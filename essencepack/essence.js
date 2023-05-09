@@ -57,7 +57,8 @@
 
   const size = 128;
   const scale = 4;
-  const numPoints = 10;
+  let numPoints = 100;
+  let radius = 10;
 
   function coord() {  return Math.floor(Math.random() * size); }
 
@@ -135,7 +136,23 @@
 
   function cycle(ctx) {
     const r = randomPoint();
-    points = [...points, ...points.map(p => merge(p, r)), r];
+    const newPoints = points.map(p => merge(p, r))
+    newPoints.push(r);
+
+    newPoints.forEach( p => {
+      // if too close to a better one, continue
+      if (points.some(q => q.score >= p.score && distanceP(p, q) <= radius)) {
+        // nope
+      }
+      else {
+        // filter out any old points we replace
+        points = points.filter( q => q.score >= p.score || distanceP(p, q) > radius);
+
+        // add it!
+        points.push(p);
+      }
+    });
+
     trim();
 
     clear();
@@ -159,6 +176,12 @@
     maxima[maximaIndex].x = x;
     maxima[maximaIndex].y = y;
     points.forEach(p => { p.score = f(p.x, p.y); })
+  });
+
+  const radiusSlider = document.getElementById('radius-slider');
+  radiusSlider.addEventListener('input', (event) => {
+    radius = parseInt(event.target.value);
+    points = [randomPoint()];
   });
 
   plotPoints();
