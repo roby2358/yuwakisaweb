@@ -113,3 +113,15 @@ textarea {
 .copy-btn:hover {
     background-color: #45a049;
 }
+
+.select-container {
+    margin-bottom: 10px;
+}
+
+#style-select {
+    width: 100%;
+    padding: 5px;
+    border: 1px solid #99d6ff;
+    border-radius: 4px;
+    background-color: #e6f7ff;
+}

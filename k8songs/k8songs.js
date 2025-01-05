@@ -1,4 +1,15 @@
 $(document).ready(function() {
+    const styleMap = {
+        'Wiggles': 'kids rockabilly, rhythm guitar',
+        'Elizabeth Mitchell': 'soft female vocals, acoustic guitar, no accompaniment',
+        'Laurie Berkner': 'energetic, strong female vocals, acoustic guitar'
+    };
+
+    $('#style-select').on('change', function() {
+        const selectedStyle = $(this).val();
+        $('#music_style').val(styleMap[selectedStyle] || '');
+    });
+
     $('.copy-btn').on('click', function() {
         const targetId = $(this).data('target');
         const text = $(`#${targetId}`).val();
@@ -40,7 +51,6 @@ $(document).ready(function() {
 
         $('#lyrics').val(lyrics);
         $('#title').val(title);
-        $('#music_style').val('kids rockabilly, rhythm guitar');
     };
 
     claudeApi.onError = function(error) {
@@ -74,23 +84,7 @@ lyrics`;
     });
 
     $('#make-music').on('click', function() {
-        const song = $('#song').val();
-        const songLines = song.split('\n');
-        let lyrics = '';
-        let title = '';
-
-        // Extract title and lyrics
-        for (let i = 0; i < songLines.length; i++) {
-            if (songLines[i].startsWith('# Title')) {
-                title = songLines[i].replace('# Title', '').trim();
-            } else if (songLines[i].startsWith('# Song')) {
-                lyrics = songLines.slice(i + 1).join('\n').trim();
-                break;
-            }
-        }
-
-        // Open Suno in a new window
-        const sunoWindow = window.open('https://suno.com/create', '_blank');
+        window.open('https://suno.ai', '_blank');
     });
 });
 
