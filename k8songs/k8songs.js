@@ -1,4 +1,23 @@
 $(document).ready(function() {
+    $('.copy-btn').on('click', function() {
+        const targetId = $(this).data('target');
+        const text = $(`#${targetId}`).val();
+        copyToClipboard(text);
+        const originalText = $(this).text();
+        $(this).text('Copied!');
+        setTimeout(() => {
+            $(this).text(originalText);
+        }, 2000);
+    });
+
+    function copyToClipboard(text) {
+        const tempTextArea = $('<textarea>');
+        $('body').append(tempTextArea);
+        tempTextArea.val(text).select();
+        document.execCommand('copy');
+        tempTextArea.remove();
+    }
+
     const claudeApi = new $.yuwakisa.ClaudeChatApi('claude-3-haiku-20240307');
 
     claudeApi.onSuccess = function(reply) {

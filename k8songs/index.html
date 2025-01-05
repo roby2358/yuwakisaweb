@@ -21,9 +21,18 @@
         <textarea id="story" placeholder="Enter your story here..."></textarea>
     </div>
     <div id="song-panel">
-        <textarea id="lyrics" placeholder="Generated lyrics will appear here..." readonly></textarea>
-        <textarea id="music_style" placeholder="Music style..." readonly>kids rockabilly, rhythm guitar</textarea>
-        <textarea id="title" placeholder="Song title..." readonly></textarea>
+        <div class="textarea-container">
+            <textarea id="lyrics" placeholder="Generated lyrics will appear here..." readonly></textarea>
+            <button class="copy-btn" data-target="lyrics">Copy Lyrics</button>
+        </div>
+        <div class="textarea-container">
+            <textarea id="music_style" placeholder="Music style..." readonly>kids rockabilly, rhythm guitar</textarea>
+            <button class="copy-btn" data-target="music_style">Copy Style</button>
+        </div>
+        <div class="textarea-container">
+            <textarea id="title" placeholder="Song title..." readonly></textarea>
+            <button class="copy-btn" data-target="title">Copy Title</button>
+        </div>
     </div>
 </div>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

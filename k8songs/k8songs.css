@@ -74,13 +74,42 @@ textarea {
     border-radius: 8px;
 }
 
+.textarea-container {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 10px;
+    flex: 0 0 auto;
+}
+
+.textarea-container:first-child {
+    flex: 1 0 auto;
+}
+
 #lyrics {
-    flex: 3;
+    height: 300px;
+    min-height: 300px;
+    flex: 0 0 auto;
     margin-bottom: 10px;
 }
 
 #music_style, #title {
-    flex: 1;
-    max-height: 60px;
+    height: 60px;
+    min-height: 60px;
+    flex: 0 0 auto;
     margin-bottom: 10px;
+}
+
+.copy-btn {
+    align-self: flex-end;
+    margin-top: 5px;
+    padding: 5px 10px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.copy-btn:hover {
+    background-color: #45a049;
 }
