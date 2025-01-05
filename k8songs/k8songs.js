@@ -69,7 +69,7 @@ $(document).ready(function() {
 
         const story = $('#story').val();
         const prompt = `
-Write a kids song for this story at a 4th-grade level of reading
+Write a kids song for this story at a K-8 elementary level of reading
 comprehension. Add lots of repetition, rounds, and fun vocal stylings.
 Use the format:
 # Comments
