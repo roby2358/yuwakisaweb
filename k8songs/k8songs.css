@@ -1,0 +1,86 @@
+body, html {
+    height: 100%;
+    margin: 0;
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    background-color: #e6f3ff; /* Light blue background */
+}
+
+#control-panel {
+    padding: 10px;
+    background-color: #ffe6e6;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+#api-key {
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 5px;
+}
+
+.button-container {
+    display: flex;
+    justify-content: space-between;
+}
+
+#make-song, #make-music {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    width: 48%;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+}
+
+#content {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+}
+
+#story-panel {
+    flex: 1;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    background-color: #ccebff; /* Slightly darker shade of light blue */
+    margin: 10px;
+    border-radius: 8px;
+}
+
+textarea {
+    flex: 1;
+    width: 100%;
+    resize: none;
+    border: 1px solid #99d6ff; /* Light blue border */
+    padding: 10px;
+    box-sizing: border-box;
+    background-color: #e6f7ff; /* Very light blue background for textareas */
+    border-radius: 4px;
+}
+
+#song-panel {
+    flex: 1;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    background-color: #e6ffcc;
+    margin: 10px;
+    border-radius: 8px;
+}
+
+#lyrics {
+    flex: 3;
+    margin-bottom: 10px;
+}
+
+#music_style, #title {
+    flex: 1;
+    max-height: 60px;
+    margin-bottom: 10px;
+}

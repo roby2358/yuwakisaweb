@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Story Song Generator</title>
+    <link rel="stylesheet" href="k8songs.css">
+</head>
+<body>
+<div id="control-panel">
+    <div>
+        <input type="password" id="api-key" placeholder="Enter your API key">
+    </div>
+    <div>
+        <button id="make-song">Make Song</button>
+        <button id="make-music">Make Music</button>
+    </div>
+</div>
+<div id="content">
+    <div id="story-panel">
+        <textarea id="story" placeholder="Enter your story here..."></textarea>
+    </div>
+    <div id="song-panel">
+        <textarea id="lyrics" placeholder="Generated lyrics will appear here..." readonly></textarea>
+        <textarea id="music_style" placeholder="Music style..." readonly>kids rockabilly, rhythm guitar</textarea>
+        <textarea id="title" placeholder="Song title..." readonly></textarea>
+    </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="k8songs.js"></script>
+</body>
+</html>
