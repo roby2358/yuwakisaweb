@@ -1,8 +1,9 @@
 $(document).ready(function() {
     const styleMap = {
-        'Wiggles': 'kids rockabilly, rhythm guitar',
-        'Elizabeth Mitchell': 'soft female vocals, acoustic guitar, no accompaniment',
-        'Laurie Berkner': 'energetic, strong female vocals, acoustic guitar'
+        'rockabilly': 'kids rockabilly, rhythm guitar',
+        'softvoice': 'soft female vocals, acoustic guitar, no accompaniment',
+        'strongvoice': 'energetic, strong female vocals, acoustic guitar',
+        'deepvoice': 'female voice deep timbre, acoustic guitar'
     };
 
     $('#style-select').on('change', function() {
