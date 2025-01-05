@@ -71,6 +71,7 @@ $(document).ready(function() {
         const prompt = `
 Write a kids song for this story at a K-8 elementary level of reading
 comprehension. Add lots of repetition, rounds, and fun vocal stylings.
+Write 3 or 4 verses, a bridge, and a chorus.
 Use the format:
 # Comments
 comments
