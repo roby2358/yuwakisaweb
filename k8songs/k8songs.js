@@ -76,6 +76,8 @@ Write 3 or 4 verses, a bridge, and a chorus.
 Use the format:
 # Comments
 comments
+# Thinking
+Plan out the song in 500 words or so. Make it catchy and fun!
 # Title
 title
 # Song
