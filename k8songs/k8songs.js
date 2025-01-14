@@ -1,9 +1,9 @@
 $(document).ready(function() {
     const styleMap = {
-        'rockabilly': 'kids rockabilly, rhythm guitar',
-        'softvoice': 'soft female vocals, acoustic guitar, no accompaniment',
-        'strongvoice': 'energetic, strong female vocals, acoustic guitar',
-        'deepvoice': 'female voice deep timbre, acoustic guitar'
+        'rockabilly': 'energetic, kids, rockabilly, rhythm guitar, experimental',
+        'softvoice': 'gentle, kids, soft female vocals, acoustic guitar, no accompaniment, experimental',
+        'strongvoice': 'energetic, kids, strong female vocals, acoustic guitar, experimental',
+        'deepvoice': 'energetic, kids, female voice deep timbre, acoustic guitar, experimental'
     };
 
     $('#style-select').on('change', function() {
