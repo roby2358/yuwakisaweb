@@ -44,7 +44,7 @@ $(document).ready(function() {
         const lyricsMatch = songText.match(/# Song[^\n]*\n([\s\S]*?)(?=\n#|$)/);
 
         if (titleMatch) {
-            title = titleMatch[1].trim().replace('"', '');
+            title = titleMatch[1].trim().replaceAll(/["]/g, '');
         }
         if (lyricsMatch) {
             lyrics = lyricsMatch[1].trim();
