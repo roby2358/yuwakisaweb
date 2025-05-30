@@ -38,50 +38,43 @@ const QUIZ_TYPES = [
     [1, 0]  // uppercase -> lowercase
 ];
 
-let currentQuestion = 0;
-let score = 0;
-let questions = [];
-let missedLetters = []; // Track missed letters
-
-// DOM elements
+// DOM Elements
 const greekLetterElement = document.getElementById('greek-letter');
 const optionsElement = document.getElementById('options');
 const scoreElement = document.getElementById('score');
+const quizPanelsElement = document.querySelector('.quiz-panels');
+const quizResultsElement = document.getElementById('quiz-results');
+const finalScoreElement = document.getElementById('final-score');
+const reviewMessageElement = document.getElementById('review-message');
+const missedLettersElement = document.getElementById('missed-letters');
+const playAgainButton = document.getElementById('play-again');
 
-// Get a random letter from the greekLetters array
-function getRandomLetter() {
-    return greekLetters[Math.floor(Math.random() * greekLetters.length)];
-}
+// Pure functions
+const getRandomLetter = () => greekLetters[Math.floor(Math.random() * greekLetters.length)];
 
-// Shuffle an array using Fisher-Yates algorithm
-function shuffleArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
+const shuffleArray = array => {
+    const newArray = [...array];
+    for (let i = newArray.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
+        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
     }
-    return array;
-}
+    return newArray;
+};
 
-// Get random options for a specific type
-function getRandomOptions(correctLetter, type) {
-    const options = [];
-    const correctIndex = QUIZ_TYPES[type][1]; // Get the correct index from the quiz type
-    
-    options.push(correctLetter[correctIndex]);
+const getRandomOptions = (correctLetter, type) => {
+    const correctIndex = QUIZ_TYPES[type][1];
+    const options = new Set([correctLetter[correctIndex]]);
 
-    while (options.length < 5) {
+    while (options.size < 5) {
         const randomLetter = getRandomLetter();
         const randomOption = randomLetter[correctIndex];
-        if (!options.includes(randomOption)) {
-            options.push(randomOption);
-        }
+        options.add(randomOption);
     }
 
-    return shuffleArray(options);
-}
+    return shuffleArray([...options]);
+};
 
-// Generate a random question
-function generateQuestion() {
+const generateQuestion = () => {
     const correctLetter = getRandomLetter();
     const type = Math.floor(Math.random() * QUIZ_TYPES.length);
     const [quizIndex, correctIndex] = QUIZ_TYPES[type];
@@ -89,52 +82,53 @@ function generateQuestion() {
     
     return {
         prompt: correctLetter[quizIndex],
-        options: options,
+        options,
         correct: options.indexOf(correctLetter[correctIndex]),
-        type
+        type,
+        correctLetter
     };
-}
+};
 
-// Initialize the quiz
-function startQuiz() {
-    currentQuestion = 0;
-    score = 0;
-    questions = [];
-    missedLetters = []; // Reset missed letters
-    
-    // Generate 10 questions
-    for (let i = 0; i < 10; i++) {
-        questions.push(generateQuestion());
-    }
-    
-    showQuestion();
-}
+// State management
+const createQuizState = () => ({
+    currentQuestion: 0,
+    score: 0,
+    questions: Array.from({ length: 10 }, generateQuestion),
+    missedLetters: new Set()
+});
 
-// Display the current question
-function showQuestion() {
-    const question = questions[currentQuestion];
+// UI Components
+const createOptionElement = (option, index, onClick) => {
+    const button = document.createElement('div');
+    button.className = 'option';
+    button.textContent = option;
+    button.addEventListener('click', () => onClick(index));
+    return button;
+};
+
+const updateScoreDisplay = (score) => {
+    scoreElement.textContent = `Score: ${score}`;
+};
+
+const showQuestion = (question, onOptionSelect) => {
     greekLetterElement.textContent = question.prompt;
-    
     optionsElement.innerHTML = '';
+    
     question.options.forEach((option, index) => {
-        const button = document.createElement('div');
-        button.className = 'option';
-        button.textContent = option;
-        button.addEventListener('click', () => selectOption(index));
-        optionsElement.appendChild(button);
+        optionsElement.appendChild(createOptionElement(option, index, onOptionSelect));
     });
-}
+};
 
-// Handle option selection
-function selectOption(index) {
-    const question = questions[currentQuestion];
+const handleOptionSelection = (index, question, state, onNextQuestion) => {
     const options = optionsElement.children;
     
-    // If the option already has "Next" in it, this is a next question click
     if (options[index].textContent.includes('Next')) {
-        nextQuestion();
+        onNextQuestion();
         return;
     }
+
+    const isCorrect = index === question.correct;
+    const correctOption = options[question.correct];
     
     // Disable all options except the correct one
     Array.from(options).forEach((option, i) => {
@@ -142,89 +136,73 @@ function selectOption(index) {
             option.style.pointerEvents = 'none';
         }
     });
-    
-    // Check if the answer is correct
-    if (index === question.correct) {
+
+    if (isCorrect) {
         options[index].style.backgroundColor = '#4CAF50';
         options[index].textContent = `${options[index].textContent} | Next`;
-        // Remove old click listener and add new one
-        const newOption = options[index].cloneNode(true);
-        options[index].parentNode.replaceChild(newOption, options[index]);
-        newOption.addEventListener('click', () => selectOption(index));
-        score++;
+        state.score++;
     } else {
         options[index].style.backgroundColor = '#f44336';
-        options[question.correct].style.backgroundColor = '#4CAF50';
-        options[question.correct].textContent = `${options[question.correct].textContent} | Next`;
-        // Remove old click listener and add new one
-        const newOption = options[question.correct].cloneNode(true);
-        options[question.correct].parentNode.replaceChild(newOption, options[question.correct]);
-        newOption.addEventListener('click', () => selectOption(question.correct));
+        correctOption.style.backgroundColor = '#4CAF50';
+        correctOption.textContent = `${correctOption.textContent} | Next`;
+        state.missedLetters.add(question.correctLetter);
+    }
+
+    updateScoreDisplay(state.score);
+};
+
+const showResults = (state) => {
+    // Hide quiz panels and show results
+    quizPanelsElement.classList.add('hidden');
+    quizResultsElement.classList.remove('hidden');
+    
+    // Update final score
+    finalScoreElement.textContent = `Final Score: ${state.score}/10`;
+    
+    // Update review section
+    if (state.missedLetters.size > 0) {
+        reviewMessageElement.textContent = 'Review these:';
+        reviewMessageElement.className = 'option review-message review';
         
-        // Add to missed letters if not already there
-        const correctLetter = greekLetters.find(letter => 
-            letter[QUIZ_TYPES[question.type][1]] === question.options[question.correct]
-        );
-        if (correctLetter && !missedLetters.some(missed => 
-            missed[0] === correctLetter[0] && 
-            missed[1] === correctLetter[1] && 
-            missed[2] === correctLetter[2]
-        )) {
-            missedLetters.push(correctLetter);
-        }
+        // Clear and populate missed letters
+        missedLettersElement.innerHTML = '';
+        Array.from(state.missedLetters).forEach(letter => {
+            const letterDiv = document.createElement('div');
+            letterDiv.className = 'option';
+            letterDiv.textContent = `${letter[2]} (${letter[0]}, ${letter[1]})`;
+            missedLettersElement.appendChild(letterDiv);
+        });
+    } else {
+        reviewMessageElement.textContent = 'Perfect score! No review needed.';
+        reviewMessageElement.className = 'option review-message perfect';
+        missedLettersElement.innerHTML = '';
     }
     
-    scoreElement.textContent = `Score: ${score}`;
-}
+    // Add event listener to Play Again button
+    playAgainButton.addEventListener('click', () => {
+        quizPanelsElement.classList.remove('hidden');
+        quizResultsElement.classList.add('hidden');
+        startQuiz();
+    });
+};
 
-// Move to the next question
-function nextQuestion() {
-    currentQuestion++;
-    if (currentQuestion < questions.length) {
-        showQuestion();
-    } else {
-        // Quiz completed
-        greekLetterElement.parentNode.style.display = 'none'; // Hide the greek letter panel
-        
-        let reviewHTML = '<div style="max-width: 800px; margin: 0 auto; padding: 2rem; display: flex; justify-content: center;">';
-        
-        // Create a grid with two columns
-        reviewHTML += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; width: 100%;">';
-        
-        // Left column - Score and Play Again
-        reviewHTML += `
-            <div>
-                <div class="option" style="background-color: #e2e3e5; color: #383d41; font-weight: bold;">Final Score: ${score}/10</div>
-                <button id="play-again" class="btn" style="margin-top: 1rem;">Play Again</button>
-            </div>
-        `;
-        
-        // Right column - Review letters
-        reviewHTML += '<div>';
-        if (missedLetters.length > 0) {
-            reviewHTML += '<div class="option" style="background-color: #fff3cd; color: #856404; font-weight: bold;">Review these:</div>';
-            missedLetters.forEach(letter => {
-                reviewHTML += `
-                    <div class="option" style="background-color: #fff3cd; color: #856404;">
-                        ${letter[2]} (${letter[0]}, ${letter[1]})
-                    </div>
-                `;
-            });
+// Quiz flow
+const startQuiz = () => {
+    const state = createQuizState();
+    
+    const nextQuestion = () => {
+        state.currentQuestion++;
+        if (state.currentQuestion < state.questions.length) {
+            showQuestion(state.questions[state.currentQuestion], 
+                (index) => handleOptionSelection(index, state.questions[state.currentQuestion], state, nextQuestion));
         } else {
-            reviewHTML += '<div class="option" style="background-color: #d4edda; color: #155724;">Perfect score! No review needed.</div>';
+            showResults(state);
         }
-        reviewHTML += '</div>';
-        
-        reviewHTML += '</div></div>';
-        optionsElement.innerHTML = reviewHTML;
-        
-        // Add event listener to Play Again button
-        document.getElementById('play-again').addEventListener('click', () => {
-            greekLetterElement.parentNode.style.display = 'flex'; // Show the greek letter panel again
-            startQuiz();
-        });
-    }
-}
+    };
+    
+    showQuestion(state.questions[state.currentQuestion], 
+        (index) => handleOptionSelection(index, state.questions[state.currentQuestion], state, nextQuestion));
+};
 
-// Start the quiz
+// Initialize the quiz
 startQuiz(); 

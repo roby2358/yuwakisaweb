@@ -1,3 +1,4 @@
+/* Reset and base styles */
 * {
     margin: 0;
     padding: 0;
@@ -13,6 +14,7 @@ body {
     align-items: center;
 }
 
+/* Layout container */
 .container {
     width: 90%;
     max-width: 1000px;
@@ -21,6 +23,7 @@ body {
     overflow: hidden;
 }
 
+/* Header styles */
 .header {
     background-color: #0077be;
     color: white;
@@ -32,10 +35,12 @@ body {
     align-items: center;
 }
 
+/* Main content area */
 .content {
     padding: 2rem;
 }
 
+/* Quiz layout */
 .quiz-panels {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -43,21 +48,23 @@ body {
     margin-bottom: 2rem;
 }
 
+/* Letter display panel */
 .letter-panel {
     display: flex;
     justify-content: center;
     align-items: center;
-    border: 2px solid black;
-    border-radius: 8px;
     padding: 2rem;
     background-color: #f8f9fa;
+    border: 2px solid black;
+    border-radius: 8px;
 }
 
 .greek-letter {
-    font-size: 8rem;
     font-family: 'Times New Roman', serif;
+    font-size: 8rem;
 }
 
+/* Options panel */
 .options-panel {
     display: flex;
     flex-direction: column;
@@ -71,12 +78,12 @@ body {
 
 .option {
     padding: 1rem;
-    border: 2px solid black;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.3s ease;
     font-size: 1.2rem;
     text-align: center;
+    cursor: pointer;
+    border: 2px solid black;
+    border-radius: 4px;
+    transition: all 0.3s ease;
 }
 
 .option:hover {
@@ -84,6 +91,7 @@ body {
     color: white;
 }
 
+/* Controls and buttons */
 .controls {
     display: flex;
     justify-content: center;
@@ -92,12 +100,12 @@ body {
 
 .btn {
     padding: 0.8rem 1.5rem;
-    background-color: #0077be;
+    font-size: 1rem;
     color: white;
+    background-color: #0077be;
     border: 2px solid black;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 1rem;
     transition: all 0.3s ease;
 }
 
@@ -105,10 +113,53 @@ body {
     background-color: #005a8c;
 }
 
+/* Score display */
 .score {
     font-size: 1.2rem;
     font-weight: bold;
-    background-color: rgba(255, 255, 255, 0.2);
     padding: 0.5rem 1rem;
+    background-color: rgba(255, 255, 255, 0.2);
     border-radius: 4px;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.quiz-results {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.results-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    width: 100%;
+}
+
+.score-display {
+    background-color: #e2e3e5;
+    color: #383d41;
+    font-weight: bold;
+}
+
+.review-message {
+    font-weight: bold;
+}
+
+.review-message.perfect {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.review-message.review {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.missed-letters .option {
+    background-color: #fff3cd;
+    color: #856404;
 } 
