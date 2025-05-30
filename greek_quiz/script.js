@@ -129,6 +129,7 @@ const handleOptionSelection = (index, question, state, onNextQuestion) => {
 
     const isCorrect = index === question.correct;
     const correctOption = options[question.correct];
+    const correctLetter = question.correctLetter;
     
     // Disable all options except the correct one
     Array.from(options).forEach((option, i) => {
@@ -139,12 +140,12 @@ const handleOptionSelection = (index, question, state, onNextQuestion) => {
 
     if (isCorrect) {
         options[index].style.backgroundColor = '#4CAF50';
-        options[index].textContent = `${options[index].textContent} | Next`;
+        options[index].textContent = `${correctLetter[0]} | ${correctLetter[1]} (${correctLetter[2]}) | Next`;
         state.score++;
     } else {
         options[index].style.backgroundColor = '#f44336';
         correctOption.style.backgroundColor = '#4CAF50';
-        correctOption.textContent = `${correctOption.textContent} | Next`;
+        correctOption.textContent = `${correctLetter[0]} | ${correctLetter[1]} (${correctLetter[2]}) | Next`;
         state.missedLetters.add(question.correctLetter);
     }
 
