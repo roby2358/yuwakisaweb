@@ -6,6 +6,62 @@ $(document).ready(function() {
         'deepvoice': 'energetic, kids, female voice deep timbre, acoustic guitar, catchy hook, experimental'
     };
 
+    const promptMap = {
+        "k8": `
+Write a kids song for this story at a K-8 elementary level of reading
+comprehension. Add lots of repetition, rounds, and fun vocal stylings.
+Write 3 or 4 verses, a bridge, and a chorus.
+`,
+        "4x4": `
+Craft that into lyrics to a song with 4 verses, a bridge and a chorus.
+ Use 4x4 meter (4 lines of 8 beats) and an ABAB rhyming scheme. Follow these
+ sensibilities: No fancy words No hidden birds Keep it raw Keep it true Tell
+ it straight Don't hesitate Make them feel What you do Simpler is stronger
+ Don't make it longer Hit them hard With what's real Repetition's your friend
+ When you need to send A message home Make them feel Write like you're screaming
+ Like your heart is beating Through your throat Through your veins Write like
+ you're burning Like the world is turning Inside out Breaking chains Don't
+ write pretty Write it gritty Make them hear What you say One clear image One
+ raw message Straight to bone No delay Keep it sharp Keep it bold Tell your
+ truth Let it fly That's how lyrics Hit like shocks Through the heart Through the sky
+ Omit punctuation. Natrual speaking rhythm without poetics. Highly pareidolia
+ style without filter words. Avoid mentioning death
+`,
+        "punchy":`
+Craft that into lyrics to a song with 4 verses, a bridge and a chorus.
+ Use short, punchy lines of 4 beats and an AABB rhyming scheme. Follow these
+ sensibilities: No fancy words No hidden birds Keep it raw Keep it true Tell
+ it straight Don't hesitate Make them feel What you do Simpler is stronger
+ Don't make it longer Hit them hard With what's real Repetition's your friend
+ When you need to send A message home Make them feel Write like you're screaming
+ Like your heart is beating Through your throat Through your veins Write like
+ you're burning Like the world is turning Inside out Breaking chains Don't
+ write pretty Write it gritty Make them hear What you say One clear image One
+ raw message Straight to bone No delay Keep it sharp Keep it bold Tell your
+ truth Let it fly That's how lyrics Hit like shocks Through the heart Through the sky
+ Omit punctuation. Natrual speaking rhythm without poetics. Highly pareidolia
+ style without filter words. Avoid mentioning death
+`
+    };
+
+    const promptFormat = `Use the format:
+# Comments
+comments
+# Thinking
+Plan out the song in 500 words or so. Make it catchy and fun!
+# Title
+title
+# Song
+lyrics`
+
+    // Populate prompt select dropdown from promptMap keys
+    Object.keys(promptMap).forEach(key => {
+        $('#prompt-select').append($('<option>', {
+            value: key,
+            text: key
+        }));
+    });
+
     $('#style-select').on('change', function() {
         const selectedStyle = $(this).val();
         $('#music_style').val(styleMap[selectedStyle] || '');
@@ -89,20 +145,8 @@ $(document).ready(function() {
         claudeApi.setApiKey(apiKey);
 
         const story = $('#story').val();
-        const prompt = `
-Write a kids song for this story at a K-8 elementary level of reading
-comprehension. Add lots of repetition, rounds, and fun vocal stylings.
-Write 3 or 4 verses, a bridge, and a chorus.
-Use the format:
-# Comments
-comments
-# Thinking
-Plan out the song in 500 words or so. Make it catchy and fun!
-# Title
-title
-# Song
-lyrics`;
-
+        const selectedPrompt = $('#prompt-select').val();
+        const prompt = promptMap[selectedPrompt] + promptFormat;
         const messages = claudeApi.buildPrompt(prompt, [story]);
         claudeApi.call(messages);
     });
