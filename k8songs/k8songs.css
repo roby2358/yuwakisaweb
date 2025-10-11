@@ -150,10 +150,12 @@ textarea {
 
 .select-container {
     margin-bottom: 10px;
+    display: flex;
+    gap: 10px;
 }
 
-#style-select {
-    width: 100%;
+#style-select, #prompt-select, #model-select {
+    flex: 1;
     padding: 5px;
     border: 1px solid #99d6ff;
     border-radius: 4px;

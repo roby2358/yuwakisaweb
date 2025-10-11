@@ -39,8 +39,8 @@ Craft that into lyrics to a song with 4 verses, a bridge and a chorus.
  write pretty Write it gritty Make them hear What you say One clear image One
  raw message Straight to bone No delay Keep it sharp Keep it bold Tell your
  truth Let it fly That's how lyrics Hit like shocks Through the heart Through the sky
- Omit punctuation. Natrual speaking rhythm without poetics. Highly pareidolia
- style without filter words. Avoid mentioning death
+ Omit punctuation. Natrual speaking rhythm without poetics. Clipped, terse, punchy.
+ Highly pareidolia style without filter words. Avoid mentioning death
 `
     };
 
@@ -54,6 +54,12 @@ title
 # Song
 lyrics`
 
+    const modelMap = {
+        "haiku": "claude-3-5-haiku-20241022",
+        "sonnet": "claude-sonnet-4-5-20250929",
+        "opus": "claude-opus-4-1-20250805"
+    };
+
     // Populate prompt select dropdown from promptMap keys
     Object.keys(promptMap).forEach(key => {
         $('#prompt-select').append($('<option>', {
@@ -61,6 +67,15 @@ lyrics`
             text: key
         }));
     });
+
+    // Populate model select dropdown from modelMap keys
+    Object.keys(modelMap).forEach(key => {
+        $('#model-select').append($('<option>', {
+            value: key,
+            text: key
+        }));
+    });
+    $('#model-select').val('haiku'); // Set default to haiku
 
     $('#style-select').on('change', function() {
         const selectedStyle = $(this).val();
@@ -105,7 +120,7 @@ lyrics`
         }
     }
 
-    const claudeApi = new $.yuwakisa.ClaudeChatApi('claude-3-haiku-20240307');
+    const claudeApi = new $.yuwakisa.ClaudeChatApi();
 
     claudeApi.onSuccess = function(reply) {
         const songText = reply.choices[0];
@@ -146,9 +161,10 @@ lyrics`
 
         const story = $('#story').val();
         const selectedPrompt = $('#prompt-select').val();
+        const selectedModel = $('#model-select').val();
         const prompt = promptMap[selectedPrompt] + promptFormat;
         const messages = claudeApi.buildPrompt(prompt, [story]);
-        claudeApi.call(messages);
+        claudeApi.call(messages, modelMap[selectedModel]);
     });
 
     $('#make-music').on('click', function() {
@@ -158,10 +174,9 @@ lyrics`
 
 // ClaudeChatApi implementation (simplified version)
 $.yuwakisa = $.yuwakisa || {};
-$.yuwakisa.ClaudeChatApi = function(model) {
+$.yuwakisa.ClaudeChatApi = function() {
     this.apiKey = '';
     this.url = 'https://api.anthropic.com/v1/messages';
-    this.model = model || 'claude-3-haiku-20240307';
     this.anthropic_version = '2023-06-01';
 
     this.setApiKey = function(key) {
@@ -192,7 +207,7 @@ $.yuwakisa.ClaudeChatApi = function(model) {
         };
     }
 
-    this.call = async function(messages) {
+    this.call = async function(messages, model) {
         const headers = {
             "x-api-key": this.apiKey,
             "Content-Type": "application/json",
@@ -201,7 +216,7 @@ $.yuwakisa.ClaudeChatApi = function(model) {
         };
 
         const data = {
-            model: this.model,
+            model: model,
             messages: messages.messages,
             system: messages.system,
             max_tokens: 1000,
