@@ -22,12 +22,31 @@ $(document).ready(function() {
         }, 2000);
     });
 
-    function copyToClipboard(text) {
-        const tempTextArea = $('<textarea>');
-        $('body').append(tempTextArea);
-        tempTextArea.val(text).select();
-        document.execCommand('copy');
-        tempTextArea.remove();
+    $('#lyrics-eye').on('click', function() {
+        const $lyrics = $('#lyrics');
+        const $fullResponse = $('#full-response');
+        
+        if ($lyrics.is(':visible')) {
+            $lyrics.hide();
+            $fullResponse.show();
+        } else {
+            $lyrics.show();
+            $fullResponse.hide();
+        }
+    });
+
+    async function copyToClipboard(text) {
+        try {
+            // Modern Clipboard API (requires HTTPS or localhost)
+            await navigator.clipboard.writeText(text);
+        } catch (err) {
+            // Fallback for older browsers or HTTP contexts
+            const tempTextArea = $('<textarea>');
+            $('body').append(tempTextArea);
+            tempTextArea.val(text).select();
+            document.execCommand('copy');
+            tempTextArea.remove();
+        }
     }
 
     const claudeApi = new $.yuwakisa.ClaudeChatApi('claude-3-haiku-20240307');
@@ -52,6 +71,7 @@ $(document).ready(function() {
 
         $('#lyrics').val(lyrics);
         $('#title').val(title);
+        $('#full-response').text(songText);
     };
 
     claudeApi.onError = function(error) {

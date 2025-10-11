@@ -23,7 +23,11 @@
     <div id="song-panel">
         <div class="textarea-container">
             <textarea id="lyrics" placeholder="Generated lyrics will appear here..." readonly></textarea>
-            <button class="copy-btn" data-target="lyrics">Copy Lyrics</button>
+            <div id="full-response" style="display: none;"></div>
+            <div class="button-row">
+                <button class="eye-btn" id="lyrics-eye">👁️</button>
+                <button class="copy-btn" data-target="lyrics">Copy Lyrics</button>
+            </div>
         </div>
         <div class="select-container">
             <select id="style-select">

@@ -92,6 +92,21 @@ textarea {
     margin-bottom: 10px;
 }
 
+#full-response {
+    height: 300px;
+    min-height: 300px;
+    flex: 0 0 auto;
+    margin-bottom: 10px;
+    overflow-y: auto;
+    border: 1px solid #99d6ff;
+    padding: 10px;
+    box-sizing: border-box;
+    background-color: #e6f7ff;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    font-family: Arial, sans-serif;
+}
+
 #music_style, #title {
     height: 60px;
     min-height: 60px;
@@ -99,9 +114,14 @@ textarea {
     margin-bottom: 10px;
 }
 
-.copy-btn {
-    align-self: flex-end;
+.button-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-top: 5px;
+}
+
+.copy-btn {
     padding: 5px 10px;
     background-color: #4CAF50;
     color: white;
@@ -112,6 +132,20 @@ textarea {
 
 .copy-btn:hover {
     background-color: #45a049;
+}
+
+.eye-btn {
+    padding: 5px 10px;
+    background-color: transparent;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.eye-btn:hover {
+    background-color: #f0f0f0;
 }
 
 .select-container {
