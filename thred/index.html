@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thred</title>
+    <link rel="stylesheet" href="css/index.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- First pane: Code editor -->
+        <div class="pane code-pane">
+            <textarea id="code-editor" placeholder="Enter your Thred code here..."></textarea>
+        </div>
+        
+        <!-- Second pane: Control buttons -->
+        <div class="pane control-pane">
+            <button id="run-btn" class="control-btn">RUN</button>
+            <button id="clear-btn" class="control-btn">CLEAR</button>
+        </div>
+        
+        <!-- Third pane: Output display -->
+        <div class="pane output-pane">
+            <div id="output-display"></div>
+        </div>
+    </div>
+    
+    <script src="js/thred.js"></script>
+    <script src="js/index.js"></script>
+</body>
+</html>
+

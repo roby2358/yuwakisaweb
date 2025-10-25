@@ -1,0 +1,103 @@
+/* Reset CSS */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body, html {
+    height: 100%;
+    margin: 0;
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    background-color: #e6f3ff; /* Light blue background */
+}
+
+.container {
+    display: flex;
+    height: 100vh;
+    flex: 1;
+}
+
+.pane {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.code-pane {
+    flex: 1;
+    padding: 10px;
+    background-color: #ccebff; /* Slightly darker shade of light blue */
+    margin: 10px;
+    border-radius: 8px;
+}
+
+.control-pane {
+    width: 200px;
+    padding: 10px;
+    background-color: #ffe6e6; /* Pink background like k8songs control panel */
+    border-left: 1px solid #99d6ff; /* Light blue border */
+    border-right: 1px solid #99d6ff;
+    justify-content: flex-start;
+    align-items: center;
+    margin: 10px 0;
+    border-radius: 8px;
+}
+
+.output-pane {
+    flex: 1;
+    padding: 10px;
+    background-color: #e6ffcc; /* Light green background like k8songs song panel */
+    margin: 10px;
+    border-radius: 8px;
+}
+
+#code-editor {
+    width: 100%;
+    height: 100%;
+    border: 1px solid #99d6ff; /* Light blue border */
+    padding: 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    resize: none;
+    outline: none;
+    background-color: #e6f7ff; /* Very light blue background for textareas */
+    border-radius: 4px;
+}
+
+.control-btn {
+    width: 100%;
+    padding: 10px 20px;
+    margin: 5px 0;
+    background-color: #4CAF50; /* Green background like k8songs buttons */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.control-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+}
+
+.control-btn:active {
+    background-color: #3d8b40; /* Even darker green when active */
+}
+
+#output-display {
+    width: 100%;
+    height: 100%;
+    border: 1px solid #99d6ff; /* Light blue border */
+    padding: 10px;
+    background-color: #e6f7ff; /* Very light blue background */
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    border-radius: 4px;
+}
+
