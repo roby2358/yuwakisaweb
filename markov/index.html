@@ -30,7 +30,10 @@
         </div>
         
         <div class="panel" id="generated-panel">
-            <button class="action-button" id="generate-btn">generate</button>
+            <div class="generate-controls">
+                <input type="number" id="output-length" value="500" min="1" class="length-input">
+                <button class="action-button" id="generate-btn">generate</button>
+            </div>
             <textarea id="generated-text" placeholder="Generated text will appear here..." readonly autocomplete="off"></textarea>
         </div>
         
@@ -43,6 +46,7 @@
     </div>
     
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="js/markov.js"></script>
     <script src="js/index.js"></script>
 </body>
 </html>

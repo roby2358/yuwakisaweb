@@ -1,4 +1,4 @@
-function Markov(maxN, tokens) {
+function Markov(tokens, maxN) {
     const Start = "<";
     const End = ">";
     
@@ -16,6 +16,7 @@ function Markov(maxN, tokens) {
      * Generates all possible n-gram pairs from a word
      */
     const ngramPairs = (word) => {
+        console.log(word)
         const wordWithMarkers = Start + word + End;
         const pairs = [];
         
@@ -24,6 +25,7 @@ function Markov(maxN, tokens) {
                 for (let startIndex = 0; startIndex <= wordWithMarkers.length - prefixLength - suffixLength; startIndex++) {
                     const prefix = wordWithMarkers.substring(startIndex, startIndex + prefixLength);
                     const suffix = wordWithMarkers.substring(startIndex + prefixLength, startIndex + prefixLength + suffixLength);
+                    console.log(prefix, '|', suffix)
                     pairs.push([prefix, suffix]);
                 }
             }
@@ -107,6 +109,8 @@ function Markov(maxN, tokens) {
             }
         } while (continuations.size > 0);
         
+        console.log(currentWord);
+        
         return clean(currentWord);
     };
     
@@ -119,6 +123,17 @@ function Markov(maxN, tokens) {
             generated = this.roll();
         } while (tokens.includes(generated));
         return generated;
+    };
+    
+    /**
+     * Generates multiple tokens
+     */
+    this.generateMultiple = (count) => {
+        const generatedTokens = [];
+        for (let i = 0; i < count; i++) {
+            generatedTokens.push(this.roll());
+        }
+        return generatedTokens;
     };
 }
 
