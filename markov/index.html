@@ -11,9 +11,20 @@
         <div class="tabs">
             <button class="tab active" data-tab="source">source</button>
             <button class="tab" data-tab="generated">generated</button>
+            <button class="tab" data-tab="about">about</button>
         </div>
         
         <div class="panel active" id="source-panel">
+            <div class="tokenization-options">
+                <label class="radio-label">
+                    <input type="radio" name="tokenization" value="characters" checked>
+                    <span>characters</span>
+                </label>
+                <label class="radio-label">
+                    <input type="radio" name="tokenization" value="words">
+                    <span>words</span>
+                </label>
+            </div>
             <button class="action-button" id="calculate-btn">calculate</button>
             <textarea id="source-text" placeholder="Enter source text here..." autocomplete="off"></textarea>
         </div>
@@ -21,6 +32,13 @@
         <div class="panel" id="generated-panel">
             <button class="action-button" id="generate-btn">generate</button>
             <textarea id="generated-text" placeholder="Generated text will appear here..." readonly autocomplete="off"></textarea>
+        </div>
+        
+        <div class="panel" id="about-panel">
+            <p>
+                This is a Markov chain text generator. Enter source text and choose how to tokenize it (by characters or words), 
+                then generate new text based on the patterns in your input.
+            </p>
         </div>
     </div>
     

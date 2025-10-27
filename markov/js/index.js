@@ -11,8 +11,10 @@ $(document).ready(function() {
         $('.panel').removeClass('active');
         if (targetTab === 'source') {
             $('#source-panel').addClass('active');
-        } else {
+        } else if (targetTab === 'generated') {
             $('#generated-panel').addClass('active');
+        } else if (targetTab === 'about') {
+            $('#about-panel').addClass('active');
         }
     });
     
