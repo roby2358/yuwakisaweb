@@ -23,8 +23,8 @@ function Markov(tokens, maxN) {
         for (let prefixLength = 1; prefixLength <= Math.min(maxN, wordWithMarkers.length - 1); prefixLength++) {
             for (let suffixLength = 1; suffixLength <= Math.min(maxN, wordWithMarkers.length - prefixLength); suffixLength++) {
                 for (let startIndex = 0; startIndex <= wordWithMarkers.length - prefixLength - suffixLength; startIndex++) {
-                    const prefix = wordWithMarkers.substring(startIndex, startIndex + prefixLength);
-                    const suffix = wordWithMarkers.substring(startIndex + prefixLength, startIndex + prefixLength + suffixLength);
+                    const prefix = wordWithMarkers.slice(startIndex, startIndex + prefixLength);
+                    const suffix = wordWithMarkers.slice(startIndex + prefixLength, startIndex + prefixLength + suffixLength);
                     console.log(prefix, '|', suffix)
                     pairs.push([prefix, suffix]);
                 }
@@ -64,7 +64,7 @@ function Markov(tokens, maxN) {
         const continuations = new Map();
         
         for (let ngramLength = 1; ngramLength <= Math.min(maxN, prefix.length); ngramLength++) {
-            const ngram = prefix.substring(prefix.length - ngramLength);
+            const ngram = prefix.slice(-ngramLength);
             const nextNgrams = this.links.get(ngram);
             
             if (nextNgrams) {
