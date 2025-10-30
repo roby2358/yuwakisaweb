@@ -30,6 +30,32 @@ body {
     padding: 0 20px;
 }
 
+.message-bar {
+    display: none;
+    padding: 10px 20px;
+    font-size: 14px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.message-bar.visible {
+    display: block;
+}
+
+.message-bar.info {
+    background: #eef5ff;
+    color: #084298;
+}
+
+.message-bar.success {
+    background: #eaf7ea;
+    color: #0a6b2a;
+}
+
+.message-bar.error {
+    background: #fdeaea;
+    color: #7f1d1d;
+}
+
 .tab {
     background: none;
     border: none;

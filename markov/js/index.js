@@ -1,6 +1,22 @@
 $(document).ready(function() {
     let markov = null;
 
+    let messageTimeoutId = null;
+    function showMessage(text, type = 'info', autoHideMs = 3500) {
+        const $bar = $('#message-bar');
+        $bar.removeClass('info success error visible');
+        $bar.text(text);
+        $bar.addClass(type).addClass('visible');
+        if (messageTimeoutId) {
+            clearTimeout(messageTimeoutId);
+        }
+        if (autoHideMs > 0) {
+            messageTimeoutId = setTimeout(() => {
+                $bar.removeClass('visible');
+            }, autoHideMs);
+        }
+    }
+
     /**
      * Tokenizes the text by characters
      */
@@ -58,7 +74,7 @@ $(document).ready(function() {
     $('#calculate-btn').on('click', function() {
         const sourceText = $('#source-text').val();
         if (!sourceText.trim()) {
-            alert('Please enter source text first.');
+            showMessage('Please enter source text first.', 'error');
             return;
         }
         
@@ -71,7 +87,7 @@ $(document).ready(function() {
             : tokenizeWords(sourceText);
         
         if (tokens.length === 0) {
-            alert('No tokens found. Please enter some text.');
+            showMessage('No tokens found. Please enter some text.', 'error');
             return;
         }
         
@@ -80,13 +96,13 @@ $(document).ready(function() {
         markov.build();
         
         console.log('Markov chain built with ' + tokens.length + ' tokens');
-        alert('Markov chain calculated successfully!');
+        showMessage('Markov chain calculated successfully!', 'success');
     });
     
     // Generate button handler
     $('#generate-btn').on('click', function() {
         if (!markov) {
-            alert('Please calculate the Markov chain first.');
+            showMessage('Please calculate the Markov chain first.', 'error');
             return;
         }
         
@@ -97,6 +113,8 @@ $(document).ready(function() {
         const generatedText = formatGeneratedText(generatedTokens, tokenizationMode);
         
         $('#generated-text').val(generatedText);
+
+        showMessage('Generation complete.', 'success');
     });
     
     // Autoscroll for textareas
