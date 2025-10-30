@@ -1,14 +1,38 @@
 $(document).ready(function() {
     let markov = null;
-    
-    // Tokenization functions
+
+    /**
+     * Tokenizes the text by characters
+     */
     function tokenizeCharacters(text) {
         // return text.split('');
-        return text.split(/\s+/).filter(t => t.length > 0);
+        return text
+            .split(/\s+/)
+            .filter(t => t.length > 0)
+            .map(t => `${MarkovConstants.Start}${t}${MarkovConstants.End}`);
     }
+
+    /**
+     * Removes the start and end markers from a string
+     */
+    const clean = (s) => s.replaceAll(MarkovConstants.Start, "").replaceAll(MarkovConstants.End, "");
     
+    /**
+     * Presentation helpers: format generated text for display
+     */
+    function formatGeneratedText(generatedTokens, tokenizationMode) {
+        const separator = tokenizationMode === 'characters' ? ' ' : ' ';
+        const tokens = tokenizationMode === 'characters'
+            ? generatedTokens.map(clean)
+            : generatedTokens;
+        return tokens.join(separator);
+    }
+
     function tokenizeWords(text) {
-        return text.split(/\s+/).filter(t => t.length > 0);
+		return text.split(/\n/)
+			.map(paragraph => paragraph.split(/\s+/).filter(word => word.length > 0))
+			.filter(paragraph => paragraph.length > 0)
+			.map(paragraph => [MarkovConstants.Start, ...paragraph, MarkovConstants.End]);
     }
     
     // Tab switching functionality
@@ -66,16 +90,11 @@ $(document).ready(function() {
             return;
         }
         
-        // Get output length from input
         const outputLength = parseInt($('#output-length').val()) || 500;
-        
-        // Generate tokens
-        const generatedTokens = markov.generateMultiple(outputLength);
-        
-        // Join tokens based on tokenization mode
         const tokenizationMode = $('input[name="tokenization"]:checked').val();
-        const separator = tokenizationMode === 'characters' ? ' ' : ' ';
-        const generatedText = generatedTokens.join(separator);
+        
+        const generatedTokens = markov.generateMultiple(outputLength);
+        const generatedText = formatGeneratedText(generatedTokens, tokenizationMode);
         
         $('#generated-text').val(generatedText);
     });

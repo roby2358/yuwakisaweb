@@ -1,6 +1,10 @@
+// Export constants for use in other modules
+const MarkovConstants = {
+    Start: "<",
+    End: ">"
+};
+
 function Markov(tokens, maxN) {
-    const Start = "<";
-    const End = ">";
     
     this.maxN = maxN;
     this.tokens = tokens;
@@ -8,24 +12,18 @@ function Markov(tokens, maxN) {
     this.links = new Map();
     
     /**
-     * Removes the start and end markers from a string
-     */
-    const clean = (s) => s.replaceAll(Start, "").replaceAll(End, "");
-    
-    /**
      * Generates all possible n-gram pairs from a word
      */
-    const ngramPairs = (word) => {
-        console.log(word)
-        const wordWithMarkers = Start + word + End;
+    const ngramPairs = (list) => {
+        console.log(list)
         const pairs = [];
         
-        for (let prefixLength = 1; prefixLength <= Math.min(maxN, wordWithMarkers.length - 1); prefixLength++) {
-            for (let suffixLength = 1; suffixLength <= Math.min(maxN, wordWithMarkers.length - prefixLength); suffixLength++) {
-                for (let startIndex = 0; startIndex <= wordWithMarkers.length - prefixLength - suffixLength; startIndex++) {
-                    const prefix = wordWithMarkers.slice(startIndex, startIndex + prefixLength);
-                    const suffix = wordWithMarkers.slice(startIndex + prefixLength, startIndex + prefixLength + suffixLength);
-                    console.log(prefix, '|', suffix)
+        for (let prefixLength = 1; prefixLength <= Math.min(maxN, list.length - 1); prefixLength++) {
+            for (let suffixLength = 1; suffixLength <= Math.min(maxN, list.length - prefixLength); suffixLength++) {
+                for (let startIndex = 0; startIndex <= list.length - prefixLength - suffixLength; startIndex++) {
+                    const prefix = list.slice(startIndex, startIndex + prefixLength);
+                    const suffix = list.slice(startIndex + prefixLength, startIndex + prefixLength + suffixLength);
+                    // console.log(prefix, '|', suffix)
                     pairs.push([prefix, suffix]);
                 }
             }
@@ -99,7 +97,7 @@ function Markov(tokens, maxN) {
      * Generates a new word using the learned patterns
      */
     this.roll = () => {
-        let currentWord = Start;
+        let currentWord = MarkovConstants.Start;
         let continuations = new Map();
         
         do {
@@ -109,21 +107,19 @@ function Markov(tokens, maxN) {
             }
         } while (continuations.size > 0);
         
-        console.log(currentWord);
-        
-        return clean(currentWord);
+        return currentWord;
     };
     
     /**
      * Generates a new token that doesn't exist in the input token list
      */
-    this.uniq = () => {
-        let generated;
-        do {
-            generated = this.roll();
-        } while (tokens.includes(generated));
-        return generated;
-    };
+    // this.uniq = () => {
+    //     let generated;
+    //     do {
+    //         generated = this.roll();
+    //     } while (tokens.includes(generated));
+    //     return generated;
+    // };
     
     /**
      * Generates multiple tokens
