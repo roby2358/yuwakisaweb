@@ -31,14 +31,8 @@ body {
 }
 
 .message-bar {
-    display: none;
     padding: 10px 20px;
-    font-size: 14px;
     border-bottom: 1px solid #e0e0e0;
-}
-
-.message-bar.visible {
-    display: block;
 }
 
 .message-bar.info {
