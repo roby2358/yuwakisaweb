@@ -1,5 +1,6 @@
 const wordsTokenizer = new Words();
 const textTokenizer = new Text();
+const ngramLength = 3;
 
 /**
  * Gets the appropriate tokenizer based on mode
@@ -66,8 +67,8 @@ $(document).ready(function() {
             return;
         }
         
-        // Build the Markov chain (use maxN = 3 for n-gram size)
-        markov = new Markov(tokens, 5);
+        // Build the Markov chain
+        markov = new Markov(tokens, ngramLength);
         markov.build();
         
         console.log('Markov chain built with ' + tokens.length + ' tokens');

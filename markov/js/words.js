@@ -3,6 +3,7 @@
  * Splits text into words and wraps each with Start/End markers
  */
 function Words() {
+
     this.tokenize = (text) => {
         if (!text || typeof text !== 'string') {
             return [];
@@ -13,10 +14,15 @@ function Words() {
             return [];
         }
 
-        return trimmedText
+        return Tokenize.removePairedPunctuation(trimmedText)
             .split(/\s+/)
             .filter(token => token.length > 0)
-            .map(token => `${MarkovConstants.Start}${token}${MarkovConstants.End}`);
+            .flatMap(token => {
+                // Split token into parts (words and punctuation)
+                const parts = Tokenize.splitTokenOnPunctuation(token);
+                // Each part becomes a separate word wrapped with Start/End markers
+                return parts.map(part => `${MarkovConstants.Start}${part}${MarkovConstants.End}`);
+            });
     };
 
     this.clean = (token) => {
@@ -30,11 +36,15 @@ function Words() {
         if (!Array.isArray(tokens)) {
             return '';
         }
-        return tokens.map(token => {
-            // token is an array like ["<", "w", "o", "r", "d", ">"]
-            // Remove first and last (Start/End markers) and join (words mode uses character-level keys)
-            return token.slice(1, -1).join('');
-        }).join(' ');
+        return tokens
+            .map(token => {
+                // token is an array like ["<", "w", "o", "r", "d", ">"]
+                // Remove first and last (Start/End markers) and join (words mode uses character-level keys)
+                return token.slice(1, -1).join('');
+            })
+            .join(' ')
+            // Remove spaces before punctuation characters
+            .replace(Tokenize.REMOVE_SPACE_BEFORE_PUNCTUATION, '$1');
     };
 }
 

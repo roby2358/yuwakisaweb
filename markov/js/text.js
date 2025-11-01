@@ -11,7 +11,10 @@ function Text() {
         if (!_isValidString(paragraph)) {
             return [];
         }
-        return paragraph.split(/\s+/).filter(token => token.length > 0);
+        return Tokenize.removePairedPunctuation(paragraph)
+            .split(/\s+/)
+            .filter(token => token.length > 0)
+            .flatMap(token => Tokenize.splitTokenOnPunctuation(token));
     };
 
     this.tokenize = (text) => {
@@ -42,7 +45,9 @@ function Text() {
                 return token.slice(1, -1).join(' ');
             })
             .filter(token => token.length > 0)
-            .join(' ');
+            .join(' ')
+            // Remove spaces before punctuation characters
+            .replace(Tokenize.REMOVE_SPACE_BEFORE_PUNCTUATION, '$1');
     };
 }
 
