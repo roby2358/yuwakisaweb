@@ -46,7 +46,7 @@
             </ul>
             <p>Both modes handle punctuation intelligently. Paired punctuation (quotes, brackets) is removed to avoid pairing errors, while unpaired punctuation (periods, commas, dashes) is properly separated and formatted.</p>
             <p><strong>Differences from vanilla Markov chains:</strong></p>
-            <p>Instead of a fixed n-gram size, this implementation generates all possible prefix-suffix pairs from 1 to N tokens and dynamically selects the best-matching prefix length at each generation step.</p>
+            <p>Instead of a fixed n-gram size, this implementation generates all possible prefix-suffix pairs from 1 to N tokens and randomly selects a prefix length weighted by frequency at each generation step.</p>
             <p>This adaptive approach better captures patterns at multiple scales.</p>
         </div>
     </div>
