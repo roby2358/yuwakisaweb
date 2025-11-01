@@ -39,10 +39,15 @@
         </div>
         
         <div class="panel" id="about-panel">
-            <p>
-                This is a Markov chain text generator. Enter source text and choose how to tokenize it (by characters or words), 
-                then generate new text based on the patterns in your input.
-            </p>
+            <p>This Markov chain text generator offers two modes:</p>
+            <ul>
+                <li><strong>Words mode:</strong> generates individual words character-by-character using adaptive n-grams (1-N tokens).</li>
+                <li><strong>Text mode:</strong> generates flowing paragraphs word-by-word with paragraph-aware boundaries.</li>
+            </ul>
+            <p>Both modes handle punctuation intelligently. Paired punctuation (quotes, brackets) is removed to avoid pairing errors, while unpaired punctuation (periods, commas, dashes) is properly separated and formatted.</p>
+            <p><strong>Differences from vanilla Markov chains:</strong></p>
+            <p>Instead of a fixed n-gram size, this implementation generates all possible prefix-suffix pairs from 1 to N tokens and dynamically selects the best-matching prefix length at each generation step.</p>
+            <p>This adaptive approach better captures patterns at multiple scales.</p>
         </div>
     </div>
     
