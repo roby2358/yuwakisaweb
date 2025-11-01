@@ -170,3 +170,22 @@ textarea[readonly] {
     cursor: default;
 }
 
+#about-panel {
+    overflow-y: auto;
+}
+
+#about-panel p {
+    margin-bottom: 1em;
+    line-height: 1.6;
+}
+
+#about-panel ul {
+    margin: 1em 0;
+    padding-left: 2em;
+    line-height: 1.6;
+}
+
+#about-panel li {
+    margin-bottom: 0.5em;
+}
+
