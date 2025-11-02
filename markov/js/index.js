@@ -1,12 +1,19 @@
 const wordsTokenizer = new Words();
 const textTokenizer = new Text();
+const gptTokenizerInstance = new Gpt();
 const ngramLength = 3;
 
 /**
  * Gets the appropriate tokenizer based on mode
  */
 function getTokenizer(mode) {
-    return mode === 'characters' ? wordsTokenizer : textTokenizer;
+    if (mode === 'characters') {
+        return wordsTokenizer;
+    } else if (mode === 'gpt') {
+        return gptTokenizerInstance;
+    } else {
+        return textTokenizer;
+    }
 }
 
 $(document).ready(function() {
@@ -60,6 +67,23 @@ $(document).ready(function() {
         
         // Tokenize the source text
         const tokenizer = getTokenizer(tokenizationMode);
+        
+        // Check if GPT tokenizer library is available when GPT mode is selected
+        // Note: ES modules load asynchronously, so it might not be ready immediately
+        if (tokenizationMode === 'gpt') {
+            // Check window.gptTokenizer directly since it's set by the ES module script
+            const gptTokenLib = typeof window !== 'undefined' ? window.gptTokenizer : gptTokenizer;
+            if (!gptTokenLib || !gptTokenLib.encode || typeof gptTokenLib.encode !== 'function') {
+                showMessage('GPT tokenizer library not loaded yet. Please wait a moment and try again, or check browser console.', 'error');
+                console.error('gptTokenizer state:', {
+                    windowGptTokenizer: typeof window !== 'undefined' ? window.gptTokenizer : 'N/A',
+                    localGptTokenizer: gptTokenizer,
+                    hasWindow: typeof window !== 'undefined'
+                });
+                return;
+            }
+        }
+        
         const tokens = tokenizer.tokenize(sourceText);
         
         if (tokens.length === 0) {

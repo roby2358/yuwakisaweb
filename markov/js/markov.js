@@ -63,8 +63,7 @@ function Markov(tokens, maxN) {
         tokens.forEach(group => {
             ngramPairs(group, addLink);
         });
-        // output links as formatted JSON
-        console.log(JSON.stringify(this.links, null, 2));
+        // console.log(JSON.stringify(this.links, null, 2));
         return this;
     };
     

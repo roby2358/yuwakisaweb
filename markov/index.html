@@ -25,6 +25,10 @@
                     <input type="radio" name="tokenization" value="words">
                     <span>text</span>
                 </label>
+                <label class="radio-label">
+                    <input type="radio" name="tokenization" value="gpt">
+                    <span>gpt</span>
+                </label>
             </div>
             <button class="action-button" id="calculate-btn">calculate</button>
             <textarea id="source-text" placeholder="Enter source text here..." autocomplete="off"></textarea>
@@ -39,12 +43,13 @@
         </div>
         
         <div class="panel" id="about-panel">
-            <p>This Markov chain text generator offers two modes:</p>
+            <p>This Markov chain text generator offers three modes:</p>
             <ul>
                 <li><strong>Words mode:</strong> generates individual words character-by-character using adaptive n-grams (1-N tokens).</li>
                 <li><strong>Text mode:</strong> generates flowing paragraphs word-by-word with paragraph-aware boundaries.</li>
+                <li><strong>GPT mode:</strong> generates text using GPT tokenizer (BPE tokens) with token-level n-grams.</li>
             </ul>
-            <p>Both modes handle punctuation intelligently. Paired punctuation (quotes, brackets) is removed to avoid pairing errors, while unpaired punctuation (periods, commas, dashes) is properly separated and formatted.</p>
+            <p>Words and Text modes handle punctuation intelligently. Paired punctuation (quotes, brackets) is removed to avoid pairing errors, while unpaired punctuation (periods, commas, dashes) is properly separated and formatted. GPT mode uses the tokenizer's built-in punctuation handling.</p>
             <p><strong>Differences from vanilla Markov chains:</strong></p>
             <p>Instead of a fixed n-gram size, this implementation generates all possible prefix-suffix pairs from 1 to N tokens and randomly selects a prefix length weighted by frequency at each generation step.</p>
             <p>This adaptive approach better captures patterns at multiple scales.</p>
@@ -52,11 +57,47 @@
     </div>
     
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://unpkg.com/gpt-tokenizer@2.1.2/dist/cl100k_base.js"></script>
+    <script>
+        (function initialiseGptTokenizer() {
+            if (typeof GPTTokenizer_cl100k_base === 'undefined') {
+                console.error('GPT tokenizer script failed to load. GPT mode will be unavailable.');
+                return;
+            }
+
+            const tokenizerModule = GPTTokenizer_cl100k_base;
+            if (!tokenizerModule || typeof tokenizerModule.encode !== 'function' || typeof tokenizerModule.decode !== 'function') {
+                console.error('GPT tokenizer module did not expose encode/decode functions.');
+                return;
+            }
+
+            window.gptTokenizer = {
+                encode: (text) => {
+                    try {
+                        return tokenizerModule.encode(text);
+                    } catch (error) {
+                        console.error('GPT encode error:', error);
+                        return [];
+                    }
+                },
+                decode: (tokenIds) => {
+                    try {
+                        return tokenizerModule.decode(tokenIds);
+                    } catch (error) {
+                        console.error('GPT decode error:', error);
+                        return '';
+                    }
+                }
+            };
+
+            console.log('GPT tokenizer initialized via gpt-tokenizer cl100k_base bundle.');
+        })();
+    </script>
     <script src="js/markov.js"></script>
     <script src="js/tokenize.js"></script>
     <script src="js/words.js"></script>
     <script src="js/text.js"></script>
+    <script src="js/gpt.js"></script>
     <script src="js/index.js"></script>
 </body>
 </html>
-
