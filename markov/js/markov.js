@@ -25,7 +25,7 @@ function Markov(tokens, maxN) {
      * Generates all possible n-gram pairs from a group and invokes callback for each
      */
     const ngramPairs = (group, callback) => {
-        console.log("ngramPairs", group);
+        // console.log("ngramPairs", group);
 
         for (let prefixLength = 1; prefixLength <= Math.min(maxN, group.length - 1); prefixLength++) {
             for (let suffixLength = 1; suffixLength <= Math.min(maxN, group.length - prefixLength); suffixLength++) {
@@ -63,7 +63,7 @@ function Markov(tokens, maxN) {
         tokens.forEach(group => {
             ngramPairs(group, addLink);
         });
-        // console.log(JSON.stringify(this.links, null, 2));
+        console.log(JSON.stringify(this.links, null, 2));
         return this;
     };
     
