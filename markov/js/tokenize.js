@@ -3,10 +3,10 @@
  */
 const Tokenize = {
     // Punctuation chars that should be separated (individual tokens)
-    // Includes: .,;:— (unpaired punctuation only)
+    // Includes: .,;:—?! (unpaired punctuation only)
     // Note: straight single quote ' is NOT in punctuation so it stays with words (e.g., "It's")
     // Note: paired punctuation "()[]''"" are removed first, before tokenization
-    PUNCTUATION_CHARS: /([.,;:—])/,
+    PUNCTUATION_CHARS: /([.,;:—?!])/,
     
     // Dash sequences (--+) should be kept together
     DASH_SEQUENCE: /(--+)/,
@@ -16,7 +16,7 @@ const Tokenize = {
     PAIRED_PUNCTUATION: /["()\[\]\u2018\u2019\u201C\u201D]/g,
     
     // Remove spaces before punctuation characters in formatted output
-    REMOVE_SPACE_BEFORE_PUNCTUATION: / +([.,;:—])/g,
+    REMOVE_SPACE_BEFORE_PUNCTUATION: / +([.,;:—?!])/g,
     
     /**
      * Splits a token (word or part of word) into parts, separating punctuation

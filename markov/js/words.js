@@ -21,7 +21,8 @@ function Words() {
                 // Split token into parts (words and punctuation)
                 const parts = Tokenize.splitTokenOnPunctuation(token);
                 // Each part becomes a separate word wrapped with Start/End markers
-                return parts.map(part => `${MarkovConstants.Start}${part}${MarkovConstants.End}`);
+                // Return as array of arrays: [["<", "w", "o", "r", "d", ">"], ...]
+                return parts.map(part => [MarkovConstants.Start, ...part.split(''), MarkovConstants.End]);
             });
     };
 

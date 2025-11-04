@@ -99,6 +99,14 @@ $(document).ready(function() {
         showMessage('Markov chain calculated successfully!', 'success');
     });
     
+    // No newlines button handler
+    $('#no-newlines-btn').on('click', function() {
+        const sourceText = $('#source-text').val();
+        const processedText = sourceText.replace(/\n+/g, ' ');
+        $('#source-text').val(processedText);
+        showMessage('Newlines replaced with spaces.', 'success');
+    });
+    
     // Generate button handler
     $('#generate-btn').on('click', function() {
         if (!markov) {
@@ -110,7 +118,7 @@ $(document).ready(function() {
         const tokenizationMode = $('input[name="tokenization"]:checked').val();
         const tokenizer = getTokenizer(tokenizationMode);
         
-        const generatedTokens = markov.generateMultiple(outputLength);
+        const generatedTokens = markov.generateTokens(outputLength);
         const generatedText = tokenizer.format(generatedTokens);
         
         $('#generated-text').val(generatedText);
