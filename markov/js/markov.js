@@ -25,14 +25,11 @@ function Markov(tokens, maxN) {
      * Generates all possible n-gram pairs from a group and invokes callback for each
      */
     const ngramPairs = (group, callback) => {
-        // console.log("ngramPairs", group);
-
         for (let prefixLength = 1; prefixLength <= Math.min(maxN, group.length - 1); prefixLength++) {
             for (let suffixLength = 1; suffixLength <= Math.min(maxN, group.length - prefixLength); suffixLength++) {
                 for (let startIndex = 0; startIndex <= group.length - prefixLength - suffixLength; startIndex++) {
                     const prefix = group.slice(startIndex, startIndex + prefixLength);
                     const suffix = group.slice(startIndex + prefixLength, startIndex + prefixLength + suffixLength);
-                    // console.log(prefix, '|', suffix)
                     callback(toKey(prefix), toKey(suffix));
                 }
             }
@@ -64,6 +61,8 @@ function Markov(tokens, maxN) {
             ngramPairs(group, addLink);
         });
         console.log(JSON.stringify(this.links, null, 2));
+        console.log("startIndex");
+        console.log(JSON.stringify(this.links[MarkovConstants.Start], null, 2));
         return this;
     };
     
@@ -104,7 +103,6 @@ function Markov(tokens, maxN) {
         }
         
         const token = weightedChoices[weightedChoices.length - 1][0]
-        console.log("token", token);
         return token;
     };
     
