@@ -35,24 +35,62 @@ $(document).ready(function() {
         }
     }
     
-    // Tab switching functionality
-    $('.tab').on('click', function() {
-        const targetTab = $(this).data('tab');
-        
-        // Update tab states
+    function handleTabClick(event) {
+        const $tab = $(event.currentTarget);
+        const targetTab = $tab.data('tab');
+
+        if (!targetTab) {
+            return;
+        }
+
         $('.tab').removeClass('active');
-        $(this).addClass('active');
-        
-        // Update panel states
+        $tab.addClass('active');
+
         $('.panel').removeClass('active');
         if (targetTab === 'source') {
             $('#source-panel').addClass('active');
-        } else if (targetTab === 'generated') {
+            return;
+        }
+
+        if (targetTab === 'generated') {
             $('#generated-panel').addClass('active');
-        } else if (targetTab === 'about') {
+            return;
+        }
+
+        if (targetTab === 'about') {
             $('#about-panel').addClass('active');
         }
-    });
+    }
+    
+    function handleNoNewlines() {
+        const sourceText = $('#source-text').val();
+        const processedText = sourceText.replace(/\n+/g, ' ');
+        $('#source-text').val(processedText);
+        showMessage('Newlines replaced with spaces.', 'success');
+    }
+
+    function handleTweets() {
+        const sourceText = $('#source-text').val();
+        if (!sourceText.trim()) {
+            showMessage('Please enter source text first.', 'error');
+            return;
+        }
+
+        const cleanedText = extractTweetBodies(sourceText);
+        if (!cleanedText.trim()) {
+            showMessage('No tweet text detected after cleaning.', 'error');
+            return;
+        }
+
+        $('#source-text').val(cleanedText);
+        showMessage('Tweet metadata removed.', 'success');
+    }
+
+    $('.tab').on('click', handleTabClick);
+
+    $('#no-newlines-btn').on('click', handleNoNewlines);
+
+    $('#tweets-btn').on('click', handleTweets);
     
     // Calculate button handler
     $('#calculate-btn').on('click', function() {
@@ -97,14 +135,6 @@ $(document).ready(function() {
         
         console.log('Markov chain built with ' + tokens.length + ' tokens');
         showMessage('Markov chain calculated successfully!', 'success');
-    });
-    
-    // No newlines button handler
-    $('#no-newlines-btn').on('click', function() {
-        const sourceText = $('#source-text').val();
-        const processedText = sourceText.replace(/\n+/g, ' ');
-        $('#source-text').val(processedText);
-        showMessage('Newlines replaced with spaces.', 'success');
     });
     
     // Generate button handler
