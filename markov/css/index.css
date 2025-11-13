@@ -90,6 +90,13 @@ body {
     margin-bottom: 15px;
 }
 
+.source-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
 .generate-controls {
     display: flex;
     gap: 10px;
