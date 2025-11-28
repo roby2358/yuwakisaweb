@@ -31,6 +31,7 @@ const restartBtn = document.getElementById('restart-btn');
 const timerBarEl = document.getElementById('timer-bar');
 const overlayEl = document.getElementById('overlay');
 const overlayTitleEl = document.getElementById('overlay-title');
+const overlayScoreEl = document.getElementById('overlay-score');
 const overlayBtn = document.getElementById('overlay-btn');
 
 // Timer State
@@ -39,12 +40,28 @@ let timerInterval = null;
 let spawnInterval = null;
 
 // Overlay Logic
-function showOverlay(title, btnText, callback) {
+function showOverlay(title, btnText, callback, score = null, bonusText = null) {
     overlayTitleEl.textContent = title;
     overlayBtn.textContent = btnText;
     overlayBtn.onclick = () => {
         callback();
     };
+    
+    // Display score if provided
+    if (score !== null) {
+        let scoreText = '';
+        if (bonusText) {
+            scoreText = `${bonusText}\nScore: ${score}`;
+        } else {
+            scoreText = `Score: ${score}`;
+        }
+        overlayScoreEl.textContent = scoreText;
+        overlayScoreEl.style.display = 'block';
+    } else {
+        overlayScoreEl.textContent = '';
+        overlayScoreEl.style.display = 'none';
+    }
+    
     overlayEl.classList.remove('hidden');
 }
 
@@ -87,10 +104,15 @@ function restartGame() {
     STATE.score = 0;
     STATE.isPlaying = false;
     updateScoreDisplay();
+    
+    // Clear any running intervals
+    if (timerInterval) clearInterval(timerInterval);
+    if (spawnInterval) clearInterval(spawnInterval);
+    
     generateGrid();
     renderBoard();
 
-    // Reset Timer Visual
+    // Reset Timer Visual (fill it and pause)
     resetTimer();
 
     // Show Start Overlay
@@ -143,7 +165,7 @@ function gameOver() {
     STATE.isPlaying = false;
     clearInterval(timerInterval);
     clearInterval(spawnInterval);
-    showOverlay('Game Over', 'Try Again', restartGame);
+    showOverlay('Game Over', 'Try Again', restartGame, STATE.score);
 }
 
 function checkWinCondition() {
@@ -155,7 +177,7 @@ function checkWinCondition() {
         clearInterval(spawnInterval);
         STATE.score += 100;
         updateScoreDisplay();
-        showOverlay('You Win!', 'Play Again', restartGame);
+        showOverlay('You Win!', 'Play Again', restartGame, STATE.score, 'Score +100');
     }
 }
 

@@ -258,6 +258,15 @@ button:active {
     text-transform: uppercase;
 }
 
+.overlay-score {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin: 10px 0;
+    white-space: pre-line;
+    text-align: center;
+}
+
 #overlay-btn {
     font-size: 1.5rem;
     padding: 15px 40px;
