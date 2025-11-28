@@ -132,6 +132,17 @@ h1 {
     z-index: 20;
 }
 
+.tile.word-claimable {
+    background-color: rgba(56, 189, 248, 0.3);
+    border: 2px solid var(--accent-color);
+    cursor: pointer;
+}
+
+.tile.word-claimable:hover {
+    background-color: rgba(56, 189, 248, 0.5);
+    transform: scale(1.02);
+}
+
 .tile-letter {
     width: var(--cell-size);
     height: var(--cell-size);

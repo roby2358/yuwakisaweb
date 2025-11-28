@@ -7,13 +7,6 @@ const CELL_SIZE = 30; // Matches CSS
 const GAP_SIZE = 1;
 const WIN_SCORE = 500;
 
-// Tile generation probabilities
-const TILE_PROBABILITIES = {
-    1: 0.7,
-    2: 0.8,
-    3: 1.0
-};
-
 // ============================================================================
 // GAME STATE
 // ============================================================================
@@ -26,7 +19,8 @@ let dragOffsetX = 0;
 let dragOffsetY = 0;
 let dragStartParent = null; // 'board' or 'tray'
 let dragStartIdx = -1; // index in tray or {r, c} for board
-let piecesByLength = { 1: [], 2: [], 3: [] };
+let pieceCumulativeFrequencies = []; // Array of {piece, cumulativeFreq} for random selection
+let wordTilesMap = new Map(); // Map of tile ID to array of word info objects {word, points, tiles}
 
 // ============================================================================
 // DOM ELEMENTS
@@ -51,7 +45,7 @@ const wordListEl = document.getElementById('word-list');
 function init() {
     if (!validateDictionaryLoaded()) return;
 
-    categorizePieces();
+    initializePieceFrequencies();
     createGrid();
     setupEventListeners();
     showReadyScreen();
@@ -66,11 +60,14 @@ function validateDictionaryLoaded() {
     return true;
 }
 
-function categorizePieces() {
-    PIECES.forEach(piece => {
-        if (piece.length >= 1 && piece.length <= 3) {
-            piecesByLength[piece.length].push(piece);
-        }
+function initializePieceFrequencies() {
+    const pieces = Object.entries(PIECES);
+    
+    // Calculate cumulative frequencies
+    let cumulative = 0;
+    pieceCumulativeFrequencies = pieces.map(([piece, frequency]) => {
+        cumulative += frequency;
+        return { piece, cumulativeFreq: cumulative };
     });
 }
 
@@ -200,21 +197,25 @@ function restartGame() {
 // TILE GENERATION & MANAGEMENT
 // ============================================================================
 function generateTile() {
-    const tileLength = selectTileLength();
-    const letters = selectRandomPiece(tileLength);
-
+    const letters = selectRandomPieceByFrequency();
     return createTileObject(letters);
 }
 
-function selectTileLength() {
-    const rand = Math.random();
-    return [1, 2, 3].find(length => rand < TILE_PROBABILITIES[length]) || 1
-}
-
-function selectRandomPiece(length) {
-    const list = piecesByLength[length];
-    if (!list || list.length === 0) return "A";
-    return list[Math.floor(Math.random() * list.length)];
+function selectRandomPieceByFrequency() {
+    if (pieceCumulativeFrequencies.length === 0) return "A";
+    
+    const maxFreq = pieceCumulativeFrequencies[pieceCumulativeFrequencies.length - 1].cumulativeFreq;
+    const rand = Math.random() * maxFreq;
+    
+    // Iterate through to find the frequency score that corresponds to the random number
+    for (const entry of pieceCumulativeFrequencies) {
+        if (rand <= entry.cumulativeFreq) {
+            return entry.piece;
+        }
+    }
+    
+    // Fallback to last piece if somehow we didn't find one
+    return pieceCumulativeFrequencies[pieceCumulativeFrequencies.length - 1].piece;
 }
 
 function createTileObject(letters) {
@@ -340,6 +341,9 @@ function onDragStart(e, tile) {
     e.stopPropagation();
     e.preventDefault();
     
+    dragStartTime = Date.now();
+    dragStartPosition = { x: e.clientX, y: e.clientY };
+    
     isDragging = true;
     draggingTile = tile;
     originalTileElement = e.currentTarget;
@@ -377,6 +381,7 @@ function onDragStart(e, tile) {
     document.addEventListener('mouseup', mouseUpHandler);
 }
 
+
 function createDragGhost(tile) {
     dragGhost = createTileElement(tile);
     dragGhost.id = 'dragging-ghost';
@@ -391,10 +396,14 @@ function createDragGhost(tile) {
 function handleDragMove(e) {
     if (!isDragging || !dragGhost || !draggingTile) return;
     
-    dragGhost.style.left = `${e.clientX - dragOffsetX}px`;
-    dragGhost.style.top = `${e.clientY - dragOffsetY}px`;
+    const moved = Math.abs(e.clientX - dragStartPosition.x) > 3 || 
+                  Math.abs(e.clientY - dragStartPosition.y) > 3;
     
-    updateGridHighlights(e.clientX, e.clientY);
+    if (moved) {
+        dragGhost.style.left = `${e.clientX - dragOffsetX}px`;
+        dragGhost.style.top = `${e.clientY - dragOffsetY}px`;
+        updateGridHighlights(e.clientX, e.clientY);
+    }
 }
 
 function updateGridHighlights(mouseX, mouseY) {
@@ -445,7 +454,31 @@ function clearGridHighlights() {
 function handleDragEnd(e) {
     if (!isDragging || !draggingTile) return;
     
+    const dragDistance = Math.sqrt(
+        Math.pow(e.clientX - dragStartPosition.x, 2) + 
+        Math.pow(e.clientY - dragStartPosition.y, 2)
+    );
+    
     clearGridHighlights();
+    
+    // If we didn't move much, treat as a click (to claim word if claimable)
+    if (dragDistance < 5 && dragStartParent === 'board') {
+        if (wordTilesMap.has(draggingTile.id)) {
+            if (dragGhost) {
+                dragGhost.remove();
+                dragGhost = null;
+            }
+            revertDrag();
+            claimWord(draggingTile.id);
+            if (originalTileElement) {
+                originalTileElement.style.opacity = '1';
+                originalTileElement = null;
+            }
+            draggingTile = null;
+            isDragging = false;
+            return;
+        }
+    }
     
     let dropped = false;
     
@@ -504,7 +537,7 @@ function attemptDrop(mouseX, mouseY) {
             fillTray();
         }
         
-        checkAndScore(draggingTile);
+        checkAndHighlightWords();
         return true;
     }
     
@@ -534,6 +567,7 @@ function revertDrag() {
 function refreshUI() {
     renderTray();
     renderBoard();
+    checkAndHighlightWords();
 }
 
 // ============================================================================
@@ -806,20 +840,138 @@ function isWord(str) {
 }
 
 // ============================================================================
-// SCORING
+// WORD DETECTION AND CLAIMING
 // ============================================================================
-function checkAndScore(tile) {
-    const result = findAllWords(tile);
+function checkAndHighlightWords() {
+    // Clear previous word highlights
+    clearWordHighlights();
+    wordTilesMap.clear();
+    
+    // Find all valid words on the board
+    const allWords = findAllWordsOnBoard();
+    
+    // Mark tiles as part of valid words
+    allWords.forEach(wordInfo => {
+        wordInfo.tiles.forEach(tile => {
+            if (!wordTilesMap.has(tile.id)) {
+                wordTilesMap.set(tile.id, []);
+            }
+            wordTilesMap.get(tile.id).push(wordInfo);
+        });
+    });
+    
+    // Highlight tiles that are part of valid words
+    highlightWordTiles();
+}
 
-    if (result.wordsFound > 0) {
-        updateScore(score + result.points);
-        removeMatchedTiles(result.tilesToRemove);
-        renderBoard();
-        
-        result.words.forEach(w => addWordToList(w.word, w.points));
-        
-        checkWinCondition();
+function findAllWordsOnBoard() {
+    const foundWords = [];
+    const processedWordKeys = new Set();
+    const getTileAt = createTileGetter();
+    
+    // Check each row for horizontal words - only check starting positions
+    for (let r = 0; r < BOARD_SIZE; r++) {
+        let c = 0;
+        while (c < BOARD_SIZE) {
+            if (board[r][c]) {
+                // Check if this is the start of a word (no tile to the left)
+                if (c === 0 || !board[r][c - 1]) {
+                    const wordResult = extractHorizontalWordWithTiles(
+                        { type: 'H', r: r, cStart: c, cEnd: BOARD_SIZE - 1 },
+                        getTileAt
+                    );
+                    if (wordResult.word.length >= 3 && isWord(wordResult.word)) {
+                        const wordKey = `H-${r}-${wordResult.word}`;
+                        if (!processedWordKeys.has(wordKey)) {
+                            processedWordKeys.add(wordKey);
+                            foundWords.push({
+                                word: wordResult.word,
+                                points: calculateWordScore(wordResult.word.length),
+                                tiles: wordResult.tiles
+                            });
+                        }
+                    }
+                }
+                // Move to next potential word start
+                const tile = board[r][c];
+                c += tile.letters.length;
+            } else {
+                c++;
+            }
+        }
     }
+    
+    // Check each column for vertical words - only check starting positions
+    for (let c = 0; c < BOARD_SIZE; c++) {
+        let r = 0;
+        while (r < BOARD_SIZE) {
+            if (board[r][c]) {
+                // Check if this is the start of a word (no tile above)
+                if (r === 0 || !board[r - 1][c]) {
+                    const wordResult = extractVerticalWordWithTiles(
+                        { type: 'V', c: c, rStart: r, rEnd: BOARD_SIZE - 1 },
+                        getTileAt
+                    );
+                    if (wordResult.word.length >= 3 && isWord(wordResult.word)) {
+                        const wordKey = `V-${c}-${wordResult.word}`;
+                        if (!processedWordKeys.has(wordKey)) {
+                            processedWordKeys.add(wordKey);
+                            foundWords.push({
+                                word: wordResult.word,
+                                points: calculateWordScore(wordResult.word.length),
+                                tiles: wordResult.tiles
+                            });
+                        }
+                    }
+                }
+                // Move to next potential word start
+                r++;
+            } else {
+                r++;
+            }
+        }
+    }
+    
+    return foundWords;
+}
+
+function highlightWordTiles() {
+    wordTilesMap.forEach((wordInfos, tileId) => {
+        const tileElement = document.querySelector(`[data-id="${tileId}"]`);
+        if (tileElement) {
+            tileElement.classList.add('word-claimable');
+            tileElement.style.cursor = 'pointer';
+        }
+    });
+}
+
+function clearWordHighlights() {
+    document.querySelectorAll('.tile.word-claimable').forEach(tile => {
+        tile.classList.remove('word-claimable');
+        tile.style.cursor = 'grab';
+    });
+}
+
+function claimWord(tileId) {
+    const wordInfos = wordTilesMap.get(tileId);
+    if (!wordInfos || wordInfos.length === 0) return;
+    
+    // Claim the first word this tile is part of
+    const wordInfo = wordInfos[0];
+    
+    // Score the word
+    updateScore(score + wordInfo.points);
+    addWordToList(wordInfo.word, wordInfo.points);
+    
+    // Remove all tiles in the word
+    const tilesToRemove = new Set(wordInfo.tiles);
+    removeMatchedTiles(tilesToRemove);
+    
+    // Re-check for remaining words
+    checkAndHighlightWords();
+    renderBoard();
+    
+    checkWinCondition();
 }
 
 function addWordToList(word, points) {
@@ -862,9 +1014,14 @@ function createTileGetter() {
 }
 
 function checkLineForWord(line, getTileAt) {
+    // Extract the FULL contiguous sequence of tiles in this line
     const { word, tiles } = extractWordWithTiles(line, getTileAt);
 
-    if (word.length > 1 && isWord(word)) {
+    // Validate that the complete sequence forms a valid word
+    // Example: [CA][T][X] = "CATX" -> invalid, not claimable
+    // Example: [CA][T][S] = "CATS" -> valid, claimable
+    // Must be at least 3 letters and must be an exact match in dictionary
+    if (word.length >= 3 && isWord(word)) {
         return {
             found: true,
             word: word,
@@ -885,15 +1042,17 @@ function extractWordWithTiles(line, getTileAt) {
 }
 
 function extractHorizontalWordWithTiles(line, getTileAt) {
+    // Find the start of the contiguous tile sequence
     let cc = line.cStart;
     while (cc > 0 && getTileAt(line.r, cc - 1)) cc--;
 
+    // Extract the FULL sequence of consecutive tiles
     let word = "";
     let tiles = [];
 
     while (cc < BOARD_SIZE) {
         const tile = getTileAt(line.r, cc);
-        if (!tile) break;
+        if (!tile) break; // Stop at first gap
 
         // All tiles are horizontal
         const letter = tile.letters[cc - tile.col];
@@ -903,19 +1062,22 @@ function extractHorizontalWordWithTiles(line, getTileAt) {
         cc++;
     }
 
+    // Returns the complete word formed by the full sequence of tiles
     return { word, tiles };
 }
 
 function extractVerticalWordWithTiles(line, getTileAt) {
+    // Find the start of the contiguous tile sequence
     let rr = line.rStart;
     while (rr > 0 && getTileAt(rr - 1, line.c)) rr--;
 
+    // Extract the FULL sequence of consecutive tiles
     let word = "";
     let tiles = [];
 
     while (rr < BOARD_SIZE) {
         const tile = getTileAt(rr, line.c);
-        if (!tile) break;
+        if (!tile) break; // Stop at first gap
 
         // All tiles are horizontal
         const letter = tile.letters[line.c - tile.col];
@@ -925,6 +1087,7 @@ function extractVerticalWordWithTiles(line, getTileAt) {
         rr++;
     }
 
+    // Returns the complete word formed by the full sequence of tiles
     return { word, tiles };
 }
 

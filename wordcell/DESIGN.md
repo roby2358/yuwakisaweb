@@ -13,9 +13,10 @@ Along the bottom of the grid is a tray with 5 tiles of the same type.
 ## Game Play
 The player may drag a tile from the tray to the playing area.
 The player may drag a tile from one position in the playing area to another.
-If when placing a tile, all the combined tiles in the same direction make a valid word from the game's dictionary, all the connected tiles are removed from the board.
+If when placing a tile, all the combined tiles in the same direction make a valid word from the game's dictionary, those tiles change color to indicate a valid word has been formed.
 A sequence of tiles must make a word exactly, not a subset of a word, or the tiles form a subset.
-When the player makes a word,they score 1 point for each letter to the e power (length ^ e) truncated to the integer.
+The player may click on any tile that is part of a valid word to claim that word, which removes all tiles in that word from the board and awards points.
+When the player claims a word, they score 1 point for each letter to the e power (length ^ e) truncated to the integer.
 
 ## Player Actions
 The player has three actions they can perform at any time:
