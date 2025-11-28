@@ -317,7 +317,10 @@ function handleDragStart(e, brick) {
         initialTop: parseFloat(brick.el.style.top),
         offsetX: clientX - rect.left,
         offsetY: clientY - rect.top,
-        boardRect: boardEl.getBoundingClientRect()
+        boardRect: boardEl.getBoundingClientRect(),
+        direction: null, // Will be determined on first move
+        lastX: clientX,
+        lastY: clientY
     };
 
     brick.el.classList.add('dragging');
@@ -332,13 +335,53 @@ function handleDragMove(e) {
     const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
     const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
 
-    // Calculate new position relative to board
-    let newLeft = clientX - dragData.boardRect.left - dragData.offsetX;
-    let newTop = clientY - dragData.boardRect.top - dragData.offsetY;
+    // Calculate movement from start
+    const deltaX = clientX - dragData.startX;
+    const deltaY = clientY - dragData.startY;
+
+    // Determine direction on first significant movement
+    if (dragData.direction === null) {
+        const absDeltaX = Math.abs(deltaX);
+        const absDeltaY = Math.abs(deltaY);
+        
+        // Need minimum threshold to determine direction
+        if (absDeltaX > 10 || absDeltaY > 10) {
+            dragData.direction = absDeltaX > absDeltaY ? 'horizontal' : 'vertical';
+        } else {
+            // Not enough movement yet, keep brick at original position
+            return;
+        }
+    }
+
+    // Calculate movement along the determined direction
+    let slideDistance = 0;
+    if (dragData.direction === 'horizontal') {
+        slideDistance = deltaX;
+    } else {
+        slideDistance = deltaY;
+    }
+
+    // Convert slide distance to grid-aligned position
+    const cellSize = CONFIG.cellSize;
+    const gridOffset = Math.round(slideDistance / cellSize);
+    
+    // Calculate new grid-aligned position
+    let newLeft = dragData.initialLeft;
+    let newTop = dragData.initialTop;
+    
+    if (dragData.direction === 'horizontal') {
+        newLeft = dragData.initialLeft + (gridOffset * cellSize);
+    } else {
+        newTop = dragData.initialTop + (gridOffset * cellSize);
+    }
 
     // Visual update only (snap logic happens on end)
     dragData.brick.el.style.left = `${newLeft}px`;
     dragData.brick.el.style.top = `${newTop}px`;
+    
+    // Update last position for tracking
+    dragData.lastX = clientX;
+    dragData.lastY = clientY;
 }
 
 function handleDragEnd(e) {
