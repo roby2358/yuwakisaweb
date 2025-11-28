@@ -20,7 +20,8 @@ const CONFIG = {
 const STATE = {
     score: 0,
     grid: [], // 2D array: null or brick object
-    bricks: [] // List of active brick objects
+    bricks: [], // List of active brick objects
+    isPlaying: false
 };
 
 // DOM Elements
@@ -28,11 +29,35 @@ const boardEl = document.getElementById('game-board');
 const scoreEl = document.getElementById('score-value');
 const restartBtn = document.getElementById('restart-btn');
 const timerBarEl = document.getElementById('timer-bar');
+const overlayEl = document.getElementById('overlay');
+const overlayTitleEl = document.getElementById('overlay-title');
+const overlayBtn = document.getElementById('overlay-btn');
 
 // Timer State
 let timerValue = 12; // seconds
 let timerInterval = null;
 let spawnInterval = null;
+
+// Overlay Logic
+function showOverlay(title, btnText, callback) {
+    overlayTitleEl.textContent = title;
+    overlayBtn.textContent = btnText;
+    overlayBtn.onclick = () => {
+        callback();
+    };
+    overlayEl.classList.remove('hidden');
+}
+
+function hideOverlay() {
+    overlayEl.classList.add('hidden');
+}
+
+function startGame() {
+    hideOverlay();
+    STATE.isPlaying = true;
+    startTimer();
+    startSpawningLoop();
+}
 
 // Initialize Game
 function init() {
@@ -57,15 +82,16 @@ function init() {
 
 function restartGame() {
     STATE.score = 0;
+    STATE.isPlaying = false;
     updateScoreDisplay();
     generateGrid();
     renderBoard();
 
-    // Restart spawning loop
-    startSpawningLoop();
+    // Reset Timer Visual
+    resetTimer();
 
-    // Restart Timer
-    startTimer();
+    // Show Start Overlay
+    showOverlay('Ready?', 'Go', startGame);
 }
 
 function startSpawningLoop() {
@@ -111,20 +137,22 @@ function updateTimerVisual() {
 }
 
 function gameOver() {
+    STATE.isPlaying = false;
     clearInterval(timerInterval);
     clearInterval(spawnInterval);
-    alert(`Game Over! Time's up. Final Score: ${STATE.score}`);
+    showOverlay('Game Over', 'Try Again', restartGame);
 }
 
 function checkWinCondition() {
     // Check if any colored bricks remain (ignore white and black)
     const coloredBricks = STATE.bricks.filter(b => b.color.name !== 'white' && b.color.name !== 'black');
     if (coloredBricks.length === 0) {
+        STATE.isPlaying = false;
         clearInterval(timerInterval);
         clearInterval(spawnInterval);
         STATE.score += 100;
         updateScoreDisplay();
-        alert(`YOU WIN! All colored bricks cleared! Final Score: ${STATE.score}`);
+        showOverlay('You Win!', 'Play Again', restartGame);
     }
 }
 
@@ -298,6 +326,8 @@ let dragData = null;
 
 function handleDragStart(e, brick) {
     e.preventDefault(); // Prevent text selection etc.
+
+    if (!STATE.isPlaying) return;
 
     const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
     const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;

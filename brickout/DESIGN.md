@@ -19,17 +19,22 @@ Brickout is a puzzle-strategy game where players clear bricks from a dense grid 
 - **Objective**: Drag bricks off the edge of the board to remove them and score points.
 - **Constraint**: **White bricks cannot be removed.** If dragged off the board, they will snap back to their original position. They serve as obstacles that must be navigated around.
 - **Win Condition**: Clear **ALL colored bricks** from the board to Win! (+100 Points). Black and White bricks do not need to be cleared.
+- **UI**: A "You Win!" overlay appears.
 
 ### Spawning
 - **Regeneration**: The board never runs out of bricks.
-- **Timer**: Every 6 seconds, the game scans for available space.
+- **Timer**: Every 6 seconds (while game is active), the game scans for available space.
 - **New Bricks**: If space is found, a new random brick is spawned in an empty slot.
 
 ### Game Over (The Clock)
-- **Countdown**: A **12-second timer** runs continuously.
+- **Countdown**: A **12-second timer** runs continuously while the game is active.
 - **Reset**: Removing a brick resets the timer to 12 seconds.
 - **Loss**: If the timer reaches 0, it's **Game Over**.
 - **Visual**: A green bar at the top shows the remaining time.
+
+### Game Flow
+- **Start**: The game begins with a "Game Start" overlay. Clicking "Go" starts the timer and enables dragging.
+- **Pause**: The game is paused (timer stops, dragging disabled) when an overlay is visible.
 
 ## Scoring System
 Bricks are color-coded by value. Higher value bricks are rarer.

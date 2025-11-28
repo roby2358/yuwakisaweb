@@ -541,6 +541,396 @@ button:active {
     background-color: #4CAF50;
     /* Green */
     transition: width 0.1s linear;
+    color: white;
+}
+
+:root {
+    --bg-color: #f8f9fa;
+    --text-color: #2d3436;
+    --board-bg: #e9ecef;
+    --cell-border: #dee2e6;
+    --primary-color: #6c5ce7;
+    --accent-color: #00b894;
+
+    /* Brick Colors */
+    --brick-white: #ffffff;
+    --brick-purple: #a29bfe;
+    --brick-blue: #74b9ff;
+    --brick-green: #55efc4;
+    --brick-yellow: #ffeaa7;
+    --brick-red: #ff7675;
+
+    --brick-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --brick-border-radius: 6px;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Outfit', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+    /* Prevent scrolling while dragging */
+}
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+}
+
+header {
+    display: flex;
+    gap: 30px;
+    align-items: center;
+    width: 100%;
+    justify-content: center;
+}
+
+h1 {
+    font-weight: 800;
+    font-size: 2.5rem;
+    color: var(--primary-color);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.score-container {
+    background: white;
+    padding: 10px 20px;
+    border-radius: 12px;
+    box-shadow: var(--brick-shadow);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+#score-value {
+    color: var(--accent-color);
+    font-weight: 800;
+}
+
+button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s, background-color 0.2s;
+    font-size: 1rem;
+}
+
+button:hover {
+    background-color: #5849be;
+    transform: translateY(-2px);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+.game-board {
+    position: relative;
+    background-color: var(--board-bg);
+    border: 2px solid var(--cell-border);
+    border-radius: 8px;
+    /* Grid layout will be set in JS based on cell size */
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.05);
+    touch-action: none;
+    /* Important for touch dragging */
+}
+
+.cell {
+    position: absolute;
+    border: 1px solid rgba(0, 0, 0, 0.03);
+    /* Debugging aid, maybe remove later for cleaner look */
+}
+
+.brick {
+    position: absolute;
+    border-radius: var(--brick-border-radius);
+    box-shadow: var(--brick-shadow);
+    cursor: grab;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 800;
+    color: rgba(0, 0, 0, 0.4);
+    font-size: 0.8rem;
+    user-select: none;
+    transition: transform 0.1s;
+    z-index: 10;
+}
+
+.brick:active {
+    cursor: grabbing;
+    z-index: 100;
+    transform: scale(1.05);
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+}
+
+.brick.dragging {
+    opacity: 0.9;
+}
+
+/* Brick Colors */
+.brick-white {
+    background-color: var(--brick-white);
+    color: #b2bec3;
+}
+
+.brick-purple {
+    background-color: var(--brick-purple);
+    color: white;
+}
+
+.brick-blue {
+    background-color: var(--brick-blue);
+    color: white;
+}
+
+.brick-green {
+    background-color: var(--brick-green);
+    color: white;
+}
+
+.brick-yellow {
+    background-color: var(--brick-yellow);
+    color: black;
+}
+
+.brick-red {
+    background-color: var(--brick-red);
+    color: white;
+}
+
+/* Timer */
+#timer-container {
+    width: 600px;
+    height: 10px;
+    background-color: #eee;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+#timer-bar {
+    width: 100%;
+    height: 100%;
+    background-color: #4CAF50;
+    /* Green */
+    transition: width 0.1s linear;
+    color: white;
+}
+
+:root {
+    --bg-color: #f8f9fa;
+    --text-color: #2d3436;
+    --board-bg: #e9ecef;
+    --cell-border: #dee2e6;
+    --primary-color: #6c5ce7;
+    --accent-color: #00b894;
+
+    /* Brick Colors */
+    --brick-white: #ffffff;
+    --brick-purple: #a29bfe;
+    --brick-blue: #74b9ff;
+    --brick-green: #55efc4;
+    --brick-yellow: #ffeaa7;
+    --brick-red: #ff7675;
+
+    --brick-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --brick-border-radius: 6px;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Outfit', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+    /* Prevent scrolling while dragging */
+}
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+}
+
+header {
+    display: flex;
+    gap: 30px;
+    align-items: center;
+    width: 100%;
+    justify-content: center;
+}
+
+h1 {
+    font-weight: 800;
+    font-size: 2.5rem;
+    color: var(--primary-color);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.score-container {
+    background: white;
+    padding: 10px 20px;
+    border-radius: 12px;
+    box-shadow: var(--brick-shadow);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+#score-value {
+    color: var(--accent-color);
+    font-weight: 800;
+}
+
+button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s, background-color 0.2s;
+    font-size: 1rem;
+}
+
+button:hover {
+    background-color: #5849be;
+    transform: translateY(-2px);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+.game-board {
+    position: relative;
+    background-color: var(--board-bg);
+    border: 2px solid var(--cell-border);
+    border-radius: 8px;
+    /* Grid layout will be set in JS based on cell size */
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.05);
+    touch-action: none;
+    /* Important for touch dragging */
+}
+
+.cell {
+    position: absolute;
+    border: 1px solid rgba(0, 0, 0, 0.03);
+    /* Debugging aid, maybe remove later for cleaner look */
+}
+
+.brick {
+    position: absolute;
+    border-radius: var(--brick-border-radius);
+    box-shadow: var(--brick-shadow);
+    cursor: grab;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 800;
+    color: rgba(0, 0, 0, 0.4);
+    font-size: 0.8rem;
+    user-select: none;
+    transition: transform 0.1s;
+    z-index: 10;
+}
+
+.brick:active {
+    cursor: grabbing;
+    z-index: 100;
+    transform: scale(1.05);
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+}
+
+.brick.dragging {
+    opacity: 0.9;
+}
+
+/* Brick Colors */
+.brick-white {
+    background-color: var(--brick-white);
+    color: #b2bec3;
+}
+
+.brick-purple {
+    background-color: var(--brick-purple);
+    color: white;
+}
+
+.brick-blue {
+    background-color: var(--brick-blue);
+    color: white;
+}
+
+.brick-green {
+    background-color: var(--brick-green);
+    color: white;
+}
+
+.brick-yellow {
+    background-color: var(--brick-yellow);
+    color: black;
+}
+
+.brick-red {
+    background-color: var(--brick-red);
+    color: white;
+}
+
+/* Timer */
+#timer-container {
+    width: 600px;
+    height: 10px;
+    background-color: #eee;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+#timer-bar {
+    width: 100%;
+    height: 100%;
+    background-color: #4CAF50;
+    /* Green */
+    transition: width 0.1s linear;
 }
 
 footer {
@@ -553,4 +943,36 @@ footer {
     background-color: #2d3436;
     color: white;
     border: 1px solid #636e72;
+}
+
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.95);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    border-radius: 8px;
+    gap: 20px;
+}
+
+.overlay.hidden {
+    display: none;
+}
+
+#overlay-title {
+    font-size: 3rem;
+    font-weight: 800;
+    color: var(--primary-color);
+    text-transform: uppercase;
+}
+
+#overlay-btn {
+    font-size: 1.5rem;
+    padding: 15px 40px;
 }
