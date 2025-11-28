@@ -8,6 +8,7 @@ const CONFIG = {
     gapChance: 0.3, // 30% chance for a gap initially
     colors: [
         { name: 'white', score: 0, weight: 50 },
+        { name: 'black', score: 0, weight: 5 }, // Immovable obstacle
         { name: 'purple', score: 1, weight: 23 },
         { name: 'blue', score: 2, weight: 12 },
         { name: 'green', score: 3, weight: 8 },
@@ -116,8 +117,8 @@ function gameOver() {
 }
 
 function checkWinCondition() {
-    // Check if any colored bricks remain
-    const coloredBricks = STATE.bricks.filter(b => b.color.name !== 'white');
+    // Check if any colored bricks remain (ignore white and black)
+    const coloredBricks = STATE.bricks.filter(b => b.color.name !== 'white' && b.color.name !== 'black');
     if (coloredBricks.length === 0) {
         clearInterval(timerInterval);
         clearInterval(spawnInterval);
@@ -300,6 +301,9 @@ function handleDragStart(e, brick) {
 
     const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
     const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+
+    // Immovable Black Bricks
+    if (brick.color.name === 'black') return;
 
     // Get initial offset within the element
     const rect = brick.el.getBoundingClientRect();

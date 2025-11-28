@@ -18,7 +18,7 @@ Brickout is a puzzle-strategy game where players clear bricks from a dense grid 
 ### Scoring & "Bearing Off"
 - **Objective**: Drag bricks off the edge of the board to remove them and score points.
 - **Constraint**: **White bricks cannot be removed.** If dragged off the board, they will snap back to their original position. They serve as obstacles that must be navigated around.
-- **Win Condition**: Clear **ALL colored bricks** from the board to Win! (+100 Points).
+- **Win Condition**: Clear **ALL colored bricks** from the board to Win! (+100 Points). Black and White bricks do not need to be cleared.
 
 ### Spawning
 - **Regeneration**: The board never runs out of bricks.
@@ -34,14 +34,15 @@ Brickout is a puzzle-strategy game where players clear bricks from a dense grid 
 ## Scoring System
 Bricks are color-coded by value. Higher value bricks are rarer.
 
-| Color  | Score | Rarity |
-| :--- | :--- | :--- |
-| **White**  | 0 | Common (Obstacle) |
-| **Purple** | 1 | Common |
-| **Blue**   | 2 | Uncommon |
-| **Green**  | 3 | Rare |
-| **Yellow** | 5 | Very Rare |
-| **Red**    | 10| Legendary |
+| Color  | Score | Rarity             |
+| :--- | :--- |:-------------------|
+| **White**  | 0 | Common (Obstacle)  |
+| **Black**  | 0 | Immovable Obstacle |
+| **Purple** | 1 | Common             |
+| **Blue**   | 2 | Uncommon           |
+| **Green**  | 3 | Rare               |
+| **Yellow** | 5 | Very Rare          |
+| **Red**    | 10| Legendary          |
 
 ## Visual Design
 - **Theme**: Clean, light mode aesthetic.
