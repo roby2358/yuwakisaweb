@@ -567,6 +567,3 @@ function attemptSpawnBrick() {
 function renderBoard() {
     // Bricks are rendered as they are created
 }
-
-// Start
-init();
