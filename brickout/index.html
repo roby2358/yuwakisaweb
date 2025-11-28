@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
 </head>
+
 <body>
     <div class="app-container">
         <header>
@@ -19,17 +21,22 @@
             </div>
             <button id="restart-btn">Restart</button>
         </header>
-        
+
+        <div id="timer-container">
+            <div id="timer-bar"></div>
+        </div>
+
         <main>
             <div id="game-board" class="game-board">
                 <!-- Grid cells and bricks will be generated here -->
             </div>
         </main>
-        
+
         <footer>
             <p>Drag bricks off the board to score!</p>
         </footer>
     </div>
     <script src="script.js"></script>
 </body>
+
 </html>

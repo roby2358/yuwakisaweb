@@ -3,8 +3,8 @@
  */
 
 const CONFIG = {
-    gridSize: 20,
-    cellSize: 30, // px
+    gridSize: 12,
+    cellSize: 50, // px
     gapChance: 0.3, // 30% chance for a gap initially
     colors: [
         { name: 'white', score: 0, weight: 50 },
@@ -26,6 +26,12 @@ const STATE = {
 const boardEl = document.getElementById('game-board');
 const scoreEl = document.getElementById('score-value');
 const restartBtn = document.getElementById('restart-btn');
+const timerBarEl = document.getElementById('timer-bar');
+
+// Timer State
+let timerValue = 12; // seconds
+let timerInterval = null;
+let spawnInterval = null;
 
 // Initialize Game
 function init() {
@@ -56,9 +62,10 @@ function restartGame() {
 
     // Restart spawning loop
     startSpawningLoop();
-}
 
-let spawnInterval = null;
+    // Restart Timer
+    startTimer();
+}
 
 function startSpawningLoop() {
     if (spawnInterval) clearInterval(spawnInterval);
@@ -69,7 +76,56 @@ function updateScoreDisplay() {
     scoreEl.textContent = STATE.score;
 }
 
-// ... (existing code) ...
+function startTimer() {
+    if (timerInterval) clearInterval(timerInterval);
+    timerValue = 12;
+    updateTimerVisual();
+    timerInterval = setInterval(() => {
+        timerValue -= 0.1;
+        if (timerValue <= 0) {
+            timerValue = 0;
+            gameOver();
+        }
+        updateTimerVisual();
+    }, 100);
+}
+
+function resetTimer() {
+    timerValue = 12;
+    updateTimerVisual();
+}
+
+function updateTimerVisual() {
+    const percentage = (timerValue / 12) * 100;
+    if (timerBarEl) {
+        timerBarEl.style.width = `${percentage}%`;
+
+        // Optional: Change color based on urgency
+        if (percentage < 25) {
+            timerBarEl.style.backgroundColor = '#f44336'; // Red
+        } else {
+            timerBarEl.style.backgroundColor = '#4CAF50'; // Green
+        }
+    }
+}
+
+function gameOver() {
+    clearInterval(timerInterval);
+    clearInterval(spawnInterval);
+    alert(`Game Over! Time's up. Final Score: ${STATE.score}`);
+}
+
+function checkWinCondition() {
+    // Check if any colored bricks remain
+    const coloredBricks = STATE.bricks.filter(b => b.color.name !== 'white');
+    if (coloredBricks.length === 0) {
+        clearInterval(timerInterval);
+        clearInterval(spawnInterval);
+        STATE.score += 100;
+        updateScoreDisplay();
+        alert(`YOU WIN! All colored bricks cleared! Final Score: ${STATE.score}`);
+    }
+}
 
 function scoreBrick(brick) {
     // Remove from grid
@@ -340,6 +396,21 @@ function scoreBrick(brick) {
 
     // Remove DOM
     brick.el.remove();
+
+    // Remove from list
+    STATE.bricks = STATE.bricks.filter(b => b !== brick);
+
+    // Update Score
+    STATE.score += brick.color.score;
+    updateScoreDisplay();
+
+    // Reset Timer
+    resetTimer();
+
+    // Check Win
+    checkWinCondition();
+
+    // NO immediate respawn
 }
 
 function removeBrickFromGrid(brick) {
