@@ -978,8 +978,8 @@ function addWordToList(word, points) {
     const wordEntry = document.createElement('div');
     wordEntry.classList.add('word-entry');
     wordEntry.textContent = `${word.toUpperCase()} (+${points})`;
-    wordListEl.appendChild(wordEntry);
-    wordListEl.scrollTop = wordListEl.scrollHeight;
+    wordListEl.insertBefore(wordEntry, wordListEl.firstChild);
+    wordListEl.scrollTop = 0;
 }
 
 function findAllWords(tile) {
