@@ -66,6 +66,9 @@ function init() {
     boardEl.style.width = `${boardSize}px`;
     boardEl.style.height = `${boardSize}px`;
 
+    // Set CSS variable for timer width to match board size
+    document.documentElement.style.setProperty('--board-size', `${boardSize}px`);
+
     restartGame();
 
     // Event Listeners
@@ -155,60 +158,6 @@ function checkWinCondition() {
         showOverlay('You Win!', 'Play Again', restartGame);
     }
 }
-
-function scoreBrick(brick) {
-    // Remove from grid
-    removeBrickFromGrid(brick);
-
-    // Remove DOM
-    brick.el.remove();
-
-    // Remove from list
-    STATE.bricks = STATE.bricks.filter(b => b !== brick);
-
-    // Update Score
-    STATE.score += brick.color.score;
-    updateScoreDisplay();
-
-    // NO immediate respawn
-}
-
-// ... (existing code) ...
-
-function attemptSpawnBrick() {
-    // 1. Find ALL valid spots
-    const validMoves = [];
-
-    for (let y = 0; y < CONFIG.gridSize; y++) {
-        for (let x = 0; x < CONFIG.gridSize; x++) {
-            // Check Horizontal
-            if (canPlaceBrick(x, y, false)) {
-                validMoves.push({ x, y, isVertical: false });
-            }
-            // Check Vertical
-            if (canPlaceBrick(x, y, true)) {
-                validMoves.push({ x, y, isVertical: true });
-            }
-        }
-    }
-
-    // 2. If no spots, skip
-    if (validMoves.length === 0) {
-        console.log("No space to spawn new brick.");
-        return;
-    }
-
-    // 3. Pick random spot
-    const move = validMoves[Math.floor(Math.random() * validMoves.length)];
-    createBrick(move.x, move.y, move.isVertical);
-}
-
-function renderBoard() {
-    // Bricks are rendered as they are created
-}
-
-// Start
-init();
 
 function getRandomColor() {
     const totalWeight = CONFIG.colors.reduce((sum, c) => sum + c.weight, 0);
