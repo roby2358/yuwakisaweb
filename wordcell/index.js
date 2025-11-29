@@ -20,6 +20,7 @@ let dragOffsetY = 0;
 let dragStartParent = null; // 'board' or 'tray'
 let dragStartIdx = -1; // index in tray or {r, c} for board
 let pieceCumulativeFrequencies = []; // Array of {piece, cumulativeFreq} for random selection
+let vowelPieces = []; // Array of pieces that are vowels (A, E, I, O, U)
 let wordTilesMap = new Map(); // Map of tile ID to array of word info objects {word, points, tiles}
 
 // ============================================================================
@@ -62,8 +63,14 @@ function validateDictionaryLoaded() {
 
 function initializePieceFrequencies() {
     const pieces = Object.entries(PIECES);
+    const vowels = new Set(['A', 'E', 'I', 'O', 'U']);
     
-    // Calculate cumulative frequencies
+    // Separate vowel pieces from all pieces
+    vowelPieces = pieces
+        .filter(([piece, frequency]) => vowels.has(piece))
+        .map(([piece, frequency]) => piece);
+    
+    // Calculate cumulative frequencies for all pieces
     let cumulative = 0;
     pieceCumulativeFrequencies = pieces.map(([piece, frequency]) => {
         cumulative += frequency;
@@ -204,6 +211,12 @@ function generateTile() {
 function selectRandomPieceByFrequency() {
     if (pieceCumulativeFrequencies.length === 0) return "A";
     
+    // 20% chance to select a vowel
+    if (Math.random() < 0.2 && vowelPieces.length > 0) {
+        return vowelPieces[Math.floor(Math.random() * vowelPieces.length)];
+    }
+    
+    // Otherwise, use frequency-based selection
     const maxFreq = pieceCumulativeFrequencies[pieceCumulativeFrequencies.length - 1].cumulativeFreq;
     const rand = Math.random() * maxFreq;
     

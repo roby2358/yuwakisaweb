@@ -5,7 +5,7 @@ The game is played on a 12x12 grid playing area.
 Multi-letter tiles occupy the grid, with one letter per grid cell.
 A tile may contain one letter or more, up to 3.
 Tiles are oriented horizontally, reading left to right.
-Picking tiles are selected randomly with probabilities: 1-letter 40% 2-letter 50% 3-letter 10%
+Picking tiles are selected using frequency-based randomization from the dictionary, with a 20% chance to select a vowel (A, E, I, O, U) instead of using frequency-based selection.
 
 ## The Tray
 Along the bottom of the grid is a tray with 5 tiles of the same type.
@@ -25,8 +25,8 @@ The player has three actions they can perform at any time:
 - **Restart**: Resets the game and takes the player to the start game overlay (ready screen).
 
 ## Dictionary
-Use the words in words_and_pieces.js as the dictionary of acceptable words.
-Use the pieces in words_and_pieces.js for the list of peices to randomize.
+Use the words in words_and_pieces.js as the dictionary of acceptable words. Only words with 3 or more letters are included.
+Use the pieces in words_and_pieces.js for tile selection. PIECES is a map of piece -> frequency, where frequency represents how many words contain that piece as a substring, divided by the total number of words. Tile selection uses this frequency-based randomization, with a 20% chance to select a vowel instead.
 
 # UI Notes
 
