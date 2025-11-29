@@ -1,3 +1,4 @@
+# Copyright (c) 2025 Rob Young
 import string
 import os
 from collections import defaultdict
@@ -57,6 +58,8 @@ def main():
 
     print(f"Writing to {output_file}...")
     with open(output_file, 'w') as f:
+        # Write copyright notice first
+        f.write("// Copyright (c) 2025 Rob Young\n")
         # Write WORDS
         f.write("const WORDS = [\n")
         for i, w in enumerate(sorted_words):

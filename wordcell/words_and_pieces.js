@@ -1,3 +1,4 @@
+// Copyright (c) 2025 Rob Young
 const WORDS = [
 "AAH",
 "AAHED",
