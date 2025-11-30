@@ -13,6 +13,7 @@ class ParliamentApp {
         this.isRunning = false;
         this.memberCount = 5;
         this.apiKey = null; // Store API key in memory, not DOM
+        this.maxTurns = 20; // Safety limit, can be doubled on restart
 
         // Load system prompts
         this.prompts = {
@@ -120,6 +121,9 @@ Respond with:
     }
 
     async start() {
+        // Reset button text to "Start Session" in case it was "Restart Session"
+        this.ui.setStartButtonText('Start Session');
+        
         // Get API key from input (user may have changed it) or memory
         const inputKey = this.ui.getApiKey();
         let apiKey = inputKey || this.apiKey;
@@ -217,9 +221,8 @@ Respond with:
         await this.sleep(500);
 
         let turnCount = 0;
-        const maxTurns = 20; // Safety limit
 
-        while (this.isRunning && turnCount < maxTurns && !this.session.state.adjourned) {
+        while (this.isRunning && turnCount < this.maxTurns && !this.session.state.adjourned) {
             turnCount++;
 
             // Phase A: Speaker Decision
@@ -290,8 +293,11 @@ Respond with:
 
         if (this.session.state.adjourned) {
             this.ui.addSystemMessage('Session ended: House adjourned by Speaker');
-        } else if (turnCount >= maxTurns) {
+        } else if (turnCount >= this.maxTurns) {
             this.ui.addSystemMessage('Session ended: Maximum turns reached');
+            // Change button to "Restart Session" and double max turns
+            this.ui.setStartButtonText('Restart Session');
+            this.maxTurns *= 2;
         }
 
         this.isRunning = false;

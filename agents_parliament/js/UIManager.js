@@ -156,6 +156,13 @@ export class UIManager {
     }
 
     /**
+     * Set the start button text
+     */
+    setStartButtonText(text) {
+        this.elements.startBtn.textContent = text;
+    }
+
+    /**
      * Get API key from input field
      */
     getApiKey() {
