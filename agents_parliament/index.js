@@ -426,23 +426,33 @@ Respond with:
             // Build the message: speech + action (if present)
             let message = '';
             
-            if (parsed.speak) {
-                message = parsed.speak;
-            } else if (parsed.thought) {
-                // Fallback: if no Speak section but there's a thought, use it
-                message = parsed.thought;
-            }
+            // Check if there's a # Speak section or # Action section
+            const hasSpeakSection = memberResponse.includes('# Speak');
+            const hasActionSection = memberResponse.includes('## Action');
             
-            // Append action to the message if present
-            if (parsed.action && !parsed.action.startsWith('parliament-speak')) {
-                if (message) {
-                    message += '\n\n```\n' + parsed.action + '\n```';
-                } else {
-                    message = '```\n' + parsed.action + '\n```';
+            if (hasSpeakSection || hasActionSection) {
+                // Use parsed sections if they exist
+                if (parsed.speak) {
+                    message = parsed.speak;
+                } else if (parsed.thought) {
+                    // Fallback: if no Speak section but there's a thought, use it
+                    message = parsed.thought;
                 }
+                
+                // Append action to the message if present
+                if (parsed.action && !parsed.action.startsWith('parliament-speak')) {
+                    if (message) {
+                        message += '\n\n```\n' + parsed.action + '\n```';
+                    } else {
+                        message = '```\n' + parsed.action + '\n```';
+                    }
+                }
+            } else {
+                // No # Speak or # Action sections - use full response as-is
+                message = memberResponse.trim();
             }
             
-            // Record single entry with speech and action combined
+            // Record single entry with speech and action combined (or full response)
             if (message) {
                 const entry = this.session.addToHansard(memberName, message);
                 this.ui.addHansardEntry(entry);
