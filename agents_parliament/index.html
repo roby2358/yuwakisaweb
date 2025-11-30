@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parliamentary Agent Framework</title>
+    <link rel="stylesheet" href="index.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🏛️ Parliamentary Agent Framework</h1>
+            <div class="controls">
+                <div style="flex: 1; position: relative;">
+                    <input type="password" id="apiKey" placeholder="OpenRouter API Key" class="api-input">
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px; opacity: 0.8;">
+                        ⚠️ API key stored in browser memory only (cleared on page close)
+                    </div>
+                </div>
+                <button id="startBtn" class="btn-primary">Start Session</button>
+                <button id="pauseBtn" class="btn-secondary" disabled>Pause</button>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <aside class="left-panel">
+                <section class="input-card">
+                    <h2>📝 Session Instructions</h2>
+                    <textarea id="userInput" class="user-input"
+                        placeholder="Enter the task or issue for Parliament to address...&#10;&#10;Example: Write a sonnet about a cat"
+                        rows="6"></textarea>
+                </section>
+
+                <section class="status-card">
+                    <h2>📊 Session Status</h2>
+                    <div id="sessionStatus">
+                        <div class="status-item">
+                            <span class="label">Stage:</span>
+                            <span id="currentStage" class="value">Idle</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="label">Bill:</span>
+                            <span id="currentBill" class="value">None</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="label">Motion:</span>
+                            <span id="currentMotion" class="value">None</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="label">Voting:</span>
+                            <span id="votingStatus" class="value">No</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="files-card">
+                    <h2>📁 Files</h2>
+                    <div id="fileList" class="file-list"></div>
+                </section>
+
+                <section class="issues-card">
+                    <h2>🎯 Issues</h2>
+                    <div id="issueList" class="issue-list"></div>
+                </section>
+            </aside>
+
+            <section class="right-panel">
+                <div class="hansard-header">
+                    <h2>📜 Hansard (Official Record)</h2>
+                    <button id="clearHansard" class="btn-clear">Clear</button>
+                </div>
+                <div id="hansard" class="hansard"></div>
+            </section>
+        </main>
+    </div>
+
+    <script type="module" src="index.js"></script>
+</body>
+
+</html>
