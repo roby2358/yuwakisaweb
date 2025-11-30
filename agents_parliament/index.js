@@ -38,11 +38,10 @@ class ParliamentApp {
         // Build initialization message
         let message = 'Parliamentary Agent Framework initialized. ';
         if (apiKeyLoaded) {
-            message += 'API key loaded from session. ';
+            message += 'API key loaded from session. Enter a matter to address, then click Start Session.';
         } else {
-            message += 'Enter your OpenRouter API key and ';
+            message += 'Enter your OpenRouter API key and a matter to address, then click Start Session.';
         }
-        message += 'a matter to address, then click Start Session.';
         
         this.ui.addSystemMessage(message);
     }
