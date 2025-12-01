@@ -245,23 +245,42 @@ export class OpenRouterAPI {
             // First try old format for backward compatibility
             let commandMatch = actionBlock.match(/\*\*Command\*\*:\s*`([^`]+)`/);
             if (commandMatch) {
-                response.action = commandMatch[1];
+                response.action = this.normalizeCommand(commandMatch[1]);
             } else {
                 // New format: command directly in backticks (may be on same line as Priority or separate line)
                 commandMatch = actionBlock.match(/`([^`]+)`/);
                 if (commandMatch) {
-                    response.action = commandMatch[1];
+                    response.action = this.normalizeCommand(commandMatch[1]);
                 } else {
                     // Fallback: extract non-empty line that isn't Priority (trimmed)
                     const lines = actionBlock.split('\n').map(l => l.trim()).filter(l => l && !l.match(/^\*\*Priority\*\*:/));
                     if (lines.length > 0) {
                         // Use first non-empty, non-priority line as the command
-                        response.action = lines[0];
+                        response.action = this.normalizeCommand(lines[0]);
                     }
                 }
             }
         }
 
         return response;
+    }
+
+    /**
+     * Normalize command by removing optional "bash" prefix and trimming whitespace
+     * @param {string} command - The raw command string
+     * @returns {string} - The normalized command
+     */
+    normalizeCommand(command) {
+        if (!command) return command;
+        
+        // Trim whitespace
+        let normalized = command.trim();
+        
+        // Remove optional "bash" prefix (case-insensitive) with optional whitespace
+        // Matches: "bash command", "bash  command", "BASH command", etc.
+        normalized = normalized.replace(/^bash\s+/i, '');
+        
+        // Trim again in case there was extra whitespace
+        return normalized.trim();
     }
 }

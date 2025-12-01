@@ -2,6 +2,7 @@ import { ParliamentSession } from './js/ParliamentSession.js';
 import { OpenRouterAPI } from './js/OpenRouterAPI.js';
 import { UIManager } from './js/UIManager.js';
 import { Interpreter } from './js/interpreter.js';
+import { KeyManager } from './js/key.js';
 
 /**
  * Main Application
@@ -13,7 +14,7 @@ class ParliamentApp {
         this.api = null;
         this.isRunning = false;
         this.memberCount = 5;
-        this.apiKey = null; // Store API key in memory, not DOM
+        this.keyManager = new KeyManager();
         this.maxTurns = 20; // Safety limit, can be doubled on restart
 
         // Load system prompts
@@ -31,7 +32,7 @@ class ParliamentApp {
         await this.loadPrompts();
 
         // Try to restore API key from sessionStorage (if user previously allowed)
-        const apiKeyLoaded = this.restoreApiKeyFromStorage();
+        const apiKeyLoaded = this.keyManager.restoreFromStorage(this.ui.elements.apiKey);
 
         // Initial UI update
         this.ui.updateAll(this.session);
@@ -45,33 +46,6 @@ class ParliamentApp {
         }
         
         this.ui.addSystemMessage(message);
-    }
-
-    /**
-     * Restore API key from sessionStorage if available
-     * @returns {boolean} True if API key was successfully restored
-     */
-    restoreApiKeyFromStorage() {
-        try {
-            const stored = sessionStorage.getItem('parliament_api_key_remember');
-            if (stored === 'true') {
-                const key = sessionStorage.getItem('parliament_api_key');
-                if (key && key.trim() !== '') {
-                    // Store in memory but don't show in input field for security
-                    this.apiKey = key.trim();
-                    this.ui.elements.apiKey.placeholder = 'API key restored from session (hidden)';
-                    return true;
-                } else {
-                    // Clear invalid stored key
-                    sessionStorage.removeItem('parliament_api_key');
-                    sessionStorage.removeItem('parliament_api_key_remember');
-                }
-            }
-        } catch (error) {
-            // sessionStorage not available or blocked
-            console.warn('Could not access sessionStorage:', error);
-        }
-        return false;
     }
 
     async loadPrompts() {
@@ -128,32 +102,18 @@ Respond with:
         
         // Get API key from input (user may have changed it) or memory
         const inputKey = this.ui.getApiKey();
-        let apiKey = inputKey || this.apiKey;
+        const apiKey = this.keyManager.validateAndSet(inputKey);
         
-        if (!apiKey || apiKey.trim() === '') {
+        if (!apiKey) {
             alert('Please enter your OpenRouter API key');
             return;
         }
 
-        // Trim whitespace
-        apiKey = apiKey.trim();
-
-        // If user entered a new key, use that (they may want to change it)
-        if (inputKey && inputKey.trim() !== this.apiKey) {
-            apiKey = inputKey.trim();
-        }
-
-        // Validate API key format (OpenRouter keys typically start with 'sk-or-')
-        if (!apiKey.startsWith('sk-')) {
-            console.warn('API key format may be incorrect. OpenRouter keys typically start with "sk-or-"');
-        }
-
-        // Store in memory and clear from DOM for security
-        this.apiKey = apiKey;
+        // Clear from DOM for security
         this.ui.clearApiKey();
 
         // Save to sessionStorage for this session
-        this.saveApiKeyToStorage();
+        this.keyManager.saveToStorage();
 
         // Get selected model ID
         const modelId = this.ui.getModelId();
@@ -176,21 +136,6 @@ Respond with:
         }
     }
 
-    /**
-     * Save API key to sessionStorage if user opts in
-     */
-    saveApiKeyToStorage() {
-        try {
-            // Check if user wants to remember (could add a checkbox in UI)
-            // For now, we'll save it for the session only
-            sessionStorage.setItem('parliament_api_key', this.apiKey);
-            sessionStorage.setItem('parliament_api_key_remember', 'true');
-        } catch (error) {
-            // sessionStorage not available
-            console.warn('Could not save to sessionStorage:', error);
-        }
-    }
-
     pause() {
         this.isRunning = false;
         this.ui.setLoading(false);
@@ -201,14 +146,8 @@ Respond with:
      * Clear API key from memory (for security)
      */
     clearApiKey() {
-        this.apiKey = null;
+        this.keyManager.clear();
         this.api = null;
-        try {
-            sessionStorage.removeItem('parliament_api_key');
-            sessionStorage.removeItem('parliament_api_key_remember');
-        } catch (error) {
-            // Ignore
-        }
     }
 
     async runSession() {

@@ -4,7 +4,6 @@
 import { toolTable } from './tools/table.js';
 import { toolShare } from './tools/share.js';
 import { toolEdit } from './tools/edit.js';
-import { toolOrderPaper } from './tools/orderPaper.js';
 import { toolIssue } from './tools/issue.js';
 import { toolAdjourn } from './tools/adjourn.js';
 import { toolRecognize } from './tools/recognize.js';
@@ -69,8 +68,6 @@ export class ParliamentSession {
                     return toolShare(this, parts.slice(1));
                 case 'parliament-edit':
                     return toolEdit(this, parts.slice(1));
-                case 'parliament-order-paper':
-                    return toolOrderPaper(this);
                 case 'parliament-issue':
                     return toolIssue(this, parts.slice(1));
                 case 'parliament-adjourn':

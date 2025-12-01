@@ -55,11 +55,11 @@ parliament-recognize [member-number] "instruction"
 - `"instruction"`: One-line instruction to give to the recognized Member(s)
 
 ### Behavior
-1. Validates the target (must be "all" or a valid member number)
-2. Returns a success status with recognition data
-3. **Framework Action**: The framework then invokes the specified Member LLM(s) with the instruction
-4. Members respond with their `# Speak` section, votes, or actions
-5. Responses are processed and added to Hansard
+- Validates the target (must be "all" or a valid member number)
+- Returns a success status with recognition data
+- **Framework Action**: The framework then invokes the specified Member LLM(s) with the instruction
+- Members respond with their `# Speak` section, votes, or actions
+- Responses are processed and added to Hansard
 
 ### Output
 ```markdown
@@ -87,24 +87,27 @@ Recognizing all members
 ## 2. `parliament-table`
 
 ### Purpose
-Submit a Bill, Motion, or Amendment.
+Submit a Bill or formally move an Amendment.
 
 ### Usage
 ```bash
-parliament-table [type] [target] "description"
+parliament-table bill [file] "description"
+parliament-table amendment [id] "description"
 ```
 
 ### Types
-- `bill [file]`: Create a new Bill
-- `motion`: Submit a procedural motion
-- `amendment [id]`: Formally move an amendment
 
-### Behavior
-- **Bill**: Create `bills/BILL-{N}.md` with metadata.
-- **Motion**: Append to Hansard and set as active motion.
-- **Amendment**: Link amendment to current Bill.
+#### `bill [file]`
+Create a new Bill.
+- `[file]`: The target filename for the Bill
+- `"description"`: Description of what the Bill addresses
 
-### Output
+**Behavior**:
+- Creates a new Bill with ID `BILL-{N}` (auto-incremented)
+- Sets the Bill as the current active Bill
+- Sets the Bill stage to "First Reading"
+
+**Output**:
 ```markdown
 ## Status: Success
 
@@ -115,12 +118,35 @@ Bill BILL-05 tabled
 - **Type**: bill
 - **Target**: main.py
 - **Description**: Fix infinite loop
+- **Stage**: First Reading
+```
+
+#### `amendment [id]`
+Formally move an amendment that was previously proposed.
+- `[id]`: The amendment ID (e.g., `AMDT-12`)
+- `"description"`: Description of the amendment motion
+
+**Behavior**:
+- Marks the amendment as `tabled: true`
+- Sets the active motion to "That Amendment {id} be made"
+- The amendment must exist (must have been created via `parliament-edit --propose`)
+
+**Output**:
+```markdown
+## Status: Success
+
+Amendment AMDT-12 tabled
+
+### Data
+- **ID**: AMDT-12
+- **Description**: [description provided]
+- **Tabled**: true
 ```
 
 ### Exit Codes
 - `0`: Success
 - `1`: Invalid type
-- `4`: Target file not found (for `bill`)
+- `4`: Amendment not found (for `amendment`)
 
 ---
 
@@ -131,17 +157,17 @@ Share a file or document with the House. This adds the document to the shared co
 
 ### Usage
 ```bash
-parliament-share [name] [file content]
+parliament-share "[name]" "[file content]"
 ```
 
 ### Arguments
-- `[name]`: The name/identifier for the shared document
-- `[file content]`: The content of the file to share
+- `"[name]"`: The name/identifier for the shared document (quotes optional but recommended)
+- `"[file content]"`: The content of the file to share (quotes optional but recommended for multi-word content)
 
 ### Behavior
-1. Creates a paper entry with the provided name and content
-2. Adds it to the shared papers collection
-3. The document becomes available in the context for all agents
+- Creates a paper entry with the provided name and content
+- Adds it to the shared papers collection
+- The document becomes available in the context for all agents
 
 ### Output
 ```markdown
@@ -170,24 +196,58 @@ View files, propose amendments, or enact approved changes.
 ### Usage
 ```bash
 parliament-edit [file] --view
-parliament-edit --view-amendment [id]
+parliament-edit --view-amendment [amendment-id]
 parliament-edit [file] --propose "diff"
-parliament-edit [file] --enact [amendment_id]
+parliament-edit [file] --enact [amendment-id]
 parliament-edit [file] --create "content"
 ```
 
 ### Modes
 
-#### `--view`
+#### `[file] --view`
 Read-only file viewing.
-**Exit Code**: `0`
+- `[file]`: The filename to view
 
-#### `--view-amendment [id]`
+**Output**:
+```markdown
+## Status: Success
+
+Viewing main.py
+
+### Data
+- **Filename**: main.py
+- **Content**: [file content]
+```
+
+**Exit Code**: `0` (success), `4` (file not found)
+
+#### `--view-amendment [amendment-id]`
 Display the proposed diff for an amendment.
-**Exit Code**: `0` (success), `4` (not found)
+- `[amendment-id]`: The amendment ID (must start with `AMDT-`, e.g., `AMDT-12`)
 
-#### `--propose "diff"`
-Create a new amendment file in `amendments/AMDT-{N}.diff`.
+**Output**:
+```markdown
+## Status: Success
+
+Viewing amendment AMDT-12
+
+### Data
+- **ID**: AMDT-12
+- **File**: main.py
+- **Diff**: [diff content]
+- **Tabled**: false
+- **Passed**: false
+```
+
+**Exit Code**: `0` (success), `4` (amendment not found)
+
+#### `[file] --propose "diff"`
+Create a new amendment proposal.
+- `[file]`: The target filename to amend
+- `"diff"`: The diff content in format `from->to` (simple string replacement)
+
+**Note**: The diff format is a simple string replacement: `"old text->new text"`. The tool will replace the first occurrence of `old text` with `new text` in the file when enacted.
+
 **Output**:
 ```markdown
 ## Status: Success
@@ -197,16 +257,31 @@ Amendment AMDT-12 created
 ### Data
 - **ID**: AMDT-12
 - **File**: main.py
-- **Diff**: (diff content shown)
+- **Diff**: [diff content]
+- **Tabled**: false
+- **Passed**: false
 ```
+
 **Exit Code**: `0`
 
-#### `--enact [id]`
-Apply the diff to the target file. **Requires**: Amendment must have passed a vote.
-**Exit Code**: `0` (success), `2` (out of order - not passed), `3` (permission denied)
+#### `[file] --enact [amendment-id]`
+Apply the diff to the target file.
+- `[file]`: The target filename (must match the amendment's file)
+- `[amendment-id]`: The amendment ID (must start with `AMDT-`, e.g., `AMDT-12`)
 
-#### `--create "content"`
-Create a new file with the specified content. **Requires**: File must not already exist.
+**Requires**: Amendment must have `passed: true` (must have passed a vote).
+
+**Behavior**: Applies the diff using simple string replacement (`from->to` format).
+
+**Exit Code**: `0` (success), `2` (out of order - not passed), `4` (amendment not found)
+
+#### `[file] --create "content"`
+Create a new file with the specified content.
+- `[file]`: The filename to create
+- `"content"`: The file content
+
+**Requires**: File must not already exist.
+
 **Output**:
 ```markdown
 ## Status: Success
@@ -215,40 +290,14 @@ File sonnet.txt created
 
 ### Data
 - **Filename**: sonnet.txt
-- **Content**: (file content shown)
+- **Content**: [file content]
 ```
+
 **Exit Code**: `0` (success), `1` (filename required), `2` (file already exists)
 
 ---
 
-## 5. `parliament-order-paper`
-
-### Purpose
-Display the current business of the House.
-
-### Usage
-```bash
-parliament-order-paper
-```
-
-### Output
-```markdown
-## Status: Success
-
-### Current Business
-- **Stage**: Committee Stage
-- **Current Bill**: BILL-05
-- **Active Motion**: That Amendment AMDT-12 be made
-- **Pending Votes**: 3
-- **Members Present**: Member for Python, Member for Security
-```
-
-### Exit Codes
-- `0`: Success
-
----
-
-## 6. `parliament-issue`
+## 5. `parliament-issue`
 
 ### Purpose
 Manage issues/tasks.
@@ -277,8 +326,25 @@ Issue ISSUE-42 created
 ```
 
 #### `close [id]`
-Mark issue as closed. **Requires**: Related Bill must have passed Third Reading.
-**Exit Code**: `0` (success), `2` (out of order)
+Mark issue as closed.
+- `[id]`: The issue ID (e.g., `ISSUE-42`)
+
+**Note**: The implementation does not currently enforce that a related Bill must have passed Third Reading. This is a procedural requirement that should be enforced by the Speaker.
+
+**Output**:
+```markdown
+## Status: Success
+
+Issue ISSUE-42 closed
+
+### Data
+- **ID**: ISSUE-42
+- **Title**: Infinite Loop in main.py
+- **Status**: closed
+- **Closed**: 2025-11-29T19:30:00Z
+```
+
+**Exit Code**: `0` (success), `4` (issue not found)
 
 #### `list`
 Return all open issues.
@@ -290,7 +356,7 @@ Return all open issues.
 
 ---
 
-## 7. `parliament-adjourn`
+## 6. `parliament-adjourn`
 
 ### Purpose
 Adjourn the House and end the session. This is a Speaker-only command that stops the parliamentary loop.
@@ -301,10 +367,10 @@ parliament-adjourn [reason]
 ```
 
 ### Behavior
-1. Sets `state.adjourned` to `true`
-2. Sets `state.stage` to `"Adjourned"`
-3. Records adjournment in Hansard
-4. Session loop will exit on next check
+- Sets `state.adjourned` to `true`
+- Sets `state.stage` to `"Adjourned"`
+- Records adjournment in Hansard
+- Session loop will exit on next check
 
 ### Output
 ```markdown

@@ -34,22 +34,22 @@ When `parliament-recognize` is executed:
 ### Two-Step Process for Opening the Floor
 When the Speaker opens the floor for comment, the standard procedure is:
 
-1. **Step 1 - Collect Summaries**: 
-   * Speaker calls `parliament-recognize all "summarize your position in one line"`
-   * All Members respond in parallel with brief one-line summaries in their `# Speak` section
-   * Framework records summaries in Hansard
+- **Step 1 - Collect Summaries**:
+  * Speaker calls `parliament-recognize all "summarize your position in one line"`
+  * All Members respond in parallel with brief one-line summaries in their `# Speak` section
+  * Framework records summaries in Hansard
 
-2. **Step 2 - Consider and Recognize**:
-   * Speaker reviews the summaries
-   * Speaker recognizes specific Member(s) based on their summaries:
-     * `parliament-recognize [number] "Please elaborate on your position"`
-   * Recognized Members provide full debate in their `# Speak` section
+- **Step 2 - Consider and Recognize**:
+  * Speaker reviews the summaries
+  * Speaker recognizes specific Member(s) based on their summaries:
+    * `parliament-recognize [number] "Please elaborate on your position"`
+  * Recognized Members provide full debate in their `# Speak` section
 
-3. **Closing Discussion and Voting**:
-   * Speaker closes discussion in their `# Speak` section
-   * Speaker calls vote using `parliament-recognize all "Vote now: aye, no, or abstain"`
-   * All Members vote in parallel
-   * Speaker tallies and declares result in their `# Speak` section
+- **Closing Discussion and Voting**:
+  * Speaker closes discussion in their `# Speak` section
+  * Speaker calls vote using `parliament-recognize all "Vote now: aye, no, or abstain"`
+  * All Members vote in parallel
+  * Speaker tallies and declares result in their `# Speak` section
 
 ### Phase D: Process Member Responses
 The Framework processes Member responses:
@@ -71,8 +71,8 @@ The Framework processes Member responses:
 ### 2. Committee Stage Review
 *   **Scenario**: A Bill is in Committee. An amendment has been tabled.
 *   **Two-Step Process**:
-    1. **Step 1**: Speaker uses `parliament-recognize all "summarize your position on this amendment in one line"` to collect summaries from all Members in parallel.
-    2. **Step 2**: Speaker reviews summaries and recognizes specific Members (e.g., `parliament-recognize 2 "Please elaborate on your concerns"`) for full debate.
+    - **Step 1**: Speaker uses `parliament-recognize all "summarize your position on this amendment in one line"` to collect summaries from all Members in parallel.
+    - **Step 2**: Speaker reviews summaries and recognizes specific Members (e.g., `parliament-recognize 2 "Please elaborate on your concerns"`) for full debate.
 *   **Parallelism**: **Controlled by Speaker**.
     *   Summary collection: All Members in parallel
     *   Full debate: Individual Members as recognized by Speaker
@@ -205,11 +205,11 @@ The parliamentary process is governed by a strict state machine that controls va
 
 ### Voting Sub-State
 When a vote is called:
-1. **State**: `voting: true` in `state.json`
-2. **Quorum**: Wait for `floor(N/2) + 1` agents to respond (or timeout)
-3. **Tally**: Count `aye`, `no`, `abstain`
-4. **Decision**: `aye > no` → Pass, else Fail
-5. **Transition**: Return to previous stage or advance
+- **State**: `voting: true` in `state.json`
+- **Quorum**: Wait for `floor(N/2) + 1` agents to respond (or timeout)
+- **Tally**: Count `aye`, `no`, `abstain`
+- **Decision**: `aye > no` → Pass, else Fail
+- **Transition**: Return to previous stage or advance
 
 ### Speaker Decision Points
 - **After Second Reading Vote**: Advance to Committee or reject Bill
@@ -226,16 +226,16 @@ When a vote is called:
 #### Malformed Response
 **Scenario**: Agent returns invalid Markdown or missing `## Action`.
 **Handler**:
-1. Log the error to Hansard as `[Malformed Response from Member X]`
-2. Treat as "No Action" (silent abstention)
-3. Continue with other agents' responses
+- Log the error to Hansard as `[Malformed Response from Member X]`
+- Treat as "No Action" (silent abstention)
+- Continue with other agents' responses
 
 #### Invalid Command
 **Scenario**: Member proposes an action that is out of order (e.g., trying to edit without a passed motion).
 **Handler**:
-1. Framework validates the command during execution
-2. Returns error status
-3. Speaker may issue a ruling in their `# Speak` section: "The Member is out of order."
+- Framework validates the command during execution
+- Returns error status
+- Speaker may issue a ruling in their `# Speak` section: "The Member is out of order."
 
 #### Timeout (see Section 6)
 
@@ -246,17 +246,17 @@ When a vote is called:
 #### Tool Execution Failure
 **Scenario**: `parliament-edit --enact AMDT-12` fails (file locked, disk full).
 **Handler**:
-1. Return error JSON to Speaker
-2. Speaker announces: `"Division on Amendment AMDT-12 has failed to execute. The House stands adjourned."`
-3. Set `state.json` to `adjourned: true`
-4. Log incident and notify system operator
+- Return error JSON to Speaker
+- Speaker announces: `"Division on Amendment AMDT-12 has failed to execute. The House stands adjourned."`
+- Set `state.json` to `adjourned: true`
+- Log incident and notify system operator
 
 #### Speaker Malfunction
 **Scenario**: Speaker times out or returns invalid response.
 **Handler**:
-1. **Emergency Protocol**: Deputy Speaker (fallback LLM) takes over
-2. If Deputy fails: **Prorogation** - halt all operations, save state, exit gracefully
-3. Manual intervention required
+- **Emergency Protocol**: Deputy Speaker (fallback LLM) takes over
+- If Deputy fails: **Prorogation** - halt all operations, save state, exit gracefully
+- Manual intervention required
 
 ---
 
@@ -265,30 +265,30 @@ When a vote is called:
 #### Simultaneous Amendments
 **Scenario**: Two agents propose amendments to the same line during parallel invocation.
 **Handler**:
-1. Speaker receives both in Phase C
-2. Speaker selects based on:
-   - **Priority**: Higher priority wins
-   - **Arrival Time**: If equal priority, first received wins
-3. Selected amendment is debated
-4. Rejected agent receives feedback: `"A conflicting amendment has been selected for debate. Please review and re-propose if needed."`
+- Speaker receives both in Phase C
+- Speaker selects based on:
+  - **Priority**: Higher priority wins
+  - **Arrival Time**: If equal priority, first received wins
+- Selected amendment is debated
+- Rejected agent receives feedback: `"A conflicting amendment has been selected for debate. Please review and re-propose if needed."`
 
 #### Edit Conflicts During Enactment
 **Scenario**: File has changed since amendment was proposed.
 **Handler**:
-1. `parliament-edit --enact` detects conflict
-2. Returns `exit 3` with error message
-3. Speaker announces: `"The amendment cannot be applied due to changes in the file. The mover may withdraw and re-propose."`
+- `parliament-edit --enact` detects conflict
+- Returns `exit 3` with error message
+- Speaker announces: `"The amendment cannot be applied due to changes in the file. The mover may withdraw and re-propose."`
 
 ---
 
 ## 7. Implementation Strategy
-1.  **Framework Core**: A Python class `ParliamentSession` that holds:
-    *   `self.hansard`: List[Dict]
-    *   `self.files`: Dict[str, str] (In-memory file system)
-    *   `self.state`: Dict (Current stage, active motions)
-2.  **Agent Pool**: A list of LLM API clients (Speaker + Members).
-3.  **Tool Registry**: Methods on `ParliamentSession` that implement `parliament-*` logic by manipulating the in-memory state. These are exposed to agents as **bash command line tools**.
-4.  **Main Loop**:
+- **Framework Core**: A Python class `ParliamentSession` that holds:
+  *   `self.hansard`: List[Dict]
+  *   `self.files`: Dict[str, str] (In-memory file system)
+  *   `self.state`: Dict (Current stage, active motions)
+- **Agent Pool**: A list of LLM API clients (Speaker + Members).
+- **Tool Registry**: Methods on `ParliamentSession` that implement `parliament-*` logic by manipulating the in-memory state. These are exposed to agents as **bash command line tools**.
+- **Main Loop**:
     ```python
     while session_active:
         # 1. Speaker Turn
@@ -312,7 +312,7 @@ To ensure the parliamentary session remains active and does not hang due to unre
 
 *   **Timeout Window**: All agent invocations must complete within a fixed time window (e.g., 30 seconds).
 *   **Handling Non-Response**:
-    *   **During Debate**: If an agent fails to respond within the window, they are considered to be silent for that turn. The Speaker proceeds with the available responses.
-        *   **Note**: This is different from an explicit "Pass" response, which indicates the agent is engaged but has nothing to contribute.
-    *   **During Voting**: If an agent fails to vote, their vote is recorded as an **Abstention** or **Absent**.
+    - **During Debate**: If an agent fails to respond within the window, they are considered to be silent for that turn. The Speaker proceeds with the available responses.
+      *   **Note**: This is different from an explicit "Pass" response, which indicates the agent is engaged but has nothing to contribute.
+    - **During Voting**: If an agent fails to vote, their vote is recorded as an **Abstention** or **Absent**.
 *   **Quorum Checks**: The Speaker monitors the number of active (responsive) agents. If the number of responsive agents falls below the required Quorum, the Speaker has the authority to adjourn the House or pause proceedings until connectivity is restored.
