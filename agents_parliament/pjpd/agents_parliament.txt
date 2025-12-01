@@ -1,0 +1,39 @@
+Priority:   70
+Status: ToDo
+ID: tool-md-ez3x
+Organize tool markdown documentation in a map structure indexed by tool name for easy lookup and retrieval
+---
+Priority:   70
+Status: ToDo
+ID: state-track-psam
+Implement House state tracking system that can be modified and updated through command line interface tools, with validation to enforce valid state transitions
+---
+Priority:   65
+Status: ToDo
+ID: house-map-5dde
+Create a mapping system that associates House state and member role configurations with their corresponding available functions and capabilities
+---
+Priority:   65
+Status: ToDo
+ID: prompt-map-ti7n
+Build a mapping that connects House state and member role configurations to their appropriate system prompts and role-specific instructions
+---
+Priority:   65
+Status: ToDo
+ID: sys-prompt-xe3n
+Implement a mapping mechanism that dynamically selects and applies the correct system prompt based on the current House state and the member's assigned role
+---
+Priority:   60
+Status: ToDo
+ID: hansard-arr-f5v6
+Parse and structure Hansard records into an array format, breaking down the parliamentary proceedings into discrete, accessible elements
+---
+Priority:   60
+Status: ToDo
+ID: hist-hansard-y5b7
+Track and maintain member conversation history including internal thoughts, then integrate and stitch these records into the Hansard parliamentary record for building the context window in OpenAI request JSON
+---
+Priority:   50
+Status: ToDo
+ID: role-user-yxjh
+Configure Hansard, Speaker, and System messages to appear with the "user" role in the OpenAI request JSON message structure
