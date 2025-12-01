@@ -1,5 +1,5 @@
 /**
- * parliament-table tool - Submit Bills, Motions, Amendments, or Papers
+ * parliament-table tool - Submit Bills, Motions, or Amendments
  */
 export function toolTable(session, args) {
     const type = args[0];
@@ -24,25 +24,6 @@ export function toolTable(session, args) {
             status: 'success',
             message: `Bill ${bill.id} tabled`,
             data: bill,
-            exitCode: 0
-        };
-    } else if (type === 'paper') {
-        const filename = args[1];
-        const description = args.slice(2).join(' ').replace(/"/g, '');
-
-        const paper = {
-            id: `PAPER-${session.papers.length + 1}`,
-            filename,
-            description,
-            content: session.files[filename] || '[File not found]'
-        };
-
-        session.papers.push(paper);
-
-        return {
-            status: 'success',
-            message: `Paper tabled: ${filename}`,
-            data: paper,
             exitCode: 0
         };
     } else if (type === 'amendment') {

@@ -87,7 +87,7 @@ Recognizing all members
 ## 2. `parliament-table`
 
 ### Purpose
-Submit a Bill, Motion, Amendment, or Paper.
+Submit a Bill, Motion, or Amendment.
 
 ### Usage
 ```bash
@@ -98,13 +98,11 @@ parliament-table [type] [target] "description"
 - `bill [file]`: Create a new Bill
 - `motion`: Submit a procedural motion
 - `amendment [id]`: Formally move an amendment
-- `paper [file]`: Table a supporting document
 
 ### Behavior
 - **Bill**: Create `bills/BILL-{N}.md` with metadata.
 - **Motion**: Append to Hansard and set as active motion.
 - **Amendment**: Link amendment to current Bill.
-- **Paper**: Copy file to `papers/` and add to context.
 
 ### Output
 ```markdown
@@ -126,7 +124,45 @@ Bill BILL-05 tabled
 
 ---
 
-## 3. `parliament-edit`
+## 3. `parliament-share`
+
+### Purpose
+Share a file or document with the House. This adds the document to the shared context available to all agents.
+
+### Usage
+```bash
+parliament-share [name] [file content]
+```
+
+### Arguments
+- `[name]`: The name/identifier for the shared document
+- `[file content]`: The content of the file to share
+
+### Behavior
+1. Creates a paper entry with the provided name and content
+2. Adds it to the shared papers collection
+3. The document becomes available in the context for all agents
+
+### Output
+```markdown
+## Status: Success
+
+Shared: log.txt
+
+### Data
+- **ID**: PAPER-1
+- **Filename**: log.txt
+- **Description**: Shared document: log.txt
+- **Content**: [file content]
+```
+
+### Exit Codes
+- `0`: Success
+- `1`: Invalid format (name and content required)
+
+---
+
+## 4. `parliament-edit`
 
 ### Purpose
 View files, propose amendments, or enact approved changes.
@@ -185,7 +221,7 @@ File sonnet.txt created
 
 ---
 
-## 4. `parliament-order-paper`
+## 5. `parliament-order-paper`
 
 ### Purpose
 Display the current business of the House.
@@ -212,7 +248,7 @@ parliament-order-paper
 
 ---
 
-## 5. `parliament-issue`
+## 6. `parliament-issue`
 
 ### Purpose
 Manage issues/tasks.
@@ -254,7 +290,7 @@ Return all open issues.
 
 ---
 
-## 6. `parliament-adjourn`
+## 7. `parliament-adjourn`
 
 ### Purpose
 Adjourn the House and end the session. This is a Speaker-only command that stops the parliamentary loop.

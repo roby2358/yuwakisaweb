@@ -241,10 +241,24 @@ export class OpenRouterAPI {
                 response.priority = parseInt(priorityMatch[1]);
             }
 
-            // Extract command
-            const commandMatch = actionBlock.match(/\*\*Command\*\*:\s*`([^`]+)`/);
+            // Extract command - support both old format (with **Command**:) and new format (direct command)
+            // First try old format for backward compatibility
+            let commandMatch = actionBlock.match(/\*\*Command\*\*:\s*`([^`]+)`/);
             if (commandMatch) {
                 response.action = commandMatch[1];
+            } else {
+                // New format: command directly in backticks (may be on same line as Priority or separate line)
+                commandMatch = actionBlock.match(/`([^`]+)`/);
+                if (commandMatch) {
+                    response.action = commandMatch[1];
+                } else {
+                    // Fallback: extract non-empty line that isn't Priority (trimmed)
+                    const lines = actionBlock.split('\n').map(l => l.trim()).filter(l => l && !l.match(/^\*\*Priority\*\*:/));
+                    if (lines.length > 0) {
+                        // Use first non-empty, non-priority line as the command
+                        response.action = lines[0];
+                    }
+                }
             }
         }
 

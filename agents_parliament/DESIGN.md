@@ -63,7 +63,11 @@ All tasks (Bills) must pass through the following stages:
 - `bill`: Creates a Bill file (e.g., `bills/BILL-01.md`) tracking the proposal.
 - `motion`: A procedural proposal (e.g., "That the House do now adjourn").
 - `amendment`: A specific change to a text.
-- `paper`: A supporting document (e.g., logs, search results, design docs) to be added to the shared context.
+
+### 2a. `parliament-share` (Share Documents)
+**Purpose**: To share documents, logs, or reference materials with the House.
+**Usage**: `parliament-share [name] [file content]`
+**Description**: Adds a document to the shared context available to all agents.
 
 ### 3. `parliament-edit` (The Editor)
 **Purpose**: To modify the content of files (The Laws).
@@ -101,9 +105,9 @@ All tasks (Bills) must pass through the following stages:
     *   *System invokes Member 1*
 2.  **Member 1** (in response): Uses `parliament-issue create "Infinite Loop in main.py" "The event handler hangs indefinitely."`
     *   *System generates Issue ID: ISSUE-42*
-3.  **Member 1** (continues): Uses `parliament-table paper "logs/error.log" "Stack trace showing the infinite loop"`
-    *   *System adds `logs/error.log` to the session context.*
-4.  **Member 1** (in "# Speak" section): "I rise to table a Bill to fix the critical infinite loop in the main event handler (ISSUE-42). I have tabled the error logs for reference."
+3.  **Member 1** (continues): Uses `parliament-share "logs/error.log" "Stack trace showing the infinite loop"`
+    *   *System adds the shared document to the session context.*
+4.  **Member 1** (in "# Speak" section): "I rise to table a Bill to fix the critical infinite loop in the main event handler (ISSUE-42). I have shared the error logs for reference."
 5.  **Member 1** (continues): Uses `parliament-table bill main.py "Fix infinite loop in event handler"`
     *   *System records the Bill.*
 

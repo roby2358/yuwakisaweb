@@ -102,7 +102,7 @@ Respond with:
 # Speak
 [Your statement to the House]
 ## Action
-**Command**: \`parliament-recognize all "instruction"\``;
+\`parliament-recognize all "instruction"\``;
 
             this.prompts.member = `# Role: Member of Parliament
 You are a Member of Parliament. Follow the parliamentary process.
@@ -113,7 +113,7 @@ Respond with:
 [Your speech to the House. Everything you write here goes into the Hansard.]
 ## Action
 **Priority**: 5
-**Command**: \`[command if needed]\``;
+\`[command if needed]\``;
         }
     }
 

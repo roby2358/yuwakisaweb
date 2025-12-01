@@ -2,6 +2,7 @@
  * ParliamentSession - Core state management for the Parliamentary Agent Framework
  */
 import { toolTable } from './tools/table.js';
+import { toolShare } from './tools/share.js';
 import { toolEdit } from './tools/edit.js';
 import { toolOrderPaper } from './tools/orderPaper.js';
 import { toolIssue } from './tools/issue.js';
@@ -64,6 +65,8 @@ export class ParliamentSession {
             switch (tool) {
                 case 'parliament-table':
                     return toolTable(this, parts.slice(1));
+                case 'parliament-share':
+                    return toolShare(this, parts.slice(1));
                 case 'parliament-edit':
                     return toolEdit(this, parts.slice(1));
                 case 'parliament-order-paper':

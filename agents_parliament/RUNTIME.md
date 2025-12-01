@@ -12,7 +12,7 @@ The Framework constructs the context for the **Speaker LLM**.
 *   **System**: `ROLE_SPEAKER.md`
 *   **User (Context)**: Current State (Stage, Bills, Issues), Hansard History, and File Contents.
 *   **Instruction**: "Review the state and Member responses. Decide the next action."
-*   **Output**: The Speaker returns a Decision, a `# Speak` section (recorded in Hansard), and an Action section with a Command (e.g., `parliament-recognize all "Vote now"`).
+*   **Output**: The Speaker returns a Decision, a `# Speak` section (recorded in Hansard), and an Action section with a command (e.g., `parliament-recognize all "Vote now"`).
 
 ### Phase B: Framework Execution
 The Framework executes the Speaker's command:
