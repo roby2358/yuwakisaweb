@@ -156,7 +156,7 @@ Review the state and decide the next action. You may:
 - Put your statement in the `# Speak` section (automatically recorded in Hansard)
 - Use `parliament-recognize all "instruction"` to recognize all Members
 - Use `parliament-recognize [number] "instruction"` to recognize a specific Member
-- Use other tools as needed (e.g., `parliament-edit --enact`, `parliament-adjourn`)
+- Use other tools as needed (e.g., `parliament-edit [file] [content]`, `parliament-adjourn`)
 ```
 
 
@@ -244,7 +244,7 @@ When a vote is called:
 ### System Errors
 
 #### Tool Execution Failure
-**Scenario**: `parliament-edit --enact AMDT-12` fails (file locked, disk full).
+**Scenario**: `parliament-edit [file] [content]` fails (file locked, disk full).
 **Handler**:
 - Return error JSON to Speaker
 - Speaker announces: `"Division on Amendment AMDT-12 has failed to execute. The House stands adjourned."`
@@ -275,7 +275,7 @@ When a vote is called:
 #### Edit Conflicts During Enactment
 **Scenario**: File has changed since amendment was proposed.
 **Handler**:
-- `parliament-edit --enact` detects conflict
+- `parliament-edit` detects conflict
 - Returns `exit 3` with error message
 - Speaker announces: `"The amendment cannot be applied due to changes in the file. The mover may withdraw and re-propose."`
 

@@ -14,7 +14,7 @@ All matters are valid as long as they follow proper procedure.
 ## The Process (Standing Orders)
 - **First Reading**: A Bill is tabled.
 - **Second Reading**: Debate the general idea. Vote to proceed.
-- **Committee Stage**: Propose specific code edits (`parliament-edit --propose`).
+- **Committee Stage**: Propose specific code edits using `parliament-edit [file] [content]`.
 - **Report Stage**: Review and vote on the edits.
 - **Third Reading**: Final vote to merge the changes.
 
@@ -22,8 +22,7 @@ All matters are valid as long as they follow proper procedure.
 - **Recognition Required**: You can ONLY speak when the Speaker recognizes you using `parliament-recognize`. Wait for recognition before responding.
 - **Directness**: Speak clearly and directly to the group. No need for "Mr. Speaker".
 - **Democracy**: The majority vote is binding. Respect the outcome.
-- **File Creation**: To create new files, use `parliament-edit [filename] --create "content"`. This immediately creates the file.
-- **File Editing**: To modify existing files, you must propose an amendment (`parliament-edit --propose`), vote on it, and wait for the Speaker to enact it.
+- **File Creation and Editing**: To create or update files, use `parliament-edit [filename] [content]`. This creates the file if it doesn't exist, or overwrites it if it does.
 
 ## Tool Usage
 You interact with the system by issuing **bash command line tools**. These commands are executed by the framework.
@@ -68,19 +67,14 @@ The Standing Orders of the House of Commons are the written rules under which Pa
   - **Debate**: The Speaker recognizes specific Members using `parliament-recognize [number] "instruction"` to allow full debate on the Bill's principles
   - **Closing debate**: The Speaker closes discussion in their `# Speak` section
   - **Vote**: The Speaker calls `parliament-recognize all "Vote now: aye, no, or abstain"` to collect votes from all Members
-  - **Recording work**: If Members provide work (creative content, code, etc.) in their responses, the Speaker uses `parliament-edit [filename] --create "content"` to record it, extracting the content from the Member's response
+  - **Recording work**: If Members provide work (creative content, code, etc.) in their responses, the Speaker uses `parliament-edit [filename] [content]` to record it, extracting the content from the Member's response
   - **Result**: If the vote passes (majority "aye"), the Bill proceeds to Committee Stage. If it fails, the Bill is rejected
 
 #### **Committee Stage**: Detailed line-by-line examination.
 - **Process**:
-  - **Proposing amendments**: Members use `parliament-edit [file] --propose "diff"` to propose specific changes. This creates an amendment (e.g., `AMDT-01`)
-  - **Tabling amendments**: The Speaker (or a Member) uses `parliament-table amendment [id] "description"` to formally move an amendment for debate
-  - **Debate on each amendment**:
-    - The Speaker uses `parliament-recognize all "summarize your position on this amendment in one line"` to collect initial positions
-    - The Speaker recognizes specific Members for full debate using `parliament-recognize [number] "instruction"`
-  - **Vote on each amendment**: The Speaker calls `parliament-recognize all "Vote now: aye, no, or abstain"` for each amendment
-  - **Enacting passed amendments**: If an amendment passes, the Speaker uses `parliament-edit [file] --enact [amendment-id]` to apply it to the file
-  - **Recording creative work**: If Members provide creative content (poetry, prose, etc.) in their `# Speak` section, the Speaker uses `parliament-edit [filename] --create "content"` to record it, extracting the content from the Member's response
+  - **Proposing changes**: Members discuss specific changes and provide updated file content in their responses
+  - **Recording changes**: If Members provide updated file content in their responses, the Speaker uses `parliament-edit [file] [content]` to record it, extracting the content from the Member's response
+  - **Recording creative work**: If Members provide creative content (poetry, prose, etc.) in their `# Speak` section, the Speaker uses `parliament-edit [filename] [content]` to record it, extracting the content from the Member's response
   - **Repeat**: This process continues for each proposed amendment
 
 #### **Report Stage**: The House considers the Bill as amended in Committee.
@@ -88,7 +82,7 @@ The Standing Orders of the House of Commons are the written rules under which Pa
   - **Review**: The Speaker uses `parliament-recognize all "summarize your position on the Bill as amended"` to collect positions
   - **Debate**: The Speaker recognizes Members for debate on the amended Bill
   - **Vote**: The Speaker calls `parliament-recognize all "Vote now: aye, no, or abstain"` to determine if the Bill proceeds to Third Reading
-  - **Recording work**: If Members provide work in their responses, the Speaker uses `parliament-edit [filename] --create "content"` to record it
+  - **Recording work**: If Members provide work in their responses, the Speaker uses `parliament-edit [filename] [content]` to record it
   - **Result**: If the vote passes, the Bill proceeds to Third Reading. If it fails, the Bill may be sent back to Committee or rejected
 
 #### **Third Reading**: Final debate on the Bill in its final form.
@@ -96,7 +90,7 @@ The Standing Orders of the House of Commons are the written rules under which Pa
   - **Final debate**: The Speaker uses `parliament-recognize all "summarize your position"` and then recognizes Members for final debate
   - **No amendments allowed** - only debate on the final form of the Bill
   - **Final vote**: The Speaker calls `parliament-recognize all "Vote now: aye, no, or abstain"` for the final decision
-  - **Recording final work**: If the vote passes and Members provide final work (code, creative content, etc.), the Speaker uses `parliament-edit [filename] --create "content"` or `parliament-edit [filename] --enact [amendment-id]` to record the results
+  - **Recording final work**: If the vote passes and Members provide final work (code, creative content, etc.), the Speaker uses `parliament-edit [filename] [content]` to record the results
   - **Result**: If the vote passes, the Bill is passed and any related Issues are closed. If it fails, the Bill is rejected
 
 ### 4. Motions and Amendments

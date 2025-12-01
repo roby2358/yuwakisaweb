@@ -129,7 +129,7 @@ Formally move an amendment that was previously proposed.
 **Behavior**:
 - Marks the amendment as `tabled: true`
 - Sets the active motion to "That Amendment {id} be made"
-- The amendment must exist (must have been created via `parliament-edit --propose`)
+- The amendment must exist (must have been created via `parliament-table amendment`)
 
 **Output**:
 ```markdown
@@ -191,109 +191,47 @@ Shared: log.txt
 ## 4. `parliament-edit`
 
 ### Purpose
-View files, propose amendments, or enact approved changes.
+Create or update a file with content. Creates the file if it doesn't exist, or overwrites it if it does.
 
 ### Usage
 ```bash
-parliament-edit [file] --view
-parliament-edit --view-amendment [amendment-id]
-parliament-edit [file] --propose "diff"
-parliament-edit [file] --enact [amendment-id]
-parliament-edit [file] --create "content"
+parliament-edit [file] [content]
 ```
 
-### Modes
+### Arguments
+- `[file]`: The filename to create or update
+- `[content]`: The file content (may be quoted, backtick-delimited, or plain text)
 
-#### `[file] --view`
-Read-only file viewing.
-- `[file]`: The filename to view
+### Behavior
+- If the file doesn't exist, it is created with the specified content
+- If the file already exists, it is overwritten with the new content
+- Content can be provided in quotes (`"content"`), backticks (```content```), or as plain text
 
-**Output**:
+### Output
 ```markdown
 ## Status: Success
 
-Viewing main.py
+File main.py created
 
 ### Data
 - **Filename**: main.py
 - **Content**: [file content]
 ```
 
-**Exit Code**: `0` (success), `4` (file not found)
-
-#### `--view-amendment [amendment-id]`
-Display the proposed diff for an amendment.
-- `[amendment-id]`: The amendment ID (must start with `AMDT-`, e.g., `AMDT-12`)
-
-**Output**:
+Or if file existed:
 ```markdown
 ## Status: Success
 
-Viewing amendment AMDT-12
+File main.py updated
 
 ### Data
-- **ID**: AMDT-12
-- **File**: main.py
-- **Diff**: [diff content]
-- **Tabled**: false
-- **Passed**: false
-```
-
-**Exit Code**: `0` (success), `4` (amendment not found)
-
-#### `[file] --propose "diff"`
-Create a new amendment proposal.
-- `[file]`: The target filename to amend
-- `"diff"`: The diff content in format `from->to` (simple string replacement)
-
-**Note**: The diff format is a simple string replacement: `"old text->new text"`. The tool will replace the first occurrence of `old text` with `new text` in the file when enacted.
-
-**Output**:
-```markdown
-## Status: Success
-
-Amendment AMDT-12 created
-
-### Data
-- **ID**: AMDT-12
-- **File**: main.py
-- **Diff**: [diff content]
-- **Tabled**: false
-- **Passed**: false
-```
-
-**Exit Code**: `0`
-
-#### `[file] --enact [amendment-id]`
-Apply the diff to the target file.
-- `[file]`: The target filename (must match the amendment's file)
-- `[amendment-id]`: The amendment ID (must start with `AMDT-`, e.g., `AMDT-12`)
-
-**Requires**: Amendment must have `passed: true` (must have passed a vote).
-
-**Behavior**: Applies the diff using simple string replacement (`from->to` format).
-
-**Exit Code**: `0` (success), `2` (out of order - not passed), `4` (amendment not found)
-
-#### `[file] --create "content"`
-Create a new file with the specified content.
-- `[file]`: The filename to create
-- `"content"`: The file content
-
-**Requires**: File must not already exist.
-
-**Output**:
-```markdown
-## Status: Success
-
-File sonnet.txt created
-
-### Data
-- **Filename**: sonnet.txt
+- **Filename**: main.py
 - **Content**: [file content]
 ```
 
-**Exit Code**: `0` (success), `1` (filename required), `2` (file already exists)
+### Exit Codes
+- `0`: Success
+- `1`: Invalid arguments (filename or content missing)
 
 ---
 

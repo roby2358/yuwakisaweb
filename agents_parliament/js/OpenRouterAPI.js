@@ -141,7 +141,7 @@ export class OpenRouterAPI {
         // Files
         context += `## Files\n`;
         if (Object.keys(session.files).length === 0) {
-            context += `No files currently exist. Use \`parliament-edit [filename] --create "content"\` to create new files.\n\n`;
+            context += `No files currently exist. Use \`parliament-edit [filename] [content]\` to create new files.\n\n`;
         } else {
             for (const [filename, content] of Object.entries(session.files)) {
                 context += `### ${filename}\n\`\`\`\n${content}\n\`\`\`\n\n`;

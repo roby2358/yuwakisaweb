@@ -70,14 +70,9 @@ All tasks (Bills) must pass through the following stages:
 **Description**: Adds a document to the shared context available to all agents.
 
 ### 3. `parliament-edit` (The Editor)
-**Purpose**: To modify the content of files (The Laws).
-**Usage**: `parliament-edit [file] [options]`
-**Description**: A line-oriented text editor that enforces parliamentary procedure.
-**Modes**:
-- **View File**: `parliament-edit [file] --view` (Read-only).
-- **View Amendment**: `parliament-edit --view-amendment [id]` (See the proposed diff).
-- **Propose**: `parliament-edit [file] --propose "diff content"` (Creates an amendment).
-- **Enact**: `parliament-edit [file] --enact [amendment_id]` (Applies an agreed amendment).
+**Purpose**: To create or update files (The Laws).
+**Usage**: `parliament-edit [file] [content]`
+**Description**: Creates a file if it doesn't exist, or overwrites it if it does.
 **Note**: Direct editing without a passed motion is blocked by the Sergeant-at-Arms (File Permissions).
 
 ### 4. `parliament-issue` (Task Management)
@@ -127,8 +122,7 @@ All tasks (Bills) must pass through the following stages:
 ### Stage 3: Committee Stage (The Work)
 - **Speaker**: `parliament-recognize 1 "You may propose amendments to fix the infinite loop."`
   *   *System invokes Member 1*
-- **Member 1**: Uses `parliament-edit main.py --propose "while True: -> while running:"`
-  *   *System generates Amendment ID: AMDT-1*
+- **Member 1**: Provides updated code in their `# Speak` section
 - **Member 1**: Uses `parliament-table amendment AMDT-1 "Replace infinite loop with state variable"`
 - **Speaker** (in "# Speak" section): "Amendment AMDT-1 has been tabled. The floor is open for comment."
 - **Speaker**: `parliament-recognize all "summarize your position on Amendment AMDT-1 in one line"`
@@ -138,13 +132,11 @@ All tasks (Bills) must pass through the following stages:
   - Member 2: `# Speak\nI have concerns about undefined variable 'running'.`
 - **Speaker**: (considers summaries) `parliament-recognize 2 "Please elaborate on your concerns"`
   *   *System invokes Member 2 for full debate*
-- **Member 2**: Uses `parliament-edit --view-amendment AMDT-1`
 - **Member 2** (in "# Speak" section): "Point of Order. The variable 'running' is not defined in this scope. This will crash."
 - **Speaker**: `parliament-recognize 1 "The Member has raised a valid point. How do you respond?"`
   *   *System invokes Member 1*
 - **Member 1** (in "# Speak" section): "The Member is correct. I withdraw and will propose a corrected version."
-- **Member 1**: Uses `parliament-edit main.py --propose "running = True\nwhile running:"`
-  *   *System generates Amendment ID: AMDT-2*
+- **Member 1**: Provides corrected code in their `# Speak` section
 - **Member 1**: Uses `parliament-table amendment AMDT-2 "Define state variable and loop condition"`
 - **Speaker** (in "# Speak" section): "Amendment AMDT-2 has been tabled. The floor is closed. The Question is that Amendment AMDT-2 be made."
 - **Speaker**: `parliament-recognize all "Vote now on Amendment AMDT-2"`
@@ -153,7 +145,7 @@ All tasks (Bills) must pass through the following stages:
   - Member 1: `# Speak\naye`
   - Member 2: `# Speak\naye`
 - **Speaker** (in "# Speak" section): "The Ayes have it."
-- **Speaker**: Uses `parliament-edit main.py --enact AMDT-2`
+- **Speaker**: Uses `parliament-edit main.py [content]` with the approved content
   *   *File `main.py` is updated.*
 
 ### Stage 4: Third Reading (Final Approval)
