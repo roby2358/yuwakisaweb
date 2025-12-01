@@ -2,13 +2,13 @@
  * OpenRouterAPI - Client for calling OpenRouter API with OpenAI protocol
  */
 export class OpenRouterAPI {
-    constructor(apiKey, model = 'anthropic/claude-haiku-4.5') {
+    constructor(apiKey, model) {
         if (!apiKey || apiKey.trim() === '') {
             throw new Error('OpenRouterAPI: API key is required');
         }
         this.apiKey = apiKey.trim();
         this.baseURL = 'https://openrouter.ai/api/v1';
-        this.model = model || 'anthropic/claude-haiku-4.5';
+        this.model = model;
     }
 
     /**
@@ -79,6 +79,15 @@ export class OpenRouterAPI {
         console.log('=== RAW LLM RESPONSE ===');
         console.log(JSON.stringify(data, null, 2));
         console.log('========================');
+        
+        // Validate response structure
+        if (!data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
+            throw new Error('API Error: Invalid response structure - no choices array');
+        }
+        
+        if (!data.choices[0].message || !data.choices[0].message.content) {
+            throw new Error('API Error: Invalid response structure - missing message content');
+        }
         
         const responseContent = data.choices[0].message.content;
         
@@ -201,12 +210,15 @@ export class OpenRouterAPI {
         try {
             // Match all headings and their content until the next heading
             // Pattern matches: (start or newline) + (#+) + heading text + newline + content until next # or end
-            const blockPattern = /(^|\n)(#+)\s+([^\n]+)\s*\n([\s\S]*?)(?=\n#|$)/g;
+            // Use a more robust pattern that ensures we match proper markdown headings (must start at line start)
+            const blockPattern = /(^|\n)(#+)\s+([^\n]+)\s*\n([\s\S]*?)(?=\n(?:#+\s|$))/g;
             
             let match;
             while ((match = blockPattern.exec(markdown)) !== null) {
                 const headingName = match[3].trim(); // The heading text
-                const content = match[4].trim(); // The content
+                // Don't trim content - preserve all whitespace including leading/trailing newlines
+                // We'll trim only when extracting specific parts if needed
+                const content = match[4]; // The content (preserve as-is)
                 
                 // Normalize heading name (case-insensitive, remove extra spaces)
                 const normalizedName = headingName.toLowerCase().trim();
@@ -230,8 +242,7 @@ export class OpenRouterAPI {
             speak: null,
             action: null,
             vote: null,
-            pass: false,
-            priority: 5
+            pass: false
         };
 
         try {
@@ -274,12 +285,6 @@ export class OpenRouterAPI {
             if (blocks.has('action')) {
                 const actionBlock = blocks.get('action');
 
-                // Extract priority
-                const priorityMatch = actionBlock.match(/\*\*Priority\*\*:\s*(\d+)/);
-                if (priorityMatch) {
-                    response.priority = parseInt(priorityMatch[1]);
-                }
-
                 // Extract command - try triple backticks (multiline), single backticks, or use whole block
                 // Since we have clean block extraction, we can simplify this
                 let commandMatch = actionBlock.match(/```+([\s\S]*?)```+/);
@@ -292,12 +297,13 @@ export class OpenRouterAPI {
                         // Single backticks - single line command
                         response.action = this.normalizeCommand(commandMatch[1]);
                     } else {
-                        // No backticks - use whole block (excluding Priority line if present)
-                        const lines = actionBlock.split('\n')
-                            .map(l => l.trim())
-                            .filter(l => l && !l.match(/^\*\*Priority\*\*:/));
-                        if (lines.length > 0) {
-                            response.action = this.normalizeCommand(lines.join('\n'));
+                        // No backticks - use whole block
+                        // Preserve all content including newlines and empty lines
+                        // Trim only leading/trailing whitespace of entire block, preserve internal structure
+                        const cleanedBlock = actionBlock.trim();
+                        
+                        if (cleanedBlock) {
+                            response.action = this.normalizeCommand(cleanedBlock);
                         } else {
                             console.log('[Parse Warning] Action block found but no command extracted');
                             console.log('[Parse Warning] Action block content:', actionBlock);
