@@ -305,7 +305,6 @@ export class OpenRouterAPI {
                     }
                 }
             } else {
-                console.log('[Parse Warning] No Action block found in response');
                 console.log('[Parse Warning] Available blocks:', Array.from(blocks.keys()));
             }
         } catch (error) {
