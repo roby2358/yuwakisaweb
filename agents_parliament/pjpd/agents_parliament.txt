@@ -33,7 +33,17 @@ Status: ToDo
 ID: hist-hansard-y5b7
 Track and maintain member conversation history including internal thoughts, then integrate and stitch these records into the Hansard parliamentary record for building the context window in OpenAI request JSON
 ---
+Priority:   60
+Status: ToDo
+ID: error-handle-rfgz
+Implement error handling system for failed commands that provides clear feedback to members about what went wrong and supports retry mechanisms for recoverable failures
+---
 Priority:   50
 Status: ToDo
 ID: role-user-yxjh
 Configure Hansard, Speaker, and System messages to appear with the "user" role in the OpenAI request JSON message structure
+---
+Priority:   50
+Status: ToDo
+ID: multi-action-8ikv
+Allow the Speaker to perform multiple actions in a single turn, enabling more complex parliamentary workflows where the Speaker can execute several commands sequentially or in parallel
