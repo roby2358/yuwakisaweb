@@ -1,3 +1,8 @@
+Priority:   80
+Status: ToDo
+ID: error-retry-gwed
+Convert command errors and system errors into prompts that trigger automatic retries with a maximum retry count of 3, allowing the system to recover from transient failures and learn from error feedback
+---
 Priority:   70
 Status: ToDo
 ID: tool-md-ez3x
