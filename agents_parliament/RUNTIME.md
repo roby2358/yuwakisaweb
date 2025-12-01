@@ -12,7 +12,7 @@ The Framework constructs the context for the **Speaker LLM**.
 *   **System**: `ROLE_SPEAKER.md`
 *   **User (Context)**: Current State (Stage, Bills, Issues), Hansard History, and File Contents.
 *   **Instruction**: "Review the state and Member responses. Decide the next action."
-*   **Output**: The Speaker returns a Decision, a `# Speak` section (recorded in Hansard), and an Execution Command (e.g., `parliament-recognize all "Vote now"`).
+*   **Output**: The Speaker returns a Decision, a `# Speak` section (recorded in Hansard), and an Action section with a Command (e.g., `parliament-recognize all "Vote now"`).
 
 ### Phase B: Framework Execution
 The Framework executes the Speaker's command:
@@ -29,7 +29,7 @@ When `parliament-recognize` is executed:
 *   **System**: `MP.md` + `ROLE_MEMBER.md`
 *   **User (Context)**: Current State, Hansard, and File Contents.
 *   **Instruction**: "The Speaker recognizes you. [instruction from recognize command]"
-*   **Output**: Members return `## Thought`, `# Speak`, `## Action` (or `## Vote` / `## Pass`).
+*   **Output**: Members return `## Thought`, `# Speak`, `## Action` (or `## Pass`). Votes are included in the `# Speak` section.
 
 ### Two-Step Process for Opening the Floor
 When the Speaker opens the floor for comment, the standard procedure is:

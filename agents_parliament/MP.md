@@ -77,8 +77,8 @@ When the Speaker calls a vote, respond with:
 ## Thought
 [Your reasoning for your vote.]
 
-## Vote
-**Decision**: aye | no | abstain
+# Speak
+[Your vote: aye, no, or abstain. Everything you write here goes into the Hansard.]
 ```
 
 ### Pass (No Action)

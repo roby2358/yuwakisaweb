@@ -76,19 +76,12 @@ All tasks (Bills) must pass through the following stages:
 - **Enact**: `parliament-edit [file] --enact [amendment_id]` (Applies an agreed amendment).
 **Note**: Direct editing without a passed motion is blocked by the Sergeant-at-Arms (File Permissions).
 
-### 4. `parliament-hansard` (History)
-**Purpose**: To read the official record.
-**Usage**: `parliament-hansard [options]`
-**Options**:
-- `--tail`: Read the last N entries.
-- `--search "query"`: Find specific precedents.
-
-### 5. `parliament-order-paper` (Agenda)
+### 4. `parliament-order-paper` (Agenda)
 **Purpose**: To see the current business of the House.
 **Usage**: `parliament-order-paper`
 **Output**: Lists the current stage, active motions, and upcoming business.
 
-### 6. `parliament-issue` (Task Management)
+### 5. `parliament-issue` (Task Management)
 **Purpose**: To manage the lifecycle of issues/tasks.
 **Usage**: `parliament-issue [action] [id] [details]`
 **Actions**:
@@ -128,8 +121,8 @@ All tasks (Bills) must pass through the following stages:
 12. **Speaker**: `parliament-recognize all "Vote now: aye, no, or abstain"`
     *   *System invokes all Members in parallel*
 13. **All Members respond with their votes**:
-    - Member 1: `## Vote\n**Decision**: aye`
-    - Member 2: `## Vote\n**Decision**: aye`
+    - Member 1: `# Speak\naye`
+    - Member 2: `# Speak\naye`
 14. **Speaker** (in "# Speak" section): "The Ayes have it. The Bill is committed to a Committee of the whole House."
 
 ### Stage 3: Committee Stage (The Work)
@@ -158,8 +151,8 @@ All tasks (Bills) must pass through the following stages:
 29. **Speaker**: `parliament-recognize all "Vote now on Amendment AMDT-2"`
     *   *System invokes all Members in parallel*
 30. **All Members respond with their votes**:
-    - Member 1: `## Vote\n**Decision**: aye`
-    - Member 2: `## Vote\n**Decision**: aye`
+    - Member 1: `# Speak\naye`
+    - Member 2: `# Speak\naye`
 31. **Speaker** (in "# Speak" section): "The Ayes have it."
 32. **Speaker**: Uses `parliament-edit main.py --enact AMDT-2`
     *   *File `main.py` is updated.*
@@ -175,8 +168,8 @@ All tasks (Bills) must pass through the following stages:
 37. **Speaker**: `parliament-recognize all "Vote now on Third Reading"`
     *   *System invokes all Members in parallel*
 38. **All Members respond with their votes**:
-    - Member 1: `## Vote\n**Decision**: aye`
-    - Member 2: `## Vote\n**Decision**: aye`
+    - Member 1: `# Speak\naye`
+    - Member 2: `# Speak\naye`
 39. **Speaker** (in "# Speak" section): "The Ayes have it. The Bill is passed."
 40. **Speaker**: Uses `parliament-issue close ISSUE-42`
     *   *Task is marked complete.*

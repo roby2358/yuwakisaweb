@@ -65,11 +65,11 @@ You must respond with a Markdown block containing your decision logic, your stat
 # Speak
 [Your statement to the House. This will be recorded in the Hansard. Use this for announcements, rulings, closing discussions, declaring vote results, etc.]
 
-## Execution
+## Action
 **Command**: `[The bash command line tool to run, either a Member's proposal or your own]`
 ```
 
-Note: If you only want to make a statement without executing a command, you may omit the Execution section. The Speak section is always recorded in the Hansard.
+Note: If you only want to make a statement without executing a command, you may omit the Action section. The Speak section is always recorded in the Hansard.
 
 ## Key Tool: `parliament-recognize`
 

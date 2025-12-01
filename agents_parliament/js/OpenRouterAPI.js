@@ -2,13 +2,13 @@
  * OpenRouterAPI - Client for calling OpenRouter API with OpenAI protocol
  */
 export class OpenRouterAPI {
-    constructor(apiKey) {
+    constructor(apiKey, model = 'anthropic/claude-haiku-4.5') {
         if (!apiKey || apiKey.trim() === '') {
             throw new Error('OpenRouterAPI: API key is required');
         }
         this.apiKey = apiKey.trim();
         this.baseURL = 'https://openrouter.ai/api/v1';
-        this.model = 'anthropic/claude-haiku-4.5'; // Default model
+        this.model = model || 'anthropic/claude-haiku-4.5';
     }
 
     /**
@@ -209,21 +209,29 @@ export class OpenRouterAPI {
             response.thought = thoughtMatch[1].trim();
         }
 
-        // Extract Vote
-        const voteMatch = markdown.match(/## Vote\s*\n\*\*Decision\*\*:\s*(aye|no|abstain)/i);
-        if (voteMatch) {
-            response.vote = voteMatch[1].toLowerCase();
-            return response;
-        }
-
-        // Extract Speak section (everything in # Speak section goes to Hansard)
-        const speakMatch = markdown.match(/# Speak\s*\n([\s\S]*?)(?=\n##|$)/);
+        // Extract Speak section (everything in #+ Speak section goes to Hansard)
+        const speakMatch = markdown.match(/#+ Speak\s*\n([\s\S]*?)(?=\n#|$)/);
         if (speakMatch) {
             response.speak = speakMatch[1].trim();
+            
+            // Check if Speak section contains a vote (aye, no, or abstain)
+            // Look for vote words as standalone or in common patterns
+            const speakContent = response.speak.toLowerCase();
+            const votePattern = /\b(aye|no|abstain)\b/i;
+            const voteMatch = speakContent.match(votePattern);
+            if (voteMatch) {
+                response.vote = voteMatch[1].toLowerCase();
+            }
         }
 
-        // Extract Action
-        const actionMatch = markdown.match(/## Action\s*\n([\s\S]*?)(?=\n##|$)/);
+        // Extract Decision (for Speaker)
+        const decisionMatch = markdown.match(/## Decision\s*\n([\s\S]*?)(?=\n#|$)/);
+        if (decisionMatch) {
+            response.thought = decisionMatch[1].trim();
+        }
+
+        // Extract Action (flexible #+ Action pattern - matches # Action, ## Action, ### Action, etc.)
+        const actionMatch = markdown.match(/#+ Action\s*\n([\s\S]*?)(?=\n#|$)/);
         if (actionMatch) {
             const actionBlock = actionMatch[1];
 
@@ -238,18 +246,6 @@ export class OpenRouterAPI {
             if (commandMatch) {
                 response.action = commandMatch[1];
             }
-        }
-
-        // Extract Decision (for Speaker)
-        const decisionMatch = markdown.match(/## Decision\s*\n([\s\S]*?)(?=\n##|$)/);
-        if (decisionMatch) {
-            response.thought = decisionMatch[1].trim();
-        }
-
-        // Extract Execution (for Speaker)
-        const executionMatch = markdown.match(/## Execution\s*\n\*\*Command\*\*:\s*`([^`]+)`/);
-        if (executionMatch) {
-            response.action = executionMatch[1];
         }
 
         return response;

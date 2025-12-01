@@ -17,7 +17,16 @@
             <h1>🏛️ Parliamentary Agent Framework</h1>
             <div class="controls">
                 <div style="flex: 1; position: relative;">
-                    <input type="password" id="apiKey" placeholder="OpenRouter API Key" class="api-input">
+                    <div style="display: flex; gap: 12px; align-items: flex-start;">
+                        <input type="password" id="apiKey" placeholder="OpenRouter API Key" class="api-input" style="flex: 1;">
+                        <select id="modelSelect" class="model-select">
+                            <option value="anthropic/claude-haiku-4.5">Claude Haiku 4.5</option>
+                            <option value="anthropic/claude-sonnet-4.5">Claude Sonnet 4.5</option>
+                            <option value="deepseek/deepseek-chat-v3">DeepSeek Chat v3</option>
+                            <option value="deepseek/deepseek-v3.2-exp">DeepSeek v3.2 Exp</option>
+                            <option value="moonshotai/kimi-k2-thinking">Kimi K2 Thinking</option>
+                        </select>
+                    </div>
                     <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px; opacity: 0.8;">
                         ⚠️ API key stored in browser memory only (cleared on page close)
                     </div>

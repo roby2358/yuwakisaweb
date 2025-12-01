@@ -37,45 +37,7 @@ All tools manipulate the `ParliamentSession` object:
 
 ---
 
-## 1. `parliament-speak`
-
-### Purpose
-Record a speech or statement in Hansard. **This tool is primarily used by the Speaker** for announcements, rulings, and procedural statements.
-
-**Note**: Members do NOT use this tool. Instead, Members put their speech in a `# Speak` section in their response, which is automatically recorded in the Hansard.
-
-### Usage
-```bash
-parliament-speak [options] "message"
-```
-
-### Options
-- `--point-of-order`: Flag as high priority
-- `--intervention`: Request to interrupt
-- `--yield`: Yield the floor
-
-### Behavior
-1. Append entry to `hansard.jsonl` with timestamp, speaker, message, and flags.
-2. Return the entry ID.
-
-### Output
-```markdown
-## Status: Success
-
-Speech recorded
-
-### Data
-- **Entry ID**: HANS-42
-- **Speaker**: Speaker
-- **Timestamp**: 2025-11-29T19:30:00Z
-```
-
-### Exit Codes
-- `0`: Success
-
----
-
-## 2. `parliament-recognize`
+## 1. `parliament-recognize`
 
 ### Purpose
 Grant the floor to a Member or all Members, triggering an LLM invocation. **This is the ONLY way to invoke Member LLMs.** There is no automatic routing of requests to Members.
@@ -117,13 +79,12 @@ Recognizing all members
 
 ### Notes
 - **Critical**: Members can ONLY be invoked through this command. There is no automatic invocation.
-- This tool replaces the old `parliament-vote` tool for calling votes.
 - When recognizing "all", all Members are invoked in parallel.
 - The instruction should be clear and specific (e.g., "What is your view on this amendment?" or "Vote now: aye, no, or abstain").
 
 ---
 
-## 3. `parliament-table`
+## 2. `parliament-table`
 
 ### Purpose
 Submit a Bill, Motion, Amendment, or Paper.
@@ -165,7 +126,7 @@ Bill BILL-05 tabled
 
 ---
 
-## 4. `parliament-edit`
+## 3. `parliament-edit`
 
 ### Purpose
 View files, propose amendments, or enact approved changes.
@@ -224,35 +185,7 @@ File sonnet.txt created
 
 ---
 
-## 5. `parliament-hansard`
-
-### Purpose
-Query the official record.
-
-### Usage
-```bash
-parliament-hansard [options]
-```
-
-### Options
-- `--tail [N]`: Last N entries (default: 10)
-- `--search "query"`: Full-text search
-
-### Output
-```markdown
-## Status: Success
-
-### Entries
-- **HANS-40** (2025-11-29T19:25:00Z) **Speaker**: The Question is...
-- **HANS-41** (2025-11-29T19:26:00Z) **Member A**: I move the amendment...
-```
-
-### Exit Codes
-- `0`: Success
-
----
-
-## 6. `parliament-order-paper`
+## 4. `parliament-order-paper`
 
 ### Purpose
 Display the current business of the House.
@@ -279,7 +212,7 @@ parliament-order-paper
 
 ---
 
-## 7. `parliament-issue`
+## 5. `parliament-issue`
 
 ### Purpose
 Manage issues/tasks.
@@ -321,7 +254,7 @@ Return all open issues.
 
 ---
 
-## 8. `parliament-adjourn`
+## 6. `parliament-adjourn`
 
 ### Purpose
 Adjourn the House and end the session. This is a Speaker-only command that stops the parliamentary loop.

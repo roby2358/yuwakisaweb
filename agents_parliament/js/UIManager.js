@@ -6,6 +6,7 @@ export class UIManager {
         this.elements = {
             userInput: document.getElementById('userInput'),
             apiKey: document.getElementById('apiKey'),
+            modelSelect: document.getElementById('modelSelect'),
             startBtn: document.getElementById('startBtn'),
             pauseBtn: document.getElementById('pauseBtn'),
             clearHansard: document.getElementById('clearHansard'),
@@ -174,6 +175,13 @@ export class UIManager {
      */
     clearApiKey() {
         this.elements.apiKey.value = '';
+    }
+
+    /**
+     * Get selected model ID from dropdown
+     */
+    getModelId() {
+        return this.elements.modelSelect.value;
     }
 
     /**

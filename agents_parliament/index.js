@@ -1,6 +1,7 @@
 import { ParliamentSession } from './js/ParliamentSession.js';
 import { OpenRouterAPI } from './js/OpenRouterAPI.js';
 import { UIManager } from './js/UIManager.js';
+import { Interpreter } from './js/interpreter.js';
 
 /**
  * Main Application
@@ -98,8 +99,10 @@ You are the Speaker of Parliament. Review member actions and decide what happens
 Respond with:
 ## Decision
 [Your reasoning]
-## Execution
-**Command**: \`parliament-speak "message"\``;
+# Speak
+[Your statement to the House]
+## Action
+**Command**: \`parliament-recognize all "instruction"\``;
 
             this.prompts.member = `# Role: Member of Parliament
 You are a Member of Parliament. Follow the parliamentary process.
@@ -152,7 +155,11 @@ Respond with:
         // Save to sessionStorage for this session
         this.saveApiKeyToStorage();
 
-        this.api = new OpenRouterAPI(apiKey);
+        // Get selected model ID
+        const modelId = this.ui.getModelId();
+        
+        this.api = new OpenRouterAPI(apiKey, modelId);
+        this.interpreter = new Interpreter(this.session, this.api, this.ui);
         this.isRunning = true;
         this.ui.setLoading(true);
 
@@ -231,61 +238,20 @@ Respond with:
                 : '';
 
             const speakerResponse = await this.invokeSpeaker([], additionalContext);
-            const speakerAction = this.api.parseResponse(speakerResponse);
+            
+            // Process speaker response using interpreter
+            const result = await this.interpreter.processSpeakerResponse(
+                speakerResponse,
+                (instruction) => this.invokeMembers(instruction),
+                (memberNumber, instruction) => this.invokeMember(memberNumber, instruction),
+                this.memberCount
+            );
 
-            // Log speaker's speech (from # Speak section) or thought (from Decision section)
-            if (speakerAction.speak) {
-                const entry = this.session.addToHansard('Speaker', speakerAction.speak);
-                this.ui.addHansardEntry(entry);
-            } else if (speakerAction.thought) {
-                // Fallback to thought if no Speak section (for backward compatibility)
-                const entry = this.session.addToHansard('Speaker', speakerAction.thought);
-                this.ui.addHansardEntry(entry);
+            if (result.adjourned) {
+                break;
             }
 
-            // Phase B: Execute Speaker's command
-            if (speakerAction.action) {
-                const entry = this.session.addToHansard('Speaker', `Executing: ${speakerAction.action}`, { command: speakerAction.action });
-                this.ui.addHansardEntry(entry);
-
-                const result = this.session.executeTool(speakerAction.action);
-
-                if (result.status === 'error') {
-                    this.ui.addSystemMessage(`Tool error: ${result.message}`);
-                } else if (result.data && result.data.requiresInvocation) {
-                    // Handle parliament-recognize: invoke member(s)
-                    const recognizeData = result.data;
-                    const instruction = recognizeData.instruction || 'What is your response?';
-                    
-                    if (recognizeData.target === 'all') {
-                        // Invoke all members
-                        this.ui.addSystemMessage('Recognizing all members...');
-                        const memberResponses = await this.invokeMembers(instruction);
-                        
-                        // Process member responses
-                        for (let i = 0; i < memberResponses.length; i++) {
-                            await this.processMemberResponse(memberResponses[i], i + 1);
-                        }
-                    } else {
-                        // Invoke specific member
-                        const memberNumber = recognizeData.target;
-                        this.ui.addSystemMessage(`Recognizing Member ${memberNumber}...`);
-                        const memberResponse = await this.invokeMember(memberNumber, instruction);
-                        await this.processMemberResponse(memberResponse, memberNumber);
-                    }
-                    
-                    this.ui.updateAll(this.session);
-                    await this.sleep(1000);
-                }
-
-                // Check if House was adjourned
-                if (this.session.state.adjourned) {
-                    this.ui.addSystemMessage('The House has been adjourned. Session ending.');
-                    break;
-                }
-
-                this.ui.updateAll(this.session);
-            }
+            await this.sleep(1000);
 
             await this.sleep(1000);
         }
@@ -411,62 +377,6 @@ Respond with:
         return await Promise.all(promises);
     }
 
-    async processMemberResponse(memberResponse, memberNumber) {
-        const parsed = this.api.parseResponse(memberResponse);
-        const memberName = `Member ${memberNumber}`;
-
-        if (parsed.pass) {
-            const entry = this.session.addToHansard(memberName, 'Pass');
-            this.ui.addHansardEntry(entry);
-        } else if (parsed.vote) {
-            const entry = this.session.addToHansard(memberName, `Votes: ${parsed.vote}`);
-            this.ui.addHansardEntry(entry);
-            this.session.recordVote(memberName, parsed.vote);
-        } else {
-            // Build the message: speech + action (if present)
-            let message = '';
-            
-            // Check if there's a # Speak section or # Action section
-            const hasSpeakSection = memberResponse.includes('# Speak');
-            const hasActionSection = memberResponse.includes('## Action');
-            
-            if (hasSpeakSection || hasActionSection) {
-                // Use parsed sections if they exist
-                if (parsed.speak) {
-                    message = parsed.speak;
-                } else if (parsed.thought) {
-                    // Fallback: if no Speak section but there's a thought, use it
-                    message = parsed.thought;
-                }
-                
-                // Append action to the message if present
-                if (parsed.action && !parsed.action.startsWith('parliament-speak')) {
-                    if (message) {
-                        message += '\n\n```\n' + parsed.action + '\n```';
-                    } else {
-                        message = '```\n' + parsed.action + '\n```';
-                    }
-                }
-            } else {
-                // No # Speak or # Action sections - use full response as-is
-                message = memberResponse.trim();
-            }
-            
-            // Record single entry with speech and action combined (or full response)
-            if (message) {
-                const entry = this.session.addToHansard(memberName, message);
-                this.ui.addHansardEntry(entry);
-            }
-            
-            // Execute action if any
-            if (parsed.action && !parsed.action.startsWith('parliament-speak')) {
-                const result = this.session.executeTool(parsed.action);
-                if (result.status === 'error') {
-                    this.ui.addSystemMessage(`Tool error from ${memberName}: ${result.message}`);
-                }
-            }
-        }
-    }
 
     sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
