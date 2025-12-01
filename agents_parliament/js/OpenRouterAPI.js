@@ -74,6 +74,12 @@ export class OpenRouterAPI {
         }
 
         const data = await response.json();
+        
+        // Log raw response JSON
+        console.log('=== RAW LLM RESPONSE ===');
+        console.log(JSON.stringify(data, null, 2));
+        console.log('========================');
+        
         const responseContent = data.choices[0].message.content;
         
         // Log full response received
