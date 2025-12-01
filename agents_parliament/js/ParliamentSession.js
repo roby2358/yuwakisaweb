@@ -7,6 +7,7 @@ import { toolEdit } from './tools/edit.js';
 import { toolIssue } from './tools/issue.js';
 import { toolAdjourn } from './tools/adjourn.js';
 import { toolRecognize } from './tools/recognize.js';
+import { CommandParser } from './CommandParser.js';
 
 export class ParliamentSession {
     constructor() {
@@ -29,6 +30,8 @@ export class ParliamentSession {
         this.nextBillId = 1;
         this.nextIssueId = 1;
         this.nextAmendmentId = 1;
+        
+        this.parser = new CommandParser();
     }
 
     /**
@@ -54,10 +57,34 @@ export class ParliamentSession {
     }
 
     /**
+     * Normalize command by removing formatting prefixes
+     * Removes leading whitespace, "bash" prefix, and "-" prefix
+     * @param {string} command - The raw command string
+     * @returns {string} - The normalized command
+     */
+    normalizeCommand(command) {
+        if (!command) return command;
+        
+        // Remove leading whitespace, optional "bash" (case-insensitive) with whitespace, and optional "-" with whitespace
+        // Matches patterns like: "  bash - parliament-edit", "bash parliament-edit", "- parliament-edit", "  -  bash ...", etc.
+        return command.replace(/^\s*(bash\s+)?-?\s*/i, '');
+    }
+
+    /**
+     * Parse command string using LALR parser
+     * Returns array of arguments with quoted strings preserved
+     */
+    parseCommand(command) {
+        return this.parser.parse(command);
+    }
+
+    /**
      * Execute a tool command and return Markdown output
      */
     executeTool(command) {
-        const parts = command.trim().split(/\s+/);
+        // Normalize command before parsing (remove formatting prefixes)
+        const normalized = this.normalizeCommand(command);
+        const parts = this.parseCommand(normalized);
         const tool = parts[0];
 
         try {

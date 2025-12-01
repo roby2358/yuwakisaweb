@@ -18,8 +18,14 @@ export function toolEdit(session, args) {
         };
     } else if (mode === '--propose') {
         const filename = args[0];
-        // Extract diff from quotes
-        const diffMatch = args.join(' ').match(/"([^"]*)"/);
+        // Extract diff from quotes or backticks (handle multi-line)
+        const fullArgs = args.join(' ');
+        // Try backticks first (triple or more)
+        let diffMatch = fullArgs.match(/```+([\s\S]*?)```+/);
+        if (!diffMatch) {
+            // Fallback to quotes
+            diffMatch = fullArgs.match(/"([\s\S]*?)"/);
+        }
         const diff = diffMatch ? diffMatch[1] : '';
 
         const amendment = {
@@ -83,9 +89,35 @@ export function toolEdit(session, args) {
             return { status: 'error', message: 'Filename required', exitCode: 1 };
         }
 
-        // Extract content from quotes
-        const contentMatch = args.join(' ').match(/"([^"]*)"/);
-        const content = contentMatch ? contentMatch[1] : '';
+        // Extract content from quotes or backticks (handle multi-line)
+        // First, try to find a quoted string argument
+        let content = '';
+        const quotedArg = args.find(arg => 
+            (arg.startsWith('"') && arg.endsWith('"')) || 
+            (arg.startsWith("'") && arg.endsWith("'")) ||
+            (arg.startsWith('```') && arg.endsWith('```'))
+        );
+        if (quotedArg) {
+            if (quotedArg.startsWith('```')) {
+                // Extract content from backtick-delimited string (remove backticks)
+                // Find the number of backticks at the start
+                const backtickCount = quotedArg.match(/^`+/)[0].length;
+                content = quotedArg.slice(backtickCount, -backtickCount);
+            } else {
+                // Extract content from quoted string (remove quotes)
+                content = quotedArg.slice(1, -1);
+            }
+        } else {
+            // Fallback: try regex on joined args (for multi-line strings that span args)
+            const fullArgs = args.join(' ');
+            // Try backticks first (triple or more)
+            let contentMatch = fullArgs.match(/```+([\s\S]*?)```+/);
+            if (!contentMatch) {
+                // Fallback to quotes
+                contentMatch = fullArgs.match(/"([\s\S]*?)"/);
+            }
+            content = contentMatch ? contentMatch[1] : '';
+        }
 
         // Check if file already exists
         if (session.files[filename]) {

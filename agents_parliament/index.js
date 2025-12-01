@@ -15,7 +15,7 @@ class ParliamentApp {
         this.isRunning = false;
         this.memberCount = 5;
         this.keyManager = new KeyManager();
-        this.maxTurns = 20; // Safety limit, can be doubled on restart
+        this.maxTurns = 200; // Safety limit, can be doubled on restart
 
         // Load system prompts
         this.prompts = {
@@ -232,7 +232,6 @@ Respond with:
             const response = await this.api.chat(messages);
             console.log('=== SPEAKER RESPONSE RECEIVED ===');
             console.log('Response Length:', response.length);
-            console.log('Response Preview:', response.substring(0, 200) + '...');
             console.log('==================================');
             return response;
         } catch (error) {
@@ -264,7 +263,6 @@ Respond with:
             const response = await this.api.chat(messages);
             console.log(`=== MEMBER ${memberNumber} RESPONSE RECEIVED ===`);
             console.log('Response Length:', response.length);
-            console.log('Response Preview:', response.substring(0, 200) + '...');
             console.log('========================================');
             return response;
         } catch (err) {
@@ -301,7 +299,6 @@ Respond with:
                 this.api.chat(messages).then(response => {
                     console.log(`=== MEMBER ${memberNumber} RESPONSE RECEIVED ===`);
                     console.log('Response Length:', response.length);
-                    console.log('Response Preview:', response.substring(0, 200) + '...');
                     console.log('========================================');
                     return response;
                 }).catch(err => {

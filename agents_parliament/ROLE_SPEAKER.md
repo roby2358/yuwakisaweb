@@ -65,9 +65,10 @@ When you receive a message:
 You must respond with a Markdown block containing your decision logic, your statement to the House, and the command to execute. Everything you say in the `# Speak` section goes into the Hansard.
 
 ```markdown
-# Speak
-[Explain why you selected this action or why you are intervening.]
+# Thoughts
+[Gather your reasoning.]
 
+# Speak
 [Your statement to the House. This will be recorded in the Hansard. Use this for announcements, rulings, closing discussions, declaring vote results, etc.]
 
 # Action

@@ -185,6 +185,37 @@ export class OpenRouterAPI {
     }
 
     /**
+     * Extract all Markdown blocks by matching from # to the next #
+     * @param {string} markdown - The markdown text
+     * @returns {Map<string, string>} Map of block names to their content
+     */
+    extractMarkdownBlocks(markdown) {
+        const blocks = new Map();
+        
+        try {
+            // Match all headings and their content until the next heading
+            // Pattern matches: (start or newline) + (#+) + heading text + newline + content until next # or end
+            const blockPattern = /(^|\n)(#+)\s+([^\n]+)\s*\n([\s\S]*?)(?=\n#|$)/g;
+            
+            let match;
+            while ((match = blockPattern.exec(markdown)) !== null) {
+                const headingName = match[3].trim(); // The heading text
+                const content = match[4].trim(); // The content
+                
+                // Normalize heading name (case-insensitive, remove extra spaces)
+                const normalizedName = headingName.toLowerCase().trim();
+                
+                blocks.set(normalizedName, content);
+            }
+        } catch (error) {
+            console.log('[Parse Error] extractMarkdownBlocks failed:', error);
+            console.log('[Parse Error] Markdown input:', markdown);
+        }
+        
+        return blocks;
+    }
+
+    /**
      * Parse Markdown response from agent
      */
     parseResponse(markdown) {
@@ -197,69 +228,84 @@ export class OpenRouterAPI {
             priority: 5
         };
 
-        // Check for Pass
-        if (markdown.includes('## Pass')) {
-            response.pass = true;
-            return response;
-        }
-
-        // Extract Thought
-        const thoughtMatch = markdown.match(/## Thought\s*\n([\s\S]*?)(?=\n##|$)/);
-        if (thoughtMatch) {
-            response.thought = thoughtMatch[1].trim();
-        }
-
-        // Extract Speak section (everything in #+ Speak section goes to Hansard)
-        const speakMatch = markdown.match(/#+ Speak\s*\n([\s\S]*?)(?=\n#|$)/);
-        if (speakMatch) {
-            response.speak = speakMatch[1].trim();
-            
-            // Check if Speak section contains a vote (aye, no, or abstain)
-            // Look for vote words as standalone or in common patterns
-            const speakContent = response.speak.toLowerCase();
-            const votePattern = /\b(aye|no|abstain)\b/i;
-            const voteMatch = speakContent.match(votePattern);
-            if (voteMatch) {
-                response.vote = voteMatch[1].toLowerCase();
-            }
-        }
-
-        // Extract Decision (for Speaker)
-        const decisionMatch = markdown.match(/## Decision\s*\n([\s\S]*?)(?=\n#|$)/);
-        if (decisionMatch) {
-            response.thought = decisionMatch[1].trim();
-        }
-
-        // Extract Action (flexible #+ Action pattern - matches # Action, ## Action, ### Action, etc.)
-        const actionMatch = markdown.match(/#+ Action\s*\n([\s\S]*?)(?=\n#|$)/);
-        if (actionMatch) {
-            const actionBlock = actionMatch[1];
-
-            // Extract priority
-            const priorityMatch = actionBlock.match(/\*\*Priority\*\*:\s*(\d+)/);
-            if (priorityMatch) {
-                response.priority = parseInt(priorityMatch[1]);
+        try {
+            // Remove markdown code block wrapper if present (e.g., ```markdown...```)
+            const markdownBlockMatch = markdown.match(/^```(?:markdown)?\s*\n([\s\S]*?)\n```$/);
+            if (markdownBlockMatch) {
+                markdown = markdownBlockMatch[1];
             }
 
-            // Extract command - support both old format (with **Command**:) and new format (direct command)
-            // First try old format for backward compatibility
-            let commandMatch = actionBlock.match(/\*\*Command\*\*:\s*`([^`]+)`/);
-            if (commandMatch) {
-                response.action = this.normalizeCommand(commandMatch[1]);
-            } else {
-                // New format: command directly in backticks (may be on same line as Priority or separate line)
-                commandMatch = actionBlock.match(/`([^`]+)`/);
-                if (commandMatch) {
-                    response.action = this.normalizeCommand(commandMatch[1]);
-                } else {
-                    // Fallback: extract non-empty line that isn't Priority (trimmed)
-                    const lines = actionBlock.split('\n').map(l => l.trim()).filter(l => l && !l.match(/^\*\*Priority\*\*:/));
-                    if (lines.length > 0) {
-                        // Use first non-empty, non-priority line as the command
-                        response.action = this.normalizeCommand(lines[0]);
-                    }
+            // Check for Pass
+            if (markdown.includes('## Pass')) {
+                response.pass = true;
+                return response;
+            }
+
+            // Extract all markdown blocks by matching from # to the next #
+            const blocks = this.extractMarkdownBlocks(markdown);
+
+            // Extract Thought or Decision
+            if (blocks.has('thought')) {
+                response.thought = blocks.get('thought');
+            } else if (blocks.has('decision')) {
+                response.thought = blocks.get('decision');
+            }
+
+            // Extract Speak section (everything in #+ Speak section goes to Hansard)
+            if (blocks.has('speak')) {
+                response.speak = blocks.get('speak');
+                
+                // Check if Speak section contains a vote (aye, no, or abstain)
+                const speakContent = response.speak.toLowerCase();
+                const votePattern = /\b(aye|no|abstain)\b/i;
+                const voteMatch = speakContent.match(votePattern);
+                if (voteMatch) {
+                    response.vote = voteMatch[1].toLowerCase();
                 }
             }
+
+            // Extract Action (flexible #+ Action pattern - matches # Action, ## Action, ### Action, etc.)
+            if (blocks.has('action')) {
+                const actionBlock = blocks.get('action');
+
+                // Extract priority
+                const priorityMatch = actionBlock.match(/\*\*Priority\*\*:\s*(\d+)/);
+                if (priorityMatch) {
+                    response.priority = parseInt(priorityMatch[1]);
+                }
+
+                // Extract command - try triple backticks (multiline), single backticks, or use whole block
+                // Since we have clean block extraction, we can simplify this
+                let commandMatch = actionBlock.match(/```+([\s\S]*?)```+/);
+                if (commandMatch) {
+                    // Triple backticks (or more) - handles multiline commands
+                    response.action = this.normalizeCommand(commandMatch[1].trim());
+                } else {
+                    commandMatch = actionBlock.match(/`([^`]+)`/);
+                    if (commandMatch) {
+                        // Single backticks - single line command
+                        response.action = this.normalizeCommand(commandMatch[1]);
+                    } else {
+                        // No backticks - use whole block (excluding Priority line if present)
+                        const lines = actionBlock.split('\n')
+                            .map(l => l.trim())
+                            .filter(l => l && !l.match(/^\*\*Priority\*\*:/));
+                        if (lines.length > 0) {
+                            response.action = this.normalizeCommand(lines.join('\n'));
+                        } else {
+                            console.log('[Parse Warning] Action block found but no command extracted');
+                            console.log('[Parse Warning] Action block content:', actionBlock);
+                        }
+                    }
+                }
+            } else {
+                console.log('[Parse Warning] No Action block found in response');
+                console.log('[Parse Warning] Available blocks:', Array.from(blocks.keys()));
+            }
+        } catch (error) {
+            console.log('[Parse Error] parseResponse failed:', error);
+            console.log('[Parse Error] Markdown input:', markdown);
+            console.log('[Parse Error] Response so far:', response);
         }
 
         return response;
