@@ -208,10 +208,14 @@ export class OpenRouterAPI {
         const blocks = new Map();
         
         try {
-            // Match all headings and their content until the next heading
+            // Match all headings and their content until the next heading or end of string
             // Pattern matches: (start or newline) + (#+) + heading text + newline + content until next # or end
-            // Use a more robust pattern that ensures we match proper markdown headings (must start at line start)
-            const blockPattern = /(^|\n)(#+)\s+([^\n]+)\s*\n([\s\S]*?)(?=\n(?:#+\s|$))/g;
+            // Fixed: lookahead allows end of string without requiring trailing newline
+            // The pattern: (^|\n)(#+)\s+([^\n]+)\s*\n captures the heading
+            // Then ([\s\S]*?) captures content non-greedily
+            // Then (?=\n#+\s|$) ensures we stop at next heading or end
+            // Use explicit grouping for the lookahead alternation
+            const blockPattern = /(^|\n)(#+)\s+([^\n]+)\s*\n([\s\S]*?)(?=(?:\n#+\s|$))/g;
             
             let match;
             while ((match = blockPattern.exec(markdown)) !== null) {
@@ -224,7 +228,12 @@ export class OpenRouterAPI {
                 const normalizedName = headingName.toLowerCase().trim();
                 
                 blocks.set(normalizedName, content);
+                
+                console.log(`[Parse Debug] Extracted block: "${normalizedName}" with content length: ${content.length}`);
             }
+            
+            console.log(`[Parse Debug] Total blocks extracted: ${blocks.size}`);
+            console.log(`[Parse Debug] Block names: ${Array.from(blocks.keys()).join(', ')}`);
         } catch (error) {
             console.log('[Parse Error] extractMarkdownBlocks failed:', error);
             console.log('[Parse Error] Markdown input:', markdown);
@@ -284,17 +293,20 @@ export class OpenRouterAPI {
             // Extract Action (flexible #+ Action pattern - matches # Action, ## Action, ### Action, etc.)
             if (blocks.has('action')) {
                 const actionBlock = blocks.get('action');
+                console.log('[Parse Debug] Action block found. Raw content:', JSON.stringify(actionBlock));
 
                 // Extract command - try triple backticks (multiline), single backticks, or use whole block
                 // Since we have clean block extraction, we can simplify this
                 let commandMatch = actionBlock.match(/```+([\s\S]*?)```+/);
                 if (commandMatch) {
                     // Triple backticks (or more) - handles multiline commands
+                    console.log('[Parse Debug] Found command in triple backticks');
                     response.action = this.normalizeCommand(commandMatch[1].trim());
                 } else {
                     commandMatch = actionBlock.match(/`([^`]+)`/);
                     if (commandMatch) {
                         // Single backticks - single line command
+                        console.log('[Parse Debug] Found command in single backticks');
                         response.action = this.normalizeCommand(commandMatch[1]);
                     } else {
                         // No backticks - use whole block
@@ -303,15 +315,19 @@ export class OpenRouterAPI {
                         const cleanedBlock = actionBlock.trim();
                         
                         if (cleanedBlock) {
+                            console.log('[Parse Debug] Using whole action block as command (no backticks)');
                             response.action = this.normalizeCommand(cleanedBlock);
                         } else {
                             console.log('[Parse Warning] Action block found but no command extracted');
-                            console.log('[Parse Warning] Action block content:', actionBlock);
+                            console.log('[Parse Warning] Action block content:', JSON.stringify(actionBlock));
                         }
                     }
                 }
+                console.log('[Parse Debug] Extracted action command:', response.action);
             } else {
+                console.log('[Parse Warning] Action block not found in parsed blocks');
                 console.log('[Parse Warning] Available blocks:', Array.from(blocks.keys()));
+                console.log('[Parse Warning] Full markdown input:', markdown);
             }
         } catch (error) {
             console.log('[Parse Error] parseResponse failed:', error);

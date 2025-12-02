@@ -52,3 +52,8 @@ Priority:   50
 Status: ToDo
 ID: multi-action-8ikv
 Allow the Speaker to perform multiple actions in a single turn, enabling more complex parliamentary workflows where the Speaker can execute several commands sequentially or in parallel
+---
+Priority:   50
+Status: ToDo
+ID: bill-track-gpxc
+Enhance tracking and presentation of bills, motions, and amendments with improved visibility in the UI, better status indicators, clearer hierarchical organization, and more intuitive navigation between related items

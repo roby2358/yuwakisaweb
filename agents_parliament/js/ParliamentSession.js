@@ -7,7 +7,7 @@ import { toolEdit } from './tools/edit.js';
 import { toolIssue } from './tools/issue.js';
 import { toolAdjourn } from './tools/adjourn.js';
 import { toolRecognize } from './tools/recognize.js';
-import { CommandParser } from './CommandParser.js';
+import { parse } from './commandParser.js';
 
 export class ParliamentSession {
     constructor() {
@@ -30,8 +30,6 @@ export class ParliamentSession {
         this.nextBillId = 1;
         this.nextIssueId = 1;
         this.nextAmendmentId = 1;
-        
-        this.parser = new CommandParser();
     }
 
     /**
@@ -75,7 +73,54 @@ export class ParliamentSession {
      * Returns array of arguments with quoted strings preserved
      */
     parseCommand(command) {
-        return this.parser.parse(command);
+        try {
+            // Trim the command to remove any leading/trailing whitespace
+            command = command.trim();
+            
+            // Check if command has escaped quotes and unescape them
+            // This can happen if the command was extracted from JSON or markdown
+            if (command.includes('\\"')) {
+                // Replace escaped quotes with actual quotes
+                command = command.replace(/\\"/g, '"');
+            }
+            
+            // Check for and replace any Unicode quote characters with ASCII quotes
+            // Sometimes markdown or copy-paste can introduce Unicode quotes
+            command = command.replace(/[""]/g, '"'); // Replace left/right double quotes
+            command = command.replace(/['']/g, "'"); // Replace left/right single quotes
+            
+            // Remove any newlines that might have been included from markdown extraction
+            // But preserve newlines inside quoted strings
+            // This is a simple approach: if the command starts with a newline, remove it
+            if (command.startsWith('\n')) {
+                command = command.substring(1);
+            }
+            if (command.endsWith('\n')) {
+                command = command.substring(0, command.length - 1);
+            }
+            
+            return parse(command);
+        } catch (error) {
+            console.error('[Parse Error] Failed to parse command:', command);
+            console.error('[Parse Error] Command length:', command.length);
+            console.error('[Parse Error] Command JSON:', JSON.stringify(command));
+            
+            // Show character codes for quotes and surrounding characters
+            const quoteIndices = [];
+            for (let i = 0; i < command.length; i++) {
+                const code = command.charCodeAt(i);
+                if (code === 34 || code === 8220 || code === 8221 || code === 8222 || code === 8223) {
+                    quoteIndices.push(i);
+                }
+            }
+            if (quoteIndices.length > 0) {
+                console.error('[Parse Error] Quote positions and codes:', quoteIndices.map(i => `${i}: '${command[i]}' (${command.charCodeAt(i)})`).join(', '));
+            }
+            
+            console.error('[Parse Error] Character codes (first 100):', Array.from(command.substring(0, 100)).map(c => `${c.charCodeAt(0)}`).join(' '));
+            console.error('[Parse Error] Error:', error);
+            throw error;
+        }
     }
 
     /**
@@ -84,6 +129,7 @@ export class ParliamentSession {
     executeTool(command) {
         // Normalize command before parsing (remove formatting prefixes)
         const normalized = this.normalizeCommand(command);
+        console.log('[Debug] Normalized command:', JSON.stringify(normalized));
         const parts = this.parseCommand(normalized);
         const tool = parts[0];
 
