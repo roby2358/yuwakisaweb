@@ -1,0 +1,14 @@
+{
+  "name": "agents-parliament",
+  "version": "1.0.0",
+  "description": "Parliamentary Agent Framework",
+  "type": "module",
+  "scripts": {
+    "build:parser": "peggy --format es -o js/commandParser.js js/command.pegjs",
+    "build": "npm run build:parser"
+  },
+  "devDependencies": {
+    "peggy": "^3.0.2"
+  }
+}
+
