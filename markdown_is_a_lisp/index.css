@@ -135,6 +135,31 @@ body {
   border-right: 1px solid #1e293b;
 }
 
+/* Example Navigation */
+.example-nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background-color: #020617;
+  border-bottom: 1px solid #1e293b;
+  font-size: 0.875rem;
+}
+
+.example-link {
+  color: #94a3b8;
+  text-decoration: none;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.example-link:hover {
+  color: #34d399;
+  background-color: rgba(52, 211, 153, 0.1);
+}
+
 .pane-header {
   background-color: rgba(15, 23, 42, 0.5);
   padding: 0.5rem 1rem;
