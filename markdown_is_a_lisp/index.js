@@ -509,7 +509,29 @@ const EXAMPLE_CODES = {
 # main
 * print
   * fizzbuzz
-    * \`15\``
+    * \`15\``,
+  
+  gcd: `# gcd
+* *
+  * a
+  * b
+* if
+  * eq
+    * b
+    * \`0\`
+  * a
+  * gcd
+    * b
+    * %
+      * a
+      * b
+
+# main
+* print
+  * \`"gcd(48, 18) ="\`
+  * gcd
+    * \`48\`
+    * \`18\``
 };
 
 const DEFAULT_CODE = EXAMPLE_CODES.factorial;
