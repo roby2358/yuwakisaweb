@@ -11,8 +11,26 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
+  min-height: 100vh;
   margin: 0;
+  padding: 20px;
+}
+.container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 40px;
+  max-width: 1200px;
+  width: 100%;
+}
+.column {
+  display: flex;
+  flex-direction: column;
+}
+h2 {
+  font-size: 28px;
+  margin-bottom: 20px;
+  color: #333;
+  text-align: center;
 }
 a {
   font-size: 24px;
@@ -25,6 +43,7 @@ a {
   transition: all 0.3s ease;
   display: block;
   margin-bottom: 10px;
+  text-align: center;
 }
 
 a:hover {
@@ -34,16 +53,26 @@ transform: translateY(-2px);
 </style>
 </head>
 <body>
-<div>
-  <a href="agents_parliament/index.html">Agents Parliament</a>
-  <a href="wordcell/index.html">Word Cell</a>
-  <a href="brickout/index.html">Brickout</a>
-  <a href="markov/index.html">Markov</a>
-  <a href="markdown_is_a_lisp/index.html">Markdown is a LISP</a>
-  <a href="greek_quiz/index.html">Greek Quiz</a>
-  <a href="essence/index.html">Essence</a>
-  <a href="essencepack/index.html">Essence Pack</a>
-  <a href="k8songs/index.html">K-8 Songs</a>
+<div class="container">
+  <div class="column">
+    <h2>Games</h2>
+    <a href="wordcell/index.html">Word Cell</a>
+    <a href="brickout/index.html">Brickout</a>
+    <a href="greek_quiz/index.html">Greek Quiz</a>
+    <a href="jump/index.html">Jump</a>
+  </div>
+  <div class="column">
+    <h2>Tools</h2>
+    <a href="k8songs/index.html">K-8 Songs</a>
+    <a href="markov/index.html">Markov</a>
+  </div>
+  <div class="column">
+    <h2>Experiments</h2>
+    <a href="agents_parliament/index.html">Agents Parliament</a>
+    <a href="markdown_is_a_lisp/index.html">Markdown is a LISP</a>
+    <a href="essence/index.html">Essence</a>
+    <a href="essencepack/index.html">Essence Pack</a>
+  </div>
 </div>
 </body>
 </html>
