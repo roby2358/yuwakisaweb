@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Circle Packing Game</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <div id="app">
+        <div id="game-container">
+            <canvas id="game-canvas" width="800" height="800"></canvas>
+        </div>
+        <div id="ui">
+            <div id="player1-area" class="player-area">
+                <h3>Player 1 (Blue)</h3>
+                <div id="player1-points">Points: 0</div>
+                <div id="player1-pieces" class="holding-area"></div>
+            </div>
+            <div id="player2-area" class="player-area">
+                <h3>Player 2 (Red)</h3>
+                <div id="player2-points">Points: 0</div>
+                <div id="player2-pieces" class="holding-area"></div>
+            </div>
+            <div id="current-player">Current Player: <span id="player-indicator">Player 1</span></div>
+            <div id="instructions" class="instructions-box">
+                <h3>How to Play</h3>
+                <ul>
+                    <li>Click your <strong>start circle</strong> to place a piece from holding</li>
+                    <li>Click a <strong>piece</strong> to select it, then click a destination to move</li>
+                    <li>Move <strong>1 or 2 spaces</strong> - you may jump over your pieces</li>
+                    <li>Or attack an opponent's piece next to you to return it to holding</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <script src="view.js"></script>
+    <script src="index.js"></script>
+    <script>
+        init(BoardMaker.create());
+    </script>
+</body>
+</html>
+
