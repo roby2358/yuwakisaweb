@@ -18,13 +18,14 @@ class HardCAPTCHA {
         };
         
         this.challengeTypes = [
-            'pattern',
-            'sequence',
-            'spatial',
-            'memory',
-            'kerning',
-            'predator',
-            'emotions'
+            // 'pattern',
+            // 'sequence',
+            // 'spatial',
+            // 'memory',
+            // 'kerning',
+            // 'predator',
+            // 'emotions',
+            'human'
         ];
         
         this.init();
@@ -179,6 +180,8 @@ class HardCAPTCHA {
                 return await PredatorChallenge.generate();
             case 'emotions':
                 return await EmotionsChallenge.generate();
+            case 'human':
+                return await HumanChallenge.generate();
             default:
                 return PatternChallenge.generate();
         }
@@ -331,6 +334,9 @@ class HardCAPTCHA {
             case 'emotions':
                 EmotionsChallenge.render(challenge, content);
                 break;
+            case 'human':
+                HumanChallenge.render(challenge, content);
+                break;
         }
     }
     
@@ -467,6 +473,8 @@ class HardCAPTCHA {
                 return PredatorChallenge.getAnswer(challenge);
             case 'emotions':
                 return EmotionsChallenge.getAnswer(challenge);
+            case 'human':
+                return HumanChallenge.getAnswer(challenge);
             default:
                 return '';
         }
@@ -493,6 +501,12 @@ class HardCAPTCHA {
                     return false;
                 }
             } else if (challenge.type === 'emotions') {
+                const userIndex = userAnswer.trim();
+                const correctIndex = challenge.answer.trim();
+                if (userIndex !== correctIndex) {
+                    return false;
+                }
+            } else if (challenge.type === 'human') {
                 const userIndex = userAnswer.trim();
                 const correctIndex = challenge.answer.trim();
                 if (userIndex !== correctIndex) {
@@ -633,6 +647,9 @@ class HardCAPTCHA {
                     break;
                 case 'emotions':
                     EmotionsChallenge.revealAnswer(challenge, challengeEl);
+                    break;
+                case 'human':
+                    HumanChallenge.revealAnswer(challenge, challengeEl);
                     break;
             }
             
