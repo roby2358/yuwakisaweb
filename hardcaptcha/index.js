@@ -20,7 +20,7 @@ class HardCAPTCHA {
         this.challengeTypes = [
             'pattern',
             'sequence',
-            'spatial',
+            // 'spatial',
             'memory',
             'kerning',
             'predator',
