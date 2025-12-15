@@ -31,16 +31,23 @@ class KerningChallenge {
         const kerning = [];
         letters.forEach((letter, index) => {
             if (index === correctIndex) {
-                // Correct kerning (0 offset)
+                // Correct kerning (0 offset on both sides)
                 kerning.push({ left: 0, right: 0 });
+            } else if (index === correctIndex - 1) {
+                // Letter to the left of correct letter: right side must be 0 (touching correct letter)
+                const erroneousValues = [-3, -2, -1, 1, 2, 3];
+                const leftOffset = erroneousValues[Math.floor(Math.random() * erroneousValues.length)];
+                kerning.push({ left: leftOffset, right: 0 });
+            } else if (index === correctIndex + 1) {
+                // Letter to the right of correct letter: left side must be 0 (touching correct letter)
+                const erroneousValues = [-3, -2, -1, 1, 2, 3];
+                const rightOffset = erroneousValues[Math.floor(Math.random() * erroneousValues.length)];
+                kerning.push({ left: 0, right: rightOffset });
             } else {
-                // Incorrect kerning: 1 or 2 pixels off on left or right
-                const leftOffset = Math.random() > 0.5 ? 
-                    (Math.random() > 0.5 ? 1 : 2) : 
-                    (Math.random() > 0.5 ? -1 : -2);
-                const rightOffset = Math.random() > 0.5 ? 
-                    (Math.random() > 0.5 ? 1 : 2) : 
-                    (Math.random() > 0.5 ? -1 : -2);
+                // All other letters: incorrect kerning on both sides (never 0)
+                const erroneousValues = [-3, -2, -1, 1, 2, 3];
+                const leftOffset = erroneousValues[Math.floor(Math.random() * erroneousValues.length)];
+                const rightOffset = erroneousValues[Math.floor(Math.random() * erroneousValues.length)];
                 kerning.push({ left: leftOffset, right: rightOffset });
             }
         });
@@ -53,22 +60,18 @@ class KerningChallenge {
             kerning: kerning,
             correctIndex: correctIndex,
             answer: correctIndex.toString(),
-            instructions: 'Click on the letter that has correct spacing on both sides.',
+            instructions: 'Click on the letter that has correct kerning on both sides.',
             timeLimit: 60
         };
     }
     
     static render(challenge, container) {
-        const challengeEl = document.getElementById(challenge.id);
-        if (!challengeEl) return;
-        
-        const content = challengeEl.querySelector('.challenge-content');
-        if (!content) return;
+        if (!container) return;
         
         // Create word display
         const wordDiv = document.createElement('div');
         wordDiv.className = 'kerning-word';
-        wordDiv.style.cssText = 'display: flex; justify-content: center; align-items: center; font-size: 3rem; font-weight: bold; font-family: monospace; margin: 2rem 0; letter-spacing: 0;';
+        wordDiv.style.cssText = 'display: flex; justify-content: center; align-items: center; font-size: 3rem; font-weight: bold; font-family: monospace; margin: 2rem 0; letter-spacing: 0; gap: 0;';
         
         challenge.letters.forEach((letter, index) => {
             const letterSpan = document.createElement('span');
@@ -82,14 +85,19 @@ class KerningChallenge {
             letterSpan.style.marginRight = `${k.right}px`;
             letterSpan.style.cursor = 'pointer';
             letterSpan.style.transition = 'all 0.2s ease';
-            letterSpan.style.padding = '0.5rem';
+            letterSpan.style.padding = '0';
+            letterSpan.style.marginTop = '0';
+            letterSpan.style.marginBottom = '0';
+            letterSpan.style.lineHeight = '1';
             letterSpan.style.borderRadius = '4px';
             
             letterSpan.addEventListener('click', () => {
-                document.querySelectorAll(`#${challenge.id} .kerning-letter`).forEach(l => {
+                wordDiv.querySelectorAll('.kerning-letter').forEach(l => {
+                    l.classList.remove('selected');
                     l.style.backgroundColor = '';
                     l.style.border = '';
                 });
+                letterSpan.classList.add('selected');
                 letterSpan.style.backgroundColor = 'rgba(37, 99, 235, 0.1)';
                 letterSpan.style.border = '2px solid var(--primary-color)';
             });
@@ -109,12 +117,34 @@ class KerningChallenge {
             wordDiv.appendChild(letterSpan);
         });
         
-        content.appendChild(wordDiv);
+        container.appendChild(wordDiv);
     }
     
     static getAnswer(challenge) {
-        const selected = document.querySelector(`#${challenge.id} .kerning-letter[style*="border"]`);
-        return selected?.dataset.index || '';
+        // Find the challenge element - it should be the most recent one with this ID
+        const challengeEl = document.getElementById(challenge.id);
+        if (!challengeEl) {
+            return '';
+        }
+        
+        // Verify this is the active challenge (in the challenges container)
+        const container = document.getElementById('challengesContainer');
+        if (!container.contains(challengeEl)) {
+            return '';
+        }
+        
+        // Look for selected letter by class or border style
+        const selected = challengeEl.querySelector('.kerning-letter.selected') || challengeEl.querySelector('.kerning-letter[style*="border"]');
+        if (!selected) {
+            return '';
+        }
+        
+        const index = parseInt(selected.dataset.index);
+        if (isNaN(index)) {
+            return '';
+        }
+        
+        return index.toString();
     }
     
     static revealAnswer(challenge, challengeEl) {

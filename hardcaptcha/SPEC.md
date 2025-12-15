@@ -66,6 +66,14 @@ The implementation MUST include anti-automation measures. The following measures
 - The system MAY include accessibility considerations
 - The system SHOULD use responsive design for various screen sizes
 
+#### 4.1 Round Structure
+
+- The CAPTCHA MUST consist of exactly 7, 11, 13, or 17 rounds, randomly selected at the start of each session
+- The system MUST display a visible "Round __" indicator showing the current round number
+- The system MUST NOT display the total number of rounds required
+- The system MUST NOT display progress indicators that reveal the total number of rounds (e.g., "Round X of Y" or progress bars that show completion percentage relative to total rounds)
+- The purpose of hiding the total round count is to keep users guessing about how many challenges remain
+
 ### 5. Validation
 
 - The system MUST perform client-side validation for immediate feedback

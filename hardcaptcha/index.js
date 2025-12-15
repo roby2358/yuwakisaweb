@@ -3,11 +3,13 @@
 
 class HardCAPTCHA {
     constructor() {
+        const possibleRounds = [7, 11, 13, 17];
+        const totalRounds = possibleRounds[Math.floor(Math.random() * possibleRounds.length)];
+        
         this.state = {
             currentRound: 0,
-            totalRounds: 5,
+            totalRounds: totalRounds,
             challenges: [],
-            attempts: 0,
             startTime: null,
             mouseMovements: [],
             keyboardEvents: [],
@@ -17,11 +19,12 @@ class HardCAPTCHA {
         
         this.challengeTypes = [
             'pattern',
-            'math',
             'sequence',
             'spatial',
             'memory',
-            'kerning'
+            'kerning',
+            'predator',
+            'emotions'
         ];
         
         this.init();
@@ -90,11 +93,11 @@ class HardCAPTCHA {
     }
     
     start() {
+        console.log('Ha ha! Looking at the console log. How very human of you! But it won\'t help you now!');
         document.getElementById('startModal').classList.remove('active');
         document.getElementById('challengeArea').classList.remove('hidden');
         this.state.startTime = Date.now();
         this.state.currentRound = 0;
-        this.state.attempts = 0;
         this.generateRound();
     }
     
@@ -108,27 +111,39 @@ class HardCAPTCHA {
         document.getElementById('feedback').classList.remove('hidden');
         
         this.state.currentRound = 0;
-        this.state.attempts = 0;
         this.state.mouseMovements = [];
         this.state.keyboardEvents = [];
         this.state.focusChanges = 0;
         this.showStartModal();
     }
     
-    generateRound() {
+    async generateRound() {
         this.state.currentRound++;
         this.updateProgress();
+        
+        // Reset focus changes counter for this round
+        this.state.focusChanges = 0;
+        
+        // Clear timers from previous challenges
+        this.state.challenges.forEach(challenge => {
+            if (challenge.timerInterval) {
+                clearInterval(challenge.timerInterval);
+            }
+            if (challenge.timerTimeout) {
+                clearTimeout(challenge.timerTimeout);
+            }
+        });
         
         // Clear previous challenges
         const container = document.getElementById('challengesContainer');
         container.innerHTML = '';
         
-        // Generate challenges - always show 3
-        const numChallenges = 3;
+        // Generate challenges - always show 1
+        const numChallenges = 1;
         this.state.challenges = [];
         
         for (let i = 0; i < numChallenges; i++) {
-            const challenge = this.generateChallenge(i);
+            const challenge = await this.generateChallenge(i);
             this.state.challenges.push(challenge);
             this.renderChallenge(challenge, container);
         }
@@ -146,116 +161,27 @@ class HardCAPTCHA {
         this.clearFeedback();
     }
     
-    generateChallenge(index) {
-        const round = this.state.currentRound;
-        
-        // Determine if this should be a blended challenge
-        const shouldBlend = round >= 2 && Math.random() > 0.4;
-        
-        if (shouldBlend && index === 0) {
-            return this.generateBlendedChallenge();
-        }
-        
+    async generateChallenge(index) {
         const type = this.challengeTypes[this.randn(0, this.challengeTypes.length)];
         
         switch (type) {
             case 'pattern':
-                return this.generatePatternChallenge();
-            case 'math':
-                return this.generateMathChallenge();
+                return PatternChallenge.generate();
             case 'sequence':
                 return this.generateSequenceChallenge();
             case 'spatial':
                 return this.generateSpatialChallenge();
             case 'memory':
                 return this.generateMemoryChallenge();
+            case 'kerning':
+                return KerningChallenge.generate();
+            case 'predator':
+                return await PredatorChallenge.generate();
+            case 'emotions':
+                return await EmotionsChallenge.generate();
             default:
-                return this.generatePatternChallenge();
+                return PatternChallenge.generate();
         }
-    }
-    
-    generateBlendedChallenge() {
-        // Math + Spatial blended challenge
-        const mathPart = this.generateMathChallenge();
-        const spatialPart = this.generateSpatialChallenge();
-        
-        // Use math answer to determine spatial rotation
-        const rotationCount = (mathPart.answer % 4);
-        
-        return {
-            id: `blended-${Date.now()}`,
-            type: 'blended',
-            subtype: 'math-spatial',
-            mathChallenge: mathPart,
-            spatialChallenge: spatialPart,
-            rotationCount: rotationCount,
-            answer: `${mathPart.answer}-${spatialPart.answer}-${rotationCount}`,
-            instructions: `First, solve the math problem. Then rotate the shape ${rotationCount} times clockwise, and select the correct orientation.`,
-            timeLimit: 110
-        };
-    }
-    
-    generatePatternChallenge() {
-        const gridSize = 4;
-        const totalSquares = gridSize * gridSize; // 16 squares
-        const pattern = [];
-        
-        // Pick which component (R, G, or B) will be consistent
-        const consistentComponent = this.randn(0, 3); // 0=R, 1=G, 2=B
-        const consistentValue = this.randn(0x80, 0xD1); // 128-208 in decimal
-        
-        // Pick which square will be the odd one out
-        const oddIndex = this.randn(0, totalSquares);
-        
-        // Generate all 16 squares
-        for (let i = 0; i < totalSquares; i++) {
-            if (i === oddIndex) {
-                // The odd one out: all 3 components are random
-                pattern.push({
-                    r: this.randn(0x80, 0xD1),
-                    g: this.randn(0x80, 0xD1),
-                    b: this.randn(0x80, 0xD1)
-                });
-            } else {
-                // 15 squares with one consistent component
-                const r = consistentComponent === 0 ? consistentValue : this.randn(0x80, 0xD1);
-                const g = consistentComponent === 1 ? consistentValue : this.randn(0x80, 0xD1);
-                const b = consistentComponent === 2 ? consistentValue : this.randn(0x80, 0xD1);
-                pattern.push({ r, g, b });
-            }
-        }
-        
-        return {
-            id: `pattern-${Date.now()}`,
-            type: 'pattern',
-            pattern: pattern,
-            correctIndex: oddIndex,
-            answer: oddIndex.toString(),
-            instructions: 'Click on the one square that is different from all the others in the grid.',
-            gridSize: gridSize,
-            timeLimit: 70
-        };
-    }
-    
-    generateMathChallenge() {
-        let question, answer;
-        
-        // Always use the hardest math challenge
-        const a = this.randn(5, 20);
-        const b = this.randn(3, 13);
-        const c = this.randn(5, 25);
-        const d = this.randn(2, 12);
-        question = `((${a} × ${b}) - ${c}) ÷ ${d}`;
-        answer = Math.floor(((a * b) - c) / d);
-        
-        return {
-            id: `math-${Date.now()}`,
-            type: 'math',
-            question: question,
-            answer: answer.toString(),
-            instructions: 'Solve the following mathematical expression:',
-            timeLimit: 55
-        };
     }
     
     generateSequenceChallenge() {
@@ -369,11 +295,7 @@ class HardCAPTCHA {
         const content = document.createElement('div');
         content.className = 'challenge-content';
         
-        if (challenge.type === 'blended') {
-            this.renderBlendedChallenge(challenge, content);
-        } else {
-            this.renderChallengeContent(challenge, content);
-        }
+        this.renderChallengeContent(challenge, content);
         
         challengeDiv.appendChild(content);
         container.appendChild(challengeDiv);
@@ -389,45 +311,10 @@ class HardCAPTCHA {
         }
     }
     
-    renderBlendedChallenge(challenge, content) {
-        // Render math part
-        const mathDiv = document.createElement('div');
-        mathDiv.className = 'math-puzzle';
-        mathDiv.innerHTML = `
-            <p><strong>Step 1: Solve this</strong></p>
-            <p>${challenge.mathChallenge.question} = ?</p>
-            <input type="number" id="math-${challenge.id}" placeholder="Answer" />
-        `;
-        content.appendChild(mathDiv);
-        
-        // Render spatial part
-        const spatialDiv = document.createElement('div');
-        spatialDiv.className = 'spatial-container';
-        spatialDiv.innerHTML = '<p><strong>Step 2: Select the correct shape</strong></p>';
-        
-        challenge.spatialChallenge.options.forEach((option, index) => {
-            const shapeDiv = document.createElement('div');
-            shapeDiv.className = 'shape';
-            shapeDiv.dataset.index = index;
-            shapeDiv.style.transform = `rotate(${option.rotation}deg)`;
-            shapeDiv.textContent = option.shape;
-            shapeDiv.addEventListener('click', () => {
-                document.querySelectorAll(`#${challenge.id} .shape`).forEach(s => s.classList.remove('selected'));
-                shapeDiv.classList.add('selected');
-            });
-            spatialDiv.appendChild(shapeDiv);
-        });
-        
-        content.appendChild(spatialDiv);
-    }
-    
     renderChallengeContent(challenge, content) {
         switch (challenge.type) {
             case 'pattern':
-                this.renderPatternChallenge(challenge, content);
-                break;
-            case 'math':
-                this.renderMathChallenge(challenge, content);
+                PatternChallenge.render(challenge, content);
                 break;
             case 'sequence':
                 this.renderSequenceChallenge(challenge, content);
@@ -438,40 +325,13 @@ class HardCAPTCHA {
             case 'kerning':
                 KerningChallenge.render(challenge, content);
                 break;
+            case 'predator':
+                PredatorChallenge.render(challenge, content);
+                break;
+            case 'emotions':
+                EmotionsChallenge.render(challenge, content);
+                break;
         }
-    }
-    
-    renderPatternChallenge(challenge, content) {
-        const grid = document.createElement('div');
-        grid.className = 'pattern-grid';
-        grid.style.gridTemplateColumns = `repeat(${challenge.gridSize}, 1fr)`;
-        
-        challenge.pattern.forEach((color, index) => {
-            const item = document.createElement('div');
-            item.className = 'pattern-item';
-            const r = color.r.toString(16).padStart(2, '0').toUpperCase();
-            const g = color.g.toString(16).padStart(2, '0').toUpperCase();
-            const b = color.b.toString(16).padStart(2, '0').toUpperCase();
-            item.style.backgroundColor = `#${r}${g}${b}`;
-            item.dataset.index = index;
-            item.addEventListener('click', () => {
-                document.querySelectorAll(`#${challenge.id} .pattern-item`).forEach(i => i.classList.remove('selected'));
-                item.classList.add('selected');
-            });
-            grid.appendChild(item);
-        });
-        
-        content.appendChild(grid);
-    }
-    
-    renderMathChallenge(challenge, content) {
-        const mathDiv = document.createElement('div');
-        mathDiv.className = 'math-puzzle';
-        mathDiv.innerHTML = `
-            <p>${challenge.question} = ?</p>
-            <input type="number" id="math-${challenge.id}" placeholder="Answer" />
-        `;
-        content.appendChild(mathDiv);
     }
     
     renderSequenceChallenge(challenge, content) {
@@ -582,7 +442,7 @@ class HardCAPTCHA {
             clearInterval(displayInterval);
             this.revealCorrectAnswers();
             this.showFeedback('Time\'s up! Challenge failed.', 'error');
-            setTimeout(() => this.handleFailure(), 3000);
+            setTimeout(() => this.handleFailure(), 2000);
         }, actualTimeLimit);
         
         challenge.timerInterval = displayInterval;
@@ -590,19 +450,9 @@ class HardCAPTCHA {
     }
     
     getChallengeAnswer(challenge) {
-        if (challenge.type === 'blended') {
-            const mathAnswer = document.getElementById(`math-${challenge.id}`)?.value;
-            const selectedShape = document.querySelector(`#${challenge.id} .shape.selected`);
-            const shapeIndex = selectedShape?.dataset.index;
-            return `${mathAnswer}-${shapeIndex}`;
-        }
-        
         switch (challenge.type) {
             case 'pattern':
-                const selected = document.querySelector(`#${challenge.id} .pattern-item.selected`);
-                return selected?.dataset.index || '';
-            case 'math':
-                return document.getElementById(`math-${challenge.id}`)?.value || '';
+                return PatternChallenge.getAnswer(challenge);
             case 'sequence':
                 const input = document.getElementById(`seq-${challenge.id}-${challenge.missingIndex}`);
                 return input?.value || '';
@@ -613,6 +463,10 @@ class HardCAPTCHA {
                 return document.getElementById(`memory-${challenge.id}`)?.value || '';
             case 'kerning':
                 return KerningChallenge.getAnswer(challenge);
+            case 'predator':
+                return PredatorChallenge.getAnswer(challenge);
+            case 'emotions':
+                return EmotionsChallenge.getAnswer(challenge);
             default:
                 return '';
         }
@@ -628,27 +482,30 @@ class HardCAPTCHA {
         for (const challenge of this.state.challenges) {
             const userAnswer = this.getChallengeAnswer(challenge);
             
-            if (challenge.type === 'blended') {
-                const parts = userAnswer.split('-');
-                const mathAnswer = parts[0];
-                const shapeIndex = parts[1];
-                
-                if (mathAnswer !== challenge.mathChallenge.answer) {
+            if (challenge.type === 'memory') {
+                const normalized = userAnswer.toLowerCase().replace(/\s/g, '').split(',').join('-');
+                if (normalized !== challenge.answer.toLowerCase()) {
                     return false;
                 }
-                
-                if (shapeIndex !== challenge.spatialChallenge.answer) {
+            } else if (challenge.type === 'predator') {
+                const userIndices = userAnswer.split(',').map(s => s.trim()).filter(s => s !== '').sort((a, b) => parseInt(a) - parseInt(b)).join(',');
+                if (userIndices !== challenge.answer) {
                     return false;
                 }
-            } else {
-                if (challenge.type === 'memory') {
-                    const normalized = userAnswer.toLowerCase().replace(/\s/g, '').split(',').join('-');
-                    if (normalized !== challenge.answer.toLowerCase()) {
-                        return false;
-                    }
-                } else if (userAnswer !== challenge.answer) {
+            } else if (challenge.type === 'emotions') {
+                const userIndex = userAnswer.trim();
+                const correctIndex = challenge.answer.trim();
+                if (userIndex !== correctIndex) {
                     return false;
                 }
+            } else if (challenge.type === 'sequence') {
+                const userValue = userAnswer.trim();
+                const correctValue = challenge.answer.trim();
+                if (userValue !== correctValue) {
+                    return false;
+                }
+            } else if (userAnswer !== challenge.answer) {
+                return false;
             }
         }
         
@@ -670,14 +527,15 @@ class HardCAPTCHA {
         }
         
         // Check focus changes (too many = suspicious)
-        if (this.state.focusChanges > 5) {
+        // Increased threshold to 10 to allow for normal tab/window switching
+        if (this.state.focusChanges > 10) {
             return false;
         }
         
-        // Check keyboard events
-        if (this.state.keyboardEvents.length === 0 && this.state.currentRound > 1) {
-            return false;
-        }
+        // Check keyboard events (only for challenges that require typing)
+        // Note: Some challenges (emotions, pattern, predator) are click-only and don't require keyboard
+        // So we only check this if there are keyboard events recorded (meaning user typed something)
+        // This prevents false positives for click-only challenges
         
         return true;
     }
@@ -686,7 +544,6 @@ class HardCAPTCHA {
         document.getElementById('submitButton').disabled = true;
         
         if (this.validateRound()) {
-            this.state.attempts = 0;
             this.showFeedback('Correct! Moving to next round...', 'success');
             
             // Clear timers
@@ -705,16 +562,11 @@ class HardCAPTCHA {
                 setTimeout(() => this.generateRound(), 1500);
             }
         } else {
-            this.state.attempts++;
-            this.showFeedback('Incorrect answer. Please try again.', 'error');
-            
-            if (this.state.attempts >= 3) {
-                setTimeout(() => this.handleFailure(), 2000);
-            } else {
-                setTimeout(() => {
-                    document.getElementById('submitButton').disabled = false;
-                }, 1000);
-            }
+            this.showFeedback('Incorrect answer.', 'error');
+            this.revealCorrectAnswers();
+            setTimeout(() => {
+                this.handleFailure();
+            }, 2000);
         }
     }
     
@@ -740,78 +592,48 @@ class HardCAPTCHA {
             const challengeEl = document.getElementById(challenge.id);
             if (!challengeEl) return;
             
-            if (challenge.type === 'blended') {
-                // Reveal math answer
-                const mathInput = document.getElementById(`math-${challenge.id}`);
-                if (mathInput) {
-                    mathInput.value = challenge.mathChallenge.answer;
-                    mathInput.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
-                    mathInput.style.borderColor = 'var(--success-color)';
-                }
-                
-                // Reveal spatial answer
-                const shapes = challengeEl.querySelectorAll('.shape');
-                shapes.forEach((shape, index) => {
-                    if (index === challenge.spatialChallenge.correctIndex) {
-                        shape.classList.add('selected');
-                        shape.style.borderColor = 'var(--success-color)';
-                        shape.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
+            switch (challenge.type) {
+                case 'pattern':
+                    PatternChallenge.revealAnswer(challenge, challengeEl);
+                    break;
+                    
+                case 'sequence':
+                    const seqInput = document.getElementById(`seq-${challenge.id}-${challenge.missingIndex}`);
+                    if (seqInput) {
+                        seqInput.value = challenge.answer;
+                        seqInput.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
+                        seqInput.style.borderColor = 'var(--success-color)';
                     }
-                });
-            } else {
-                switch (challenge.type) {
-                    case 'pattern':
-                        const patternItems = challengeEl.querySelectorAll('.pattern-item');
-                        patternItems.forEach((item, index) => {
-                            if (index === challenge.correctIndex) {
-                                item.classList.add('selected');
-                                item.style.borderColor = 'var(--success-color)';
-                                item.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
-                            }
-                        });
-                        break;
-                        
-                    case 'math':
-                        const mathInput = document.getElementById(`math-${challenge.id}`);
-                        if (mathInput) {
-                            mathInput.value = challenge.answer;
-                            mathInput.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
-                            mathInput.style.borderColor = 'var(--success-color)';
+                    break;
+                    
+                case 'spatial':
+                    const spatialShapes = challengeEl.querySelectorAll('.shape');
+                    spatialShapes.forEach((shape, index) => {
+                        if (index === challenge.correctIndex) {
+                            shape.classList.add('selected');
+                            shape.style.borderColor = 'var(--success-color)';
+                            shape.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
                         }
-                        break;
-                        
-                    case 'sequence':
-                        const seqInput = document.getElementById(`seq-${challenge.id}-${challenge.missingIndex}`);
-                        if (seqInput) {
-                            seqInput.value = challenge.answer;
-                            seqInput.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
-                            seqInput.style.borderColor = 'var(--success-color)';
-                        }
-                        break;
-                        
-                    case 'spatial':
-                        const spatialShapes = challengeEl.querySelectorAll('.shape');
-                        spatialShapes.forEach((shape, index) => {
-                            if (index === challenge.correctIndex) {
-                                shape.classList.add('selected');
-                                shape.style.borderColor = 'var(--success-color)';
-                                shape.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
-                            }
-                        });
-                        break;
-                        
-                    case 'memory':
-                        const memoryInput = document.getElementById(`memory-${challenge.id}`);
-                        if (memoryInput) {
-                            memoryInput.value = challenge.sequence.join(', ');
-                            memoryInput.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
-                            memoryInput.style.borderColor = 'var(--success-color)';
-                        }
-                        break;
-                    case 'kerning':
-                        KerningChallenge.revealAnswer(challenge, challengeEl);
-                        break;
-                }
+                    });
+                    break;
+                    
+                case 'memory':
+                    const memoryInput = document.getElementById(`memory-${challenge.id}`);
+                    if (memoryInput) {
+                        memoryInput.value = challenge.sequence.join(', ');
+                        memoryInput.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
+                        memoryInput.style.borderColor = 'var(--success-color)';
+                    }
+                    break;
+                case 'kerning':
+                    KerningChallenge.revealAnswer(challenge, challengeEl);
+                    break;
+                case 'predator':
+                    PredatorChallenge.revealAnswer(challenge, challengeEl);
+                    break;
+                case 'emotions':
+                    EmotionsChallenge.revealAnswer(challenge, challengeEl);
+                    break;
             }
             
         });
@@ -828,6 +650,8 @@ class HardCAPTCHA {
     }
     
     handleFailure() {
+        console.log('Yes you can pass this challenge. If you couldn\'t, it wouldn\'t be any fun watching you try.');
+        
         // Hide buttons
         document.getElementById('buttonGroup').classList.add('hidden');
         document.getElementById('feedback').classList.add('hidden');
@@ -852,9 +676,7 @@ class HardCAPTCHA {
     }
     
     updateProgress() {
-        const progress = (this.state.currentRound / this.state.totalRounds) * 100;
-        document.getElementById('progressFill').style.width = `${progress}%`;
-        document.getElementById('progressText').textContent = `Challenge ${this.state.currentRound} of ${this.state.totalRounds}`;
+        document.getElementById('progressText').textContent = `Round ${this.state.currentRound}`;
     }
     
     showFeedback(message, type) {
