@@ -18,13 +18,13 @@ class HardCAPTCHA {
         };
         
         this.challengeTypes = [
-            // 'pattern',
-            // 'sequence',
-            // 'spatial',
-            // 'memory',
-            // 'kerning',
-            // 'predator',
-            // 'emotions',
+            'pattern',
+            'sequence',
+            'spatial',
+            'memory',
+            'kerning',
+            'predator',
+            'emotions',
             'human'
         ];
         
@@ -684,12 +684,29 @@ class HardCAPTCHA {
     }
     
     generateRandomCode() {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        // Generate 10 capital hexadecimal digits (0-F)
+        const hexChars = '0123456789ABCDEF';
         let code = '';
-        for (let i = 0; i < 12; i++) {
-            code += chars.charAt(this.randn(0, chars.length));
+        for (let i = 0; i < 10; i++) {
+            code += hexChars.charAt(this.randn(0, hexChars.length));
         }
-        return code;
+        
+        // Group into 5 pairs and XOR each pair
+        let xorResult = 0;
+        for (let i = 0; i < 10; i += 2) {
+            const pair1 = parseInt(code[i], 16);
+            const pair2 = parseInt(code[i + 1], 16);
+            xorResult ^= (pair1 << 4) | pair2;
+        }
+        
+        // XOR with FF to get checksum
+        const checksum = xorResult ^ 0xFF;
+        
+        // Format checksum as 2 capital hex digits
+        const checksumStr = checksum.toString(16).toUpperCase().padStart(2, '0');
+        
+        // Return 10 original digits + 2 checksum digits
+        return code + checksumStr;
     }
     
     updateProgress() {
@@ -707,6 +724,46 @@ class HardCAPTCHA {
         feedback.textContent = '';
         feedback.className = 'feedback';
     }
+}
+
+// Verification function for console testing
+// Usage: verifyCode('A1B2C3D4E5F6') or verifyCode('1.2-3.4-5.6.7!9    0...A,B')
+function verifyCode(code) {
+    if (!code) {
+        console.log('Error: Code is required');
+        return;
+    }
+    
+    // Remove all non-hexadecimal characters (keep only 0-9, A-F, a-f)
+    const hexOnly = code.replace(/[^0-9A-Fa-f]/g, '').toUpperCase();
+    
+    if (hexOnly.length !== 12) {
+        console.log(`Error: After filtering, code must have exactly 12 hexadecimal digits (found ${hexOnly.length})`);
+        console.log(`Original input: ${code}`);
+        console.log(`Filtered hex: ${hexOnly}`);
+        return;
+    }
+    
+    // Group into 6 pairs and XOR each pair
+    let xorResult = 0;
+    const pairs = [];
+    
+    for (let i = 0; i < 12; i += 2) {
+        const pair = hexOnly.substring(i, i + 2);
+        const pairValue = parseInt(pair, 16);
+        pairs.push(pair);
+        xorResult ^= pairValue;
+    }
+    
+    const resultHex = xorResult.toString(16).toUpperCase().padStart(2, '0');
+    console.log(`Original input: ${code}`);
+    console.log(`Filtered hex: ${hexOnly}`);
+    console.log(`Pairs: ${pairs.join(', ')}`);
+    console.log(`XOR result: 0x${resultHex} (${xorResult})`);
+    console.log(`Expected: 0xFF (255)`);
+    console.log(`Valid: ${xorResult === 0xFF ? '✓ YES' : '✗ NO'}`);
+    
+    return xorResult === 0xFF;
 }
 
 // Initialize when DOM is ready
