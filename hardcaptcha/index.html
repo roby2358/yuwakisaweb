@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HardCAPTCHA</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <!-- Start Modal -->
+    <div id="startModal" class="modal active">
+        <div class="modal-content">
+            <h1>HardCAPTCHA</h1>
+            <p>Welcome to the most preposterously hard CAPTCHA system ever created.</p>
+            <p>You will face multiple challenges that test your pattern recognition, mathematical skills, spatial reasoning, and memory. Some challenges will run concurrently, requiring you to solve them simultaneously or in a specific sequence.</p>
+            <p>Each challenge is designed to be difficult for both humans and automated systems. Pay close attention, think carefully, and good luck!</p>
+            <button id="startButton" class="btn btn-primary">Start</button>
+        </div>
+    </div>
+
+    <!-- End Modal -->
+    <div id="endModal" class="modal">
+        <div class="modal-content">
+            <h1 id="endTitle"></h1>
+            <p id="endMessage"></p>
+            <div id="codeDisplay" class="code-display"></div>
+            <button id="restartButton" class="btn btn-primary">Try Again</button>
+        </div>
+    </div>
+
+    <!-- Main Challenge Area -->
+    <div id="challengeArea" class="challenge-area hidden">
+        <header class="header">
+            <h1>HardCAPTCHA</h1>
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill"></div>
+                </div>
+                <span id="progressText" class="progress-text">Challenge 1 of 5</span>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div id="challengesContainer" class="challenges-container">
+                <!-- Challenges will be dynamically inserted here -->
+            </div>
+
+            <div class="controls">
+                <div id="buttonGroup" class="button-group">
+                    <button id="submitButton" class="btn btn-submit" disabled>Submit</button>
+                    <button id="giveUpButton" class="btn btn-giveup">I give up</button>
+                </div>
+                <div id="resultDisplay" class="result-display hidden">
+                    <h2 id="resultTitle"></h2>
+                    <p id="resultMessage"></p>
+                    <div id="resultCodeDisplay" class="code-display"></div>
+                    <button id="resultRestartButton" class="btn btn-primary">Try Again</button>
+                </div>
+                <div id="feedback" class="feedback"></div>
+            </div>
+        </main>
+    </div>
+
+    <script src="index.js"></script>
+</body>
+</html>
+
