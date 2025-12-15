@@ -20,7 +20,7 @@ class HardCAPTCHA {
         this.challengeTypes = [
             'pattern',
             'sequence',
-            // 'spatial',
+            'spatial',
             'memory',
             'kerning',
             'predator',
@@ -171,7 +171,7 @@ class HardCAPTCHA {
             case 'sequence':
                 return this.generateSequenceChallenge();
             case 'spatial':
-                return this.generateSpatialChallenge();
+                return SpatialChallenge.generate();
             case 'memory':
                 return this.generateMemoryChallenge();
             case 'kerning':
@@ -214,46 +214,6 @@ class HardCAPTCHA {
             instructions: 'Find the missing number in the sequence:',
             timeLimit: 90,
             formula: { a: a, b: b }
-        };
-    }
-    
-    generateSpatialChallenge() {
-        const shapes = ['▲', '●', '■', '◆'];
-        const rotations = [0, 90, 180, 270];
-        const correctShape = shapes[this.randn(0, shapes.length)];
-        const correctRotation = rotations[this.randn(0, rotations.length)];
-        
-        const options = [];
-        // Add correct option
-        options.push({ shape: correctShape, rotation: correctRotation, correct: true });
-        
-        // Add incorrect options
-        for (let i = 0; i < 3; i++) {
-            const shape = shapes[this.randn(0, shapes.length)];
-            const rotation = rotations[this.randn(0, rotations.length)];
-            if (shape !== correctShape || rotation !== correctRotation) {
-                options.push({ shape, rotation, correct: false });
-            }
-        }
-        
-        // Shuffle options
-        for (let i = options.length - 1; i > 0; i--) {
-            const j = this.randn(0, i + 1);
-            [options[i], options[j]] = [options[j], options[i]];
-        }
-        
-        const correctIndex = options.findIndex(opt => opt.correct);
-        
-        return {
-            id: `spatial-${Date.now()}`,
-            type: 'spatial',
-            targetShape: correctShape,
-            targetRotation: correctRotation,
-            options: options,
-            correctIndex: correctIndex,
-            answer: correctIndex.toString(),
-            instructions: `Select the shape ${correctShape} rotated ${correctRotation} degrees clockwise:`,
-            timeLimit: 60
         };
     }
     
@@ -323,7 +283,7 @@ class HardCAPTCHA {
                 this.renderSequenceChallenge(challenge, content);
                 break;
             case 'spatial':
-                this.renderSpatialChallenge(challenge, content);
+                SpatialChallenge.render(challenge, content);
                 break;
             case 'kerning':
                 KerningChallenge.render(challenge, content);
@@ -365,26 +325,6 @@ class HardCAPTCHA {
         });
         
         content.appendChild(seqDiv);
-    }
-    
-    renderSpatialChallenge(challenge, content) {
-        const spatialDiv = document.createElement('div');
-        spatialDiv.className = 'spatial-container';
-        
-        challenge.options.forEach((option, index) => {
-            const shapeDiv = document.createElement('div');
-            shapeDiv.className = 'shape';
-            shapeDiv.dataset.index = index;
-            shapeDiv.style.transform = `rotate(${option.rotation}deg)`;
-            shapeDiv.textContent = option.shape;
-            shapeDiv.addEventListener('click', () => {
-                document.querySelectorAll(`#${challenge.id} .shape`).forEach(s => s.classList.remove('selected'));
-                shapeDiv.classList.add('selected');
-            });
-            spatialDiv.appendChild(shapeDiv);
-        });
-        
-        content.appendChild(spatialDiv);
     }
     
     handleMemoryChallenge(challenge, content) {
@@ -463,8 +403,7 @@ class HardCAPTCHA {
                 const input = document.getElementById(`seq-${challenge.id}-${challenge.missingIndex}`);
                 return input?.value || '';
             case 'spatial':
-                const selectedShape = document.querySelector(`#${challenge.id} .shape.selected`);
-                return selectedShape?.dataset.index || '';
+                return SpatialChallenge.getAnswer(challenge);
             case 'memory':
                 return document.getElementById(`memory-${challenge.id}`)?.value || '';
             case 'kerning':
@@ -621,14 +560,7 @@ class HardCAPTCHA {
                     break;
                     
                 case 'spatial':
-                    const spatialShapes = challengeEl.querySelectorAll('.shape');
-                    spatialShapes.forEach((shape, index) => {
-                        if (index === challenge.correctIndex) {
-                            shape.classList.add('selected');
-                            shape.style.borderColor = 'var(--success-color)';
-                            shape.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
-                        }
-                    });
+                    SpatialChallenge.revealAnswer(challenge, challengeEl);
                     break;
                     
                 case 'memory':
