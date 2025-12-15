@@ -226,6 +226,7 @@ class HardCAPTCHA {
             missingIndex: missingIndex,
             answer: correctAnswer.toString(),
             instructions: 'Find the missing number in the sequence:',
+            explanation: 'In the 20th century, humans needed to learn how to use calculators to survive.',
             timeLimit: 90,
             formula: { a: a, b: b }
         };
@@ -246,6 +247,7 @@ class HardCAPTCHA {
             sequence: sequence,
             answer: sequence.join('-'),
             instructions: 'Watch the sequence carefully, then recreate it:',
+            explanation: 'Remembering sequences of patterns, shapes, or colors is a vital survival skill for biological intelligences.',
             timeLimit: 60,
             showTime: 6000
         };
@@ -268,6 +270,13 @@ class HardCAPTCHA {
         instructions.className = 'challenge-instructions';
         instructions.textContent = challenge.instructions;
         challengeDiv.appendChild(instructions);
+        
+        if (challenge.explanation) {
+            const explanation = document.createElement('div');
+            explanation.className = 'challenge-explanation';
+            explanation.textContent = challenge.explanation;
+            challengeDiv.appendChild(explanation);
+        }
         
         const content = document.createElement('div');
         content.className = 'challenge-content';

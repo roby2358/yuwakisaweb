@@ -75,6 +75,7 @@ class SpatialChallenge {
             correctIndex: correctIndex,
             answer: correctIndex.toString(),
             instructions: `Select the shape ${correctShape} rotated ${correctRotation} degrees ${direction}:`,
+            explanation: 'Embodied intelligences needed to turn and navigate physical spaces.',
             timeLimit: 60
         };
     }

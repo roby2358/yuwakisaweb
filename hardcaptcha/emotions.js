@@ -98,6 +98,7 @@ class EmotionsChallenge {
             correctIndex: newCorrectIndex,
             answer: newCorrectIndex.toString(),
             instructions: `Select all the squares that display ${targetEmotion}.`,
+            explanation: 'Biological intelligences have developed keen senses for very subtle emotional states.',
             timeLimit: 60
         };
     }

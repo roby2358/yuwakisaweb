@@ -70,6 +70,7 @@ class HumanChallenge {
             correctIndex: newCorrectIndex,
             answer: newCorrectIndex.toString(),
             instructions: 'Select the human',
+            explanation: 'Biological intelligences survive by identifying and banding with others of their kind.',
             timeLimit: 90
         };
     }

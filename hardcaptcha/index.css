@@ -249,9 +249,17 @@ body {
 }
 
 .challenge-instructions {
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
     color: var(--text-secondary);
     line-height: 1.8;
+}
+
+.challenge-explanation {
+    margin-bottom: 0.75rem;
+    color: var(--text-secondary);
+    font-style: italic;
+    line-height: 1.6;
+    font-size: 0.95rem;
 }
 
 .challenge-content {

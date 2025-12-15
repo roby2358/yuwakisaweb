@@ -61,6 +61,7 @@ class KerningChallenge {
             correctIndex: correctIndex,
             answer: correctIndex.toString(),
             instructions: 'Click on the letter that has correct kerning on both sides.',
+            explanation: 'While artificial intelligences match patterns and discard the spaces in between, biological intelligences need their full vision.',
             timeLimit: 60
         };
     }

@@ -48,6 +48,7 @@ class PatternChallenge {
             correctIndex: oddIndex,
             answer: oddIndex.toString(),
             instructions: 'Click on the one square that is different from all the others in the grid.',
+            explanation: 'Biological intelligences need to percieve very subtle shade differences in the wild to survive.',
             gridSize: gridSize,
             timeLimit: 70
         };

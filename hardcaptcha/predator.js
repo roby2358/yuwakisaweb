@@ -132,6 +132,7 @@ class PredatorChallenge {
             correctIndices: sortedIndices,
             answer: sortedIndices.join(','),
             instructions: 'Click on the predators that are safe to approach.',
+            explanation: 'Biological intelligences are constantly carefully negotiating with the presence of dangerous predators',
             timeLimit: 75
         };
     }
