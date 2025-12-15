@@ -17,15 +17,21 @@ class PatternChallenge {
         // Pick which square will be the odd one out
         const oddIndex = this.randn(0, totalSquares);
         
+        // Generate the "out" square's consistent component value
+        // Must have absolute difference of 16 or more from consistentValue
+        let outComponentValue;
+        do {
+            outComponentValue = this.randn(0x80, 0xD1);
+        } while (Math.abs(outComponentValue - consistentValue) < 16);
+        
         // Generate all 16 squares
         for (let i = 0; i < totalSquares; i++) {
             if (i === oddIndex) {
-                // The odd one out: all 3 components are random
-                pattern.push({
-                    r: this.randn(0x80, 0xD1),
-                    g: this.randn(0x80, 0xD1),
-                    b: this.randn(0x80, 0xD1)
-                });
+                // The odd one out: consistent component has value with abs diff >= 16, other two are random
+                const r = consistentComponent === 0 ? outComponentValue : this.randn(0x80, 0xD1);
+                const g = consistentComponent === 1 ? outComponentValue : this.randn(0x80, 0xD1);
+                const b = consistentComponent === 2 ? outComponentValue : this.randn(0x80, 0xD1);
+                pattern.push({ r, g, b });
             } else {
                 // 15 squares with one consistent component
                 const r = consistentComponent === 0 ? consistentValue : this.randn(0x80, 0xD1);
