@@ -642,7 +642,16 @@ class HardCAPTCHA {
         // Generate 10 capital hexadecimal digits (0-F)
         const hexChars = '0123456789ABCDEF';
         let code = '';
-        for (let i = 0; i < 10; i++) {
+        
+        // First digit: 'F' if xyzzy cheat code is set, otherwise 0-E
+        if (cheatChallengeType !== null) {
+            code += 'F';
+        } else {
+            code += hexChars.charAt(this.randn(0, 15)); // 0-E (excludes F)
+        }
+        
+        // Generate remaining 9 digits normally
+        for (let i = 1; i < 10; i++) {
             code += hexChars.charAt(this.randn(0, hexChars.length));
         }
         
