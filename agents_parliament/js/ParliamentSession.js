@@ -7,7 +7,7 @@ import { toolEdit } from './tools/edit.js';
 import { toolIssue } from './tools/issue.js';
 import { toolAdjourn } from './tools/adjourn.js';
 import { toolRecognize } from './tools/recognize.js';
-import { parse } from './commandParser.js';
+import { parse } from './CommandParser.js';
 
 export class ParliamentSession {
     constructor() {

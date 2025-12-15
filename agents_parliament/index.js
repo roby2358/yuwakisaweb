@@ -86,7 +86,6 @@ Respond with:
 # Speak
 [Your speech to the House. Everything you write here goes into the Hansard.]
 ## Action
-**Priority**: 5
 \`[command if needed]\``;
         }
     }
@@ -189,8 +188,6 @@ Respond with:
             if (result.adjourned) {
                 break;
             }
-
-            await this.sleep(1000);
 
             await this.sleep(1000);
         }
