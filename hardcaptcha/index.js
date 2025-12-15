@@ -1,6 +1,19 @@
 // HardCAPTCHA Implementation
 // All logic runs entirely in the browser
 
+// Global cheat code variable
+let cheatChallengeType = null;
+
+// Cheat code function - call xyzzy('challengeType') from console to force a specific challenge type
+function xyzzy(str) {
+    if (typeof str !== 'string') {
+        console.log('No');
+        return;
+    }
+    cheatChallengeType = str;
+    console.log('Nothing happens.');
+}
+
 class HardCAPTCHA {
     constructor() {
         const possibleRounds = [7, 11, 13, 17];
@@ -163,7 +176,8 @@ class HardCAPTCHA {
     }
     
     async generateChallenge(index) {
-        const type = this.challengeTypes[this.randn(0, this.challengeTypes.length)];
+        // Use cheat code if set, otherwise select randomly
+        const type = cheatChallengeType || this.challengeTypes[this.randn(0, this.challengeTypes.length)];
         
         switch (type) {
             case 'pattern':
