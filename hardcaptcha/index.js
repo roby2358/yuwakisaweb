@@ -20,7 +20,8 @@ class HardCAPTCHA {
             'math',
             'sequence',
             'spatial',
-            'memory'
+            'memory',
+            'kerning'
         ];
         
         this.init();
@@ -434,6 +435,9 @@ class HardCAPTCHA {
             case 'spatial':
                 this.renderSpatialChallenge(challenge, content);
                 break;
+            case 'kerning':
+                KerningChallenge.render(challenge, content);
+                break;
         }
     }
     
@@ -607,6 +611,8 @@ class HardCAPTCHA {
                 return selectedShape?.dataset.index || '';
             case 'memory':
                 return document.getElementById(`memory-${challenge.id}`)?.value || '';
+            case 'kerning':
+                return KerningChallenge.getAnswer(challenge);
             default:
                 return '';
         }
@@ -801,6 +807,9 @@ class HardCAPTCHA {
                             memoryInput.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
                             memoryInput.style.borderColor = 'var(--success-color)';
                         }
+                        break;
+                    case 'kerning':
+                        KerningChallenge.revealAnswer(challenge, challengeEl);
                         break;
                 }
             }
