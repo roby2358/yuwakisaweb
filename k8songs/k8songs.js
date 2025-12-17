@@ -55,9 +55,9 @@ title
 lyrics`
 
     const modelMap = {
-        "haiku": "claude-3-5-haiku-20241022",
-        "sonnet": "claude-sonnet-4-5-20250929",
-        "opus": "claude-opus-4-1-20250805"
+        "haiku": "anthropic/claude-haiku-4.5",
+        "sonnet": "anthropic/claude-sonnet-4.5",
+        "opus": "anthropic/claude-opus-4.5"
     };
 
     // Populate prompt select dropdown from promptMap keys
@@ -120,9 +120,9 @@ lyrics`
         }
     }
 
-    const claudeApi = new $.yuwakisa.ClaudeChatApi();
+    const openRouterApi = new $.yuwakisa.OpenRouterChatApi();
 
-    claudeApi.onSuccess = function(reply) {
+    openRouterApi.onSuccess = function(reply) {
         const songText = reply.choices[0];
 
         console.log(songText);
@@ -145,7 +145,7 @@ lyrics`
         $('#full-response').text(songText);
     };
 
-    claudeApi.onError = function(error) {
+    openRouterApi.onError = function(error) {
         console.error('API Error:', error);
         $('#song').val('Error generating song. Please try again.');
     };
@@ -157,14 +157,14 @@ lyrics`
             return;
         }
 
-        claudeApi.setApiKey(apiKey);
+        openRouterApi.setApiKey(apiKey);
 
         const story = $('#story').val();
         const selectedPrompt = $('#prompt-select').val();
         const selectedModel = $('#model-select').val();
         const prompt = promptMap[selectedPrompt] + promptFormat;
-        const messages = claudeApi.buildPrompt(prompt, [story]);
-        claudeApi.call(messages, modelMap[selectedModel]);
+        const messages = openRouterApi.buildPrompt(prompt, [story]);
+        openRouterApi.call(messages, modelMap[selectedModel]);
     });
 
     $('#make-music').on('click', function() {
@@ -172,12 +172,11 @@ lyrics`
     });
 });
 
-// ClaudeChatApi implementation (simplified version)
+// OpenRouterChatApi implementation
 $.yuwakisa = $.yuwakisa || {};
-$.yuwakisa.ClaudeChatApi = function() {
+$.yuwakisa.OpenRouterChatApi = function() {
     this.apiKey = '';
-    this.url = 'https://api.anthropic.com/v1/messages';
-    this.anthropic_version = '2023-06-01';
+    this.url = 'https://openrouter.ai/api/v1/chat/completions';
 
     this.setApiKey = function(key) {
         this.apiKey = key;
@@ -187,38 +186,33 @@ $.yuwakisa.ClaudeChatApi = function() {
     this.onError = (json) => { console.log(json); }
 
     this.buildPrompt = (systemText, messages) => {
-        return {
-            system: [{ type: "text", text: systemText }],
-            messages: [{ role: "user", content: messages.join("\n") }]
-        };
+        return [
+            { role: "system", content: systemText },
+            { role: "user", content: messages.join("\n") }
+        ];
     };
 
     this.formatReply = function(json) {
-        if (!json.content || json.content.length === 0) {
+        if (!json.choices || json.choices.length === 0) {
             return { choices: [], usage: json?.usage };
         }
         return {
-            choices: [json.content[0].text],
-            usage: {
-                prompt_tokens: json.usage?.input_tokens,
-                completion_tokens: json.usage?.output_tokens,
-                total_tokens: json.usage?.input_tokens + json.usage?.output_tokens
-            }
+            choices: [json.choices[0].message.content],
+            usage: json.usage
         };
     }
 
     this.call = async function(messages, model) {
         const headers = {
-            "x-api-key": this.apiKey,
+            "Authorization": `Bearer ${this.apiKey}`,
             "Content-Type": "application/json",
-            "anthropic-version": this.anthropic_version,
-            "anthropic-dangerous-direct-browser-access": "true"
+            "HTTP-Referer": window.location.origin,
+            "X-Title": "k8songs"
         };
 
         const data = {
             model: model,
-            messages: messages.messages,
-            system: messages.system,
+            messages: messages,
             max_tokens: 1000,
         };
 
