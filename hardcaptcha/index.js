@@ -2,7 +2,7 @@
 // All logic runs entirely in the browser
 
 // Version string in format vYYYYMMDD.HHMMSS
-const VERSION = 'v20251218.073330';
+const VERSION = 'v20251218.080830';
 
 // Global cheat code variable
 let cheatChallengeType = null;

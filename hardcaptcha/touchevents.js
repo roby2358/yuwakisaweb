@@ -1,5 +1,5 @@
 // Touch Event Handler
-// Provides iOS detection and touch event handling utilities
+// Provides touch event handling utilities
 
 class TouchEventHandler {
     constructor(options = {}) {
@@ -24,11 +24,6 @@ class TouchEventHandler {
         }
     }
     
-    static isIOS() {
-        return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    }
-    
     static isMobile() {
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
                (navigator.maxTouchPoints && navigator.maxTouchPoints > 2 && /MacIntel/.test(navigator.platform));
@@ -36,7 +31,7 @@ class TouchEventHandler {
     
     static getPlatformInfo() {
         return {
-            isIOS: TouchEventHandler.isIOS(),
+            isIOS: IOSDetector.isIOS(),
             isMobile: TouchEventHandler.isMobile(),
             userAgent: navigator.userAgent,
             platform: navigator.platform,
@@ -157,6 +152,5 @@ class TouchEventHandler {
 
 // Expose static methods globally for backward compatibility
 window.getPlatformInfo = TouchEventHandler.getPlatformInfo;
-window.isIOS = TouchEventHandler.isIOS;
 window.isMobile = TouchEventHandler.isMobile;
 
