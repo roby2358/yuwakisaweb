@@ -69,7 +69,25 @@ class PatternChallenge {
             const b = color.b.toString(16).padStart(2, '0').toUpperCase();
             item.style.backgroundColor = `#${r}${g}${b}`;
             item.dataset.index = index;
-            item.addEventListener('click', () => {
+            
+            let lastTouchTime = 0;
+            const TOUCH_DELAY = 300;
+            
+            const handleSelection = (e) => {
+                const now = Date.now();
+                
+                if (e.type === 'touchend') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    lastTouchTime = now;
+                } else if (e.type === 'click') {
+                    if (now - lastTouchTime < TOUCH_DELAY) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return;
+                    }
+                }
+                
                 grid.querySelectorAll('.pattern-item').forEach(i => {
                     i.classList.remove('selected');
                     i.style.borderWidth = '';
@@ -85,7 +103,10 @@ class PatternChallenge {
                 item.style.outlineOffset = '3px';
                 item.style.zIndex = '10';
                 item.style.position = 'relative';
-            });
+            };
+            
+            item.addEventListener('click', handleSelection);
+            item.addEventListener('touchend', handleSelection, { passive: false });
             grid.appendChild(item);
         });
         

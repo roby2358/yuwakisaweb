@@ -92,7 +92,24 @@ class KerningChallenge {
             letterSpan.style.lineHeight = '1';
             letterSpan.style.borderRadius = '4px';
             
-            letterSpan.addEventListener('click', () => {
+            let lastTouchTime = 0;
+            const TOUCH_DELAY = 300;
+            
+            const handleSelection = (e) => {
+                const now = Date.now();
+                
+                if (e.type === 'touchend') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    lastTouchTime = now;
+                } else if (e.type === 'click') {
+                    if (now - lastTouchTime < TOUCH_DELAY) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return;
+                    }
+                }
+                
                 wordDiv.querySelectorAll('.kerning-letter').forEach(l => {
                     l.classList.remove('selected');
                     l.style.backgroundColor = '';
@@ -101,7 +118,10 @@ class KerningChallenge {
                 letterSpan.classList.add('selected');
                 letterSpan.style.backgroundColor = 'rgba(37, 99, 235, 0.1)';
                 letterSpan.style.border = '2px solid var(--primary-color)';
-            });
+            };
+            
+            letterSpan.addEventListener('click', handleSelection);
+            letterSpan.addEventListener('touchend', handleSelection, { passive: false });
             
             letterSpan.addEventListener('mouseenter', () => {
                 if (!letterSpan.style.backgroundColor) {

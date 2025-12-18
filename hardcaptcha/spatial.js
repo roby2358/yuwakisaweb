@@ -95,7 +95,25 @@ class SpatialChallenge {
             const rotationValue = challenge.isClockwise ? option.rotation : -option.rotation;
             shapeDiv.style.transform = `rotate(${rotationValue}deg)`;
             shapeDiv.textContent = option.shape;
-            shapeDiv.addEventListener('click', () => {
+            
+            let lastTouchTime = 0;
+            const TOUCH_DELAY = 300;
+            
+            const handleSelection = (e) => {
+                const now = Date.now();
+                
+                if (e.type === 'touchend') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    lastTouchTime = now;
+                } else if (e.type === 'click') {
+                    if (now - lastTouchTime < TOUCH_DELAY) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return;
+                    }
+                }
+                
                 const challengeRoot = document.getElementById(challenge.id);
                 if (!challengeRoot) {
                     return;
@@ -106,7 +124,10 @@ class SpatialChallenge {
                     shape.style.backgroundColor = '';
                 });
                 shapeDiv.classList.add('selected');
-            });
+            };
+            
+            shapeDiv.addEventListener('click', handleSelection);
+            shapeDiv.addEventListener('touchend', handleSelection, { passive: false });
             spatialDiv.appendChild(shapeDiv);
         });
 
