@@ -2,7 +2,7 @@
 // All logic runs entirely in the browser
 
 // Version string in format vYYYYMMDD.HHMMSS
-const VERSION = 'v20251218.071830';
+const VERSION = 'v20251218.073330';
 
 // Global cheat code variable
 let cheatChallengeType = null;
@@ -60,9 +60,22 @@ class HardCAPTCHA {
     }
     
     init() {
+        // Check if iOS and show terminal iOS modal (no navigation out)
+        if (this.platformInfo.isIOS) {
+            this.showIOSModal();
+            return; // Terminal - no further initialization
+        }
+        
         this.setupEventListeners();
         this.setupAntiAutomation();
         this.showStartModal();
+    }
+    
+    showIOSModal() {
+        // Terminal modal - no buttons, no way to dismiss or navigate away
+        document.getElementById('iosModal').classList.add('active');
+        document.getElementById('startModal').classList.remove('active');
+        document.getElementById('challengeArea').classList.add('hidden');
     }
     
     setupEventListeners() {

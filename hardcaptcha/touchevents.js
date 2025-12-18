@@ -12,7 +12,7 @@ class TouchEventHandler {
         };
         
         this.touchEvents = [];
-        this.platformInfo = this.getPlatformInfo();
+        this.platformInfo = TouchEventHandler.getPlatformInfo();
         
         if (this.options.enableLogging) {
             console.log('TouchEventHandler initialized');
