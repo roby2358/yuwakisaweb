@@ -1,6 +1,9 @@
 // HardCAPTCHA Implementation
 // All logic runs entirely in the browser
 
+// Version string in format vYYYYMMDD.HHMMSS
+const VERSION = 'v20251218.063529';
+
 // Global cheat code variable
 let cheatChallengeType = null;
 
@@ -16,6 +19,8 @@ function xyzzy(str) {
 
 class HardCAPTCHA {
     constructor() {
+        console.log(`HardCAPTCHA ${VERSION}`);
+        
         const possibleRounds = [7, 11, 13, 17];
         const totalRounds = possibleRounds[Math.floor(Math.random() * possibleRounds.length)];
         

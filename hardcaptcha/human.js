@@ -104,9 +104,27 @@ class HumanChallenge {
             const img = document.createElement('img');
             img.src = spriteData.sprite.toDataURL();
             img.style.cssText = 'max-width: 100%; max-height: 100%; object-fit: contain;';
+            img.style.pointerEvents = 'none';
             spriteDiv.appendChild(img);
             
-            spriteDiv.addEventListener('click', () => {
+            let lastTouchTime = 0;
+            const TOUCH_DELAY = 300;
+            
+            const handleSelection = (e) => {
+                const now = Date.now();
+                
+                if (e.type === 'touchend') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    lastTouchTime = now;
+                } else if (e.type === 'click') {
+                    if (now - lastTouchTime < TOUCH_DELAY) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return;
+                    }
+                }
+                
                 const isSelected = spriteDiv.classList.contains('selected');
                 if (isSelected) {
                     spriteDiv.classList.remove('selected');
@@ -138,7 +156,10 @@ class HumanChallenge {
                     spriteDiv.style.zIndex = '10';
                     spriteDiv.style.position = 'relative';
                 }
-            });
+            };
+            
+            spriteDiv.addEventListener('click', handleSelection);
+            spriteDiv.addEventListener('touchend', handleSelection, { passive: false });
             
             spriteDiv.addEventListener('mouseenter', () => {
                 if (!spriteDiv.classList.contains('selected')) {

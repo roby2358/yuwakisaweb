@@ -47,11 +47,13 @@ The implementation MUST support dynamic challenge blending and concurrent presen
 The implementation MUST include anti-automation measures. The following measures SHOULD be implemented:
 
 - **Timing Analysis**: The system SHOULD detect suspiciously fast completion times
-- **Mouse Movement Tracking**: The system SHOULD require natural mouse movements
-- **Keyboard Event Monitoring**: The system SHOULD track typing patterns
+- **Mouse Movement Tracking**: The system SHOULD require natural mouse movements on desktop platforms
+- **Touch Movement Tracking**: The system SHOULD track touch movements on mobile platforms as an alternative to mouse movement tracking
+- **Keyboard Event Monitoring**: The system SHOULD track typing patterns (where applicable, as some challenges may be touch-only)
 - **Focus/Blur Detection**: The system SHOULD monitor window focus state
 - **Random Delays**: The system MAY introduce unpredictable timing elements
 - **Dynamic Challenge Generation**: The system MUST generate challenges using complex client-side algorithms (server-side generation is excluded from this implementation)
+- **Platform-Aware Detection**: The system SHOULD adapt anti-automation checks based on the detected input method (mouse vs touch) to avoid false positives on mobile devices
 
 ### 4. User Experience
 
@@ -65,6 +67,7 @@ The implementation MUST include anti-automation measures. The following measures
 - The system SHOULD provide progress indicators
 - The system MAY include accessibility considerations
 - The system SHOULD use responsive design for various screen sizes
+- The system MUST provide consistent interaction behavior across desktop and mobile platforms, ensuring touch interactions work as reliably as mouse interactions
 
 #### 4.1 Round Structure
 
@@ -128,6 +131,31 @@ The implementation SHOULD include:
 
 - Animations and transitions
 - Dark/light mode considerations
+
+### Cross-Platform Compatibility
+
+The implementation MUST support both desktop and mobile platforms. The following requirements MUST be met:
+
+- **Touch Event Support**: Interactive challenge elements (clickable sprites, buttons, selectable items) MUST handle both mouse click events and touch events (touchend) to ensure proper functionality on iOS, Android, and other mobile platforms
+- **Event Prevention**: Touch event handlers MUST prevent default behavior and suppress subsequent click events to avoid double-firing when both touch and click events are triggered
+- **Pointer Events**: Interactive images or nested elements within clickable containers SHOULD have `pointer-events: none` to prevent interference with parent touch/click handlers
+- **iOS Compatibility**: The system MUST work correctly on iOS Safari and Chrome for iOS, where click events may be unreliable or delayed without proper touch event handling
+- **Android Compatibility**: The system MUST work correctly on Android Chrome, Samsung Internet, Firefox for Android, and other Android browsers
+- **Viewport Configuration**: The system MUST include proper viewport meta tags (`width=device-width, initial-scale=1.0`) to ensure correct rendering and touch target sizing on mobile devices
+- **Touch Target Sizing**: Interactive elements SHOULD have minimum touch target sizes of 44x44 pixels (iOS HIG) or 48x48 pixels (Material Design) to ensure comfortable interaction on mobile devices
+- **Performance Considerations**: The system SHOULD be optimized for lower-end Android devices with limited processing power and memory
+
+#### Mobile-Specific Anti-Automation
+
+- **Touch Movement Tracking**: On mobile platforms, the system SHOULD track touch movements (touchmove events) as an alternative to mouse movement tracking for anti-automation purposes
+- **Mobile Input Patterns**: The system SHOULD account for different input patterns on mobile (touch vs mouse, virtual keyboard vs physical keyboard) when evaluating anti-automation metrics
+
+The implementation SHOULD test on multiple platforms including:
+- Desktop browsers (Chrome, Firefox, Safari, Edge)
+- Mobile browsers:
+  - iOS: Safari, Chrome for iOS
+  - Android: Chrome, Samsung Internet, Firefox for Android
+- Various device sizes and pixel densities
 
 ## Challenge Examples
 
