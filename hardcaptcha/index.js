@@ -60,12 +60,20 @@ class HardCAPTCHA {
     }
     
     init() {
+        // Debug: Log platform info
+        console.log('Platform detection:', this.platformInfo);
+        console.log('isIOS check:', this.platformInfo.isIOS);
+        console.log('User agent:', navigator.userAgent);
+        console.log('Platform:', navigator.platform);
+        
         // Check if iOS and show terminal iOS modal (no navigation out)
         if (this.platformInfo.isIOS) {
+            console.log('iOS detected - showing iOS modal');
             this.showIOSModal();
             return; // Terminal - no further initialization
         }
         
+        console.log('Not iOS - proceeding with normal initialization');
         this.setupEventListeners();
         this.setupAntiAutomation();
         this.showStartModal();
@@ -79,11 +87,20 @@ class HardCAPTCHA {
     }
     
     setupEventListeners() {
-        document.getElementById('startButton').addEventListener('click', () => this.start());
-        document.getElementById('restartButton').addEventListener('click', () => this.restart());
-        document.getElementById('resultRestartButton').addEventListener('click', () => this.restart());
-        document.getElementById('submitButton').addEventListener('click', () => this.submitRound());
-        document.getElementById('giveUpButton').addEventListener('click', () => this.handleGiveUp());
+        const startButton = document.getElementById('startButton');
+        this.touchHandler.attachTouchHandler(startButton, () => this.start());
+        
+        const restartButton = document.getElementById('restartButton');
+        this.touchHandler.attachTouchHandler(restartButton, () => this.restart());
+        
+        const resultRestartButton = document.getElementById('resultRestartButton');
+        this.touchHandler.attachTouchHandler(resultRestartButton, () => this.restart());
+        
+        const submitButton = document.getElementById('submitButton');
+        this.touchHandler.attachTouchHandler(submitButton, () => this.submitRound());
+        
+        const giveUpButton = document.getElementById('giveUpButton');
+        this.touchHandler.attachTouchHandler(giveUpButton, () => this.handleGiveUp());
     }
     
     setupAntiAutomation() {
