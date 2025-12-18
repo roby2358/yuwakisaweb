@@ -7,28 +7,6 @@ const VERSION = 'v20251218.071830';
 // Global cheat code variable
 let cheatChallengeType = null;
 
-// Platform detection utilities
-function isIOS() {
-    return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-           (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-}
-
-function isMobile() {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-           (navigator.maxTouchPoints && navigator.maxTouchPoints > 2 && /MacIntel/.test(navigator.platform));
-}
-
-function getPlatformInfo() {
-    return {
-        isIOS: isIOS(),
-        isMobile: isMobile(),
-        userAgent: navigator.userAgent,
-        platform: navigator.platform,
-        maxTouchPoints: navigator.maxTouchPoints || 0,
-        hasTouchSupport: 'ontouchstart' in window || navigator.maxTouchPoints > 0
-    };
-}
-
 // Cheat code function - call xyzzy('challengeType') from console to force a specific challenge type
 function xyzzy(str) {
     if (typeof str !== 'string') {
@@ -43,13 +21,9 @@ class HardCAPTCHA {
     constructor() {
         console.log(`HardCAPTCHA ${VERSION}`);
         
-        // Detect and log platform information
-        this.platformInfo = getPlatformInfo();
-        console.log('Platform Info:', this.platformInfo);
-        
-        if (this.platformInfo.isIOS) {
-            console.log('iOS detected - touch event handling enabled');
-        }
+        // Initialize touch event handler
+        this.touchHandler = new TouchEventHandler();
+        this.platformInfo = this.touchHandler.getPlatformInfo();
         
         const possibleRounds = [7, 11, 13, 17];
         const totalRounds = possibleRounds[Math.floor(Math.random() * possibleRounds.length)];
@@ -113,55 +87,15 @@ class HardCAPTCHA {
             }
         });
         
-        // Touch movement tracking (for mobile)
-        if (this.platformInfo.hasTouchSupport) {
-            this.state.touchEvents = [];
-            document.addEventListener('touchstart', (e) => {
-                if (e.touches.length > 0) {
-                    this.state.touchEvents.push({
-                        type: 'touchstart',
-                        x: e.touches[0].clientX,
-                        y: e.touches[0].clientY,
-                        time: Date.now(),
-                        target: e.target.tagName + (e.target.className ? '.' + e.target.className : '')
-                    });
-                    if (this.platformInfo.isIOS) {
-                        console.log('Touch start:', {
-                            target: e.target.tagName + (e.target.className ? '.' + e.target.className : ''),
-                            x: e.touches[0].clientX,
-                            y: e.touches[0].clientY
-                        });
-                    }
-                }
-                // Keep only last 50 touch events
-                if (this.state.touchEvents.length > 50) {
-                    this.state.touchEvents.shift();
-                }
-            });
-            
-            document.addEventListener('touchend', (e) => {
-                if (e.changedTouches.length > 0) {
-                    this.state.touchEvents.push({
-                        type: 'touchend',
-                        x: e.changedTouches[0].clientX,
-                        y: e.changedTouches[0].clientY,
-                        time: Date.now(),
-                        target: e.target.tagName + (e.target.className ? '.' + e.target.className : '')
-                    });
-                    if (this.platformInfo.isIOS) {
-                        console.log('Touch end:', {
-                            target: e.target.tagName + (e.target.className ? '.' + e.target.className : ''),
-                            x: e.changedTouches[0].clientX,
-                            y: e.changedTouches[0].clientY
-                        });
-                    }
-                }
-                // Keep only last 50 touch events
-                if (this.state.touchEvents.length > 50) {
-                    this.state.touchEvents.shift();
-                }
-            });
-        }
+        // Touch movement tracking (for mobile) - handled by TouchEventHandler
+        // Update state directly when touch events occur
+        this.touchHandler.options.onTouchEvent = (touchData) => {
+            this.state.touchEvents.push(touchData);
+            if (this.state.touchEvents.length > 50) {
+                this.state.touchEvents.shift();
+            }
+        };
+        this.touchHandler.setupTouchTracking(document);
         
         // Keyboard event monitoring
         document.addEventListener('keydown', (e) => {
@@ -214,6 +148,8 @@ class HardCAPTCHA {
         this.state.mouseMovements = [];
         this.state.keyboardEvents = [];
         this.state.focusChanges = 0;
+        this.touchHandler.clearTouchEvents();
+        this.state.touchEvents = [];
         this.showStartModal();
     }
     
@@ -826,8 +762,5 @@ if (document.readyState === 'loading') {
     hardCAPTCHAInstance = new HardCAPTCHA();
 }
 
-// Expose platform detection utilities globally for debugging
-window.getPlatformInfo = getPlatformInfo;
-window.isIOS = isIOS;
-window.isMobile = isMobile;
+// Platform detection utilities are exposed globally by TouchEventHandler
 
