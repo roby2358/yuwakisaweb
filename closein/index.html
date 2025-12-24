@@ -13,6 +13,7 @@
             <h2>Welcome to Close In!</h2>
             <div class="modal-body">
                 <p>The point of this game is to be the player who can get closest to a number without going over.</p>
+                <p><strong>Be the first to earn 6 round points to win the game!</strong></p>
                 <p>Each turn you can <strong>Roll</strong> or <strong>Stop</strong>.</p>
                 <ul>
                     <li>If you go over, you lose <strong>ONE POINT</strong>!</li>
@@ -41,13 +42,13 @@
             <div id="round-info">
                 <h3 id="current-player-display">Press "Start Round" to begin!</h3>
                 <div id="turn-stats" class="hidden">
-                    <p>Current Total: <span id="current-total">0</span> / 12</p>
-                    <div id="dice-rolls" class="dice-container"></div>
+                    <p><span id="rolls-display" class="rolls-history"></span> Total <span id="current-total" class="total-badge">0</span> / 12</p>
                 </div>
             </div>
 
             <div id="controls" class="controls">
                 <button id="start-btn" class="btn primary">Start Round</button>
+                <button id="roll-message" class="btn primary hidden"></button>
                 <button id="roll-btn" class="btn secondary hidden">Roll Dice</button>
                 <button id="stop-btn" class="btn tertiary hidden">Stop</button>
             </div>
