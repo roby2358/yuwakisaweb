@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Close In!</title>
+    <link rel="stylesheet" href="index.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+    <div id="intro-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Welcome to Close In!</h2>
+            <div class="modal-body">
+                <p>The point of this game is to be the player who can get closest to a number without going over.</p>
+                <p>Each turn you can <strong>Roll</strong> or <strong>Stop</strong>.</p>
+                <ul>
+                    <li>If you go over, you lose <strong>ONE POINT</strong>!</li>
+                    <li>If you win, you get <strong>ONE POINT</strong>!</li>
+                    <li>If you get the number exactly, you get <strong>FIVE POINTS</strong>!</li>
+                </ul>
+            </div>
+            <button id="close-modal-btn" class="btn primary">Start Game</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Close In!</h1>
+            <p>Get closest to 12 without going over!</p>
+        </header>
+
+        <section class="score-board">
+            <h2>Scores</h2>
+            <div id="scores-container" class="scores-grid">
+                <!-- Scores will be injected here -->
+            </div>
+        </section>
+
+        <section id="game-area" class="game-area">
+            <div id="round-info">
+                <h3 id="current-player-display">Press "Start Round" to begin!</h3>
+                <div id="turn-stats" class="hidden">
+                    <p>Current Total: <span id="current-total">0</span> / 12</p>
+                    <div id="dice-rolls" class="dice-container"></div>
+                </div>
+            </div>
+
+            <div id="controls" class="controls">
+                <button id="start-btn" class="btn primary">Start Round</button>
+                <button id="roll-btn" class="btn secondary hidden">Roll Dice</button>
+                <button id="stop-btn" class="btn tertiary hidden">Stop</button>
+            </div>
+        </section>
+
+        <section class="turn-order-area">
+            <h2>Round Progress</h2>
+            <div id="progress-container" class="progress-bars-container">
+                <!-- Progress bars will be injected here -->
+            </div>
+        </section>
+
+        <section class="log-area">
+            <h2>Game Log</h2>
+            <div id="game-log" class="log-container">
+                <p>Welcome to Close In!</p>
+            </div>
+        </section>
+    </div>
+    <script src="index.js"></script>
+</body>
+</html>
+
