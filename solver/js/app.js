@@ -203,21 +203,29 @@ class SolverApp {
     }
 
     async translateToSmtLib(problem) {
-        const systemPrompt = `You are an expert in SMT-LIB (Satisfiability Modulo Theories Library) format. 
-Your task is to translate natural language constraint problems into valid SMT-LIB format.
+        const systemPrompt = `You are an expert in SMT-LIB2 (Satisfiability Modulo Theories Library) format. 
+Your task is to translate natural language constraint problems into valid SMT-LIB2 format.
 
 Guidelines:
-- Output ONLY valid SMT-LIB code, wrapped in a code block (\`\`\`smtlib ... \`\`\`)
+- Output ONLY valid SMT-LIB2 code, wrapped in a code block (\`\`\`smtlib ... \`\`\`)
 - Start with (set-option :produce-unsat-cores true) to enable unsat core extraction
-- Use appropriate SMT-LIB theories (Int, Real, Bool, Array, etc.)
+- Use appropriate SMT-LIB2 theories (Int, Real, Bool, Array, etc.)
 - Declare all variables and functions
 - Use NAMED assertions for all constraints using the :named annotation syntax:
   (assert (! <constraint> :named <descriptive-name>))
   Example: (assert (! (> x 0) :named x-is-positive))
   Example: (assert (! (distinct a b c) :named all-different))
 - Use descriptive kebab-case names that explain what each constraint enforces
+- IMPORTANT: :named symbols MUST start with a letter, NOT a digit. Use "constraint-70-linkedin" not "70-linkedin"
 - End with (check-sat) - do NOT include (get-model) or (get-unsat-core), they are added automatically
 - Keep the problem simple - avoid complex features that might not be supported
+
+CRITICAL - SMT-LIB2 SYNTAX RULES:
+- There is NO "member" function in SMT-LIB2. For set membership, use explicit disjunction:
+  WRONG: (member x (1 2 3 4))
+  CORRECT: (or (= x 1) (= x 2) (= x 3) (= x 4))
+- Use only standard SMT-LIB2 functions. When unsure, use basic logic (and, or, not, =, <, >, +, -, *, distinct)
+
 - Do not include explanations or comments outside the code block
 - Focus on creating satisfiable constraints that solve the user's problem`;
 
