@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMT Solver with LLM Translation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+        }
+
+        .section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .section h2 {
+            color: #34495e;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 10px;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        textarea.code {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 13px;
+            background: #f8f8f8;
+            border-color: #e0e0e0;
+        }
+
+        .output {
+            background: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 12px;
+            min-height: 60px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .output.empty {
+            color: #999;
+            font-style: italic;
+        }
+
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            background: #2980b9;
+        }
+
+        button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #fee;
+            border-color: #fcc;
+            color: #c33;
+        }
+
+        .success {
+            background: #efe;
+            border-color: #cfc;
+            color: #3c3;
+        }
+
+        .config-section {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .config-section h3 {
+            margin-bottom: 10px;
+            color: #856404;
+        }
+
+        .config-section input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-top: 5px;
+        }
+
+        .config-section label {
+            display: block;
+            margin-top: 10px;
+            font-weight: 500;
+        }
+
+        .api-warning {
+            display: block;
+            margin-top: 6px;
+            color: #856404;
+            font-size: 12px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .sample-problems {
+            background: #e8f4f8;
+            border: 1px solid #b3d9e6;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .sample-problems span {
+            color: #555;
+            margin-right: 10px;
+        }
+
+        .sample-problems a {
+            color: #2980b9;
+            text-decoration: none;
+            cursor: pointer;
+            margin-right: 15px;
+            border-bottom: 1px dotted #2980b9;
+        }
+
+        .sample-problems a:hover {
+            color: #3498db;
+            border-bottom-color: #3498db;
+        }
+    </style>
+  <script type="module" crossorigin src="./assets/index-BAloGWgd.js"></script>
+</head>
+<body>
+    <h1>SMT Solver with LLM Translation</h1>
+    <p class="subtitle">Describe a problem in plain English. An LLM translates it to SMT-LIB, a solver finds a solution, and the LLM translates the answer back.</p>
+
+    <!-- API Configuration -->
+    <div class="config-section">
+        <h3>API Configuration</h3>
+        <label>
+            OpenRouter API Key:
+            <input type="password" id="apiKeyInput" placeholder="sk-or-...">
+        </label>
+        <small class="api-warning">⚠️ Never share API keys with untrusted sites. Use a temporary key with spending limits.</small>
+        <label>
+            Model (optional):
+            <input type="text" id="modelInput" placeholder="anthropic/claude-haiku-4.5" value="anthropic/claude-haiku-4.5">
+        </label>
+    </div>
+
+    <!-- Problem Input -->
+    <div class="section">
+        <h2>1. Problem Input</h2>
+        <div class="sample-problems">
+            <span>Try a sample:</span>
+            <a href="#" id="sample1">Meeting Scheduling</a>
+            <a href="#" id="sample2">Graph Coloring</a>
+            <a href="#" id="sample3">Subset Sum</a>
+        </div>
+        <textarea id="problemInput" placeholder="Describe your problem in plain English. Example: I need to schedule 3 meetings, each 1 hour long, between 9am and 5pm, with no overlaps."></textarea>
+        <div class="button-group">
+            <button id="translateBtn">Translate to SMT-LIB</button>
+        </div>
+    </div>
+
+    <!-- Translated Problem (SMT-LIB) -->
+    <div class="section">
+        <h2>2. Translated Problem (SMT-LIB)</h2>
+        <textarea id="smtlibInput" class="code" placeholder="SMT-LIB representation will appear here..."></textarea>
+    </div>
+
+    <!-- Back-Translation (Verification) -->
+    <div class="section">
+        <h2>3. Verification</h2>
+        <div id="verificationOutput" class="output empty">Translation verification will appear here...</div>
+    </div>
+
+    <!-- Confirm Button -->
+    <div class="section">
+        <div class="button-group">
+            <button id="confirmBtn" disabled>Solve with Z3</button>
+        </div>
+    </div>
+
+    <!-- Raw Solver Output -->
+    <div class="section">
+        <h2>4. Raw Solver Output</h2>
+        <div id="solverOutput" class="output empty">Solver output will appear here...</div>
+    </div>
+
+    <!-- Solution Translation -->
+    <div class="section">
+        <h2>5. Human-Readable Solution</h2>
+        <div id="solutionOutput" class="output empty">Human-readable solution will appear here...</div>
+    </div>
+
+    <!-- Service worker to enable COOP/COEP headers client-side (for SharedArrayBuffer) -->
+    <!-- This allows the app to work on hosts like GitHub Pages that don't support custom headers -->
+    <script src="coi-serviceworker.js"></script>
+    <!-- Polyfill for 'global' which z3-solver expects (Node.js term, browsers use globalThis) -->
+    <script>if (typeof global === 'undefined') { window.global = globalThis; }</script>
+    <!-- Z3 WASM library - official z3-solver package (copied to public for COEP compatibility) -->
+    <script src="z3-built.js"></script>
+</body>
+</html>
