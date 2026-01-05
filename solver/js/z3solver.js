@@ -56,11 +56,7 @@ export class Z3Solver {
             const { Z3 } = await initZ3Solver();
             
             this.z3 = Z3;
-            
-            // Create a config and context for solving
-            const config = this.z3.mk_config();
-            this.context = this.z3.mk_context(config);
-            this.z3.del_config(config);
+            // Context will be created fresh for each solve call
             
             console.log('Z3 initialized successfully');
         } catch (error) {
@@ -104,10 +100,63 @@ export class Z3Solver {
     }
 
     /**
-     * Solve SMT-LIB input
+     * Strip (get-model) and (get-unsat-core) from SMT-LIB
+     * These will be added conditionally based on check-sat result
+     * @param {string} smtlib - SMT-LIB input
+     * @returns {string} SMT-LIB without get-model/get-unsat-core
+     */
+    _stripGetCommands(smtlib) {
+        return smtlib
+            .replace(/\(get-model\)/g, '')
+            .replace(/\(get-unsat-core\)/g, '');
+    }
+
+    /**
+     * Parse check-sat result from solver output
+     * @param {string} result - Solver output
+     * @returns {'sat'|'unsat'|'unknown'} The satisfiability result
+     */
+    _parseCheckSat(result) {
+        const trimmed = result.trim().toLowerCase();
+        if (trimmed === 'sat' || trimmed.startsWith('sat\n') || trimmed.endsWith('\nsat')) {
+            return 'sat';
+        }
+        if (trimmed === 'unsat' || trimmed.startsWith('unsat\n') || trimmed.endsWith('\nunsat')) {
+            return 'unsat';
+        }
+        if (trimmed.includes('unsat')) {
+            return 'unsat';
+        }
+        if (trimmed.includes('sat')) {
+            return 'sat';
+        }
+        return 'unknown';
+    }
+
+    /**
+     * Create a fresh context for solving
+     * This ensures no state leaks between solve calls
+     */
+    _createFreshContext() {
+        // Delete old context if it exists
+        if (this.context) {
+            this.z3.del_context(this.context);
+            this.context = null;
+        }
+        
+        const config = this.z3.mk_config();
+        this.context = this.z3.mk_context(config);
+        this.z3.del_config(config);
+    }
+
+    /**
+     * Solve SMT-LIB input with two-phase approach:
+     * 1. Run constraints + check-sat to get sat/unsat
+     * 2. Based on result, run (get-model) or (get-unsat-core) on same context
+     * 
      * @param {string} smtlib - SMT-LIB formatted string
      * @param {number} timeout - Timeout in milliseconds (unused for now)
-     * @returns {Promise<string>} Solver output (sat/unsat + model)
+     * @returns {Promise<string>} Solver output (sat/unsat + model or unsat core)
      */
     async solve(smtlib, timeout = 30000) {
         if (!smtlib || smtlib.trim() === '') {
@@ -117,24 +166,36 @@ export class Z3Solver {
         // Initialize Z3 if needed
         await this._initZ3();
 
-        // Clean the SMT-LIB for compatibility
+        // Create a fresh context for each solve to avoid state leaks
+        this._createFreshContext();
+
+        // Clean and strip get- commands (we'll add them conditionally)
         const cleanedSmtlib = this._cleanSmtLib(smtlib);
-        
-        // Prepend (reset) to ensure clean state between solve calls
-        const resetSmtlib = '(reset)\n' + cleanedSmtlib;
-        console.log('Cleaned SMT-LIB:\n', resetSmtlib);
+        const baseSmtlib = this._stripGetCommands(cleanedSmtlib);
+        console.log('Base SMT-LIB (without get- commands):\n', baseSmtlib);
 
         try {
-            // Use the wrapped eval_smtlib2_string which handles async execution properly
-            const result = await this.z3.eval_smtlib2_string(this.context, resetSmtlib);
+            // Phase 1: Run constraints + check-sat
+            const checkSatResult = await this.z3.eval_smtlib2_string(this.context, baseSmtlib);
+            const checkSatStr = typeof checkSatResult === 'string' ? checkSatResult : String(checkSatResult || '');
+            console.log('check-sat result:', checkSatStr);
+
+            const satStatus = this._parseCheckSat(checkSatStr);
             
-            if (typeof result === 'string') {
-                return result;
-            } else if (result !== null && result !== undefined) {
-                return String(result);
-            } else {
-                return '(no result returned)';
+            // Phase 2: Based on result, get model or unsat core (on same context)
+            let followupResult = '';
+            if (satStatus === 'sat') {
+                followupResult = await this.z3.eval_smtlib2_string(this.context, '(get-model)');
+            } else if (satStatus === 'unsat') {
+                followupResult = await this.z3.eval_smtlib2_string(this.context, '(get-unsat-core)');
             }
+            
+            const followupStr = typeof followupResult === 'string' ? followupResult : String(followupResult || '');
+            
+            // Combine results
+            const combinedResult = checkSatStr.trim() + '\n' + followupStr.trim();
+            return combinedResult.trim();
+            
         } catch (error) {
             const errorMsg = error && error.message ? error.message : String(error);
             
@@ -157,6 +218,6 @@ export class Z3Solver {
      * Check if Z3 is loaded
      */
     isLoaded() {
-        return this.z3 !== null && this.context !== null;
+        return this.z3 !== null;
     }
 }

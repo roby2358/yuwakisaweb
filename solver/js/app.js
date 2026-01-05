@@ -3,7 +3,7 @@
  */
 import { OpenRouterAPI } from './OpenRouterAPI.js';
 import { Z3Solver } from './z3solver.js';
-import { SAMPLE_MEETING_SCHEDULING, SAMPLE_GRAPH_COLORING, SAMPLE_SUBSET_SUM } from './sample_problems.js';
+import { SAMPLE_MEETING_SCHEDULING, SAMPLE_GRAPH_COLORING, SAMPLE_MAGIC_SQUARE } from './sample_problems.js';
 
 class SolverApp {
     constructor() {
@@ -111,7 +111,7 @@ class SolverApp {
         const samples = {
             1: SAMPLE_MEETING_SCHEDULING,
             2: SAMPLE_GRAPH_COLORING,
-            3: SAMPLE_SUBSET_SUM
+            3: SAMPLE_MAGIC_SQUARE
         };
 
         const problem = samples[index];
@@ -183,8 +183,10 @@ class SolverApp {
                 const solution = await this.translateSolution(this.currentProblem, solverResult);
                 this.setOutput(this.elements.solutionOutput, solution, false);
             } else if (resultType.status === 'unsat' && this.api) {
-                // Explain why no solution exists
-                const explanation = await this.explainUnsat(this.currentProblem, solverResult);
+                // Extract unsat core from solver result for precise explanation
+                const unsatCore = this.extractUnsatCore(solverResult);
+                // Explain why no solution exists using the unsat core
+                const explanation = await this.explainUnsat(this.currentProblem, smtlib, unsatCore);
                 this.setOutput(this.elements.solutionOutput, explanation, false);
             } else if (resultType.status === 'unknown' || resultType.status === 'error') {
                 this.setOutput(this.elements.solutionOutput, 
@@ -206,11 +208,15 @@ Your task is to translate natural language constraint problems into valid SMT-LI
 
 Guidelines:
 - Output ONLY valid SMT-LIB code, wrapped in a code block (\`\`\`smtlib ... \`\`\`)
+- Start with (set-option :produce-unsat-cores true) to enable unsat core extraction
 - Use appropriate SMT-LIB theories (Int, Real, Bool, Array, etc.)
 - Declare all variables and functions
-- Use (assert ...) for constraints
-- Include (check-sat) at the end
-- After (check-sat), include (get-model) to retrieve the solution
+- Use NAMED assertions for all constraints using the :named annotation syntax:
+  (assert (! <constraint> :named <descriptive-name>))
+  Example: (assert (! (> x 0) :named x-is-positive))
+  Example: (assert (! (distinct a b c) :named all-different))
+- Use descriptive kebab-case names that explain what each constraint enforces
+- End with (check-sat) - do NOT include (get-model) or (get-unsat-core), they are added automatically
 - Keep the problem simple - avoid complex features that might not be supported
 - Do not include explanations or comments outside the code block
 - Focus on creating satisfiable constraints that solve the user's problem`;
@@ -265,25 +271,73 @@ Guidelines:
         return response.trim();
     }
 
-    async explainUnsat(originalProblem, solverResult) {
+    async explainUnsat(originalProblem, smtlib, unsatCore) {
         const systemPrompt = `You are a helpful assistant that explains why a constraint problem has no solution.
 Your task is to explain in plain English why the constraints cannot be satisfied.
 
 Guidelines:
-- Explain what constraints conflict
-- Be clear and helpful
-- Suggest what might be wrong with the problem formulation`;
+- Focus on the UNSAT CORE - these are the specific constraints that conflict with each other
+- The unsat core contains the :named labels of the minimal conflicting constraint subset
+- Cross-reference the named constraints with the SMT-LIB code to explain what each constraint means
+- Explain clearly why these specific constraints cannot all be true simultaneously
+- Be precise and mathematically rigorous in your explanation
+- Suggest what constraint(s) might need to be relaxed or removed`;
+
+        let userContent = `Original problem:\n${originalProblem}\n\nSMT-LIB code:\n\`\`\`smtlib\n${smtlib}\n\`\`\`\n\n`;
+        
+        if (unsatCore && unsatCore.length > 0) {
+            userContent += `UNSAT CORE (minimal conflicting constraints):\n${unsatCore.join('\n')}\n\n`;
+            userContent += `Explain why these specific constraints conflict and make the problem unsatisfiable.`;
+        } else {
+            userContent += `The solver returned unsat but no core was extracted. Explain why no solution might exist based on the constraints.`;
+        }
 
         const messages = [
             { role: 'system', content: systemPrompt },
-            { 
-                role: 'user', 
-                content: `Original problem:\n${originalProblem}\n\nSolver result:\n${solverResult}\n\nExplain why no solution exists.`
-            }
+            { role: 'user', content: userContent }
         ];
 
         const response = await this.api.chat(messages, { temperature: 0.5 });
         return response.trim();
+    }
+
+    /**
+     * Extract unsat core names from solver output
+     * The unsat core is returned as a list of :named assertion labels
+     * @param {string} solverResult - Raw solver output
+     * @returns {string[]} Array of constraint names from the unsat core
+     */
+    extractUnsatCore(solverResult) {
+        // Look for unsat core output pattern: (name1 name2 name3) after unsat
+        // Z3 outputs the core as a space-separated list in parentheses
+        const coreMatch = solverResult.match(/unsat[\s\S]*?\(([^()]*)\)\s*$/m);
+        if (coreMatch) {
+            const coreContent = coreMatch[1].trim();
+            if (coreContent) {
+                return coreContent.split(/\s+/).filter(name => name.length > 0);
+            }
+        }
+        
+        // Alternative pattern: look for any parenthesized list after "unsat"
+        const lines = solverResult.split('\n');
+        let foundUnsat = false;
+        for (const line of lines) {
+            if (line.trim() === 'unsat') {
+                foundUnsat = true;
+                continue;
+            }
+            if (foundUnsat) {
+                const match = line.match(/^\s*\(([^()]+)\)\s*$/);
+                if (match) {
+                    const names = match[1].trim().split(/\s+/).filter(n => n.length > 0);
+                    if (names.length > 0) {
+                        return names;
+                    }
+                }
+            }
+        }
+        
+        return [];
     }
 
     extractSmtLibCode(response) {
