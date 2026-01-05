@@ -119,11 +119,14 @@ export class Z3Solver {
 
         // Clean the SMT-LIB for compatibility
         const cleanedSmtlib = this._cleanSmtLib(smtlib);
-        console.log('Cleaned SMT-LIB:\n', cleanedSmtlib);
+        
+        // Prepend (reset) to ensure clean state between solve calls
+        const resetSmtlib = '(reset)\n' + cleanedSmtlib;
+        console.log('Cleaned SMT-LIB:\n', resetSmtlib);
 
         try {
             // Use the wrapped eval_smtlib2_string which handles async execution properly
-            const result = await this.z3.eval_smtlib2_string(this.context, cleanedSmtlib);
+            const result = await this.z3.eval_smtlib2_string(this.context, resetSmtlib);
             
             if (typeof result === 'string') {
                 return result;
