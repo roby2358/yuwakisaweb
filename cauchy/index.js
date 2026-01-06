@@ -23,6 +23,8 @@
 // Cauchy-All-The-Way-Down Heat Map Visualizer
 // Generates a 2D heat map where Cauchy distributions control everything
 
+const COLOR_MAP_SIZE = 1024;
+
 // Utility functions
 function clipValue(value, minVal, maxVal) {
     return Math.max(minVal, Math.min(maxVal, value));
@@ -51,6 +53,17 @@ function createSeededRandom(seed) {
 function sampleCauchy(location, scale, randomFn) {
     const u = randomFn() - 0.5;
     return location + scale * Math.tan(Math.PI * u);
+}
+
+function sampleGaussian(mean, stdDev, randomFn) {
+    let u1 = 0;
+    let u2 = 0;
+    while (u1 === 0) {
+        u1 = randomFn();
+    }
+    u2 = randomFn();
+    const z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+    return mean + z0 * stdDev;
 }
 
 function calculateDistance(x1, y1, x2, y2) {
@@ -111,6 +124,10 @@ class CauchyHeatMap {
         return sampleCauchy(location, scale, () => this.random());
     }
 
+    sampleGaussian(location, scale) {
+        return sampleGaussian(location, scale, () => this.random());
+    }
+
     drawPointCount(location = 15.0, scale = 5.0, minPoints = 3, maxPoints = 50, densityMultiplier = 1.0) {
         const value = this.sampleCauchy(location, scale);
         const baseCount = Math.floor(clipValue(value, minPoints, maxPoints));
@@ -121,8 +138,8 @@ class CauchyHeatMap {
         if (locationX === null) locationX = gridWidth / 2.0;
         if (locationY === null) locationY = gridHeight / 2.0;
 
-        const x = this.sampleCauchy(locationX, scale * gridWidth);
-        const y = this.sampleCauchy(locationY, scale * gridHeight);
+        const x = this.sampleGaussian(locationX, scale * gridWidth);
+        const y = this.sampleGaussian(locationY, scale * gridHeight);
 
         return {
             x: clipValue(x, 0, gridWidth - 1),
@@ -228,7 +245,7 @@ class CauchyHeatMap {
     }
 
     getColormapFromScheme(colors) {
-        const colorsObj = new Colors(256, colors);
+        const colorsObj = new Colors(COLOR_MAP_SIZE, colors);
         return (t) => colorsObj.apply(t);
     }
 
