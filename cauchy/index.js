@@ -262,14 +262,19 @@ class CauchyHeatMap {
         imageData.data[index + 3] = 255;
     }
 
+    clampFieldToZero(field) {
+        return field.map(row => row.map(val => Math.max(0, val)));
+    }
+
     render(field, colormapName = 'viridis') {
-        const { normalized } = this.normalizeField(field);
+        const clampedField = this.clampFieldToZero(field);
+        const { normalized } = this.normalizeField(clampedField);
         const colormap = this.getColormap(colormapName);
         const imageData = this.ctx.createImageData(this.width, this.height);
 
         for (let y = 0; y < this.height; y++) {
             for (let x = 0; x < this.width; x++) {
-                const t = Math.max(0, normalized[y][x]);
+                const t = normalized[y][x];
                 const color = colormap(t);
                 this.setPixel(imageData, x, y, color.r, color.g, color.b);
             }
