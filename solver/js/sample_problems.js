@@ -7,3 +7,5 @@ export const SAMPLE_MEETING_SCHEDULING = 'I need to schedule 3 meetings, each 1 
 export const SAMPLE_GRAPH_COLORING = 'I have 4 regions that need to be colored. Region 1 borders regions 2 and 3. Region 2 borders regions 1, 3, and 4. Region 3 borders regions 1, 2, and 4. Region 4 borders regions 2 and 3. No two adjacent regions can share the same color. Find a valid coloring using at most 3 colors.';
 
 export const SAMPLE_MAGIC_SQUARE = 'Fill in the 4x4 magic square that starts with 1 in the top-left corner and ends with 16 in the bottom-right corner. Each row, column, and both diagonals must sum to the same value.';
+
+export const SAMPLE_LATIN_SQUARE = 'Solve the 4x4 Latin Square puzzle. Each row and column must contain the numbers 1, 2, 3, and 4 exactly once. The given values are: position (1,1) = 1, position (2,2) = 2, position (3,3) = 3, position (4,4) = 4. Fill in the remaining empty cells.';

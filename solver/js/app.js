@@ -3,7 +3,7 @@
  */
 import { OpenRouterAPI } from './OpenRouterAPI.js';
 import { Z3Solver } from './z3solver.js';
-import { SAMPLE_MEETING_SCHEDULING, SAMPLE_GRAPH_COLORING, SAMPLE_MAGIC_SQUARE } from './sample_problems.js';
+import { SAMPLE_MEETING_SCHEDULING, SAMPLE_GRAPH_COLORING, SAMPLE_MAGIC_SQUARE, SAMPLE_LATIN_SQUARE } from './sample_problems.js';
 
 class SolverApp {
     constructor() {
@@ -32,7 +32,8 @@ class SolverApp {
             solutionOutput: document.getElementById('solutionOutput'),
             sample1: document.getElementById('sample1'),
             sample2: document.getElementById('sample2'),
-            sample3: document.getElementById('sample3')
+            sample3: document.getElementById('sample3'),
+            sample4: document.getElementById('sample4')
         };
     }
 
@@ -74,6 +75,11 @@ class SolverApp {
             e.preventDefault();
             this.loadSampleProblem(3);
         });
+
+        this.elements.sample4.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.loadSampleProblem(4);
+        });
     }
 
     saveApiKey() {
@@ -111,7 +117,8 @@ class SolverApp {
         const samples = {
             1: SAMPLE_MEETING_SCHEDULING,
             2: SAMPLE_GRAPH_COLORING,
-            3: SAMPLE_MAGIC_SQUARE
+            3: SAMPLE_MAGIC_SQUARE,
+            4: SAMPLE_LATIN_SQUARE
         };
 
         const problem = samples[index];
