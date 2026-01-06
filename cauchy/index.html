@@ -15,13 +15,17 @@
             <div class="controls">
                 <button id="generate-btn">Generate New Heat Map</button>
                 <label>
-                    Colormap:
-                    <select id="colormap-select">
-                        <option value="viridis">Viridis</option>
-                        <option value="plasma">Plasma</option>
-                        <option value="inferno">Inferno</option>
-                        <option value="magma">Magma</option>
-                        <option value="turbo">Turbo</option>
+                    Color Scheme:
+                    <select id="scheme-select">
+                        <option value="random">Random</option>
+                        <option value="monochromatic">Monochromatic</option>
+                        <option value="analogous">Analogous</option>
+                        <option value="triad">Triad</option>
+                        <option value="complementary">Complementary</option>
+                        <option value="splitComplementary">Split Complementary</option>
+                        <option value="doubleSplitComplementary">Double Split Complementary</option>
+                        <option value="square">Square</option>
+                        <option value="compound">Compound</option>
                     </select>
                 </label>
                 <label>
@@ -44,6 +48,9 @@
             </div>
         </main>
     </div>
+    <script src="colorwheel.js"></script>
+    <script src="schemes.js"></script>
+    <script src="colors.js"></script>
     <script src="index.js"></script>
 </body>
 </html>

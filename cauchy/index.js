@@ -189,69 +189,25 @@ class CauchyHeatMap {
         return { normalized, min, max };
     }
 
-    getColormap(name) {
-        const colormaps = {
-            viridis: (t) => {
-                const r = t < 0.5 
-                    ? 0.267 + 0.005 * (t * 2)
-                    : 0.272 + 0.728 * ((t - 0.5) * 2);
-                const g = t < 0.5
-                    ? 0.005 + 0.995 * (t * 2)
-                    : 1.0;
-                const b = t < 0.5
-                    ? 0.329 + 0.671 * (t * 2)
-                    : 1.0 - 1.0 * ((t - 0.5) * 2);
-                return clampRgb(r, g, b);
-            },
-            plasma: (t) => {
-                const r = t < 0.5
-                    ? 0.941 + 0.059 * (t * 2)
-                    : 1.0;
-                const g = t < 0.5
-                    ? 0.0 + 0.859 * (t * 2)
-                    : 0.859 + 0.141 * ((t - 0.5) * 2);
-                const b = t < 0.5
-                    ? 0.502 + 0.498 * (t * 2)
-                    : 1.0 - 0.5 * ((t - 0.5) * 2);
-                return clampRgb(r, g, b);
-            },
-            inferno: (t) => {
-                const r = Math.min(1, t * 1.2);
-                const g = t < 0.5 ? 0.0 : Math.min(1, (t - 0.5) * 2);
-                const b = t < 0.5 ? 0.0 : Math.min(1, (t - 0.5) * 1.5);
-                return clampRgb(r, g, b);
-            },
-            magma: (t) => {
-                const r = Math.min(1, t * 1.1);
-                const g = t < 0.5 ? 0.0 : Math.min(1, (t - 0.5) * 1.8);
-                const b = t < 0.5 ? 0.0 : Math.min(1, (t - 0.5) * 1.2);
-                return clampRgb(r, g, b);
-            },
-            turbo: (t) => {
-                const r = t < 0.25
-                    ? 0.0
-                    : t < 0.5
-                        ? (t - 0.25) * 4
-                        : t < 0.75
-                            ? 1.0
-                            : 1.0 - (t - 0.75) * 4;
-                const g = t < 0.25
-                    ? (t * 4)
-                    : t < 0.75
-                        ? 1.0
-                        : 1.0 - (t - 0.75) * 4;
-                const b = t < 0.25
-                    ? 0.5 + (t * 2)
-                    : t < 0.5
-                        ? 1.0 - ((t - 0.25) * 2)
-                        : t < 0.75
-                            ? (t - 0.5) * 4
-                            : 1.0;
-                return clampRgb(r, g, b);
-            }
-        };
+    generateColorScheme(schemeName) {
+        const randomFn = () => this.random();
+        const radial = { a: randomFn(), r: randomR(randomFn) };
+        
+        if (schemeName === 'random') {
+            return randomScheme(randomFn);
+        }
+        
+        const generator = SchemeGenerators[schemeName];
+        if (!generator) {
+            return randomScheme(randomFn);
+        }
+        
+        return generator(radial, randomFn);
+    }
 
-        return colormaps[name] || colormaps.viridis;
+    getColormapFromScheme(colors) {
+        const colorsObj = new Colors(256, colors);
+        return (t) => colorsObj.apply(t);
     }
 
     setPixel(imageData, x, y, r, g, b) {
@@ -266,10 +222,18 @@ class CauchyHeatMap {
         return field.map(row => row.map(val => Math.max(0, val)));
     }
 
-    render(field, colormapName = 'viridis') {
+    render(field, schemeName = 'monochromatic', schemeColors = null) {
         const clampedField = this.clampFieldToZero(field);
         const { normalized } = this.normalizeField(clampedField);
-        const colormap = this.getColormap(colormapName);
+        
+        let colormap;
+        if (schemeColors && schemeColors.length > 0) {
+            colormap = this.getColormapFromScheme(schemeColors);
+        } else {
+            const colors = this.generateColorScheme(schemeName);
+            colormap = this.getColormapFromScheme(colors);
+        }
+        
         const imageData = this.ctx.createImageData(this.width, this.height);
 
         for (let y = 0; y < this.height; y++) {
@@ -283,23 +247,25 @@ class CauchyHeatMap {
         this.ctx.putImageData(imageData, 0, 0);
     }
 
-    generate(seed = null, colormapName = 'viridis', densityMultiplier = 1.0, allowNegative = false) {
+    generate(seed = null, schemeName = 'monochromatic', densityMultiplier = 1.0, allowNegative = false) {
         this.setSeed(seed);
 
         const pointCount = this.drawPointCount(15.0, 5.0, 3, 50, densityMultiplier);
         const sources = this.generateHeatSources(pointCount, allowNegative);
         const field = this.calculateHeatField(sources);
-        this.render(field, colormapName);
+        const colors = this.generateColorScheme(schemeName);
+        this.render(field, schemeName, colors);
 
         return {
             sources: sources,
             field: field,
-            pointCount: pointCount
+            pointCount: pointCount,
+            colors: colors
         };
     }
 
-    renderField(field, colormapName = 'viridis') {
-        this.render(field, colormapName);
+    renderField(field, schemeName = 'monochromatic', colors = null) {
+        this.render(field, schemeName, colors);
     }
 }
 
@@ -308,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const container = document.getElementById('visualization-container');
     const canvas = document.getElementById('heatmap-canvas');
     const generateBtn = document.getElementById('generate-btn');
-    const colormapSelect = document.getElementById('colormap-select');
+    const schemeSelect = document.getElementById('scheme-select');
     const seedInput = document.getElementById('seed-input');
     const densitySlider = document.getElementById('density-slider');
     const densityValue = document.getElementById('density-value');
@@ -329,6 +295,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let heatmap = initializeHeatmap();
     let currentField = null;
     let currentSources = null;
+    let currentColors = null;
+    let currentScheme = null;
 
     function getInputSeed() {
         return parseSeed(seedInput.value);
@@ -360,21 +328,25 @@ document.addEventListener('DOMContentLoaded', () => {
             heatmap = new CauchyHeatMap(canvas, width, height);
             currentField = null;
             currentSources = null;
+            currentColors = null;
+            currentScheme = null;
         }
 
         const seed = getInputSeed();
-        const colormap = colormapSelect.value;
+        const scheme = schemeSelect.value;
         const density = getDensityMultiplier();
         const allowNegative = getAllowNegative();
         
         console.log('Generating heat map...');
-        const result = heatmap.generate(seed, colormap, density, allowNegative);
+        const result = heatmap.generate(seed, scheme, density, allowNegative);
         currentField = result.field;
         currentSources = result.sources;
+        currentColors = result.colors;
+        currentScheme = scheme;
         logGenerationResult(result);
     }
 
-    function redrawWithColormap() {
+    function redrawWithScheme() {
         if (currentField === null) {
             generate();
             return;
@@ -386,8 +358,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const colormap = colormapSelect.value;
-        heatmap.renderField(currentField, colormap);
+        const scheme = schemeSelect.value;
+        const colors = heatmap.generateColorScheme(scheme);
+        currentColors = colors;
+        currentScheme = scheme;
+        heatmap.renderField(currentField, scheme, colors);
     }
 
     function getCanvasCoordinates(event) {
@@ -408,10 +383,11 @@ document.addEventListener('DOMContentLoaded', () => {
         currentSources[randomIndex].x = clickX;
         currentSources[randomIndex].y = clickY;
 
-        const colormap = colormapSelect.value;
         const field = heatmap.calculateHeatField(currentSources);
         currentField = field;
-        heatmap.render(field, colormap);
+        console.log('Using saved colors:', currentColors);
+        console.log('Using saved scheme:', currentScheme);
+        heatmap.render(field, currentScheme, currentColors);
 
         console.log(`Moved source ${randomIndex} to (${clickX.toFixed(2)}, ${clickY.toFixed(2)})`);
     }
@@ -422,7 +398,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     generateBtn.addEventListener('click', generate);
-    colormapSelect.addEventListener('change', redrawWithColormap);
+    schemeSelect.addEventListener('change', redrawWithScheme);
     densitySlider.addEventListener('input', () => {
         updateDensityDisplay();
         generate();
