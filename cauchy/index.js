@@ -304,9 +304,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getCanvasSize() {
         const containerRect = container.getBoundingClientRect();
-        const width = Math.floor(containerRect.width);
-        const height = Math.floor(containerRect.height);
-        return { width, height };
+        const size = Math.floor(Math.min(containerRect.width, containerRect.height));
+        return { width: size, height: size };
     }
 
     function initializeHeatmap() {
@@ -327,8 +326,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function logGenerationResult(result) {
         console.log(`Generated ${result.pointCount} heat sources`);
         const flatField = result.field.flat();
-        const min = Math.min(...flatField);
-        const max = Math.max(...flatField);
+        let min = Infinity;
+        let max = -Infinity;
+        for (let i = 0; i < flatField.length; i++) {
+            const value = flatField[i];
+            if (value < min) min = value;
+            if (value > max) max = value;
+        }
         console.log(`Field range: [${min.toFixed(4)}, ${max.toFixed(4)}]`);
     }
 
