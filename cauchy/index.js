@@ -323,6 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let heatmap = initializeHeatmap();
     let currentField = null;
+    let currentSources = null;
 
     function getInputSeed() {
         return parseSeed(seedInput.value);
@@ -353,6 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (heatmap.width !== width || heatmap.height !== height) {
             heatmap = new CauchyHeatMap(canvas, width, height);
             currentField = null;
+            currentSources = null;
         }
 
         const seed = getInputSeed();
@@ -363,6 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Generating heat map...');
         const result = heatmap.generate(seed, colormap, density, allowNegative);
         currentField = result.field;
+        currentSources = result.sources;
         logGenerationResult(result);
     }
 
@@ -381,6 +384,37 @@ document.addEventListener('DOMContentLoaded', () => {
         const colormap = colormapSelect.value;
         heatmap.renderField(currentField, colormap);
     }
+
+    function getCanvasCoordinates(event) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const x = (event.clientX - rect.left) * scaleX;
+        const y = (event.clientY - rect.top) * scaleY;
+        return { x, y };
+    }
+
+    function moveRandomSourceToClick(clickX, clickY) {
+        if (!currentSources || currentSources.length === 0) {
+            return;
+        }
+
+        const randomIndex = Math.floor(Math.random() * currentSources.length);
+        currentSources[randomIndex].x = clickX;
+        currentSources[randomIndex].y = clickY;
+
+        const colormap = colormapSelect.value;
+        const field = heatmap.calculateHeatField(currentSources);
+        currentField = field;
+        heatmap.render(field, colormap);
+
+        console.log(`Moved source ${randomIndex} to (${clickX.toFixed(2)}, ${clickY.toFixed(2)})`);
+    }
+
+    canvas.addEventListener('click', (event) => {
+        const coords = getCanvasCoordinates(event);
+        moveRandomSourceToClick(coords.x, coords.y);
+    });
 
     generateBtn.addEventListener('click', generate);
     colormapSelect.addEventListener('change', redrawWithColormap);
