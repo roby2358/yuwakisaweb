@@ -134,12 +134,12 @@ class CauchyHeatMap {
         return Math.floor(baseCount * densityMultiplier);
     }
 
-    drawPointPlacement(gridWidth, gridHeight, locationX = null, locationY = null, scale = 0.3) {
+    drawPointPlacement(gridWidth, gridHeight, locationX = null, locationY = null, scale = 0.08) {
         if (locationX === null) locationX = gridWidth / 2.0;
         if (locationY === null) locationY = gridHeight / 2.0;
 
-        const x = this.sampleGaussian(locationX, scale * gridWidth);
-        const y = this.sampleGaussian(locationY, scale * gridHeight);
+        const x = this.sampleCauchy(locationX, scale * gridWidth);
+        const y = this.sampleCauchy(locationY, scale * gridHeight);
 
         return {
             x: clipValue(x, 0, gridWidth - 1),
