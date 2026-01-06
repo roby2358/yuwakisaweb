@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cauchy Heat Map Visualizer</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Cauchy Heat Map Visualizer</h1>
+        </header>
+        <main>
+            <div class="controls">
+                <button id="generate-btn">Generate New Heat Map</button>
+                <label>
+                    Colormap:
+                    <select id="colormap-select">
+                        <option value="viridis">Viridis</option>
+                        <option value="plasma">Plasma</option>
+                        <option value="inferno">Inferno</option>
+                        <option value="magma">Magma</option>
+                        <option value="turbo">Turbo</option>
+                    </select>
+                </label>
+                <label>
+                    Seed:
+                    <input type="number" id="seed-input" value="">
+                </label>
+                <label>
+                    Density:
+                    <input type="range" id="density-slider" min="1" max="10" value="1" step="1">
+                    <span id="density-value">1x</span>
+                </label>
+                <label>
+                    <input type="checkbox" id="positive-negative-checkbox">
+                    +/-
+                </label>
+            </div>
+            <div id="visualization-container">
+                <canvas id="heatmap-canvas"></canvas>
+            </div>
+        </main>
+    </div>
+    <script src="index.js"></script>
+</body>
+</html>
