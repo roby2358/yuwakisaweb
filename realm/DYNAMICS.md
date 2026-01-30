@@ -110,6 +110,14 @@ Passability check considers terrain movement cost (Infinity = impassable).
 - Maximum **2 friendly units per hex**
 - Cannot move into a hex at stacking limit
 
+### Stacking Order
+
+Units within a hex are sorted at the start of each turn:
+1. **Type priority:** Cavalry > Heavy Infantry > Infantry > Worker
+2. **HP (descending):** Higher health units first within same type
+
+This order determines which unit is auto-selected when clicking the hex and the display order in the UI. The order is fixed for the turn and doesn't change as units take damage.
+
 ### Movement Reset
 
 - All units reset to full movement at turn end
@@ -221,7 +229,9 @@ Units are automatically deselected when:
 - Movement is exhausted (movesLeft reaches 0)
 - The turn ends
 
-At the start of a new turn, no unit is automatically selected.
+**Units with 0 movement are never selected.** If a unit runs out of moves after moving or attacking, it is immediately deselected. Clicking a hex will only auto-select units that have moves remaining.
+
+At the start of a new turn, the **largest settlement** is automatically selected (random if tied for largest tier). If there are units with moves at that settlement, one will be auto-selected.
 
 ---
 
@@ -264,6 +274,7 @@ Requirements:
 - Plains or Hills terrain
 - No existing settlement or danger point
 - Hex must be controlled
+- **Friendly unit must be present**
 - Influence at location >= 1.0
 - At least one existing settlement
 - Cost: 20 gold, 30 materials
@@ -633,18 +644,20 @@ Collapse occurs when **any two society parameters reach 100%**.
 Each turn processes in this order:
 
 1. **Unit refresh:** Heal units, reset movement and action flags
-2. **Danger point occupation:** Check for strength reduction from military units
-3. **Enemy spawning:** Process all danger point spawn timers
-4. **Enemy turn:** Enemy attacks and movement
-5. **Resource production:** Collect gold and materials
-6. **Settlement growth:** Add growth points, check for tier advancement
-7. **Settlement spawning:** Check for spontaneous settlement creation
-8. **Society update:** Adjust corruption, unrest, decadence, overextension
-9. **Era check:** Verify era transition thresholds
-10. **Collapse check:** Check for civilization collapse
-11. **Unit deselection:** Clear selected unit (no auto-select next turn)
-12. **Society options shuffle:** Randomize available management actions for next turn
-13. **Turn increment**
+2. **Unit sorting:** Sort units within each hex by type priority (cavalry > heavy infantry > infantry > worker), then by HP descending
+3. **Danger point occupation:** Check for strength reduction from military units
+4. **Enemy spawning:** Process all danger point spawn timers
+5. **Enemy turn:** Enemy attacks and movement
+6. **Resource production:** Collect gold and materials
+7. **Settlement growth:** Add growth points, check for tier advancement
+8. **Settlement spawning:** Check for spontaneous settlement creation
+9. **Society update:** Adjust corruption, unrest, decadence, overextension
+10. **Era check:** Verify era transition thresholds
+11. **Collapse check:** Check for civilization collapse
+12. **Unit deselection:** Clear selected unit
+13. **Society options shuffle:** Randomize available management actions for next turn
+14. **Select largest settlement:** Auto-select the highest tier settlement (random if tied)
+15. **Turn increment**
 
 ---
 
