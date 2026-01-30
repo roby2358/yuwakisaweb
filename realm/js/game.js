@@ -246,6 +246,7 @@ export class Game {
         if (!hex) return false;
         if (hex.settlement || hex.dangerPoint) return false;
         if (hex.terrain !== TERRAIN.PLAINS && hex.terrain !== TERRAIN.HILLS) return false;
+        if (hex.resource) return false;
         if (!hex.controlled) return false;
 
         // Must have a friendly unit present

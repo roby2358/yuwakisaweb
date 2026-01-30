@@ -309,6 +309,11 @@ export class UI {
             needs.push('plains or hills terrain');
         }
 
+        // Check for resource
+        if (hex.resource) {
+            needs.push('no resource on hex');
+        }
+
         // Check for friendly unit
         if (this.game.getUnitsAt(hex.q, hex.r).length === 0) {
             needs.push('a unit present');

@@ -272,7 +272,7 @@ Total population is the sum of all settlement population values.
 
 Requirements:
 - Plains or Hills terrain
-- No existing settlement or danger point
+- No existing settlement, danger point, or resource
 - Hex must be controlled
 - **Friendly unit must be present**
 - Influence at location >= 1.0
@@ -306,6 +306,7 @@ Settlements grow automatically each turn using **polynomial growth** against **e
 | 6    | 7           | 570       | 81              |
 | 7    | 8           | 855       | 107             |
 | 8    | 9           | 1282      | 142             |
+| 9    | 10          | —         | (max tier)      |
 
 - When growth points reach the threshold, settlement advances one tier
 - Growth points carry over (excess counts toward next level)
