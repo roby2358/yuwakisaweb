@@ -1,0 +1,437 @@
+/* ============================================
+   Realm - Game Stylesheet
+   ============================================ */
+
+/* Reset & Base
+   -------------------------------------------- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    /* Colors */
+    --bg-dark: #1a1a2e;
+    --bg-medium: #16213e;
+    --bg-light: #0f3460;
+    --accent: #e94560;
+    --text: #eaeaea;
+    --text-dim: #888;
+
+    /* Resource colors */
+    --gold: #ffd700;
+    --food: #7cb342;
+    --population: #42a5f5;
+    --materials: #8d6e63;
+
+    /* Status colors */
+    --danger: #ff5252;
+    --success: #4caf50;
+
+    /* Spacing */
+    --space-xs: 0.25rem;
+    --space-sm: 0.4rem;
+    --space-md: 0.75rem;
+    --space-lg: 1rem;
+    --space-xl: 1.5rem;
+
+    /* Typography */
+    --font-xs: 0.75rem;
+    --font-sm: 0.8rem;
+    --font-base: 0.85rem;
+    --font-md: 0.9rem;
+    --font-lg: 1rem;
+
+    /* Layout */
+    --panel-width: 220px;
+    --border-width: 2px;
+    --border-radius: 4px;
+}
+
+html, body {
+    height: 100%;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: var(--font-base);
+    background: var(--bg-dark);
+    color: var(--text);
+    overflow: hidden;
+}
+
+/* Layout
+   -------------------------------------------- */
+#game-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+#main-area {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+#game-canvas {
+    flex: 1;
+    background: var(--bg-dark);
+    cursor: pointer;
+}
+
+/* Resource Bar (Top)
+   -------------------------------------------- */
+#resource-bar {
+    display: flex;
+    gap: var(--space-xl);
+    padding: var(--space-sm) var(--space-lg);
+    background: var(--bg-medium);
+    border-bottom: var(--border-width) solid var(--bg-light);
+}
+
+.resource {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: var(--font-md);
+}
+
+.resource-icon {
+    font-size: var(--font-lg);
+}
+
+.resource-value {
+    font-weight: bold;
+    min-width: 3rem;
+}
+
+#gold-display .resource-value { color: var(--gold); }
+#population-display .resource-value { color: var(--population); }
+#materials-display .resource-value { color: var(--materials); }
+
+/* Side Panel
+   -------------------------------------------- */
+#side-panel {
+    width: var(--panel-width);
+    background: var(--bg-medium);
+    border-left: var(--border-width) solid var(--bg-light);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+#side-panel section {
+    padding: 0.5rem var(--space-md);
+    border-bottom: 1px solid var(--bg-light);
+}
+
+#side-panel h3 {
+    font-size: var(--font-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    margin-bottom: var(--space-sm);
+}
+
+/* Info Panel Content
+   -------------------------------------------- */
+#info-content {
+    font-size: var(--font-sm);
+    line-height: 1.4;
+}
+
+#info-content .label {
+    color: var(--text-dim);
+}
+
+#info-content hr {
+    border: none;
+    border-top: 1px solid var(--bg-light);
+    margin: var(--space-sm) 0;
+}
+
+/* Info panel highlight colors */
+.hex-info-terrain { color: var(--food); }
+.hex-info-settlement { color: var(--gold); }
+.hex-info-unit { color: var(--population); }
+.hex-info-resource { color: var(--materials); }
+.hex-info-danger { color: var(--danger); }
+
+/* Info lists */
+.info-list {
+    margin: 0.5rem 0;
+    padding-left: var(--space-lg);
+}
+
+.info-list li {
+    margin: var(--space-xs) 0;
+}
+
+/* Actions Panel
+   -------------------------------------------- */
+#actions-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.action-btn {
+    padding: var(--space-sm) var(--space-md);
+    background: var(--bg-light);
+    border: 1px solid var(--accent);
+    color: var(--text);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: var(--font-sm);
+    text-align: left;
+    transition: background-color 0.2s;
+}
+
+.action-btn:hover:not(:disabled) {
+    background: var(--accent);
+}
+
+.action-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    border-color: var(--text-dim);
+}
+
+.action-btn .cost {
+    font-size: var(--font-sm);
+    color: var(--text-dim);
+    display: block;
+    margin-top: var(--space-xs);
+}
+
+.action-btn.unit-selected {
+    background: #1a4a6e;
+    border-color: var(--population);
+}
+
+/* Society Stats
+   -------------------------------------------- */
+.society-stat {
+    margin-bottom: var(--space-sm);
+}
+
+.society-stat span {
+    font-size: var(--font-xs);
+    display: block;
+    margin-bottom: 0.15rem;
+}
+
+.stat-bar {
+    height: 6px;
+    background: var(--bg-dark);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.stat-fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.3s;
+    width: 0%;
+}
+
+/* Status Bar (Bottom)
+   -------------------------------------------- */
+#status-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xl);
+    padding: var(--space-sm) var(--space-lg);
+    background: var(--bg-medium);
+    border-top: var(--border-width) solid var(--bg-light);
+    font-size: var(--font-base);
+}
+
+#era-btn {
+    padding: 0.3rem var(--space-md);
+    background: var(--bg-light);
+    border: 1px solid var(--text-dim);
+    color: var(--text);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: var(--font-base);
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+#era-btn:hover {
+    background: var(--bg-medium);
+    border-color: var(--accent);
+}
+
+#end-turn-btn {
+    padding: 0.3rem var(--space-lg);
+    background: var(--accent);
+    border: none;
+    color: var(--text);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-weight: bold;
+    font-size: var(--font-base);
+    transition: opacity 0.2s;
+}
+
+#end-turn-btn:hover {
+    opacity: 0.85;
+}
+
+#notification {
+    flex: 1;
+    text-align: right;
+    color: var(--text-dim);
+    font-style: italic;
+}
+
+/* Modal
+   -------------------------------------------- */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    background: var(--bg-medium);
+    border: var(--border-width) solid var(--bg-light);
+    border-radius: var(--border-radius);
+    padding: var(--space-lg);
+    max-width: 400px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.modal-close {
+    position: absolute;
+    top: var(--space-sm);
+    right: var(--space-sm);
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0.2rem 0.5rem;
+}
+
+.modal-close:hover {
+    color: var(--text);
+}
+
+.modal h2 {
+    margin-bottom: var(--space-md);
+    color: var(--gold);
+    font-size: 1.1rem;
+}
+
+.modal p {
+    margin-bottom: var(--space-sm);
+    line-height: 1.5;
+}
+
+.modal h3 {
+    margin-top: var(--space-md);
+    margin-bottom: var(--space-xs);
+    font-size: var(--font-md);
+    color: var(--text);
+}
+
+.modal ul {
+    margin: var(--space-xs) 0;
+    padding-left: var(--space-lg);
+}
+
+.modal li {
+    margin-bottom: var(--space-xs);
+}
+
+.modal .highlight {
+    color: var(--gold);
+}
+
+.modal .danger {
+    color: var(--danger);
+}
+
+/* Confirmation Modal
+   -------------------------------------------- */
+.modal-confirm {
+    text-align: center;
+}
+
+.modal-confirm h2 {
+    color: var(--danger);
+}
+
+#confirm-modal-body {
+    text-align: left;
+    margin: var(--space-lg) 0;
+    line-height: 1.6;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: var(--space-md);
+    justify-content: center;
+    margin-top: var(--space-lg);
+}
+
+.modal-btn {
+    padding: var(--space-sm) var(--space-lg);
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: var(--font-base);
+    font-weight: bold;
+    transition: opacity 0.2s;
+}
+
+.modal-btn:hover {
+    opacity: 0.85;
+}
+
+.modal-btn.cancel {
+    background: var(--bg-light);
+    color: var(--text);
+    border: 1px solid var(--text-dim);
+}
+
+.modal-btn.confirm {
+    background: var(--danger);
+    color: var(--text);
+}
+
+/* Action Button Cost Labels
+   -------------------------------------------- */
+.action-btn .cost-pop {
+    font-size: var(--font-xs);
+    color: var(--population);
+    display: block;
+    margin-top: var(--space-xs);
+}
+
+.action-btn .cost-warning {
+    font-size: var(--font-xs);
+    color: var(--danger);
+    display: block;
+    margin-top: var(--space-xs);
+    font-weight: bold;
+}

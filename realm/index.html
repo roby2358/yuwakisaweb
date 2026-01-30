@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Realm</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="game-container">
+        <header id="resource-bar">
+            <div class="resource" id="gold-display">
+                <span class="resource-icon">💰</span>
+                <span class="resource-value">0</span>
+            </div>
+            <div class="resource" id="population-display">
+                <span class="resource-icon">👥</span>
+                <span class="resource-value">0</span>
+            </div>
+            <div class="resource" id="materials-display">
+                <span class="resource-icon">🪨</span>
+                <span class="resource-value">0</span>
+            </div>
+        </header>
+
+        <main id="main-area">
+            <canvas id="game-canvas"></canvas>
+
+            <aside id="side-panel">
+                <section id="info-panel">
+                    <h3>Info</h3>
+                    <div id="info-content">
+                        <p>Click a hex to select</p>
+                    </div>
+                </section>
+
+                <section id="actions-panel">
+                    <h3>Actions</h3>
+                    <div id="actions-content">
+                        <!-- Actions populated dynamically -->
+                    </div>
+                </section>
+
+                <section id="society-panel">
+                    <h3>Society</h3>
+                    <div class="society-stat">
+                        <span>Corruption</span>
+                        <div class="stat-bar"><div class="stat-fill" id="corruption-bar"></div></div>
+                    </div>
+                    <div class="society-stat">
+                        <span>Unrest</span>
+                        <div class="stat-bar"><div class="stat-fill" id="unrest-bar"></div></div>
+                    </div>
+                    <div class="society-stat">
+                        <span>Decadence</span>
+                        <div class="stat-bar"><div class="stat-fill" id="decadence-bar"></div></div>
+                    </div>
+                    <div class="society-stat">
+                        <span>Overextension</span>
+                        <div class="stat-bar"><div class="stat-fill" id="overextension-bar"></div></div>
+                    </div>
+                </section>
+            </aside>
+        </main>
+
+        <footer id="status-bar">
+            <span id="turn-display">Turn: 1</span>
+            <button id="era-btn">Era: Barbarian</button>
+            <button id="end-turn-btn">End Turn</button>
+            <span id="notification"></span>
+        </footer>
+
+        <!-- Era Info Modal -->
+        <div id="era-modal" class="modal hidden">
+            <div class="modal-content">
+                <button class="modal-close">&times;</button>
+                <h2 id="era-modal-title">Era: Barbarian</h2>
+                <div id="era-modal-body"></div>
+            </div>
+        </div>
+
+        <!-- Confirmation Modal -->
+        <div id="confirm-modal" class="modal hidden">
+            <div class="modal-content modal-confirm">
+                <h2 id="confirm-modal-title">Confirm Action</h2>
+                <div id="confirm-modal-body"></div>
+                <div class="modal-buttons">
+                    <button id="confirm-cancel-btn" class="modal-btn cancel">Cancel</button>
+                    <button id="confirm-ok-btn" class="modal-btn confirm">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
