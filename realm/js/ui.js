@@ -309,6 +309,11 @@ export class UI {
             needs.push('plains or hills terrain');
         }
 
+        // Check for friendly unit
+        if (this.game.getUnitsAt(hex.q, hex.r).length === 0) {
+            needs.push('a unit present');
+        }
+
         // Check influence
         const influence = this.game.calculateInfluenceAt(hex.q, hex.r);
         if (influence < 1) {

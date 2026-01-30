@@ -155,9 +155,11 @@ class App {
             // Check if clicking on a valid move
             if (this.game.canMoveUnit(selectedUnit, q, r)) {
                 this.game.moveUnit(selectedUnit, q, r);
-                // Keep unit selected after moving
                 this.game.selectHex(q, r);
-                this.game.selectUnit(selectedUnit);
+                // Keep unit selected only if it has moves left
+                if (selectedUnit.movesLeft > 0) {
+                    this.game.selectUnit(selectedUnit);
+                }
                 this.update();
                 return;
             }
@@ -169,11 +171,9 @@ class App {
         // If there are friendly units here, select the first one with moves left
         if (clickedHex.units.length > 0) {
             const friendlyUnits = clickedHex.units.filter(u => this.game.units.includes(u));
-            const unitWithMoves = friendlyUnits.find(u => u.movesLeft > 0 && !u.hasActed);
+            const unitWithMoves = friendlyUnits.find(u => u.movesLeft > 0);
             if (unitWithMoves) {
                 this.game.selectUnit(unitWithMoves);
-            } else if (friendlyUnits.length > 0) {
-                this.game.selectUnit(friendlyUnits[0]);
             }
         }
 

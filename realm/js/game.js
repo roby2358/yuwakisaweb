@@ -248,6 +248,9 @@ export class Game {
         if (hex.terrain !== TERRAIN.PLAINS && hex.terrain !== TERRAIN.HILLS) return false;
         if (!hex.controlled) return false;
 
+        // Must have a friendly unit present
+        if (this.getUnitsAt(q, r).length === 0) return false;
+
         // Check influence requirement
         const influence = this.calculateInfluenceAt(q, r);
         if (influence < 1) return false;
@@ -515,6 +518,11 @@ export class Game {
         unit.hasActed = true;
         unit.movesLeft = 0;
 
+        // Deselect unit if it has no moves left
+        if (unit.movesLeft <= 0 && this.selectedUnit === unit) {
+            this.selectedUnit = null;
+        }
+
         const result = { damage, killed: false };
 
         if (enemy.health <= 0) {
@@ -658,6 +666,23 @@ export class Game {
             unit.hasActed = false;
         }
 
+        // Sort units within each hex: cavalry > heavy_infantry > infantry > worker, then by HP desc
+        const unitTypePriority = {
+            [UNIT_TYPE.CAVALRY]: 0,
+            [UNIT_TYPE.HEAVY_INFANTRY]: 1,
+            [UNIT_TYPE.INFANTRY]: 2,
+            [UNIT_TYPE.WORKER]: 3
+        };
+        for (const [key, hex] of this.hexes) {
+            if (hex.units.length > 1) {
+                hex.units.sort((a, b) => {
+                    const typeDiff = unitTypePriority[a.type] - unitTypePriority[b.type];
+                    if (typeDiff !== 0) return typeDiff;
+                    return b.health - a.health; // Higher HP first
+                });
+            }
+        }
+
         // 2. Process danger points occupied by military units
         this.processDangerPointOccupation();
 
@@ -690,6 +715,14 @@ export class Game {
 
         // 12. Shuffle society options for next turn
         this.shuffledSocietyOptions = createShuffledOptions();
+
+        // 13. Select largest settlement for next turn
+        if (this.settlements.length > 0) {
+            const maxTier = Math.max(...this.settlements.map(s => s.tier));
+            const largest = this.settlements.filter(s => s.tier === maxTier);
+            const selected = largest[Math.floor(Math.random() * largest.length)];
+            this.selectHex(selected.q, selected.r);
+        }
 
         this.turn++;
         return true;
@@ -1167,7 +1200,10 @@ export class Game {
     }
 
     selectUnit(unit) {
-        this.selectedUnit = unit;
+        // Never select a unit with no moves left
+        if (unit && unit.movesLeft > 0) {
+            this.selectedUnit = unit;
+        }
     }
 
     clearSelection() {

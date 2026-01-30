@@ -364,7 +364,7 @@ This creates a **Gaussian falloff** - influence is strongest at the settlement a
 
 ### Modifiers
 
-1. **Corruption:** Reduces gold income by corruption%
+1. **Corruption:** Reduces gold income by (corruption/4)%
 2. **Decadence:** Reduces all production by (decadence/2)%
 
 ---
@@ -488,12 +488,12 @@ Building an installation **permanently neutralizes** the danger point.
 
 ## Society Parameters
 
-Four parameters track civilization health (0-100%):
+Four parameters track civilization health (0-100%). The society panel displays bars that transition from **yellow (0%) to red (100%)** to indicate severity.
 
 ### Corruption
 
 - **Increases:** +0.01 per gold income, +0.1 per settlement per turn
-- **Effect:** Reduces gold income by corruption%
+- **Effect:** Reduces gold income by (corruption/4)% (e.g., 100% corruption = 25% reduction)
 - **Decay:** None
 
 ### Unrest
@@ -519,6 +519,78 @@ Four parameters track civilization health (0-100%):
 - **Increases:** +0.1 per excess hex per turn
 - **Decay:** -1 per turn when under limit
 - **Effect:** Contributes to collapse
+
+---
+
+## Society Management
+
+Click the **Society panel** to open the realm management interface. This displays:
+1. A narrative description of the realm's current state
+2. Current effects of each society parameter
+3. Three available actions to manage the realm
+
+### Action Selection
+
+At the start of each turn, all 80 society actions are **shuffled** into a randomized list. When the panel is opened, the first 3 **valid** actions from this list are displayed. This means:
+- Opening/closing the panel shows the same options (no gaming the system)
+- Taking an action removes it from the list, so reopening shows fresh options
+- All options reset and reshuffle at the start of the next turn
+
+### Percentage-Based Effects
+
+All society effects are **percentage multipliers**, not flat changes:
+- **+20%** means multiply the current value by 1.2 (e.g., 50 → 60)
+- **-30%** means multiply the current value by 0.7 (e.g., 50 → 35)
+
+This makes:
+- Low values easy to manage (small absolute changes)
+- High values difficult to reduce (diminishing returns)
+- Runaway problems increasingly hard to control
+
+### Action Categories
+
+#### 1. Trade Actions (No Resource Cost)
+Swap one society problem for another. Good for rebalancing without spending resources.
+
+Examples:
+- "Royal Guards Crack Down": -20% Corruption, +30% Unrest
+- "Host a Bacchanalia": -20% Unrest, +30% Decadence
+- "Consolidate Borders": -25% Overextension, +15% Unrest
+
+#### 2. Pay Actions (Gold Cost)
+Spend gold to reduce one problem, with a smaller side effect.
+
+Examples:
+- "Hire Civil Administrators": -5 gold, -10% Overextension, +5% Corruption
+- "Establish Courts": -10 gold, -20% Corruption, +10% Unrest
+- "Secret Police": -10 gold, -20% Unrest, +15% Corruption
+
+#### 3. Public Works Actions (Gold + Materials Cost)
+Build structures that address society problems.
+
+Examples:
+- "Build a Temple": -2 gold, -10 materials, -20% Decadence, +10% Unrest
+- "Build a Courthouse": -4 gold, -20 materials, -25% Corruption, +10% Unrest
+- "Build City Walls": -8 gold, -30 materials, -20% Overextension, +5% Unrest
+
+#### 4. Cash In Actions (Gain Resources)
+**Requires:** Related society parameter > 20%
+
+Accept resources in exchange for increasing society problems. Only available when you already have significant issues.
+
+Examples:
+- "Accept Gift from Wealthy Merchant": +5 gold, +20% Corruption (requires Corruption > 20)
+- "Confiscate Rebel Properties": +10 gold, +30% Unrest (requires Unrest > 20)
+- "Strip Frontier Fortifications": +30 materials, +40% Overextension (requires Overextension > 20)
+
+| Resource Gains | Typical Effect Increase |
+|----------------|------------------------|
+| +5 gold        | +20-25%                |
+| +10 gold       | +30-35%                |
+| +20 gold       | +45-50%                |
+| +10 materials  | +20-25%                |
+| +20 materials  | +30-35%                |
+| +30 materials  | +40-45%                |
 
 ---
 
@@ -571,7 +643,8 @@ Each turn processes in this order:
 9. **Era check:** Verify era transition thresholds
 10. **Collapse check:** Check for civilization collapse
 11. **Unit deselection:** Clear selected unit (no auto-select next turn)
-12. **Turn increment**
+12. **Society options shuffle:** Randomize available management actions for next turn
+13. **Turn increment**
 
 ---
 
@@ -583,11 +656,13 @@ Each turn processes in this order:
 - **Click selected unit's hex:** Deselect unit
 - **Click valid move hex:** Move selected unit (deselects if moves exhausted)
 - **Click enemy hex:** Attack with selected unit
+- **Click Society panel:** Open realm management interface
+- **Click Era button:** View era information and advancement requirements
 
 ### Keyboard
 
 - **Escape:** Close modal or clear selection
-- **Enter/Space:** End turn (if modal closed)
+- **Enter/Space:** End turn (if no modal open)
 
 ### Unit Selection
 
