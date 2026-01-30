@@ -88,6 +88,9 @@ class App {
             }
         });
 
+        // Welcome modal
+        document.getElementById('welcome-start-btn').addEventListener('click', () => this.hideWelcomeModal());
+
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
@@ -95,7 +98,10 @@ class App {
                 const eraModal = document.getElementById('era-modal');
                 const confirmModal = document.getElementById('confirm-modal');
                 const societyModal = document.getElementById('society-modal');
-                if (!confirmModal.classList.contains('hidden')) {
+                const welcomeModal = document.getElementById('welcome-modal');
+                if (!welcomeModal.classList.contains('hidden')) {
+                    this.hideWelcomeModal();
+                } else if (!confirmModal.classList.contains('hidden')) {
                     this.hideConfirmModal();
                 } else if (!societyModal.classList.contains('hidden')) {
                     this.hideSocietyModal();
@@ -110,7 +116,8 @@ class App {
                 const eraModal = document.getElementById('era-modal');
                 const confirmModal = document.getElementById('confirm-modal');
                 const societyModal = document.getElementById('society-modal');
-                if (eraModal.classList.contains('hidden') && confirmModal.classList.contains('hidden') && societyModal.classList.contains('hidden')) {
+                const welcomeModal = document.getElementById('welcome-modal');
+                if (eraModal.classList.contains('hidden') && confirmModal.classList.contains('hidden') && societyModal.classList.contains('hidden') && welcomeModal.classList.contains('hidden')) {
                     this.handleEndTurn();
                 }
             }
@@ -420,6 +427,10 @@ class App {
     hideSocietyModal() {
         document.getElementById('society-modal').classList.add('hidden');
         this.currentSocietyOptions = null;
+    }
+
+    hideWelcomeModal() {
+        document.getElementById('welcome-modal').classList.add('hidden');
     }
 
     formatEffectsHtml(effects) {

@@ -421,8 +421,7 @@ export class Game {
             r: settlement.r,
             health: stats.health,
             maxHealth: stats.health,
-            movesLeft: stats.speed,
-            hasActed: false
+            movesLeft: stats.speed
         };
 
         const hex = this.getHex(settlement.q, settlement.r);
@@ -495,7 +494,7 @@ export class Game {
 
     // Combat
     canAttack(unit, targetQ, targetR) {
-        if (unit.hasActed) return false;
+        if (unit.movesLeft <= 0) return false;
         if (hexDistance(unit.q, unit.r, targetQ, targetR) !== 1) return false;
         return this.getEnemiesAt(targetQ, targetR).length > 0;
     }
@@ -515,7 +514,6 @@ export class Game {
         const damage = this.calculateDamage(unitStats.attack, enemy.defense + terrainDef);
 
         enemy.health -= damage;
-        unit.hasActed = true;
         unit.movesLeft = 0;
 
         // Deselect unit if it has no moves left
@@ -663,7 +661,6 @@ export class Game {
 
             // Reset for next turn
             unit.movesLeft = stats.speed;
-            unit.hasActed = false;
         }
 
         // Sort units within each hex: cavalry > heavy_infantry > infantry > worker, then by HP desc

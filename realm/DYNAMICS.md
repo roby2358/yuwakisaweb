@@ -187,8 +187,8 @@ Killing an enemy grants:
 
 ### Combat Actions
 
-- Attacking consumes the unit's action for the turn
-- Sets `hasActed = true` and `movesLeft = 0`
+- Attacking consumes all remaining movement
+- Sets `movesLeft = 0`
 
 ---
 

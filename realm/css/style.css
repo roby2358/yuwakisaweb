@@ -581,3 +581,31 @@ body {
     text-align: center;
     padding: var(--space-lg);
 }
+
+/* Welcome Modal
+   -------------------------------------------- */
+.modal-welcome {
+    text-align: center;
+    max-width: 360px;
+}
+
+.modal-welcome h2 {
+    color: var(--gold);
+    margin-bottom: var(--space-md);
+}
+
+.modal-welcome p {
+    margin-bottom: var(--space-md);
+    line-height: 1.6;
+}
+
+.modal-welcome .disclaimer {
+    font-size: var(--font-xs);
+    color: var(--text-dim);
+    font-style: italic;
+    margin-bottom: var(--space-lg);
+}
+
+.modal-welcome #welcome-start-btn {
+    padding: var(--space-sm) var(--space-xl);
+}
