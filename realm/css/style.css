@@ -435,3 +435,149 @@ body {
     margin-top: var(--space-xs);
     font-weight: bold;
 }
+
+/* Society Panel Button
+   -------------------------------------------- */
+#society-panel {
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+    border: 1px solid transparent;
+    margin: var(--space-xs);
+    border-radius: var(--border-radius);
+}
+
+#society-panel:hover {
+    background: var(--bg-light);
+    border-color: var(--accent);
+}
+
+#society-panel:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+#society-panel h3 {
+    transition: color 0.2s;
+}
+
+#society-panel:hover h3 {
+    color: var(--accent);
+}
+
+/* Society Modal
+   -------------------------------------------- */
+.modal-society {
+    max-width: 500px;
+}
+
+#society-modal-state {
+    background: var(--bg-dark);
+    padding: var(--space-md);
+    border-radius: var(--border-radius);
+    margin-bottom: var(--space-md);
+    line-height: 1.6;
+    font-style: italic;
+}
+
+#society-modal-impacts {
+    margin-bottom: var(--space-lg);
+}
+
+.society-impact {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-sm) 0;
+    border-bottom: 1px solid var(--bg-light);
+}
+
+.society-impact:last-child {
+    border-bottom: none;
+}
+
+.society-impact-label {
+    font-weight: bold;
+}
+
+.society-impact-value {
+    color: var(--accent);
+    font-weight: bold;
+}
+
+.society-impact-effect {
+    font-size: var(--font-xs);
+    color: var(--text-dim);
+    margin-top: var(--space-xs);
+}
+
+.society-impact-high .society-impact-value {
+    color: var(--danger);
+}
+
+#society-modal-options h3 {
+    margin-bottom: var(--space-sm);
+    color: var(--text);
+    font-size: var(--font-md);
+}
+
+.society-option {
+    background: var(--bg-light);
+    border: 1px solid var(--bg-light);
+    border-radius: var(--border-radius);
+    padding: var(--space-md);
+    margin-bottom: var(--space-sm);
+    cursor: pointer;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+.society-option:hover {
+    border-color: var(--accent);
+    background: var(--bg-medium);
+}
+
+.society-option-name {
+    font-weight: bold;
+    color: var(--text);
+    margin-bottom: var(--space-xs);
+}
+
+.society-option-desc {
+    font-size: var(--font-sm);
+    color: var(--text-dim);
+    margin-bottom: var(--space-sm);
+    line-height: 1.4;
+}
+
+.society-option-details {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--font-xs);
+}
+
+.society-option-cost {
+    color: var(--gold);
+}
+
+.society-option-gain {
+    color: var(--success);
+    font-weight: bold;
+}
+
+.society-option-effects {
+    text-align: right;
+}
+
+.society-option-effects .positive {
+    color: var(--success);
+}
+
+.society-option-effects .negative {
+    color: var(--danger);
+}
+
+.society-no-options {
+    color: var(--text-dim);
+    font-style: italic;
+    text-align: center;
+    padding: var(--space-lg);
+}

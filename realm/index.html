@@ -64,7 +64,7 @@ SOFTWARE.
                     </div>
                 </section>
 
-                <section id="society-panel">
+                <section id="society-panel" role="button" tabindex="0">
                     <h3>Society</h3>
                     <div class="society-stat">
                         <span>Corruption</span>
@@ -111,6 +111,17 @@ SOFTWARE.
                     <button id="confirm-cancel-btn" class="modal-btn cancel">Cancel</button>
                     <button id="confirm-ok-btn" class="modal-btn confirm">Confirm</button>
                 </div>
+            </div>
+        </div>
+
+        <!-- Society Modal -->
+        <div id="society-modal" class="modal hidden">
+            <div class="modal-content modal-society">
+                <button class="modal-close">&times;</button>
+                <h2>Manage the Realm</h2>
+                <div id="society-modal-state"></div>
+                <div id="society-modal-impacts"></div>
+                <div id="society-modal-options"></div>
             </div>
         </div>
     </div>

@@ -5,6 +5,13 @@ import { Renderer } from './render.js';
 import { UI } from './ui.js';
 import { hexKey } from './hex.js';
 import { ERA_INFO, COLLAPSE_INFO } from './config.js';
+import {
+    getRealmStateDescription,
+    getCurrentImpacts,
+    getAvailableOptions,
+    formatEffect,
+    formatCost
+} from './society.js';
 
 class App {
     constructor() {
@@ -52,6 +59,27 @@ class App {
             }
         });
 
+        // Society panel and modal
+        document.getElementById('society-panel').addEventListener('click', () => this.showSocietyModal());
+        document.getElementById('society-panel').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this.showSocietyModal();
+            }
+        });
+        document.querySelector('#society-modal .modal-close').addEventListener('click', () => this.hideSocietyModal());
+        document.getElementById('society-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'society-modal') {
+                this.hideSocietyModal();
+            }
+        });
+        document.getElementById('society-modal-options').addEventListener('click', (e) => {
+            const option = e.target.closest('.society-option');
+            if (option) {
+                this.handleSocietyOption(option);
+            }
+        });
+
         // Action buttons (delegated)
         document.getElementById('actions-content').addEventListener('click', (e) => {
             const btn = e.target.closest('.action-btn');
@@ -66,8 +94,11 @@ class App {
                 // Close any open modal, otherwise clear selection
                 const eraModal = document.getElementById('era-modal');
                 const confirmModal = document.getElementById('confirm-modal');
+                const societyModal = document.getElementById('society-modal');
                 if (!confirmModal.classList.contains('hidden')) {
                     this.hideConfirmModal();
+                } else if (!societyModal.classList.contains('hidden')) {
+                    this.hideSocietyModal();
                 } else if (!eraModal.classList.contains('hidden')) {
                     this.hideEraModal();
                 } else {
@@ -78,7 +109,8 @@ class App {
                 // Don't end turn if modal is open
                 const eraModal = document.getElementById('era-modal');
                 const confirmModal = document.getElementById('confirm-modal');
-                if (eraModal.classList.contains('hidden') && confirmModal.classList.contains('hidden')) {
+                const societyModal = document.getElementById('society-modal');
+                if (eraModal.classList.contains('hidden') && confirmModal.classList.contains('hidden') && societyModal.classList.contains('hidden')) {
                     this.handleEndTurn();
                 }
             }
@@ -321,6 +353,119 @@ class App {
                 break;
         }
 
+        this.update();
+    }
+
+    showSocietyModal() {
+        const stateEl = document.getElementById('society-modal-state');
+        const impactsEl = document.getElementById('society-modal-impacts');
+        const optionsEl = document.getElementById('society-modal-options');
+
+        // Show realm state description
+        const stateDesc = getRealmStateDescription(this.game.society, this.game.era);
+        stateEl.innerHTML = `<p>${stateDesc}</p>`;
+
+        // Show current impacts
+        const impacts = getCurrentImpacts(this.game.society);
+        if (impacts.length > 0) {
+            let impactsHtml = '<h3>Current Effects</h3>';
+            for (const impact of impacts) {
+                const highClass = impact.value >= 50 ? ' society-impact-high' : '';
+                impactsHtml += `
+                    <div class="society-impact${highClass}">
+                        <div>
+                            <span class="society-impact-label">${impact.param}:</span>
+                            <span class="society-impact-value">${impact.value}%</span>
+                            <div class="society-impact-effect">${impact.effect}</div>
+                        </div>
+                    </div>`;
+            }
+            impactsEl.innerHTML = impactsHtml;
+        } else {
+            impactsEl.innerHTML = '<p style="color: var(--success); margin-bottom: var(--space-md);">The realm is in perfect balance.</p>';
+        }
+
+        // Show available options from pre-shuffled list
+        const options = getAvailableOptions(this.game.resources, this.game.society, this.game.shuffledSocietyOptions);
+        this.currentSocietyOptions = options; // Store for handling clicks
+
+        if (options.length > 0) {
+            let optionsHtml = '<h3>Available Actions</h3>';
+            for (let i = 0; i < options.length; i++) {
+                const opt = options[i];
+                const costStr = formatCost(opt.costs);
+                const effectsHtml = this.formatEffectsHtml(opt.effects);
+                // Use gain class if getting resources (negative costs)
+                const isGain = opt.costs[0] < 0 || opt.costs[1] < 0;
+                const costClass = isGain ? 'society-option-gain' : 'society-option-cost';
+
+                optionsHtml += `
+                    <div class="society-option" data-option-index="${i}">
+                        <div class="society-option-name">${opt.name}</div>
+                        <div class="society-option-desc">${opt.description}</div>
+                        <div class="society-option-details">
+                            <span class="${costClass}">${costStr}</span>
+                            <span class="society-option-effects">${effectsHtml}</span>
+                        </div>
+                    </div>`;
+            }
+            optionsEl.innerHTML = optionsHtml;
+        } else {
+            optionsEl.innerHTML = '<div class="society-no-options">No actions available. Build up your treasury or wait for conditions to change.</div>';
+        }
+
+        document.getElementById('society-modal').classList.remove('hidden');
+    }
+
+    hideSocietyModal() {
+        document.getElementById('society-modal').classList.add('hidden');
+        this.currentSocietyOptions = null;
+    }
+
+    formatEffectsHtml(effects) {
+        const labels = ['Corr', 'Unr', 'Dec', 'Over'];
+        const parts = [];
+
+        for (let i = 0; i < 4; i++) {
+            if (effects[i] !== 0) {
+                const sign = effects[i] > 0 ? '+' : '';
+                const cls = effects[i] < 0 ? 'positive' : 'negative';
+                parts.push(`<span class="${cls}">${sign}${effects[i]}% ${labels[i]}</span>`);
+            }
+        }
+
+        return parts.join(' ');
+    }
+
+    handleSocietyOption(optionEl) {
+        const index = parseInt(optionEl.dataset.optionIndex);
+        const option = this.currentSocietyOptions?.[index];
+
+        if (!option) return;
+
+        // Remove used option from shuffled list so next opening shows different options
+        const optionIndex = this.game.shuffledSocietyOptions.findIndex(o => o.name === option.name);
+        if (optionIndex !== -1) {
+            this.game.shuffledSocietyOptions.splice(optionIndex, 1);
+        }
+
+        // Apply costs
+        this.game.resources.gold -= option.costs[0];
+        this.game.resources.materials -= option.costs[1];
+
+        // Apply effects as percentage changes (+20 means *1.2, -30 means *0.7)
+        const [corr, unr, dec, over] = option.effects;
+        const applyPct = (current, pct) => {
+            const multiplier = 1 + pct / 100;
+            return Math.max(0, Math.min(100, current * multiplier));
+        };
+        this.game.society.corruption = applyPct(this.game.society.corruption, corr);
+        this.game.society.unrest = applyPct(this.game.society.unrest, unr);
+        this.game.society.decadence = applyPct(this.game.society.decadence, dec);
+        this.game.society.overextension = applyPct(this.game.society.overextension, over);
+
+        this.hideSocietyModal();
+        this.ui.showNotification(`${option.name} enacted!`);
         this.update();
     }
 }

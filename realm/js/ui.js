@@ -55,11 +55,19 @@ export class UI {
         this.decadenceBar.style.width = `${this.game.society.decadence}%`;
         this.overextensionBar.style.width = `${this.game.society.overextension}%`;
 
-        // Color warning for high values
-        this.corruptionBar.style.backgroundColor = this.game.society.corruption > 75 ? '#ff5252' : '#e94560';
-        this.unrestBar.style.backgroundColor = this.game.society.unrest > 75 ? '#ff5252' : '#e94560';
-        this.decadenceBar.style.backgroundColor = this.game.society.decadence > 75 ? '#ff5252' : '#e94560';
-        this.overextensionBar.style.backgroundColor = this.game.society.overextension > 75 ? '#ff5252' : '#e94560';
+        // Color gradient from yellow (0%) to red (100%)
+        this.corruptionBar.style.backgroundColor = this.getBarColor(this.game.society.corruption);
+        this.unrestBar.style.backgroundColor = this.getBarColor(this.game.society.unrest);
+        this.decadenceBar.style.backgroundColor = this.getBarColor(this.game.society.decadence);
+        this.overextensionBar.style.backgroundColor = this.getBarColor(this.game.society.overextension);
+    }
+
+    // Interpolate from yellow (0%) to red (100%)
+    getBarColor(value) {
+        const pct = Math.max(0, Math.min(100, value)) / 100;
+        // Yellow: rgb(255, 215, 0) -> Red: rgb(255, 0, 0)
+        const g = Math.round(215 * (1 - pct));
+        return `rgb(255, ${g}, 0)`;
     }
 
 

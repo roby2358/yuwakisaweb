@@ -60,8 +60,8 @@ export class Production {
     applyModifiers(raw) {
         let { gold, materials } = raw;
 
-        // Corruption reduces gold income
-        const corruptionMult = 1 - this.game.society.corruption / 100;
+        // Corruption reduces gold income (quarter the percentage)
+        const corruptionMult = 1 - this.game.society.corruption / 400;
         gold = Math.floor(gold * corruptionMult);
 
         // Decadence reduces all production (half the percentage)

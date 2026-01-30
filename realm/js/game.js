@@ -37,6 +37,7 @@ import {
 import { hexKey, parseHexKey, hexDistance, hexNeighbors, hexesInRange, findPath } from './hex.js';
 import { generateTerrain, findStartingLocation } from './terrain.js';
 import { Production } from './production.js';
+import { createShuffledOptions } from './society.js';
 
 export class Game {
     constructor(mapRadius = 12) {
@@ -60,6 +61,9 @@ export class Game {
 
         this.selectedHex = null;
         this.selectedUnit = null;
+
+        // Shuffled society options (refreshed each turn)
+        this.shuffledSocietyOptions = createShuffledOptions();
 
         // Spawn rates by danger point size (1-6)
         this.spawnRates = [4, 3, 3, 2, 2, 1];
@@ -683,6 +687,9 @@ export class Game {
 
         // 11. Deselect unit at turn end (don't auto-select next turn)
         this.selectedUnit = null;
+
+        // 12. Shuffle society options for next turn
+        this.shuffledSocietyOptions = createShuffledOptions();
 
         this.turn++;
         return true;
