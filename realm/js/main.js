@@ -91,6 +91,9 @@ class App {
         // Welcome modal
         document.getElementById('welcome-start-btn').addEventListener('click', () => this.hideWelcomeModal());
 
+        // Population map toggle
+        document.getElementById('population-map-btn').addEventListener('click', () => this.togglePopulationMap());
+
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
@@ -431,6 +434,12 @@ class App {
 
     hideWelcomeModal() {
         document.getElementById('welcome-modal').classList.add('hidden');
+    }
+
+    togglePopulationMap() {
+        const mode = this.renderer.toggleMapMode();
+        const btn = document.getElementById('population-map-btn');
+        btn.classList.toggle('active', mode === 'population');
     }
 
     formatEffectsHtml(effects) {

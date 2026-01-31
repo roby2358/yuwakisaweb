@@ -109,23 +109,22 @@ export const SETTLEMENT_POPULATION = {
     9: 15   // Capital
 };
 
-// Growth thresholds: floor(50 * 1.5^tier)
+// Growth thresholds: floor(50 * 2.1^tier) - exponential
 export const SETTLEMENT_GROWTH_THRESHOLD = {
-    0: 50,    // Camp -> Hamlet
-    1: 75,    // Hamlet -> Village
-    2: 113,   // Village -> Town
-    3: 169,   // Town -> Large Town
-    4: 253,   // Large Town -> Small City
-    5: 380,   // Small City -> City
-    6: 570,   // City -> Large City
-    7: 855,   // Large City -> Metropolis
-    8: 1282   // Metropolis -> Capital
+    0: 50,     // Camp -> Hamlet
+    1: 105,    // Hamlet -> Village
+    2: 220,    // Village -> Town
+    3: 463,    // Town -> Large Town
+    4: 972,    // Large Town -> Small City
+    5: 2041,   // Small City -> City
+    6: 4286,   // City -> Large City
+    7: 9001,   // Large City -> Metropolis
+    8: 18902   // Metropolis -> Capital
 };
 
-// Growth per turn: 1 + tier, except tier 0 gets 4x bonus
+// Growth per turn: floor(10 * (1 + tier)^1.5) - polynomial
 export function getSettlementGrowth(tier) {
-    if (tier === 0) return 4; // Hearty settlers bonus
-    return 1 + tier;
+    return Math.floor(10 * Math.pow(1 + tier, 1.5));
 }
 
 // Influence radius scales with level

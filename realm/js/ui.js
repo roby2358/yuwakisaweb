@@ -127,7 +127,8 @@ export class UI {
             html += `<p><span class="label">Settlement:</span> <span class="hex-info-settlement">${SETTLEMENT_NAMES[s.tier]} (Lv ${s.tier + 1})</span></p>`;
             html += `<p><span class="label">Defense:</span> +${settlementDef}</p>`;
             const threshold = SETTLEMENT_GROWTH_THRESHOLD[s.tier] || 100;
-            html += `<p><span class="label">Growth:</span> ${s.growthPoints}/${threshold}</p>`;
+            const growthPct = Math.floor((s.growthPoints / threshold) * 100);
+            html += `<p><span class="label">Growth:</span> ${growthPct}%</p>`;
 
             const maxLevel = this.game.getMaxTierAt(s.q, s.r);
             if (maxLevel < this.game.maxSettlementLevel) {
@@ -200,7 +201,8 @@ export class UI {
             } else if (settlement.tier < this.game.maxSettlementLevel) {
                 // Show growth progress for auto-advancing settlements
                 const threshold = SETTLEMENT_GROWTH_THRESHOLD[settlement.tier] || 100;
-                html += `<p style="margin-bottom: 0.5rem; color: var(--text-dim); font-size: 0.85rem;">Growth: ${settlement.growthPoints}/${threshold} to ${SETTLEMENT_NAMES[settlement.tier + 1]}</p>`;
+                const growthPct = Math.floor((settlement.growthPoints / threshold) * 100);
+                html += `<p style="margin-bottom: 0.5rem; color: var(--text-dim); font-size: 0.85rem;">Growth: ${growthPct}% to ${SETTLEMENT_NAMES[settlement.tier + 1]}</p>`;
             }
 
             // Build unit buttons
@@ -317,12 +319,6 @@ export class UI {
         // Check for friendly unit
         if (this.game.getUnitsAt(hex.q, hex.r).length === 0) {
             needs.push('a unit present');
-        }
-
-        // Check influence
-        const influence = this.game.calculateInfluenceAt(hex.q, hex.r);
-        if (influence < 1) {
-            needs.push(`more influence (${influence.toFixed(1)}/1.0)`);
         }
 
         // Check resources

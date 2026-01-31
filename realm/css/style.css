@@ -111,6 +111,35 @@ body {
 #population-display .resource-value { color: var(--population); }
 #materials-display .resource-value { color: var(--materials); }
 
+/* Spacer to push map toggle to right */
+#resource-bar .spacer {
+    flex: 1;
+}
+
+/* Map toggle button */
+.map-toggle-btn {
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--bg-light);
+    border: 1px solid var(--text-dim);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.map-toggle-btn:hover {
+    background: var(--bg-medium);
+    border-color: var(--accent);
+}
+
+.map-toggle-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.map-toggle-btn .resource-icon {
+    font-size: var(--font-lg);
+}
+
 /* Side Panel
    -------------------------------------------- */
 #side-panel {

@@ -290,23 +290,27 @@ Building a new settlement reduces the tier of your **largest settlement** by 1:
 
 Settlements grow automatically each turn using **polynomial growth** against **exponential thresholds**:
 
-**Growth per turn:** `1 + tier` (scales with settlement size)
-- **Exception:** Tier 0 (Camp) gets a **4x bonus** (4 growth/turn) - hearty settlers!
+**Growth per turn:** `floor(base × gaussian × decadenceMult)`
+- Base: `10 × (1 + tier)^1.5` (polynomial)
+- Gaussian multiplier: mean 1.0, stddev ±33%, min 0.1
+- Decadence bonus: `1 + (decadence/100) × 0.25` (up to 25% boost at 100 decadence)
 
-**Growth threshold:** `floor(50 × 1.5^tier)` (exponential)
+**Growth threshold:** `floor(50 × 2.1^tier)` (exponential)
 
 | Tier | Growth/turn | Threshold | ~Turns to level |
 |------|-------------|-----------|-----------------|
-| 0    | 4 (bonus)   | 50        | 13              |
-| 1    | 2           | 75        | 38              |
-| 2    | 3           | 113       | 38              |
-| 3    | 4           | 169       | 42              |
-| 4    | 5           | 253       | 51              |
-| 5    | 6           | 380       | 63              |
-| 6    | 7           | 570       | 81              |
-| 7    | 8           | 855       | 107             |
-| 8    | 9           | 1282      | 142             |
-| 9    | 10          | —         | (max tier)      |
+| 0    | 10          | 50        | 5               |
+| 1    | 28          | 105       | 4               |
+| 2    | 52          | 220       | 4               |
+| 3    | 80          | 463       | 6               |
+| 4    | 112         | 972       | 9               |
+| 5    | 147         | 2041      | 14              |
+| 6    | 185         | 4286      | 23              |
+| 7    | 226         | 9001      | 40              |
+| 8    | 268         | 18902     | 71              |
+| 9    | —           | —         | (max tier)      |
+
+**Total time to tier 8:** ~105 turns (early game quick, late game slow)
 
 - When growth points reach the threshold, settlement advances one tier
 - Growth points carry over (excess counts toward next level)
@@ -326,13 +330,46 @@ Larger settlements cap the growth of nearby smaller ones:
 - Capped at (larger settlement tier - 1)
 - Prevents clustering of large settlements
 
-### Spontaneous Settlement Spawning
+### Autonomous Settlement Spawning
 
-Each turn, there's a 10% chance to spawn a new Camp:
-- Hex must be controlled, not have settlement/danger point
-- Must be plains or hills
-- Influence >= 3.0 required
-- Weighted by influence (higher = more likely)
+Settlements spawn autonomously based on social pressure (unrest):
+
+**Spawn Chance:** `10% + (unrest / 200)`
+
+| Unrest | Spawn Chance |
+|--------|--------------|
+| 0      | 10%          |
+| 20     | 20%          |
+| 50     | 35%          |
+| 80     | 50%          |
+
+**On Successful Spawn:**
+- Unrest is halved (pressure released as people leave)
+- Overextension increases by 25% (more territory to manage)
+
+**Hex Scoring:**
+
+Each eligible hex is scored based on attraction (pull toward civilization) and repulsion (push away from crowding):
+
+```
+attraction = Σ (strength × e^(-d / λ_attract))
+repulsion  = Σ (strength × e^(-d / λ_repel))
+score = attraction × max(0, 1 - repulsion)
+```
+
+Where:
+- `λ_attract = 4` (attraction decay length - smaller means faster fade with distance)
+- `λ_repel = 1.5` (repulsion decay length - smaller means tighter crowding zone)
+- `strength = tier + 1` for each settlement
+
+**Resource Adjacency Bonus:** 2× multiplier per adjacent resource (stacks multiplicatively: 2×, 4×, 8×)
+
+This creates a "donut" of optimal placement: not too close (crowded), not too far (isolated).
+
+**Hex Requirements:**
+- Plains or hills terrain
+- No existing settlement, danger point, or resource
+- Must have minimum attraction (0.01) from settlements
 
 ---
 
@@ -514,23 +551,28 @@ Four parameters track civilization health (0-100%). The society panel displays b
   - +0.01 per population per turn
   - +2 when friendly unit killed in combat
   - +3 when unit killed by enemy attack
-  - +5 when settlement attacked
+  - +5 when settlement attacked or installation destroyed
   - +10 when settlement destroyed
 - **Effect:** At >75%, 5% chance per settlement to revolt (destroyed)
-- **Decay:** -1 per turn
+- **Decay:** None
+- **Special:** Triggers autonomous settlement spawning (see Settlement Spawning)
 
 ### Decadence
 
-- **Increases:** +0.5 per turn (Empire era only)
+- **Increases:** +0.01 per population per turn (all eras)
 - **Effect:** Reduces all production by (decadence/2)%
 - **Decay:** None
 
+Note: With small populations (Barbarian era), decadence grows slowly. With large populations (Empire), it accelerates dramatically.
+
 ### Overextension
 
-- **Calculation:** Based on (controlled hexes) vs (settlements * 20)
-- **Increases:** +0.1 per excess hex per turn
-- **Decay:** -1 per turn when under limit
+- **Increases:** +0.05 per influenced hex per turn (rounded up)
 - **Effect:** Contributes to collapse
+- **Decay:** None
+- **Special:** Increases by 25% when a new settlement spawns
+
+Influenced hexes are hexes within the influence radius of any settlement (not including unit adjacency).
 
 ---
 

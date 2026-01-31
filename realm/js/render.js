@@ -12,8 +12,17 @@ export class Renderer {
         this.offsetX = 0;
         this.offsetY = 0;
 
+        // Map view mode: 'terrain' or 'population'
+        this.mapMode = 'terrain';
+
         this.resize();
         window.addEventListener('resize', () => this.resize());
+    }
+
+    toggleMapMode() {
+        this.mapMode = this.mapMode === 'terrain' ? 'population' : 'terrain';
+        this.render();
+        return this.mapMode;
     }
 
     resize() {
@@ -31,6 +40,11 @@ export class Renderer {
     render() {
         const ctx = this.ctx;
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        if (this.mapMode === 'population') {
+            this.renderPopulationMap();
+            return;
+        }
 
         // Draw all hexes
         for (const [key, hex] of this.game.hexes) {
@@ -90,6 +104,53 @@ export class Renderer {
 
         // Draw controlled territory overlay
         this.drawControlledOverlay();
+    }
+
+    renderPopulationMap() {
+        const ctx = this.ctx;
+        const probabilities = this.game.getSpawnProbabilities();
+
+        // Find max probability for scaling
+        let maxProb = 0;
+        for (const prob of probabilities.values()) {
+            if (prob > maxProb) maxProb = prob;
+        }
+
+        // Draw all hexes with grayscale based on spawn probability
+        for (const [key, hex] of this.game.hexes) {
+            const { x, y } = this.getHexCenter(hex.q, hex.r);
+            const prob = probabilities.get(key) || 0;
+
+            // Use logarithmic scale so the gradient is visible
+            // log(1 + x) / log(1 + max) gives 0-1 range with better spread
+            let brightness = 0;
+            if (maxProb > 0 && prob > 0) {
+                const logProb = Math.log(1 + prob * 100);
+                const logMax = Math.log(1 + maxProb * 100);
+                brightness = Math.floor((logProb / logMax) * 255);
+            }
+
+            drawHexPath(ctx, x, y, HEX_SIZE);
+            ctx.fillStyle = `rgb(${brightness}, ${brightness}, ${brightness})`;
+            ctx.fill();
+        }
+
+        // Draw grid lines
+        for (const [key, hex] of this.game.hexes) {
+            this.drawHexBorder(hex);
+        }
+
+        // Draw settlements (so you can see where they are)
+        for (const settlement of this.game.settlements) {
+            this.drawSettlement(settlement);
+        }
+
+        // Draw resources (helpful context)
+        for (const [key, hex] of this.game.hexes) {
+            if (hex.resource) {
+                this.drawResource(hex);
+            }
+        }
     }
 
     getHexCenter(q, r) {

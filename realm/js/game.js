@@ -252,10 +252,6 @@ export class Game {
         // Must have a friendly unit present
         if (this.getUnitsAt(q, r).length === 0) return false;
 
-        // Check influence requirement
-        const influence = this.calculateInfluenceAt(q, r);
-        if (influence < 1) return false;
-
         // Need at least one settlement to draw population from
         if (this.settlements.length === 0) return false;
 
@@ -639,6 +635,17 @@ export class Game {
         return count;
     }
 
+    // Count hexes within settlement influence (not unit adjacency)
+    getInfluencedHexCount() {
+        let count = 0;
+        for (const [key, hex] of this.hexes) {
+            if (hex.terrain === TERRAIN.WATER) continue;
+            const influence = this.calculateInfluenceAt(hex.q, hex.r);
+            if (influence > 0) count++;
+        }
+        return count;
+    }
+
     // Turn Processing
     endTurn() {
         // 1. Heal units and reset moves
@@ -979,7 +986,12 @@ export class Game {
     processSettlementGrowth() {
         // Each settlement grows based on its tier (polynomial growth vs exponential threshold)
         for (const settlement of this.settlements) {
-            const growth = getSettlementGrowth(settlement.tier);
+            const baseGrowth = getSettlementGrowth(settlement.tier);
+            // Gaussian multiplier: mean 1.0, stddev 0.33 (±33% at 1 stddev)
+            const gaussianMult = Math.max(0.1, 1 + this.randomGaussian() * 0.33);
+            // Decadence bonus: 25% increase at 100 decadence (growth through excess)
+            const decadenceMult = 1 + (this.society.decadence / 100) * 0.25;
+            const growth = Math.floor(baseGrowth * gaussianMult * decadenceMult);
             settlement.growthPoints += growth;
 
             // Get threshold for current tier
@@ -1030,60 +1042,143 @@ export class Game {
         }
     }
 
+    // Settlement spawn scoring parameters (all in one place for easy tuning)
+    static SPAWN_CONFIG = {
+        sigmaAttract: 4,        // Gaussian attraction stddev
+        sigmaRepel: 1.1,        // Gaussian repulsion stddev
+        repelStrength: 5,       // Repulsion multiplier (higher = stronger dead zone)
+        lambdaDecay: {          // Exponential decay length by era (higher = farther reach)
+            Barbarian: 0.5,
+            Kingdom: 1,
+            Empire: 4
+        },
+        resourceMultiplier: 8,  // Score multiplier per adjacent resource
+        minScore: 0.001         // Minimum score threshold
+    };
+
+    // Calculate settlement spawn score for a single hex
+    calculateSpawnScore(hex) {
+        if (hex.settlement || hex.dangerPoint || hex.resource) return 0;
+        if (hex.terrain !== TERRAIN.PLAINS && hex.terrain !== TERRAIN.HILLS) return 0;
+
+        const cfg = Game.SPAWN_CONFIG;
+
+        // Calculate attraction and repulsion from all settlements
+        let attraction = 0;
+        let repulsion = 0;
+        let minDist = Infinity;
+
+        for (const settlement of this.settlements) {
+            const dist = hexDistance(hex.q, hex.r, settlement.q, settlement.r);
+            const strength = settlement.tier + 1;
+            minDist = Math.min(minDist, dist);
+
+            // Gaussian attraction (1 stddev at sigmaAttract hexes)
+            attraction += strength * Math.exp(-(dist * dist) / (2 * cfg.sigmaAttract * cfg.sigmaAttract));
+
+            // Gaussian repulsion (1 stddev at sigmaRepel hexes)
+            repulsion += strength * cfg.repelStrength * Math.exp(-(dist * dist) / (2 * cfg.sigmaRepel * cfg.sigmaRepel));
+        }
+
+        // Combine: attraction * (1 - repulsion), clamped to positive
+        let score = attraction * Math.max(0, 1 - repulsion);
+
+        // Apply exponential decay based on distance to nearest settlement (era-dependent)
+        const lambdaDecay = cfg.lambdaDecay[this.era] || 0.5;
+        score *= Math.exp(-minDist / lambdaDecay);
+
+        // Resource adjacency bonus
+        const neighbors = hexNeighbors(hex.q, hex.r);
+        const adjacentResources = neighbors.filter(n => {
+            const nHex = this.getHex(n.q, n.r);
+            return nHex && nHex.resource;
+        }).length;
+
+        if (adjacentResources > 0) {
+            score *= Math.pow(cfg.resourceMultiplier, adjacentResources);
+        }
+
+        // Apply minimum threshold
+        if (score < cfg.minScore) return 0;
+
+        return score;
+    }
+
+    // Get spawn scores for all hexes, normalized to 0-1 probabilities
+    getSpawnProbabilities() {
+        const scores = new Map();
+        let totalScore = 0;
+
+        for (const [key, hex] of this.hexes) {
+            const score = this.calculateSpawnScore(hex);
+            scores.set(key, score);
+            totalScore += score;
+        }
+
+        // Normalize to probabilities
+        const probabilities = new Map();
+        for (const [key, score] of scores) {
+            probabilities.set(key, totalScore > 0 ? score / totalScore : 0);
+        }
+
+        return probabilities;
+    }
+
     processSettlementSpawning() {
-        // Check for spontaneous settlement spawning
-        const spawnThreshold = 3;
+        // Spawn chance based on unrest: 10% base + 0.5% per unrest point
+        const spawnChance = 0.10 + (this.society.unrest / 200);
+        if (Math.random() >= spawnChance) return;
+
+        // Score all eligible hexes
         const candidates = [];
 
         for (const [key, hex] of this.hexes) {
-            if (hex.settlement || hex.dangerPoint) continue;
-            if (hex.terrain !== TERRAIN.PLAINS && hex.terrain !== TERRAIN.HILLS) continue;
-            if (!hex.controlled) continue;
-
-            const influence = this.calculateInfluenceAt(hex.q, hex.r);
-            if (influence >= spawnThreshold) {
-                candidates.push({ hex, influence });
+            const score = this.calculateSpawnScore(hex);
+            if (score > 0) {
+                candidates.push({ hex, score });
             }
         }
 
-        // Spawn one new settlement per turn if conditions met
-        if (candidates.length > 0 && Math.random() < 0.1) { // 10% chance
-            // Weight by influence
-            const totalWeight = candidates.reduce((sum, c) => sum + c.influence, 0);
-            let roll = Math.random() * totalWeight;
+        if (candidates.length === 0) return;
 
-            for (const c of candidates) {
-                roll -= c.influence;
-                if (roll <= 0) {
-                    this.createSettlement(c.hex.q, c.hex.r, SETTLEMENT_LEVEL.CAMP);
-                    break;
-                }
+        // Weighted random selection by score
+        const totalWeight = candidates.reduce((sum, c) => sum + c.score, 0);
+        let roll = Math.random() * totalWeight;
+
+        for (const c of candidates) {
+            roll -= c.score;
+            if (roll <= 0) {
+                this.createSettlement(c.hex.q, c.hex.r, SETTLEMENT_LEVEL.CAMP);
+
+                // Settlement spawning effects:
+                // - Halve unrest (pressure released)
+                this.society.unrest /= 2;
+                // - Increase overextension by 25% (more territory to manage)
+                this.society.overextension *= 1.25;
+                this.society.overextension = Math.min(100, this.society.overextension);
+
+                break;
             }
         }
     }
 
     updateSocietyParams() {
-        // Corruption: increases with gold income and settlements
+        const population = this.getPopulation();
+
+        // Corruption: increases with gold income and settlements (unchanged)
         const goldIncome = this.settlements.reduce((sum, s) => sum + SETTLEMENT_PRODUCTION[s.tier].gold, 0);
         this.society.corruption = Math.min(100, this.society.corruption + goldIncome * 0.01 + this.settlements.length * 0.1);
 
-        // Unrest: slowly decreases, increases with population
-        this.society.unrest = Math.max(0, this.society.unrest - 1);
-        this.society.unrest = Math.min(100, this.society.unrest + this.getPopulation() * 0.01);
+        // Unrest: +0.01 per population, no decay
+        this.society.unrest = Math.min(100, this.society.unrest + population * 0.01);
 
-        // Decadence: only increases during Empire
-        if (this.era === ERA.EMPIRE) {
-            this.society.decadence = Math.min(100, this.society.decadence + 0.5);
-        }
+        // Decadence: +0.01 per population (all eras), no decay
+        this.society.decadence = Math.min(100, this.society.decadence + population * 0.01);
 
-        // Overextension: based on territory vs settlements
-        const hexCount = this.getControlledHexCount();
-        const sustainable = this.settlements.length * 20;
-        if (hexCount > sustainable) {
-            this.society.overextension = Math.min(100, this.society.overextension + (hexCount - sustainable) * 0.1);
-        } else {
-            this.society.overextension = Math.max(0, this.society.overextension - 1);
-        }
+        // Overextension: +0.05 per influenced hex (round up), no decay
+        const influencedHexCount = this.getInfluencedHexCount();
+        const overextIncrease = Math.ceil(influencedHexCount * 0.05);
+        this.society.overextension = Math.min(100, this.society.overextension + overextIncrease);
 
         // Unrest can cause revolts
         if (this.society.unrest > 75) {
