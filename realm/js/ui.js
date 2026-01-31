@@ -209,7 +209,7 @@ export class UI {
 
             // Found new settlement button (requires tier >= 1)
             if (settlement.tier >= 1) {
-                const foundCost = getSettlementFoundCost(settlement.tier);
+                const foundCost = getSettlementFoundCost(this.game.era);
                 const canFound = this.game.canFoundSettlement(settlement);
                 html += `<button class="action-btn" data-action="found-settlement" ${canFound ? '' : 'disabled'}>
                     Found Settlement

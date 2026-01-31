@@ -262,8 +262,8 @@ export class Game {
         // Must be at least tier 1 (so it can go down to tier 0)
         if (settlement.tier < 1) return false;
 
-        // Check cost based on source settlement tier
-        const cost = getSettlementFoundCost(settlement.tier);
+        // Check cost based on current era
+        const cost = getSettlementFoundCost(this.era);
         if (!this.canAfford(cost)) return false;
 
         // Check if there's a valid location to place the new settlement
@@ -293,7 +293,7 @@ export class Game {
     foundSettlement(sourceSettlement) {
         if (!this.canFoundSettlement(sourceSettlement)) return null;
 
-        const cost = getSettlementFoundCost(sourceSettlement.tier);
+        const cost = getSettlementFoundCost(this.era);
         const targetHex = this.findBestFoundingLocation(sourceSettlement);
 
         if (!targetHex) return null;
