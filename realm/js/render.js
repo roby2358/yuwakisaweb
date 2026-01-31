@@ -1,6 +1,6 @@
 // Canvas Rendering
 
-import { HEX_SIZE, TERRAIN_COLORS, RESOURCE_COLORS, SETTLEMENT_COLORS, UNIT_COLORS, SETTLEMENT_GROWTH_THRESHOLD } from './config.js';
+import { HEX_SIZE, TERRAIN_COLORS, RESOURCE_COLORS, SETTLEMENT_COLORS, UNIT_COLORS, UNIT_TYPE, SETTLEMENT_GROWTH_THRESHOLD } from './config.js';
 import { hexToPixel, drawHexPath, hexNeighbors } from './hex.js';
 
 export class Renderer {
@@ -353,8 +353,45 @@ export class Renderer {
         const ux = x + unitOffsetX - width / 2;
         const uy = y + HEX_SIZE * 0.15 - height / 2;
 
-        ctx.fillStyle = color;
-        ctx.fillRect(ux, uy, width, height);
+        // Draw unit symbol based on type
+        if (unit.type === UNIT_TYPE.HEAVY_INFANTRY) {
+            // Half left black, right color (vertically split)
+            ctx.fillStyle = '#000';
+            ctx.fillRect(ux, uy, width / 2, height);
+            ctx.fillStyle = color;
+            ctx.fillRect(ux + width / 2, uy, width / 2, height);
+        } else if (unit.type === UNIT_TYPE.WORKER) {
+            // Top half color, bottom half black
+            ctx.fillStyle = color;
+            ctx.fillRect(ux, uy, width, height / 2);
+            ctx.fillStyle = '#000';
+            ctx.fillRect(ux, uy + height / 2, width, height / 2);
+        } else {
+            // Infantry and Cavalry: full color background first
+            ctx.fillStyle = color;
+            ctx.fillRect(ux, uy, width, height);
+        }
+
+        // Draw markings on top
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1.5;
+        if (unit.type === UNIT_TYPE.INFANTRY) {
+            // Single diagonal from lower left to upper right
+            ctx.beginPath();
+            ctx.moveTo(ux, uy + height);
+            ctx.lineTo(ux + width, uy);
+            ctx.stroke();
+        } else if (unit.type === UNIT_TYPE.CAVALRY) {
+            // X from corner to corner
+            ctx.beginPath();
+            ctx.moveTo(ux, uy);
+            ctx.lineTo(ux + width, uy + height);
+            ctx.moveTo(ux + width, uy);
+            ctx.lineTo(ux, uy + height);
+            ctx.stroke();
+        }
+
+        // Border
         ctx.strokeStyle = this.game.selectedUnit === unit ? '#fff' : '#000';
         ctx.lineWidth = this.game.selectedUnit === unit ? 3 : 1;
         ctx.strokeRect(ux, uy, width, height);
