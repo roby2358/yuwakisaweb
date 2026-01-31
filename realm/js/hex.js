@@ -97,70 +97,93 @@ export function drawHexPath(ctx, centerX, centerY, size = HEX_SIZE) {
     ctx.closePath();
 }
 
+// Find the key with lowest fScore in openSet
+function findLowestFScoreKey(openSet, fScore) {
+    let bestKey = null;
+    let lowestF = Infinity;
+
+    for (const [key, _] of openSet) {
+        const f = fScore.get(key) || Infinity;
+        if (f < lowestF) {
+            lowestF = f;
+            bestKey = key;
+        }
+    }
+    return bestKey;
+}
+
+// Reconstruct path from cameFrom map
+function reconstructPath(cameFrom, endKey) {
+    const path = [];
+    let key = endKey;
+    while (key) {
+        path.unshift(parseHexKey(key));
+        key = cameFrom.get(key);
+    }
+    return path;
+}
+
+// A* pathfinding state container
+class PathfinderState {
+    constructor(start, end) {
+        this.endKey = hexKey(end.q, end.r);
+        this.openSet = new Map();
+        this.closedSet = new Set();
+        this.cameFrom = new Map();
+        this.gScore = new Map();
+        this.fScore = new Map();
+
+        const startKey = hexKey(start.q, start.r);
+        this.gScore.set(startKey, 0);
+        this.fScore.set(startKey, hexDistance(start.q, start.r, end.q, end.r));
+        this.openSet.set(startKey, start);
+    }
+
+    processNeighbor(neighbor, currentKey, end, isPassable, movementCost, maxCost) {
+        const neighborKey = hexKey(neighbor.q, neighbor.r);
+
+        if (this.closedSet.has(neighborKey)) return;
+        if (!isPassable(neighbor.q, neighbor.r)) return;
+
+        const cost = movementCost(neighbor.q, neighbor.r);
+        const tentativeG = (this.gScore.get(currentKey) || 0) + cost;
+
+        if (tentativeG > maxCost) return;
+
+        const isBetterPath = !this.openSet.has(neighborKey) ||
+                             tentativeG < (this.gScore.get(neighborKey) || Infinity);
+
+        if (isBetterPath) {
+            this.cameFrom.set(neighborKey, currentKey);
+            this.gScore.set(neighborKey, tentativeG);
+            this.fScore.set(neighborKey, tentativeG + hexDistance(neighbor.q, neighbor.r, end.q, end.r));
+            this.openSet.set(neighborKey, neighbor);
+        }
+    }
+}
+
 // A* pathfinding for hex grid
 export function findPath(start, end, isPassable, movementCost, maxCost = Infinity) {
-    const startKey = hexKey(start.q, start.r);
-    const endKey = hexKey(end.q, end.r);
-
-    if (startKey === endKey) return [start];
+    if (hexKey(start.q, start.r) === hexKey(end.q, end.r)) return [start];
     if (!isPassable(end.q, end.r)) return null;
 
-    const openSet = new Map();
-    const closedSet = new Set();
-    const cameFrom = new Map();
-    const gScore = new Map();
-    const fScore = new Map();
+    const state = new PathfinderState(start, end);
 
-    gScore.set(startKey, 0);
-    fScore.set(startKey, hexDistance(start.q, start.r, end.q, end.r));
-    openSet.set(startKey, start);
+    while (state.openSet.size > 0) {
+        const currentKey = findLowestFScoreKey(state.openSet, state.fScore);
 
-    while (openSet.size > 0) {
-        // Find node with lowest fScore
-        let currentKey = null;
-        let lowestF = Infinity;
-        for (const [key, _] of openSet) {
-            const f = fScore.get(key) || Infinity;
-            if (f < lowestF) {
-                lowestF = f;
-                currentKey = key;
-            }
+        if (currentKey === state.endKey) {
+            return reconstructPath(state.cameFrom, state.endKey);
         }
 
-        if (currentKey === endKey) {
-            // Reconstruct path
-            const path = [];
-            let key = endKey;
-            while (key) {
-                path.unshift(parseHexKey(key));
-                key = cameFrom.get(key);
-            }
-            return path;
-        }
-
-        const current = openSet.get(currentKey);
-        openSet.delete(currentKey);
-        closedSet.add(currentKey);
+        const current = state.openSet.get(currentKey);
+        state.openSet.delete(currentKey);
+        state.closedSet.add(currentKey);
 
         for (const neighbor of hexNeighbors(current.q, current.r)) {
-            const neighborKey = hexKey(neighbor.q, neighbor.r);
-
-            if (closedSet.has(neighborKey)) continue;
-            if (!isPassable(neighbor.q, neighbor.r)) continue;
-
-            const cost = movementCost(neighbor.q, neighbor.r);
-            const tentativeG = (gScore.get(currentKey) || 0) + cost;
-
-            if (tentativeG > maxCost) continue;
-
-            if (!openSet.has(neighborKey) || tentativeG < (gScore.get(neighborKey) || Infinity)) {
-                cameFrom.set(neighborKey, currentKey);
-                gScore.set(neighborKey, tentativeG);
-                fScore.set(neighborKey, tentativeG + hexDistance(neighbor.q, neighbor.r, end.q, end.r));
-                openSet.set(neighborKey, neighbor);
-            }
+            state.processNeighbor(neighbor, currentKey, end, isPassable, movementCost, maxCost);
         }
     }
 
-    return null; // No path found
+    return null;
 }

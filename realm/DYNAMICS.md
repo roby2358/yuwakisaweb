@@ -360,6 +360,27 @@ This creates a "donut" of optimal placement: not too close (crowded), not too fa
 - No existing settlement, danger point, or resource
 - Must have minimum score (0.001) after all calculations
 
+### Manual Settlement Founding
+
+Settlements can manually found new settlements, with costs scaling by era:
+
+| Era       | Gold Cost | Materials Cost |
+|-----------|-----------|----------------|
+| Barbarian | 50        | 50             |
+| Kingdom   | 100       | 100            |
+| Empire    | 200       | 200            |
+
+**Requirements:**
+- Source settlement must be at least tier 1
+- Must afford the era-based cost
+- Valid target location must exist
+
+**Effects:**
+- Source settlement tier decreases by 1
+- Source settlement growth points reset to 0
+- New Camp (tier 0) settlement created at optimal location
+- Target location uses same scoring as autonomous spawning
+
 ---
 
 ## Territory Control
@@ -536,9 +557,10 @@ Four parameters track civilization health (0-100%). The society panel displays b
 
 ### Unrest
 
-- **Base Change:** Random(-1 to +2) + population × 0.02 per turn
+- **Base Change:** (Random(-1 to +2) + population × 0.02) × era multiplier per turn
   - Varies each turn, sometimes increasing, sometimes decreasing
-  - Trends slightly positive over time (average ~+0.5 base)
+  - Trends slightly positive over time
+  - **Era multiplier:** Barbarian ×1, Kingdom ×2, Empire ×4
 - **Combat Increases:**
   - +2 when friendly unit killed in combat
   - +3 when unit killed by enemy attack
@@ -644,13 +666,13 @@ Examples:
 
 ### Era Progression
 
-| Era       | Settlements | Decadence Rate |
-|-----------|-------------|----------------|
-| Barbarian | -           | +0.5/turn      |
-| Kingdom   | 4+          | +1.0/turn      |
-| Empire    | 7+          | +2.0/turn      |
+| Era       | Settlements | Decadence Rate | Unrest Multiplier |
+|-----------|-------------|----------------|-------------------|
+| Barbarian | -           | +0.5/turn      | ×1                |
+| Kingdom   | 4+          | +1.0/turn      | ×2                |
+| Empire    | 7+          | +2.0/turn      | ×4                |
 
-Era transitions are automatic when settlement thresholds are met.
+Era transitions are automatic when settlement thresholds are met. Both decadence and unrest scale with era at ratio 1:2:4.
 
 ---
 
@@ -669,8 +691,10 @@ Collapse occurs when **any two society parameters reach 100%**.
 5. **Settlement conversion:**
    - One settlement survives (smallest tier, random if tied)
    - Surviving settlement resets to Camp (tier 0)
-   - All other settlements become danger points
-   - Danger strength = floor(tier/2) + 1
+   - All other settlements become danger points with strength 0
+   - 15 strength points are randomly distributed among the danger points
+   - Any danger points still at strength 0 are removed
+   - This creates varied threat levels: some settlements disappear, others become strong danger points
 
 ---
 

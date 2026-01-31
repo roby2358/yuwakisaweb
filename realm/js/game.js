@@ -41,6 +41,7 @@ import { Production } from './production.js';
 import { createShuffledOptions } from './society.js';
 import { gaussian } from './utils.js';
 import { Rando } from './rando.js';
+import { Collapse } from './collapse.js';
 
 export class Game {
     constructor(mapRadius = 12) {
@@ -195,6 +196,41 @@ export class Game {
         if (!settlement) return 0;
         // Defense scales: 2 + (tier * 2/9), giving 2.0 to 4.0
         return Math.floor(2 + (settlement.tier * 2 / 9));
+    }
+
+    // Get combined structure defense at a location (settlement + installation)
+    getStructureDefenseAt(q, r) {
+        const hex = this.getHex(q, r);
+        if (!hex) return 0;
+        return this.getSettlementDefense(hex.settlement) + (hex.installation?.defense || 0);
+    }
+
+    // Generate random loot (gold and materials)
+    generateLoot(minAmount = 1, maxAmount = 4) {
+        return {
+            gold: Rando.int(minAmount, maxAmount),
+            materials: Rando.int(minAmount, maxAmount)
+        };
+    }
+
+    // Add loot to player resources
+    collectLoot(loot) {
+        this.resources.gold += loot.gold;
+        this.resources.materials += loot.materials;
+    }
+
+    // Increase a society parameter, clamping to 0-100
+    adjustSociety(param, amount) {
+        this.society[param] = Math.max(0, Math.min(100, this.society[param] + amount));
+    }
+
+    // Create a danger point at a hex
+    createDangerPoint(hex, strength) {
+        const maxSpawnTime = this.getSpawnRate(strength);
+        hex.dangerPoint = {
+            strength,
+            turnsUntilSpawn: Rando.int(1, maxSpawnTime)
+        };
     }
 
     // ============ End Helper Functions ============
@@ -479,54 +515,53 @@ export class Game {
         enemy.health -= damage;
         unit.movesLeft = 0;
 
-        // Deselect unit if it has no moves left
-        if (unit.movesLeft <= 0 && this.selectedUnit === unit) {
+        if (this.selectedUnit === unit) {
             this.selectedUnit = null;
         }
 
         const result = { damage, killed: false };
 
         if (enemy.health <= 0) {
-            this.enemies = this.enemies.filter(e => e.id !== enemy.id);
+            this.removeEnemy(enemy);
             result.killed = true;
-
-            // Loot: 1-4 gold and 1-4 materials
-            const goldLoot = Rando.int(1, 4);
-            const materialsLoot = Rando.int(1, 4);
-            this.resources.gold += goldLoot;
-            this.resources.materials += materialsLoot;
-            result.loot = { gold: goldLoot, materials: materialsLoot };
-
-            // Move unit into the hex if empty
-            if (this.getEnemiesAt(targetQ, targetR).length === 0) {
-                const fromHex = this.getHex(unit.q, unit.r);
-                fromHex.units = fromHex.units.filter(u => u.id !== unit.id);
-                unit.q = targetQ;
-                unit.r = targetR;
-                targetHex.units.push(unit);
-            }
+            result.loot = this.generateLoot();
+            this.collectLoot(result.loot);
+            this.moveUnitToHex(unit, targetHex);
         } else {
-            // Counter-attack (unit gets settlement/installation defense bonus)
-            const unitHex = this.getHex(unit.q, unit.r);
-            const structureDef = this.getSettlementDefense(unitHex?.settlement) +
-                                 (unitHex?.installation?.defense || 0);
-            // Cavalry has 5 defense when attacking (strong charge, needs support when defending)
-            const baseDefense = unit.type === UNIT_TYPE.CAVALRY ? 5 : unitStats.defense;
-            const counterDamage = this.calculateDamage(enemy.attack, baseDefense + structureDef);
-            unit.health -= counterDamage;
-            result.counterDamage = counterDamage;
-
+            result.counterDamage = this.processCounterAttack(enemy, unit, unitStats);
             if (unit.health <= 0) {
                 this.removeUnit(unit);
                 result.unitKilled = true;
-
-                // Increase unrest from military losses
-                this.society.unrest = Math.min(100, this.society.unrest + 2);
+                this.adjustSociety('unrest', 2);
             }
         }
 
         this.updateControlledTerritory();
         return result;
+    }
+
+    // Process counter-attack from enemy to unit, returns damage dealt
+    processCounterAttack(enemy, unit, unitStats) {
+        const structureDef = this.getStructureDefenseAt(unit.q, unit.r);
+        // Cavalry has 5 defense when attacking (strong charge, needs support when defending)
+        const baseDefense = unit.type === UNIT_TYPE.CAVALRY ? 5 : unitStats.defense;
+        const counterDamage = this.calculateDamage(enemy.attack, baseDefense + structureDef);
+        unit.health -= counterDamage;
+        return counterDamage;
+    }
+
+    // Move unit to a target hex (used after combat)
+    moveUnitToHex(unit, targetHex) {
+        const fromHex = this.getHex(unit.q, unit.r);
+        fromHex.units = fromHex.units.filter(u => u.id !== unit.id);
+        unit.q = targetHex.q;
+        unit.r = targetHex.r;
+        targetHex.units.push(unit);
+    }
+
+    // Remove enemy from game
+    removeEnemy(enemy) {
+        this.enemies = this.enemies.filter(e => e.id !== enemy.id);
     }
 
     // Installation Management
@@ -614,89 +649,73 @@ export class Game {
 
     // Turn Processing
     endTurn() {
-        // 1. Heal units and reset moves
+        this.refreshUnits();
+        this.sortUnitsInHexes();
+        this.processDangerPointOccupation();
+        this.processEnemySpawns();
+        this.processEnemyTurn();
+        this.processProduction();
+        this.processSettlementGrowth();
+        this.processSettlementSpawning();
+        this.updateSocietyParams();
+        this.checkEraTransition();
+        this.checkCollapse();
+
+        this.selectedUnit = null;
+        this.shuffledSocietyOptions = createShuffledOptions();
+        this.selectLargestSettlement();
+
+        this.turn++;
+        return true;
+    }
+
+    // Heal units and reset movement points
+    refreshUnits() {
         for (const unit of this.units) {
             const stats = UNIT_STATS[unit.type];
-
-            // Healing: 0% if no moves left, 20% if has moves left, 30% if in settlement/installation
             const hex = this.getHex(unit.q, unit.r);
             const hasMovesLeft = unit.movesLeft > 0;
             const inStructure = hex && (hex.settlement || hex.installation);
 
-            let healPercent = 0; // No healing if used all movement or attacked
+            // Healing: 0% if no moves left, 20% if has moves left, 30% if in settlement/installation
             if (hasMovesLeft) {
-                healPercent = inStructure ? 0.3 : 0.2;
-            }
-
-            if (healPercent > 0) {
+                const healPercent = inStructure ? 0.3 : 0.2;
                 const healAmount = Math.ceil(unit.maxHealth * healPercent);
                 unit.health = Math.min(unit.maxHealth, unit.health + healAmount);
             }
 
-            // Reset for next turn
             unit.movesLeft = stats.speed;
         }
+    }
 
-        // Sort units within each hex: cavalry > heavy_infantry > infantry > worker, then by HP desc
+    // Sort units within each hex by type priority, then by HP
+    sortUnitsInHexes() {
         const unitTypePriority = {
             [UNIT_TYPE.CAVALRY]: 0,
             [UNIT_TYPE.HEAVY_INFANTRY]: 1,
             [UNIT_TYPE.INFANTRY]: 2,
             [UNIT_TYPE.WORKER]: 3
         };
+
         for (const [key, hex] of this.hexes) {
             if (hex.units.length > 1) {
                 hex.units.sort((a, b) => {
                     const typeDiff = unitTypePriority[a.type] - unitTypePriority[b.type];
                     if (typeDiff !== 0) return typeDiff;
-                    return b.health - a.health; // Higher HP first
+                    return b.health - a.health;
                 });
             }
         }
+    }
 
-        // 2. Process danger points occupied by military units
-        this.processDangerPointOccupation();
+    // Select the largest settlement for the next turn
+    selectLargestSettlement() {
+        if (this.settlements.length === 0) return;
 
-        // 3. Enemy spawning
-        this.processEnemySpawns();
-
-        // 4. Enemy movement and attacks
-        this.processEnemyTurn();
-
-        // 5. Resource production
-        this.processProduction();
-
-        // 6. Settlement growth
-        this.processSettlementGrowth();
-
-        // 7. Spontaneous settlement spawning
-        this.processSettlementSpawning();
-
-        // 8. Update society parameters
-        this.updateSocietyParams();
-
-        // 9. Check era transitions
-        this.checkEraTransition();
-
-        // 10. Check for collapse
-        this.checkCollapse();
-
-        // 11. Deselect unit at turn end (don't auto-select next turn)
-        this.selectedUnit = null;
-
-        // 12. Shuffle society options for next turn
-        this.shuffledSocietyOptions = createShuffledOptions();
-
-        // 13. Select largest settlement for next turn (without auto-selecting units)
-        if (this.settlements.length > 0) {
-            const maxTier = Math.max(...this.settlements.map(s => s.tier));
-            const largest = this.settlements.filter(s => s.tier === maxTier);
-            const selected = largest[Math.floor(Math.random() * largest.length)];
-            this.selectedHex = this.getHex(selected.q, selected.r);
-        }
-
-        this.turn++;
-        return true;
+        const maxTier = Math.max(...this.settlements.map(s => s.tier));
+        const largest = this.settlements.filter(s => s.tier === maxTier);
+        const selected = Rando.choice(largest);
+        this.selectedHex = this.getHex(selected.q, selected.r);
     }
 
     processDangerPointOccupation() {
@@ -820,22 +839,10 @@ export class Game {
 
     // Enemy attacks an undefended installation - both are destroyed, creates danger point
     enemyAttackInstallation(enemy, hex) {
-        // Destroy the installation
         hex.installation = null;
-
-        // Create a danger point with random size 1-6
-        const dangerSize = Rando.int(1, 6);
-        const initialCountdown = Rando.int(1, this.getSpawnRate(dangerSize));
-        hex.dangerPoint = {
-            strength: dangerSize,
-            turnsUntilSpawn: initialCountdown
-        };
-
-        // Remove the enemy
-        this.enemies = this.enemies.filter(e => e.id !== enemy.id);
-
-        // Increase unrest from losing the installation
-        this.society.unrest = Math.min(100, this.society.unrest + 5);
+        this.createDangerPoint(hex, Rando.int(1, 6));
+        this.removeEnemy(enemy);
+        this.adjustSociety('unrest', 5);
     }
 
     // Get valid move destinations for an enemy
@@ -878,48 +885,51 @@ export class Game {
 
     enemyAttack(enemy, target) {
         if (target.isUnit) {
-            // Use specific unit if provided, otherwise find one at location
-            const unit = target.unit || this.units.find(u => u.q === target.q && u.r === target.r);
-            if (unit) {
-                const unitStats = UNIT_STATS[unit.type];
-
-                // Unit gets settlement/installation defense bonus
-                const unitHex = this.getHex(unit.q, unit.r);
-                const structureDef = this.getSettlementDefense(unitHex?.settlement) +
-                                     (unitHex?.installation?.defense || 0);
-                const damage = this.calculateDamage(enemy.attack, unitStats.defense + structureDef);
-                unit.health -= damage;
-
-                // Counter-attack from unit to enemy
-                const counterDamage = this.calculateDamage(unitStats.attack, enemy.defense);
-                enemy.health -= counterDamage;
-
-                // Check if enemy died from counter-attack
-                if (enemy.health <= 0) {
-                    this.enemies = this.enemies.filter(e => e.id !== enemy.id);
-                }
-
-                if (unit.health <= 0) {
-                    this.removeUnit(unit);
-                    this.society.unrest = Math.min(100, this.society.unrest + 3);
-                }
-            }
+            this.enemyAttackUnit(enemy, target);
         } else if (target.isSettlement) {
-            const settlement = this.settlements.find(s => s.q === target.q && s.r === target.r);
-            if (settlement) {
-                // Damage settlement - increase unrest significantly
-                this.society.unrest = Math.min(100, this.society.unrest + 5);
+            this.enemyAttackSettlement(enemy, target);
+        }
+    }
 
-                // Small chance to damage undefended settlement
-                const defenders = this.getUnitsAt(settlement.q, settlement.r);
-                if (defenders.length === 0 && Math.random() < 0.3) {
-                    if (settlement.tier > SETTLEMENT_LEVEL.CAMP) {
-                        settlement.tier--;
-                    } else if (this.settlements.length > 1) {
-                        this.destroySettlement(settlement);
-                        this.society.unrest = Math.min(100, this.society.unrest + 10);
-                    }
-                }
+    // Enemy attacks a unit
+    enemyAttackUnit(enemy, target) {
+        const unit = target.unit || this.units.find(u => u.q === target.q && u.r === target.r);
+        if (!unit) return;
+
+        const unitStats = UNIT_STATS[unit.type];
+        const structureDef = this.getStructureDefenseAt(unit.q, unit.r);
+        const damage = this.calculateDamage(enemy.attack, unitStats.defense + structureDef);
+        unit.health -= damage;
+
+        // Counter-attack from unit to enemy
+        const counterDamage = this.calculateDamage(unitStats.attack, enemy.defense);
+        enemy.health -= counterDamage;
+
+        if (enemy.health <= 0) {
+            this.removeEnemy(enemy);
+        }
+
+        if (unit.health <= 0) {
+            this.removeUnit(unit);
+            this.adjustSociety('unrest', 3);
+        }
+    }
+
+    // Enemy attacks a settlement
+    enemyAttackSettlement(enemy, target) {
+        const settlement = this.settlements.find(s => s.q === target.q && s.r === target.r);
+        if (!settlement) return;
+
+        this.adjustSociety('unrest', 5);
+
+        // Small chance to damage undefended settlement
+        const defenders = this.getUnitsAt(settlement.q, settlement.r);
+        if (defenders.length === 0 && Math.random() < 0.3) {
+            if (settlement.tier > SETTLEMENT_LEVEL.CAMP) {
+                settlement.tier--;
+            } else if (this.settlements.length > 1) {
+                this.destroySettlement(settlement);
+                this.adjustSociety('unrest', 10);
             }
         }
     }
@@ -1129,34 +1139,46 @@ export class Game {
     }
 
     updateSocietyParams() {
-        const population = this.getPopulation();
+        this.updateCorruption();
+        this.updateUnrest();
+        this.updateDecadence();
+        this.updateOverextension();
+        this.processRevolts();
+    }
 
-        // Corruption: increases with gold income and settlements (unchanged)
+    updateCorruption() {
         const goldIncome = this.settlements.reduce((sum, s) => sum + SETTLEMENT_PRODUCTION[s.tier].gold, 0);
-        this.society.corruption = Math.min(100, this.society.corruption + goldIncome * 0.01 + this.settlements.length * 0.1);
+        this.adjustSociety('corruption', goldIncome * 0.01 + this.settlements.length * 0.1);
+    }
 
-        // Unrest: varies each turn, trending slightly positive
+    updateUnrest() {
         // Range: -1 to +2 base (average +0.5) plus small population factor
-        const unrestChange = (Math.random() * 3 - 1) + population * 0.02;
-        this.society.unrest = Math.max(0, Math.min(100, this.society.unrest + unrestChange));
+        // Scales with era at ratio 1:2:4 (Barbarian:Kingdom:Empire)
+        const population = this.getPopulation();
+        const multiplier = this.era === ERA.EMPIRE ? 4 : this.era === ERA.KINGDOM ? 2 : 1;
+        const unrestChange = ((Math.random() * 3 - 1) + population * 0.02) * multiplier;
+        this.adjustSociety('unrest', unrestChange);
+    }
 
-        // Decadence: scales with era at ratio 1:2:4 (Barbarian:Kingdom:Empire)
-        const decadenceMultiplier = this.era === ERA.EMPIRE ? 4 : this.era === ERA.KINGDOM ? 2 : 1;
-        const decadenceChange = 0.5 * decadenceMultiplier;
-        this.society.decadence = Math.min(100, this.society.decadence + decadenceChange);
+    updateDecadence() {
+        // Scales with era at ratio 1:2:4 (Barbarian:Kingdom:Empire)
+        const multiplier = this.era === ERA.EMPIRE ? 4 : this.era === ERA.KINGDOM ? 2 : 1;
+        this.adjustSociety('decadence', 0.5 * multiplier);
+    }
 
-        // Overextension: +0.025 per influenced hex (round up), no decay
+    updateOverextension() {
+        // +0.025 per influenced hex (round up), no decay
         const influencedHexCount = this.getInfluencedHexCount();
-        const overextIncrease = Math.ceil(influencedHexCount * 0.025);
-        this.society.overextension = Math.min(100, this.society.overextension + overextIncrease);
+        this.adjustSociety('overextension', Math.ceil(influencedHexCount * 0.025));
+    }
 
-        // Unrest can cause revolts
-        if (this.society.unrest > 75) {
-            for (const settlement of this.settlements) {
-                if (Math.random() < 0.05 && this.settlements.length > 1) {
-                    // Settlement revolts - becomes neutral
-                    this.destroySettlement(settlement);
-                }
+    processRevolts() {
+        if (this.society.unrest <= 75) return;
+
+        // Copy array to avoid mutation during iteration
+        for (const settlement of [...this.settlements]) {
+            if (Math.random() < 0.05 && this.settlements.length > 1) {
+                this.destroySettlement(settlement);
             }
         }
     }
@@ -1176,91 +1198,32 @@ export class Game {
     }
 
     checkCollapse() {
-        // Collapse if two society params hit 100
-        const critical = [
-            this.society.corruption >= 100,
-            this.society.unrest >= 100,
-            this.society.decadence >= 100,
-            this.society.overextension >= 100
-        ].filter(x => x).length;
-
-        if (critical >= 2) {
-            this.triggerCollapse();
+        const collapse = new Collapse(this);
+        if (collapse.shouldCollapse()) {
+            collapse.execute();
         }
-    }
-
-    triggerCollapse() {
-        // Reset to barbarian era with single settlement
-        this.era = ERA.BARBARIAN;
-        this.society = { corruption: 0, unrest: 0, decadence: 0, overextension: 0 };
-
-        if (this.settlements.length > 0) {
-            // Find smallest settlement (random if tie)
-            const minTier = Math.min(...this.settlements.map(s => s.tier));
-            const smallest = this.settlements.filter(s => s.tier === minTier);
-            const keeper = Rando.choice(smallest);
-
-            // Convert other settlements to danger points
-            for (const s of this.settlements) {
-                if (s.id === keeper.id) continue;
-
-                const hex = this.getHex(s.q, s.r);
-                if (hex) {
-                    // Danger point strength scales with settlement level (1-5 for levels 0-9)
-                    const dangerStrength = Math.floor(s.tier / 2) + 1;
-                    const maxSpawnTime = this.getSpawnRate(dangerStrength);
-                    // Randomize initial countdown so they don't all spawn together
-                    const initialCountdown = Rando.int(1, maxSpawnTime);
-                    hex.dangerPoint = {
-                        strength: dangerStrength,
-                        turnsUntilSpawn: initialCountdown
-                    };
-                    hex.settlement = null;
-                }
-            }
-
-            // Reset keeper to level 0 (Camp)
-            keeper.tier = 0;
-            keeper.growthPoints = 0;
-            this.settlements = [keeper];
-        }
-
-        // Remove all units
-        for (const unit of this.units) {
-            const hex = this.getHex(unit.q, unit.r);
-            if (hex) hex.units = [];
-        }
-        this.units = [];
-
-        // Reset resources
-        this.resources = { ...STARTING_RESOURCES };
-
-        this.updateControlledTerritory();
     }
 
     // Selection helpers
     selectHex(q, r) {
         this.selectedHex = this.getHex(q, r) || null;
-        this.selectedUnit = null;
+        this.selectedUnit = this.selectedHex ? this.findBestUnitAt(q, r) : null;
+    }
 
-        // Auto-select a unit with moves remaining, priority: cavalry > infantry > heavy infantry
-        const friendlyUnits = this.selectedHex ? this.getUnitsAt(q, r) : [];
-        const unitsWithMoves = friendlyUnits.filter(u => u.movesLeft > 0);
+    // Find the best unit to select at a location (by type priority, must have moves)
+    findBestUnitAt(q, r) {
+        const units = this.getUnitsAt(q, r).filter(u => u.movesLeft > 0);
+        if (units.length === 0) return null;
 
-        if (unitsWithMoves.length > 0) {
-            const selectionOrder = [UNIT_TYPE.CAVALRY, UNIT_TYPE.INFANTRY, UNIT_TYPE.HEAVY_INFANTRY];
-            for (const unitType of selectionOrder) {
-                const unit = unitsWithMoves.find(u => u.type === unitType);
-                if (unit) {
-                    this.selectedUnit = unit;
-                    break;
-                }
-            }
+        const selectionOrder = [UNIT_TYPE.CAVALRY, UNIT_TYPE.INFANTRY, UNIT_TYPE.HEAVY_INFANTRY];
+        for (const unitType of selectionOrder) {
+            const unit = units.find(u => u.type === unitType);
+            if (unit) return unit;
         }
+        return null;
     }
 
     selectUnit(unit) {
-        // Never select a unit with no moves left
         if (unit && unit.movesLeft > 0) {
             this.selectedUnit = unit;
         }
