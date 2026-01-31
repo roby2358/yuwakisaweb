@@ -206,8 +206,8 @@ export const ERA = {
 };
 
 export const ERA_THRESHOLDS = {
-    [ERA.KINGDOM]: { population: 50, hexes: 30 },
-    [ERA.EMPIRE]: { population: 200, hexes: 60 }
+    [ERA.KINGDOM]: { settlements: 4 },
+    [ERA.EMPIRE]: { settlements: 7 }
 };
 
 export const ERA_INFO = {
@@ -220,8 +220,7 @@ export const ERA_INFO = {
         advance: {
             nextEra: ERA.KINGDOM,
             requirements: [
-                'Population: 50+',
-                'Controlled hexes: 30+'
+                'Settlements: 4+'
             ]
         }
     },
@@ -234,8 +233,7 @@ export const ERA_INFO = {
         advance: {
             nextEra: ERA.EMPIRE,
             requirements: [
-                'Population: 200+',
-                'Controlled hexes: 60+'
+                'Settlements: 7+'
             ]
         }
     },

@@ -1174,17 +1174,14 @@ export class Game {
     }
 
     checkEraTransition() {
-        const hexCount = this.getControlledHexCount();
-        const pop = this.getPopulation();
+        const settlementCount = this.settlements.length;
 
         if (this.era === ERA.BARBARIAN) {
-            const thresh = ERA_THRESHOLDS[ERA.KINGDOM];
-            if (pop >= thresh.population && hexCount >= thresh.hexes) {
+            if (settlementCount >= ERA_THRESHOLDS[ERA.KINGDOM].settlements) {
                 this.era = ERA.KINGDOM;
             }
         } else if (this.era === ERA.KINGDOM) {
-            const thresh = ERA_THRESHOLDS[ERA.EMPIRE];
-            if (pop >= thresh.population && hexCount >= thresh.hexes) {
+            if (settlementCount >= ERA_THRESHOLDS[ERA.EMPIRE].settlements) {
                 this.era = ERA.EMPIRE;
             }
         }

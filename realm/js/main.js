@@ -310,8 +310,7 @@ class App {
 
         // Current status
         html += '<h3>Current Status</h3>';
-        html += `<p>Population: <span class="highlight">${this.game.getPopulation()}</span></p>`;
-        html += `<p>Controlled Hexes: <span class="highlight">${this.game.getControlledHexCount()}</span></p>`;
+        html += `<p>Settlements: <span class="highlight">${this.game.settlements.length}</span></p>`;
 
         // Advancement criteria
         if (info.advance) {
