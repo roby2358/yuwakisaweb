@@ -268,24 +268,6 @@ Healing formula: `ceil(maxHealth * healPercent)`
 
 Total population is the sum of all settlement population values.
 
-### Building Settlements
-
-Requirements:
-- Plains or Hills terrain
-- No existing settlement, danger point, or resource
-- Hex must be controlled
-- **Friendly unit must be present**
-- Influence at location >= 1.0
-- At least one existing settlement
-- Cost: 20 gold, 30 materials
-
-**Expansion Cost:**
-Building a new settlement reduces the tier of your **largest settlement** by 1:
-- If multiple settlements tie for largest, one is chosen randomly
-- The affected settlement's growth points reset to 50
-- If the largest settlement is a Camp (tier 0), it will be **destroyed**
-- A confirmation dialog appears before destroying a settlement
-
 ### Growth System
 
 Settlements grow automatically each turn using **polynomial growth** against **exponential thresholds**:

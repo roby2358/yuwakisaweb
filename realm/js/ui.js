@@ -1,7 +1,7 @@
 // UI Management
 
 import {
-    TERRAIN, SETTLEMENT_NAMES, SETTLEMENT_LEVEL, SETTLEMENT_BUILD_COST, SETTLEMENT_UPGRADE_COST,
+    TERRAIN, SETTLEMENT_NAMES, SETTLEMENT_LEVEL, SETTLEMENT_UPGRADE_COST,
     SETTLEMENT_UPGRADE_LEVELS, SETTLEMENT_GROWTH_THRESHOLD,
     UNIT_TYPE, UNIT_STATS, INSTALLATION_STATS, RESOURCE_TYPE
 } from './config.js';
@@ -231,27 +231,6 @@ export class UI {
             }
         }
 
-        // Build settlement
-        if (!hex.settlement && !hex.dangerPoint && hex.controlled) {
-            const canBuild = this.game.canBuildSettlement(hex.q, hex.r);
-            if (canBuild) {
-                const popCost = this.game.getSettlementPopCost();
-                const costLabel = popCost.willDestroy
-                    ? `<span class="cost-warning">Destroys ${popCost.name}</span>`
-                    : `<span class="cost-pop">-1 tier from ${popCost.name}</span>`;
-                html += `<button class="action-btn" data-action="build-settlement">
-                    Build Settlement
-                    <span class="cost">${SETTLEMENT_BUILD_COST.gold}g, ${SETTLEMENT_BUILD_COST.materials}m</span>
-                    ${costLabel}
-                </button>`;
-            } else {
-                // Show what's needed
-                const needs = this.getSettlementNeeds(hex);
-                html += `<p style="margin-top: 0.5rem; color: var(--text-dim); font-size: 0.85rem;">Build Settlement requires:</p>`;
-                html += `<p style="color: var(--danger); font-size: 0.8rem;">${needs}</p>`;
-            }
-        }
-
         // Danger point actions
         if (hex.dangerPoint && !hex.installation) {
             const friendlyUnits = hex.units.filter(u => this.game.units.includes(u));
@@ -304,32 +283,4 @@ export class UI {
         }, duration);
     }
 
-    getSettlementNeeds(hex) {
-        const needs = [];
-
-        // Check terrain
-        if (hex.terrain !== TERRAIN.PLAINS && hex.terrain !== TERRAIN.HILLS) {
-            needs.push('plains or hills terrain');
-        }
-
-        // Check for resource
-        if (hex.resource) {
-            needs.push('no resource on hex');
-        }
-
-        // Check for friendly unit
-        if (this.game.getUnitsAt(hex.q, hex.r).length === 0) {
-            needs.push('a unit present');
-        }
-
-        // Check resources
-        if (this.game.resources.gold < SETTLEMENT_BUILD_COST.gold) {
-            needs.push(`${SETTLEMENT_BUILD_COST.gold - this.game.resources.gold} more gold`);
-        }
-        if (this.game.resources.materials < SETTLEMENT_BUILD_COST.materials) {
-            needs.push(`${SETTLEMENT_BUILD_COST.materials - this.game.resources.materials} more materials`);
-        }
-
-        return needs.length > 0 ? needs.join(', ') : 'unknown';
-    }
 }

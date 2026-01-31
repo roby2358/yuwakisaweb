@@ -4,7 +4,7 @@ A browser-based realm management simulation game spanning the cycle from barbari
 
 ## Purpose
 
-Realm is a strategic management game where players guide a civilization through growth phases—building settlements, raising armies, and defending against threats—while managing the inevitable decline and rebirth of their realm.
+Realm is a strategic management game where players guide a civilization through growth phases—expanding through autonomous settlement spawning, raising armies, and defending against threats—while managing the inevitable decline and rebirth of their realm.
 
 ## UI Layout
 
@@ -64,7 +64,7 @@ Realm is a strategic management game where players guide a civilization through 
   - Population
   - Building Material
 - Resources MUST be displayed in the resource bar
-- Resources MUST be consumed when building settlements or producing units
+- Resources MUST be consumed when producing units or upgrading settlements
 
 ### Settlements
 

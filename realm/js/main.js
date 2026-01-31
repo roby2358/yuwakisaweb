@@ -226,22 +226,6 @@ class App {
                 }
                 break;
 
-            case 'build-settlement':
-                if (hex) {
-                    // Check if this would destroy a settlement
-                    if (this.game.buildSettlementNeedsConfirmation(hex.q, hex.r)) {
-                        const cost = this.game.getSettlementPopCost();
-                        this.showConfirmModal(
-                            'Destroy Settlement?',
-                            `Building a new settlement will destroy your <strong>${cost.name}</strong> at (${cost.settlement.q}, ${cost.settlement.r}).<br><br>Are you sure you want to proceed?`,
-                            { action: 'build-settlement', q: hex.q, r: hex.r, victim: cost.settlement }
-                        );
-                    } else if (this.game.buildSettlement(hex.q, hex.r)) {
-                        this.ui.showNotification('Settlement founded!');
-                    }
-                }
-                break;
-
             case 'build-installation':
                 if (hex) {
                     const type = btn.dataset.installation;
@@ -363,18 +347,7 @@ class App {
             return;
         }
 
-        const data = this.pendingConfirmation;
         this.hideConfirmModal();
-
-        // Handle the confirmed action
-        switch (data.action) {
-            case 'build-settlement':
-                if (this.game.buildSettlement(data.q, data.r, data.victim)) {
-                    this.ui.showNotification('Settlement founded! Previous settlement destroyed.');
-                }
-                break;
-        }
-
         this.update();
     }
 

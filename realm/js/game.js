@@ -27,7 +27,7 @@ SOFTWARE.
 import {
     TERRAIN, TERRAIN_MOVEMENT, TERRAIN_DEFENSE,
     SETTLEMENT_LEVEL, SETTLEMENT_NAMES, SETTLEMENT_PRODUCTION, SETTLEMENT_INFLUENCE,
-    SETTLEMENT_UPGRADE_COST, SETTLEMENT_BUILD_COST, SETTLEMENT_UPGRADE_LEVELS,
+    SETTLEMENT_UPGRADE_COST, SETTLEMENT_UPGRADE_LEVELS,
     SETTLEMENT_POPULATION, SETTLEMENT_GROWTH_THRESHOLD, getSettlementGrowth,
     UNIT_TYPE, UNIT_STATS,
     INSTALLATION_TYPE, INSTALLATION_STATS,
@@ -223,78 +223,6 @@ export class Game {
         this.settlements.push(settlement);
         this.updateControlledTerritory();
         return settlement;
-    }
-
-    canBuildSettlement(q, r) {
-        const hex = this.getHex(q, r);
-        if (!hex) return false;
-        if (hex.settlement || hex.dangerPoint) return false;
-        if (hex.terrain !== TERRAIN.PLAINS && hex.terrain !== TERRAIN.HILLS) return false;
-        if (hex.resource) return false;
-        if (!hex.controlled) return false;
-
-        // Must have a friendly unit present
-        if (this.getUnitsAt(q, r).length === 0) return false;
-
-        // Need at least one settlement to draw population from
-        if (this.settlements.length === 0) return false;
-
-        return this.canAfford(SETTLEMENT_BUILD_COST);
-    }
-
-    // Get info about which settlement will lose a tier when building a new one
-    getSettlementPopCost() {
-        if (this.settlements.length === 0) return null;
-
-        // Find the largest settlement(s) by tier
-        const maxTier = Math.max(...this.settlements.map(s => s.tier));
-        const largest = this.settlements.filter(s => s.tier === maxTier);
-
-        // Pick randomly if there's a tie
-        const victim = largest[Math.floor(Math.random() * largest.length)];
-
-        return {
-            settlement: victim,
-            willDestroy: victim.tier === 0,
-            name: SETTLEMENT_NAMES[victim.tier]
-        };
-    }
-
-    // Check if building would destroy a settlement (needs confirmation)
-    buildSettlementNeedsConfirmation(q, r) {
-        if (!this.canBuildSettlement(q, r)) return false;
-        const cost = this.getSettlementPopCost();
-        return cost && cost.willDestroy;
-    }
-
-    buildSettlement(q, r, confirmedVictim = null) {
-        if (!this.canBuildSettlement(q, r)) return false;
-
-        // Get the settlement that will lose population
-        // Use confirmedVictim if provided (from confirmation dialog), otherwise calculate
-        let victim;
-        if (confirmedVictim) {
-            victim = this.settlements.find(s => s.id === confirmedVictim.id);
-        } else {
-            const cost = this.getSettlementPopCost();
-            victim = cost?.settlement;
-        }
-
-        if (!victim) return false;
-
-        this.spend(SETTLEMENT_BUILD_COST);
-
-        // Apply population cost - reduce victim's tier by 1
-        if (victim.tier > 0) {
-            victim.tier--;
-            victim.growthPoints = 50; // Reset growth to midpoint
-        } else {
-            // Tier 0 settlement is destroyed
-            this.destroySettlement(victim);
-        }
-
-        this.createSettlement(q, r, SETTLEMENT_LEVEL.CAMP);
-        return true;
     }
 
     // Check if settlement can be manually upgraded (only at threshold levels)

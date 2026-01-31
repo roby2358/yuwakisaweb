@@ -147,8 +147,6 @@ export const SETTLEMENT_UPGRADE_COST = {
     [SETTLEMENT_LEVEL.CAPITAL]: { gold: 300, materials: 400 }    // 9 -> 10
 };
 
-export const SETTLEMENT_BUILD_COST = { gold: 20, materials: 30 };
-
 // Colors gradient from light to dark as settlement grows
 export const SETTLEMENT_COLORS = {
     0: '#bcaaa4',  // Camp - lightest
