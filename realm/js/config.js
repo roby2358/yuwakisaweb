@@ -214,7 +214,7 @@ export const ERA_INFO = {
     [ERA.BARBARIAN]: {
         description: 'A fledgling tribe struggling to survive. Resources are scarce, but the realm is young and uncorrupted.',
         effects: [
-            'No decadence accumulation',
+            'Decadence +0.5 per turn',
             'Base production rates apply'
         ],
         advance: {
@@ -227,7 +227,7 @@ export const ERA_INFO = {
     [ERA.KINGDOM]: {
         description: 'A growing realm with established settlements. The people prosper, but the seeds of ambition take root.',
         effects: [
-            'No decadence accumulation',
+            'Decadence +1 per turn',
             'Base production rates apply'
         ],
         advance: {
@@ -240,7 +240,7 @@ export const ERA_INFO = {
     [ERA.EMPIRE]: {
         description: 'A vast domain spanning many lands. Power and wealth abound, but decadence gnaws at the foundations of civilization.',
         effects: [
-            'Decadence increases by 0.5 per turn',
+            'Decadence +2 per turn',
             'Decadence reduces all production by up to 50%'
         ],
         advance: null

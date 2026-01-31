@@ -36,7 +36,10 @@ js/
 ├── terrain.js    # Diamond-square map generation, resource/danger placement
 ├── render.js     # Canvas rendering (terrain, units, settlements)
 ├── ui.js         # DOM updates, action panel, info panel
-└── production.js # Resource calculation with modifiers
+├── production.js # Resource calculation with modifiers
+├── society.js    # Society management actions and effects
+├── rando.js      # Seeded random number generator
+└── utils.js      # Utility functions (gaussian distribution)
 ```
 
 ### Data Flow
@@ -47,7 +50,7 @@ User Input → main.js → game.js state update → render.js + ui.js
 
 ### Key Data Structures
 
-**Hex object:** `{ q, r, terrain, elevation, resource, controlled, settlement, units[], danger, installation }`
+**Hex object:** `{ q, r, terrain, elevation, resource, controlled, settlement, units[], dangerPoint, installation }`
 
 **Hexes stored in Map:** `game.hexes.get(hexKey(q, r))` where `hexKey` returns `"q,r"` string
 
@@ -82,9 +85,9 @@ damage = floor(max(0, expectedDamage + gaussian() * stddev))
 ```
 
 ### Settlement Growth
-- Growth per turn: `1 + tier` (tier 0 gets 4x bonus)
-- Growth threshold: `floor(50 × 1.5^tier)` (exponential)
-- Manual upgrade required at levels 6→7 and 9→10
+- Growth per turn: `floor(10 × (1 + tier)^1.5)` (polynomial)
+- Growth threshold: `floor(50 × 2.1^tier)` (exponential, hardcoded values)
+- Manual upgrade required at tiers 5→6 and 8→9
 
 ### Influence Calculation
 Gaussian falloff from settlements:

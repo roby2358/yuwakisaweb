@@ -1151,15 +1151,19 @@ export class Game {
         const goldIncome = this.settlements.reduce((sum, s) => sum + SETTLEMENT_PRODUCTION[s.tier].gold, 0);
         this.society.corruption = Math.min(100, this.society.corruption + goldIncome * 0.01 + this.settlements.length * 0.1);
 
-        // Unrest: +0.01 per population, no decay
-        this.society.unrest = Math.min(100, this.society.unrest + population * 0.01);
+        // Unrest: varies each turn, trending slightly positive
+        // Range: -1 to +2 base (average +0.5) plus small population factor
+        const unrestChange = (Math.random() * 3 - 1) + population * 0.02;
+        this.society.unrest = Math.max(0, Math.min(100, this.society.unrest + unrestChange));
 
-        // Decadence: +0.01 per population (all eras), no decay
-        this.society.decadence = Math.min(100, this.society.decadence + population * 0.01);
+        // Decadence: scales with era at ratio 1:2:4 (Barbarian:Kingdom:Empire)
+        const decadenceMultiplier = this.era === ERA.EMPIRE ? 4 : this.era === ERA.KINGDOM ? 2 : 1;
+        const decadenceChange = 0.5 * decadenceMultiplier;
+        this.society.decadence = Math.min(100, this.society.decadence + decadenceChange);
 
-        // Overextension: +0.05 per influenced hex (round up), no decay
+        // Overextension: +0.025 per influenced hex (round up), no decay
         const influencedHexCount = this.getInfluencedHexCount();
-        const overextIncrease = Math.ceil(influencedHexCount * 0.05);
+        const overextIncrease = Math.ceil(influencedHexCount * 0.025);
         this.society.overextension = Math.min(100, this.society.overextension + overextIncrease);
 
         // Unrest can cause revolts

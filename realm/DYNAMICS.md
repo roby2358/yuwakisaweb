@@ -253,18 +253,18 @@ Healing formula: `ceil(maxHealth * healPercent)`
 
 ### Settlement Tiers
 
-| Level | Name        | Gold | Materials | Influence Radius | Influence Strength | Population |
-|-------|-------------|------|-----------|------------------|-------------------|------------|
-| 1     | Camp        | 1    | 1         | 1 (7 hexes)      | 1                 | 1          |
-| 2     | Hamlet      | 2    | 2         | 1 (7 hexes)      | 2                 | 2          |
-| 3     | Village     | 4    | 3         | 2 (19 hexes)     | 3                 | 3          |
-| 4     | Town        | 7    | 5         | 2 (19 hexes)     | 4                 | 4          |
-| 5     | Large Town  | 12   | 8         | 2 (19 hexes)     | 5                 | 5          |
-| 6     | Small City  | 20   | 12        | 3 (37 hexes)     | 6                 | 6          |
-| 7     | City        | 35   | 18        | 3 (37 hexes)     | 8                 | 8          |
-| 8     | Large City  | 55   | 25        | 3 (37 hexes)     | 10                | 10         |
-| 9     | Metropolis  | 80   | 35        | 4 (61 hexes)     | 12                | 12         |
-| 10    | Capital     | 120  | 50        | 4 (61 hexes)     | 15                | 15         |
+| Tier | Name        | Gold | Materials | Influence Radius | Influence Strength | Population |
+|------|-------------|------|-----------|------------------|-------------------|------------|
+| 0    | Camp        | 1    | 1         | 1 (7 hexes)      | 1                 | 1          |
+| 1    | Hamlet      | 2    | 2         | 1 (7 hexes)      | 2                 | 2          |
+| 2    | Village     | 4    | 3         | 2 (19 hexes)     | 3                 | 3          |
+| 3    | Town        | 7    | 5         | 2 (19 hexes)     | 4                 | 4          |
+| 4    | Large Town  | 12   | 8         | 2 (19 hexes)     | 5                 | 5          |
+| 5    | Small City  | 20   | 12        | 3 (37 hexes)     | 6                 | 6          |
+| 6    | City        | 35   | 18        | 3 (37 hexes)     | 8                 | 8          |
+| 7    | Large City  | 55   | 25        | 3 (37 hexes)     | 10                | 10         |
+| 8    | Metropolis  | 80   | 35        | 4 (61 hexes)     | 12                | 12         |
+| 9    | Capital     | 120  | 50        | 4 (61 hexes)     | 15                | 15         |
 
 Total population is the sum of all settlement population values.
 
@@ -301,13 +301,13 @@ Settlements grow automatically each turn using **polynomial growth** against **e
 |------|-------------|-----------|-----------------|
 | 0    | 10          | 50        | 5               |
 | 1    | 28          | 105       | 4               |
-| 2    | 52          | 220       | 4               |
+| 2    | 51          | 220       | 4               |
 | 3    | 80          | 463       | 6               |
-| 4    | 112         | 972       | 9               |
-| 5    | 147         | 2041      | 14              |
+| 4    | 111         | 972       | 9               |
+| 5    | 146         | 2041      | 14              |
 | 6    | 185         | 4286      | 23              |
 | 7    | 226         | 9001      | 40              |
-| 8    | 268         | 18902     | 71              |
+| 8    | 270         | 18902     | 70              |
 | 9    | —           | —         | (max tier)      |
 
 **Total time to tier 8:** ~105 turns (early game quick, late game slow)
@@ -317,9 +317,9 @@ Settlements grow automatically each turn using **polynomial growth** against **e
 
 ### Manual Upgrade Thresholds
 
-Certain levels require **manual upgrade** (cannot auto-advance past):
-- Level 6 (Small City) → Level 7 (City): 100 gold, 150 materials
-- Level 9 (Metropolis) → Level 10 (Capital): 300 gold, 400 materials
+Certain tiers require **manual upgrade** (cannot auto-advance past):
+- Tier 5 (Small City) → Tier 6 (City): 100 gold, 150 materials
+- Tier 8 (Metropolis) → Tier 9 (Capital): 300 gold, 400 materials
 
 At these thresholds, growth points cap at 50 and overflow to nearby settlements.
 
@@ -349,27 +349,34 @@ Settlements spawn autonomously based on social pressure (unrest):
 
 **Hex Scoring:**
 
-Each eligible hex is scored based on attraction (pull toward civilization) and repulsion (push away from crowding):
+Each eligible hex is scored based on attraction (pull toward civilization) and repulsion (push away from crowding), using Gaussian functions:
 
 ```
-attraction = Σ (strength × e^(-d / λ_attract))
-repulsion  = Σ (strength × e^(-d / λ_repel))
-score = attraction × max(0, 1 - repulsion)
+attraction = Σ (strength × gaussian(dist, σ_attract))
+repulsion  = Σ (strength × repelStrength × gaussian(dist, σ_repel))
+score = attraction × max(0, 1 - repulsion) × e^(-minDist / λ_decay)
 ```
 
 Where:
-- `λ_attract = 4` (attraction decay length - smaller means faster fade with distance)
-- `λ_repel = 1.5` (repulsion decay length - smaller means tighter crowding zone)
+- `gaussian(d, σ) = e^(-(d² / (2 × σ²)))` (Gaussian falloff)
+- `σ_attract = 4` (attraction standard deviation)
+- `σ_repel = 1.1` (repulsion standard deviation - tight crowding zone)
+- `repelStrength = 5` (repulsion multiplier for stronger dead zones)
 - `strength = tier + 1` for each settlement
+- `minDist` = distance to nearest settlement
+- `λ_decay` = era-dependent expansion reach:
+  - Barbarian: 0.5 (settlements cluster tightly)
+  - Kingdom: 1 (moderate expansion)
+  - Empire: 4 (distant expansion possible)
 
-**Resource Adjacency Bonus:** 2× multiplier per adjacent resource (stacks multiplicatively: 2×, 4×, 8×)
+**Resource Adjacency Bonus:** 8× multiplier per adjacent resource (stacks multiplicatively: 8×, 64×, 512×)
 
-This creates a "donut" of optimal placement: not too close (crowded), not too far (isolated).
+This creates a "donut" of optimal placement: not too close (crowded), not too far (isolated). The era-dependent decay controls how far from existing settlements new ones can spawn.
 
 **Hex Requirements:**
 - Plains or hills terrain
 - No existing settlement, danger point, or resource
-- Must have minimum attraction (0.01) from settlements
+- Must have minimum score (0.001) after all calculations
 
 ---
 
@@ -427,7 +434,7 @@ Population is **derived from settlements** rather than tracked as a separate res
 ### Population Effects
 
 - Contributes to era advancement thresholds
-- Increases unrest slightly each turn (+0.01 per population)
+- Increases unrest slightly each turn (population × 0.02 added to random variance)
 
 ---
 
@@ -541,33 +548,36 @@ Four parameters track civilization health (0-100%). The society panel displays b
 
 ### Corruption
 
-- **Increases:** +0.01 per gold income, +0.1 per settlement per turn
+- **Increases:** +0.01 per settlement gold production, +0.1 per settlement per turn
 - **Effect:** Reduces gold income by (corruption/4)% (e.g., 100% corruption = 25% reduction)
 - **Decay:** None
 
 ### Unrest
 
-- **Increases:**
-  - +0.01 per population per turn
+- **Base Change:** Random(-1 to +2) + population × 0.02 per turn
+  - Varies each turn, sometimes increasing, sometimes decreasing
+  - Trends slightly positive over time (average ~+0.5 base)
+- **Combat Increases:**
   - +2 when friendly unit killed in combat
   - +3 when unit killed by enemy attack
   - +5 when settlement attacked or installation destroyed
   - +10 when settlement destroyed
 - **Effect:** At >75%, 5% chance per settlement to revolt (destroyed)
-- **Decay:** None
+- **Decay:** Can decrease naturally due to random variance
 - **Special:** Triggers autonomous settlement spawning (see Settlement Spawning)
 
 ### Decadence
 
-- **Increases:** +0.01 per population per turn (all eras)
+- **Increases:** Scales with era (ratio 1:2:4)
+  - Barbarian: +0.5 per turn
+  - Kingdom: +1.0 per turn
+  - Empire: +2.0 per turn
 - **Effect:** Reduces all production by (decadence/2)%
 - **Decay:** None
 
-Note: With small populations (Barbarian era), decadence grows slowly. With large populations (Empire), it accelerates dramatically.
-
 ### Overextension
 
-- **Increases:** +0.05 per influenced hex per turn (rounded up)
+- **Increases:** +0.025 per influenced hex per turn (rounded up)
 - **Effect:** Contributes to collapse
 - **Decay:** None
 - **Special:** Increases by 25% when a new settlement spawns
@@ -652,13 +662,13 @@ Examples:
 
 ### Era Progression
 
-| Era       | Population | Controlled Hexes | Special |
-|-----------|------------|------------------|---------|
-| Barbarian | -          | -                | No decadence |
-| Kingdom   | 50+        | 30+              | No decadence |
-| Empire    | 200+       | 60+              | Decadence accumulates |
+| Era       | Settlements | Decadence Rate |
+|-----------|-------------|----------------|
+| Barbarian | -           | +0.5/turn      |
+| Kingdom   | 4+          | +1.0/turn      |
+| Empire    | 7+          | +2.0/turn      |
 
-Era transitions are automatic when thresholds are met. Population is the sum of all settlement population values (see Settlement Tiers table).
+Era transitions are automatic when settlement thresholds are met.
 
 ---
 
