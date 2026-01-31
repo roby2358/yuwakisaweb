@@ -147,6 +147,14 @@ export const SETTLEMENT_UPGRADE_COST = {
     [SETTLEMENT_LEVEL.CAPITAL]: { gold: 300, materials: 400 }    // 9 -> 10
 };
 
+// Cost for founding a new settlement (based on source settlement tier bracket)
+// Tier 0-2: 50/50, Tier 3-5: 100/100, Tier 6-9: 200/200
+export function getSettlementFoundCost(tier) {
+    if (tier <= 2) return { gold: 50, materials: 50 };
+    if (tier <= 5) return { gold: 100, materials: 100 };
+    return { gold: 200, materials: 200 };
+}
+
 // Colors gradient from light to dark as settlement grows
 export const SETTLEMENT_COLORS = {
     0: '#bcaaa4',  // Camp - lightest

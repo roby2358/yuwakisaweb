@@ -235,6 +235,15 @@ class App {
                 }
                 break;
 
+            case 'found-settlement':
+                if (hex && hex.settlement) {
+                    const newSettlement = this.game.foundSettlement(hex.settlement);
+                    if (newSettlement) {
+                        this.ui.showNotification(`New settlement founded at (${newSettlement.q}, ${newSettlement.r})!`);
+                    }
+                }
+                break;
+
             case 'select-unit':
                 if (hex) {
                     const unitId = parseFloat(btn.dataset.unitId);

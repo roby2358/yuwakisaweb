@@ -29,6 +29,7 @@ import {
     SETTLEMENT_LEVEL, SETTLEMENT_NAMES, SETTLEMENT_PRODUCTION, SETTLEMENT_INFLUENCE,
     SETTLEMENT_UPGRADE_COST, SETTLEMENT_UPGRADE_LEVELS,
     SETTLEMENT_POPULATION, SETTLEMENT_GROWTH_THRESHOLD, getSettlementGrowth,
+    getSettlementFoundCost,
     UNIT_TYPE, UNIT_STATS,
     INSTALLATION_TYPE, INSTALLATION_STATS,
     ERA, ERA_THRESHOLDS,
@@ -254,6 +255,61 @@ export class Game {
         settlement.growthPoints = 0;
         this.updateControlledTerritory();
         return true;
+    }
+
+    // Check if a settlement can found a new settlement
+    canFoundSettlement(settlement) {
+        // Must be at least tier 1 (so it can go down to tier 0)
+        if (settlement.tier < 1) return false;
+
+        // Check cost based on source settlement tier
+        const cost = getSettlementFoundCost(settlement.tier);
+        if (!this.canAfford(cost)) return false;
+
+        // Check if there's a valid location to place the new settlement
+        const targetHex = this.findBestFoundingLocation(settlement);
+        if (!targetHex) return false;
+
+        return true;
+    }
+
+    // Find the best hex for founding a new settlement from a source
+    findBestFoundingLocation(sourceSettlement) {
+        let bestHex = null;
+        let bestScore = 0;
+
+        for (const [key, hex] of this.hexes) {
+            const score = this.calculateSpawnScore(hex);
+            if (score > bestScore) {
+                bestScore = score;
+                bestHex = hex;
+            }
+        }
+
+        return bestHex;
+    }
+
+    // Found a new settlement from an existing one
+    foundSettlement(sourceSettlement) {
+        if (!this.canFoundSettlement(sourceSettlement)) return null;
+
+        const cost = getSettlementFoundCost(sourceSettlement.tier);
+        const targetHex = this.findBestFoundingLocation(sourceSettlement);
+
+        if (!targetHex) return null;
+
+        // Spend resources
+        this.spend(cost);
+
+        // Reduce source settlement tier by 1
+        sourceSettlement.tier--;
+        sourceSettlement.growthPoints = 0;
+
+        // Create new settlement at tier 0 (Camp)
+        const newSettlement = this.createSettlement(targetHex.q, targetHex.r, SETTLEMENT_LEVEL.CAMP);
+
+        this.updateControlledTerritory();
+        return newSettlement;
     }
 
     // Check if settlement can auto-advance (not at a threshold that requires manual upgrade)

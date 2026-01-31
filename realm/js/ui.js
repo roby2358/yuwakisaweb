@@ -3,6 +3,7 @@
 import {
     TERRAIN, SETTLEMENT_NAMES, SETTLEMENT_LEVEL, SETTLEMENT_UPGRADE_COST,
     SETTLEMENT_UPGRADE_LEVELS, SETTLEMENT_GROWTH_THRESHOLD,
+    getSettlementFoundCost,
     UNIT_TYPE, UNIT_STATS, INSTALLATION_STATS, RESOURCE_TYPE
 } from './config.js';
 import { clamp } from './utils.js';
@@ -204,6 +205,16 @@ export class UI {
                 const threshold = SETTLEMENT_GROWTH_THRESHOLD[settlement.tier] || 100;
                 const growthPct = Math.floor((settlement.growthPoints / threshold) * 100);
                 html += `<p style="margin-bottom: 0.5rem; color: var(--text-dim); font-size: 0.85rem;">Growth: ${growthPct}% to ${SETTLEMENT_NAMES[settlement.tier + 1]}</p>`;
+            }
+
+            // Found new settlement button (requires tier >= 1)
+            if (settlement.tier >= 1) {
+                const foundCost = getSettlementFoundCost(settlement.tier);
+                const canFound = this.game.canFoundSettlement(settlement);
+                html += `<button class="action-btn" data-action="found-settlement" ${canFound ? '' : 'disabled'}>
+                    Found Settlement
+                    <span class="cost">${foundCost.gold}g, ${foundCost.materials}m | -1 tier</span>
+                </button>`;
             }
 
             // Build unit buttons
