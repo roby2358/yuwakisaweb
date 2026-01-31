@@ -703,12 +703,12 @@ export class Game {
         // 12. Shuffle society options for next turn
         this.shuffledSocietyOptions = createShuffledOptions();
 
-        // 13. Select largest settlement for next turn
+        // 13. Select largest settlement for next turn (without auto-selecting units)
         if (this.settlements.length > 0) {
             const maxTier = Math.max(...this.settlements.map(s => s.tier));
             const largest = this.settlements.filter(s => s.tier === maxTier);
             const selected = largest[Math.floor(Math.random() * largest.length)];
-            this.selectHex(selected.q, selected.r);
+            this.selectedHex = this.getHex(selected.q, selected.r);
         }
 
         this.turn++;
