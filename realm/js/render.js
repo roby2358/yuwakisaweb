@@ -233,10 +233,19 @@ export class Renderer {
         // Pulsing danger indicator
         const pulse = 0.8 + Math.sin(Date.now() / 500) * 0.2;
 
+        // Draw pentagon
+        const radius = HEX_SIZE * 0.4;
         ctx.beginPath();
-        ctx.moveTo(x, y - HEX_SIZE * 0.5);
-        ctx.lineTo(x + HEX_SIZE * 0.4, y + HEX_SIZE * 0.3);
-        ctx.lineTo(x - HEX_SIZE * 0.4, y + HEX_SIZE * 0.3);
+        for (let i = 0; i < 5; i++) {
+            const angle = -Math.PI / 2 + (i * 2 * Math.PI / 5);
+            const px = x + radius * Math.cos(angle);
+            const py = y + radius * Math.sin(angle);
+            if (i === 0) {
+                ctx.moveTo(px, py);
+            } else {
+                ctx.lineTo(px, py);
+            }
+        }
         ctx.closePath();
 
         ctx.fillStyle = `rgba(255, 82, 82, ${pulse})`;
