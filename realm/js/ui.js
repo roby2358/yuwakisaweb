@@ -5,6 +5,7 @@ import {
     SETTLEMENT_UPGRADE_LEVELS, SETTLEMENT_GROWTH_THRESHOLD,
     UNIT_TYPE, UNIT_STATS, INSTALLATION_STATS, RESOURCE_TYPE
 } from './config.js';
+import { clamp } from './utils.js';
 
 export class UI {
     constructor(game) {
@@ -64,7 +65,7 @@ export class UI {
 
     // Interpolate from yellow (0%) to red (100%)
     getBarColor(value) {
-        const pct = Math.max(0, Math.min(100, value)) / 100;
+        const pct = clamp(value, 0, 100) / 100;
         // Yellow: rgb(255, 215, 0) -> Red: rgb(255, 0, 0)
         const g = Math.round(215 * (1 - pct));
         return `rgb(255, ${g}, 0)`;

@@ -38,6 +38,8 @@ import { hexKey, parseHexKey, hexDistance, hexNeighbors, hexesInRange, findPath 
 import { generateTerrain, findStartingLocation } from './terrain.js';
 import { Production } from './production.js';
 import { createShuffledOptions } from './society.js';
+import { gaussian } from './utils.js';
+import { Rando } from './rando.js';
 
 export class Game {
     constructor(mapRadius = 12) {
@@ -124,24 +126,6 @@ export class Game {
         if (cost.materials) this.resources.materials -= cost.materials;
     }
 
-    // Random element from array
-    randomChoice(array) {
-        if (array.length === 0) return null;
-        return array[Math.floor(Math.random() * array.length)];
-    }
-
-    // Random integer between min and max (inclusive)
-    randomInt(min, max) {
-        return min + Math.floor(Math.random() * (max - min + 1));
-    }
-
-    // Gaussian random using Box-Muller transform (mean=0, stddev=1)
-    randomGaussian() {
-        const u1 = Math.random();
-        const u2 = Math.random();
-        return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-    }
-
     // Calculate combat damage with scaling and Gaussian randomization
     // Damage scales with attack relative to defense, randomized around expected value
     calculateDamage(attack, defense) {
@@ -153,7 +137,7 @@ export class Game {
 
         // Gaussian randomization: stddev = 25% of expected, min 1
         const stddev = Math.max(1, expectedDamage * 0.25);
-        const randomizedDamage = expectedDamage + this.randomGaussian() * stddev;
+        const randomizedDamage = expectedDamage + Rando.gaussian() * stddev;
 
         // Floor and ensure minimum 0
         return Math.max(0, Math.floor(randomizedDamage));
@@ -365,10 +349,8 @@ export class Game {
             const { strength, radius } = SETTLEMENT_INFLUENCE[settlement.tier];
 
             if (dist <= radius) {
-                // Gaussian falloff
-                const sigma = radius / 2;
-                const influence = strength * Math.exp(-(dist * dist) / (2 * sigma * sigma));
-                totalInfluence += influence;
+                // Gaussian falloff (sigma = radius/2)
+                totalInfluence += strength * gaussian(dist, radius / 2);
             }
         }
 
@@ -525,8 +507,8 @@ export class Game {
             result.killed = true;
 
             // Loot: 1-4 gold and 1-4 materials
-            const goldLoot = this.randomInt(1, 4);
-            const materialsLoot = this.randomInt(1, 4);
+            const goldLoot = Rando.int(1, 4);
+            const materialsLoot = Rando.int(1, 4);
             this.resources.gold += goldLoot;
             this.resources.materials += materialsLoot;
             result.loot = { gold: goldLoot, materials: materialsLoot };
@@ -823,7 +805,7 @@ export class Game {
         for (const unitType of attackOrder) {
             const targets = adjacentUnits.filter(u => u.type === unitType);
             if (targets.length > 0) {
-                const target = this.randomChoice(targets);
+                const target = Rando.choice(targets);
                 this.enemyAttack(enemy, { q: target.q, r: target.r, isUnit: true, unit: target });
                 return true;
             }
@@ -858,8 +840,8 @@ export class Game {
         hex.installation = null;
 
         // Create a danger point with random size 1-6
-        const dangerSize = this.randomInt(1, 6);
-        const initialCountdown = this.randomInt(1, this.getSpawnRate(dangerSize));
+        const dangerSize = Rando.int(1, 6);
+        const initialCountdown = Rando.int(1, this.getSpawnRate(dangerSize));
         hex.dangerPoint = {
             strength: dangerSize,
             turnsUntilSpawn: initialCountdown
@@ -903,7 +885,7 @@ export class Game {
     // Move enemy to a random valid hex
     moveEnemyRandom(enemy) {
         const validMoves = this.getValidEnemyMoves(enemy);
-        const randomMove = this.randomChoice(validMoves);
+        const randomMove = Rando.choice(validMoves);
         if (randomMove) {
             enemy.q = randomMove.q;
             enemy.r = randomMove.r;
@@ -988,7 +970,7 @@ export class Game {
         for (const settlement of this.settlements) {
             const baseGrowth = getSettlementGrowth(settlement.tier);
             // Gaussian multiplier: mean 1.0, stddev 0.33 (±33% at 1 stddev)
-            const gaussianMult = Math.max(0.1, 1 + this.randomGaussian() * 0.33);
+            const gaussianMult = Math.max(0.1, 1 + Rando.gaussian() * 0.33);
             // Decadence bonus: 25% increase at 100 decadence (growth through excess)
             const decadenceMult = 1 + (this.society.decadence / 100) * 0.25;
             const growth = Math.floor(baseGrowth * gaussianMult * decadenceMult);
@@ -1074,10 +1056,10 @@ export class Game {
             minDist = Math.min(minDist, dist);
 
             // Gaussian attraction (1 stddev at sigmaAttract hexes)
-            attraction += strength * Math.exp(-(dist * dist) / (2 * cfg.sigmaAttract * cfg.sigmaAttract));
+            attraction += strength * gaussian(dist, cfg.sigmaAttract);
 
             // Gaussian repulsion (1 stddev at sigmaRepel hexes)
-            repulsion += strength * cfg.repelStrength * Math.exp(-(dist * dist) / (2 * cfg.sigmaRepel * cfg.sigmaRepel));
+            repulsion += strength * cfg.repelStrength * gaussian(dist, cfg.sigmaRepel);
         }
 
         // Combine: attraction * (1 - repulsion), clamped to positive
@@ -1231,7 +1213,7 @@ export class Game {
             // Find smallest settlement (random if tie)
             const minTier = Math.min(...this.settlements.map(s => s.tier));
             const smallest = this.settlements.filter(s => s.tier === minTier);
-            const keeper = this.randomChoice(smallest);
+            const keeper = Rando.choice(smallest);
 
             // Convert other settlements to danger points
             for (const s of this.settlements) {
@@ -1243,7 +1225,7 @@ export class Game {
                     const dangerStrength = Math.floor(s.tier / 2) + 1;
                     const maxSpawnTime = this.getSpawnRate(dangerStrength);
                     // Randomize initial countdown so they don't all spawn together
-                    const initialCountdown = this.randomInt(1, maxSpawnTime);
+                    const initialCountdown = Rando.int(1, maxSpawnTime);
                     hex.dangerPoint = {
                         strength: dangerStrength,
                         turnsUntilSpawn: initialCountdown

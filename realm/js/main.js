@@ -13,6 +13,9 @@ import {
     formatCost
 } from './society.js';
 
+// Modal IDs in priority order for escape handling
+const MODAL_IDS = ['welcome-modal', 'confirm-modal', 'society-modal', 'era-modal'];
+
 class App {
     constructor() {
         this.game = new Game(12); // Map radius of 12
@@ -28,6 +31,29 @@ class App {
 
         // Start render loop for animations
         this.animate();
+    }
+
+    // Check if any modal is currently open
+    isModalOpen() {
+        return MODAL_IDS.some(id => !document.getElementById(id).classList.contains('hidden'));
+    }
+
+    // Close the topmost open modal, returns true if a modal was closed
+    closeTopModal() {
+        const hideActions = {
+            'welcome-modal': () => this.hideWelcomeModal(),
+            'confirm-modal': () => this.hideConfirmModal(),
+            'society-modal': () => this.hideSocietyModal(),
+            'era-modal': () => this.hideEraModal()
+        };
+
+        for (const id of MODAL_IDS) {
+            if (!document.getElementById(id).classList.contains('hidden')) {
+                hideActions[id]();
+                return true;
+            }
+        }
+        return false;
     }
 
     setupEventListeners() {
@@ -98,29 +124,13 @@ class App {
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 // Close any open modal, otherwise clear selection
-                const eraModal = document.getElementById('era-modal');
-                const confirmModal = document.getElementById('confirm-modal');
-                const societyModal = document.getElementById('society-modal');
-                const welcomeModal = document.getElementById('welcome-modal');
-                if (!welcomeModal.classList.contains('hidden')) {
-                    this.hideWelcomeModal();
-                } else if (!confirmModal.classList.contains('hidden')) {
-                    this.hideConfirmModal();
-                } else if (!societyModal.classList.contains('hidden')) {
-                    this.hideSocietyModal();
-                } else if (!eraModal.classList.contains('hidden')) {
-                    this.hideEraModal();
-                } else {
+                if (!this.closeTopModal()) {
                     this.game.clearSelection();
                     this.update();
                 }
             } else if (e.key === 'Enter' || e.key === ' ') {
-                // Don't end turn if modal is open
-                const eraModal = document.getElementById('era-modal');
-                const confirmModal = document.getElementById('confirm-modal');
-                const societyModal = document.getElementById('society-modal');
-                const welcomeModal = document.getElementById('welcome-modal');
-                if (eraModal.classList.contains('hidden') && confirmModal.classList.contains('hidden') && societyModal.classList.contains('hidden') && welcomeModal.classList.contains('hidden')) {
+                // Only end turn if no modal is open
+                if (!this.isModalOpen()) {
                     this.handleEndTurn();
                 }
             }

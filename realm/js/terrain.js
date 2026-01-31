@@ -2,14 +2,7 @@
 
 import { TERRAIN, RESOURCE_TYPE } from './config.js';
 import { hexKey, hexDistance, hexNeighbors } from './hex.js';
-
-// Fisher-Yates shuffle helper
-function shuffle(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-    }
-}
+import { Rando } from './rando.js';
 
 // Diamond-Square algorithm for heightmap generation
 function diamondSquare(size, roughness = 0.5) {
@@ -277,9 +270,9 @@ function placeResources(hexes, mapRadius, accessibleKeys) {
     }
 
     // Shuffle all arrays
-    shuffle(plains);
-    shuffle(hills);
-    shuffle(mountains);
+    Rando.shuffle(plains);
+    Rando.shuffle(hills);
+    Rando.shuffle(mountains);
 
     let plainsIdx = 0;
     let hillsIdx = 0;
@@ -300,7 +293,7 @@ function placeResources(hexes, mapRadius, accessibleKeys) {
         ...hills.slice(hillsIdx),
         ...mountains  // Gold can now spawn on accessible mountains
     ];
-    shuffle(goldCandidates);
+    Rando.shuffle(goldCandidates);
 
     for (let i = 0; i < GOLD_COUNT && i < goldCandidates.length; i++) {
         goldCandidates[i].resource = RESOURCE_TYPE.GOLD_DEPOSIT;
@@ -320,14 +313,14 @@ function distributeRandomly(total, parts) {
         remaining--;
     }
 
-    shuffle(result);
+    Rando.shuffle(result);
     return result;
 }
 
 // Place danger points on the map edges (only on accessible hexes)
 function placeDangerPoints(hexes, mapRadius, accessibleKeys) {
     // 3-6 danger points, sizes sum to 15
-    const dangerCount = 3 + Math.floor(Math.random() * 4); // 3-6
+    const dangerCount = Rando.int(3, 6);
     const sizes = distributeRandomly(15, dangerCount);
 
     const edgeHexes = [];
@@ -343,7 +336,7 @@ function placeDangerPoints(hexes, mapRadius, accessibleKeys) {
         }
     }
 
-    shuffle(edgeHexes);
+    Rando.shuffle(edgeHexes);
 
     // Place danger points with assigned sizes
     // Spawn rate proportional to size: larger = faster spawns
@@ -352,7 +345,7 @@ function placeDangerPoints(hexes, mapRadius, accessibleKeys) {
         const size = Math.min(6, sizes[i]); // Cap at 6
         const maxSpawnTime = spawnRates[size - 1] || 1;
         // Randomize initial countdown (1 to maxSpawnTime) so they don't all spawn together
-        const initialCountdown = 1 + Math.floor(Math.random() * maxSpawnTime);
+        const initialCountdown = Rando.int(1, maxSpawnTime);
         edgeHexes[i].dangerPoint = {
             strength: size,
             turnsUntilSpawn: initialCountdown

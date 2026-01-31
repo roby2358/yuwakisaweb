@@ -5,6 +5,8 @@
 // - costs: [gold, materials] - resources consumed
 // - effects: [corruption, unrest, decadence, overextension] - changes to society params
 
+import { Rando } from './rando.js';
+
 // Category 1: Trade one condition for another (no resource cost)
 export const TRADE_OPTIONS = [
     {
@@ -616,15 +618,6 @@ export function getCurrentImpacts(society) {
     return impacts;
 }
 
-// Shuffle an array in place using Fisher-Yates
-function shuffle(arr) {
-    for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr;
-}
-
 // Create a shuffled list of all options (called at turn start)
 export function createShuffledOptions() {
     const all = [
@@ -633,7 +626,7 @@ export function createShuffledOptions() {
         ...PUBLIC_WORKS_OPTIONS.map(o => ({ ...o, category: 'works' })),
         ...CASHIN_OPTIONS.map(o => ({ ...o, category: 'cashin' }))
     ];
-    return shuffle(all);
+    return Rando.shuffle(all);
 }
 
 // Get available options from pre-shuffled list (first 3 valid ones)
