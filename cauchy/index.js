@@ -318,6 +318,47 @@ document.addEventListener('DOMContentLoaded', () => {
     const densitySlider = document.getElementById('density-slider');
     const densityValue = document.getElementById('density-value');
     const positiveNegativeCheckbox = document.getElementById('positive-negative-checkbox');
+    const gradientColorsEl = document.getElementById('gradient-colors');
+    const copyColorsBtn = document.getElementById('copy-colors-btn');
+
+    function rgbToHex(r, g, b) {
+        const toHex = (c) => {
+            const hex = Math.round(c * 255).toString(16);
+            return hex.length === 1 ? '0' + hex : hex;
+        };
+        return '#' + toHex(r) + toHex(g) + toHex(b);
+    }
+
+    function updateGradientPanel(colors) {
+        if (!colors || colors.length === 0) {
+            gradientColorsEl.innerHTML = '';
+            return;
+        }
+
+        gradientColorsEl.innerHTML = colors.map(([r, g, b]) => {
+            const hex = rgbToHex(r, g, b);
+            return `<span class="color-swatch">
+                <span class="color-swatch-box" style="background-color: ${hex}"></span>
+                <span class="color-swatch-hex">${hex}</span>
+            </span>`;
+        }).join('');
+    }
+
+    function copyColorsToClipboard() {
+        if (!currentColors || currentColors.length === 0) return;
+
+        const hexCodes = currentColors.map(([r, g, b]) => rgbToHex(r, g, b)).join(' ');
+        navigator.clipboard.writeText(hexCodes).then(() => {
+            copyColorsBtn.textContent = 'Copied!';
+            copyColorsBtn.classList.add('copied');
+            setTimeout(() => {
+                copyColorsBtn.textContent = 'Copy';
+                copyColorsBtn.classList.remove('copied');
+            }, 1500);
+        });
+    }
+
+    copyColorsBtn.addEventListener('click', copyColorsToClipboard);
 
     function getCanvasSize() {
         const containerRect = container.getBoundingClientRect();
@@ -387,6 +428,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentColors = result.colors;
         currentScheme = scheme;
         logGenerationResult(result);
+        updateGradientPanel(currentColors);
     }
 
     function redrawWithScheme() {
@@ -406,6 +448,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentColors = colors;
         currentScheme = scheme;
         heatmap.renderField(currentField, scheme, colors);
+        updateGradientPanel(currentColors);
     }
 
     function getCanvasCoordinates(event) {

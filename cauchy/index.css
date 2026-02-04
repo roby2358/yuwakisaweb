@@ -173,3 +173,66 @@ h1 {
     color: #cccccc;
     text-align: center;
 }
+
+#gradient-panel {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    max-width: 720px;
+    margin: 1rem auto 0;
+    padding: 0.75rem 1rem;
+    background-color: #2a2a2a;
+    border-radius: 8px;
+    border: 1px solid #3a3a3a;
+}
+
+#gradient-colors {
+    flex: 1;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+    font-size: 0.85rem;
+}
+
+.color-swatch {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.color-swatch-box {
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+    border: 1px solid #4a4a4a;
+}
+
+.color-swatch-hex {
+    color: #b0b0b0;
+}
+
+#copy-colors-btn {
+    padding: 0.4rem 1rem;
+    background-color: #3a3a3a;
+    color: #e0e0e0;
+    border: 1px solid #4a4a4a;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+}
+
+#copy-colors-btn:hover {
+    background-color: #4a4a4a;
+}
+
+#copy-colors-btn:active {
+    background-color: #5a5a5a;
+}
+
+#copy-colors-btn.copied {
+    background-color: #2a7a3a;
+    border-color: #3a9a4a;
+}
