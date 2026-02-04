@@ -81,7 +81,7 @@ function renderIntro() {
     content.innerHTML = `
         <div class="intro">
             <p>${state.theme.intro}</p>
-            <button onclick="beginQuestions()">Begin</button>
+            <button class="btn btn-primary btn-lg" onclick="beginQuestions()">Begin</button>
         </div>
     `;
 }
@@ -97,7 +97,8 @@ function selectQuestions(theme) {
         const categoryQuestions = category.questions.map(q => ({
             text: q.text,
             positive: q.positive,
-            categoryPositive: category.positive
+            categoryPositive: category.positive,
+            categoryName: category.name
         }));
 
         const shuffled = shuffle([...categoryQuestions]);
@@ -167,11 +168,6 @@ function calculateScore() {
         const q = state.questions[i];
         const agreed = state.answers[i];
 
-        // Positive contribution when:
-        // - Agree with positive question in positive category
-        // - Agree with negative question in negative category
-        // - Disagree with negative question in positive category
-        // - Disagree with positive question in negative category
         const questionPolarity = q.positive === q.categoryPositive;
         const contributesPositively = agreed === questionPolarity;
 
@@ -183,15 +179,58 @@ function calculateScore() {
     return Math.round((points / state.questions.length) * 100);
 }
 
+function calculateCategoryScores() {
+    const categoryResults = {};
+
+    for (let i = 0; i < state.questions.length; i++) {
+        const q = state.questions[i];
+        const agreed = state.answers[i];
+        const categoryName = q.categoryName;
+
+        if (!categoryResults[categoryName]) {
+            categoryResults[categoryName] = { positive: 0, total: 0 };
+        }
+
+        categoryResults[categoryName].total++;
+
+        // Positive for category when answer matches question polarity
+        const positiveForCategory = agreed === q.positive;
+        if (positiveForCategory) {
+            categoryResults[categoryName].positive++;
+        }
+    }
+
+    const ratings = {};
+    for (const [name, data] of Object.entries(categoryResults)) {
+        ratings[name] = data.positive > data.total / 2 ? 'HIGH' : 'LOW';
+    }
+
+    return ratings;
+}
+
 function showResults() {
     const content = document.getElementById('content');
     const score = calculateScore();
+    const ratings = calculateCategoryScores();
+
+    const categoryOrder = state.theme.categories.map(c => c.name);
+    const ratingsHtml = categoryOrder
+        .filter(name => ratings[name])
+        .map(name => `
+            <div class="category-rating">
+                <span class="category-name">${name}</span>
+                <span class="rating ${ratings[name].toLowerCase()}">${ratings[name]}</span>
+            </div>
+        `).join('');
 
     content.innerHTML = `
         <div class="results">
             <h2>Your Score:</h2>
             <div class="score">${score}%</div>
-            <button onclick="window.location.href='?'">Take Another Survey</button>
+            <div class="category-ratings">
+                ${ratingsHtml}
+            </div>
+            <button class="btn btn-primary" onclick="window.location.href='?'">Take Another Survey</button>
         </div>
     `;
 }

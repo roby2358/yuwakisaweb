@@ -1,3 +1,48 @@
+/* ============================================
+   CSS Custom Properties
+   ============================================ */
+:root {
+    /* Colors */
+    --color-primary: #3182ce;
+    --color-primary-hover: #2b6cb0;
+    --color-primary-light: #ebf8ff;
+
+    --color-text: #333;
+    --color-text-muted: #718096;
+    --color-text-heading: #4a5568;
+    --color-text-dark: #2d3748;
+
+    --color-bg: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+    --color-surface: white;
+    --color-surface-alt: #f7fafc;
+    --color-border: #e2e8f0;
+    --color-border-light: #edf2f7;
+
+    --color-success: #276749;
+    --color-success-bg: #c6f6d5;
+    --color-danger: #c53030;
+    --color-danger-bg: #fed7d7;
+
+    /* Spacing */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --space-xl: 32px;
+
+    /* Border Radius */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+
+    /* Transitions */
+    --transition-fast: 0.2s ease;
+}
+
+/* ============================================
+   Reset & Base
+   ============================================ */
 * {
     box-sizing: border-box;
     margin: 0;
@@ -6,12 +51,15 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-    background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+    background: var(--color-bg);
     min-height: 100vh;
-    color: #333;
+    color: var(--color-text);
     line-height: 1.6;
 }
 
+/* ============================================
+   Layout
+   ============================================ */
 #app {
     max-width: 600px;
     margin: 0 auto;
@@ -20,114 +68,141 @@ body {
 
 header {
     text-align: center;
-    margin-bottom: 30px;
+    margin-bottom: var(--space-xl);
 }
 
 header h1 {
     font-size: 1.8rem;
     font-weight: 600;
-    color: #4a5568;
+    color: var(--color-text-heading);
 }
 
 main {
-    background: white;
-    border-radius: 12px;
-    padding: 30px;
+    background: var(--color-surface);
+    border-radius: var(--radius-xl);
+    padding: var(--space-xl);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
-/* Intro Page */
+/* ============================================
+   Buttons
+   ============================================ */
+.btn {
+    padding: 12px var(--space-lg);
+    font-size: 1rem;
+    border: none;
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.btn-primary {
+    background: var(--color-primary);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--color-primary-hover);
+}
+
+.btn-secondary {
+    background: var(--color-border-light);
+    color: var(--color-text-heading);
+}
+
+.btn-secondary:hover {
+    background: var(--color-border);
+}
+
+.btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.btn-lg {
+    padding: 14px 40px;
+    font-size: 1.1rem;
+}
+
+/* ============================================
+   Theme Selection
+   ============================================ */
+.theme-list h2 {
+    font-size: 1.2rem;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-md);
+    font-weight: 500;
+}
+
+.theme-list a {
+    display: block;
+    padding: var(--space-md);
+    margin: var(--space-sm) 0;
+    color: var(--color-primary);
+    text-decoration: none;
+    border-radius: var(--radius-lg);
+    transition: background var(--transition-fast);
+}
+
+.theme-list a:hover {
+    background: var(--color-primary-light);
+}
+
+/* ============================================
+   Intro Page
+   ============================================ */
 .intro {
     text-align: center;
 }
 
 .intro p {
     font-size: 1.1rem;
-    color: #4a5568;
+    color: var(--color-text-heading);
     line-height: 1.8;
-    margin-bottom: 30px;
+    margin-bottom: var(--space-xl);
 }
 
-.intro button {
-    padding: 14px 40px;
-    font-size: 1.1rem;
-    border: none;
-    border-radius: 8px;
-    background: #3182ce;
-    color: white;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.intro button:hover {
-    background: #2b6cb0;
-}
-
-/* Theme Selection */
-.theme-list {
-    list-style: none;
-}
-
-.theme-list h2 {
-    font-size: 1.2rem;
-    color: #666;
-    margin-bottom: 15px;
-    font-weight: 500;
-}
-
-.theme-list a {
-    display: block;
-    padding: 12px 16px;
-    margin: 8px 0;
-    color: #3182ce;
-    text-decoration: none;
-    border-radius: 8px;
-    transition: background 0.2s;
-}
-
-.theme-list a:hover {
-    background: #ebf8ff;
-}
-
-/* Question View */
+/* ============================================
+   Question View
+   ============================================ */
 .progress {
     font-size: 0.9rem;
-    color: #718096;
+    color: var(--color-text-muted);
     margin-bottom: 20px;
 }
 
 .question-text {
     font-size: 1.3rem;
-    color: #2d3748;
-    margin-bottom: 30px;
+    color: var(--color-text-dark);
+    margin-bottom: var(--space-xl);
     font-style: italic;
 }
 
 .answer-buttons {
     display: flex;
-    gap: 15px;
-    margin-bottom: 25px;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
 }
 
 .answer-buttons button {
     flex: 1;
-    padding: 14px 24px;
+    padding: 14px var(--space-lg);
     font-size: 1rem;
-    border: 2px solid #e2e8f0;
-    border-radius: 8px;
-    background: white;
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all var(--transition-fast);
 }
 
 .answer-buttons button:hover {
-    border-color: #3182ce;
-    background: #ebf8ff;
+    border-color: var(--color-primary);
+    background: var(--color-primary-light);
 }
 
 .answer-buttons button.selected {
-    border-color: #3182ce;
-    background: #3182ce;
+    border-color: var(--color-primary);
+    background: var(--color-primary);
     color: white;
 }
 
@@ -141,70 +216,93 @@ main {
     padding: 10px 20px;
     font-size: 0.95rem;
     border: none;
-    border-radius: 6px;
+    border-radius: var(--radius-md);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all var(--transition-fast);
+}
+
+.navigation button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 
 .nav-back {
-    background: #edf2f7;
-    color: #4a5568;
+    background: var(--color-border-light);
+    color: var(--color-text-heading);
 }
 
-.nav-back:hover {
-    background: #e2e8f0;
-}
-
-.nav-back:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
+.nav-back:hover:not(:disabled) {
+    background: var(--color-border);
 }
 
 .nav-next {
-    background: #3182ce;
+    background: var(--color-primary);
     color: white;
 }
 
-.nav-next:hover {
-    background: #2b6cb0;
+.nav-next:hover:not(:disabled) {
+    background: var(--color-primary-hover);
 }
 
-.nav-next:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
-
-/* Results View */
+/* ============================================
+   Results View
+   ============================================ */
 .results {
     text-align: center;
+}
+
+.results h2 {
+    font-size: 1.2rem;
+    color: var(--color-text-muted);
+    font-weight: 500;
+    margin-bottom: var(--space-sm);
 }
 
 .score {
     font-size: 3rem;
     font-weight: 700;
-    color: #3182ce;
-    margin: 20px 0;
-}
-
-.results h2 {
-    font-size: 1.2rem;
-    color: #666;
-    font-weight: 500;
-    margin-bottom: 10px;
+    color: var(--color-primary);
+    margin: var(--space-md) 0 var(--space-lg);
 }
 
 .results button {
-    margin-top: 30px;
-    padding: 12px 24px;
-    font-size: 1rem;
-    border: none;
-    border-radius: 8px;
-    background: #3182ce;
-    color: white;
-    cursor: pointer;
-    transition: background 0.2s;
+    margin-top: var(--space-xl);
 }
 
-.results button:hover {
-    background: #2b6cb0;
+/* Category Ratings */
+.category-ratings {
+    margin: 20px 0;
+    text-align: left;
+}
+
+.category-rating {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-md);
+    margin: var(--space-sm) 0;
+    background: var(--color-surface-alt);
+    border-radius: var(--radius-lg);
+}
+
+.category-name {
+    font-weight: 500;
+    color: var(--color-text-dark);
+}
+
+.rating {
+    font-weight: 700;
+    font-size: 0.9rem;
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-sm);
+}
+
+.rating.high {
+    background: var(--color-success-bg);
+    color: var(--color-success);
+}
+
+.rating.low {
+    background: var(--color-danger-bg);
+    color: var(--color-danger);
 }
