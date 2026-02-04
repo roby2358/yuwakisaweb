@@ -1,5 +1,6 @@
 const THEMES = {
-    halloween_fun: halloweenFunTheme
+    halloween_fun: halloweenFunTheme,
+    tescreal: tescreal
 };
 
 let state = {
@@ -45,6 +46,21 @@ function startSurvey(themeKey) {
     state.currentIndex = 0;
 
     document.getElementById('header-title').textContent = theme.name;
+    renderIntro();
+}
+
+function renderIntro() {
+    const content = document.getElementById('content');
+
+    content.innerHTML = `
+        <div class="intro">
+            <p>${state.theme.intro}</p>
+            <button onclick="beginQuestions()">Begin</button>
+        </div>
+    `;
+}
+
+function beginQuestions() {
     renderQuestion();
 }
 

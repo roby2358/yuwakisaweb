@@ -1,5 +1,6 @@
 const halloweenFunTheme = {
     name: "Halloween Fun",
+    intro: "How much do you embrace the spirit of Halloween? This survey explores your feelings about spooky creatures, scary entertainment, and festive frights. Answer honestly and discover your inner ghoul.",
     questionsPerCategory: 3,
     categories: [
         {

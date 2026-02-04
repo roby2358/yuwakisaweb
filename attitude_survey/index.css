@@ -36,6 +36,33 @@ main {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
+/* Intro Page */
+.intro {
+    text-align: center;
+}
+
+.intro p {
+    font-size: 1.1rem;
+    color: #4a5568;
+    line-height: 1.8;
+    margin-bottom: 30px;
+}
+
+.intro button {
+    padding: 14px 40px;
+    font-size: 1.1rem;
+    border: none;
+    border-radius: 8px;
+    background: #3182ce;
+    color: white;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.intro button:hover {
+    background: #2b6cb0;
+}
+
 /* Theme Selection */
 .theme-list {
     list-style: none;

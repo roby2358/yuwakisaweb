@@ -24,6 +24,21 @@ Present users with agree/disagree questions organized by categories. Questions a
 +-----------------------------------------------+
 ```
 
+### Intro View
+
+```
++-----------------------------------------------+
+|  [Theme Name]                                 |
++-----------------------------------------------+
+|                                               |
+|  [Introductory paragraph describing           |
+|   the theme and what it measures]             |
+|                                               |
+|  [Begin]                                      |
+|                                               |
++-----------------------------------------------+
+```
+
 ### Question View
 
 ```
@@ -68,6 +83,7 @@ Present users with agree/disagree questions organized by categories. Questions a
 ### Survey Structure
 
 - Each theme MUST be defined in a separate JavaScript file
+- A theme MUST include an introductory paragraph describing the survey
 - A theme MUST contain a list of categories
 - A theme MUST specify the number of questions to select per category
 - The questions-per-category count MUST be the same for all categories within a theme
@@ -82,6 +98,12 @@ Present users with agree/disagree questions organized by categories. Questions a
 - The application MUST shuffle all selected questions together after selection
 - Question selection and shuffling MUST occur when the theme is selected
 - A page reload MUST re-randomize the question selection and order
+
+### Intro Presentation
+
+- The application MUST display an intro page before the first question
+- The intro page MUST display the theme's introductory paragraph
+- The intro page MUST include a button to begin the survey
 
 ### Question Presentation
 
@@ -137,7 +159,7 @@ A question contributes positively to the score when the user's agreement aligns 
 
 ### Theme File Structure
 
-Each theme file should export the theme name, categories with their polarities, and questions with their polarities. The exact structure is left to implementation.
+Each theme file should export the theme name, introductory paragraph, categories with their polarities, and questions with their polarities. The exact structure is left to implementation.
 
 ## Future Considerations
 
