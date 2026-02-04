@@ -25,7 +25,8 @@ SOFTWARE.
 const THEMES = {
     halloween_fun: halloweenFunTheme,
     tescreal: tescreal,
-    wirehead_poaster: wireheadPoaster
+    wirehead_poaster: wireheadPoaster,
+    secular_religionist: secularReligionist
 };
 
 let state = {

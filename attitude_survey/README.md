@@ -9,6 +9,7 @@ Open `index.html` in a browser, or link directly to a theme:
 - `?theme=halloween_fun` - Halloween Fun
 - `?theme=tescreal` - TESCREAL
 - `?theme=wirehead_poaster` - Wirehead Bluesky Poaster
+- `?theme=secular_religionist` - Secular Religionist
 
 ## Adding Themes
 
