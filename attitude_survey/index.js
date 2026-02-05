@@ -33,7 +33,8 @@ let state = {
     theme: null,
     questions: [],
     answers: [],
-    currentIndex: 0
+    currentIndex: 0,
+    surveyLength: 'short'
 };
 
 function init() {
@@ -67,9 +68,7 @@ function showThemeSelection() {
 function startSurvey(themeKey) {
     const theme = THEMES[themeKey];
     state.theme = theme;
-    state.questions = selectQuestions(theme);
-    state.answers = new Array(state.questions.length).fill(null);
-    state.currentIndex = 0;
+    state.surveyLength = 'short';
 
     document.getElementById('header-title').textContent = theme.name;
     renderIntro();
@@ -77,21 +76,43 @@ function startSurvey(themeKey) {
 
 function renderIntro() {
     const content = document.getElementById('content');
+    const shortCount = state.theme.questionsPerCategory * state.theme.categories.length;
+    const longCount = (state.theme.questionsPerCategory + 2) * state.theme.categories.length;
 
     content.innerHTML = `
         <div class="intro">
             <p>${state.theme.intro}</p>
+            <div class="survey-length-options">
+                <label class="length-option">
+                    <input type="radio" name="surveyLength" value="short" ${state.surveyLength === 'short' ? 'checked' : ''} onchange="setSurveyLength('short')">
+                    <span>Short (${shortCount} questions)</span>
+                </label>
+                <label class="length-option">
+                    <input type="radio" name="surveyLength" value="long" ${state.surveyLength === 'long' ? 'checked' : ''} onchange="setSurveyLength('long')">
+                    <span>Long (${longCount} questions)</span>
+                </label>
+            </div>
             <button class="btn btn-primary btn-lg" onclick="beginQuestions()">Begin</button>
         </div>
     `;
 }
 
+function setSurveyLength(length) {
+    state.surveyLength = length;
+}
+
 function beginQuestions() {
+    state.questions = selectQuestions(state.theme);
+    state.answers = new Array(state.questions.length).fill(null);
+    state.currentIndex = 0;
     renderQuestion();
 }
 
 function selectQuestions(theme) {
     const selected = [];
+    const questionsPerCategory = state.surveyLength === 'long'
+        ? theme.questionsPerCategory + 2
+        : theme.questionsPerCategory;
 
     for (const category of theme.categories) {
         const categoryQuestions = category.questions.map(q => ({
@@ -102,7 +123,7 @@ function selectQuestions(theme) {
         }));
 
         const shuffled = shuffle([...categoryQuestions]);
-        const picked = shuffled.slice(0, theme.questionsPerCategory);
+        const picked = shuffled.slice(0, questionsPerCategory);
         selected.push(...picked);
     }
 

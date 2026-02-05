@@ -162,6 +162,34 @@ main {
     margin-bottom: var(--space-xl);
 }
 
+.survey-length-options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-lg);
+    text-align: left;
+    max-width: 250px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.length-option {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-xs) 0;
+    cursor: pointer;
+}
+
+.length-option input[type="radio"] {
+    cursor: pointer;
+}
+
+.length-option span {
+    font-size: 0.95rem;
+    color: var(--color-text-muted);
+}
+
 /* ============================================
    Question View
    ============================================ */

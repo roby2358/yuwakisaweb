@@ -34,6 +34,9 @@ Present users with agree/disagree questions organized by categories. Questions a
 |  [Introductory paragraph describing           |
 |   the theme and what it measures]             |
 |                                               |
+|  ○ Short (X questions)                        |
+|  ○ Long (X questions)                         |
+|                                               |
 |  [Begin]                                      |
 |                                               |
 +-----------------------------------------------+
@@ -103,6 +106,11 @@ Present users with agree/disagree questions organized by categories. Questions a
 
 - The application MUST display an intro page before the first question
 - The intro page MUST display the theme's introductory paragraph
+- The intro page MUST display survey length options (Short/Long)
+- Short length MUST use the theme's default questionsPerCategory value
+- Long length MUST add 2 additional questions per category
+- The intro page MUST display the total number of questions for each length option
+- Short length MUST be selected by default
 - The intro page MUST include a button to begin the survey
 
 ### Question Presentation
