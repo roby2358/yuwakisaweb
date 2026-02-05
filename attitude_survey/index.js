@@ -23,10 +23,12 @@ SOFTWARE.
 */
 
 const THEMES = {
+    claude_v_gpt: claudeVsGpt,
     halloween_fun: halloweenFunTheme,
+    halloween_vs_christmas: halloweenVsChristmas,
+    secular_religionist: secularReligionist,
     tescreal: tescreal,
-    wirehead_poaster: wireheadPoaster,
-    secular_religionist: secularReligionist
+    wirehead_poaster: wireheadPoaster
 };
 
 let state = {
@@ -182,6 +184,14 @@ function goNext() {
     }
 }
 
+function isOrMode(theme) {
+    return theme.options !== undefined;
+}
+
+function answersAlignWithQuestion(agreed, questionPositive) {
+    return agreed === questionPositive;
+}
+
 function calculateScore() {
     let points = 0;
 
@@ -200,7 +210,49 @@ function calculateScore() {
     return Math.round((points / state.questions.length) * 100);
 }
 
-function calculateCategoryScores() {
+function calculateOrScore() {
+    let optionACount = 0;
+    let optionBCount = 0;
+
+    for (let i = 0; i < state.questions.length; i++) {
+        const q = state.questions[i];
+        const agreed = state.answers[i];
+
+        // Positive question + agree = Option A
+        // Positive question + disagree = Option B
+        // Negative question + agree = Option B
+        // Negative question + disagree = Option A
+        if (answersAlignWithQuestion(agreed, q.positive)) {
+            optionACount++;
+        } else {
+            optionBCount++;
+        }
+    }
+
+    const total = state.questions.length;
+
+    // Determine winner from raw counts (not rounded percentages)
+    // A tie only occurs when counts are exactly equal
+    let winner = null;
+    if (optionACount > optionBCount) {
+        winner = 'a';
+    } else if (optionBCount > optionACount) {
+        winner = 'b';
+    }
+    // If optionACount === optionBCount, winner remains null (true tie)
+
+    // Calculate display percentages (integers)
+    const percentA = Math.round((optionACount / total) * 100);
+    const percentB = 100 - percentA;
+
+    return {
+        winner,  // 'a', 'b', or null (tie)
+        percentA,
+        percentB
+    };
+}
+
+function accumulateCategoryResults() {
     const categoryResults = {};
 
     for (let i = 0; i < state.questions.length; i++) {
@@ -209,40 +261,115 @@ function calculateCategoryScores() {
         const categoryName = q.categoryName;
 
         if (!categoryResults[categoryName]) {
-            categoryResults[categoryName] = { positive: 0, total: 0 };
+            categoryResults[categoryName] = { aligned: 0, total: 0 };
         }
 
         categoryResults[categoryName].total++;
 
-        // Positive for category when answer matches question polarity
-        const positiveForCategory = agreed === q.positive;
-        if (positiveForCategory) {
-            categoryResults[categoryName].positive++;
+        if (answersAlignWithQuestion(agreed, q.positive)) {
+            categoryResults[categoryName].aligned++;
         }
     }
 
-    const ratings = {};
+    return categoryResults;
+}
+
+function calculateOrCategoryScores() {
+    const categoryResults = accumulateCategoryResults();
+    const winners = {};
+
     for (const [name, data] of Object.entries(categoryResults)) {
-        ratings[name] = data.positive > data.total / 2 ? 'HIGH' : 'LOW';
+        winners[name] = data.aligned >= data.total / 2 ? 'a' : 'b';
+    }
+
+    return winners;
+}
+
+function calculateCategoryScores() {
+    const categoryResults = accumulateCategoryResults();
+    const ratings = {};
+
+    for (const [name, data] of Object.entries(categoryResults)) {
+        ratings[name] = data.aligned > data.total / 2 ? 'HIGH' : 'LOW';
     }
 
     return ratings;
 }
 
+function renderCategoryRatings(categoryScores, formatLabel) {
+    const categoryOrder = state.theme.categories.map(c => c.name);
+    return categoryOrder
+        .filter(name => categoryScores[name])
+        .map(name => {
+            const label = formatLabel(categoryScores[name]);
+            return `
+                <div class="category-rating">
+                    <span class="category-name">${name}</span>
+                    <span class="rating ${label.cssClass || ''}">${label.text}</span>
+                </div>
+            `;
+        }).join('');
+}
+
 function showResults() {
     const content = document.getElementById('content');
+
+    if (isOrMode(state.theme)) {
+        renderOrResults(content);
+    } else {
+        renderStandardResults(content);
+    }
+}
+
+function renderOrResults(content) {
+    const result = calculateOrScore();
+    const categoryWinners = calculateOrCategoryScores();
+    const options = state.theme.options;
+
+    const ratingsHtml = renderCategoryRatings(categoryWinners, (winner) => {
+        const optionName = winner === 'a' ? options.a : options.b;
+        return { text: optionName };
+    });
+
+    // Handle tie vs winner display
+    let headlineHtml;
+    let percentHtml;
+
+    if (result.winner === null) {
+        // Exact 50/50 tie
+        headlineHtml = `<div class="score cannot-decide">You cannot decide</div>`;
+        percentHtml = `<div class="score-detail">50%</div>`;
+    } else {
+        // Winner exists
+        const winnerName = result.winner === 'a' ? options.a : options.b;
+        const winnerPercent = result.winner === 'a' ? result.percentA : result.percentB;
+        headlineHtml = `
+            <h2>You lean toward:</h2>
+            <div class="score">${winnerName}</div>
+        `;
+        percentHtml = `<div class="score-detail">${winnerPercent}%</div>`;
+    }
+
+    content.innerHTML = `
+        <div class="results">
+            ${headlineHtml}
+            ${percentHtml}
+            <div class="category-ratings">
+                ${ratingsHtml}
+            </div>
+            <button class="btn btn-primary" onclick="window.location.href='?'">Take Another Survey</button>
+        </div>
+    `;
+}
+
+function renderStandardResults(content) {
     const score = calculateScore();
     const ratings = calculateCategoryScores();
 
-    const categoryOrder = state.theme.categories.map(c => c.name);
-    const ratingsHtml = categoryOrder
-        .filter(name => ratings[name])
-        .map(name => `
-            <div class="category-rating">
-                <span class="category-name">${name}</span>
-                <span class="rating ${ratings[name].toLowerCase()}">${ratings[name]}</span>
-            </div>
-        `).join('');
+    const ratingsHtml = renderCategoryRatings(ratings, (rating) => ({
+        text: rating,
+        cssClass: rating.toLowerCase()
+    }));
 
     content.innerHTML = `
         <div class="results">

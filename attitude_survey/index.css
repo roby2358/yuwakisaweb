@@ -63,7 +63,7 @@ body {
 #app {
     max-width: 600px;
     margin: 0 auto;
-    padding: 20px;
+    padding: var(--space-lg);
 }
 
 header {
@@ -114,7 +114,8 @@ main {
     background: var(--color-border);
 }
 
-.btn:disabled {
+.btn:disabled,
+.navigation button:disabled {
     opacity: 0.4;
     cursor: not-allowed;
 }
@@ -196,7 +197,7 @@ main {
 .progress {
     font-size: 0.9rem;
     color: var(--color-text-muted);
-    margin-bottom: 20px;
+    margin-bottom: var(--space-lg);
 }
 
 .question-text {
@@ -249,11 +250,6 @@ main {
     transition: all var(--transition-fast);
 }
 
-.navigation button:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
-
 .nav-back {
     background: var(--color-border-light);
     color: var(--color-text-heading);
@@ -293,13 +289,19 @@ main {
     margin: var(--space-md) 0 var(--space-lg);
 }
 
+.score-detail {
+    font-size: 1.5rem;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-lg);
+}
+
 .results button {
     margin-top: var(--space-xl);
 }
 
 /* Category Ratings */
 .category-ratings {
-    margin: 20px 0;
+    margin: var(--space-lg) 0;
     text-align: left;
 }
 
@@ -323,6 +325,8 @@ main {
     font-size: 0.9rem;
     padding: var(--space-xs) var(--space-md);
     border-radius: var(--radius-sm);
+    background: var(--color-surface-alt);
+    color: var(--color-text-dark);
 }
 
 .rating.high {
@@ -334,3 +338,4 @@ main {
     background: var(--color-danger-bg);
     color: var(--color-danger);
 }
+

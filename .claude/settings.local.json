@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep:*)",
+      "Bash(while [ ! -f /mnt/c/work/yuwakisaweb/attitude_survey/claude_v_gpt.js ])",
+      "Bash(do sleep 1)",
+      "Bash(done)"
+    ]
+  }
+}
