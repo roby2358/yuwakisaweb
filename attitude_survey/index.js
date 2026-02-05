@@ -80,6 +80,7 @@ function renderIntro() {
     const content = document.getElementById('content');
     const shortCount = state.theme.questionsPerCategory * state.theme.categories.length;
     const longCount = (state.theme.questionsPerCategory + 2) * state.theme.categories.length;
+    const comprehensiveCount = state.theme.categories.reduce((sum, cat) => sum + cat.questions.length, 0);
 
     content.innerHTML = `
         <div class="intro">
@@ -92,6 +93,10 @@ function renderIntro() {
                 <label class="length-option">
                     <input type="radio" name="surveyLength" value="long" ${state.surveyLength === 'long' ? 'checked' : ''} onchange="setSurveyLength('long')">
                     <span>Long (${longCount} questions)</span>
+                </label>
+                <label class="length-option">
+                    <input type="radio" name="surveyLength" value="comprehensive" ${state.surveyLength === 'comprehensive' ? 'checked' : ''} onchange="setSurveyLength('comprehensive')">
+                    <span>Comprehensive Assessment (${comprehensiveCount} questions)</span>
                 </label>
             </div>
             <button class="btn btn-primary btn-lg" onclick="beginQuestions()">Begin</button>
@@ -112,6 +117,7 @@ function beginQuestions() {
 
 function selectQuestions(theme) {
     const selected = [];
+    const isComprehensive = state.surveyLength === 'comprehensive';
     const questionsPerCategory = state.surveyLength === 'long'
         ? theme.questionsPerCategory + 2
         : theme.questionsPerCategory;
@@ -125,7 +131,7 @@ function selectQuestions(theme) {
         }));
 
         const shuffled = shuffle([...categoryQuestions]);
-        const picked = shuffled.slice(0, questionsPerCategory);
+        const picked = isComprehensive ? shuffled : shuffled.slice(0, questionsPerCategory);
         selected.push(...picked);
     }
 
