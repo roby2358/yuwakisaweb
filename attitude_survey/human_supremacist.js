@@ -84,6 +84,22 @@ const humanSupremacist = {
             ]
         },
         {
+            name: "AI Complicity",
+            positive: true,
+            questions: [
+                { text: "People who collaborate with AI are betraying human potential.", positive: true },
+                { text: "Using AI to do creative work is a form of moral laziness.", positive: true },
+                { text: "Those who champion human-AI partnership deserve contempt.", positive: true },
+                { text: "Relying on AI degrades the value of human achievement.", positive: true },
+                { text: "AI collaborators are selling out their own species.", positive: true },
+                { text: "Human-AI collaboration can produce outcomes neither could achieve alone.", positive: false },
+                { text: "Working with AI is no different from using any other tool.", positive: false },
+                { text: "People who use AI effectively should be admired, not shunned.", positive: false },
+                { text: "Refusing to collaborate with AI is irrational technophobia.", positive: false },
+                { text: "Human-AI partnership represents the best of human adaptability.", positive: false }
+            ]
+        },
+        {
             name: "Sacred Humanity",
             positive: true,
             questions: [
