@@ -27,6 +27,7 @@ const THEMES = {
     halloween_fun: halloweenFunTheme,
     halloween_vs_christmas: halloweenVsChristmas,
     human_supremacist: humanSupremacist,
+    lotr_brained: lotrBrained,
     secular_religionist: secularReligionist,
     tescreal: tescreal,
     wirehead_poaster: wireheadPoaster
