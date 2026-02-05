@@ -1,3 +1,6 @@
+// Feedback: "a couple of these end up being real inside baseball. i love that
+// it has two separate fedorovist questions though that rules"
+
 const tescreal = {
     name: "TESCREAL",
     intro: "TESCREAL is the bundle of ideologies shaping Silicon Valley's vision of the future: Transhumanism, Extropianism, Singularitarianism, Cosmism, Rationalism, Effective Altruism, and Longtermism. How aligned are you with this techno-optimist worldview? Let's find out.",
@@ -33,6 +36,22 @@ const tescreal = {
                 { text: "Growth for its own sake is dangerous.", positive: false },
                 { text: "We should accept natural limits gracefully.", positive: false },
                 { text: "The universe tends toward disorder and we should accept that.", positive: false }
+            ]
+        },
+        {
+            name: "Singularitarianism",
+            positive: true,
+            questions: [
+                { text: "Artificial general intelligence will be created within my lifetime.", positive: true },
+                { text: "The technological singularity is inevitable.", positive: true },
+                { text: "Machine intelligence will eventually surpass human intelligence.", positive: true },
+                { text: "An intelligence explosion could transform civilization overnight.", positive: true },
+                { text: "We should actively work to accelerate the development of superintelligence.", positive: true },
+                { text: "The singularity will be the most important event in human history.", positive: true },
+                { text: "Human-level AI is centuries away, if possible at all.", positive: false },
+                { text: "Intelligence has fundamental limits that cannot be transcended.", positive: false },
+                { text: "Predictions about superintelligence are more fiction than science.", positive: false },
+                { text: "Singularity predictions are unfounded technological speculation.", positive: false }
             ]
         },
         {
