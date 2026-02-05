@@ -26,6 +26,7 @@ const THEMES = {
     claude_v_gpt: claudeVsGpt,
     halloween_fun: halloweenFunTheme,
     halloween_vs_christmas: halloweenVsChristmas,
+    human_supremacist: humanSupremacist,
     secular_religionist: secularReligionist,
     tescreal: tescreal,
     wirehead_poaster: wireheadPoaster
