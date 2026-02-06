@@ -39,7 +39,8 @@ let state = {
     questions: [],
     answers: [],
     currentIndex: 0,
-    surveyLength: 'short'
+    surveyLength: 'short',
+    currentView: 'theme-selection'
 };
 
 function init() {
@@ -51,9 +52,13 @@ function init() {
     } else {
         showThemeSelection();
     }
+
+    // Setup global keyboard listener
+    document.addEventListener('keydown', handleGlobalKeyPress);
 }
 
 function showThemeSelection() {
+    state.currentView = 'theme-selection';
     document.getElementById('header-title').textContent = 'Attitude Surveys';
     const content = document.getElementById('content');
 
@@ -80,6 +85,7 @@ function startSurvey(themeKey) {
 }
 
 function renderIntro() {
+    state.currentView = 'intro';
     const content = document.getElementById('content');
     const shortCount = state.theme.questionsPerCategory * state.theme.categories.length;
     const longCount = (state.theme.questionsPerCategory + 2) * state.theme.categories.length;
@@ -103,6 +109,9 @@ function renderIntro() {
                 </label>
             </div>
             <button class="btn btn-primary btn-lg" onclick="beginQuestions()">Begin</button>
+            <p class="keyboard-hint">
+                <strong>Keyboard:</strong> <kbd>←</kbd> Disagree, <kbd>→</kbd> Agree (double-tap to confirm)
+            </p>
         </div>
     `;
 }
@@ -150,9 +159,10 @@ function shuffle(array) {
 }
 
 function renderQuestion() {
+    state.currentView = 'question';
     const content = document.getElementById('content');
     const question = state.questions[state.currentIndex];
-    const answer = state.answers[state.currentIndex];
+    const currentAnswer = state.answers[state.currentIndex];
     const total = state.questions.length;
     const current = state.currentIndex + 1;
 
@@ -160,17 +170,22 @@ function renderQuestion() {
         <div class="progress">Question ${current} of ${total}</div>
         <div class="question-text">"${question.text}"</div>
         <div class="answer-buttons">
-            <button class="agree ${answer === true ? 'selected' : ''}" onclick="answer(true)">Agree</button>
-            <button class="disagree ${answer === false ? 'selected' : ''}" onclick="answer(false)">Disagree</button>
+            <button class="disagree ${currentAnswer === false ? 'selected' : ''}" onclick="selectAnswer(false)" title="Press ← (left arrow)">Disagree</button>
+            <button class="agree ${currentAnswer === true ? 'selected' : ''}" onclick="selectAnswer(true)" title="Press → (right arrow)">Agree</button>
         </div>
         <div class="navigation">
-            <button class="nav-back" onclick="goBack()" ${state.currentIndex === 0 ? 'disabled' : ''}>Back</button>
-            <button class="nav-next" onclick="goNext()" ${answer === null ? 'disabled' : ''}>Next</button>
+            <button class="nav-back" onclick="goBack()" ${state.currentIndex === 0 ? 'disabled' : ''} title="Press Backspace">Back</button>
+            <button class="nav-next" onclick="goNext()" ${currentAnswer === null ? 'disabled' : ''} title="Press Space or Enter">Next</button>
+        </div>
+        <div class="keyboard-hints">
+            <small>
+                <kbd>←</kbd> Disagree • <kbd>→</kbd> Agree • Double-tap to confirm
+            </small>
         </div>
     `;
 }
 
-function answer(agree) {
+function selectAnswer(agree) {
     state.answers[state.currentIndex] = agree;
     renderQuestion();
 }
@@ -190,6 +205,90 @@ function goNext() {
         renderQuestion();
     } else {
         showResults();
+    }
+}
+
+function handleGlobalKeyPress(event) {
+    // Don't interfere with input elements
+    if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+        return;
+    }
+
+    const key = event.key;
+
+    // Theme selection view
+    if (state.currentView === 'theme-selection') {
+        return;
+    }
+
+    // Intro view
+    if (state.currentView === 'intro') {
+        if (key === 'Enter' || key === ' ') {
+            event.preventDefault();
+            beginQuestions();
+        }
+        return;
+    }
+
+    // Question view
+    if (state.currentView === 'question') {
+        const currentAnswer = state.answers[state.currentIndex];
+
+        // Left arrow: select Disagree, or confirm if already selected
+        if (key === 'ArrowLeft') {
+            event.preventDefault();
+            if (currentAnswer === false) {
+                goNext();
+            } else {
+                selectAnswer(false);
+            }
+            return;
+        }
+
+        // Right arrow: select Agree, or confirm if already selected
+        if (key === 'ArrowRight') {
+            event.preventDefault();
+            if (currentAnswer === true) {
+                goNext();
+            } else {
+                selectAnswer(true);
+            }
+            return;
+        }
+
+        // Spacebar: confirm current selection and move to next question
+        if (key === ' ') {
+            event.preventDefault();
+            if (currentAnswer !== null) {
+                goNext();
+            }
+            return;
+        }
+
+        // Enter: also confirms and moves to next
+        if (key === 'Enter') {
+            event.preventDefault();
+            if (currentAnswer !== null) {
+                goNext();
+            }
+            return;
+        }
+
+        // Backspace: go back to previous question
+        if (key === 'Backspace') {
+            event.preventDefault();
+            goBack();
+            return;
+        }
+    }
+
+    // Results view
+    if (state.currentView === 'results') {
+        if (key === 'Enter' || key === ' ') {
+            event.preventDefault();
+            window.location.href = '?';
+        }
+        return;
     }
 }
 
@@ -321,6 +420,7 @@ function renderCategoryRatings(categoryScores, formatLabel) {
 }
 
 function showResults() {
+    state.currentView = 'results';
     const content = document.getElementById('content');
 
     if (isOrMode(state.theme)) {
@@ -367,6 +467,9 @@ function renderOrResults(content) {
                 ${ratingsHtml}
             </div>
             <button class="btn btn-primary" onclick="window.location.href='?'">Take Another Survey</button>
+            <p class="keyboard-hint">
+                Press <kbd>Enter</kbd> or <kbd>Space</kbd> to take another survey
+            </p>
         </div>
     `;
 }
@@ -388,6 +491,9 @@ function renderStandardResults(content) {
                 ${ratingsHtml}
             </div>
             <button class="btn btn-primary" onclick="window.location.href='?'">Take Another Survey</button>
+            <p class="keyboard-hint">
+                Press <kbd>Enter</kbd> or <kbd>Space</kbd> to take another survey
+            </p>
         </div>
     `;
 }
