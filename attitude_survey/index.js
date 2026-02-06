@@ -24,6 +24,7 @@ SOFTWARE.
 
 const THEMES = {
     claude_v_gpt: claudeVsGpt,
+    dune_brained: duneBrained,
     halloween_fun: halloweenFunTheme,
     halloween_vs_christmas: halloweenVsChristmas,
     human_supremacist: humanSupremacist,
