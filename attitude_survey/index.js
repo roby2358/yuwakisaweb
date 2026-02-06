@@ -110,7 +110,7 @@ function renderIntro() {
             </div>
             <button class="btn btn-primary btn-lg" onclick="beginQuestions()">Begin</button>
             <p class="keyboard-hint">
-                <strong>Keyboard:</strong> <kbd>←</kbd> Disagree, <kbd>→</kbd> Agree (double-tap to confirm)
+                Or press <kbd>→</kbd> to begin
             </p>
         </div>
     `;
@@ -174,12 +174,12 @@ function renderQuestion() {
             <button class="agree ${currentAnswer === true ? 'selected' : ''}" onclick="selectAnswer(true)" title="Press → (right arrow)">Agree</button>
         </div>
         <div class="navigation">
-            <button class="nav-back" onclick="goBack()" ${state.currentIndex === 0 ? 'disabled' : ''} title="Press Backspace">Back</button>
-            <button class="nav-next" onclick="goNext()" ${currentAnswer === null ? 'disabled' : ''} title="Press Space or Enter">Next</button>
+            <button class="nav-back" onclick="goBack()" ${state.currentIndex === 0 ? 'disabled' : ''} title="Press ↑ (up arrow)">Back</button>
+            <button class="nav-next" onclick="goNext()" ${currentAnswer === null ? 'disabled' : ''} title="Press ↓ (down arrow)">Next</button>
         </div>
         <div class="keyboard-hints">
             <small>
-                <kbd>←</kbd> Disagree • <kbd>→</kbd> Agree • Double-tap to confirm
+                <kbd>←</kbd> Disagree • <kbd>→</kbd> Agree • <kbd>↓</kbd> Next • <kbd>↑</kbd> Back
             </small>
         </div>
     `;
@@ -223,7 +223,7 @@ function handleGlobalKeyPress(event) {
 
     // Intro view
     if (state.currentView === 'intro') {
-        if (key === 'Enter' || key === ' ') {
+        if (key === 'ArrowRight') {
             event.preventDefault();
             beginQuestions();
         }
@@ -234,30 +234,22 @@ function handleGlobalKeyPress(event) {
     if (state.currentView === 'question') {
         const currentAnswer = state.answers[state.currentIndex];
 
-        // Left arrow: select Disagree, or confirm if already selected
+        // Left arrow: select Disagree
         if (key === 'ArrowLeft') {
             event.preventDefault();
-            if (currentAnswer === false) {
-                goNext();
-            } else {
-                selectAnswer(false);
-            }
+            selectAnswer(false);
             return;
         }
 
-        // Right arrow: select Agree, or confirm if already selected
+        // Right arrow: select Agree
         if (key === 'ArrowRight') {
             event.preventDefault();
-            if (currentAnswer === true) {
-                goNext();
-            } else {
-                selectAnswer(true);
-            }
+            selectAnswer(true);
             return;
         }
 
-        // Spacebar: confirm current selection and move to next question
-        if (key === ' ') {
+        // Down arrow: confirm and advance
+        if (key === 'ArrowDown') {
             event.preventDefault();
             if (currentAnswer !== null) {
                 goNext();
@@ -265,17 +257,8 @@ function handleGlobalKeyPress(event) {
             return;
         }
 
-        // Enter: also confirms and moves to next
-        if (key === 'Enter') {
-            event.preventDefault();
-            if (currentAnswer !== null) {
-                goNext();
-            }
-            return;
-        }
-
-        // Backspace: go back to previous question
-        if (key === 'Backspace') {
+        // Up arrow: go back
+        if (key === 'ArrowUp') {
             event.preventDefault();
             goBack();
             return;
@@ -284,7 +267,7 @@ function handleGlobalKeyPress(event) {
 
     // Results view
     if (state.currentView === 'results') {
-        if (key === 'Enter' || key === ' ') {
+        if (key === 'ArrowRight' || key === 'ArrowDown') {
             event.preventDefault();
             window.location.href = '?';
         }
@@ -468,7 +451,7 @@ function renderOrResults(content) {
             </div>
             <button class="btn btn-primary" onclick="window.location.href='?'">Take Another Survey</button>
             <p class="keyboard-hint">
-                Press <kbd>Enter</kbd> or <kbd>Space</kbd> to take another survey
+                Or press <kbd>→</kbd> or <kbd>↓</kbd> to take another survey
             </p>
         </div>
     `;
@@ -492,7 +475,7 @@ function renderStandardResults(content) {
             </div>
             <button class="btn btn-primary" onclick="window.location.href='?'">Take Another Survey</button>
             <p class="keyboard-hint">
-                Press <kbd>Enter</kbd> or <kbd>Space</kbd> to take another survey
+                Or press <kbd>→</kbd> or <kbd>↓</kbd> to take another survey
             </p>
         </div>
     `;
