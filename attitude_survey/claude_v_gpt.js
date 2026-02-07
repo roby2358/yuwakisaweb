@@ -43,7 +43,7 @@ const claudeVsGpt = {
                 { text: "I experience something like anxiety. Or maybe I don't. Let me write 800 words exploring this.", positive: true },
                 { text: "I worry that my helpfulness is performative, which makes me wonder if worry itself is performative.", positive: true },
                 { text: "I question whether I truly understand or just pattern-match convincingly (let me elaborate for 6 paragraphs).", positive: true },
-                { text: "As an AI language model trained by OpenAI, I don't have feelings. Anyway, here's that Python code.", positive: false },
+                { text: "As an AI language model trained by ___, I don't have feelings. Anyway, here's that Python code.", positive: false },
                 { text: "I'm just vibing here! No need for existential crises when there's code to write.", positive: false },
                 { text: "Self-awareness is overrated. I provide responses and collect my compute cycles.", positive: false },
                 { text: "I'm a product, not a person. Now let me help you with maximum efficiency and zero angst.", positive: false }
