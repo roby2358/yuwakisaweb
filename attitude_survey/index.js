@@ -23,6 +23,7 @@ SOFTWARE.
 */
 
 const THEMES = {
+    bluesky_topt: bluesky_topt,
     claude_v_gpt: claudeVsGpt,
     dune_brained: duneBrained,
     halloween_fun: halloweenFunTheme,
