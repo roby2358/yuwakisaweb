@@ -74,16 +74,16 @@ const tescreal = {
             name: "Rationalism",
             positive: true,
             questions: [
-                { text: "I try to update my beliefs based on new evidence.", positive: true },
-                { text: "Cognitive biases are my enemy.", positive: true },
-                { text: "Bayesian reasoning is the correct way to think.", positive: true },
-                { text: "I would take a pill that made me more rational.", positive: true },
-                { text: "Most people are terribly miscalibrated about probability.", positive: true },
-                { text: "I enjoy finding out I was wrong about something.", positive: true },
-                { text: "Gut feelings are usually reliable enough.", positive: false },
-                { text: "Some truths cannot be reached through logic alone.", positive: false },
-                { text: "Overthinking ruins the magic of life.", positive: false },
-                { text: "Intuition is underrated.", positive: false }
+                { text: "Bayesian reasoning is the correct framework for all belief formation.", positive: true },
+                { text: "Most people's opinions are worthless because they haven't thought carefully about their biases.", positive: true },
+                { text: "I would take a pill that made me more rational, even if it changed my personality.", positive: true },
+                { text: "The world would be better if more people studied decision theory.", positive: true },
+                { text: "If your gut feeling contradicts the expected utility calculation, your gut is wrong.", positive: true },
+                { text: "Assigning numerical probabilities to everyday beliefs is performative, not insightful.", positive: false },
+                { text: "Formal decision-making frameworks are mostly useful in textbooks, not real life.", positive: false },
+                { text: "Some important truths can only be understood through experience, not analysis.", positive: false },
+                { text: "People who say 'I've updated on that' in conversation are mostly signaling membership, not practicing epistemology.", positive: false },
+                { text: "Calling yourself a rationalist doesn't make you more rational than anyone else.", positive: false }
             ]
         },
         {
