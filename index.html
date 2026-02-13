@@ -1,106 +1,55 @@
-<!--
-MIT License
-
-Copyright (c) 2026 Rob Young
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
--->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Yuwakisa Experiments</title>
-  <style>
-body {
-  background-color: white;
-  font-family: Arial, sans-serif;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  margin: 0;
-  padding: 20px;
-}
-.container {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 40px;
-  max-width: 1200px;
-  width: 100%;
-}
-.column {
-  display: flex;
-  flex-direction: column;
-}
-h2 {
-  font-size: 28px;
-  margin-bottom: 20px;
-  color: #333;
-  text-align: center;
-}
-a {
-  font-size: 24px;
-  text-decoration: none;
-  color: white;
-  background-image: linear-gradient(45deg, #32CD32, #00BFFF);
-  padding: 12px 24px;
-  border-radius: 5px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-  display: block;
-  margin-bottom: 10px;
-  text-align: center;
-}
-
-a:hover {
-box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
-transform: translateY(-2px);
-}
-</style>
+  <title>Yuwakisa — Memory, Auth, and State for Intelligent Systems</title>
+  <meta name="description" content="Yuwakisa builds infrastructure for intelligent systems: distributed agent messaging, stateful MCP/HTTP servers with auth, and DOCMEM hierarchical memory management.">
+  <link rel="stylesheet" href="css/index.css">
 </head>
 <body>
-<div class="container">
-  <div class="column">
-    <h2>Experiments</h2>
-    <a href="agents_parliament/index.html">Agents Parliament</a>
-    <a href="markdown_is_a_lisp/index.html">Markdown is a LISP</a>
-    <a href="essence/index.html">Essence</a>
-    <a href="essencepack/index.html">Essence Pack</a>
-    <a href="cauchy/index.html">Cauchy Heat Map</a>
-  </div>
-  <div class="column">
-    <h2>Tools</h2>
-    <a href="k8songs/index.html">K-8 Songs</a>
-    <a href="markov/index.html">Markov</a>
-  </div>
-  <div class="column">
-    <h2>Games</h2>
-    <a href="attitude_survey/index.html">Attitude Survey</a>
-    <a href="closein/index.html">Closein</a>
-    <a href="wordcell/index.html">Word Cell</a>
-    <a href="brickout/index.html">Brickout</a>
-    <a href="greek_quiz/index.html">Greek Quiz</a>
-    <a href="jump/index.html">Jump</a>
-    <a href="hardcaptcha/index.html">HARD CAPTCHA</a>
-    <a href="realm/index.html">Realm</a>
-  </div>
+<div class="page">
+
+  <header class="header">
+    <img src="pics/logo_yuwakisa_daughters.png" alt="Yuwakisa" class="logo">
+    <h1 class="company-name">Yuwakisa</h1>
+    <p class="tagline">Models are brilliant. Systems forget. We build the memory, auth, and state that makes them intelligent.</p>
+  </header>
+
+  <section class="pillars">
+    <div class="pillar">
+      <h3>Distributed Agent Messaging</h3>
+      <p>A multi-agent orchestration framework out of the box. Agents communicate, coordinate, and share context without bespoke wiring.</p>
+    </div>
+    <div class="pillar">
+      <h3>Stateful MCP &amp; HTTP Servers</h3>
+      <p>Blended MCP and HTTP servers with built-in authentication and authorization. Real auth stories for real production systems.</p>
+    </div>
+    <div class="pillar">
+      <h3>DOCMEM</h3>
+      <p>Hierarchical memory management that gives LLMs persistent, structured context across sessions. The memory layer intelligent systems have been missing.</p>
+    </div>
+  </section>
+
+  <p class="secondary-tagline">The hard part of intelligent systems isn't the intelligence &mdash; it's building the state, the security, and the memory.</p>
+
+  <section class="consulting">
+    <h2>Consulting &amp; Services</h2>
+    <ul>
+      <li>AI integration consulting and platform development for teams bringing language models into production</li>
+      <li>OAuth/OIDC and API security expertise &mdash; increasingly critical as MCP servers demand real auth stories</li>
+      <li>Developer tooling that makes engineers more productive with AI</li>
+    </ul>
+  </section>
+
+  <footer class="footer">
+    <div class="contact">
+      <p>Rob Young &middot; Seattle, WA</p>
+      <p><a href="https://www.linkedin.com/in/rob-young-82b1132/">LinkedIn</a> &middot; <a href="https://www.linkedin.com/company/yuwakisa/about/">Yuwakisa on LinkedIn</a></p>
+    </div>
+    <a href="experiments.html" class="experiments-link">Experiments</a>
+  </footer>
+
 </div>
 </body>
 </html>

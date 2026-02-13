@@ -1,0 +1,196 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #fafafa;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  color: #222;
+  line-height: 1.6;
+}
+
+.page {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 60px 32px 48px;
+}
+
+/* Header */
+
+.header {
+  text-align: center;
+  margin-bottom: 56px;
+}
+
+.logo {
+  width: 140px;
+  height: auto;
+  margin-bottom: 24px;
+}
+
+.company-name {
+  font-size: 2.4rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-bottom: 12px;
+  color: #111;
+}
+
+.tagline {
+  font-size: 1.15rem;
+  color: #444;
+  max-width: 640px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
+/* Pillars */
+
+.pillars {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 28px;
+  margin-bottom: 56px;
+}
+
+.pillar {
+  background: white;
+  border-left: 4px solid transparent;
+  border-image: linear-gradient(180deg, #32CD32, #00BFFF) 1;
+  border-radius: 4px;
+  padding: 24px 28px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.pillar h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #111;
+}
+
+.pillar p {
+  font-size: 0.95rem;
+  color: #555;
+  line-height: 1.55;
+}
+
+/* Secondary tagline */
+
+.secondary-tagline {
+  text-align: center;
+  font-size: 1.05rem;
+  font-style: italic;
+  color: #555;
+  max-width: 640px;
+  margin: 0 auto 56px;
+  padding: 0 16px;
+}
+
+/* Consulting */
+
+.consulting {
+  margin-bottom: 56px;
+}
+
+.consulting h2 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #111;
+}
+
+.consulting ul {
+  list-style: none;
+  padding: 0;
+}
+
+.consulting li {
+  position: relative;
+  padding-left: 20px;
+  margin-bottom: 10px;
+  font-size: 0.95rem;
+  color: #444;
+}
+
+.consulting li::before {
+  content: '\2014';
+  position: absolute;
+  left: 0;
+  color: #32CD32;
+}
+
+/* Footer */
+
+.footer {
+  border-top: 1px solid #e0e0e0;
+  padding-top: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+
+.contact {
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.contact p {
+  margin-bottom: 4px;
+}
+
+.contact a {
+  color: #0077B5;
+  text-decoration: none;
+}
+
+.contact a:hover {
+  text-decoration: underline;
+}
+
+.experiments-link {
+  display: inline-block;
+  font-size: 0.9rem;
+  color: white;
+  background-image: linear-gradient(45deg, #32CD32, #00BFFF);
+  padding: 10px 20px;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.experiments-link:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.18);
+  transform: translateY(-1px);
+}
+
+/* Responsive */
+
+@media (max-width: 600px) {
+  .page {
+    padding: 40px 20px 32px;
+  }
+
+  .company-name {
+    font-size: 1.8rem;
+  }
+
+  .tagline {
+    font-size: 1rem;
+  }
+
+  .logo {
+    width: 110px;
+  }
+
+  .footer {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+}
