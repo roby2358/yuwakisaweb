@@ -29,8 +29,8 @@ Then open `http://localhost:8000` (or appropriate port) in a browser.
 
 ```
 js/
-├── main.js       # App entry, event handlers, modals
-├── game.js       # Core game state, settlement/unit/enemy logic, turn processing
+├── main.js       # App entry (App class), event handlers, modals
+├── game.js       # Core Game class: state, settlement/unit/enemy logic, turn processing
 ├── config.js     # All constants (terrain, units, settlements, eras, costs)
 ├── hex.js        # Hex coordinate math, A* pathfinding
 ├── terrain.js    # Diamond-square map generation, resource/danger placement
@@ -38,6 +38,7 @@ js/
 ├── ui.js         # DOM updates, action panel, info panel
 ├── production.js # Resource calculation with modifiers
 ├── society.js    # Society management actions and effects
+├── collapse.js   # Civilization collapse mechanics
 ├── rando.js      # Seeded random number generator
 └── utils.js      # Utility functions (gaussian distribution)
 ```

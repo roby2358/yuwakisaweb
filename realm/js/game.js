@@ -205,11 +205,11 @@ export class Game {
         return this.getSettlementDefense(hex.settlement) + (hex.installation?.defense || 0);
     }
 
-    // Generate random loot (gold and materials)
-    generateLoot(minAmount = 1, maxAmount = 4) {
+    // Generate random loot (gold and materials) using 2d6 per resource, with optional multiplier
+    generateLoot(multiplier = 1) {
         return {
-            gold: Rando.int(minAmount, maxAmount),
-            materials: Rando.int(minAmount, maxAmount)
+            gold: (Rando.int(1, 6) + Rando.int(1, 6)) * multiplier,
+            materials: (Rando.int(1, 6) + Rando.int(1, 6)) * multiplier
         };
     }
 
@@ -731,9 +731,13 @@ export class Game {
                 if (roll > hex.dangerPoint.strength) {
                     hex.dangerPoint.strength--;
 
-                    // If strength reaches 0, remove the danger point
+                    // If strength reaches 0, remove the danger point (10x reward)
+                    // Otherwise, 5x reward for reducing strength
                     if (hex.dangerPoint.strength <= 0) {
                         hex.dangerPoint = null;
+                        this.collectLoot(this.generateLoot(10));
+                    } else {
+                        this.collectLoot(this.generateLoot(5));
                     }
                 }
             }
