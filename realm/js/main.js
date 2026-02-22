@@ -26,6 +26,9 @@ class App {
         // Pending confirmation data
         this.pendingConfirmation = null;
 
+        // Combat reporting mode
+        this.reportingMode = false;
+
         this.setupEventListeners();
         this.update();
 
@@ -122,6 +125,11 @@ class App {
 
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
+            if (this.reportingMode) {
+                this.dismissCombatReport();
+                return;
+            }
+
             if (e.key === 'Escape') {
                 // Close any open modal, otherwise clear selection
                 if (!this.closeTopModal()) {
@@ -138,6 +146,11 @@ class App {
     }
 
     handleCanvasClick(e) {
+        if (this.reportingMode) {
+            this.dismissCombatReport();
+            return;
+        }
+
         const { q, r } = this.renderer.screenToHex(e.clientX, e.clientY);
         const clickedHex = this.game.hexes.get(hexKey(q, r));
 
@@ -259,6 +272,11 @@ class App {
     }
 
     handleEndTurn() {
+        if (this.reportingMode) {
+            this.dismissCombatReport();
+            return;
+        }
+
         const previousEra = this.game.era;
         this.game.endTurn();
 
@@ -272,6 +290,22 @@ class App {
             this.ui.showNotification('Your civilization has collapsed! Starting anew...', 5000);
         }
 
+        // Enter combat reporting mode if there were enemy attacks
+        if (this.game.combatReport.length > 0) {
+            this.reportingMode = true;
+            this.renderer.combatReport = this.game.combatReport;
+            document.getElementById('end-turn-btn').textContent = 'Continue';
+            this.update();
+            return;
+        }
+
+        this.update();
+    }
+
+    dismissCombatReport() {
+        this.reportingMode = false;
+        this.renderer.combatReport = null;
+        document.getElementById('end-turn-btn').textContent = 'End Turn';
         this.update();
     }
 

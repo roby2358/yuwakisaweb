@@ -156,6 +156,18 @@ Realm is a strategic management game where players guide a civilization through 
 - Enemies MUST engage player units and settlements in combat
 - The application SHOULD implement basic AI pathfinding for enemy movement
 
+### Combat Reporting
+
+- After end-of-turn processing, the application MUST display attack markers on every hex where an enemy attack occurred during that turn
+- Attack markers MUST be spiky, irregular "bang" shapes rendered in yellow
+- If the attack resulted in a friendly unit being killed, the marker MUST be rendered in red instead of yellow
+- The application MUST pre-generate 5 distinct bang shape variants and select randomly among them for each marker
+- While attack markers are displayed:
+  - The "End Turn" button MUST change its label to "Continue"
+  - Player interaction with the game MUST be suspended (no hex selection, unit movement, or other actions)
+- The markers MUST be cleared and normal play MUST resume when the player clicks anywhere on the screen or presses any key
+- If no enemy attacks occurred during the turn, the application MUST NOT pause for marker display and play MUST continue normally
+
 ## Non-Functional Requirements
 
 ### Technology

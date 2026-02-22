@@ -15,6 +15,12 @@ export class Renderer {
         // Map view mode: 'terrain' or 'population'
         this.mapMode = 'terrain';
 
+        // Combat report overlay (set from main.js during reporting mode)
+        this.combatReport = null;
+
+        // Pre-generate 5 bang shape variants as arrays of polar offsets
+        this.bangShapes = this.generateBangShapes();
+
         this.resize();
         window.addEventListener('resize', () => this.resize());
     }
@@ -104,6 +110,9 @@ export class Renderer {
 
         // Draw controlled territory overlay
         this.drawControlledOverlay();
+
+        // Draw combat report markers if active
+        this.drawCombatReport();
     }
 
     renderPopulationMap() {
@@ -467,6 +476,51 @@ export class Renderer {
             if (this.game.canAttack(unit, n.q, n.r)) {
                 this.drawHexHighlight(n.q, n.r, 'rgba(244, 67, 54, 0.3)', 'rgba(244, 67, 54, 0.8)');
             }
+        }
+    }
+
+    generateBangShapes() {
+        const shapes = [];
+        for (let s = 0; s < 5; s++) {
+            const points = [];
+            const numSpikes = 6 + (s % 3); // 6-8 spikes
+            for (let i = 0; i < numSpikes * 2; i++) {
+                const baseAngle = (i * Math.PI) / numSpikes;
+                const angle = baseAngle + (Math.sin(s * 7 + i * 3) * 0.15);
+                const isSpike = i % 2 === 0;
+                const baseR = isSpike ? HEX_SIZE * 0.45 : HEX_SIZE * 0.2;
+                const radius = baseR * (0.8 + Math.abs(Math.sin(s * 13 + i * 5)) * 0.4);
+                points.push({ angle, radius });
+            }
+            shapes.push(points);
+        }
+        return shapes;
+    }
+
+    drawCombatReport() {
+        if (!this.combatReport || this.combatReport.length === 0) return;
+
+        const ctx = this.ctx;
+        for (const entry of this.combatReport) {
+            const { x, y } = this.getHexCenter(entry.q, entry.r);
+            // Deterministic shape selection based on coordinates
+            const variant = Math.abs((entry.q * 7 + entry.r * 13) % 5);
+            const shape = this.bangShapes[variant];
+
+            ctx.beginPath();
+            for (let i = 0; i < shape.length; i++) {
+                const px = x + shape[i].radius * Math.cos(shape[i].angle);
+                const py = y + shape[i].radius * Math.sin(shape[i].angle);
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+
+            ctx.fillStyle = entry.unitKilled ? '#ff3333' : '#ffdd00';
+            ctx.fill();
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.stroke();
         }
     }
 

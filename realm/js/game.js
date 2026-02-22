@@ -78,6 +78,9 @@ export class Game {
         // Max settlement level (0-indexed, so 9 = level 10)
         this.maxSettlementLevel = 9;
 
+        // Combat report for end-of-turn enemy attacks
+        this.combatReport = [];
+
         // Initialize starting settlement
         this.initializeStart();
     }
@@ -649,6 +652,7 @@ export class Game {
 
     // Turn Processing
     endTurn() {
+        this.combatReport = [];
         this.refreshUnits();
         this.sortUnitsInHexes();
         this.processDangerPointOccupation();
@@ -843,6 +847,7 @@ export class Game {
 
     // Enemy attacks an undefended installation - both are destroyed, creates danger point
     enemyAttackInstallation(enemy, hex) {
+        this.combatReport.push({ q: hex.q, r: hex.r, unitKilled: false });
         hex.installation = null;
         this.createDangerPoint(hex, Rando.int(1, 6));
         this.removeEnemy(enemy);
@@ -913,7 +918,10 @@ export class Game {
             this.removeEnemy(enemy);
         }
 
-        if (unit.health <= 0) {
+        const unitKilled = unit.health <= 0;
+        this.combatReport.push({ q: target.q, r: target.r, unitKilled });
+
+        if (unitKilled) {
             this.removeUnit(unit);
             this.adjustSociety('unrest', 3);
         }
@@ -924,6 +932,7 @@ export class Game {
         const settlement = this.settlements.find(s => s.q === target.q && s.r === target.r);
         if (!settlement) return;
 
+        this.combatReport.push({ q: target.q, r: target.r, unitKilled: false });
         this.adjustSociety('unrest', 5);
 
         // Small chance to damage undefended settlement
