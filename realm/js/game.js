@@ -46,7 +46,9 @@ import { Collapse } from './collapse.js';
 export class Game {
     constructor(mapRadius = 12) {
         this.mapRadius = mapRadius;
-        this.hexes = generateTerrain(mapRadius);
+        const { hexes, accessibleKeys } = generateTerrain(mapRadius);
+        this.hexes = hexes;
+        this.accessibleKeys = accessibleKeys;
         this.turn = 1;
         this.era = ERA.BARBARIAN;
 
@@ -1065,6 +1067,7 @@ export class Game {
     calculateSpawnScore(hex) {
         if (hex.settlement || hex.dangerPoint || hex.resource) return 0;
         if (hex.terrain !== TERRAIN.PLAINS && hex.terrain !== TERRAIN.HILLS) return 0;
+        if (!this.accessibleKeys.has(hexKey(hex.q, hex.r))) return 0;
 
         const cfg = Game.SPAWN_CONFIG;
 

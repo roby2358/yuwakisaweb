@@ -167,7 +167,7 @@ export function generateTerrain(mapRadius) {
         placeDangerPoints(hexes, mapRadius, accessibleKeys);
     }
 
-    return hexes;
+    return { hexes, accessibleKeys };
 }
 
 // Internal version for terrain generation (called before resources/danger points)
