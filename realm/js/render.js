@@ -421,13 +421,27 @@ export class Renderer {
         const ctx = this.ctx;
         const { x, y } = this.getHexCenter(enemy.q, enemy.r);
 
-        const size = 8;
+        const sizeByType = {
+            [UNIT_TYPE.ENEMY_SMALL]: 5,
+            [UNIT_TYPE.ENEMY_MEDIUM]: 8,
+            [UNIT_TYPE.ENEMY_LARGE]: 11,
+            [UNIT_TYPE.ENEMY_MONSTER]: 11
+        };
+        const size = sizeByType[enemy.type] || 8;
 
-        // Inverted triangle: flat base at top, point at bottom
         ctx.beginPath();
-        ctx.moveTo(x - size, y - size);      // top left
-        ctx.lineTo(x + size, y - size);      // top right
-        ctx.lineTo(x, y + size);             // bottom point
+        if (enemy.type === UNIT_TYPE.ENEMY_MONSTER) {
+            // Vertical diamond (rhombus)
+            ctx.moveTo(x, y - size);          // top
+            ctx.lineTo(x + size * 0.7, y);    // right
+            ctx.lineTo(x, y + size);          // bottom
+            ctx.lineTo(x - size * 0.7, y);    // left
+        } else {
+            // Inverted triangle: flat base at top, point at bottom
+            ctx.moveTo(x - size, y - size);   // top left
+            ctx.lineTo(x + size, y - size);   // top right
+            ctx.lineTo(x, y + size);          // bottom point
+        }
         ctx.closePath();
 
         ctx.fillStyle = '#ff5252';
@@ -503,25 +517,48 @@ export class Renderer {
         const ctx = this.ctx;
         for (const entry of this.combatReport) {
             const { x, y } = this.getHexCenter(entry.q, entry.r);
-            // Deterministic shape selection based on coordinates
-            const variant = Math.abs((entry.q * 7 + entry.r * 13) % 5);
-            const shape = this.bangShapes[variant];
 
-            ctx.beginPath();
-            for (let i = 0; i < shape.length; i++) {
-                const px = x + shape[i].radius * Math.cos(shape[i].angle);
-                const py = y + shape[i].radius * Math.sin(shape[i].angle);
-                if (i === 0) ctx.moveTo(px, py);
-                else ctx.lineTo(px, py);
+            if (entry.type === 'monsterSpawn') {
+                this.drawExclamationMark(ctx, x, y, '#ffdd00');
+            } else if (entry.type === 'enemyKilled') {
+                this.drawBangShape(ctx, x, y, entry, '#ff3333');
+            } else {
+                // Standard attack: yellow for hit, red for unit kill
+                this.drawBangShape(ctx, x, y, entry, entry.unitKilled ? '#ff3333' : '#ffdd00');
             }
-            ctx.closePath();
-
-            ctx.fillStyle = entry.unitKilled ? '#ff3333' : '#ffdd00';
-            ctx.fill();
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
-            ctx.stroke();
         }
+    }
+
+    drawBangShape(ctx, x, y, entry, color) {
+        const variant = Math.abs((entry.q * 7 + entry.r * 13) % 5);
+        const shape = this.bangShapes[variant];
+
+        ctx.beginPath();
+        for (let i = 0; i < shape.length; i++) {
+            const px = x + shape[i].radius * Math.cos(shape[i].angle);
+            const py = y + shape[i].radius * Math.sin(shape[i].angle);
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+
+    drawExclamationMark(ctx, x, y, color) {
+        const size = 14;
+        ctx.font = `bold ${size * 2}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 3;
+        ctx.strokeText('!', x, y);
+        ctx.fillStyle = color;
+        ctx.fillText('!', x, y);
     }
 
     // Convert screen coordinates to hex

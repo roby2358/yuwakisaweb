@@ -30,7 +30,7 @@ import {
     SETTLEMENT_UPGRADE_COST, SETTLEMENT_UPGRADE_LEVELS,
     SETTLEMENT_POPULATION, SETTLEMENT_GROWTH_THRESHOLD, getSettlementGrowth,
     getSettlementFoundCost,
-    UNIT_TYPE, UNIT_STATS,
+    UNIT_TYPE, UNIT_STATS, ENEMY_SPAWN_WEIGHTS,
     INSTALLATION_TYPE, INSTALLATION_STATS,
     ERA, ERA_THRESHOLDS,
     STARTING_RESOURCES
@@ -661,6 +661,7 @@ export class Game {
         this.processProduction();
         this.processSettlementGrowth();
         this.processSettlementSpawning();
+        this.processMonsterSpawn();
         this.updateSocietyParams();
         this.checkEraTransition();
         this.checkCollapse();
@@ -762,14 +763,18 @@ export class Game {
                 // Spawn 1 enemy on a random adjacent hex (strength affects rate, not count)
                 if (validSpawns.length > 0) {
                     const spawnHex = validSpawns[Math.floor(Math.random() * validSpawns.length)];
+                    const enemyType = this.randomEnemyType();
+                    const stats = UNIT_STATS[enemyType];
                     this.enemies.push({
                         id: Date.now() + Math.random(),
                         q: spawnHex.q,
                         r: spawnHex.r,
-                        attack: 5,
-                        defense: 1,
-                        health: 8,
-                        maxHealth: 8
+                        type: enemyType,
+                        purpose: this.randomEnemyPurpose(),
+                        attack: stats.attack,
+                        defense: stats.defense,
+                        health: stats.health,
+                        maxHealth: stats.health
                     });
                 }
 
@@ -778,25 +783,35 @@ export class Game {
         }
     }
 
+    randomEnemyType() {
+        let roll = Math.random();
+        for (const { type, weight } of ENEMY_SPAWN_WEIGHTS) {
+            roll -= weight;
+            if (roll <= 0) return type;
+        }
+        return ENEMY_SPAWN_WEIGHTS[ENEMY_SPAWN_WEIGHTS.length - 1].type;
+    }
+
+    randomEnemyPurpose() {
+        const roll = Math.random();
+        if (roll < 0.5) return 'random';
+        if (roll < 0.8) return 'resource';
+        return 'settlement';
+    }
+
     processEnemyTurn() {
         for (const enemy of this.enemies) {
             // First, attack any adjacent targets
             if (this.tryEnemyAttack(enemy)) continue;
 
-            // Movement: always move 1 space
-            // 1/3 toward resource, 1/3 toward settlement, 1/3 random
-            const roll = Math.random();
-
-            if (roll < 1/3) {
-                // Move toward nearest resource
+            // Movement: always move 1 space, direction based on purpose
+            if (enemy.purpose === 'resource') {
                 const target = this.findNearest(enemy.q, enemy.r, hex => hex.resource);
                 this.moveEnemyToward(enemy, target);
-            } else if (roll < 2/3) {
-                // Move toward nearest settlement
+            } else if (enemy.purpose === 'settlement') {
                 const target = this.findNearestSettlement(enemy.q, enemy.r);
                 this.moveEnemyToward(enemy, target);
             } else {
-                // Random movement
                 this.moveEnemyRandom(enemy);
             }
         }
@@ -915,6 +930,7 @@ export class Game {
         enemy.health -= counterDamage;
 
         if (enemy.health <= 0) {
+            this.combatReport.push({ q: enemy.q, r: enemy.r, type: 'enemyKilled' });
             this.removeEnemy(enemy);
         }
 
@@ -1146,6 +1162,48 @@ export class Game {
                 this.society.overextension *= 1.25;
                 this.society.overextension = Math.min(100, this.society.overextension);
 
+                break;
+            }
+        }
+    }
+
+    processMonsterSpawn() {
+        // Sum current danger point strengths
+        let totalStrength = 0;
+        for (const [key, hex] of this.hexes) {
+            if (hex.dangerPoint) totalStrength += hex.dangerPoint.strength;
+        }
+
+        // Probability scales with destroyed danger and decadence
+        const chance = (15 - totalStrength) * 0.001 * (this.society.decadence / 30);
+        if (chance <= 0 || Math.random() >= chance) return;
+
+        // Use same weighted hex selection as settlement spawning
+        const candidates = [];
+        for (const [key, hex] of this.hexes) {
+            const score = this.calculateSpawnScore(hex);
+            if (score > 0) candidates.push({ hex, score });
+        }
+        if (candidates.length === 0) return;
+
+        const totalWeight = candidates.reduce((sum, c) => sum + c.score, 0);
+        let roll = Math.random() * totalWeight;
+        for (const c of candidates) {
+            roll -= c.score;
+            if (roll <= 0) {
+                const stats = UNIT_STATS[UNIT_TYPE.ENEMY_MONSTER];
+                this.enemies.push({
+                    id: Date.now() + Math.random(),
+                    q: c.hex.q,
+                    r: c.hex.r,
+                    type: UNIT_TYPE.ENEMY_MONSTER,
+                    purpose: this.randomEnemyPurpose(),
+                    attack: stats.attack,
+                    defense: stats.defense,
+                    health: stats.health,
+                    maxHealth: stats.health
+                });
+                this.combatReport.push({ q: c.hex.q, r: c.hex.r, type: 'monsterSpawn' });
                 break;
             }
         }

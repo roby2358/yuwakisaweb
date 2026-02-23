@@ -192,14 +192,15 @@ Killing an enemy grants loot (2d6 per resource):
 
 ### Combat Reporting
 
-After end-of-turn enemy attacks, the game pauses to display visual feedback:
+After end-of-turn processing, the game pauses to display visual feedback if any notable events occurred:
 
 - **Yellow bang markers** appear on hexes where enemies attacked (units, settlements, or installations)
-- **Red bang markers** appear on hexes where a friendly unit was killed
+- **Red bang markers** appear on hexes where a friendly unit was killed or an enemy was killed by counter-attack
+- **Yellow exclamation marks** appear on hexes where a monster spawned
 - The "End Turn" button changes to "Continue"
 - All game interactions are blocked during this display
 - Clicking anywhere or pressing any key dismisses the markers and resumes play
-- Turns with no enemy attacks proceed without pausing
+- Turns with no events proceed without pausing
 
 ---
 
@@ -480,12 +481,36 @@ Valid spawn hexes:
 - No other enemies present
 - No friendly units, settlements, or installations
 
-### Enemy Stats
+### Enemy Types
 
-All spawned enemies have identical stats:
-- Attack: 5
-- Defense: 1
-- Health: 8
+Enemies spawn in four size categories with different stats:
+
+| Type    | Attack | Defense | Speed | Health | Spawn Frequency |
+|---------|--------|---------|-------|--------|-----------------|
+| Small   | 2      | 1       | 2     | 4      | 20%             |
+| Medium  | 4      | 1       | 1     | 6      | 30%             |
+| Large   | 5      | 1       | 1     | 8      | 40%             |
+| Monster | 6      | 3       | 1     | 12     | 10%             |
+
+### Monster Spawning
+
+In addition to danger point spawns, monsters can appear near settlements:
+- **Probability per turn:** `(15 - totalDangerStrength) × 0.001 × (decadence / 30)`
+- At full danger strength (15), probability is 0%
+- Uses the same weighted hex selection as settlement spawning
+- Triggered by weakening danger points and rising decadence
+
+### Enemy Purpose
+
+Each enemy is assigned a permanent purpose at spawn that determines its movement behavior:
+
+| Purpose    | Frequency | Movement                    |
+|------------|----------|-----------------------------|
+| Random     | 50%      | Wander randomly             |
+| Resource   | 30%      | Move toward nearest resource |
+| Settlement | 20%      | Move toward nearest settlement |
+
+The purpose is fixed for the unit's lifetime and does not change.
 
 ### Enemy AI Behavior
 
@@ -499,12 +524,7 @@ Each turn, enemies act in this order:
 
 **2. Movement (if no attack):**
 
-Enemies always move 1 space per turn:
-| Roll | Action |
-|------|--------|
-| 0-33% | Move toward nearest resource |
-| 33-67% | Move toward nearest settlement |
-| 67-100% | Random movement |
+Enemies always move 1 space per turn, directed by their purpose (see Enemy Purpose above).
 
 ### Enemy Movement Restrictions
 
@@ -723,14 +743,15 @@ Each turn processes in this order:
 6. **Resource production:** Collect gold and materials
 7. **Settlement growth:** Add growth points, check for tier advancement
 8. **Settlement spawning:** Check for spontaneous settlement creation
-9. **Society update:** Adjust corruption, unrest, decadence, overextension
-10. **Era check:** Verify era transition thresholds
-11. **Collapse check:** Check for civilization collapse
-12. **Unit deselection:** Clear selected unit
-13. **Society options shuffle:** Randomize available management actions for next turn
-14. **Select largest settlement:** Auto-select the highest tier settlement (random if tied)
-15. **Turn increment**
-16. **Combat reporting pause:** If enemies attacked during step 5, display bang markers and wait for player input before resuming (see Combat Reporting)
+9. **Monster spawning:** Check for random monster spawn near settlements
+10. **Society update:** Adjust corruption, unrest, decadence, overextension
+11. **Era check:** Verify era transition thresholds
+12. **Collapse check:** Check for civilization collapse
+13. **Unit deselection:** Clear selected unit
+14. **Society options shuffle:** Randomize available management actions for next turn
+15. **Select largest settlement:** Auto-select the highest tier settlement (random if tied)
+16. **Turn increment**
+17. **Combat reporting pause:** If notable events occurred during steps 5 or 9, display markers and wait for player input before resuming (see Combat Reporting)
 
 ---
 

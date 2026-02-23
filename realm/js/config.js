@@ -176,15 +176,30 @@ export const UNIT_TYPE = {
     WORKER: 'worker',
     INFANTRY: 'infantry',
     HEAVY_INFANTRY: 'heavy_infantry',
-    CAVALRY: 'cavalry'
+    CAVALRY: 'cavalry',
+    ENEMY_SMALL: 'enemy_small',
+    ENEMY_MEDIUM: 'enemy_medium',
+    ENEMY_LARGE: 'enemy_large',
+    ENEMY_MONSTER: 'enemy_monster'
 };
 
 export const UNIT_STATS = {
     [UNIT_TYPE.WORKER]: { attack: 1, defense: 1, speed: 2, health: 10, cost: { gold: 5, materials: 5 } },
     [UNIT_TYPE.INFANTRY]: { attack: 2, defense: 2, speed: 2, health: 10, cost: { gold: 5, materials: 2 } },
     [UNIT_TYPE.HEAVY_INFANTRY]: { attack: 3, defense: 4, speed: 1, health: 15, cost: { gold: 10, materials: 7 } },
-    [UNIT_TYPE.CAVALRY]: { attack: 4, defense: 1, speed: 3, health: 8, cost: { gold: 15, materials: 5 } }
+    [UNIT_TYPE.CAVALRY]: { attack: 4, defense: 1, speed: 3, health: 8, cost: { gold: 15, materials: 5 } },
+    [UNIT_TYPE.ENEMY_SMALL]: { attack: 2, defense: 1, speed: 2, health: 4 },
+    [UNIT_TYPE.ENEMY_MEDIUM]: { attack: 4, defense: 1, speed: 1, health: 6 },
+    [UNIT_TYPE.ENEMY_LARGE]: { attack: 5, defense: 1, speed: 1, health: 8 },
+    [UNIT_TYPE.ENEMY_MONSTER]: { attack: 6, defense: 3, speed: 1, health: 12 }
 };
+
+export const ENEMY_SPAWN_WEIGHTS = [
+    { type: UNIT_TYPE.ENEMY_SMALL, weight: 0.2 },
+    { type: UNIT_TYPE.ENEMY_MEDIUM, weight: 0.3 },
+    { type: UNIT_TYPE.ENEMY_LARGE, weight: 0.4 },
+    { type: UNIT_TYPE.ENEMY_MONSTER, weight: 0.1 }
+];
 
 export const UNIT_COLORS = {
     [UNIT_TYPE.WORKER]: '#d7a86e',
