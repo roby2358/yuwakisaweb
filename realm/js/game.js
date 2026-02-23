@@ -802,7 +802,6 @@ export class Game {
         if (TERRAIN_MOVEMENT[hex.terrain] === Infinity) return false;
         if (this.enemies.some(e => e.q === q && e.r === r)) return false;
         if (this.settlements.some(s => s.q === q && s.r === r)) return false;
-        if (hex.installation) return false;
         return true;
     }
 
