@@ -557,7 +557,11 @@ Enemies always move 1 space per turn, directed by their purpose (see Enemy Purpo
 
 **Method 1: Military occupation**
 - Keep a unit on the danger point
-- Each turn, the danger point attacks the occupying unit with ENEMY_LARGE stats (attack 5, defense 1)
+- Each turn, the danger point attacks the occupying unit with stats based on its strength:
+  - Strength 1-2: ENEMY_SMALL (attack 2)
+  - Strength 3-4: ENEMY_MEDIUM (attack 4)
+  - Strength 5: ENEMY_LARGE (attack 5)
+  - Strength 6: ENEMY_MONSTER (attack 6)
 - If the unit survives, roll 1d6
 - If roll > strength, reduce strength by 1
   - Reward for reducing strength: 2d6 × (strength before reduction) gold and materials

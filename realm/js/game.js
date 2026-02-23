@@ -751,16 +751,24 @@ export class Game {
         this.selectedHex = this.getHex(selected.q, selected.r);
     }
 
-    processDangerPointOccupation() {
-        const dpStats = UNIT_STATS[UNIT_TYPE.ENEMY_LARGE];
+    // Get enemy type for danger point attack based on strength
+    getDangerPointAttackType(strength) {
+        if (strength <= 2) return UNIT_TYPE.ENEMY_SMALL;
+        if (strength <= 4) return UNIT_TYPE.ENEMY_MEDIUM;
+        if (strength === 5) return UNIT_TYPE.ENEMY_LARGE;
+        return UNIT_TYPE.ENEMY_MONSTER;
+    }
 
+    processDangerPointOccupation() {
         for (const [key, hex] of this.hexes) {
             if (!hex.dangerPoint) continue;
 
             const occupants = this.getUnitsAt(hex.q, hex.r);
             if (occupants.length === 0) continue;
 
-            // Danger point attacks the first unit (same targeting as enemy attacks)
+            // Danger point attacks with strength based on its size
+            const dpType = this.getDangerPointAttackType(hex.dangerPoint.strength);
+            const dpStats = UNIT_STATS[dpType];
             const target = occupants[0];
             this.strikeUnit(dpStats.attack, target);
 
