@@ -247,8 +247,17 @@ class App {
             case 'build-installation':
                 if (hex) {
                     const type = btn.dataset.installation;
+                    const hadExisting = !!hex.installation;
                     if (this.game.buildInstallation(hex, type)) {
-                        this.ui.showNotification(`${type} built! Danger neutralized.`);
+                        this.ui.showNotification(hadExisting ? `Upgraded to ${type}!` : `${type} built!`);
+                    }
+                }
+                break;
+
+            case 'tear-down-installation':
+                if (hex) {
+                    if (this.game.tearDownInstallation(hex)) {
+                        this.ui.showNotification('Installation torn down.');
                     }
                 }
                 break;

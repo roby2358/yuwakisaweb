@@ -565,10 +565,6 @@ Enemies always move 1 space per turn, directed by their purpose (see Enemy Purpo
 - If the unit is killed, no reduction roll occurs (+3 unrest)
 - Strength 6 cannot be removed this way
 
-**Method 2: Build installation**
-- Requires friendly unit present, no enemies
-- Building any installation neutralizes the danger point
-
 ### Installation Attack
 
 When an enemy attacks an undefended installation:
@@ -581,21 +577,29 @@ When an enemy attacks an undefended installation:
 
 ## Installations
 
-Installations can only be built on danger points:
+Installations are general-purpose fortifications that can be built anywhere with a friendly unit:
 
-| Type     | Defense | Cost (g/m) |
-|----------|---------|------------|
-| Outpost  | +1      | 15/20      |
-| Fort     | +2      | 40/60      |
-| Garrison | +3      | 100/150    |
+| Type     | Tier | Defense | Cost (g/m) |
+|----------|------|---------|------------|
+| Outpost  | 0    | +1      | 15/20      |
+| Fort     | 1    | +2      | 40/60      |
+| Garrison | 2    | +3      | 100/150    |
 
-Requirements:
-- Hex must have a danger point
-- No existing installation
+### Building Requirements
 - Friendly unit must be present
 - No enemies in the hex
+- **No danger point** on the hex
+- Can afford the full cost
 
-Building an installation **permanently neutralizes** the danger point.
+### Upgrading
+- An existing installation can be upgraded by building a higher-tier installation on the same hex
+- Costs the full price of the new tier (no discount for existing installation)
+- Only higher tiers are available (e.g., an outpost can upgrade to fort or garrison)
+
+### Tear Down
+- Requires a friendly unit present and no enemies
+- Removes the installation immediately
+- **No resource refund**
 
 ---
 

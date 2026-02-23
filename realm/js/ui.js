@@ -4,7 +4,7 @@ import {
     TERRAIN, SETTLEMENT_NAMES, SETTLEMENT_LEVEL, SETTLEMENT_UPGRADE_COST,
     SETTLEMENT_UPGRADE_LEVELS, SETTLEMENT_GROWTH_THRESHOLD,
     getSettlementFoundCost,
-    UNIT_TYPE, UNIT_STATS, INSTALLATION_STATS, RESOURCE_TYPE
+    UNIT_TYPE, UNIT_STATS, INSTALLATION_STATS, INSTALLATION_TIER, RESOURCE_TYPE
 } from './config.js';
 import { clamp } from './utils.js';
 
@@ -249,21 +249,34 @@ export class UI {
             }
         }
 
-        // Danger point actions
-        if (hex.dangerPoint && !hex.installation) {
-            const friendlyUnits = hex.units.filter(u => this.game.units.includes(u));
-            const noEnemies = this.game.enemies.filter(e => e.q === hex.q && e.r === hex.r).length === 0;
+        // Installation actions (build, upgrade, tear down)
+        const friendlyUnits = hex.units.filter(u => this.game.units.includes(u));
+        const noEnemies = this.game.enemies.filter(e => e.q === hex.q && e.r === hex.r).length === 0;
 
-            if (friendlyUnits.length > 0 && noEnemies) {
-                html += `<p style="margin-top: 0.5rem; color: var(--text-dim); font-size: 0.85rem;">Build Installation:</p>`;
+        if (friendlyUnits.length > 0 && noEnemies && !hex.dangerPoint) {
+            const currentTier = hex.installation ? INSTALLATION_TIER[hex.installation.type] : -1;
+            const buildableTypes = Object.entries(INSTALLATION_STATS).filter(
+                ([type]) => INSTALLATION_TIER[type] > currentTier
+            );
 
-                for (const [type, stats] of Object.entries(INSTALLATION_STATS)) {
+            if (buildableTypes.length > 0) {
+                const label = hex.installation ? 'Upgrade Installation:' : 'Build Installation:';
+                html += `<p style="margin-top: 0.5rem; color: var(--text-dim); font-size: 0.85rem;">${label}</p>`;
+
+                for (const [type, stats] of buildableTypes) {
                     const canBuild = this.game.canBuildInstallation(hex, type);
                     html += `<button class="action-btn" data-action="build-installation" data-installation="${type}" ${canBuild ? '' : 'disabled'}>
                         ${type}
                         <span class="cost">${stats.cost.gold}g, ${stats.cost.materials}m | Def: +${stats.defense}</span>
                     </button>`;
                 }
+            }
+
+            if (hex.installation) {
+                html += `<button class="action-btn" data-action="tear-down-installation">
+                    Tear Down ${hex.installation.type}
+                    <span class="cost">No refund</span>
+                </button>`;
             }
         }
 

@@ -220,6 +220,12 @@ export const INSTALLATION_STATS = {
     [INSTALLATION_TYPE.GARRISON]: { defense: 3, cost: { gold: 100, materials: 150 } }
 };
 
+export const INSTALLATION_TIER = {
+    [INSTALLATION_TYPE.OUTPOST]: 0,
+    [INSTALLATION_TYPE.FORT]: 1,
+    [INSTALLATION_TYPE.GARRISON]: 2
+};
+
 export const ERA = {
     BARBARIAN: 'Barbarian',
     KINGDOM: 'Kingdom',

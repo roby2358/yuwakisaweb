@@ -31,7 +31,7 @@ import {
     SETTLEMENT_POPULATION, SETTLEMENT_GROWTH_THRESHOLD, getSettlementGrowth,
     getSettlementFoundCost,
     UNIT_TYPE, UNIT_STATS, ENEMY_SPAWN_WEIGHTS,
-    INSTALLATION_TYPE, INSTALLATION_STATS,
+    INSTALLATION_TYPE, INSTALLATION_STATS, INSTALLATION_TIER,
     ERA, ERA_THRESHOLDS,
     STARTING_RESOURCES
 } from './config.js';
@@ -581,8 +581,12 @@ export class Game {
 
     // Installation Management
     canBuildInstallation(hex, type) {
-        if (!hex.dangerPoint) return false;
-        if (hex.installation) return false;
+        if (hex.dangerPoint) return false;
+
+        // Allow upgrade if new type has higher tier than existing
+        if (hex.installation) {
+            if (INSTALLATION_TIER[type] <= INSTALLATION_TIER[hex.installation.type]) return false;
+        }
 
         if (!this.canAfford(INSTALLATION_STATS[type].cost)) return false;
 
@@ -604,8 +608,20 @@ export class Game {
             defense: stats.defense
         };
 
-        // Neutralize danger point
-        hex.dangerPoint = null;
+        this.updateControlledTerritory();
+        return true;
+    }
+
+    canTearDownInstallation(hex) {
+        if (!hex.installation) return false;
+        if (this.getUnitsAt(hex.q, hex.r).length === 0) return false;
+        if (this.getEnemiesAt(hex.q, hex.r).length > 0) return false;
+        return true;
+    }
+
+    tearDownInstallation(hex) {
+        if (!this.canTearDownInstallation(hex)) return false;
+        hex.installation = null;
         this.updateControlledTerritory();
         return true;
     }
