@@ -142,13 +142,21 @@ export class UI {
         const friendlyUnits = hex.units.filter(u => this.game.units.includes(u));
         if (friendlyUnits.length > 0) {
             html += `<hr style="border-color: var(--bg-light); margin: 0.5rem 0;">`;
-            html += `<p><span class="label">Units:</span></p><ul class="info-list">`;
+            html += `<p><span class="label">Units:</span></p>`;
             for (const unit of friendlyUnits) {
                 const stats = UNIT_STATS[unit.type];
-                const selected = this.game.selectedUnit === unit ? ' (selected)' : '';
-                html += `<li class="hex-info-unit">${unit.type}${selected} - HP: ${unit.health}/${stats.health}, Moves: ${unit.movesLeft}</li>`;
+                const isSelected = this.game.selectedUnit === unit;
+                const btnClass = isSelected ? 'action-btn unit-selected' : 'action-btn';
+                const typeDisplay = isSelected ? `<strong>${unit.type}</strong>` : unit.type;
+                html += `<button class="${btnClass}" data-action="select-unit" data-unit-id="${unit.id}">
+                    ${typeDisplay}
+                    <span class="cost">HP: ${unit.health}/${stats.health} | Moves: ${unit.movesLeft}</span>
+                </button>`;
             }
-            html += '</ul>';
+            const atStackLimit = !this.game.canStackUnit(hex.q, hex.r);
+            if (atStackLimit) {
+                html += `<p style="margin-top: 0.3rem; color: var(--danger); font-size: 0.85rem;">Stacking limit reached (${this.game.maxUnitsPerHex} units max)</p>`;
+            }
         }
 
         // Enemies
@@ -218,9 +226,8 @@ export class UI {
             }
 
             // Build unit buttons
-            const atStackLimit = !this.game.canStackUnit(settlement.q, settlement.r);
-            if (atStackLimit) {
-                html += `<p style="margin-top: 0.5rem; color: var(--danger); font-size: 0.85rem;">Stacking limit reached (${this.game.maxUnitsPerHex} units max)</p>`;
+            if (!this.game.canStackUnit(settlement.q, settlement.r)) {
+                html += `<p style="margin-top: 0.5rem; color: var(--text-dim); font-size: 0.85rem;">Build Units: at stacking limit</p>`;
             } else {
                 html += `<p style="margin-top: 0.5rem; color: var(--text-dim); font-size: 0.85rem;">Build Units:</p>`;
 
@@ -255,24 +262,6 @@ export class UI {
                     html += `<button class="action-btn" data-action="build-installation" data-installation="${type}" ${canBuild ? '' : 'disabled'}>
                         ${type}
                         <span class="cost">${stats.cost.gold}g, ${stats.cost.materials}m | Def: +${stats.defense}</span>
-                    </button>`;
-                }
-            }
-        }
-
-        // Unit actions
-        const selectedUnit = this.game.selectedUnit;
-        if (selectedUnit && selectedUnit.q === hex.q && selectedUnit.r === hex.r) {
-            const friendlyUnitsHere = hex.units.filter(u => this.game.units.includes(u));
-            if (friendlyUnitsHere.length > 1) {
-                html += `<p style="margin-top: 0.5rem; color: var(--text-dim); font-size: 0.85rem;">Select Unit:</p>`;
-                for (const unit of friendlyUnitsHere) {
-                    const isSelected = unit === selectedUnit;
-                    const btnClass = isSelected ? 'action-btn unit-selected' : 'action-btn';
-                    const typeDisplay = isSelected ? `<strong>${unit.type}</strong>` : unit.type;
-                    html += `<button class="${btnClass}" data-action="select-unit" data-unit-id="${unit.id}">
-                        ${typeDisplay}
-                        <span class="cost">HP: ${unit.health} | Moves: ${unit.movesLeft}</span>
                     </button>`;
                 }
             }

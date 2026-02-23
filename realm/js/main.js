@@ -109,13 +109,15 @@ class App {
             }
         });
 
-        // Action buttons (delegated)
-        document.getElementById('actions-content').addEventListener('click', (e) => {
+        // Action buttons (delegated from both panels)
+        const handleActionClick = (e) => {
             const btn = e.target.closest('.action-btn');
             if (btn && !btn.disabled) {
                 this.handleAction(btn);
             }
-        });
+        };
+        document.getElementById('actions-content').addEventListener('click', handleActionClick);
+        document.getElementById('info-content').addEventListener('click', handleActionClick);
 
         // Welcome modal
         document.getElementById('welcome-start-btn').addEventListener('click', () => this.hideWelcomeModal());
