@@ -430,11 +430,11 @@ export class Renderer {
 
         ctx.beginPath();
         if (enemy.type === UNIT_TYPE.ENEMY_MONSTER) {
-            // Vertical diamond (rhombus) — tall
-            ctx.moveTo(x, y - size * 1.25);      // top
-            ctx.lineTo(x + size * 0.7, y);        // right
-            ctx.lineTo(x, y + size * 1.25);      // bottom
-            ctx.lineTo(x - size * 0.7, y);        // left
+            // Vertical diamond (rhombus) — tall and wide
+            ctx.moveTo(x, y - size * 1.5);        // top
+            ctx.lineTo(x + size * 0.875, y);      // right
+            ctx.lineTo(x, y + size * 1.5);        // bottom
+            ctx.lineTo(x - size * 0.875, y);      // left
         } else {
             // Inverted triangle: flat base at top, point at bottom
             ctx.moveTo(x - size, y - size);   // top left
