@@ -180,15 +180,26 @@ Combat is always mutual - both sides deal damage:
 
 ### Kill Rewards
 
-Killing an enemy grants:
-- 1-4 gold (random)
-- 1-4 materials (random)
+Killing an enemy grants loot (2d6 per resource):
+- 2-12 gold
+- 2-12 materials
 - Unit advances into the vacated hex (if empty)
 
 ### Combat Actions
 
 - Attacking consumes all remaining movement
 - Sets `movesLeft = 0`
+
+### Combat Reporting
+
+After end-of-turn enemy attacks, the game pauses to display visual feedback:
+
+- **Yellow bang markers** appear on hexes where enemies attacked (units, settlements, or installations)
+- **Red bang markers** appear on hexes where a friendly unit was killed
+- The "End Turn" button changes to "Continue"
+- All game interactions are blocked during this display
+- Clicking anywhere or pressing any key dismisses the markers and resumes play
+- Turns with no enemy attacks proceed without pausing
 
 ---
 
@@ -509,6 +520,8 @@ Enemies always move 1 space per turn:
 - Keep a unit on the danger point
 - Each turn, roll 1d6
 - If roll > strength, reduce strength by 1
+  - Reward for reducing strength: 2d6 × 5 gold and materials (10-60 each)
+  - Reward for destroying (strength reaches 0): 2d6 × 10 gold and materials (20-120 each)
 - Strength 6 cannot be removed this way
 
 **Method 2: Build installation**
@@ -717,6 +730,7 @@ Each turn processes in this order:
 13. **Society options shuffle:** Randomize available management actions for next turn
 14. **Select largest settlement:** Auto-select the highest tier settlement (random if tied)
 15. **Turn increment**
+16. **Combat reporting pause:** If enemies attacked during step 5, display bang markers and wait for player input before resuming (see Combat Reporting)
 
 ---
 
@@ -735,6 +749,7 @@ Each turn processes in this order:
 
 - **Escape:** Close modal or clear selection
 - **Enter/Space:** End turn (if no modal open)
+- **Any key:** Dismiss combat report (during reporting mode)
 
 ### Unit Selection
 
