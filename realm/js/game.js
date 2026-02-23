@@ -663,7 +663,7 @@ export class Game {
         this.processProduction();
         this.processSettlementGrowth();
         this.processSettlementSpawning();
-        this.processMonsterSpawn();
+        this.processWildSpawns();
         this.updateSocietyParams();
         this.checkEraTransition();
         this.checkCollapse();
@@ -765,24 +765,27 @@ export class Game {
                 // Spawn 1 enemy on a random adjacent hex (strength affects rate, not count)
                 if (validSpawns.length > 0) {
                     const spawnHex = validSpawns[Math.floor(Math.random() * validSpawns.length)];
-                    const enemyType = this.randomEnemyType();
-                    const stats = UNIT_STATS[enemyType];
-                    this.enemies.push({
-                        id: Date.now() + Math.random(),
-                        q: spawnHex.q,
-                        r: spawnHex.r,
-                        type: enemyType,
-                        purpose: this.randomEnemyPurpose(),
-                        attack: stats.attack,
-                        defense: stats.defense,
-                        health: stats.health,
-                        maxHealth: stats.health
-                    });
+                    this.spawnEnemy(spawnHex.q, spawnHex.r, this.randomEnemyType());
                 }
 
                 hex.dangerPoint.turnsUntilSpawn = this.getSpawnRate(hex.dangerPoint.strength);
             }
         }
+    }
+
+    spawnEnemy(q, r, type) {
+        const stats = UNIT_STATS[type];
+        const enemy = {
+            id: Date.now() + Math.random(),
+            q, r, type,
+            purpose: this.randomEnemyPurpose(),
+            attack: stats.attack,
+            defense: stats.defense,
+            health: stats.health,
+            maxHealth: stats.health
+        };
+        this.enemies.push(enemy);
+        return enemy;
     }
 
     randomEnemyType() {
@@ -1170,46 +1173,51 @@ export class Game {
         }
     }
 
-    processMonsterSpawn() {
+    processWildSpawns() {
         // Sum current danger point strengths
         let totalStrength = 0;
         for (const [key, hex] of this.hexes) {
             if (hex.dangerPoint) totalStrength += hex.dangerPoint.strength;
         }
 
-        // Probability scales with destroyed danger and decadence
-        const chance = (15 - totalStrength) * 0.001 * (this.society.decadence / 30);
-        if (chance <= 0 || Math.random() >= chance) return;
+        const baseChance = (15 - totalStrength) * 0.001 * (this.society.decadence / 30);
+        if (baseChance <= 0) return;
 
-        // Use same weighted hex selection as settlement spawning
+        // Random enemy unit spawn (10× base chance) with new danger point
+        if (Math.random() < baseChance * 10) {
+            const hex = this.pickWeightedSpawnHex();
+            if (hex) {
+                this.spawnEnemy(hex.q, hex.r, this.randomEnemyType());
+                this.createDangerPoint(hex, Rando.int(1, 5));
+                this.combatReport.push({ q: hex.q, r: hex.r, type: 'monsterSpawn' });
+            }
+        }
+
+        // Monster spawn (base chance)
+        if (Math.random() < baseChance) {
+            const hex = this.pickWeightedSpawnHex();
+            if (hex) {
+                this.spawnEnemy(hex.q, hex.r, UNIT_TYPE.ENEMY_MONSTER);
+                this.combatReport.push({ q: hex.q, r: hex.r, type: 'monsterSpawn' });
+            }
+        }
+    }
+
+    pickWeightedSpawnHex() {
         const candidates = [];
         for (const [key, hex] of this.hexes) {
             const score = this.calculateSpawnScore(hex);
             if (score > 0) candidates.push({ hex, score });
         }
-        if (candidates.length === 0) return;
+        if (candidates.length === 0) return null;
 
         const totalWeight = candidates.reduce((sum, c) => sum + c.score, 0);
         let roll = Math.random() * totalWeight;
         for (const c of candidates) {
             roll -= c.score;
-            if (roll <= 0) {
-                const stats = UNIT_STATS[UNIT_TYPE.ENEMY_MONSTER];
-                this.enemies.push({
-                    id: Date.now() + Math.random(),
-                    q: c.hex.q,
-                    r: c.hex.r,
-                    type: UNIT_TYPE.ENEMY_MONSTER,
-                    purpose: this.randomEnemyPurpose(),
-                    attack: stats.attack,
-                    defense: stats.defense,
-                    health: stats.health,
-                    maxHealth: stats.health
-                });
-                this.combatReport.push({ q: c.hex.q, r: c.hex.r, type: 'monsterSpawn' });
-                break;
-            }
+            if (roll <= 0) return c.hex;
         }
+        return candidates[candidates.length - 1].hex;
     }
 
     updateSocietyParams() {
