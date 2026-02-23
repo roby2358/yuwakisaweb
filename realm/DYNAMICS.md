@@ -1,4 +1,4 @@
-# Realm - Game Dynamics
+﻿# Realm - Game Dynamics
 
 This document describes the mechanics and systems that govern gameplay in Realm.
 
@@ -144,9 +144,9 @@ damage = floor(max(0, expectedDamage + gaussian() * stddev))
 ```
 
 This means:
-- Equal attack/defense → expected damage = attack/2
-- Attack >> defense → expected damage approaches attack
-- Attack << defense → expected damage approaches 0
+- Equal attack/defense -> expected damage = attack/2
+- Attack >> defense -> expected damage approaches attack
+- Attack << defense -> expected damage approaches 0
 
 ### Defense Bonuses
 
@@ -216,9 +216,9 @@ After end-of-turn processing, the game pauses to display visual feedback if any 
 ### Worker Special Ability
 
 Workers **double resource output** when stationed on a resource hex:
-- Forest: 1 → 2 materials
-- Quarry: 2 → 4 materials
-- Gold Deposit: 2 → 4 gold
+- Forest: 1 -> 2 materials
+- Quarry: 2 -> 4 materials
+- Gold Deposit: 2 -> 4 gold
 
 Note: Mountain gold deposits cannot benefit from workers since mountains are impassable terrain. They still produce gold when controlled (via settlement influence or adjacent units).
 
@@ -228,12 +228,11 @@ Cavalry has a special rule: when **attacking**, they use **5 defense** against c
 
 ### Unit Selection Priority
 
-When clicking a hex with multiple units, priority order for auto-selection:
-1. Cavalry (fastest)
-2. Infantry
-3. Heavy Infantry (slowest)
-
-Workers are not auto-selected and must be manually selected via action buttons.
+When clicking a hex with units, the first unit with moves remaining is auto-selected. Since units are sorted each turn (see Stacking Order), the selection priority follows the same order:
+1. Cavalry
+2. Heavy Infantry
+3. Infantry
+4. Worker
 
 ### Unit Deselection
 
@@ -312,8 +311,8 @@ Settlements grow automatically each turn using **polynomial growth** against **e
 ### Manual Upgrade Thresholds
 
 Certain tiers require **manual upgrade** (cannot auto-advance past):
-- Tier 5 (Small City) → Tier 6 (City): 100 gold, 150 materials
-- Tier 8 (Metropolis) → Tier 9 (Capital): 300 gold, 400 materials
+- Tier 5 (Small City) -> Tier 6 (City): 100 gold, 150 materials
+- Tier 8 (Metropolis) -> Tier 9 (Capital): 300 gold, 400 materials
 
 At these thresholds, growth points cap at 50 and overflow to nearby settlements.
 
@@ -363,12 +362,13 @@ Where:
   - Kingdom: 1 (moderate expansion)
   - Empire: 4 (distant expansion possible)
 
-**Resource Adjacency Bonus:** 8× multiplier per adjacent resource (stacks multiplicatively: 8×, 64×, 512×)
+**Resource Adjacency Bonus:** 8x multiplier per adjacent resource (stacks multiplicatively: 8x, 64x, 512x)
 
 This creates a "donut" of optimal placement: not too close (crowded), not too far (isolated). The era-dependent decay controls how far from existing settlements new ones can spawn.
 
 **Hex Requirements:**
 - Plains or hills terrain
+- Must be on an accessible hex (reachable from starting location via BFS)
 - No existing settlement, danger point, or resource
 - Must have minimum score (0.001) after all calculations
 
@@ -492,13 +492,24 @@ Enemies spawn in four size categories with different stats:
 | Large   | 5      | 1       | 1     | 8      | 40%             |
 | Monster | 6      | 3       | 1     | 12     | 10%             |
 
-### Monster Spawning
+### Wild Spawning
 
-In addition to danger point spawns, monsters can appear near settlements:
-- **Probability per turn:** `(15 - totalDangerStrength) × 0.001 × (decadence / 30)`
-- At full danger strength (15), probability is 0%
-- Uses the same weighted hex selection as settlement spawning
-- Triggered by weakening danger points and rising decadence
+As danger points are destroyed and decadence rises, threats emerge organically across the map. Two independent rolls occur each turn:
+
+**Base probability:** `(15 - totalDangerStrength) × 0.001 × (decadence / 30)`
+
+At full danger strength (15) or zero decadence, probability is 0%.
+
+**1. Random Enemy + Danger Point (10x base chance):**
+- Spawns a random enemy (using standard type weights) on a weighted hex
+- Creates a new danger point at the same location with strength 1-5
+- Represents new threats emerging from the wilderness
+
+**2. Monster Spawn (1x base chance):**
+- Spawns a monster on a weighted hex
+- No danger point created
+
+Both use the same weighted hex selection as settlement spawning (attraction/repulsion scoring). Both trigger a yellow exclamation mark in combat reporting.
 
 ### Enemy Purpose
 
@@ -518,13 +529,13 @@ Each turn, enemies act in this order:
 
 **1. Attack (priority):**
 - If adjacent to friendly unit, attack it
-- Target priority: Heavy Infantry > Infantry > Cavalry
+- Target priority: Heavy Infantry > Infantry > Cavalry > Worker
 - If no units, attack adjacent settlements
 - If no settlements, attack undefended installations
 
 **2. Movement (if no attack):**
 
-Enemies always move 1 space per turn, directed by their purpose (see Enemy Purpose above).
+Enemies always move 1 space per turn, directed by their purpose (see Enemy Purpose above). If an enemy with a resource or settlement purpose cannot move closer to its target (blocked or no valid target exists), it falls back to random movement. If no adjacent hex is available at all, the enemy stands still.
 
 ### Enemy Movement Restrictions
 
@@ -540,7 +551,7 @@ Enemies always move 1 space per turn, directed by their purpose (see Enemy Purpo
 - Keep a unit on the danger point
 - Each turn, roll 1d6
 - If roll > strength, reduce strength by 1
-  - Reward for reducing strength: 2d6 × 5 gold and materials (10-60 each)
+  - Reward for reducing strength: 2d6 × (strength before reduction) gold and materials
   - Reward for destroying (strength reaches 0): 2d6 × 10 gold and materials (20-120 each)
 - Strength 6 cannot be removed this way
 
@@ -593,7 +604,7 @@ Four parameters track civilization health (0-100%). The society panel displays b
 - **Base Change:** (Random(-1 to +2) + population × 0.02) × era multiplier per turn
   - Varies each turn, sometimes increasing, sometimes decreasing
   - Trends slightly positive over time
-  - **Era multiplier:** Barbarian ×1, Kingdom ×2, Empire ×4
+  - **Era multiplier:** Barbarian x1, Kingdom x2, Empire x4
 - **Combat Increases:**
   - +2 when friendly unit killed in combat
   - +3 when unit killed by enemy attack
@@ -640,8 +651,8 @@ At the start of each turn, all 80 society actions are **shuffled** into a random
 ### Percentage-Based Effects
 
 All society effects are **percentage multipliers**, not flat changes:
-- **+20%** means multiply the current value by 1.2 (e.g., 50 → 60)
-- **-30%** means multiply the current value by 0.7 (e.g., 50 → 35)
+- **+20%** means multiply the current value by 1.2 (e.g., 50 -> 60)
+- **-30%** means multiply the current value by 0.7 (e.g., 50 -> 35)
 
 This makes:
 - Low values easy to manage (small absolute changes)
@@ -701,9 +712,9 @@ Examples:
 
 | Era       | Settlements | Decadence Rate | Unrest Multiplier |
 |-----------|-------------|----------------|-------------------|
-| Barbarian | -           | +0.5/turn      | ×1                |
-| Kingdom   | 4+          | +1.0/turn      | ×2                |
-| Empire    | 7+          | +2.0/turn      | ×4                |
+| Barbarian | -           | +0.5/turn      | x1                |
+| Kingdom   | 4+          | +1.0/turn      | x2                |
+| Empire    | 7+          | +2.0/turn      | x4                |
 
 Era transitions are automatic when settlement thresholds are met. Both decadence and unrest scale with era at ratio 1:2:4.
 
@@ -743,7 +754,7 @@ Each turn processes in this order:
 6. **Resource production:** Collect gold and materials
 7. **Settlement growth:** Add growth points, check for tier advancement
 8. **Settlement spawning:** Check for spontaneous settlement creation
-9. **Monster spawning:** Check for random monster spawn near settlements
+9. **Wild spawning:** Check for random enemy + danger point spawn (10x base) and monster spawn (1x base)
 10. **Society update:** Adjust corruption, unrest, decadence, overextension
 11. **Era check:** Verify era transition thresholds
 12. **Collapse check:** Check for civilization collapse

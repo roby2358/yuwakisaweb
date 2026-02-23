@@ -736,15 +736,16 @@ export class Game {
                 // This means size 6 danger points can only be removed with installations
                 const roll = 1 + Math.floor(Math.random() * 6);
                 if (roll > hex.dangerPoint.strength) {
+                    const prevStrength = hex.dangerPoint.strength;
                     hex.dangerPoint.strength--;
 
-                    // If strength reaches 0, remove the danger point (10x reward)
-                    // Otherwise, 5x reward for reducing strength
+                    // Reward scales with strength before reduction
+                    // Destroying (1->0) gives special 10x bonus
                     if (hex.dangerPoint.strength <= 0) {
                         hex.dangerPoint = null;
                         this.collectLoot(this.generateLoot(10));
                     } else {
-                        this.collectLoot(this.generateLoot(5));
+                        this.collectLoot(this.generateLoot(prevStrength));
                     }
                 }
             }
@@ -832,7 +833,7 @@ export class Game {
         );
 
         // Attack in priority order: heavy_infantry, infantry, cavalry
-        const attackOrder = [UNIT_TYPE.HEAVY_INFANTRY, UNIT_TYPE.INFANTRY, UNIT_TYPE.CAVALRY];
+        const attackOrder = [UNIT_TYPE.HEAVY_INFANTRY, UNIT_TYPE.INFANTRY, UNIT_TYPE.CAVALRY, UNIT_TYPE.WORKER];
         for (const unitType of attackOrder) {
             const targets = adjacentUnits.filter(u => u.type === unitType);
             if (targets.length > 0) {
@@ -1294,20 +1295,7 @@ export class Game {
     // Selection helpers
     selectHex(q, r) {
         this.selectedHex = this.getHex(q, r) || null;
-        this.selectedUnit = this.selectedHex ? this.findBestUnitAt(q, r) : null;
-    }
-
-    // Find the best unit to select at a location (by type priority, must have moves)
-    findBestUnitAt(q, r) {
-        const units = this.getUnitsAt(q, r).filter(u => u.movesLeft > 0);
-        if (units.length === 0) return null;
-
-        const selectionOrder = [UNIT_TYPE.CAVALRY, UNIT_TYPE.INFANTRY, UNIT_TYPE.HEAVY_INFANTRY];
-        for (const unitType of selectionOrder) {
-            const unit = units.find(u => u.type === unitType);
-            if (unit) return unit;
-        }
-        return null;
+        this.selectedUnit = null;
     }
 
     selectUnit(unit) {

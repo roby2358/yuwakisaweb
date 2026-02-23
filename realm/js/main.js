@@ -123,6 +123,9 @@ class App {
         // Population map toggle
         document.getElementById('population-map-btn').addEventListener('click', () => this.togglePopulationMap());
 
+        // Dynamics document
+        document.getElementById('dynamics-btn').addEventListener('click', () => window.open('DYNAMICS.md', '_blank'));
+
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if (this.reportingMode) {
