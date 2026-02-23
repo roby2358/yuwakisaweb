@@ -150,6 +150,16 @@ export class Game {
         return Math.max(0, Math.floor(randomizedDamage));
     }
 
+    // Shared attack logic: attacker's attack vs unit's defense + structure defense
+    // Applies damage, returns amount dealt. Callers handle death, reporting, unrest.
+    strikeUnit(attack, unit) {
+        const unitStats = UNIT_STATS[unit.type];
+        const structureDef = this.getStructureDefenseAt(unit.q, unit.r);
+        const damage = this.calculateDamage(attack, unitStats.defense + structureDef);
+        unit.health -= damage;
+        return damage;
+    }
+
     // Get spawn rate for a danger point size
     getSpawnRate(size) {
         return this.spawnRates[size - 1] || 1;
@@ -726,30 +736,53 @@ export class Game {
     }
 
     processDangerPointOccupation() {
+        const dpStats = UNIT_STATS[UNIT_TYPE.ENEMY_LARGE];
+
         for (const [key, hex] of this.hexes) {
             if (!hex.dangerPoint) continue;
 
-            // Check if a friendly military unit occupies this danger point
-            const hasUnit = this.units.some(u => u.q === hex.q && u.r === hex.r);
-            if (hasUnit) {
-                // Roll a die (1-6), reduce strength if roll > size
-                // This means size 6 danger points can only be removed with installations
-                const roll = 1 + Math.floor(Math.random() * 6);
-                if (roll > hex.dangerPoint.strength) {
-                    const prevStrength = hex.dangerPoint.strength;
-                    hex.dangerPoint.strength--;
+            const occupants = this.getUnitsAt(hex.q, hex.r);
+            if (occupants.length === 0) continue;
 
-                    // Reward scales with strength before reduction
-                    // Destroying (1->0) gives special 10x bonus
-                    if (hex.dangerPoint.strength <= 0) {
-                        hex.dangerPoint = null;
-                        this.collectLoot(this.generateLoot(10));
-                    } else {
-                        this.collectLoot(this.generateLoot(prevStrength));
-                    }
+            // Danger point attacks the first unit (same targeting as enemy attacks)
+            const target = occupants[0];
+            this.strikeUnit(dpStats.attack, target);
+
+            this.combatReport.push({ q: hex.q, r: hex.r, unitKilled: target.health <= 0 });
+
+            if (target.health <= 0) {
+                this.removeUnit(target);
+                this.adjustSociety('unrest', 3);
+                continue;
+            }
+
+            // Roll a die (1-6), reduce strength if roll > size
+            // This means size 6 danger points can only be removed with installations
+            const roll = 1 + Math.floor(Math.random() * 6);
+            if (roll > hex.dangerPoint.strength) {
+                const prevStrength = hex.dangerPoint.strength;
+                hex.dangerPoint.strength--;
+
+                // Reward scales with strength before reduction
+                // Destroying (1->0) gives special 10x bonus
+                if (hex.dangerPoint.strength <= 0) {
+                    hex.dangerPoint = null;
+                    this.collectLoot(this.generateLoot(10));
+                } else {
+                    this.collectLoot(this.generateLoot(prevStrength));
                 }
             }
         }
+    }
+
+    isValidSpawnHex(q, r) {
+        const hex = this.getHex(q, r);
+        if (!hex) return false;
+        if (TERRAIN_MOVEMENT[hex.terrain] === Infinity) return false;
+        if (this.enemies.some(e => e.q === q && e.r === r)) return false;
+        if (this.settlements.some(s => s.q === q && s.r === r)) return false;
+        if (hex.installation) return false;
+        return true;
     }
 
     processEnemySpawns() {
@@ -759,14 +792,44 @@ export class Game {
             hex.dangerPoint.turnsUntilSpawn--;
 
             if (hex.dangerPoint.turnsUntilSpawn <= 0) {
-                // Find valid adjacent hexes to spawn enemies (reuse enemy move validation)
                 const neighbors = hexNeighbors(hex.q, hex.r);
-                const validSpawns = neighbors.filter(n => this.isValidEnemyMove(n.q, n.r));
+                const validSpawns = neighbors.filter(n => this.isValidSpawnHex(n.q, n.r));
 
-                // Spawn 1 enemy on a random adjacent hex (strength affects rate, not count)
                 if (validSpawns.length > 0) {
                     const spawnHex = validSpawns[Math.floor(Math.random() * validSpawns.length)];
-                    this.spawnEnemy(spawnHex.q, spawnHex.r, this.randomEnemyType());
+                    const enemyType = this.randomEnemyType();
+                    const defenders = this.getUnitsAt(spawnHex.q, spawnHex.r);
+
+                    if (defenders.length > 0) {
+                        // Spawn hex has a friendly unit — spawning enemy attacks it
+                        const unit = defenders[0];
+                        const stats = UNIT_STATS[enemyType];
+                        this.strikeUnit(stats.attack, unit);
+
+                        // Counter-attack from unit to spawning enemy
+                        const unitStats = UNIT_STATS[unit.type];
+                        const counterDamage = this.calculateDamage(unitStats.attack, stats.defense);
+                        const attackerSurvives = counterDamage < stats.health;
+
+                        if (unit.health <= 0 && attackerSurvives) {
+                            // Unit killed and attacker survives — enemy materializes
+                            this.removeUnit(unit);
+                            this.adjustSociety('unrest', 3);
+                            const enemy = this.spawnEnemy(spawnHex.q, spawnHex.r, enemyType);
+                            enemy.health = stats.health - counterDamage;
+                            this.combatReport.push({ q: spawnHex.q, r: spawnHex.r, unitKilled: true });
+                        } else {
+                            // Unit survives or attacker would die — spawn fails
+                            if (unit.health <= 0) {
+                                this.removeUnit(unit);
+                                this.adjustSociety('unrest', 3);
+                            }
+                            this.combatReport.push({ q: spawnHex.q, r: spawnHex.r, unitKilled: unit.health <= 0 });
+                        }
+                    } else {
+                        // Empty hex — spawn normally
+                        this.spawnEnemy(spawnHex.q, spawnHex.r, enemyType);
+                    }
                 }
 
                 hex.dangerPoint.turnsUntilSpawn = this.getSpawnRate(hex.dangerPoint.strength);
@@ -931,12 +994,10 @@ export class Game {
         const unit = target.unit || this.units.find(u => u.q === target.q && u.r === target.r);
         if (!unit) return;
 
-        const unitStats = UNIT_STATS[unit.type];
-        const structureDef = this.getStructureDefenseAt(unit.q, unit.r);
-        const damage = this.calculateDamage(enemy.attack, unitStats.defense + structureDef);
-        unit.health -= damage;
+        this.strikeUnit(enemy.attack, unit);
 
         // Counter-attack from unit to enemy
+        const unitStats = UNIT_STATS[unit.type];
         const counterDamage = this.calculateDamage(unitStats.attack, enemy.defense);
         enemy.health -= counterDamage;
 

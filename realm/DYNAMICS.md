@@ -479,7 +479,15 @@ Each turn, for each danger point:
 Valid spawn hexes:
 - Not water or mountain
 - No other enemies present
-- No friendly units, settlements, or installations
+- No settlements or installations
+- **May contain friendly units** (see Spawn Attack below)
+
+**Spawn Attack:** When a spawn targets a hex with a friendly unit, the spawning enemy attacks it before materializing:
+1. Enemy rolls damage against the unit (attack vs defense + structure defense)
+2. Unit counter-attacks the spawning enemy
+3. If the unit is killed **and** the attacker survives the counter-attack, the enemy spawns (with reduced health from counter-damage)
+4. If the unit survives, or the counter-attack would kill the spawning enemy, the spawn fails (unit still takes damage)
+5. Units blocking spawn hexes are not safe — they will be attacked each time the spawn timer fires
 
 ### Enemy Types
 
@@ -549,10 +557,12 @@ Enemies always move 1 space per turn, directed by their purpose (see Enemy Purpo
 
 **Method 1: Military occupation**
 - Keep a unit on the danger point
-- Each turn, roll 1d6
+- Each turn, the danger point attacks the occupying unit with ENEMY_LARGE stats (attack 5, defense 1)
+- If the unit survives, roll 1d6
 - If roll > strength, reduce strength by 1
   - Reward for reducing strength: 2d6 × (strength before reduction) gold and materials
   - Reward for destroying (strength reaches 0): 2d6 × 10 gold and materials (20-120 each)
+- If the unit is killed, no reduction roll occurs (+3 unrest)
 - Strength 6 cannot be removed this way
 
 **Method 2: Build installation**
