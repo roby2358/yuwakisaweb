@@ -160,7 +160,7 @@ export class UI {
         }
 
         // Enemies
-        const enemies = this.game.enemies.filter(e => e.q === hex.q && e.r === hex.r);
+        const enemies = this.game.getEnemiesAt(hex.q, hex.r);
         if (enemies.length > 0) {
             html += `<hr style="border-color: var(--bg-light); margin: 0.5rem 0;">`;
             html += `<p><span class="label hex-info-danger">Enemies:</span> ${enemies.length}</p>`;
@@ -180,114 +180,122 @@ export class UI {
 
     updateActions() {
         const hex = this.game.selectedHex;
-        let html = '';
 
         if (!hex) {
             this.actionsContent.innerHTML = '<p style="color: var(--text-dim);">Select a hex</p>';
             return;
         }
 
-        // Settlement actions - check both hex.settlement and if hex is in settlements list
-        const settlement = hex.settlement || this.game.settlements.find(s => s.q === hex.q && s.r === hex.r);
+        let html = '';
+        html += this.renderSettlementActions(hex);
+        html += this.renderInstallationActions(hex);
 
-        if (settlement) {
-            // Ensure hex.settlement is set (in case it wasn't)
-            if (!hex.settlement) {
-                hex.settlement = settlement;
-            }
-
-            // Show upgrade button only at threshold levels
-            if (SETTLEMENT_UPGRADE_LEVELS.includes(settlement.tier)) {
-                const nextLevel = settlement.tier + 1;
-                const cost = SETTLEMENT_UPGRADE_COST[nextLevel];
-                const canUpgrade = this.game.canUpgradeSettlement(settlement);
-
-                if (cost) {
-                    html += `<button class="action-btn" data-action="upgrade" ${canUpgrade ? '' : 'disabled'}>
-                        Upgrade to ${SETTLEMENT_NAMES[nextLevel]}
-                        <span class="cost">${cost.gold}g, ${cost.materials}m</span>
-                    </button>`;
-                }
-            } else if (settlement.tier < this.game.maxSettlementLevel) {
-                // Show growth progress for auto-advancing settlements
-                const threshold = SETTLEMENT_GROWTH_THRESHOLD[settlement.tier] || 100;
-                const growthPct = Math.floor((settlement.growthPoints / threshold) * 100);
-                html += `<p style="margin-bottom: 0.5rem; color: var(--text-dim); font-size: 0.85rem;">Growth: ${growthPct}% to ${SETTLEMENT_NAMES[settlement.tier + 1]}</p>`;
-            }
-
-            // Found new settlement button (requires tier >= 1)
-            if (settlement.tier >= 1) {
-                const foundCost = getSettlementFoundCost(this.game.era);
-                const canFound = this.game.canFoundSettlement(settlement);
-                html += `<button class="action-btn" data-action="found-settlement" ${canFound ? '' : 'disabled'}>
-                    Found Settlement
-                    <span class="cost">${foundCost.gold}g, ${foundCost.materials}m | -1 tier</span>
-                </button>`;
-            }
-
-            // Build unit buttons
-            if (!this.game.canStackUnit(settlement.q, settlement.r)) {
-                html += `<p style="margin-top: 0.5rem; color: var(--text-dim); font-size: 0.85rem;">Build Units: at stacking limit</p>`;
-            } else {
-                html += `<p style="margin-top: 0.5rem; color: var(--text-dim); font-size: 0.85rem;">Build Units:</p>`;
-
-                const unitTypes = [
-                    { type: UNIT_TYPE.WORKER, label: 'Worker' },
-                    { type: UNIT_TYPE.INFANTRY, label: 'Infantry' },
-                    { type: UNIT_TYPE.HEAVY_INFANTRY, label: 'Heavy Infantry' },
-                    { type: UNIT_TYPE.CAVALRY, label: 'Cavalry' }
-                ];
-
-                for (const { type, label } of unitTypes) {
-                    const stats = UNIT_STATS[type];
-                    const canBuild = this.game.canBuildUnit(settlement, type);
-                    html += `<button class="action-btn" data-action="build-unit" data-unit="${type}" ${canBuild ? '' : 'disabled'}>
-                        ${label}
-                        <span class="cost">${stats.cost.gold}g, ${stats.cost.materials}m | A:${stats.attack} D:${stats.defense} S:${stats.speed}</span>
-                    </button>`;
-                }
-            }
-        }
-
-        // Installation actions (build, upgrade, tear down)
-        const friendlyUnits = hex.units.filter(u => this.game.units.includes(u));
-        const noEnemies = this.game.enemies.filter(e => e.q === hex.q && e.r === hex.r).length === 0;
-
-        if (friendlyUnits.length > 0 && noEnemies && !hex.dangerPoint) {
-            const currentTier = hex.installation ? INSTALLATION_TIER[hex.installation.type] : -1;
-            const buildableTypes = Object.entries(INSTALLATION_STATS).filter(
-                ([type]) => INSTALLATION_TIER[type] > currentTier
-            );
-
-            if (buildableTypes.length > 0) {
-                const label = hex.installation ? 'Upgrade Installation:' : 'Build Installation:';
-                html += `<p style="margin-top: 0.5rem; color: var(--text-dim); font-size: 0.85rem;">${label}</p>`;
-
-                for (const [type, stats] of buildableTypes) {
-                    const canBuild = this.game.canBuildInstallation(hex, type);
-                    html += `<button class="action-btn" data-action="build-installation" data-installation="${type}" ${canBuild ? '' : 'disabled'}>
-                        ${type}
-                        <span class="cost">${stats.cost.gold}g, ${stats.cost.materials}m | Def: +${stats.defense}</span>
-                    </button>`;
-                }
-            }
-
-            if (hex.installation) {
-                html += `<button class="action-btn" data-action="tear-down-installation">
-                    Tear Down ${hex.installation.type}
-                    <span class="cost">No refund</span>
-                </button>`;
-            }
-        }
-
-        if (!html) {
-            html = '<p style="color: var(--text-dim);">No actions available</p>';
-        }
-
-        this.actionsContent.innerHTML = html;
+        this.actionsContent.innerHTML = html || '<p style="color: var(--text-dim);">No actions available</p>';
     }
 
-    showNotification(message, duration = 3000) {
+    renderSettlementActions(hex) {
+        const settlement = hex.settlement || this.game.settlements.find(s => s.q === hex.q && s.r === hex.r);
+        if (!settlement) return '';
+
+        // Ensure hex.settlement is set (in case it wasn't)
+        if (!hex.settlement) hex.settlement = settlement;
+
+        let html = '';
+        html += this.renderUpgradeButton(settlement);
+        html += this.renderFoundButton(settlement);
+        html += this.renderBuildUnitButtons(settlement);
+        return html;
+    }
+
+    renderUpgradeButton(settlement) {
+        if (SETTLEMENT_UPGRADE_LEVELS.includes(settlement.tier)) {
+            const nextLevel = settlement.tier + 1;
+            const cost = SETTLEMENT_UPGRADE_COST[nextLevel];
+            if (!cost) return '';
+            const canUpgrade = this.game.canUpgradeSettlement(settlement);
+            return `<button class="action-btn" data-action="upgrade" ${canUpgrade ? '' : 'disabled'}>
+                Upgrade to ${SETTLEMENT_NAMES[nextLevel]}
+                <span class="cost">${cost.gold}g, ${cost.materials}m</span>
+            </button>`;
+        }
+
+        if (settlement.tier >= this.game.maxSettlementLevel) return '';
+
+        // Show growth progress for auto-advancing settlements
+        const threshold = SETTLEMENT_GROWTH_THRESHOLD[settlement.tier] || 100;
+        const growthPct = Math.floor((settlement.growthPoints / threshold) * 100);
+        return `<p style="margin-bottom: 0.5rem; color: var(--text-dim); font-size: 0.85rem;">Growth: ${growthPct}% to ${SETTLEMENT_NAMES[settlement.tier + 1]}</p>`;
+    }
+
+    renderFoundButton(settlement) {
+        if (settlement.tier < 1) return '';
+        const foundCost = getSettlementFoundCost(this.game.era);
+        const canFound = this.game.canFoundSettlement(settlement);
+        return `<button class="action-btn" data-action="found-settlement" ${canFound ? '' : 'disabled'}>
+            Found Settlement
+            <span class="cost">${foundCost.gold}g, ${foundCost.materials}m | -1 tier</span>
+        </button>`;
+    }
+
+    renderBuildUnitButtons(settlement) {
+        if (!this.game.canStackUnit(settlement.q, settlement.r)) {
+            return `<p style="margin-top: 0.5rem; color: var(--text-dim); font-size: 0.85rem;">Build Units: at stacking limit</p>`;
+        }
+
+        const unitTypes = [
+            { type: UNIT_TYPE.WORKER, label: 'Worker' },
+            { type: UNIT_TYPE.INFANTRY, label: 'Infantry' },
+            { type: UNIT_TYPE.HEAVY_INFANTRY, label: 'Heavy Infantry' },
+            { type: UNIT_TYPE.CAVALRY, label: 'Cavalry' }
+        ];
+
+        let html = `<p style="margin-top: 0.5rem; color: var(--text-dim); font-size: 0.85rem;">Build Units:</p>`;
+        for (const { type, label } of unitTypes) {
+            const stats = UNIT_STATS[type];
+            const canBuild = this.game.canBuildUnit(settlement, type);
+            html += `<button class="action-btn" data-action="build-unit" data-unit="${type}" ${canBuild ? '' : 'disabled'}>
+                ${label}
+                <span class="cost">${stats.cost.gold}g, ${stats.cost.materials}m | A:${stats.attack} D:${stats.defense} S:${stats.speed}</span>
+            </button>`;
+        }
+        return html;
+    }
+
+    renderInstallationActions(hex) {
+        const friendlyUnits = hex.units.filter(u => this.game.units.includes(u));
+        const hasEnemies = this.game.getEnemiesAt(hex.q, hex.r).length > 0;
+        if (friendlyUnits.length === 0 || hasEnemies || hex.dangerPoint) return '';
+
+        let html = '';
+        const currentTier = hex.installation ? INSTALLATION_TIER[hex.installation.type] : -1;
+        const buildableTypes = Object.entries(INSTALLATION_STATS).filter(
+            ([type]) => INSTALLATION_TIER[type] > currentTier
+        );
+
+        if (buildableTypes.length > 0) {
+            const label = hex.installation ? 'Upgrade Installation:' : 'Build Installation:';
+            html += `<p style="margin-top: 0.5rem; color: var(--text-dim); font-size: 0.85rem;">${label}</p>`;
+
+            for (const [type, stats] of buildableTypes) {
+                const canBuild = this.game.canBuildInstallation(hex, type);
+                html += `<button class="action-btn" data-action="build-installation" data-installation="${type}" ${canBuild ? '' : 'disabled'}>
+                    ${type}
+                    <span class="cost">${stats.cost.gold}g, ${stats.cost.materials}m | Def: +${stats.defense}</span>
+                </button>`;
+            }
+        }
+
+        if (hex.installation) {
+            html += `<button class="action-btn" data-action="tear-down-installation">
+                Tear Down ${hex.installation.type}
+                <span class="cost">No refund</span>
+            </button>`;
+        }
+
+        return html;
+    }
+
+    showNotification(message, duration) {
         this.notification.textContent = message;
         setTimeout(() => {
             if (this.notification.textContent === message) {

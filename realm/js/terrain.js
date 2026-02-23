@@ -1,11 +1,11 @@
 // Terrain Generation using Diamond-Square (Fractal Plasma) Algorithm
 
-import { TERRAIN, RESOURCE_TYPE } from './config.js';
+import { TERRAIN, RESOURCE_TYPE, DANGER_SPAWN_RATES } from './config.js';
 import { hexKey, hexDistance, hexNeighbors } from './hex.js';
 import { Rando } from './rando.js';
 
 // Diamond-Square algorithm for heightmap generation
-function diamondSquare(size, roughness = 0.5) {
+function diamondSquare(size, roughness) {
     // Size must be 2^n + 1
     const gridSize = size;
     const grid = new Array(gridSize * gridSize).fill(0);
@@ -152,7 +152,7 @@ export function generateTerrain(mapRadius) {
     }
 
     // Find starting settlement location FIRST (before resources/danger points)
-    const startingSettlement = findStartingLocationInternal(hexes, mapRadius);
+    const startingSettlement = findBestStartingHex(hexes, mapRadius, false);
 
     // Build set of accessible hexes via BFS from starting settlement
     const accessibleKeys = startingSettlement
@@ -170,27 +170,35 @@ export function generateTerrain(mapRadius) {
     return { hexes, accessibleKeys };
 }
 
-// Internal version for terrain generation (called before resources/danger points)
-function findStartingLocationInternal(hexes, mapRadius) {
+// Score a hex as a starting location candidate
+function scoreStartingHex(hex, hexes, mapRadius, scoreResources) {
+    if (hex.terrain !== TERRAIN.PLAINS) return -Infinity;
+    if (scoreResources && hex.dangerPoint) return -Infinity;
+
+    const distFromCenter = hexDistance(0, 0, hex.q, hex.r);
+    if (distFromCenter > mapRadius * 0.4) return -Infinity;
+
+    // Score: prefer center, with nearby plains
+    let score = (mapRadius - distFromCenter) * 2;
+
+    const neighbors = hexNeighbors(hex.q, hex.r);
+    for (const n of neighbors) {
+        const nHex = hexes.get(hexKey(n.q, n.r));
+        if (!nHex) continue;
+        if (nHex.terrain === TERRAIN.PLAINS) score += 1;
+        if (scoreResources && nHex.resource) score += 5;
+    }
+
+    return score;
+}
+
+// Find best starting location. scoreResources=true when resources have been placed.
+function findBestStartingHex(hexes, mapRadius, scoreResources) {
     let best = null;
     let bestScore = -Infinity;
 
     for (const [key, hex] of hexes) {
-        if (hex.terrain !== TERRAIN.PLAINS) continue;
-
-        const distFromCenter = hexDistance(0, 0, hex.q, hex.r);
-        if (distFromCenter > mapRadius * 0.4) continue;
-
-        // Score: prefer center, with nearby plains
-        let score = (mapRadius - distFromCenter) * 2;
-
-        // Bonus for nearby plains
-        const neighbors = hexNeighbors(hex.q, hex.r);
-        for (const n of neighbors) {
-            const nHex = hexes.get(hexKey(n.q, n.r));
-            if (nHex && nHex.terrain === TERRAIN.PLAINS) score += 1;
-        }
-
+        const score = scoreStartingHex(hex, hexes, mapRadius, scoreResources);
         if (score > bestScore) {
             bestScore = score;
             best = hex;
@@ -340,10 +348,9 @@ function placeDangerPoints(hexes, mapRadius, accessibleKeys) {
 
     // Place danger points with assigned sizes
     // Spawn rate proportional to size: larger = faster spawns
-    const spawnRates = [4, 3, 3, 2, 2, 1]; // Size 1-6
     for (let i = 0; i < Math.min(dangerCount, edgeHexes.length); i++) {
         const size = Math.min(6, sizes[i]); // Cap at 6
-        const maxSpawnTime = spawnRates[size - 1] || 1;
+        const maxSpawnTime = DANGER_SPAWN_RATES[size - 1];
         // Randomize initial countdown (1 to maxSpawnTime) so they don't all spawn together
         const initialCountdown = Rando.int(1, maxSpawnTime);
         edgeHexes[i].dangerPoint = {
@@ -355,32 +362,5 @@ function placeDangerPoints(hexes, mapRadius, accessibleKeys) {
 
 // Find a good starting location (center-ish, plains, no dangers nearby)
 export function findStartingLocation(hexes, mapRadius) {
-    let best = null;
-    let bestScore = -Infinity;
-
-    for (const [key, hex] of hexes) {
-        if (hex.terrain !== TERRAIN.PLAINS) continue;
-        if (hex.dangerPoint) continue;
-
-        const distFromCenter = hexDistance(0, 0, hex.q, hex.r);
-        if (distFromCenter > mapRadius * 0.4) continue;
-
-        // Score: prefer center, with nearby plains
-        let score = (mapRadius - distFromCenter) * 2;
-
-        // Bonus for nearby resources
-        const neighbors = hexNeighbors(hex.q, hex.r);
-        for (const n of neighbors) {
-            const nHex = hexes.get(hexKey(n.q, n.r));
-            if (nHex && nHex.resource) score += 5;
-            if (nHex && nHex.terrain === TERRAIN.PLAINS) score += 1;
-        }
-
-        if (score > bestScore) {
-            bestScore = score;
-            best = hex;
-        }
-    }
-
-    return best;
+    return findBestStartingHex(hexes, mapRadius, true);
 }

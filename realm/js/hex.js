@@ -74,7 +74,7 @@ export function parseHexKey(key) {
 }
 
 // Get corner points of a hex for drawing
-export function hexCorners(centerX, centerY, size = HEX_SIZE) {
+export function hexCorners(centerX, centerY, size) {
     const corners = [];
     for (let i = 0; i < 6; i++) {
         const angle = Math.PI / 180 * (60 * i - 30);
@@ -87,7 +87,7 @@ export function hexCorners(centerX, centerY, size = HEX_SIZE) {
 }
 
 // Draw a hex path on canvas context
-export function drawHexPath(ctx, centerX, centerY, size = HEX_SIZE) {
+export function drawHexPath(ctx, centerX, centerY, size) {
     const corners = hexCorners(centerX, centerY, size);
     ctx.beginPath();
     ctx.moveTo(corners[0].x, corners[0].y);
@@ -163,7 +163,7 @@ class PathfinderState {
 }
 
 // A* pathfinding for hex grid
-export function findPath(start, end, isPassable, movementCost, maxCost = Infinity) {
+export function findPath(start, end, isPassable, movementCost, maxCost) {
     if (hexKey(start.q, start.r) === hexKey(end.q, end.r)) return [start];
     if (!isPassable(end.q, end.r)) return null;
 

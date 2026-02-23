@@ -54,7 +54,7 @@ export class Rando {
      * @param {number} max
      * @returns {number}
      */
-    static float(min = 0, max = 1) {
+    static float(min, max) {
         return min + Math.random() * (max - min);
     }
 
@@ -63,7 +63,7 @@ export class Rando {
      * @param {number} probability - Chance of returning true (0-1), default 0.5
      * @returns {boolean}
      */
-    static bool(probability = 0.5) {
+    static bool(probability) {
         return Math.random() < probability;
     }
 

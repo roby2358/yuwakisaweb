@@ -33,7 +33,7 @@ import {
     UNIT_TYPE, UNIT_STATS, ENEMY_SPAWN_WEIGHTS,
     INSTALLATION_TYPE, INSTALLATION_STATS, INSTALLATION_TIER,
     ERA, ERA_THRESHOLDS,
-    STARTING_RESOURCES
+    STARTING_RESOURCES, DANGER_SPAWN_RATES
 } from './config.js';
 import { hexKey, parseHexKey, hexDistance, hexNeighbors, hexesInRange, findPath } from './hex.js';
 import { generateTerrain, findStartingLocation } from './terrain.js';
@@ -44,7 +44,7 @@ import { Rando } from './rando.js';
 import { Collapse } from './collapse.js';
 
 export class Game {
-    constructor(mapRadius = 12) {
+    constructor(mapRadius) {
         this.mapRadius = mapRadius;
         const { hexes, accessibleKeys } = generateTerrain(mapRadius);
         this.hexes = hexes;
@@ -70,9 +70,6 @@ export class Game {
 
         // Shuffled society options (refreshed each turn)
         this.shuffledSocietyOptions = createShuffledOptions();
-
-        // Spawn rates by danger point size (1-6)
-        this.spawnRates = [4, 3, 3, 2, 2, 1];
 
         // Stacking limit for military units
         this.maxUnitsPerHex = 2;
@@ -107,7 +104,7 @@ export class Game {
     }
 
     // Check if a hex is a valid move/spawn target for enemies
-    isValidEnemyMove(q, r, excludeEnemy = null) {
+    isValidEnemyMove(q, r, excludeEnemy) {
         const hex = this.getHex(q, r);
         if (!hex) return false;
         if (TERRAIN_MOVEMENT[hex.terrain] === Infinity) return false;
@@ -162,7 +159,7 @@ export class Game {
 
     // Get spawn rate for a danger point size
     getSpawnRate(size) {
-        return this.spawnRates[size - 1] || 1;
+        return DANGER_SPAWN_RATES[size - 1];
     }
 
     // Find nearest entity matching predicate
@@ -221,7 +218,7 @@ export class Game {
     }
 
     // Generate random loot (gold and materials) using 2d6 per resource, with optional multiplier
-    generateLoot(multiplier = 1) {
+    generateLoot(multiplier) {
         return {
             gold: (Rando.int(1, 6) + Rando.int(1, 6)) * multiplier,
             materials: (Rando.int(1, 6) + Rando.int(1, 6)) * multiplier
@@ -260,7 +257,7 @@ export class Game {
     }
 
     // Settlement Management
-    createSettlement(q, r, tier = SETTLEMENT_LEVEL.CAMP) {
+    createSettlement(q, r, tier) {
         const hex = this.getHex(q, r);
         if (!hex || hex.settlement) return null;
 
@@ -539,7 +536,7 @@ export class Game {
         if (enemy.health <= 0) {
             this.removeEnemy(enemy);
             result.killed = true;
-            result.loot = this.generateLoot();
+            result.loot = this.generateLoot(1);
             this.collectLoot(result.loot);
             this.moveUnitToHex(unit, targetHex);
         } else {
@@ -812,53 +809,55 @@ export class Game {
     processEnemySpawns() {
         for (const [key, hex] of this.hexes) {
             if (!hex.dangerPoint) continue;
-
             hex.dangerPoint.turnsUntilSpawn--;
+            if (hex.dangerPoint.turnsUntilSpawn > 0) continue;
 
-            if (hex.dangerPoint.turnsUntilSpawn <= 0) {
-                const neighbors = hexNeighbors(hex.q, hex.r);
-                const validSpawns = neighbors.filter(n => this.isValidSpawnHex(n.q, n.r));
-
-                if (validSpawns.length > 0) {
-                    const spawnHex = validSpawns[Math.floor(Math.random() * validSpawns.length)];
-                    const enemyType = this.randomEnemyType();
-                    const defenders = this.getUnitsAt(spawnHex.q, spawnHex.r);
-
-                    if (defenders.length > 0) {
-                        // Spawn hex has a friendly unit — spawning enemy attacks it
-                        const unit = defenders[0];
-                        const stats = UNIT_STATS[enemyType];
-                        this.strikeUnit(stats.attack, unit);
-
-                        // Counter-attack from unit to spawning enemy
-                        const unitStats = UNIT_STATS[unit.type];
-                        const counterDamage = this.calculateDamage(unitStats.attack, stats.defense);
-                        const attackerSurvives = counterDamage < stats.health;
-
-                        if (unit.health <= 0 && attackerSurvives) {
-                            // Unit killed and attacker survives — enemy materializes
-                            this.removeUnit(unit);
-                            this.adjustSociety('unrest', 3);
-                            const enemy = this.spawnEnemy(spawnHex.q, spawnHex.r, enemyType);
-                            enemy.health = stats.health - counterDamage;
-                            this.combatReport.push({ q: spawnHex.q, r: spawnHex.r, unitKilled: true });
-                        } else {
-                            // Unit survives or attacker would die — spawn fails
-                            if (unit.health <= 0) {
-                                this.removeUnit(unit);
-                                this.adjustSociety('unrest', 3);
-                            }
-                            this.combatReport.push({ q: spawnHex.q, r: spawnHex.r, unitKilled: unit.health <= 0 });
-                        }
-                    } else {
-                        // Empty hex — spawn normally
-                        this.spawnEnemy(spawnHex.q, spawnHex.r, enemyType);
-                    }
-                }
-
-                hex.dangerPoint.turnsUntilSpawn = this.getSpawnRate(hex.dangerPoint.strength);
-            }
+            this.spawnFromDangerPoint(hex);
+            hex.dangerPoint.turnsUntilSpawn = this.getSpawnRate(hex.dangerPoint.strength);
         }
+    }
+
+    // Attempt to spawn an enemy from a danger point
+    spawnFromDangerPoint(hex) {
+        const neighbors = hexNeighbors(hex.q, hex.r);
+        const validSpawns = neighbors.filter(n => this.isValidSpawnHex(n.q, n.r));
+        if (validSpawns.length === 0) return;
+
+        const spawnHex = Rando.choice(validSpawns);
+        const enemyType = this.randomEnemyType();
+        const defenders = this.getUnitsAt(spawnHex.q, spawnHex.r);
+
+        if (defenders.length === 0) {
+            this.spawnEnemy(spawnHex.q, spawnHex.r, enemyType);
+            return;
+        }
+
+        this.resolveSpawnCombat(spawnHex, enemyType, defenders[0]);
+    }
+
+    // Resolve combat when an enemy spawns onto a hex with a friendly unit
+    resolveSpawnCombat(spawnHex, enemyType, unit) {
+        const stats = UNIT_STATS[enemyType];
+        this.strikeUnit(stats.attack, unit);
+
+        // Counter-attack from unit to spawning enemy
+        const unitStats = UNIT_STATS[unit.type];
+        const counterDamage = this.calculateDamage(unitStats.attack, stats.defense);
+        const attackerSurvives = counterDamage < stats.health;
+        const unitKilled = unit.health <= 0;
+
+        if (unitKilled) {
+            this.removeUnit(unit);
+            this.adjustSociety('unrest', 3);
+        }
+
+        // Enemy materializes only if it killed the unit and survived
+        if (unitKilled && attackerSurvives) {
+            const enemy = this.spawnEnemy(spawnHex.q, spawnHex.r, enemyType);
+            enemy.health = stats.health - counterDamage;
+        }
+
+        this.combatReport.push({ q: spawnHex.q, r: spawnHex.r, unitKilled });
     }
 
     spawnEnemy(q, r, type) {
@@ -877,12 +876,7 @@ export class Game {
     }
 
     randomEnemyType() {
-        let roll = Math.random();
-        for (const { type, weight } of ENEMY_SPAWN_WEIGHTS) {
-            roll -= weight;
-            if (roll <= 0) return type;
-        }
-        return ENEMY_SPAWN_WEIGHTS[ENEMY_SPAWN_WEIGHTS.length - 1].type;
+        return Rando.weighted(ENEMY_SPAWN_WEIGHTS);
     }
 
     randomEnemyPurpose() {
@@ -1106,41 +1100,49 @@ export class Game {
             }
         }
 
-        // Overflow from capped settlements (at max level or at upgrade threshold)
+        this.redistributeGrowthOverflow();
+    }
+
+    // Overflow from capped settlements redistributes to nearest settlement with room to grow
+    redistributeGrowthOverflow() {
         for (const settlement of this.settlements) {
-            const maxLevel = this.getMaxTierAt(settlement.q, settlement.r);
-            const atCap = settlement.tier >= maxLevel ||
-                          settlement.tier >= this.maxSettlementLevel ||
-                          SETTLEMENT_UPGRADE_LEVELS.includes(settlement.tier);
+            const overflow = this.calculateOverflow(settlement);
+            if (overflow <= 0) continue;
 
-            const threshold = this.getGrowthThreshold(settlement.tier);
-            const halfThreshold = Math.floor(threshold / 2);
+            const halfThreshold = Math.floor(this.getGrowthThreshold(settlement.tier) / 2);
+            settlement.growthPoints = halfThreshold;
 
-            if (atCap && settlement.growthPoints > halfThreshold) {
-                const overflow = settlement.growthPoints - halfThreshold;
-                settlement.growthPoints = halfThreshold;
-
-                // Find nearest settlement with room to grow
-                let nearest = null;
-                let nearestDist = Infinity;
-
-                for (const other of this.settlements) {
-                    if (other.id === settlement.id) continue;
-                    const otherThreshold = this.getGrowthThreshold(other.tier);
-                    if (this.canAutoAdvance(other) || other.growthPoints < otherThreshold) {
-                        const dist = hexDistance(settlement.q, settlement.r, other.q, other.r);
-                        if (dist < nearestDist) {
-                            nearestDist = dist;
-                            nearest = other;
-                        }
-                    }
-                }
-
-                if (nearest) {
-                    nearest.growthPoints += overflow;
-                }
+            const recipient = this.findNearestGrowableSettlement(settlement);
+            if (recipient) {
+                recipient.growthPoints += overflow;
             }
         }
+    }
+
+    // Calculate how much growth overflows from a capped settlement (0 if not capped)
+    calculateOverflow(settlement) {
+        const maxLevel = this.getMaxTierAt(settlement.q, settlement.r);
+        const atCap = settlement.tier >= maxLevel ||
+                      settlement.tier >= this.maxSettlementLevel ||
+                      SETTLEMENT_UPGRADE_LEVELS.includes(settlement.tier);
+        if (!atCap) return 0;
+
+        const halfThreshold = Math.floor(this.getGrowthThreshold(settlement.tier) / 2);
+        if (settlement.growthPoints <= halfThreshold) return 0;
+
+        return settlement.growthPoints - halfThreshold;
+    }
+
+    // Find nearest settlement that can still grow
+    findNearestGrowableSettlement(source) {
+        const coords = this.findNearest(source.q, source.r, hex => {
+            if (!hex.settlement) return false;
+            if (hex.settlement.id === source.id) return false;
+            const threshold = this.getGrowthThreshold(hex.settlement.tier);
+            return this.canAutoAdvance(hex.settlement) || hex.settlement.growthPoints < threshold;
+        });
+        if (!coords) return null;
+        return this.getHex(coords.q, coords.r).settlement;
     }
 
     // Settlement spawn scoring parameters (all in one place for easy tuning)
@@ -1244,24 +1246,18 @@ export class Game {
         if (candidates.length === 0) return;
 
         // Weighted random selection by score
-        const totalWeight = candidates.reduce((sum, c) => sum + c.score, 0);
-        let roll = Math.random() * totalWeight;
+        const weighted = candidates.map(c => ({ item: c.hex, weight: c.score }));
+        const chosen = Rando.weighted(weighted);
+        if (!chosen) return;
 
-        for (const c of candidates) {
-            roll -= c.score;
-            if (roll <= 0) {
-                this.createSettlement(c.hex.q, c.hex.r, SETTLEMENT_LEVEL.CAMP);
+        this.createSettlement(chosen.q, chosen.r, SETTLEMENT_LEVEL.CAMP);
 
-                // Settlement spawning effects:
-                // - Halve unrest (pressure released)
-                this.society.unrest /= 2;
-                // - Increase overextension by 25% (more territory to manage)
-                this.society.overextension *= 1.25;
-                this.society.overextension = Math.min(100, this.society.overextension);
-
-                break;
-            }
-        }
+        // Settlement spawning effects:
+        // - Halve unrest (pressure released)
+        this.society.unrest /= 2;
+        // - Increase overextension by 25% (more territory to manage)
+        this.society.overextension *= 1.25;
+        this.society.overextension = Math.min(100, this.society.overextension);
     }
 
     processWildSpawns() {
@@ -1298,17 +1294,9 @@ export class Game {
         const candidates = [];
         for (const [key, hex] of this.hexes) {
             const score = this.calculateSpawnScore(hex);
-            if (score > 0) candidates.push({ hex, score });
+            if (score > 0) candidates.push({ item: hex, weight: score });
         }
-        if (candidates.length === 0) return null;
-
-        const totalWeight = candidates.reduce((sum, c) => sum + c.score, 0);
-        let roll = Math.random() * totalWeight;
-        for (const c of candidates) {
-            roll -= c.score;
-            if (roll <= 0) return c.hex;
-        }
-        return candidates[candidates.length - 1].hex;
+        return Rando.weighted(candidates);
     }
 
     updateSocietyParams() {

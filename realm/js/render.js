@@ -1,7 +1,7 @@
 // Canvas Rendering
 
-import { HEX_SIZE, TERRAIN_COLORS, RESOURCE_COLORS, SETTLEMENT_COLORS, UNIT_COLORS, UNIT_TYPE, SETTLEMENT_GROWTH_THRESHOLD } from './config.js';
-import { hexToPixel, drawHexPath, hexNeighbors } from './hex.js';
+import { HEX_SIZE, TERRAIN_COLORS, RESOURCE_COLORS, SETTLEMENT_COLORS, UNIT_COLORS, UNIT_TYPE, SETTLEMENT_GROWTH_THRESHOLD, DANGER_SPAWN_RATES } from './config.js';
+import { hexToPixel, pixelToHex, drawHexPath, hexNeighbors } from './hex.js';
 
 export class Renderer {
     constructor(canvas, game) {
@@ -171,7 +171,7 @@ export class Renderer {
     }
 
     // Draw a health bar at the specified position
-    drawHealthBar(x, y, width, healthPercent, color = null) {
+    drawHealthBar(x, y, width, healthPercent, color) {
         const ctx = this.ctx;
         ctx.fillStyle = '#333';
         ctx.fillRect(x - width / 2, y, width, 3);
@@ -271,8 +271,7 @@ export class Renderer {
         ctx.fillText(danger.strength, x, y);
 
         // Spawn progress bar
-        const spawnRates = [4, 3, 3, 2, 2, 1];
-        const maxSpawnTime = spawnRates[danger.strength - 1] || 1;
+        const maxSpawnTime = DANGER_SPAWN_RATES[danger.strength - 1];
         const spawnProgress = (maxSpawnTime - danger.turnsUntilSpawn) / maxSpawnTime;
         const barWidth = HEX_SIZE * 0.8;
         const barY = y + HEX_SIZE * 0.4;
@@ -344,7 +343,7 @@ export class Renderer {
         }
     }
 
-    drawUnit(unit, isEnemy = false) {
+    drawUnit(unit, isEnemy) {
         const ctx = this.ctx;
         const hex = this.game.getHex(unit.q, unit.r);
         const { x, y } = this.getHexCenter(unit.q, unit.r);
@@ -406,7 +405,7 @@ export class Renderer {
         ctx.strokeRect(ux, uy, width, height);
 
         // Health bar
-        this.drawHealthBar(x + unitOffsetX, uy + height + 3, width + 4, unit.health / unit.maxHealth);
+        this.drawHealthBar(x + unitOffsetX, uy + height + 3, width + 4, unit.health / unit.maxHealth, null);
 
         // Movement indicator - white dot in center if has moves
         if (!isEnemy && unit.movesLeft > 0) {
@@ -566,27 +565,6 @@ export class Renderer {
         const rect = this.canvas.getBoundingClientRect();
         const x = screenX - rect.left - this.offsetX;
         const y = screenY - rect.top - this.offsetY;
-
-        // Reverse of hexToPixel
-        const q = (Math.sqrt(3) / 3 * x - 1 / 3 * y) / HEX_SIZE;
-        const r = (2 / 3 * y) / HEX_SIZE;
-
-        // Round to nearest hex
-        const s = -q - r;
-        let rq = Math.round(q);
-        let rr = Math.round(r);
-        let rs = Math.round(s);
-
-        const qDiff = Math.abs(rq - q);
-        const rDiff = Math.abs(rr - r);
-        const sDiff = Math.abs(rs - s);
-
-        if (qDiff > rDiff && qDiff > sDiff) {
-            rq = -rr - rs;
-        } else if (rDiff > sDiff) {
-            rr = -rq - rs;
-        }
-
-        return { q: rq, r: rr };
+        return pixelToHex(x, y);
     }
 }

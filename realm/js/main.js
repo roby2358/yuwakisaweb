@@ -178,12 +178,12 @@ class App {
                 const result = this.game.attack(selectedUnit, q, r);
                 if (result) {
                     if (result.killed) {
-                        this.ui.showNotification(`Enemy destroyed! Dealt ${result.damage} damage.`);
+                        this.ui.showNotification(`Enemy destroyed! Dealt ${result.damage} damage.`, 3000);
                     } else {
-                        this.ui.showNotification(`Dealt ${result.damage} damage, took ${result.counterDamage} in return.`);
+                        this.ui.showNotification(`Dealt ${result.damage} damage, took ${result.counterDamage} in return.`, 3000);
                     }
                     if (result.unitKilled) {
-                        this.ui.showNotification('Your unit was destroyed!');
+                        this.ui.showNotification('Your unit was destroyed!', 3000);
                     }
                 }
                 this.update();
@@ -229,7 +229,7 @@ class App {
             case 'upgrade':
                 if (hex && hex.settlement) {
                     if (this.game.upgradeSettlement(hex.settlement)) {
-                        this.ui.showNotification(`Settlement upgraded!`);
+                        this.ui.showNotification(`Settlement upgraded!`, 3000);
                     }
                 }
                 break;
@@ -239,7 +239,7 @@ class App {
                     const unitType = btn.dataset.unit;
                     const unit = this.game.buildUnit(hex.settlement, unitType);
                     if (unit) {
-                        this.ui.showNotification(`${unitType} recruited!`);
+                        this.ui.showNotification(`${unitType} recruited!`, 3000);
                     }
                 }
                 break;
@@ -249,7 +249,7 @@ class App {
                     const type = btn.dataset.installation;
                     const hadExisting = !!hex.installation;
                     if (this.game.buildInstallation(hex, type)) {
-                        this.ui.showNotification(hadExisting ? `Upgraded to ${type}!` : `${type} built!`);
+                        this.ui.showNotification(hadExisting ? `Upgraded to ${type}!` : `${type} built!`, 3000);
                     }
                 }
                 break;
@@ -257,7 +257,7 @@ class App {
             case 'tear-down-installation':
                 if (hex) {
                     if (this.game.tearDownInstallation(hex)) {
-                        this.ui.showNotification('Installation torn down.');
+                        this.ui.showNotification('Installation torn down.', 3000);
                     }
                 }
                 break;
@@ -266,7 +266,7 @@ class App {
                 if (hex && hex.settlement) {
                     const newSettlement = this.game.foundSettlement(hex.settlement);
                     if (newSettlement) {
-                        this.ui.showNotification(`New settlement founded at (${newSettlement.q}, ${newSettlement.r})!`);
+                        this.ui.showNotification(`New settlement founded at (${newSettlement.q}, ${newSettlement.r})!`, 3000);
                     }
                 }
                 break;
@@ -527,7 +527,7 @@ class App {
         this.game.society.overextension = applyPct(this.game.society.overextension, over);
 
         this.hideSocietyModal();
-        this.ui.showNotification(`${option.name} enacted!`);
+        this.ui.showNotification(`${option.name} enacted!`, 3000);
         this.update();
     }
 }

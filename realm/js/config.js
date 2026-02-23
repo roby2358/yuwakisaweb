@@ -195,10 +195,10 @@ export const UNIT_STATS = {
 };
 
 export const ENEMY_SPAWN_WEIGHTS = [
-    { type: UNIT_TYPE.ENEMY_SMALL, weight: 0.2 },
-    { type: UNIT_TYPE.ENEMY_MEDIUM, weight: 0.3 },
-    { type: UNIT_TYPE.ENEMY_LARGE, weight: 0.4 },
-    { type: UNIT_TYPE.ENEMY_MONSTER, weight: 0.1 }
+    { item: UNIT_TYPE.ENEMY_SMALL, weight: 0.2 },
+    { item: UNIT_TYPE.ENEMY_MEDIUM, weight: 0.3 },
+    { item: UNIT_TYPE.ENEMY_LARGE, weight: 0.4 },
+    { item: UNIT_TYPE.ENEMY_MONSTER, weight: 0.1 }
 ];
 
 export const UNIT_COLORS = {
@@ -301,3 +301,4 @@ export const STARTING_RESOURCES = {
 // Danger point settings
 export const DANGER_SPAWN_INTERVAL = 6; // turns between spawns
 export const DANGER_SPAWN_STRENGTH = { min: 1, max: 3 }; // enemy units spawned
+export const DANGER_SPAWN_RATES = [4, 3, 3, 2, 2, 1]; // turns between spawns by strength (1-6)
