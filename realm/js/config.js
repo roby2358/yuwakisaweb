@@ -232,6 +232,12 @@ export const ERA = {
     EMPIRE: 'Empire'
 };
 
+export const ERA_MULTIPLIER = {
+    [ERA.BARBARIAN]: 1,
+    [ERA.KINGDOM]: 2,
+    [ERA.EMPIRE]: 4
+};
+
 export const ERA_THRESHOLDS = {
     [ERA.KINGDOM]: { settlements: 4 },
     [ERA.EMPIRE]: { settlements: 7 }

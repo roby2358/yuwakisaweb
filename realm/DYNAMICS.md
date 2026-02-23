@@ -661,10 +661,22 @@ Click the **Society panel** to open the realm management interface. This display
 
 ### Action Selection
 
-At the start of each turn, all 80 society actions are **shuffled** into a randomized list. When the panel is opened, the first 3 **valid** actions from this list are displayed. This means:
+At the start of each turn, all 88 society actions are **shuffled** into a randomized list. When the panel is opened, the first 3 **valid** actions from this list are displayed. This means:
 - Opening/closing the panel shows the same options (no gaming the system)
 - Taking an action removes it from the list, so reopening shows fresh options
 - All options reset and reshuffle at the start of the next turn
+
+### Era-Scaled Costs
+
+All gold and materials costs (and gains) are multiplied by the **era multiplier**:
+
+| Era       | Multiplier | Example (base 10g) |
+|-----------|------------|---------------------|
+| Barbarian | x1         | 10 gold             |
+| Kingdom   | x2         | 20 gold             |
+| Empire    | x4         | 40 gold             |
+
+This applies to all action categories — costs increase with era, and cash-in gains also scale up.
 
 ### Percentage-Based Effects
 
@@ -694,6 +706,15 @@ Examples:
 - "Hire Civil Administrators": -5 gold, -10% Overextension, +5% Corruption
 - "Establish Courts": -10 gold, -20% Corruption, +10% Unrest
 - "Secret Police": -10 gold, -20% Unrest, +15% Corruption
+
+This category also includes **pure investment** options that reduce a single meter with no side effects, at higher gold costs:
+
+| Tier  | Base Cost | Effect | Example                          |
+|-------|-----------|--------|----------------------------------|
+| 50g   | 50 gold   | -15%   | "Build Offices" (-15% Overext.)  |
+| 100g  | 100 gold  | -25%   | "Grand Concessions" (-25% Unrest)|
+
+One pair (50g and 100g) exists for each of the four society meters.
 
 #### 3. Public Works Actions (Gold + Materials Cost)
 Build structures that address society problems.

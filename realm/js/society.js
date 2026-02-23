@@ -252,6 +252,54 @@ export const PAY_OPTIONS = [
         description: "Aid calms crises but requires extended presence.",
         costs: [8, 0],
         effects: [0, -20, 0, 5]
+    },
+    {
+        name: "Build Offices",
+        description: "New administrative buildings ease territorial management.",
+        costs: [50, 0],
+        effects: [0, 0, 0, -15]
+    },
+    {
+        name: "Build Provincial Capitals",
+        description: "Major governance centers bring distant lands under control.",
+        costs: [100, 0],
+        effects: [0, 0, 0, -25]
+    },
+    {
+        name: "Establish Oversight Board",
+        description: "An independent body roots out graft and bribery.",
+        costs: [50, 0],
+        effects: [-15, 0, 0, 0]
+    },
+    {
+        name: "Sweeping Anti-Corruption Reforms",
+        description: "A top-to-bottom purge of corrupt officials and practices.",
+        costs: [100, 0],
+        effects: [-25, 0, 0, 0]
+    },
+    {
+        name: "Public Relief Program",
+        description: "Food and shelter for the discontented eases tensions.",
+        costs: [50, 0],
+        effects: [0, -15, 0, 0]
+    },
+    {
+        name: "Grand Concessions",
+        description: "Major reforms address the people's deepest grievances.",
+        costs: [100, 0],
+        effects: [0, -25, 0, 0]
+    },
+    {
+        name: "Temperance Campaign",
+        description: "A concerted effort to curtail excess in the courts.",
+        costs: [50, 0],
+        effects: [0, 0, -15, 0]
+    },
+    {
+        name: "Monastic Revival",
+        description: "A return to discipline and virtue sweeps the realm.",
+        costs: [100, 0],
+        effects: [0, 0, -25, 0]
     }
 ];
 
@@ -630,12 +678,14 @@ export function createShuffledOptions() {
 }
 
 // Get available options from pre-shuffled list (first 3 valid ones)
-export function getAvailableOptions(resources, society, shuffledOptions) {
+export function getAvailableOptions(resources, society, shuffledOptions, eraMultiplier) {
     const available = [];
 
     // Helper to check affordability (negative costs mean gains, always affordable)
+    // Costs scale with era multiplier (1/2/4 for Barbarian/Kingdom/Empire)
     const canAfford = (costs) => {
-        return resources.gold >= Math.max(0, costs[0]) && resources.materials >= Math.max(0, costs[1]);
+        return resources.gold >= Math.max(0, costs[0] * eraMultiplier)
+            && resources.materials >= Math.max(0, costs[1] * eraMultiplier);
     };
 
     // Helper to check if option is useful (at least one negative effect applies)
@@ -688,11 +738,14 @@ export function formatEffect(effects) {
 }
 
 // Format cost for display (negative costs are gains)
-export function formatCost(costs) {
+// Costs scale with era multiplier (1/2/4 for Barbarian/Kingdom/Empire)
+export function formatCost(costs, eraMultiplier) {
     const parts = [];
-    if (costs[0] > 0) parts.push(`-${costs[0]} gold`);
-    else if (costs[0] < 0) parts.push(`+${-costs[0]} gold`);
-    if (costs[1] > 0) parts.push(`-${costs[1]} materials`);
-    else if (costs[1] < 0) parts.push(`+${-costs[1]} materials`);
+    const gold = costs[0] * eraMultiplier;
+    const materials = costs[1] * eraMultiplier;
+    if (gold > 0) parts.push(`-${gold} gold`);
+    else if (gold < 0) parts.push(`+${-gold} gold`);
+    if (materials > 0) parts.push(`-${materials} materials`);
+    else if (materials < 0) parts.push(`+${-materials} materials`);
     return parts.length > 0 ? parts.join(', ') : 'Free';
 }

@@ -592,6 +592,11 @@ body {
     font-weight: bold;
 }
 
+.society-option-heavy {
+    color: var(--danger);
+    font-weight: bold;
+}
+
 .society-option-effects {
     text-align: right;
 }

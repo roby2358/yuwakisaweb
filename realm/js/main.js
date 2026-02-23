@@ -4,7 +4,7 @@ import { Game } from './game.js';
 import { Renderer } from './render.js';
 import { UI } from './ui.js';
 import { hexKey } from './hex.js';
-import { ERA_INFO, COLLAPSE_INFO } from './config.js';
+import { ERA_INFO, ERA_MULTIPLIER, COLLAPSE_INFO } from './config.js';
 import {
     getRealmStateDescription,
     getCurrentImpacts,
@@ -438,18 +438,22 @@ class App {
         }
 
         // Show available options from pre-shuffled list
-        const options = getAvailableOptions(this.game.resources, this.game.society, this.game.shuffledSocietyOptions);
+        const eraMult = ERA_MULTIPLIER[this.game.era];
+        const options = getAvailableOptions(this.game.resources, this.game.society, this.game.shuffledSocietyOptions, eraMult);
         this.currentSocietyOptions = options; // Store for handling clicks
 
         if (options.length > 0) {
             let optionsHtml = '<h3>Available Actions</h3>';
             for (let i = 0; i < options.length; i++) {
                 const opt = options[i];
-                const costStr = formatCost(opt.costs);
+                const costStr = formatCost(opt.costs, eraMult);
                 const effectsHtml = this.formatEffectsHtml(opt.effects);
-                // Use gain class if getting resources (negative costs)
-                const isGain = opt.costs[0] < 0 || opt.costs[1] < 0;
-                const costClass = isGain ? 'society-option-gain' : 'society-option-cost';
+                // Color cost: green for gains, red for heavy costs (>=50 scaled), gold otherwise
+                const scaledGold = opt.costs[0] * eraMult;
+                const scaledMaterials = opt.costs[1] * eraMult;
+                const isGain = scaledGold < 0 || scaledMaterials < 0;
+                const isHeavy = scaledGold >= 50 || scaledMaterials >= 50;
+                const costClass = isGain ? 'society-option-gain' : isHeavy ? 'society-option-heavy' : 'society-option-cost';
 
                 optionsHtml += `
                     <div class="society-option" data-option-index="${i}">
@@ -511,9 +515,10 @@ class App {
             this.game.shuffledSocietyOptions.splice(optionIndex, 1);
         }
 
-        // Apply costs
-        this.game.resources.gold -= option.costs[0];
-        this.game.resources.materials -= option.costs[1];
+        // Apply costs scaled by era multiplier (1/2/4)
+        const eraMult = ERA_MULTIPLIER[this.game.era];
+        this.game.resources.gold -= option.costs[0] * eraMult;
+        this.game.resources.materials -= option.costs[1] * eraMult;
 
         // Apply effects as percentage changes (+20 means *1.2, -30 means *0.7)
         const [corr, unr, dec, over] = option.effects;
