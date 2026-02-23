@@ -881,7 +881,10 @@ export class Game {
 
     // Move enemy toward a target
     moveEnemyToward(enemy, target) {
-        if (!target) return;
+        if (!target) {
+            this.moveEnemyRandom(enemy);
+            return;
+        }
 
         const validMoves = this.getValidEnemyMoves(enemy);
         let bestMove = null;
@@ -895,10 +898,12 @@ export class Game {
             }
         }
 
-        // Only move if it gets us closer
+        // Only move if it gets us closer, otherwise move randomly
         if (bestMove && bestDist < hexDistance(enemy.q, enemy.r, target.q, target.r)) {
             enemy.q = bestMove.q;
             enemy.r = bestMove.r;
+        } else {
+            this.moveEnemyRandom(enemy);
         }
     }
 
