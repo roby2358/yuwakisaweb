@@ -150,6 +150,24 @@ class App {
         });
     }
 
+    // Select the next friendly unit with moves on this hex after `afterUnit`.
+    // If afterUnit is null, selects the first. If none remain, clears selection.
+    selectNextUnit(hex, afterUnit) {
+        const friendly = hex.units.filter(u => this.game.units.includes(u) && u.movesLeft > 0);
+        if (friendly.length === 0) return;
+
+        if (!afterUnit) {
+            this.game.selectUnit(friendly[0]);
+            return;
+        }
+
+        const idx = friendly.indexOf(afterUnit);
+        const next = friendly[idx + 1];
+        if (next) {
+            this.game.selectUnit(next);
+        }
+    }
+
     handleCanvasClick(e) {
         if (this.reportingMode) {
             this.dismissCombatReport();
@@ -163,15 +181,16 @@ class App {
 
         const selectedUnit = this.game.selectedUnit;
 
-        // If clicking on the selected unit's hex, deselect the unit
-        if (selectedUnit && selectedUnit.q === q && selectedUnit.r === r) {
-            this.game.selectedUnit = null;
-            this.update();
-            return;
-        }
-
-        // If we have a unit selected, try to move or attack
+        // If we have a unit selected, try to attack, move, or cycle
         if (selectedUnit) {
+            // Clicking selected unit's hex: cycle to next unit with moves
+            if (selectedUnit.q === q && selectedUnit.r === r) {
+                this.game.selectedUnit = null;
+                this.selectNextUnit(clickedHex, selectedUnit);
+                this.update();
+                return;
+            }
+
             // Check if clicking on an enemy to attack
             const enemiesAt = this.game.enemies.filter(en => en.q === q && en.r === r);
             if (enemiesAt.length > 0 && this.game.canAttack(selectedUnit, q, r)) {
@@ -200,17 +219,10 @@ class App {
             }
         }
 
-        // Otherwise, select the hex
+        // Clicking a hex with no action: select hex and first movable unit
         this.game.selectHex(q, r);
-
-        // If there are friendly units here, select the first one with moves left
-        if (clickedHex.units.length > 0) {
-            const friendlyUnits = clickedHex.units.filter(u => this.game.units.includes(u));
-            const unitWithMoves = friendlyUnits.find(u => u.movesLeft > 0);
-            if (unitWithMoves) {
-                this.game.selectUnit(unitWithMoves);
-            }
-        }
+        this.game.selectedUnit = null;
+        this.selectNextUnit(clickedHex, null);
 
         this.update();
     }
