@@ -790,7 +790,7 @@ export class Game {
     processEnemySpawns() {
         for (const [key, hex] of this.hexes) {
             if (!hex.dangerPoint) continue;
-            hex.dangerPoint.turnsUntilSpawn--;
+            hex.dangerPoint.turnsUntilSpawn -= Rando.int(1, 6) / 3.5;
             if (hex.dangerPoint.turnsUntilSpawn > 0) continue;
 
             this.spawnFromDangerPoint(hex);

@@ -441,7 +441,7 @@ Danger points are threat generators on the map edge:
 ### Enemy Spawning
 
 Each turn, for each danger point:
-1. Decrement spawn countdown
+1. Decrement spawn countdown by 1d6/3.5 (average 1 per turn, range ~0.29–1.71)
 2. When countdown reaches 0:
    - Spawn **1 enemy** on a random valid adjacent hex
    - Reset countdown to spawn rate for this strength
