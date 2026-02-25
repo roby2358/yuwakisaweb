@@ -18,8 +18,8 @@ The map uses the **Diamond-Square (Fractal Plasma) algorithm** to generate reali
 | Terrain   | Percentage | Movement Cost | Defense Bonus |
 |-----------|------------|---------------|---------------|
 | Water     | 20%        | Impassable    | 0             |
-| Plains    | 73%        | 1             | 0             |
-| Hills     | 5%         | 2             | +1            |
+| Plains    | 68%        | 1             | 0             |
+| Hills     | 10%        | 2             | +1            |
 | Mountain  | 2%         | Impassable    | +2            |
 
 - Edge hexes (distance >= mapRadius - 1) are always water, creating an ocean border
@@ -58,9 +58,25 @@ Fixed resource counts distributed on **accessible hexes only**:
 ### Danger Point Placement
 
 - 3-6 danger points placed on outer ring (distance >= mapRadius - 2)
-- Total strength distributed = 15 (split among all danger points)
+- Total strength distributed varies by difficulty (see below)
 - Only placed on **accessible** plains or hills (not mountains)
 - Accessibility guarantees a traversable path to the starting settlement
+
+---
+
+## Difficulty
+
+The player selects a difficulty at game start. It controls danger point generation and wild spawn frequency.
+
+| Setting | Easy | Medium | Hard |
+|---------|------|--------|------|
+| Initial danger point sum | 10 | 12 | 15 |
+| Max danger level per point | 4 | 5 | 6 |
+| Wild spawn multiplier | 1x | 2x | 3x |
+
+- **Initial danger point sum**: Total strength distributed across 3-6 danger points at map edges.
+- **Max danger level**: Caps the strength of any single danger point.
+- **Wild spawn multiplier**: Scales the base chance of random enemy and monster spawns from destroyed danger points.
 
 ---
 

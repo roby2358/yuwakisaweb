@@ -85,7 +85,7 @@ function sampleHeight(heightmap, q, r, mapRadius) {
     return heightmap.grid[clampedY * heightmap.size + clampedX];
 }
 
-// Generate the complete terrain map
+// Generate terrain-only hex grid (no resources, danger points, or starting location)
 export function generateTerrain(mapRadius) {
     const hexes = new Map();
 
@@ -130,9 +130,9 @@ export function generateTerrain(mapRadius) {
     const count = innerHexes.length;
 
     // Calculate elevation thresholds based on actual percentiles
-    // Water: 20%, Plains: 73%, Hills: 5%, Mountains: 2%
+    // Water: 20%, Plains: 68%, Hills: 10%, Mountains: 2%
     const waterThreshold = innerHexes[Math.floor(count * 0.20)]?.elevation ?? 0;
-    const hillsThreshold = innerHexes[Math.floor(count * 0.93)]?.elevation ?? 93;
+    const hillsThreshold = innerHexes[Math.floor(count * 0.88)]?.elevation ?? 88;
     const mountainThreshold = innerHexes[Math.floor(count * 0.98)]?.elevation ?? 98;
 
     // Assign terrain based on percentile thresholds
@@ -151,6 +151,11 @@ export function generateTerrain(mapRadius) {
         }
     }
 
+    return hexes;
+}
+
+// Place resources, danger points, and find accessible hexes on an existing hex grid
+export function populateTerrain(hexes, mapRadius, dangerSum, maxDangerLevel) {
     // Find starting settlement location FIRST (before resources/danger points)
     const startingSettlement = findBestStartingHex(hexes, mapRadius, false);
 
@@ -164,10 +169,10 @@ export function generateTerrain(mapRadius) {
 
     // Place danger points only on accessible edge hexes
     if (startingSettlement) {
-        placeDangerPoints(hexes, mapRadius, accessibleKeys);
+        placeDangerPoints(hexes, mapRadius, accessibleKeys, dangerSum, maxDangerLevel);
     }
 
-    return { hexes, accessibleKeys };
+    return accessibleKeys;
 }
 
 // Score a hex as a starting location candidate
@@ -307,10 +312,9 @@ function distributeRandomly(total, parts) {
 }
 
 // Place danger points on the map edges (only on accessible hexes)
-function placeDangerPoints(hexes, mapRadius, accessibleKeys) {
-    // 3-6 danger points, sizes sum to 15
+function placeDangerPoints(hexes, mapRadius, accessibleKeys, dangerSum, maxDangerLevel) {
     const dangerCount = Rando.int(3, 6);
-    const sizes = distributeRandomly(15, dangerCount);
+    const sizes = distributeRandomly(dangerSum, dangerCount);
 
     const edgeHexes = [];
 
@@ -330,7 +334,7 @@ function placeDangerPoints(hexes, mapRadius, accessibleKeys) {
     // Place danger points with assigned sizes
     // Spawn rate proportional to size: larger = faster spawns
     for (let i = 0; i < Math.min(dangerCount, edgeHexes.length); i++) {
-        const size = Math.min(6, sizes[i]); // Cap at 6
+        const size = Math.min(maxDangerLevel, sizes[i]);
         const maxSpawnTime = DANGER_SPAWN_RATES[size - 1];
         // Randomize initial countdown (1 to maxSpawnTime) so they don't all spawn together
         const initialCountdown = Rando.int(1, maxSpawnTime);

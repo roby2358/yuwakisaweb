@@ -308,3 +308,10 @@ export const STARTING_RESOURCES = {
 export const DANGER_SPAWN_INTERVAL = 6; // turns between spawns
 export const DANGER_SPAWN_STRENGTH = { min: 1, max: 3 }; // enemy units spawned
 export const DANGER_SPAWN_RATES = [4, 3, 3, 2, 2, 1]; // turns between spawns by strength (1-6)
+
+// Difficulty presets
+export const DIFFICULTY = {
+    easy:   { dangerSum: 10, maxDangerLevel: 4, wildSpawnMultiplier: 1 },
+    medium: { dangerSum: 12, maxDangerLevel: 5, wildSpawnMultiplier: 2 },
+    hard:   { dangerSum: 15, maxDangerLevel: 6, wildSpawnMultiplier: 3 }
+};

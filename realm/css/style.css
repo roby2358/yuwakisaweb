@@ -640,6 +640,35 @@ body {
     margin-bottom: var(--space-lg);
 }
 
-.modal-welcome #welcome-start-btn {
-    padding: var(--space-sm) var(--space-xl);
+.difficulty-buttons {
+    display: flex;
+    gap: var(--space-sm);
+    justify-content: center;
+}
+
+.difficulty-btn {
+    padding: var(--space-sm) var(--space-lg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: var(--font-sm);
+    font-weight: bold;
+    color: var(--bg-dark);
+    transition: filter 0.15s;
+}
+
+.difficulty-btn:hover {
+    filter: brightness(1.15);
+}
+
+.difficulty-btn.easy {
+    background: #66bb6a;
+}
+
+.difficulty-btn.medium {
+    background: #ffa726;
+}
+
+.difficulty-btn.hard {
+    background: #ef5350;
 }

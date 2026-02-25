@@ -36,7 +36,7 @@ import {
     STARTING_RESOURCES, DANGER_SPAWN_RATES
 } from './config.js';
 import { hexKey, parseHexKey, hexDistance, hexNeighbors, hexesInRange, findPath, bfsHexes } from './hex.js';
-import { generateTerrain, findStartingLocation } from './terrain.js';
+import { populateTerrain, findStartingLocation } from './terrain.js';
 import { Production } from './production.js';
 import { createShuffledOptions } from './society.js';
 import { gaussian } from './utils.js';
@@ -44,11 +44,11 @@ import { Rando } from './rando.js';
 import { Collapse } from './collapse.js';
 
 export class Game {
-    constructor(mapRadius) {
+    constructor(mapRadius, difficulty, hexes) {
         this.mapRadius = mapRadius;
-        const { hexes, accessibleKeys } = generateTerrain(mapRadius);
+        this.difficulty = difficulty;
         this.hexes = hexes;
-        this.accessibleKeys = accessibleKeys;
+        this.accessibleKeys = populateTerrain(this.hexes, mapRadius, difficulty.dangerSum, difficulty.maxDangerLevel);
         this.turn = 1;
         this.era = ERA.BARBARIAN;
 
@@ -1248,7 +1248,7 @@ export class Game {
             if (hex.dangerPoint) totalStrength += hex.dangerPoint.strength;
         }
 
-        const baseChance = (15 - totalStrength) * 0.001 * (this.society.decadence / 30);
+        const baseChance = (this.difficulty.dangerSum - totalStrength) * 0.001 * (this.society.decadence / 30) * this.difficulty.wildSpawnMultiplier;
         if (baseChance <= 0) return;
 
         // Random enemy unit spawn (10× base chance) with new danger point

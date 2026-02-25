@@ -4,7 +4,8 @@ import { Game } from './game.js';
 import { Renderer } from './render.js';
 import { UI } from './ui.js';
 import { hexKey } from './hex.js';
-import { ERA_INFO, ERA_MULTIPLIER, COLLAPSE_INFO } from './config.js';
+import { ERA_INFO, ERA_MULTIPLIER, COLLAPSE_INFO, DIFFICULTY } from './config.js';
+import { generateTerrain } from './terrain.js';
 import {
     getRealmStateDescription,
     getCurrentImpacts,
@@ -16,12 +17,27 @@ import {
 // Modal IDs in priority order for escape handling
 const MODAL_IDS = ['welcome-modal', 'confirm-modal', 'society-modal', 'era-modal'];
 
+// Minimal game-like object for rendering terrain before the real game starts
+function createTerrainPreview(hexes) {
+    return {
+        hexes,
+        settlements: [],
+        units: [],
+        enemies: [],
+        selectedHex: null,
+        selectedUnit: null,
+        getSpawnProbabilities() { return new Map(); },
+        getHex(q, r) { return hexes.get(hexKey(q, r)); },
+        getValidMoves() { return new Set(); },
+        canAttack() { return false; }
+    };
+}
+
 class App {
     constructor() {
-        this.game = new Game(12); // Map radius of 12
+        this.game = null;
         this.canvas = document.getElementById('game-canvas');
-        this.renderer = new Renderer(this.canvas, this.game);
-        this.ui = new UI(this.game);
+        this.ui = null;
 
         // Pending confirmation data
         this.pendingConfirmation = null;
@@ -29,11 +45,24 @@ class App {
         // Combat reporting mode
         this.reportingMode = false;
 
-        this.setupEventListeners();
-        this.update();
-
-        // Start render loop for animations
+        // Generate terrain and show it behind the welcome modal
+        this.mapRadius = 12;
+        this.previewHexes = generateTerrain(this.mapRadius);
+        this.renderer = new Renderer(this.canvas, createTerrainPreview(this.previewHexes));
+        this.renderer.render();
         this.animate();
+
+        this.setupEventListeners();
+    }
+
+    startGame(difficultyKey) {
+        const difficulty = DIFFICULTY[difficultyKey];
+        this.game = new Game(this.mapRadius, difficulty, this.previewHexes);
+        this.previewHexes = null;
+        this.renderer.game = this.game;
+        this.ui = new UI(this.game);
+        this.hideWelcomeModal();
+        this.update();
     }
 
     // Check if any modal is currently open
@@ -119,8 +148,10 @@ class App {
         document.getElementById('actions-content').addEventListener('click', handleActionClick);
         document.getElementById('info-content').addEventListener('click', handleActionClick);
 
-        // Welcome modal
-        document.getElementById('welcome-start-btn').addEventListener('click', () => this.hideWelcomeModal());
+        // Difficulty buttons on welcome modal
+        for (const btn of document.querySelectorAll('.difficulty-btn')) {
+            btn.addEventListener('click', () => this.startGame(btn.dataset.difficulty));
+        }
 
         // Population map toggle
         document.getElementById('population-map-btn').addEventListener('click', () => this.togglePopulationMap());
@@ -137,7 +168,7 @@ class App {
 
             if (e.key === 'Escape') {
                 // Close any open modal, otherwise clear selection
-                if (!this.closeTopModal()) {
+                if (!this.closeTopModal() && this.game) {
                     this.game.clearSelection();
                     this.update();
                 }
@@ -169,6 +200,7 @@ class App {
     }
 
     handleCanvasClick(e) {
+        if (!this.game) return;
         if (this.reportingMode) {
             this.dismissCombatReport();
             return;
@@ -228,6 +260,7 @@ class App {
     }
 
     handleAction(btn) {
+        if (!this.game) return;
         const action = btn.dataset.action;
         const hex = this.game.selectedHex;
 
@@ -292,6 +325,7 @@ class App {
     }
 
     handleEndTurn() {
+        if (!this.game) return;
         if (this.reportingMode) {
             this.dismissCombatReport();
             return;
@@ -330,6 +364,7 @@ class App {
     }
 
     update() {
+        if (!this.game) return;
         this.ui.update();
         this.renderer.render();
     }
@@ -341,6 +376,7 @@ class App {
     }
 
     showEraModal() {
+        if (!this.game) return;
         const era = this.game.era;
         const info = ERA_INFO[era];
 
@@ -415,6 +451,7 @@ class App {
     }
 
     showSocietyModal() {
+        if (!this.game) return;
         const stateEl = document.getElementById('society-modal-state');
         const impactsEl = document.getElementById('society-modal-impacts');
         const optionsEl = document.getElementById('society-modal-options');
@@ -489,6 +526,7 @@ class App {
     }
 
     togglePopulationMap() {
+        if (!this.game) return;
         const mode = this.renderer.toggleMapMode();
         const btn = document.getElementById('population-map-btn');
         btn.classList.toggle('active', mode === 'population');
