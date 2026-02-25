@@ -1,7 +1,7 @@
 // Terrain Generation using Diamond-Square (Fractal Plasma) Algorithm
 
 import { TERRAIN, RESOURCE_TYPE, DANGER_SPAWN_RATES } from './config.js';
-import { hexKey, hexDistance, hexNeighbors } from './hex.js';
+import { hexKey, hexDistance, hexNeighbors, bfsHexes } from './hex.js';
 import { Rando } from './rando.js';
 
 // Diamond-Square algorithm for heightmap generation
@@ -208,46 +208,27 @@ function findBestStartingHex(hexes, mapRadius, scoreResources) {
     return best;
 }
 
-// BFS from starting hex to find all accessible hexes (plains/hills reachable by land)
+// Accessible hexes for map generation: all plains/hills reachable by land,
+// plus mountains adjacent to reachable hexes (for gold placement)
 function computeAccessibleHexes(startHex, hexes) {
-    const accessible = new Set();
-    const queue = [startHex];
-    accessible.add(hexKey(startHex.q, startHex.r));
+    const reachable = bfsHexes(
+        startHex,
+        hexes,
+        hex => (hex.terrain === TERRAIN.PLAINS || hex.terrain === TERRAIN.HILLS) ? 1 : Infinity,
+        Infinity
+    );
 
-    while (queue.length > 0) {
-        const current = queue.shift();
-
-        for (const n of hexNeighbors(current.q, current.r)) {
-            const key = hexKey(n.q, n.r);
-            if (accessible.has(key)) continue;
-
-            const neighbor = hexes.get(key);
-            if (!neighbor) continue;
-
-            // Can traverse plains and hills
-            if (neighbor.terrain === TERRAIN.PLAINS || neighbor.terrain === TERRAIN.HILLS) {
-                accessible.add(key);
-                queue.push(neighbor);
-            }
-        }
-    }
-
-    // Also mark mountains adjacent to accessible hexes as accessible (for gold placement)
-    const adjacentMountains = new Set();
-    for (const key of accessible) {
+    // Add mountains adjacent to reachable hexes (for gold placement)
+    const accessible = new Set(reachable.keys());
+    for (const key of reachable.keys()) {
         const hex = hexes.get(key);
         for (const n of hexNeighbors(hex.q, hex.r)) {
             const nKey = hexKey(n.q, n.r);
             const neighbor = hexes.get(nKey);
             if (neighbor && neighbor.terrain === TERRAIN.MOUNTAIN) {
-                adjacentMountains.add(nKey);
+                accessible.add(nKey);
             }
         }
-    }
-
-    // Add adjacent mountains to accessible set
-    for (const key of adjacentMountains) {
-        accessible.add(key);
     }
 
     return accessible;

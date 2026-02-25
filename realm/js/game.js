@@ -35,7 +35,7 @@ import {
     ERA, ERA_THRESHOLDS,
     STARTING_RESOURCES, DANGER_SPAWN_RATES
 } from './config.js';
-import { hexKey, parseHexKey, hexDistance, hexNeighbors, hexesInRange, findPath } from './hex.js';
+import { hexKey, parseHexKey, hexDistance, hexNeighbors, hexesInRange, findPath, bfsHexes } from './hex.js';
 import { generateTerrain, findStartingLocation } from './terrain.js';
 import { Production } from './production.js';
 import { createShuffledOptions } from './society.js';
@@ -442,35 +442,35 @@ export class Game {
         return unit;
     }
 
+    getValidMoves(unit) {
+        if (unit.movesLeft <= 0) return new Map();
+
+        const startHex = this.getHex(unit.q, unit.r);
+        if (!startHex) return new Map();
+
+        const reachable = bfsHexes(startHex, this.hexes, hex => {
+            if (this.getEnemiesAt(hex.q, hex.r).length > 0) return Infinity;
+            if (!this.canStackUnit(hex.q, hex.r)) return Infinity;
+            return TERRAIN_MOVEMENT[hex.terrain] ?? Infinity;
+        }, unit.movesLeft);
+
+        reachable.delete(hexKey(unit.q, unit.r));
+        return reachable;
+    }
+
     canMoveUnit(unit, toQ, toR) {
-        if (unit.movesLeft <= 0) return false;
-
-        const toHex = this.getHex(toQ, toR);
-        if (!toHex) return false;
-
-        const moveCost = TERRAIN_MOVEMENT[toHex.terrain];
-        if (moveCost === Infinity) return false;
-
-        // Check if adjacent
-        if (hexDistance(unit.q, unit.r, toQ, toR) !== 1) return false;
-
-        if (unit.movesLeft < moveCost) return false;
-
-        // Can't move onto enemy units (must attack instead)
-        if (this.getEnemiesAt(toQ, toR).length > 0) return false;
-
-        // Check stacking limit
-        if (!this.canStackUnit(toQ, toR)) return false;
-
-        return true;
+        const reachable = this.getValidMoves(unit);
+        return reachable.has(hexKey(toQ, toR));
     }
 
     moveUnit(unit, toQ, toR) {
-        if (!this.canMoveUnit(unit, toQ, toR)) return false;
+        const reachable = this.getValidMoves(unit);
+        const key = hexKey(toQ, toR);
+        const cost = reachable.get(key);
+        if (cost === undefined) return false;
 
         const fromHex = this.getHex(unit.q, unit.r);
         const toHex = this.getHex(toQ, toR);
-        const moveCost = TERRAIN_MOVEMENT[toHex.terrain];
 
         // Remove from old hex
         fromHex.units = fromHex.units.filter(u => u.id !== unit.id);
@@ -478,29 +478,11 @@ export class Game {
         // Move to new hex
         unit.q = toQ;
         unit.r = toR;
-        unit.movesLeft -= moveCost;
+        unit.movesLeft -= cost;
         toHex.units.push(unit);
-
-        // Deselect unit if it has no moves left
-        if (unit.movesLeft <= 0 && this.selectedUnit === unit) {
-            this.selectedUnit = null;
-        }
 
         this.updateControlledTerritory();
         return true;
-    }
-
-    getValidMoves(unit) {
-        const moves = [];
-        const neighbors = hexNeighbors(unit.q, unit.r);
-
-        for (const n of neighbors) {
-            if (this.canMoveUnit(unit, n.q, n.r)) {
-                moves.push(n);
-            }
-        }
-
-        return moves;
     }
 
     // Combat

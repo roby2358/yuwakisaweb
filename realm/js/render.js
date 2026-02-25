@@ -477,14 +477,17 @@ export class Renderer {
     }
 
     drawValidMoves(unit) {
-        const validMoves = this.game.getValidMoves(unit);
+        const reachable = this.game.getValidMoves(unit);
 
-        // Highlight valid move destinations
-        for (const move of validMoves) {
-            this.drawHexHighlight(move.q, move.r, 'rgba(76, 175, 80, 0.3)', 'rgba(76, 175, 80, 0.8)');
+        // Highlight reachable move destinations in yellow
+        for (const [key] of reachable) {
+            const hex = this.game.hexes.get(key);
+            if (hex) {
+                this.drawHexHighlight(hex.q, hex.r, 'rgba(255, 215, 0, 0.3)', 'rgba(255, 215, 0, 0.8)');
+            }
         }
 
-        // Highlight attack targets
+        // Highlight attack targets in red
         for (const n of hexNeighbors(unit.q, unit.r)) {
             if (this.game.canAttack(unit, n.q, n.r)) {
                 this.drawHexHighlight(n.q, n.r, 'rgba(244, 67, 54, 0.3)', 'rgba(244, 67, 54, 0.8)');

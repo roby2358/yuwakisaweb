@@ -123,6 +123,60 @@ function reconstructPath(cameFrom, endKey) {
     return path;
 }
 
+// Cost-aware BFS (Dijkstra) for hex grids
+// Returns a Map of hexKey -> cost for all reachable hexes within maxCost.
+// - startHex: { q, r }
+// - hexes: Map of hexKey -> hex objects
+// - movementCost(hex): returns cost to enter hex, or Infinity if impassable
+// - maxCost: stop exploring when cost exceeds this
+export function bfsHexes(startHex, hexes, movementCost, maxCost) {
+    const costs = new Map();
+    const startKey = hexKey(startHex.q, startHex.r);
+    costs.set(startKey, 0);
+
+    // Priority queue as sorted array (fine for hex-grid BFS with small cost values)
+    const queue = [{ hex: startHex, cost: 0 }];
+
+    while (queue.length > 0) {
+        const { hex: current, cost: currentCost } = queue.shift();
+
+        for (const n of hexNeighbors(current.q, current.r)) {
+            const key = hexKey(n.q, n.r);
+            const neighbor = hexes.get(key);
+            if (!neighbor) continue;
+
+            const cost = movementCost(neighbor);
+            if (cost === Infinity) continue;
+
+            const totalCost = currentCost + cost;
+            if (totalCost > maxCost) continue;
+
+            if (!costs.has(key) || totalCost < costs.get(key)) {
+                costs.set(key, totalCost);
+                // Insert sorted by cost for correct Dijkstra ordering
+                const idx = queue.findIndex(e => e.cost > totalCost);
+                if (idx === -1) queue.push({ hex: neighbor, cost: totalCost });
+                else queue.splice(idx, 0, { hex: neighbor, cost: totalCost });
+            }
+        }
+    }
+
+    return costs;
+}
+
+// Get all hexes reachable by a unit with given movement points
+// Returns a Map of hexKey -> cost (excluding the starting hex)
+export function getReachableHexes(startHex, hexes, movementPoints, terrainMovement) {
+    const costs = bfsHexes(
+        startHex,
+        hexes,
+        hex => terrainMovement[hex.terrain] ?? Infinity,
+        movementPoints
+    );
+    costs.delete(hexKey(startHex.q, startHex.r));
+    return costs;
+}
+
 // A* pathfinding state container
 class PathfinderState {
     constructor(start, end) {

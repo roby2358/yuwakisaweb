@@ -193,14 +193,8 @@ class App {
             // Check if clicking on a valid move
             if (this.game.canMoveUnit(selectedUnit, q, r)) {
                 this.game.moveUnit(selectedUnit, q, r);
-                // Update selected hex without auto-selecting units
                 this.game.selectedHex = this.game.getHex(q, r);
-                // Keep unit selected only if it has moves left
-                if (selectedUnit.movesLeft > 0) {
-                    this.game.selectedUnit = selectedUnit;
-                } else {
-                    this.game.selectedUnit = null;
-                }
+                this.game.selectedUnit = null;
                 this.update();
                 return;
             }
