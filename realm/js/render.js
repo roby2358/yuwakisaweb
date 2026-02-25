@@ -3,6 +3,10 @@
 import { HEX_SIZE, TERRAIN_COLORS, RESOURCE_COLORS, SETTLEMENT_COLORS, UNIT_COLORS, UNIT_TYPE, SETTLEMENT_GROWTH_THRESHOLD, DANGER_SPAWN_RATES } from './config.js';
 import { hexToPixel, pixelToHex, drawHexPath, hexNeighbors } from './hex.js';
 
+const HEALTH_WHITE = [255, 255, 255];
+const HEALTH_RED = [244, 67, 54];
+const HEALTH_YELLOW = [255, 235, 59];
+
 export class Renderer {
     constructor(canvas, game) {
         this.canvas = canvas;
@@ -170,12 +174,21 @@ export class Renderer {
         };
     }
 
+    // Lerp between two [r,g,b] colors
+    lerpColor(a, b, t) {
+        const r = Math.round(a[0] + (b[0] - a[0]) * t);
+        const g = Math.round(a[1] + (b[1] - a[1]) * t);
+        const bl = Math.round(a[2] + (b[2] - a[2]) * t);
+        return `rgb(${r},${g},${bl})`;
+    }
+
     // Draw a health bar at the specified position
-    drawHealthBar(x, y, width, healthPercent, color) {
+    // colorFrom/colorTo are [r,g,b] arrays: bar lerps from colorFrom (1 hp) to colorTo (full)
+    drawHealthBar(x, y, width, healthPercent, colorFrom, colorTo) {
         const ctx = this.ctx;
         ctx.fillStyle = '#333';
         ctx.fillRect(x - width / 2, y, width, 3);
-        ctx.fillStyle = color || (healthPercent > 0.5 ? '#4caf50' : healthPercent > 0.25 ? '#ff9800' : '#f44336');
+        ctx.fillStyle = this.lerpColor(colorFrom, colorTo, healthPercent);
         ctx.fillRect(x - width / 2, y, width * healthPercent, 3);
     }
 
@@ -404,8 +417,8 @@ export class Renderer {
         ctx.lineWidth = this.game.selectedUnit === unit ? 3 : 1;
         ctx.strokeRect(ux, uy, width, height);
 
-        // Health bar
-        this.drawHealthBar(x + unitOffsetX, uy + height + 3, width + 4, unit.health / unit.maxHealth, null);
+        // Health bar (red at low hp → green at full)
+        this.drawHealthBar(x + unitOffsetX, uy + height + 3, width + 4, unit.health / unit.maxHealth, HEALTH_RED, HEALTH_WHITE);
 
         // Movement indicator - white dot in center if has moves
         if (!isEnemy && unit.movesLeft > 0) {
@@ -449,8 +462,8 @@ export class Renderer {
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // Health bar
-        this.drawHealthBar(x, y + size + 3, size * 2, enemy.health / enemy.maxHealth, '#f44336');
+        // Health bar (yellow at low hp → red at full)
+        this.drawHealthBar(x, y + size + 3, size * 2, enemy.health / enemy.maxHealth, HEALTH_YELLOW, HEALTH_RED);
     }
 
     drawSelection(hex) {
