@@ -1,6 +1,6 @@
 ﻿# Realm - Game Dynamics
 
-This document describes the mechanics and systems that govern gameplay in Realm.
+This document describes the mechanics and systems that govern gameplay in Realm. For UI behavior, visual feedback, input handling, and selection logic, see [UI.md](UI.md).
 
 ---
 
@@ -116,7 +116,7 @@ Units within a hex are sorted at the start of each turn:
 1. **Type priority:** Cavalry > Heavy Infantry > Infantry > Worker
 2. **HP (descending):** Higher health units first within same type
 
-This order determines which unit is auto-selected when clicking the hex and the display order in the UI. The order is fixed for the turn and doesn't change as units take damage.
+The order is fixed for the turn and doesn't change as units take damage.
 
 ### Movement Reset
 
@@ -190,18 +190,6 @@ Killing an enemy grants loot (2d6 per resource):
 - Attacking consumes all remaining movement
 - Sets `movesLeft = 0`
 
-### Combat Reporting
-
-After end-of-turn processing, the game pauses to display visual feedback if any notable events occurred:
-
-- **Yellow bang markers** appear on hexes where enemies attacked (units, settlements, or installations)
-- **Red bang markers** appear on hexes where a friendly unit was killed or an enemy was killed by counter-attack
-- **Yellow exclamation marks** appear on hexes where a monster spawned
-- The "End Turn" button changes to "Continue"
-- All game interactions are blocked during this display
-- Clicking anywhere or pressing any key dismisses the markers and resumes play
-- Turns with no events proceed without pausing
-
 ---
 
 ## Unit Types
@@ -225,24 +213,6 @@ Note: Mountain gold deposits cannot benefit from workers since mountains are imp
 ### Cavalry Charge
 
 Cavalry has a special rule: when **attacking**, they use **5 defense** against counter-attacks instead of their normal 1. This represents their strong charging ability. However, when defending against enemy attacks, they use their normal 1 defense - cavalry needs infantry support to hold ground.
-
-### Unit Selection Priority
-
-When clicking a hex with units, the first unit with moves remaining is auto-selected. Since units are sorted each turn (see Stacking Order), the selection priority follows the same order:
-1. Cavalry
-2. Heavy Infantry
-3. Infantry
-4. Worker
-
-### Unit Deselection
-
-Units are automatically deselected when:
-- Movement is exhausted (movesLeft reaches 0)
-- The turn ends
-
-**Units with 0 movement are never selected.** If a unit runs out of moves after moving or attacking, it is immediately deselected. Clicking a hex will only auto-select units that have moves remaining.
-
-At the start of a new turn, the **largest settlement** is automatically selected (random if tied for largest tier). If there are units with moves at that settlement, one will be auto-selected.
 
 ---
 
@@ -517,7 +487,7 @@ At full danger strength (15) or zero decadence, probability is 0%.
 - Spawns a monster on a weighted hex
 - No danger point created
 
-Both use the same weighted hex selection as settlement spawning (attraction/repulsion scoring). Both trigger a yellow exclamation mark in combat reporting.
+Both use the same weighted hex selection as settlement spawning (attraction/repulsion scoring).
 
 ### Enemy Purpose
 
@@ -609,7 +579,7 @@ Installations are general-purpose fortifications that can be built anywhere with
 
 ## Society Parameters
 
-Four parameters track civilization health (0-100%). The society panel displays bars that transition from **yellow (0%) to red (100%)** to indicate severity.
+Four parameters track civilization health (0-100%).
 
 ### Corruption
 
@@ -653,11 +623,6 @@ Influenced hexes are hexes within the influence radius of any settlement (not in
 ---
 
 ## Society Management
-
-Click the **Society panel** to open the realm management interface. This displays:
-1. A narrative description of the realm's current state
-2. Current effects of each society parameter
-3. Three available actions to manage the realm
 
 ### Action Selection
 
@@ -801,27 +766,5 @@ Each turn processes in this order:
 14. **Society options shuffle:** Randomize available management actions for next turn
 15. **Select largest settlement:** Auto-select the highest tier settlement (random if tied)
 16. **Turn increment**
-17. **Combat reporting pause:** If notable events occurred during steps 5 or 9, display markers and wait for player input before resuming (see Combat Reporting)
+17. **Combat reporting pause:** If notable events occurred during steps 5 or 9, display markers and wait for player input before resuming (see [UI.md](UI.md))
 
----
-
-## Controls
-
-### Mouse
-
-- **Click hex:** Select hex, auto-select unit with moves remaining (see priority order)
-- **Click selected unit's hex:** Deselect unit
-- **Click valid move hex:** Move selected unit (deselects if moves exhausted)
-- **Click enemy hex:** Attack with selected unit
-- **Click Society panel:** Open realm management interface
-- **Click Era button:** View era information and advancement requirements
-
-### Keyboard
-
-- **Escape:** Close modal or clear selection
-- **Enter/Space:** End turn (if no modal open)
-- **Any key:** Dismiss combat report (during reporting mode)
-
-### Unit Selection
-
-When multiple units occupy a hex, action buttons allow switching between them.
