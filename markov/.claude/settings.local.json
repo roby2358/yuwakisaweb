@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:steveseguin.github.io)",
+      "WebFetch(domain:github.com)",
+      "Bash(echo gh not authenticated or error:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:cdn.jsdelivr.net)",
+      "WebFetch(domain:www.albertopettarin.it)",
+      "Bash(gh api:*)",
+      "Bash(curl:*)"
+    ]
+  }
+}

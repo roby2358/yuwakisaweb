@@ -29,6 +29,10 @@
                     <input type="radio" name="tokenization" value="gpt">
                     <span>gpt</span>
                 </label>
+                <label class="radio-label">
+                    <input type="radio" name="tokenization" value="phonetic">
+                    <span>phonetic</span>
+                </label>
             </div>
             <div class="source-actions">
                 <button class="action-button" id="calculate-btn">calculate</button>
@@ -42,6 +46,8 @@
             <div class="generate-controls">
                 <input type="number" id="output-length" value="10" min="1" class="length-input">
                 <button class="action-button" id="generate-btn">generate</button>
+                <button class="action-button" id="speak-btn">speak</button>
+                <button class="action-button" id="translate-btn">translate</button>
             </div>
             <textarea id="generated-text" placeholder="Generated text will appear here..." readonly autocomplete="off"></textarea>
         </div>
@@ -52,6 +58,7 @@
                 <li><strong>Words mode:</strong> generates individual words character-by-character using adaptive n-grams (1-N tokens).</li>
                 <li><strong>Text mode:</strong> generates flowing paragraphs word-by-word with paragraph-aware boundaries.</li>
                 <li><strong>GPT mode:</strong> generates text using GPT tokenizer (BPE tokens) with token-level n-grams.</li>
+                <li><strong>Phonetic mode:</strong> converts text to IPA phonemes and generates phonetically plausible words. Use the Speak button to hear generated text aloud.</li>
             </ul>
             <p>Words and Text modes handle punctuation intelligently. Paired punctuation (quotes, brackets) is removed to avoid pairing errors, while unpaired punctuation (periods, commas, dashes) is properly separated and formatted. GPT mode uses the tokenizer's built-in punctuation handling.</p>
             <p><strong>Differences from vanilla Markov chains:</strong></p>
@@ -102,6 +109,10 @@
     <script src="js/words.js"></script>
     <script src="js/text.js"></script>
     <script src="js/gpt.js"></script>
+    <script src="js/espeakng/espeakng.min.js"></script>
+    <script src="js/espeakng/espeakng-simple.js"></script>
+    <script src="js/espeak.js"></script>
+    <script src="js/phonetic.js"></script>
     <script src="js/tweet-cleaner.js"></script>
     <script src="js/index.js"></script>
 </body>

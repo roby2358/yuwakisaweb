@@ -1,6 +1,8 @@
 const wordsTokenizer = new Words();
 const textTokenizer = new Text();
 const gptTokenizerInstance = new Gpt();
+const espeakInstance = new Espeak();
+const phoneticTokenizer = new Phonetic(espeakInstance);
 const ngramLength = 3;
 
 /**
@@ -11,6 +13,8 @@ function getTokenizer(mode) {
         return wordsTokenizer;
     } else if (mode === 'gpt') {
         return gptTokenizerInstance;
+    } else if (mode === 'phonetic') {
+        return phoneticTokenizer;
     } else {
         return textTokenizer;
     }
@@ -92,6 +96,17 @@ $(document).ready(function() {
 
     $('#tweets-btn').on('click', handleTweets);
     
+    function buildMarkov(tokens) {
+        if (tokens.length === 0) {
+            showMessage('No tokens found. Please enter some text.', 'error');
+            return;
+        }
+        markov = new Markov(tokens, ngramLength);
+        markov.build();
+        console.log('Markov chain built with ' + tokens.length + ' tokens');
+        showMessage('Markov chain calculated successfully!', 'success');
+    }
+
     // Calculate button handler
     $('#calculate-btn').on('click', function() {
         const sourceText = $('#source-text').val();
@@ -99,25 +114,24 @@ $(document).ready(function() {
             showMessage('Please enter source text first.', 'error');
             return;
         }
-        
+
         // Get tokenization mode
         const tokenizationMode = $('input[name="tokenization"]:checked').val();
-        
-        // Tokenize the source text
         const tokenizer = getTokenizer(tokenizationMode);
-        const tokens = tokenizer.tokenize(sourceText);
-        
-        if (tokens.length === 0) {
-            showMessage('No tokens found. Please enter some text.', 'error');
-            return;
+
+        if (tokenizationMode === 'phonetic') {
+            showMessage('Converting to phonemes...', 'info', 0);
+            tokenizer.tokenize(sourceText, function(err, tokens) {
+                if (err) {
+                    showMessage('Phonetic error: ' + err, 'error');
+                    return;
+                }
+                buildMarkov(tokens);
+            });
+        } else {
+            const tokens = tokenizer.tokenize(sourceText);
+            buildMarkov(tokens);
         }
-        
-        // Build the Markov chain
-        markov = new Markov(tokens, ngramLength);
-        markov.build();
-        
-        console.log('Markov chain built with ' + tokens.length + ' tokens');
-        showMessage('Markov chain calculated successfully!', 'success');
     });
     
     // Generate button handler
@@ -139,6 +153,35 @@ $(document).ready(function() {
         showMessage('Generation complete.', 'success');
     });
     
+    // Translate button handler (IPA → approximate English)
+    $('#translate-btn').on('click', function() {
+        const text = $('#generated-text').val();
+        if (!text.trim()) {
+            showMessage('No text to translate. Generate some text first.', 'error');
+            return;
+        }
+        const english = Espeak.ipaToText(text);
+        $('#generated-text').val(english);
+        showMessage('Translated IPA to approximate English.', 'success');
+    });
+
+    // Speak button handler
+    $('#speak-btn').on('click', function() {
+        const text = $('#generated-text').val();
+        if (!text.trim()) {
+            showMessage('No text to speak. Generate some text first.', 'error');
+            return;
+        }
+        showMessage('Speaking...', 'info', 0);
+        espeakInstance.speak(text, function(err) {
+            if (err) {
+                showMessage('Speak error: ' + err, 'error');
+                return;
+            }
+            showMessage('Done speaking.', 'success');
+        });
+    });
+
     // Autoscroll for textareas
     $('textarea').on('input', function() {
         this.scrollTop = this.scrollHeight;
