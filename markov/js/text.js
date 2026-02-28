@@ -3,22 +3,8 @@
  * Splits text into paragraphs, then words, and wraps paragraphs with Start/End markers
  */
 function Text() {
-    const _isValidString = (value) => {
-        return value && typeof value === 'string';
-    };
-
-    this.splitParagraphIntoTokens = (paragraph) => {
-        if (!_isValidString(paragraph)) {
-            return [];
-        }
-        return Tokenize.removePairedPunctuation(paragraph)
-            .split(/\s+/)
-            .filter(token => token.length > 0)
-            .flatMap(token => Tokenize.splitTokenOnPunctuation(token));
-    };
-
     this.tokenize = (text) => {
-        if (!_isValidString(text)) {
+        if (!text || typeof text !== 'string') {
             return [];
         }
 
@@ -29,9 +15,9 @@ function Text() {
 
         return trimmedText
             .split(/\n/)
-            .map(paragraph => this.splitParagraphIntoTokens(paragraph))
-            .filter(paragraph => paragraph.length > 0)
-            .map(paragraph => [MarkovConstants.Start, ...paragraph, MarkovConstants.End]);
+            .map(paragraph => Tokenize.splitIntoWordTokens(paragraph))
+            .filter(tokens => tokens.length > 0)
+            .map(tokens => [MarkovConstants.Start, ...tokens, MarkovConstants.End]);
     };
 
     this.format = (tokens) => {

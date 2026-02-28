@@ -93,17 +93,15 @@ function Markov(tokens, maxN) {
     const selectWeightedChoice = (weightedChoices) => {
         const totalWeight = weightedChoices.reduce((sum, [, weight]) => sum + weight, 0);
         let randomValue = Math.floor(this.random() * totalWeight);
-        
+
         for (const [choice, weight] of weightedChoices) {
-            if (randomValue >= 0) {
-                randomValue -= weight;
-            } else {
+            randomValue -= weight;
+            if (randomValue < 0) {
                 return choice;
             }
         }
-        
-        const token = weightedChoices[weightedChoices.length - 1][0]
-        return token;
+
+        return weightedChoices[weightedChoices.length - 1][0];
     };
     
     /**

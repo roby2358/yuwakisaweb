@@ -25,10 +25,6 @@ const Tokenize = {
      * @returns {string[]} Array of token parts
      */
     splitTokenOnPunctuation(token) {
-        if (!token || typeof token !== 'string' || token.length === 0) {
-            return [];
-        }
-        // First split on dash sequences (keeping them)
         const withDashes = token.split(this.DASH_SEQUENCE);
         // Then split on punctuation (keeping punctuation as separate tokens)
         return withDashes.flatMap(part => {
@@ -46,9 +42,6 @@ const Tokenize = {
      * @returns {string} Text with paired punctuation removed
      */
     removePairedPunctuation(text) {
-        if (!text || typeof text !== 'string') {
-            return '';
-        }
         return text.replace(this.PAIRED_PUNCTUATION, '');
     },
     
@@ -58,10 +51,21 @@ const Tokenize = {
      * @returns {string} Text with spaces removed before punctuation
      */
     removeSpaceBeforePunctuation(text) {
-        if (!text || typeof text !== 'string') {
-            return '';
-        }
         return text.replace(this.REMOVE_SPACE_BEFORE_PUNCTUATION, '$1');
+    },
+
+    /**
+     * Splits text into word tokens: removes paired punctuation, splits on whitespace,
+     * then separates remaining punctuation into individual tokens.
+     * Shared pipeline used by Words and Text tokenizers.
+     * @param {string} text - The text to split
+     * @returns {string[]} Array of word/punctuation tokens
+     */
+    splitIntoWordTokens(text) {
+        return this.removePairedPunctuation(text)
+            .split(/\s+/)
+            .filter(token => token.length > 0)
+            .flatMap(token => this.splitTokenOnPunctuation(token));
     }
 };
 
