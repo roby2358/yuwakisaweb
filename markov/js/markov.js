@@ -67,24 +67,35 @@ function Markov(tokens, maxN) {
     };
     
     /**
-     * Gets all possible next n-grams and their frequencies for a given prefix
+     * Gets possible continuations grouped by n-gram order.
+     * Returns an array of { order, suffixes } where suffixes is { key: count }.
+     * Only includes orders that have at least one matching prefix.
      */
-    const getPossibleContinuations = (prefixArray) => {
-        const continuations = {};
-        
+    const getContinuationsByOrder = (prefixArray) => {
+        const byOrder = [];
+
         for (let ngramLength = 1; ngramLength <= Math.min(maxN, prefixArray.length); ngramLength++) {
             const ngram = prefixArray.slice(-ngramLength);
             const ngramKey = toKey(ngram);
             const nextNgrams = this.links[ngramKey];
-            
+
             if (nextNgrams) {
-                for (const nextNgramKey in nextNgrams) {
-                    continuations[nextNgramKey] = (continuations[nextNgramKey] || 0) + nextNgrams[nextNgramKey];
-                }
+                byOrder.push({ order: ngramLength, suffixes: nextNgrams });
             }
         }
-        
-        return continuations;
+
+        return byOrder;
+    };
+
+    /**
+     * Selects a suffix using normalized order selection:
+     * 1. Pick an order uniformly among orders with matches
+     * 2. Sample a suffix from that order weighted by frequency
+     */
+    const selectFromOrders = (byOrder) => {
+        const orderIndex = Math.floor(this.random() * byOrder.length);
+        const { suffixes } = byOrder[orderIndex];
+        return selectWeightedChoice(Object.entries(suffixes));
     };
     
     /**
@@ -129,10 +140,9 @@ function Markov(tokens, maxN) {
         let tokensGenerated = 0;
         
         while (tokensGenerated < count) {
-            const continuations = getPossibleContinuations(currentGroup);
-            const continuationsSize = Object.keys(continuations).length;
-            
-            if (continuationsSize === 0) {
+            const byOrder = getContinuationsByOrder(currentGroup);
+
+            if (byOrder.length === 0) {
                 // No more continuations, close current group and start new one
                 if (currentGroup.length > 1) {
                     groups.push(closeGroup(currentGroup));
@@ -141,7 +151,7 @@ function Markov(tokens, maxN) {
                 continue;
             }
             
-            const nextNgramKey = selectWeightedChoice(Object.entries(continuations));
+            const nextNgramKey = selectFromOrders(byOrder);
             const nextNgram = nextNgramKey.split('|');
             
             // Check if this ngram contains an End token
