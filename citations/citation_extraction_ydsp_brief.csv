@@ -1,0 +1,264 @@
+Brief Page,PDF Page,Classification,Citation/Reference Text,Authority (Normalized),Type of Authority,Basis for Classification
+i,2,CITATION,"Pub. L. No. 100-89, 101 Stat. 666 (Aug. 18, 1987) (""Restoration Act"")",Restoration Act,Statute,Full public law citation with Statutes at Large locator
+i,2,CITATION,"California v. Cabazon Band of Mission Indians, 480 U.S. 202 (1987)",California v. Cabazon Band,Case,Full case citation with reporter and page
+1,12,CITATION,918 F.3d 440,Fifth Circuit opinion below,Case,Reporter volume and page
+1,12,CITATION,"Pub. L. No. 100-89, 101 Stat. 666 (1987)",Restoration Act,Statute,Full public law citation
+1,12,CITATION,28 U.S.C. § 1254(1),28 U.S.C. § 1254(1),Statute,"Title, code, and section number"
+3,14,CITATION,"California v. Cabazon Band of Mission Indians, 480 U.S. 202 (1987)",California v. Cabazon Band,Case,Full case citation with reporter and page
+3,14,OTHER,Cabazon Band,California v. Cabazon Band,Case,"Short name without locator, used narratively: 'its landmark decision in Cabazon Band'"
+4,15,OTHER,Cabazon Band,California v. Cabazon Band,Case,Narrative use: 'the prohibitory/regulatory framework from this Court's decision'
+4,15,OTHER,Cabazon Band,California v. Cabazon Band,Case,Narrative use: 'Congress incorporated Cabazon Band'
+5,16,OTHER,Cabazon Band,California v. Cabazon Band,Case,Multiple narrative uses without locator
+5,16,OTHER,"the Indian Gaming Regulatory Act (""IGRA"")",IGRA,Statute,Named but not cited with code section or public law number
+6,17,CITATION,"S. Rep. No. 100-90, at 6 (1987)",S. Rep. No. 100-90,Legislative History,Senate Report with number and page
+6,17,CITATION,Id.,S. Rep. No. 100-90,Legislative History,Id. referring back to S. Rep. No. 100-90
+6,17,CITATION,Id. at 6–7,S. Rep. No. 100-90,Legislative History,Id. at pinpoint page
+6,17,CITATION,"Act of Apr. 12, 1968, Pub. L. No. 90-287, 82 Stat. 93",Tiwa Indians Act,Statute,Full public law citation
+6,17,CITATION,"Act of Aug. 23, 1954, Pub. L. No. 627, ch. 831, 68 Stat. 768",Pub. L. No. 627 (Alabama-Coushatta termination),Statute,Full public law citation in footnote 1
+6,17,CITATION,"Ala.-Coushatta Indian Tribe of Tex. v. Mattox, 650 F. Supp. 282, 284, 289 (W.D. Tex. 1986)",Alabama-Coushatta v. Mattox,Case,Full case citation in footnote 2
+7,18,CITATION,25 U.S.C. §§ 731–737 and §§ 1300g–1300g-7,Restoration Act (U.S.C. sections),Statute,Code sections in footnote 3
+8,19,CITATION,"H.R. Rep. No. 99-440, at 2–3 (1985)",H.R. Rep. No. 99-440,Legislative History,House Report with number and page
+8,19,CITATION,"131 Cong. Rec. 36,565–70 (1985)","131 Cong. Rec. 36,565",Legislative History,Congressional Record with volume and page
+8,19,REVIEW,"App. 20–21, 122",Appendix,Record,"Appendix reference — record cite, not legal authority"
+8,19,REVIEW,App. 121–24,Appendix,Record,"Appendix reference — record cite, not legal authority"
+8,19,REVIEW,App. 122,Appendix,Record,"Appendix reference — record cite, not legal authority"
+8,19,REVIEW,App. 123,Appendix,Record,"Appendix reference — record cite, not legal authority"
+8,19,CITATION,"Restoration of Federal Recognition to the Ysleta del Sur Pueblo and the Alabama and Coushatta Indian Tribes of Texas: Hearing on H.R. 1344 Before the S. Select Comm. on Indian Affs., 99th Cong. 23 (1986) (statement of Don B. Miller, Att'y, Native American Rights Fund)",Hearing on H.R. 1344 (1986),Legislative History,"Full hearing citation with committee, congress, and page"
+9,20,CITATION,"S. Rep. No. 99-470, at 4 (1986)",S. Rep. No. 99-470,Legislative History,Senate Report with number and page
+9,20,CITATION,"H.R. Rep. No. 100-36, at 1 (1987)",H.R. Rep. No. 100-36,Legislative History,House Report with number and page
+9,20,CITATION,133 Cong. Rec. 9042–45 (1987),133 Cong. Rec. 9042,Legislative History,Congressional Record with volume and page
+9,20,CITATION,"Public Law No. 83-280, Act. of Aug. 15, 1953, ch. 505, 67 Stat. 588",Public Law 280,Statute,Full public law citation
+9,20,CITATION,"Indian Civil Rights Act of 1968, Pub. L. No. 90-284, tit. II–VII, 82 Stat. 73, 77–81",Indian Civil Rights Act,Statute,Full public law citation
+9,20,OTHER,Public Law 280,Public Law 280,Statute,Narrative use: 'covered by Public Law No. 83-280'
+10,21,CITATION,"Bryan v. Itasca Cnty., 426 U.S. 373 (1976)",Bryan v. Itasca County,Case,Full case citation
+10,21,OTHER,Cabazon Band,California v. Cabazon Band,Case,Narrative: 'this Court issued its decision in Cabazon Band'
+10,21,CITATION,"Seminole Tribe of Florida v. Butterworth, 658 F.2d 310 (5th Cir. Unit B 1981)",Seminole Tribe v. Butterworth,Case,Full case citation
+10,21,CITATION,480 U.S. at 209,California v. Cabazon Band,Case,Pinpoint cite to previously cited Cabazon Band
+10,21,CITATION,Id.,California v. Cabazon Band,Case,Id. to Cabazon Band
+10,21,CITATION,Id. at 210–12,California v. Cabazon Band,Case,Id. at pinpoint
+10,21,CITATION,Id. at 211,California v. Cabazon Band,Case,Id. at pinpoint
+11,22,CITATION,Id.,California v. Cabazon Band,Case,Id. continuing from page 10
+11,22,OTHER,Cabazon Band,California v. Cabazon Band,Case,Narrative: 'In the wake of Cabazon Band'
+11,22,CITATION,"Gaming Activities on Indian Reservations and Lands: Hearing on S. 555 and S. 1303 Before the S. Select Comm. on Indian Affs., 100th Cong. (1987)",Hearing on S. 555 & S. 1303 (1987),Legislative History,Full hearing citation
+11,22,CITATION,S. Rep. at 3,S. Rep. No. 100-446,Legislative History,Short-form cite to Senate Report defined earlier
+11,22,OTHER,Cabazon Band,California v. Cabazon Band,Case,Narrative: 'the line Cabazon Band had drawn'
+11,22,CITATION,Id.,S. Rep. No. 100-446,Legislative History,Id. to Senate Report
+12,23,CITATION,"133 Cong. Rec. 20,956–59 (1987)","133 Cong. Rec. 20,956",Legislative History,Congressional Record citation
+12,23,CITATION,"133 Cong. Rec. 22,111–14 (1987)","133 Cong. Rec. 22,111",Legislative History,Congressional Record citation
+12,23,CITATION,"133 Cong. Rec. 22,114 (1987)","133 Cong. Rec. 22,114",Legislative History,Congressional Record citation — Chairman Udall's statement
+12,23,CITATION,25 U.S.C. § 2702(1),25 U.S.C. § 2702(1),Statute,IGRA code section
+12,23,CITATION,id. § 2701(4),25 U.S.C. § 2701(4),Statute,Id. cross-ref to IGRA
+12,23,OTHER,Cabazon Band,California v. Cabazon Band,Case,Narrative: 'Enacted on the heels of Cabazon Band'
+13,24,CITATION,"S. Rep. No. 100-446, at 5 (1988)",S. Rep. No. 100-446 (IGRA),Legislative History,Full Senate Report citation
+13,24,CITATION,25 U.S.C. § 2701(5),25 U.S.C. § 2701(5),Statute,IGRA code section
+13,24,CITATION,"Id. §§ 2702(3), 2704(a)","25 U.S.C. §§ 2702(3), 2704(a)",Statute,Id. to title 25
+13,24,CITATION,"id. §§ 2703(6), 2710(a)(1)","25 U.S.C. §§ 2703(6), 2710(a)(1)",Statute,Id.
+13,24,CITATION,"id. §§ 2703(7)(A)(i), 2710(a)(2)","25 U.S.C. §§ 2703(7)(A)(i), 2710(a)(2)",Statute,Id.
+13,24,CITATION,"id. §§ 2703(8), 2710(d)","25 U.S.C. §§ 2703(8), 2710(d)",Statute,Id.
+13,24,CITATION,Id. § 2710(b)(1)(A),25 U.S.C. § 2710(b)(1)(A),Statute,Id.
+13,24,CITATION,id. § 2710(d)(1)(B),25 U.S.C. § 2710(d)(1)(B),Statute,Id.
+14,25,CITATION,IGRA S. Rep. at 6,S. Rep. No. 100-446,Legislative History,Short-form cite to IGRA Senate Report
+14,25,OTHER,Cabazon Band,California v. Cabazon Band,Case,Narrative: 'IGRA thus incorporates the Cabazon Band approach'
+14,25,OTHER,Cabazon,California v. Cabazon Band,Case,Within quotation from Senate Report
+14,25,CITATION,"Wisconsin v. Ho-Chunk Nation, 784 F.3d 1076, 1082 (7th Cir. 2015)",Wisconsin v. Ho-Chunk Nation,Case,Full case citation
+14,25,CITATION,"Mashantucket Pequot Tribe v. Connecticut, 913 F.2d 1024, 1031–32 (2d Cir. 1990)",Mashantucket Pequot Tribe v. Connecticut,Case,Full case citation
+14,25,CITATION,"United States v. Sisseton-Wahpeton Sioux Tribe, 897 F.2d 358, 367 (8th Cir. 1990)",United States v. Sisseton-Wahpeton Sioux Tribe,Case,Full case citation
+14,25,CITATION,"Ysleta del Sur Pueblo v. Texas, 852 F. Supp. 587, 588–89 (W.D. Tex. 1993)",Ysleta del Sur Pueblo v. Texas (dist. ct.),Case,Full case citation
+14,25,CITATION,Id. at 589–90,Ysleta del Sur Pueblo v. Texas (dist. ct.),Case,Id. at pinpoint
+14,25,OTHER,Cabazon Band,California v. Cabazon Band,Case,Narrative: 'IGRA had incorporated the Cabazon Band prohibitory/regulatory framework'
+14,25,CITATION,id. at 592–93,Ysleta del Sur Pueblo v. Texas (dist. ct.),Case,Id. at pinpoint
+14,25,CITATION,id. at 593,Ysleta del Sur Pueblo v. Texas (dist. ct.),Case,Id. at pinpoint
+14,25,CITATION,id. at 597,Ysleta del Sur Pueblo v. Texas (dist. ct.),Case,Id. at pinpoint
+15,26,CITATION,"Ysleta del Sur Pueblo v. Texas, 36 F.3d 1325 (5th Cir. 1994)",Ysleta I,Case,Full case citation
+15,26,OTHER,Ysleta I,Ysleta I,Case,"Established short name, used narratively thereafter"
+15,26,CITATION,Id. at 1334,Ysleta I,Case,Id. at pinpoint
+15,26,CITATION,Id. at 1333,Ysleta I,Case,Id. at pinpoint
+15,26,CITATION,Id. at 1335,Ysleta I,Case,Id. at pinpoint
+15,26,CITATION,Id. at 1334–35,Ysleta I,Case,Id. at pinpoint
+15,26,OTHER,the Restoration Act,Restoration Act,Statute,Narrative use throughout
+16,27,REVIEW,"Conditional Cross-Petition for Writ of Certiorari at 9, Texas v. Ysleta del Sur Pueblo, No. 94-1310 (U.S. Jan. 30, 1995)","Conditional Cross-Petition, Texas v. YDSP",Filing,Citation to a litigation filing — legal authority or record?
+16,27,CITATION,Id. at 8,Conditional Cross-Petition,Filing,Id. to filing
+16,27,CITATION,"Texas v. Ysleta del Sur Pueblo, 514 U.S. 1016 (1995) (mem.)",Texas v. Ysleta del Sur Pueblo (cert. denied),Case,Full citation to cert denial
+16,27,OTHER,Ysleta I,Ysleta I,Case,Narrative use
+17,28,CITATION,"Texas v. Ysleta del Sur Pueblo, No. EP-99-CV-320-KC, 2016 WL 3039991, at *19 (W.D. Tex. May 27, 2016)",Texas v. YDSP (2016 WL),Case,Full Westlaw citation
+17,28,CITATION,"Texas v. Ysleta del Sur Pueblo, 220 F. Supp. 2d 668 (W.D. Tex. 2001), aff'd, 31 F. App'x 835 (5th Cir. 2002), and aff'd per curiam, 69 F. App'x 659 (5th Cir. 2003)",Texas v. YDSP (220 F. Supp. 2d 668),Case,Full citation with subsequent history
+17,28,CITATION,"Texas v. Ysleta del Sur Pueblo, No. EP-99-CA-320-H, 2009 WL 10679419 (W.D. Tex. Aug. 4, 2009)",Texas v. YDSP (2009 WL),Case,Full Westlaw citation
+17,28,OTHER,Ysleta I,Ysleta I,Case,Narrative reference
+18,29,CITATION,"Legislative Hearing on H.R. 4985 Before the Subcomm. on Indian, Insular & Alaska Native Affs. of the H. Comm. on Nat. Res., 115th Cong. 4 (2018) (statement of Carlos Hisa, Governor, Ysleta del Sur Pueblo)",Hearing on H.R. 4985 (2018),Legislative History,Full hearing citation
+18,29,CITATION,id.,Hearing on H.R. 4985,Legislative History,Id. to hearing
+18,29,OTHER,Ysleta I,Ysleta I,Case,Narrative: 'reaffirmed Ysleta I'
+19,30,OTHER,IGRA,IGRA,Statute,Narrative reference to statute by acronym
+19,30,OTHER,the Restoration Act,Restoration Act,Statute,Narrative reference
+19,30,REVIEW,Brief for the United States as Amicus Curiae 10,CVSG Brief,Filing,"Citation to amicus brief — filing, not authority per se"
+19,30,CITATION,Id. at 10–11,CVSG Brief,Filing,Id. to amicus brief
+19,30,OTHER,Cabazon Band,California v. Cabazon Band,Case,Within quotation from CVSG brief
+20,31,OTHER,Cabazon Band,California v. Cabazon Band,Case,Narrative: 'codifies Cabazon Band's prohibitory/regulatory framework'
+20,31,OTHER,Bryan,Bryan v. Itasca County,Case,Narrative short name: 'this Court had previously construed in Bryan and Cabazon Band'
+20,31,OTHER,Cabazon Band,California v. Cabazon Band,Case,Narrative: 'Congress incorporated the Cabazon Band framework'
+21,32,OTHER,Public Law 280,Public Law 280,Statute,Narrative reference
+21,32,OTHER,Cabazon Band,California v. Cabazon Band,Case,Multiple narrative uses
+22,33,OTHER,Cabazon Band,California v. Cabazon Band,Case,Narrative: 'Congress codified Cabazon Band'
+22,33,OTHER,Public Law 280,Public Law 280,Statute,Narrative reference
+22,33,OTHER,IGRA,IGRA,Statute,Narrative reference
+22,33,OTHER,Ysleta I,Ysleta I,Case,Narrative reference
+23,34,OTHER,Cabazon Band,California v. Cabazon Band,Case,Section heading and narrative uses
+23,34,OTHER,Bryan,Bryan v. Itasca County,Case,Narrative: 'laid out in Bryan and Cabazon Band'
+23,34,OTHER,Public Law 280,Public Law 280,Statute,Narrative reference
+24,35,CITATION,"Cabazon Band, 480 U.S. at 207–08 nn.6–7",California v. Cabazon Band,Case,Pinpoint cite to previously cited case
+24,35,CITATION,"82 Stat. at 78–79, §§ 401(a), 402(a)",Indian Civil Rights Act (82 Stat.),Statute,Statutes at Large with section
+24,35,CITATION,"82 Stat. at 78, § 401(a)",Indian Civil Rights Act § 401(a),Statute,Statutes at Large pinpoint
+25,36,CITATION,"Id. at 79, § 402(a)",Indian Civil Rights Act § 402(a),Statute,Id. to Statutes at Large
+25,36,CITATION,"Cabazon Band, 480 U.S. at 207–08 & nn.6–7",California v. Cabazon Band,Case,Pinpoint cite
+25,36,CITATION,"Bryan, 426 U.S. at 380",Bryan v. Itasca County,Case,Pinpoint cite
+25,36,CITATION,Id.,Cabazon Band / Bryan,Case,Ambiguous id.
+26,37,CITATION,"Merrill Lynch, Pierce, Fenner & Smith, Inc. v. Curran, 456 U.S. 353, 382 n.66 (1982)",Merrill Lynch v. Curran,Case,Full citation
+26,37,CITATION,"Lorillard v. Pons, 434 U.S. 575, 580–81 (1978)",Lorillard v. Pons,Case,Full citation (within parenthetical of Merrill Lynch)
+26,37,CITATION,"Bragdon v. Abbott, 524 U.S. 624, 645 (1998)",Bragdon v. Abbott,Case,Full citation
+26,37,CITATION,"U.S. Dep't of Energy v. Ohio, 503 U.S. 607, 626 (1992)",DOE v. Ohio,Case,Full citation
+26,37,OTHER,Cabazon Band,California v. Cabazon Band,Case,Narrative: 'followed directly on the heels of Cabazon Band'
+26,37,CITATION,"supra, p. 10",Internal cross-reference,Internal,Supra reference to earlier page of brief
+26,37,CITATION,480 U.S. at 211,California v. Cabazon Band,Case,Pinpoint cite
+26,37,CITATION,id. at 209,California v. Cabazon Band,Case,Id. at pinpoint
+27,38,OTHER,Cabazon Band,California v. Cabazon Band,Case,Narrative: 'Congress incorporated the Cabazon Band framework'
+27,38,OTHER,Public Law 280,Public Law 280,Statute,Narrative reference
+27,38,CITATION,"101 Stat. at 668–69, § 107(a)",Restoration Act § 107(a),Statute,Statutes at Large pinpoint to specific section
+27,38,CITATION,"Id. at 669, § 107(b)",Restoration Act § 107(b),Statute,Id. to Statutes at Large
+28,39,CITATION,Black's Law Dictionary (11th ed. 2019),Black's Law Dictionary,Secondary Source,Full dictionary citation with edition
+28,39,CITATION,Id.,Black's Law Dictionary,Secondary Source,Id. to Black's
+28,39,CITATION,"United States v. Lopez, 514 U.S. 549, 553 (1995)",United States v. Lopez,Case,Full citation
+28,39,CITATION,"Gibbons v. Ogden, 22 U.S. (9 Wheat.) 1, 196 (1824)",Gibbons v. Ogden,Case,Full citation within parenthetical of Lopez
+28,39,OTHER,Cabazon Band,California v. Cabazon Band,Case,Narrative: 'as framed by Cabazon Band'
+28,39,CITATION,"Conditional Cross-Petition, supra, at 8",Conditional Cross-Petition,Filing,Supra cite to earlier-cited filing
+29,40,CITATION,"Wampanoag Tribal Council of Gay Head, Inc., Indian Claims Settlement Act of 1987, Pub. L. No. 100-95, § 9, 101 Stat. 704, 709–10",Wampanoag Settlement Act,Statute,Full public law citation with section
+29,40,CITATION,"Seminole Indian Land Claims Settlement Act of 1987, Pub. L. No. 100-228, § 6(d)(1), 101 Stat. 1556, 1560",Seminole Settlement Act,Statute,Full public law citation with section
+29,40,CITATION,"Catawba Indian Tribe of South Carolina Land Claims Settlement Act of 1993, Pub. L. No. 103-116, § 14(b), 107 Stat. 1118, 1136",Catawba Settlement Act,Statute,Full public law citation with section
+29,40,OTHER,the Restoration Act,Restoration Act,Statute,Narrative contrast
+29,40,OTHER,Cabazon Band,California v. Cabazon Band,Case,Narrative reference
+30,41,CITATION,"Lagos v. United States, 138 S. Ct. 1684, 1689–90 (2018)",Lagos v. United States,Case,Full citation
+30,41,CITATION,"Life Techs. Corp. v. Promega Corp., 137 S. Ct. 734, 740 (2017)",Life Technologies v. Promega,Case,Full citation
+30,41,CITATION,"Liteky v. United States, 510 U.S. 540, 552–53 (1994)",Liteky v. United States,Case,Full citation
+30,41,CITATION,"101 Stat. at 669, § 107(b)",Restoration Act § 107(b),Statute,Statutes at Large pinpoint
+30,41,CITATION,"Bennett v. Spear, 520 U.S. 154, 173 (1997)",Bennett v. Spear,Case,Full citation
+30,41,CITATION,"Liteky, 510 U.S. at 552–53 & n.2",Liteky v. United States,Case,Short-form case name with pinpoint
+31,42,CITATION,"Dep't of Rev. of Or. v. ACF Indus., Inc., 510 U.S. 332, 340 (1994)",Dept. of Revenue v. ACF Industries,Case,Full citation
+31,42,REVIEW,"Brief of Appellee at 20, 33–34, Texas v. Ysleta del Sur Pueblo, No. 19-50400 (5th Cir. Oct. 10, 2019)",Brief of Appellee (5th Cir.),Filing,"Citation to litigation brief — arguably record, not authority"
+31,42,CITATION,"101 Stat. at 669, § 107(c)",Restoration Act § 107(c),Statute,Statutes at Large pinpoint
+31,42,OTHER,Public Law 280,Public Law 280,Statute,Narrative reference
+32,43,CITATION,"Lorillard, 434 U.S. at 582",Lorillard v. Pons,Case,Short-form with pinpoint
+32,43,CITATION,CVSG Br. 21–22,CVSG Brief,Filing,Short-form cite to amicus brief
+32,43,OTHER,Ysleta I,Ysleta I,Case,Narrative reference
+32,43,CITATION,"supra, p. 14",Internal cross-reference,Internal,Supra to earlier page of brief
+33,44,CITATION,18 U.S.C. § 1166(d),18 U.S.C. § 1166(d),Statute,Full code citation
+33,44,CITATION,S. Rep. at 10–11,S. Rep. No. 100-446,Legislative History,Short-form Senate Report cite
+33,44,CITATION,"133 Cong. Rec. 22,114 (1987)","133 Cong. Rec. 22,114",Legislative History,Congressional Record citation — Udall statement
+33,44,OTHER,Cabazon Band,California v. Cabazon Band,Case,Within Udall quotation
+33,44,OTHER,Public Law 280,Public Law 280,Statute,Narrative reference
+34,45,CITATION,"Epic Sys. Corp. v. Lewis, 138 S. Ct. 1612, 1624 (2018)",Epic Systems v. Lewis,Case,Full citation
+34,45,CITATION,"Morton v. Mancari, 417 U.S. 535, 551 (1974)",Morton v. Mancari,Case,Full citation within parenthetical of Epic
+34,45,CITATION,"POM Wonderful LLC v. Coca-Cola Co., 573 U.S. 102, 115 (2014)",POM Wonderful v. Coca-Cola,Case,Full citation
+34,45,CITATION,"Epic, 138 S. Ct. at 1624",Epic Systems v. Lewis,Case,Short-form with pinpoint
+34,45,CITATION,"Vimar Seguros y Reaseguros, S.A. v. M/V Sky Reefer, 515 U.S. 528, 533 (1995)",Vimar Seguros v. M/V Sky Reefer,Case,Full citation within parenthetical of Epic
+34,45,CITATION,"Morton, 417 U.S. at 551",Morton v. Mancari,Case,Short-form with pinpoint within parenthetical
+34,45,OTHER,IGRA,IGRA,Statute,Narrative reference
+34,45,OTHER,Ysleta I,Ysleta I,Case,Narrative reference
+35,46,CITATION,36 F.3d at 1334–35,Ysleta I,Case,Short-form reporter cite
+35,46,CITATION,"25 U.S.C. § 2710(b), (d)","25 U.S.C. § 2710(b), (d)",Statute,Code section
+35,46,CITATION,Id. § 2710(a)(2),25 U.S.C. § 2710(a)(2),Statute,Id. to code
+35,46,CITATION,"id. § 2710(d)(1), (7)(B)(vii)",25 U.S.C. § 2710(d),Statute,Id. to code
+35,46,CITATION,CVSG Br. 10–11,CVSG Brief,Filing,Short-form filing cite
+35,46,OTHER,Cabazon Band,California v. Cabazon Band,Case,Narrative reference
+36,47,CITATION,IGRA S. Rep. at 5–6,S. Rep. No. 100-446,Legislative History,Short-form IGRA Senate Report
+36,47,CITATION,id. at 6,S. Rep. No. 100-446,Legislative History,Id.
+36,47,CITATION,id. at 11–12,S. Rep. No. 100-446,Legislative History,Id.
+36,47,CITATION,CVSG Br. 20–21,CVSG Brief,Filing,Short-form filing cite
+36,47,CITATION,"Epic, 138 S. Ct. at 1624",Epic Systems v. Lewis,Case,Short-form with pinpoint
+37,48,CITATION,"101 Stat. at 667, § 103(a)",Restoration Act § 103(a),Statute,Statutes at Large pinpoint
+37,48,CITATION,Id. § 103(c),Restoration Act § 103(c),Statute,Id.
+37,48,CITATION,"Cabazon Band, 460 U.S. at 207",California v. Cabazon Band,Case,Note: brief has '460 U.S.' — likely typo for '480 U.S.' — pinpoint cite
+37,48,CITATION,Id.,California v. Cabazon Band,Case,Id.
+37,48,CITATION,"Michigan v. Bay Mills Indian Cmty., 572 U.S. 782, 788 (2014)",Michigan v. Bay Mills,Case,Full citation
+37,48,CITATION,"United States v. Wheeler, 435 U.S. 313, 323 (1978)",United States v. Wheeler,Case,Full citation within parenthetical
+37,48,CITATION,"Montana v. Blackfeet Tribe of Indians, 471 U.S. 759, 766 (1985)",Montana v. Blackfeet Tribe,Case,Full citation
+37,48,CITATION,"Bryan, 426 U.S. at 392",Bryan v. Itasca County,Case,Short-form with pinpoint
+38,49,OTHER,Ysleta I,Ysleta I,Case,Narrative: 'Ysleta I badly misinterpreted'
+38,49,OTHER,Cabazon Band,California v. Cabazon Band,Case,Narrative reference
+38,49,CITATION,36 F.3d at 1333,Ysleta I,Case,Short-form reporter cite
+39,50,CITATION,Id.,Ysleta I,Case,Id.
+39,50,OTHER,Cabazon Band,California v. Cabazon Band,Case,Narrative reference
+39,50,CITATION,IGRA S. Rep. at 6,S. Rep. No. 100-446,Legislative History,Short-form cite
+39,50,CITATION,480 U.S. at 211,California v. Cabazon Band,Case,Pinpoint cite
+40,51,OTHER,Cabazon Band,California v. Cabazon Band,Case,Narrative: 'consistent with Cabazon Band'
+40,51,CITATION,CVSG Br. 13,CVSG Brief,Filing,Short-form filing cite
+40,51,CITATION,36 F.3d at 1333–34,Ysleta I,Case,Short-form reporter cite
+41,52,CITATION,"supra, pp. 7–8",Internal cross-reference,Internal,Supra to earlier pages of brief
+41,52,OTHER,Cabazon Band,California v. Cabazon Band,Case,Narrative reference
+41,52,CITATION,"supra, p. 10",Internal cross-reference,Internal,Supra reference
+41,52,OTHER,Ysleta I,Ysleta I,Case,Narrative reference
+41,52,CITATION,36 F.3d at 1333,Ysleta I,Case,Short-form reporter cite
+42,53,REVIEW,App. 122,Appendix,Record,Record reference
+42,53,CITATION,IGRA S. Rep. at 4,S. Rep. No. 100-446,Legislative History,Short-form cite
+42,53,CITATION,"Bryan, 426 U.S. at 376 n.2",Bryan v. Itasca County,Case,Short-form with pinpoint
+43,54,CITATION,"McClanahan v. State Tax Comm'n, 411 U.S. 164, 168 (1973)",McClanahan v. State Tax Comm'n,Case,Full citation within parenthetical of Bryan
+43,54,CITATION,"Williams v. Lee, 358 U.S. 217, 220 (1959)",Williams v. Lee,Case,Full citation within parenthetical
+43,54,OTHER,Ysleta I,Ysleta I,Case,Narrative reference
+43,54,CITATION,36 F.3d at 1335,Ysleta I,Case,Short-form reporter cite
+43,54,OTHER,Cabazon Band,California v. Cabazon Band,Case,Narrative reference
+43,54,REVIEW,App. 122,Appendix,Record,Record reference
+44,55,CITATION,"101 Stat. at 668–69, § 107(a)",Restoration Act § 107(a),Statute,Statutes at Large pinpoint
+44,55,CITATION,H. Rep. at 6,H.R. Rep. No. 100-36,Legislative History,Short-form House Report
+44,55,CITATION,IGRA S. Rep. at 5,S. Rep. No. 100-446,Legislative History,Short-form cite
+44,55,REVIEW,App. 122,Appendix,Record,Record reference
+44,55,OTHER,Cabazon Band,California v. Cabazon Band,Case,Narrative reference
+45,56,CITATION,CVSG Br. 17,CVSG Brief,Filing,Short-form filing cite
+45,56,CITATION,"14 Penn Plaza LLC v. Pyett, 556 U.S. 247, 259–60 n.6 (2009)",14 Penn Plaza v. Pyett,Case,Full citation
+45,56,CITATION,"Shaughnessy v. Pedreiro, 349 U.S. 48, 52 (1955)",Shaughnessy v. Pedreiro,Case,Full citation
+46,57,CITATION,"Corley v. United States, 556 U.S. 303, 318 (2009)",Corley v. United States,Case,Full citation
+46,57,CITATION,S. Rep. at 10–11,S. Rep. No. 100-446,Legislative History,Short-form Senate Report
+46,57,CITATION,36 F.3d at 1334,Ysleta I,Case,Short-form reporter cite
+46,57,OTHER,Cabazon Band,California v. Cabazon Band,Case,Narrative reference
+47,58,CITATION,36 F.3d at 1333,Ysleta I,Case,Short-form reporter cite
+47,58,CITATION,36 F.3d at 1334 n.18,Ysleta I,Case,Short-form with footnote
+47,58,CITATION,"Stokeling v. United States, 139 S. Ct. 544, 551 (2019)",Stokeling v. United States,Case,Full citation
+47,58,CITATION,"Hall v. Hall, 138 S. Ct. 1118, 1128 (2018)",Hall v. Hall,Case,Full citation within parenthetical
+47,58,CITATION,"Ho-Chunk Nation, 784 F.3d at 1082",Wisconsin v. Ho-Chunk Nation,Case,Short-form with pinpoint
+47,58,CITATION,25 U.S.C. § 941l(a) (1994),25 U.S.C. § 941l(a),Statute,Code section — Catawba exemption from IGRA
+48,59,CITATION,36 F.3d at 1334–35 & n.20,Ysleta I,Case,Short-form with page and footnote
+48,59,CITATION,"supra, Part I.C",Internal cross-reference,Internal,Supra to earlier section of brief
+48,59,CITATION,36 F.3d at 1334,Ysleta I,Case,Short-form reporter cite
+48,59,CITATION,36 F.3d at 1335 & n.21,Ysleta I,Case,Short-form with footnote
+48,59,CITATION,25 U.S.C. §§ 2701(5) & 2710(b)(1)(A),"25 U.S.C. §§ 2701(5), 2710(b)(1)(A)",Statute,Code sections
+48,59,CITATION,"101 Stat. at 668–69, § 107(a)",Restoration Act § 107(a),Statute,Statutes at Large pinpoint
+48,59,CITATION,"Massachusetts v. Wampanoag Tribe of Gay Head (Aquinnah), 853 F.3d 618, 629 (1st Cir. 2017)",Massachusetts v. Wampanoag Tribe,Case,Full citation
+49,60,CITATION,36 F.3d at 1335 & n.22,Ysleta I,Case,Short-form with footnote
+49,60,CITATION,"Cabazon Band, 480 U.S. at 209",California v. Cabazon Band,Case,Pinpoint cite
+49,60,CITATION,Id.,California v. Cabazon Band,Case,Id.
+50,61,CITATION,Tex. Occ. Code Ann. § 2001.001 et seq.,Texas Bingo Enabling Act,Statute,Full state code citation
+50,61,CITATION,"Cabazon Band, 480 U.S. at 211",California v. Cabazon Band,Case,Pinpoint cite
+50,61,OTHER,Cabazon Band,California v. Cabazon Band,Case,Narrative: 'this Court examined California's bingo law in Cabazon Band'
+50,61,OTHER,Seminole Tribe,Seminole Tribe v. Butterworth,Case,Narrative: 'the Fifth Circuit examined Florida's bingo law in Seminole Tribe'
+50,61,CITATION,"Cabazon Band, 480 U.S. at 210–11",California v. Cabazon Band,Case,Pinpoint cite
+50,61,CITATION,"Seminole Tribe, 658 F.2d at 314–15",Seminole Tribe v. Butterworth,Case,Short-form with pinpoint
+50,61,CITATION,"Tex. Occ. Code Ann. §§ 2001.101, 2001.411",Texas Bingo Enabling Act (specific sections),Statute,State code sections (fn 5)
+50,61,CITATION,"Cabazon Band, 480 U.S. at 205",California v. Cabazon Band,Case,Pinpoint cite (fn 5)
+50,61,CITATION,"Seminole Tribe, 658 F.2d at 311 n.1, 314",Seminole Tribe v. Butterworth,Case,Short-form (fn 5)
+51,62,CITATION,Tex. Occ. Code Ann. §§ 2001.451–.459,Texas Bingo Enabling Act (sections),Statute,State code sections (fn 6)
+51,62,CITATION,"Cabazon Band, 480 U.S. at 205",California v. Cabazon Band,Case,Pinpoint cite (fn 6)
+51,62,CITATION,"Seminole Tribe, 658 F.2d at 311 n.1, 314",Seminole Tribe v. Butterworth,Case,Short-form (fn 6)
+51,62,CITATION,Tex. Occ. Code Ann. § 2001.420,Texas Bingo Enabling Act § 2001.420,Statute,State code section (fn 7)
+51,62,CITATION,"Cabazon Band, 480 U.S. at 205",California v. Cabazon Band,Case,Pinpoint cite (fn 7)
+51,62,CITATION,"Seminole Tribe, 658 F.2d at 311 n.1",Seminole Tribe v. Butterworth,Case,Short-form (fn 7)
+51,62,CITATION,Tex. Occ. Code Ann. § 2001.551(c),Texas Bingo Enabling Act § 2001.551(c),Statute,State code section (fn 8)
+51,62,CITATION,"Cabazon Band, 480 U.S. at 209",California v. Cabazon Band,Case,Pinpoint cite (fn 8)
+51,62,CITATION,"Seminole Tribe, 658 F.2d at 311 n.1",Seminole Tribe v. Butterworth,Case,Short-form (fn 8)
+51,62,CITATION,Tex. Occ. Code Ann. § 2001.419,Texas Bingo Enabling Act § 2001.419,Statute,State code section (fn 9)
+51,62,CITATION,"Seminole Tribe, 658 F.2d at 311 n.1",Seminole Tribe v. Butterworth,Case,Short-form (fn 9)
+51,62,CITATION,Tex. Occ. Code Ann. § 2001.404,Texas Bingo Enabling Act § 2001.404,Statute,State code section (fn 10)
+51,62,CITATION,"Seminole Tribe, 658 F.2d at 311 n.1",Seminole Tribe v. Butterworth,Case,Short-form (fn 10)
+51,62,CITATION,"Cabazon Band, 480 U.S. at 210–12",California v. Cabazon Band,Case,Pinpoint cite
+51,62,CITATION,"Seminole Tribe, 658 F.2d at 314–15",Seminole Tribe v. Butterworth,Case,Short-form
+52,63,CITATION,480 U.S. at 210,California v. Cabazon Band,Case,Pinpoint cite
+52,63,CITATION,"State Lottery Act, Tex. Gov't Code Ann. § 466.001 et seq.",Texas State Lottery Act,Statute,Full state code citation
+52,63,CITATION,"Texas Racing Act, Tex. Occ. Code Ann. § 2021.001 et seq.",Texas Racing Act,Statute,Full state code citation
+52,63,CITATION,"Charitable Raffle Enabling Act, Tex. Occ. Code Ann. § 2002.001 et seq.",Charitable Raffle Enabling Act,Statute,Full state code citation
+52,63,CITATION,"Seminole Tribe, 658 F.2d at 314",Seminole Tribe v. Butterworth,Case,Short-form with pinpoint
+52,63,OTHER,Cabazon Band,California v. Cabazon Band,Case,Narrative: 'pointed to in Cabazon Band'
