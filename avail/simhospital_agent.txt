@@ -1,0 +1,235 @@
+
+# Agent Instructions: Port SimHospital Simulation Core to Java
+
+## Goal
+Port the simulation engine from the Go-based SimHospital project (in the `simhosp/`
+directory) to a self-contained Java library. The deliverable is a single class,
+`HospitalSimulator`, that exposes a `nextMessage()` method returning well-formed
+HL7v2 messages. This library will be consumed by a performance testing framework.
+
+---
+
+## Step 1: Read and Understand the Source
+
+Before writing any code, read the following files from `simhosp/`:
+
+- `README.md` — understand overall architecture
+- `config/pathways/` — read all pathway YAML/JSON files to understand the event
+  model (admission, discharge, order, result, transfer, etc.)
+- `pkg/pathway/` — understand how pathways are parsed and executed
+- `pkg/message/` — understand how HL7v2 messages are constructed from events
+- `pkg/patient/` — understand patient state and how it evolves through a pathway
+- `pkg/clock/` — understand the simulation clock abstraction
+- `pkg/simulator/` — understand the top-level simulation loop
+
+Do not begin coding until you have read all of the above.
+
+---
+
+## Step 2: Identify What to Port
+
+You are porting ONLY the simulation core. Do not port:
+
+- The MLLP transport layer (the Java consumer will handle this)
+- The web dashboard
+- The metrics/monitoring subsystem
+- Any CLI entrypoints
+
+The components to port are:
+
+| Go Package | Java Equivalent |
+|---|---|
+| `pkg/pathway` | `PathwayLoader` — parses YAML pathway definitions |
+| `pkg/patient` | `PatientState` — holds current patient data and position in pathway |
+| `pkg/clock` | `SimulationClock` interface + two implementations (wall clock, synthetic) |
+| `pkg/message` | `MessageFactory` — produces HAPI HL7v2 `Message` objects from events |
+| `pkg/simulator` | `HospitalSimulator` — top-level class, owns the event queue |
+
+---
+
+## Step 3: Dependencies
+
+Use the following dependencies. Add them to `pom.xml` or `build.gradle`:
+
+- `ca.uhn.hapi:hapi-base:2.3` — HAPI HL7v2 core
+- `ca.uhn.hapi:hapi-structures-v25:2.3` — HL7v2 v2.5 message structures
+- `com.fasterxml.jackson.dataformat:jackson-dataformat-yaml` — YAML pathway parsing
+- `com.fasterxml.jackson.core:jackson-databind` — JSON support
+- `com.google.guava:guava:32.0-jre` — utility (optional but useful)
+
+Do NOT introduce any MLLP, HTTP, or server-side dependencies.
+
+---
+
+## Step 4: Core Design
+
+Implement the following interfaces and classes exactly as specified.
+
+### `SimulationClock` (interface)
+```java
+public interface SimulationClock {
+    Instant now();
+    void advance(Duration duration); // no-op for wall clock
+}
+```
+
+Provide two implementations:
+- `WallClock` — delegates to `Instant.now()`
+- `SyntheticClock` — starts at a configurable epoch, advances via `advance()`.
+  This allows faster-than-realtime simulation.
+
+### `PatientState`
+A plain data class holding:
+- Patient demographics (name, DOB, MRN, gender)
+- Current pathway name
+- Index of the next event to execute within the pathway
+- Admission datetime
+- Current location (ward, bed)
+- Any pending orders (map of order ID → order details)
+
+### `PathwayLoader`
+- Reads YAML files from a configurable directory
+- Parses them into a `Map<String, Pathway>` where the key is the pathway name
+- A `Pathway` is a list of `PathwayEvent` objects
+- A `PathwayEvent` has: event type (enum), optional delay (duration), optional
+  parameters (map of string to string)
+
+Support at minimum these event types, matching simhospital's model:
+`ADMISSION`, `DISCHARGE`, `TRANSFER`, `ORDER`, `RESULT`, `OBSERVATION`,
+`CANCEL_ORDER`, `DELAY`
+
+### `MessageFactory`
+- Takes a `PathwayEvent` and a `PatientState`
+- Returns a HAPI `Message` object (or null for DELAY events)
+- Use HAPI's message builders — do not hand-roll HL7v2 strings
+- Mappings:
+  - `ADMISSION` → `ADT_A01`
+  - `DISCHARGE` → `ADT_A03`
+  - `TRANSFER` → `ADT_A02`
+  - `ORDER` → `ORM_O01`
+  - `RESULT` → `ORU_R01`
+  - `OBSERVATION` → `ORU_R01`
+  - `CANCEL_ORDER` → `ORM_O01` with ORC-1 = "CA"
+- Populate MSH, PID, PV1 segments from `PatientState` on every message
+- Use random but realistic synthetic values for fields not tracked in state
+  (e.g. attending physician name, lab values within normal ranges)
+
+### `HospitalSimulator` (main class)
+```java
+public class HospitalSimulator {
+
+    public HospitalSimulator(SimulatorConfig config) { ... }
+
+    // Returns the next HL7v2 message in simulation time order.
+    // Blocks until a message is ready if using wall clock.
+    // Returns immediately if using synthetic clock.
+    public Message nextMessage() throws InterruptedException { ... }
+
+    // Convenience: returns an infinite Java Stream of messages
+    public Stream<Message> stream() { ... }
+
+    // Shut down cleanly
+    public void close() { ... }
+}
+```
+
+Internally, `HospitalSimulator` should:
+- Maintain a pool of N concurrent patients (configurable, default 50)
+- Each patient progresses independently through their assigned pathway
+- Use a `PriorityQueue<ScheduledEvent>` ordered by scheduled time to determine
+  which message is next
+- When a patient completes their pathway, immediately start a new patient on a
+  randomly selected pathway to keep the pool full
+- When using `SyntheticClock`, auto-advance the clock to the next scheduled event
+  time rather than waiting
+
+### `SimulatorConfig`
+A plain configuration class (builder pattern) with fields:
+- `pathwayDirectory` (Path) — where to load YAML pathways from
+- `concurrentPatients` (int, default 50)
+- `clock` (SimulationClock, default WallClock)
+- `messageRatePerSecond` (double, optional throttle for wall clock mode)
+- `seed` (long, optional random seed for reproducibility)
+
+---
+
+## Step 5: Project Structure
+
+Create a standard Maven project layout:
+
+```
+simhospital-java/
+  pom.xml
+  src/
+    main/java/com/simhospital/
+      SimulatorConfig.java
+      HospitalSimulator.java
+      clock/
+        SimulationClock.java
+        WallClock.java
+        SyntheticClock.java
+      patient/
+        PatientState.java
+        PatientGenerator.java
+      pathway/
+        Pathway.java
+        PathwayEvent.java
+        PathwayEventType.java
+        PathwayLoader.java
+      message/
+        MessageFactory.java
+    test/java/com/simhospital/
+      HospitalSimulatorTest.java
+      MessageFactoryTest.java
+      PathwayLoaderTest.java
+```
+
+---
+
+## Step 6: Tests
+
+Write unit tests covering:
+
+- `PathwayLoader` correctly parses all YAML files in `simhosp/config/pathways/`
+- `MessageFactory` produces a valid, parseable HL7v2 message for each event type
+- `HospitalSimulator` with `SyntheticClock` returns messages in chronological order
+- `HospitalSimulator` with `SyntheticClock` and a simple admit→discharge pathway
+  produces an `ADT_A01` before an `ADT_A03` for the same patient
+- `HospitalSimulator` keeps the patient pool at the configured size
+
+---
+
+## Step 7: Verify
+
+After implementation, run this smoke test to confirm the library works end-to-end:
+
+```java
+SimulatorConfig config = SimulatorConfig.builder()
+    .pathwayDirectory(Path.of("simhosp/config/pathways"))
+    .concurrentPatients(10)
+    .clock(new SyntheticClock(Instant.parse("2024-01-01T00:00:00Z")))
+    .seed(42L)
+    .build();
+
+HospitalSimulator sim = new HospitalSimulator(config);
+
+for (int i = 0; i < 100; i++) {
+    Message msg = sim.nextMessage();
+    System.out.println(msg.getName() + " — " + msg.encode().substring(0, 60));
+}
+
+sim.close();
+```
+
+This should print 100 lines of mixed ADT, ORM, and ORU message names without
+throwing any exceptions.
+
+---
+
+## Constraints
+
+- Java 21 minimum (use records, virtual threads where appropriate)
+- No Spring, no frameworks — this must be a plain library JAR with no server runtime
+- All randomness must be seeded through `SimulatorConfig.seed` for reproducibility
+- The library must be thread-safe — `nextMessage()` must be safe to call from
+  multiple threads simultaneously
