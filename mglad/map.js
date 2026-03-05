@@ -32,9 +32,9 @@ class GameMap {
     inBounds(x, y) { return x >= 0 && x < this.w && y >= 0 && y < this.h; }
     isBlocked(x, y) { return !this.inBounds(x, y) || this.check(x, y, FL_NOMOVE); }
 
-    // render whole map
+    // render whole map (double-wide: each cell = 2 screen columns)
     show() {
-        this.screen.box(this.border, this.ox-1, this.oy-1, this.ox+this.w, this.oy+this.h, BACKGR);
+        this.screen.box(this.border, this.ox-1, this.oy-1, this.ox+this.w*2, this.oy+this.h, BACKGR);
         for (let y = 0; y < this.h; y++)
             for (let x = 0; x < this.w; x++)
                 this.showCell(x, y);
@@ -44,11 +44,18 @@ class GameMap {
         const t = this.get(x, y);
         if (t >= 0 && t < NUM_TERRAIN) {
             const td = TERRAIN[t];
-            this.screen.plot(x + this.ox, y + this.oy, td.ch, td.attr);
+            const sx = this.ox + x * 2;
+            this.screen.plot(sx,     y + this.oy, td.ch, td.attr);
+            this.screen.plot(sx + 1, y + this.oy, td.ch, td.attr);
         }
     }
 
-    plot(x, y, ch, attr) { this.screen.plot(x + this.ox, y + this.oy, ch, attr); }
+    // plot a unit: character + space
+    plot(x, y, ch, attr) {
+        const sx = this.ox + x * 2;
+        this.screen.plot(sx,     y + this.oy, ch,  attr);
+        this.screen.plot(sx + 1, y + this.oy, ' ', attr);
+    }
 
     async blip(x, y, ch, attr, ms) {
         this.plot(x, y, ch, attr);
@@ -99,12 +106,17 @@ class GameMap {
 
     roundBorder(thickness, t1, t2) {
         const cx = (this.w - 1) / 2, cy = (this.h - 1) / 2;
-        const rx = cx - thickness + 0.5, ry = cy - thickness + 0.5;
+        const rx = cx - thickness + 2.5, ry = cy - thickness + 2.5;
         for (let y = 0; y < this.h; y++)
             for (let x = 0; x < this.w; x++) {
                 const dx = (x - cx) / rx, dy = (y - cy) / ry;
                 if (dx*dx + dy*dy > 1) this.set(x, y, R(0,1) ? t1 : t2);
             }
+        // ensure impassable barrier on top and bottom rows
+        for (let x = 0; x < this.w; x++) {
+            this.set(x, 0, R(0,1) ? t1 : t2);
+            this.set(x, this.h - 1, R(0,1) ? t1 : t2);
+        }
     }
 
     // for AI shift: adjacent cells sorted by direction preference
@@ -130,7 +142,7 @@ class GameMap {
 function forestMap(map) {
     map.clear(T_CLEAR);
     map.roundBorder(3, T_TREE, T_ROCK);
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 10; i++) {
         let p;
         p = map.rndRevcent(FL_TERR); map.set(p.x, p.y, T_TREE);
         p = map.rndRevcent(FL_TERR); map.set(p.x, p.y, T_TREE);
@@ -150,7 +162,7 @@ function arenaMap(map) {
 function ruinsMap(map) {
     map.clear(T_CLEAR);
     map.roundBorder(3, T_ROCK, T_COLUMN);
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 5; i++) {
         let p;
         p = map.rndSpot(FL_TERR);    map.set(p.x, p.y, T_ROCK);
         p = map.rndRevcent(FL_TERR); map.set(p.x, p.y, T_BUSH);
@@ -167,7 +179,7 @@ function ruinsMap(map) {
 function rockyMap(map) {
     map.clear(T_CLEAR);
     map.roundBorder(3, T_ROCK, T_TREE);
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 15; i++) {
         let p;
         p = map.rndSpot(FL_TERR);    map.set(p.x, p.y, T_ROCK);
         p = map.rndRevcent(FL_TERR); map.set(p.x, p.y, T_ROCK);
