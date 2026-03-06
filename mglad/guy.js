@@ -57,7 +57,7 @@ class Guy {
         this.weapon = 0; this.armor = 0;
         this.att = 0; this.att0 = 0;
         this.speed = 30;
-        this.pop = 0; this.gold = 100;
+        this.pop = 0; this.gold = 100; this.pts = 0;
         this.time = 0;
         this.human = false;
         this.state = GUY_OK;

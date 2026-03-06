@@ -107,14 +107,16 @@ class Arena {
             if (k === 'arrowup' || k === 'w') {
                 for (let j = 1; j < options.length; j++) {
                     const idx = (sel - j + options.length) % options.length;
-                    if (options[idx].quit || options[idx].cost <= guy.gold) { sel = idx; break; }
+                    const oo = options[idx];
+                    if (oo.quit || oo.cost <= guy.gold) { sel = idx; break; }
                 }
                 render(); continue;
             }
             if (k === 'arrowdown' || k === 'x') {
                 for (let j = 1; j < options.length; j++) {
                     const idx = (sel + j) % options.length;
-                    if (options[idx].quit || options[idx].cost <= guy.gold) { sel = idx; break; }
+                    const oo = options[idx];
+                    if (oo.quit || oo.cost <= guy.gold) { sel = idx; break; }
                 }
                 render(); continue;
             }
@@ -133,13 +135,14 @@ class Arena {
             if (o.passage) { guy.gold -= 1000; overlay.classList.add('hidden'); return AR_PASSAGE; }
 
             guy.gold -= o.cost;
-            await this.buyStats(guy, o.pts, o.stats);
+            guy.pts += o.pts;
+            await this.buyStats(guy, o.stats);
             overlay.classList.add('hidden');
             return AR_OK;
         }
     }
 
-    async buyStats(guy, pts, allowedStats) {
+    async buyStats(guy, allowedStats) {
         const overlay = document.getElementById('overlay');
         const allStatDefs = [
             { label: 'Improve Skill',    field: 'skill',  cost: STAT_COST.skill,  key: 's' },
@@ -149,41 +152,45 @@ class Arena {
             { label: 'Improve Armor',    field: 'armor',  cost: STAT_COST.armor,  key: 'a' },
         ];
         const statNames = allStatDefs.filter(s => allowedStats.includes(s.field));
+        const doneIdx = statNames.length;
 
         let sel = 0;
 
         const render = () => {
             overlay.innerHTML = `<div class="overlay-panel" style="display:flex;gap:24px">` +
                 `<div>${this._statHTML(guy)}</div>` +
-                `<div><div class="points-left">Points: ${pts}</div>` +
+                `<div><div class="points-left">Points: ${guy.pts}</div>` +
                 statNames.map((s, i) => {
-                    const avail = pts >= s.cost;
+                    const avail = guy.pts >= s.cost;
                     const cls = !avail ? 'menu-item disabled' :
                                 i === sel ? 'menu-item selected' : 'menu-item';
                     return `<div class="${cls}"><span>${s.label}</span>` +
                         `<span class="cost">${s.cost}pt</span></div>`;
                 }).join('') +
-                `<div class="hint" style="margin-top:12px">W/X to navigate, Enter to select, Esc to finish</div>` +
+                `<div class="${sel === doneIdx ? 'menu-item selected' : 'menu-item'}">` +
+                `<span>Done</span></div>` +
+                `<div class="hint" style="margin-top:12px">W/X to navigate, Enter to select</div>` +
                 `</div></div>`;
         };
 
         render();
 
-        while (pts > 0) {
+        while (true) {
             const ev = await input.waitKey();
             const k = ev.key.toLowerCase();
+            const total = statNames.length + 1;
 
             if (k === 'arrowup' || k === 'w') {
-                for (let j = 1; j < statNames.length; j++) {
-                    const idx = (sel - j + statNames.length) % statNames.length;
-                    if (pts >= statNames[idx].cost) { sel = idx; break; }
+                for (let j = 1; j < total; j++) {
+                    const idx = (sel - j + total) % total;
+                    if (idx === doneIdx || guy.pts >= statNames[idx].cost) { sel = idx; break; }
                 }
                 render(); continue;
             }
             if (k === 'arrowdown' || k === 'x') {
-                for (let j = 1; j < statNames.length; j++) {
-                    const idx = (sel + j) % statNames.length;
-                    if (pts >= statNames[idx].cost) { sel = idx; break; }
+                for (let j = 1; j < total; j++) {
+                    const idx = (sel + j) % total;
+                    if (idx === doneIdx || guy.pts >= statNames[idx].cost) { sel = idx; break; }
                 }
                 render(); continue;
             }
@@ -191,15 +198,17 @@ class Arena {
 
             let picked = -1;
             if (k === 'enter' || k === ' ') picked = sel;
+            else if (k === 'd') picked = doneIdx;
             else {
                 for (let i = 0; i < statNames.length; i++)
                     if (statNames[i].key === k) { picked = i; break; }
             }
             if (picked < 0) continue;
+            if (picked === doneIdx) break;
             const s = statNames[picked];
-            if (pts < s.cost) continue;
+            if (guy.pts < s.cost) continue;
             guy[s.field]++;
-            pts -= s.cost;
+            guy.pts -= s.cost;
             render();
         }
 
@@ -219,6 +228,7 @@ class Arena {
             `<div class="stat-row"><span class="label">Speed</span><span class="value">${g.speed}</span></div>` +
             `<div class="stat-row"><span class="label">Points</span><span class="value">${g.calcPoints()}</span></div>` +
             `<div class="stat-row"><span class="label">Attack</span><span class="value">${g.att}/${g.att0}</span></div>` +
+            (g.pts > 0 ? `<div class="stat-row"><span class="label">Saved Pts</span><span class="value">${g.pts}</span></div>` : ``) +
             `<div class="pop-row"><span>Pop: ${g.pop}</span><span style="color:var(--gold)">Gold: ${g.gold}C</span></div>` +
             `</div>`;
     }
