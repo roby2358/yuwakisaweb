@@ -1,0 +1,14 @@
+We need a sprite sheet with 32x32 pixel images that show terrain features with a sand background. Omit labelling. Each row should be a different terrain type:
+
+Blood (a splatter of blood on sand from a monster attack)
+Sand
+Brush
+Tree
+Rock
+Pool
+Large Column
+Columns
+Light Stone Block
+Dark Stone Block
+
+With 8 different variations from left to right. The particular variation don't matter

@@ -1,0 +1,25 @@
+We need a sprite sheet with 32x32 pixel images that show silhouettes of humanoid monsters. They may have claws but should omit swords, shields, weapons, or other things they're holding in their hands. The background should be silver and the silohutee black. They should be facing forward. Omit labelling. Each row should be a different monster type:
+
+Standard
+
+Rock
+
+Brick
+
+Speedster
+
+Master
+
+Wall
+
+Slasher
+
+Specialist
+
+Monster
+
+Strongman
+
+
+
+With 8 different fierce poses from left to right. The particular poses don't matter
