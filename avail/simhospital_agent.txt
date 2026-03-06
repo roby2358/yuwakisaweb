@@ -1,169 +1,389 @@
-
 # Agent Instructions: Port SimHospital Simulation Core to Java
 
 ## Goal
 Port the simulation engine from the Go-based SimHospital project (in the `simhosp/`
-directory) to a self-contained Java library. The deliverable is a single class,
-`HospitalSimulator`, that exposes a `nextMessage()` method returning well-formed
-HL7v2 messages. This library will be consumed by a performance testing framework.
+directory) to a self-contained Java library. The deliverable is a Maven project
+containing a `HospitalSimulator` class that exposes a `nextMessage()` method
+returning well-formed HAPI HL7v2 `Message` objects. This library will be embedded
+in a performance testing framework — it has no server runtime, no HTTP layer, and
+no transport concerns.
 
 ---
 
 ## Step 1: Read and Understand the Source
 
-Before writing any code, read the following files from `simhosp/`:
+Before writing any code, read the following from `simhosp/`:
 
-- `README.md` — understand overall architecture
-- `config/pathways/` — read all pathway YAML/JSON files to understand the event
-  model (admission, discharge, order, result, transfer, etc.)
-- `pkg/pathway/` — understand how pathways are parsed and executed
-- `pkg/message/` — understand how HL7v2 messages are constructed from events
-- `pkg/patient/` — understand patient state and how it evolves through a pathway
-- `pkg/clock/` — understand the simulation clock abstraction
-- `pkg/simulator/` — understand the top-level simulation loop
+- `README.md` — overall architecture
+- `config/pathways/` — all pathway YAML/JSON files; understand the event model
+  (admission, discharge, order, result, transfer, etc.)
+- `pkg/pathway/` — how pathways are parsed and executed
+- `pkg/message/` — how HL7v2 messages are constructed from events
+- `pkg/patient/` — how patient state is modelled and evolves through a pathway
+- `pkg/clock/` — the simulation clock abstraction
+- `pkg/simulator/` — the top-level simulation loop and event queue
 
-Do not begin coding until you have read all of the above.
+Do not begin writing code until you have read all of the above.
 
 ---
 
 ## Step 2: Identify What to Port
 
-You are porting ONLY the simulation core. Do not port:
+Port ONLY the simulation core. Do not port:
 
-- The MLLP transport layer (the Java consumer will handle this)
+- The MLLP transport layer (the caller handles transport)
 - The web dashboard
 - The metrics/monitoring subsystem
 - Any CLI entrypoints
 
-The components to port are:
+Components to port:
 
-| Go Package | Java Equivalent |
-|---|---|
-| `pkg/pathway` | `PathwayLoader` — parses YAML pathway definitions |
-| `pkg/patient` | `PatientState` — holds current patient data and position in pathway |
-| `pkg/clock` | `SimulationClock` interface + two implementations (wall clock, synthetic) |
-| `pkg/message` | `MessageFactory` — produces HAPI HL7v2 `Message` objects from events |
-| `pkg/simulator` | `HospitalSimulator` — top-level class, owns the event queue |
+| Go Package      | Java Class(es)                                                  |
+|-----------------|-----------------------------------------------------------------|
+| `pkg/clock`     | `SimulationClock` interface, `WallClock`, `SyntheticClock`      |
+| `pkg/patient`   | `PatientState`, `PatientGenerator`                              |
+| `pkg/pathway`   | `Pathway`, `PathwayEvent`, `PathwayEventType`, `PathwayLoader`  |
+| `pkg/message`   | `MessageFactory`                                                |
+| `pkg/simulator` | `HospitalSimulator`, `SimulatorConfig`, `ScheduledEvent`        |
 
 ---
 
 ## Step 3: Dependencies
 
-Use the following dependencies. Add them to `pom.xml` or `build.gradle`:
+Use the following dependencies in `pom.xml`. Check Maven Central for the latest
+stable version of each before adding it — do not hard-code stale versions.
 
-- `ca.uhn.hapi:hapi-base:2.3` — HAPI HL7v2 core
-- `ca.uhn.hapi:hapi-structures-v25:2.3` — HL7v2 v2.5 message structures
-- `com.fasterxml.jackson.dataformat:jackson-dataformat-yaml` — YAML pathway parsing
-- `com.fasterxml.jackson.core:jackson-databind` — JSON support
-- `com.google.guava:guava:32.0-jre` — utility (optional but useful)
+```xml
+<!-- HAPI HL7v2 core parser and runtime -->
+<dependency>
+  <groupId>ca.uhn.hapi</groupId>
+  <artifactId>hapi-base</artifactId>
+</dependency>
 
-Do NOT introduce any MLLP, HTTP, or server-side dependencies.
+<!-- HL7v2.5 message structure definitions -->
+<dependency>
+  <groupId>ca.uhn.hapi</groupId>
+  <artifactId>hapi-structures-v25</artifactId>
+</dependency>
+
+<!-- YAML and JSON pathway file parsing -->
+<dependency>
+  <groupId>com.fasterxml.jackson.dataformat</groupId>
+  <artifactId>jackson-dataformat-yaml</artifactId>
+</dependency>
+<dependency>
+  <groupId>com.fasterxml.jackson.core</groupId>
+  <artifactId>jackson-databind</artifactId>
+</dependency>
+
+<!-- Required for Jackson to deserialise Optional<> fields correctly -->
+<dependency>
+  <groupId>com.fasterxml.jackson.datatype</groupId>
+  <artifactId>jackson-datatype-jdk8</artifactId>
+</dependency>
+
+<!-- Test -->
+<dependency>
+  <groupId>org.junit.jupiter</groupId>
+  <artifactId>junit-jupiter</artifactId>
+  <scope>test</scope>
+</dependency>
+```
+
+Register the JDK8 module with your `ObjectMapper`:
+```java
+ObjectMapper mapper = new ObjectMapper(new YAMLFactory())
+    .registerModule(new Jdk8Module());
+```
+
+Set minimum Java version to 21 using the `release` flag (preferred over
+`source`/`target` in modern Maven):
+```xml
+<maven.compiler.release>21</maven.compiler.release>
+```
+
+Do NOT introduce Spring, any application server, or MLLP/HTTP dependencies.
 
 ---
 
 ## Step 4: Core Design
 
-Implement the following interfaces and classes exactly as specified.
+Implement the following classes and interfaces exactly as specified. Where Java 21
+features (records, sealed interfaces, virtual threads) are a natural fit, use them.
+
+---
 
 ### `SimulationClock` (interface)
+
 ```java
 public interface SimulationClock {
+    /** Returns the current simulation time. */
     Instant now();
-    void advance(Duration duration); // no-op for wall clock
+
+    /**
+     * Advances the clock to the given target time.
+     *
+     * WallClock: blocks the calling thread until wall time reaches or exceeds
+     * target. This enforces real-time pacing.
+     *
+     * SyntheticClock: sets internal time to target and returns immediately.
+     * This allows faster-than-realtime simulation.
+     *
+     * Calls with a target earlier than now() must be treated as a no-op —
+     * the clock must never go backwards.
+     *
+     * HospitalSimulator is single-threaded; implementations do not need to
+     * be thread-safe. One SimulationClock instance per HospitalSimulator.
+     */
+    void advanceTo(Instant target) throws InterruptedException;
 }
 ```
 
 Provide two implementations:
-- `WallClock` — delegates to `Instant.now()`
-- `SyntheticClock` — starts at a configurable epoch, advances via `advance()`.
-  This allows faster-than-realtime simulation.
 
-### `PatientState`
-A plain data class holding:
-- Patient demographics (name, DOB, MRN, gender)
-- Current pathway name
-- Index of the next event to execute within the pathway
-- Admission datetime
-- Current location (ward, bed)
-- Any pending orders (map of order ID → order details)
+**`WallClock`** — `now()` delegates to `Instant.now()`. `advanceTo(target)` calls
+`Thread.sleep()` in a loop until `Instant.now().compareTo(target) >= 0`.
+
+**`SyntheticClock`** — holds a plain `Instant currentTime` field. `now()` returns
+it. `advanceTo(target)` sets `currentTime = target` if `target` is after the
+current value, otherwise does nothing. Constructed with a start epoch:
+```java
+new SyntheticClock(Instant.parse("2024-01-01T00:00:00Z"))
+```
+
+---
+
+### `PatientState` (mutable class — not a record)
+
+Holds the full mutable state of one simulated patient. `ScheduledEvent` holds a
+live reference to this object, not a snapshot — mutations to `PatientState` after
+scheduling (e.g. advancing `nextEventIndex`) are visible in the queue.
+
+```java
+public class PatientState {
+    String mrn;                           // generated unique ID
+    String familyName;
+    String givenName;
+    LocalDate dateOfBirth;
+    String gender;                        // "M", "F", or "U"
+    String pathwayName;
+    int nextEventIndex;                   // index of next event in Pathway.events()
+    Instant admissionTime;
+    String ward;
+    String bed;
+    Map<String, OrderDetails> openOrders; // orderId → OrderDetails
+}
+```
+
+`OrderDetails` is an immutable record:
+```java
+public record OrderDetails(String orderCode, String description) {}
+```
+
+---
+
+### `PatientGenerator`
+
+Generates new `PatientState` instances with randomised demographics. Accepts a
+`Random` instance (seeded from `SimulatorConfig`) so output is reproducible.
+Generates synthetic names, DOBs, and gender distributions — do not use real
+patient data.
+
+---
+
+### `PathwayEventType` (enum)
+
+```java
+public enum PathwayEventType {
+    ADMISSION, DISCHARGE, TRANSFER, ORDER, RESULT, OBSERVATION, CANCEL_ORDER, DELAY
+}
+```
+
+If additional event types are discovered in `simhosp/config/pathways/` during
+Step 1, add them here before writing any other code.
+
+---
+
+### `PathwayEvent` (record)
+
+```java
+public record PathwayEvent(
+    PathwayEventType type,
+    Optional<Duration> delay,         // wall-clock delay before this event fires;
+                                      // absent means fire immediately after prior event
+    Map<String, String> parameters    // event-specific config from YAML
+) {}
+```
+
+---
+
+### `Pathway` (record)
+
+```java
+public record Pathway(String name, List<PathwayEvent> events) {}
+```
+
+---
 
 ### `PathwayLoader`
-- Reads YAML files from a configurable directory
-- Parses them into a `Map<String, Pathway>` where the key is the pathway name
-- A `Pathway` is a list of `PathwayEvent` objects
-- A `PathwayEvent` has: event type (enum), optional delay (duration), optional
-  parameters (map of string to string)
 
-Support at minimum these event types, matching simhospital's model:
-`ADMISSION`, `DISCHARGE`, `TRANSFER`, `ORDER`, `RESULT`, `OBSERVATION`,
-`CANCEL_ORDER`, `DELAY`
+```java
+public class PathwayLoader {
+    /**
+     * Reads all .yaml and .json files in the given directory.
+     * Returns a map of pathway name → Pathway.
+     * Throws IllegalArgumentException if the directory does not exist or
+     * contains no recognisable pathway files.
+     */
+    public Map<String, Pathway> load(Path directory) { ... }
+}
+```
+
+Read the actual files in `simhosp/config/pathways/` during Step 1 to confirm
+exact YAML field names before writing Jackson deserialisation code. Do not guess
+field names.
+
+---
+
+### `ScheduledEvent` (record)
+
+Used internally by `HospitalSimulator`'s `PriorityQueue`. Place in the `simulator`
+package. `patient` is a reference to the live, mutable `PatientState` — not a
+copy. Mutations to `PatientState` after scheduling are reflected immediately.
+
+```java
+public record ScheduledEvent(
+    Instant scheduledTime,
+    PatientState patient,
+    PathwayEvent event
+) implements Comparable<ScheduledEvent> {
+
+    @Override
+    public int compareTo(ScheduledEvent other) {
+        return this.scheduledTime.compareTo(other.scheduledTime);
+    }
+}
+```
+
+---
 
 ### `MessageFactory`
-- Takes a `PathwayEvent` and a `PatientState`
-- Returns a HAPI `Message` object (or null for DELAY events)
-- Use HAPI's message builders — do not hand-roll HL7v2 strings
-- Mappings:
-  - `ADMISSION` → `ADT_A01`
-  - `DISCHARGE` → `ADT_A03`
-  - `TRANSFER` → `ADT_A02`
-  - `ORDER` → `ORM_O01`
-  - `RESULT` → `ORU_R01`
-  - `OBSERVATION` → `ORU_R01`
-  - `CANCEL_ORDER` → `ORM_O01` with ORC-1 = "CA"
-- Populate MSH, PID, PV1 segments from `PatientState` on every message
-- Use random but realistic synthetic values for fields not tracked in state
-  (e.g. attending physician name, lab values within normal ranges)
+
+```java
+public class MessageFactory {
+    /**
+     * Constructs a HAPI Message from the given event and patient state.
+     * Returns Optional.empty() for DELAY events (no message is produced).
+     *
+     * Use HAPI's typed message classes — do not build HL7v2 strings manually.
+     *
+     * To encode a Message to a String (e.g. in tests or the smoke test), use:
+     *   new PipeParser().encode(message)
+     * Do NOT call encode() inside this class.
+     */
+    public Optional<Message> build(PathwayEvent event, PatientState patient,
+                                   Instant eventTime) { ... }
+}
+```
+
+Event-to-message-type mappings:
+
+| PathwayEventType | HAPI Message Class | Notes                          |
+|------------------|--------------------|--------------------------------|
+| `ADMISSION`      | `ADT_A01`          |                                |
+| `DISCHARGE`      | `ADT_A03`          |                                |
+| `TRANSFER`       | `ADT_A02`          |                                |
+| `ORDER`          | `ORM_O01`          | ORC-1 = "NW" (new order)       |
+| `CANCEL_ORDER`   | `ORM_O01`          | ORC-1 = "CA" (cancel)          |
+| `RESULT`         | `ORU_R01`          |                                |
+| `OBSERVATION`    | `ORU_R01`          | Typically vital signs          |
+| `DELAY`          | *(none)*           | Return `Optional.empty()`      |
+
+Populate the following segments from `PatientState` on every message:
+- **MSH**: sending app, sending facility, datetime from `eventTime` formatted as
+  `yyyyMMddHHmmss`, message control ID (UUID), processing ID "P", version "2.5"
+- **PID**: MRN in PID-3, patient name in PID-5, DOB in PID-7, gender in PID-8
+- **PV1** (where applicable): patient class, assigned location (ward/bed),
+  admission datetime
+
+For fields not tracked in `PatientState` (e.g. attending physician name, lab
+result values), generate plausible synthetic values using the seeded `Random`
+from `SimulatorConfig`. Lab values should fall within clinically normal ranges.
+
+---
+
+### `SimulatorConfig` (builder pattern)
+
+```java
+public class SimulatorConfig {
+    Path pathwayDirectory;            // required; no default
+    int concurrentPatients;           // default: 50
+    SimulationClock clock;            // default: new WallClock()
+    Optional<Long> seed;              // if present, seed all Random instances;
+                                      // default: Optional.empty()
+    double messageRatePerSecond;      // maximum messages/sec produced by nextMessage();
+                                      // applies to WallClock mode only;
+                                      // 0.0 = no throttle (default)
+
+    public static Builder builder() { ... }
+}
+```
+
+---
 
 ### `HospitalSimulator` (main class)
+
 ```java
 public class HospitalSimulator {
 
     public HospitalSimulator(SimulatorConfig config) { ... }
 
-    // Returns the next HL7v2 message in simulation time order.
-    // Blocks until a message is ready if using wall clock.
-    // Returns immediately if using synthetic clock.
+    /**
+     * Returns the next HL7v2 message in simulation-time order.
+     *
+     * Runs entirely on the calling thread — there is no background thread.
+     * To run multiple parallel streams, create multiple HospitalSimulator
+     * instances (one per thread) with the same config.
+     *
+     * With WallClock: blocks until the event's scheduled time is reached via
+     * clock.advanceTo(), then returns the message. If messageRatePerSecond is
+     * set, additionally sleeps to enforce the configured rate.
+     *
+     * With SyntheticClock: advances the clock to the event's scheduled time
+     * and returns immediately — no blocking occurs. messageRatePerSecond is
+     * ignored.
+     */
     public Message nextMessage() throws InterruptedException { ... }
-
-    // Convenience: returns an infinite Java Stream of messages
-    public Stream<Message> stream() { ... }
-
-    // Shut down cleanly
-    public void close() { ... }
 }
 ```
 
-Internally, `HospitalSimulator` should:
-- Maintain a pool of N concurrent patients (configurable, default 50)
-- Each patient progresses independently through their assigned pathway
-- Use a `PriorityQueue<ScheduledEvent>` ordered by scheduled time to determine
-  which message is next
-- When a patient completes their pathway, immediately start a new patient on a
-  randomly selected pathway to keep the pool full
-- When using `SyntheticClock`, auto-advance the clock to the next scheduled event
-  time rather than waiting
+**Internal execution model:**
 
-### `SimulatorConfig`
-A plain configuration class (builder pattern) with fields:
-- `pathwayDirectory` (Path) — where to load YAML pathways from
-- `concurrentPatients` (int, default 50)
-- `clock` (SimulationClock, default WallClock)
-- `messageRatePerSecond` (double, optional throttle for wall clock mode)
-- `seed` (long, optional random seed for reproducibility)
+`nextMessage()` runs entirely on the calling thread:
+
+1. Peek at the head of the `PriorityQueue<ScheduledEvent>` (earliest event)
+2. Call `clock.advanceTo(event.scheduledTime())` to pace delivery
+3. Pop the event, invoke `MessageFactory.build()`
+4. If the event produces a message, advance the patient's `nextEventIndex`.
+   If the patient's pathway is now complete, replace them with a new patient
+   to keep the pool at its configured size. Re-enqueue the next event for this
+   patient (or the replacement), then return the message.
+5. If the event is a `DELAY` (no message), re-enqueue the patient's next event
+   and loop back to step 1.
+6. If `messageRatePerSecond` is set and `WallClock` is in use, apply a
+   `Thread.sleep` throttle after step 2 based on elapsed wall time.
 
 ---
 
 ## Step 5: Project Structure
-
-Create a standard Maven project layout:
 
 ```
 simhospital-java/
   pom.xml
   src/
     main/java/com/simhospital/
-      SimulatorConfig.java
       HospitalSimulator.java
+      SimulatorConfig.java
       clock/
         SimulationClock.java
         WallClock.java
@@ -171,6 +391,7 @@ simhospital-java/
       patient/
         PatientState.java
         PatientGenerator.java
+        OrderDetails.java
       pathway/
         Pathway.java
         PathwayEvent.java
@@ -178,58 +399,88 @@ simhospital-java/
         PathwayLoader.java
       message/
         MessageFactory.java
+      simulator/
+        ScheduledEvent.java
     test/java/com/simhospital/
       HospitalSimulatorTest.java
       MessageFactoryTest.java
       PathwayLoaderTest.java
+      SyntheticClockTest.java
 ```
 
 ---
 
 ## Step 6: Tests
 
-Write unit tests covering:
+Write JUnit 5 unit tests covering the following:
 
-- `PathwayLoader` correctly parses all YAML files in `simhosp/config/pathways/`
-- `MessageFactory` produces a valid, parseable HL7v2 message for each event type
-- `HospitalSimulator` with `SyntheticClock` returns messages in chronological order
-- `HospitalSimulator` with `SyntheticClock` and a simple admit→discharge pathway
-  produces an `ADT_A01` before an `ADT_A03` for the same patient
-- `HospitalSimulator` keeps the patient pool at the configured size
+**`PathwayLoaderTest`**
+- Successfully parses all YAML files in `simhosp/config/pathways/`
+- Each loaded pathway has at least one event
+- All event types map to recognised `PathwayEventType` values
+
+**`MessageFactoryTest`**
+- For each non-DELAY `PathwayEventType`, `build()` returns a non-empty `Optional`
+- The returned `Message` round-trips through `new PipeParser()` without throwing
+- MSH-7, PID-3, PID-5 are non-empty on every message
+
+**`SyntheticClockTest`**
+- `advanceTo(t)` results in `now()` returning `t`
+- Calling `advanceTo()` with a time earlier than `now()` is a no-op (clock does
+  not go backwards)
+
+**`HospitalSimulatorTest`**
+- With `SyntheticClock`, 1000 consecutive `nextMessage()` calls return messages
+  whose MSH-7 timestamps (parsed as `yyyyMMddHHmmss`) are in non-decreasing order
+- A pathway containing only `ADMISSION` then `DISCHARGE` produces an `ADT_A01`
+  before an `ADT_A03` for the same MRN (verify via PID-3)
+- With `seed` set, two separate `HospitalSimulator` instances with identical
+  config produce the same sequence of MSH-7 / MSH-9 values for the first 100
+  messages
 
 ---
 
-## Step 7: Verify
+## Step 7: Smoke Test
 
-After implementation, run this smoke test to confirm the library works end-to-end:
+After all tests pass, verify end-to-end with the following main method:
 
 ```java
-SimulatorConfig config = SimulatorConfig.builder()
+var config = SimulatorConfig.builder()
     .pathwayDirectory(Path.of("simhosp/config/pathways"))
     .concurrentPatients(10)
     .clock(new SyntheticClock(Instant.parse("2024-01-01T00:00:00Z")))
     .seed(42L)
     .build();
 
-HospitalSimulator sim = new HospitalSimulator(config);
+var sim = new HospitalSimulator(config);
+var parser = new PipeParser();
 
 for (int i = 0; i < 100; i++) {
-    Message msg = sim.nextMessage();
-    System.out.println(msg.getName() + " — " + msg.encode().substring(0, 60));
+    try {
+        Message msg = sim.nextMessage();
+        String encoded = parser.encode(msg);
+        System.out.println(msg.getName() + " | " + encoded.substring(0, 60));
+    } catch (HL7Exception e) {
+        throw new RuntimeException("Failed to encode message at index " + i, e);
+    }
 }
-
-sim.close();
 ```
 
-This should print 100 lines of mixed ADT, ORM, and ORU message names without
-throwing any exceptions.
+Expected output: 100 lines of mixed `ADT_A01`, `ADT_A02`, `ADT_A03`, `ORM_O01`,
+and `ORU_R01` message names with no exceptions thrown.
 
 ---
 
 ## Constraints
 
-- Java 21 minimum (use records, virtual threads where appropriate)
-- No Spring, no frameworks — this must be a plain library JAR with no server runtime
-- All randomness must be seeded through `SimulatorConfig.seed` for reproducibility
-- The library must be thread-safe — `nextMessage()` must be safe to call from
-  multiple threads simultaneously
+- **Java 21+**: use records for immutable data classes
+- **No frameworks**: plain library JAR only — no Spring, Quarkus, or any
+  application container
+- **No transport**: no MLLP, no sockets, no HTTP — the caller handles all of that
+- **Single-threaded per instance**: `HospitalSimulator` is not thread-safe by
+  design. To parallelise, the caller creates one instance per thread. Do not add
+  synchronisation inside the simulator
+- **Reproducibility**: when `seed` is set in `SimulatorConfig`, identical configs
+  must produce identical message sequences across JVM runs
+- **No background threads**: `HospitalSimulator` must not start any threads
+  internally. All work happens on the calling thread inside `nextMessage()`
