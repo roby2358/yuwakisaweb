@@ -12,18 +12,21 @@ no transport concerns.
 
 ## Step 1: Read and Understand the Source
 
-Before writing any code, read the following from `simhosp/`:
+The SimHospital Go source is in the `simhosp/` directory of this repository.
+Before writing any code, read the following files:
 
-- `README.md` — overall architecture
-- `config/pathways/` — all pathway YAML/JSON files; understand the event model
-  (admission, discharge, order, result, transfer, etc.)
-- `pkg/pathway/` — how pathways are parsed and executed
-- `pkg/message/` — how HL7v2 messages are constructed from events
-- `pkg/patient/` — how patient state is modelled and evolves through a pathway
-- `pkg/clock/` — the simulation clock abstraction
-- `pkg/simulator/` — the top-level simulation loop and event queue
+- `simhosp/README.md` — overall architecture
+- `simhosp/config/pathways/` — all pathway YAML/JSON files; understand the event
+  model (admission, discharge, order, result, transfer, etc.)
+- `simhosp/pkg/pathway/` — how pathways are parsed and executed
+- `simhosp/pkg/message/` — how HL7v2 messages are constructed from events
+- `simhosp/pkg/patient/` — how patient state is modelled and evolves through a
+  pathway
+- `simhosp/pkg/clock/` — the simulation clock abstraction
+- `simhosp/pkg/simulator/` — the top-level simulation loop and event queue
 
-Do not begin writing code until you have read all of the above.
+Read each of these in full before generating any code. Do not infer file
+contents or field names from context — read the actual files.
 
 ---
 
@@ -377,6 +380,9 @@ public class HospitalSimulator {
 
 ## Step 5: Project Structure
 
+Create all files under `simhospital-java/` in the root of this repository,
+alongside the existing `simhosp/` directory.
+
 ```
 simhospital-java/
   pom.xml
@@ -446,7 +452,7 @@ After all tests pass, verify end-to-end with the following main method:
 
 ```java
 var config = SimulatorConfig.builder()
-    .pathwayDirectory(Path.of("simhosp/config/pathways"))
+    .pathwayDirectory(Path.of("simhosp/config/pathways")) // relative to repo root
     .concurrentPatients(10)
     .clock(new SyntheticClock(Instant.parse("2024-01-01T00:00:00Z")))
     .seed(42L)
