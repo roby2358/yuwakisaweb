@@ -4,17 +4,29 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Monster Gladiators</title>
-<link rel="stylesheet" href="image.css">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<canvas id="screen"></canvas>
-<div id="help">QWEASDZC move | S rest | click/key advance | `k kill all</div>
+<div id="app">
+  <div id="game-container" class="hidden">
+    <canvas id="map-canvas"></canvas>
+    <div id="sidebar">
+      <div id="stat1" class="stat-panel"></div>
+      <div id="stat2" class="stat-panel"></div>
+      <div id="attack-info"></div>
+      <div id="roster"></div>
+      <div id="kill-timer"></div>
+    </div>
+  </div>
+  <div id="overlay"></div>
+  <div id="help-bar">Q W E / A S D / Z _ C move (S rest) | click or key to advance</div>
+</div>
 <script src="mglad.js"></script>
-<script src="screen.js"></script>
-<script src="map.js"></script>
+<script src="renderer.js"></script>
+<script src="hexmap.js"></script>
 <script src="guy.js"></script>
 <script src="combat.js"></script>
 <script src="arena.js"></script>
-<script src="image.js"></script>
+<script src="main.js"></script>
 </body>
 </html>

@@ -3,25 +3,23 @@
 class Combat {
     constructor() {
         this.map = null;
+        this.renderer = null;
         this.guys = null;
         this.rounds = 0;
     }
 
-    // ---- main entry ----
-
-    async doCombat(screen, guys, multPop) {
+    async doCombat(renderer, guys, multPop) {
+        this.renderer = renderer;
         this.guys = guys;
-        this.genMap(screen);
+        this.genMap();
         this.placeGuys();
-        await this.doFight(screen);
-        await this.doReward(screen, multPop);
+        await this.doFight();
+        await this.doReward(multPop);
         this.guys = null;
     }
 
-    // ---- map setup ----
-
-    genMap(screen) {
-        this.map = new GameMap(screen, 19, 19);
+    genMap() {
+        this.map = new HexMap(MAP_W, MAP_H);
         switch (R(1, 4)) {
             case 1: forestMap(this.map); break;
             case 2: arenaMap(this.map);  break;
@@ -38,88 +36,107 @@ class Combat {
         }
     }
 
-    // ---- fight loop ----
+    async doFight() {
+        const renderer = this.renderer;
+        const guys = this.guys;
 
-    async doFight(screen) {
-        screen.screenFade();
-        this.map.show();
-        showAllGuys(this.guys, this.map);
+        // Show game container, hide overlay
+        document.getElementById('game-container').classList.remove('hidden');
+        document.getElementById('overlay').classList.add('hidden');
 
-        // blank stat panels
-        this.guys[0].blankStats(screen, 41, 1, BD_IN);
-        this.guys[0].blankStats(screen, 61, 1, BD_IN);
+        renderer.drawMap(this.map);
+        showAllGuys(guys, renderer, this.map);
+
+        const stat1 = document.getElementById('stat1');
+        const stat2 = document.getElementById('stat2');
+        const attInfo = document.getElementById('attack-info');
+        const rosterEl = document.getElementById('roster');
+        const timerEl = document.getElementById('kill-timer');
+
+        stat1.innerHTML = '';
+        stat2.innerHTML = '';
 
         this.rounds = 0;
 
-        while (numAlive(this.guys) > 1 && this.rounds < KILL_TIMEOUT) {
-            showRoster(screen, this.guys, 41, 16);
+        while (numAlive(guys) > 1 && this.rounds < KILL_TIMEOUT) {
+            renderRoster(rosterEl, guys);
 
-            const t = minTime(this.guys);
+            const t = minTime(guys);
             this.rounds += t;
 
-            for (let i = 0; i < this.guys.length; i++) {
-                if (this.guys[i].human)
-                    await this.moveHuman(screen, i, t);
+            for (let i = 0; i < guys.length; i++) {
+                if (guys[i].human)
+                    await this.moveHuman(i, t);
                 else
-                    await this.moveComputer(screen, i, t);
+                    await this.moveComputer(i, t);
             }
 
-            // kill timer display
-            screen.putStr(2, 23, `kill time: ${KILL_TIMEOUT - this.rounds}    `, BACKGR);
+            // Update attack info for human
+            const human = guys.find(g => g.human);
+            if (human && human.target) {
+                renderAttackInfo(attInfo, human, human.target);
+            }
+
+            // Kill timer
+            const remaining = KILL_TIMEOUT - this.rounds;
+            timerEl.textContent = `Kill timer: ${remaining}`;
+            timerEl.className = remaining < 300 ? 'warning' : '';
         }
 
         if (this.rounds >= KILL_TIMEOUT)
-            await killAllGuys(this.guys, this.map);
+            await killAllGuys(guys, renderer, this.map);
+
+        timerEl.textContent = '';
     }
 
-    // ---- human move ----
-
-    async moveHuman(screen, n, tt) {
+    async moveHuman(n, tt) {
         const g = this.guys[n];
         if (!g.state) return;
         g.time -= tt;
         if (g.time > 0) return;
 
-        g.showStats(screen, 41, 1, BD_IN);
-        screen.flushKeys();
+        const renderer = this.renderer;
+        const stat1 = document.getElementById('stat1');
+        renderStatPanel(stat1, g);
 
-        const ev = await screen.waitKey();
+        input.flush();
+        const ev = await input.waitKey();
         const key = ev.key;
 
-        // debug prefix
         if (ev.debug) {
             if (key === 'k') {
-                await killAllGuys(this.guys, this.map);
+                await killAllGuys(this.guys, renderer, this.map);
                 return;
             }
             if (key === 'm') {
-                this.map.show();
-                showAllGuys(this.guys, this.map);
+                renderer.drawMap(this.map);
+                showAllGuys(this.guys, renderer, this.map);
                 return;
             }
             return;
         }
 
-        // rest (center key)
         const dir = KEY_DIR[key];
-        if (dir === 5) {
-            await g.showRest(this.map);
+
+        // Rest (center: S or space)
+        if (dir === 6) {
+            await g.showRest(renderer, this.map);
             g.rest(g.state = GUY_REST);
             return;
         }
 
-        if (key === 'Escape') return; // skip turn
+        if (key === 'Escape') return;
 
-        // movement / attack
-        if (dir && dir >= 1 && dir <= 9 && dir !== 5) {
+        // Movement / attack (hex directions 0-5)
+        if (dir !== undefined && dir >= 0 && dir <= 5) {
             const pos = this.map.closein(dir, g.x, g.y);
             const targ = guyAt(this.guys, pos.x, pos.y);
 
             if (targ > -1 && targ !== n) {
-                // attack
                 g.target = this.guys[targ];
-                await g.attack(this.map, g.target);
-                checkShowAttack(screen, g, g.target);
+                const stat2 = document.getElementById('stat2');
+                renderStatPanel(stat2, g.target);
+                await g.attack(renderer, this.map, g.target);
                 g.rest(g.state = GUY_ATTACK);
                 if (!g.target.health) {
                     g.pop++;
@@ -127,26 +144,24 @@ class Combat {
                             this.guys.indexOf(g.target));
                     this.rounds = 0;
                 }
-            } else {
-                // move
-                g.blank(this.map);
+            } else if (pos.x !== g.x || pos.y !== g.y) {
+                g.blank(renderer, this.map);
                 g.x = pos.x; g.y = pos.y;
-                g.show(this.map);
+                g.show(renderer, this.map);
                 g.rest(g.state = GUY_MOVE);
             }
             return;
         }
     }
 
-    // ---- AI move ----
-
-    async moveComputer(screen, n, tt) {
+    async moveComputer(n, tt) {
         const g = this.guys[n];
         if (!g.state) return;
         g.time -= tt;
         if (g.time > 0) return;
 
-        const targ = guyAdjacent(this.guys, this.map, g.x, g.y);
+        const renderer = this.renderer;
+        const targ = guyAdjacent(this.guys, g.x, g.y);
 
         if (targ > -1) {
             g.target = this.guys[targ];
@@ -154,27 +169,30 @@ class Combat {
             const rd = g.target.att + g.target.armor;
 
             if (g.att < g.att0 && ra < rd - 1) {
-                // rest / guard
-                await g.showRest(this.map);
+                await g.showRest(renderer, this.map);
                 g.rest(g.state = GUY_REST);
             } else {
                 if (R(0, ra) < R(0, rd)) {
-                    // shift position
+                    // Shift position
                     const dir = this.map.delta(g.x, g.y, g.target.x, g.target.y);
                     const positions = this.map.getShiftPositions(g.x, g.y, dir);
-                    g.blank(this.map);
+                    g.blank(renderer, this.map);
                     for (const p of positions) {
                         if (guyAt(this.guys, p.x, p.y) === -1) {
                             g.x = p.x; g.y = p.y;
                             break;
                         }
                     }
-                    g.show(this.map);
+                    g.show(renderer, this.map);
                     g.rest(g.state = GUY_MOVE);
                 } else {
-                    // attack
-                    await g.attack(this.map, g.target);
-                    checkShowAttack(screen, g, g.target);
+                    // Attack
+                    // Update stat panel if fighting human
+                    if (g.target.human) {
+                        const stat2 = document.getElementById('stat2');
+                        renderStatPanel(stat2, g);
+                    }
+                    await g.attack(renderer, this.map, g.target);
                     g.rest(g.state = GUY_ATTACK);
                     if (!g.target.health) {
                         g.pop++;
@@ -185,45 +203,44 @@ class Combat {
                 }
             }
         } else {
-            // move toward closest
-            const ci = guyClosest(this.guys, this.map, g.x, g.y);
+            const ci = guyClosest(this.guys, g.x, g.y);
             if (ci === -1) return;
             g.target = this.guys[ci];
-
             const dir = this.map.delta(g.x, g.y, g.target.x, g.target.y);
             const pos = this.map.closein(dir, g.x, g.y);
-
-            g.blank(this.map);
-            g.x = pos.x; g.y = pos.y;
-            g.show(this.map);
+            if (pos.x !== g.x || pos.y !== g.y) {
+                g.blank(renderer, this.map);
+                g.x = pos.x; g.y = pos.y;
+                g.show(renderer, this.map);
+            }
             g.rest(g.state = GUY_MOVE);
         }
 
-        await delay(30); // brief pause for visual pacing
+        await delay(30);
     }
 
-    // ---- rewards ----
-
-    async doReward(screen, mult) {
+    async doReward(mult) {
+        const overlay = document.getElementById('overlay');
         let place = 4;
         for (const g of this.guys) {
             g.pop += (place--) * mult;
-
             let earned = 0;
             if (g.pop > 0)
                 earned = Math.floor(Math.sqrt(g.pop) * POP_REWARD);
             g.gold += earned;
-
             if (!g.human && g.gold < PT_COST) g.gold += PT_COST;
 
             if (g.human) {
-                const x = 41, y0 = 5;
-                screen.box(BD_OUT | BD_FILL, x, y0, 78, y0 + 5, BACKGR);
-                screen.putStr(45, y0 + 1, g.name, 15 | BACKGR);
-                screen.putStr(45, y0 + 2, `Popularity ${lpad(g.pop, 5)} `, 14 | BACKGR);
-                screen.putStr(45, y0 + 3, `Credits earned:  ${lpad(earned, 5)}C `, BACKGR);
-                screen.putStr(45, y0 + 4, `Current credits: ${lpad(g.gold, 5)}C `, BACKGR);
-                await screen.waitKey();
+                overlay.classList.remove('hidden');
+                overlay.innerHTML =
+                    `<div class="overlay-panel reward-panel">` +
+                    `<div class="reward-name" style="color:${g.color}">${g.name}</div>` +
+                    `<div class="reward-stat">Popularity: ${g.pop}</div>` +
+                    `<div class="reward-stat" style="color:var(--gold)">Credits earned: ${earned}C</div>` +
+                    `<div class="reward-stat">Current credits: ${g.gold}C</div>` +
+                    `<div class="hint">Press any key</div></div>`;
+                await input.waitKey();
+                overlay.classList.add('hidden');
             }
         }
     }
