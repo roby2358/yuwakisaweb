@@ -60,13 +60,19 @@ class Arena {
         const overlay = document.getElementById('overlay');
         document.getElementById('game-container').classList.add('hidden');
 
+        const BASE_STATS = ['skill', 'str', 'health'];
+        const ALL_STATS  = ['skill', 'str', 'health', 'weapon', 'armor'];
+        const WPN_ONLY   = ['weapon'];
+        const ARM_ONLY   = ['armor'];
+
         const options = [
-            { label: 'Train in Gym',              cost:    0, pts:  1, key: 't' },
-            { label: 'Extensive Training',         cost:  200, pts:  2, key: 'e' },
-            { label: 'Hire a Trainer',             cost:  300, pts:  3, key: 'h' },
-            { label: 'Outpatient Bioengineering',  cost:  500, pts:  5, key: 'o' },
-            { label: 'Minor Bioengineering',       cost:  800, pts:  9, key: 'n' },
-            { label: 'Major Bioengineering',       cost: 1200, pts: 14, key: 'm' },
+            { label: 'Train in Gym',              cost:    0, pts:  1, key: 't', stats: BASE_STATS },
+            { label: 'Extensive Training',         cost:  200, pts:  3, key: 'e', stats: BASE_STATS },
+            { label: 'Outpatient Bioengineering',  cost:  300, pts:  4, key: 'o', stats: ALL_STATS },
+            { label: 'Bioweapon Specialist',       cost:  200, pts:  3, key: 'b', stats: WPN_ONLY },
+            { label: 'Armor Engineering',          cost:  200, pts:  3, key: 'a', stats: ARM_ONLY },
+            { label: 'Minor Bioengineering',       cost:  500, pts:  7, key: 'n', stats: ALL_STATS },
+            { label: 'Major Bioengineering',       cost:  800, pts: 11, key: 'm', stats: ALL_STATS },
             { label: 'Buy Passage',                cost: 1000, pts:  0, key: 'p', passage: true },
             { label: 'Quit',                       cost:    0, pts:  0, key: 'q', quit: true },
         ];
@@ -127,19 +133,22 @@ class Arena {
             if (o.passage) { guy.gold -= 1000; overlay.classList.add('hidden'); return AR_PASSAGE; }
 
             guy.gold -= o.cost;
-            await this.buyStats(guy, o.pts);
+            await this.buyStats(guy, o.pts, o.stats);
             overlay.classList.add('hidden');
             return AR_OK;
         }
     }
 
-    async buyStats(guy, pts) {
+    async buyStats(guy, pts, allowedStats) {
         const overlay = document.getElementById('overlay');
-        const statNames = [
+        const allStatDefs = [
             { label: 'Improve Skill',    field: 'skill',  cost: STAT_COST.skill,  key: 's' },
             { label: 'Improve Strength', field: 'str',    cost: STAT_COST.str,    key: 't' },
             { label: 'Improve Health',   field: 'health', cost: STAT_COST.health, key: 'h' },
+            { label: 'Improve Weapon',   field: 'weapon', cost: STAT_COST.weapon, key: 'w' },
+            { label: 'Improve Armor',    field: 'armor',  cost: STAT_COST.armor,  key: 'a' },
         ];
+        const statNames = allStatDefs.filter(s => allowedStats.includes(s.field));
 
         let sel = 0;
 
@@ -275,6 +284,18 @@ class Arena {
 
     // ---- Standings ----
 
+    _rosterHTML() {
+        const listHTML = this.guys.map(gy =>
+            `<div class="roster2-row">` +
+            `<div class="r2-icon" style="background:${gy.color}"></div>` +
+            `<span class="r2-name" style="${gy.human ? 'color:var(--text-bright)' : ''}">${gy.name}</span>` +
+            `<span class="r2-info">${lpad(gy.pop, 3)} (${gy.calcAttStr()}/${gy.calcPoints()})</span></div>`
+        ).join('');
+        const human = this.guys.find(g => g.human);
+        const goldLine = human ? `<div style="margin-top:12px;color:var(--gold)">You have ${human.gold}C</div>` : '';
+        return listHTML + goldLine;
+    }
+
     async showStandings() {
         document.getElementById('game-container').classList.add('hidden');
         const overlay = document.getElementById('overlay');
@@ -297,18 +318,10 @@ class Arena {
             ).join('') + `</div>`
         ).join('');
 
-        const rosterHTML = g.map(gy =>
-            `<div class="roster2-row">` +
-            `<div class="r2-icon" style="background:${gy.color}"></div>` +
-            `<span class="r2-name">${gy.name}</span>` +
-            `<span class="r2-info">${lpad(gy.calcAttStr(), 3)} (${lpad(gy.calcPoints(), 3)}) ` +
-            `p${lpad(gy.pop, 3)}, ${lpad(gy.gold, 5)}C</span></div>`
-        ).join('');
-
         overlay.innerHTML = `<div class="overlay-panel">` +
             `<h2>Standings</h2>` +
             `<div class="pyramid">${pyramidHTML}</div>` +
-            `<div style="margin-top:16px;border-top:1px solid var(--panel-border);padding-top:12px">${rosterHTML}</div>` +
+            `<div style="margin-top:16px;border-top:1px solid var(--panel-border);padding-top:12px">${this._rosterHTML()}</div>` +
             `<div class="hint">Press any key</div></div>`;
 
         await input.waitKey();
@@ -318,18 +331,9 @@ class Arena {
     async showRoster2(title) {
         const overlay = document.getElementById('overlay');
         overlay.classList.remove('hidden');
-        const rosterHTML = this.guys.map(gy =>
-            `<div class="roster2-row">` +
-            `<div class="r2-icon" style="background:${gy.color}"></div>` +
-            `<span class="r2-name" style="${gy.human ? 'color:var(--text-bright)' : ''}">${gy.name}</span>` +
-            `<span class="r2-info">${lpad(gy.pop, 3)} (${gy.calcAttStr()}/${gy.calcPoints()})</span></div>`
-        ).join('');
-
-        const human = this.guys.find(g => g.human);
-        const goldLine = human ? `<div style="margin-top:12px;color:var(--gold)">You have ${human.gold}C</div>` : '';
 
         overlay.innerHTML = `<div class="overlay-panel">` +
-            `<h2>${title}</h2>${rosterHTML}${goldLine}` +
+            `<h2>${title}</h2>${this._rosterHTML()}` +
             `<div class="hint">Press any key</div></div>`;
 
         await input.waitKey();

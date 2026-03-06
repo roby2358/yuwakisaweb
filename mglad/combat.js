@@ -83,8 +83,17 @@ class Combat {
             timerEl.className = remaining < 300 ? 'warning' : '';
         }
 
-        if (this.rounds >= KILL_TIMEOUT)
+        if (this.rounds >= KILL_TIMEOUT) {
+            const overlay = document.getElementById('overlay');
+            overlay.classList.remove('hidden');
+            overlay.innerHTML =
+                `<div class="overlay-panel">` +
+                `<h2 style="color:var(--danger)">Kill timer expired. All die!</h2>` +
+                `<div class="hint">Press any key</div></div>`;
+            await input.waitKey();
+            overlay.classList.add('hidden');
             await killAllGuys(guys, renderer, this.map);
+        }
 
         timerEl.textContent = '';
     }

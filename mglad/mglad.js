@@ -10,7 +10,7 @@ const PALETTE = [
 
 // ---- Game constants ----
 const PT_COST     = 100;
-const POP_REWARD  = 40;
+const POP_REWARD  = 120;
 const ATT_SLOW    = 10;
 const KILL_TIMEOUT = 1200;
 const NUM_GUYS    = 8;
@@ -47,7 +47,7 @@ const GUY_DEFEND = 4, GUY_REST = 5, GUY_HIT = 6;
 const AR_OK = 0, AR_QUIT = 1, AR_PASSAGE = 2, AR_PROMOTE = 3, AR_DEMOTE = 4;
 
 // ---- Stat costs ----
-const STAT_COST = { skill: 1, str: 2, health: 1, weapon: 2, armor: 3 };
+const STAT_COST = { skill: 1, str: 2, health: 1, weapon: 3, armor: 3 };
 
 // ---- Archetypes ----
 const ARCHETYPES = [
