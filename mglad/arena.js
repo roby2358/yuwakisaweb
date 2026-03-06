@@ -209,6 +209,8 @@ class Arena {
             if (guy.pts < s.cost) continue;
             guy[s.field]++;
             guy.pts -= s.cost;
+            const minCost = Math.min(...statNames.map(sn => sn.cost));
+            if (guy.pts < minCost) break;
             render();
         }
 
