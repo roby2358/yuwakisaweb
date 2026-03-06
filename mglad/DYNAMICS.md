@@ -1,6 +1,6 @@
 # Monster Gladiators — Game Dynamics
 
-Reference for the gameplay systems, mechanics, and flow of MGLAD. Based on the original Turbo C++ source code (September 1992).
+Reference for the gameplay systems, mechanics, and flow of MGLAD. Originally based on the Turbo C++ source code (September 1992), now updated for the hex-based sprite version.
 
 ## Game Loop
 
@@ -14,14 +14,14 @@ Each iteration of the loop is one **arena round**: a buy phase, a combat, stat a
 
 ## Arena Structure
 
-An arena holds a ranked roster of 8 gladiators. One is the human player (always starts in position 8, last place). The rest are AI-generated.
+An arena holds a ranked roster of 8 gladiators, sorted by popularity (highest first). One is the human player (starts at the bottom). The rest are AI-generated.
 
 ### Arena Parameters
 
 | Parameter     | Default | Description                                    |
 |---------------|---------|------------------------------------------------|
 | `min_pop`     | -5      | Popularity floor — below this, demoted/removed |
-| `max_pop`     | 25      | Popularity ceiling — above this, promoted       |
+| `max_pop`     | 50      | Popularity ceiling — above this, promoted       |
 | `mult_pop`    | 2       | Popularity multiplier for placement rewards     |
 | `base_points` | 30      | Base stat points for generating AI gladiators   |
 | `base_var`    | 6       | Variance when randomizing AI stats              |
@@ -84,7 +84,7 @@ Player starts as: Skill 6, Str 4, Health 5, Weapon 0, Armor 0 (21 points).
 
 ## AI Generation
 
-When creating an AI gladiator (`rand_guy`):
+When creating an AI gladiator (`randGuy`):
 
 1. Pick a random archetype from the base list
 2. Scale stats proportionally to `base_points` (default 30) minus a variance buffer
@@ -92,7 +92,7 @@ When creating an AI gladiator (`rand_guy`):
 4. Set initial popularity: average of two rolls in `[min_pop, max_pop]`, divided by 3
 5. Set initial gold: random `[0, pt_cost]`
 
-The character display uses the first letter of their archetype name and a random foreground+background color.
+Each gladiator gets a sprite from their archetype's row in `monsters.png` (random pose column) and a random bright color from the EGA palette (indices 8-15) for their hex tint.
 
 ## Time System
 
@@ -123,7 +123,7 @@ Where `ATT_SLOW = 10`. A fatigued gladiator (low `att` relative to `att0`) takes
 
 ### Map
 
-The arena is a 19x19 grid. One of four map types is randomly chosen:
+The arena is a 19x19 **hexagonal** grid (pointy-top, odd-r offset). One of four map types is randomly chosen:
 
 | Map     | Character                                  |
 |---------|--------------------------------------------|
@@ -147,7 +147,23 @@ Terrain types and their properties:
 | Lt Wall  | Yes             | Obstacle               |
 | Dk Wall  | Yes             | Obstacle               |
 
-Gladiators are placed at random non-blocked positions, biased toward the edges (`rnd_revcent`).
+Gladiators are placed at random non-blocked positions, biased toward the edges (`rndRevcent`).
+
+### Movement
+
+Movement uses 6 hex directions:
+
+| Key | Direction |
+|-----|-----------|
+| Q   | NW        |
+| E   | NE        |
+| A   | W         |
+| D   | E         |
+| Z   | SW        |
+| C   | SE        |
+| S   | Rest      |
+
+W/X (or arrow keys) are used for menu navigation.
 
 ### Kill Timer
 
@@ -194,18 +210,22 @@ Stamina is always clamped to `[1, att0]`.
 
 ## AI Behavior
 
-The AI (`move_computer`) follows a simple priority system:
+The AI (`moveComputer`) follows a simple priority system:
 
 1. **Adjacent enemy exists?**
    - Calculate `ra = att + weapon` vs `rd = target.att + target.armor`
    - If fatigued (`att < att0`) AND outmatched (`ra < rd - 1`): **rest/guard**
    - Otherwise, roll `random(0, ra)` vs `random(0, rd)`:
-     - If attacker's roll is lower: **shift position** (move to a different adjacent square)
+     - If attacker's roll is lower: **shift position** (move to a different adjacent hex)
      - Otherwise: **attack**
 
 2. **No adjacent enemy:**
-   - Find the **closest** living gladiator (Manhattan distance)
+   - Find the **closest** living gladiator (hex distance)
    - **Move** one step toward them
+
+### Targeting Bias
+
+When multiple enemies are equally valid (adjacent or equidistant), the AI targets the one with the **lowest array index** — which corresponds to the **highest-ranked** gladiator, since the roster is sorted by popularity. This creates natural pressure on top-ranked gladiators: the more popular you are, the more you get targeted.
 
 The AI has no long-term planning, no terrain awareness, and no coordination. It simply moves toward the nearest enemy and attacks when adjacent, with a self-preservation instinct to rest when outmatched.
 
@@ -252,32 +272,41 @@ This creates a progression treadmill — gladiators slowly grow stronger as they
 
 ## Ranking
 
-The roster is an ordered array. Position determines display order (pyramid standings) and placement rewards. Rankings change by:
+The roster is sorted by **popularity** (highest first). This determines display order, placement rewards, and AI targeting priority. Rankings change by:
 
 - **Killing** another gladiator moves the killer ahead of the victim in the list
 - **Promotion** (exceeding `max_pop`) removes the #1 gladiator and shifts everyone up
 - **Demotion** (below `min_pop`) removes the gladiator and shifts everyone up
+- **Between rounds**, the roster is re-sorted by popularity
 
 The standings are displayed as a pyramid: #1 at the top, then #2-3, then #4-8 at the bottom.
 
 ## Display
 
-The game renders in **text mode** (80x25, 16-color ANSI). Each gladiator is shown as a single character (first letter of their archetype name) with a random foreground/background color combination.
+The game renders with **32x32 sprites on a hexagonal grid** using HTML5 canvas, with HTML/CSS panels for UI.
 
-Key UI regions:
-- **Map area** (left): 19x19 combat grid
-- **Stat panels** (right): Two stat windows showing attacker and defender during combat
-- **Combat roster** (right): List of all gladiators with health/attack bars
-- **Pyramid** (between fights): Visual ranking display
-- **Kill timer**: Countdown displayed at bottom during combat
+Each gladiator is shown as a black silhouette (from their archetype's sprite row) with a colored hex tint from the EGA palette.
+
+### Sprite Sheets
+
+- **`monsters.png`** (320x320): 10x10 grid. One row per archetype, 10 pose variations. Black silhouettes on silver background (silver removed at load time).
+- **`terrain.png`** (320x320): 10x10 grid. One row per terrain type, 10 variations.
+- **`effects.png`** (192x192): 6x6 grid. Two rows per effect type: miss (rows 0-1, shown on target), hit (rows 2-3, shown on target), rest/shield (rows 4-5, shown on self).
+
+### UI Regions
+
+- **Hex map** (left): 19x19 hex combat grid on canvas
+- **Stat panels** (right sidebar): Two stat panels showing attacker and defender during combat
+- **Attack info** (right sidebar): Hit/miss detail with comparative bars
+- **Combat roster** (right sidebar): List of all gladiators with health/attack bars
+- **Kill timer** (right sidebar): Countdown during combat
+- **Overlay panels**: Full-screen overlays for title, buy phase, stat upgrades, standings pyramid, rewards, and promotion/demotion messages
 
 ## Unfinished Systems
 
-Several systems are stubbed but not implemented:
+Several systems from the original C++ source are stubbed but not implemented:
 
-- **`world_t`** class (commented out in M_ARENA.H) — would have defined multiple arenas as tiers within a world, with different events
-- **`passage()`** and **`demote()`** — empty function bodies
+- **`world_t`** class — would have defined multiple arenas as tiers within a world, with different events
+- **`passage()`** and **`demote()`** — empty function bodies in the original
 - **`awakening()`** — empty; appears to be a game intro
-- **`global_t`** — empty struct placeholder
-- **EGA graphical mode** — sprite assets (GUYS.EGA, TERRAIN.EGA) exist but the game runs in text mode only
-- **Name generation** — chart-based name builder is commented out in `rand_guy()`; gladiators use archetype names instead
+- **Name generation** — chart-based name builder was commented out in the original; gladiators use archetype names instead
