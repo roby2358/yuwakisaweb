@@ -1,7 +1,7 @@
-We need a sprite sheet with 32x32 pixel images that show actions with a greenscreen background. Omit labeling. Omit any figure performing the action, just the result. Each row should be a different action:
+We need a sprite sheet with 32x32 pixel images that show actions with a black background. Omit labeling. Omit any figure performing the action, just the result. Each row should be a different action:
 
-Attack and miss (swoop)
-Attack and hit (a bloody splat)
-Rest (A unadorned shield in light gray)
+3 rows Attack and miss (swoop)
+3 rows Attack and hit (a bloody splat)
+3 rows Rest (A unadorned shield in light gray)
 
-With 8 different variations from left to right. The particular variations don't matter
+With 9 different variations from left to right. The particular variations don't matter
