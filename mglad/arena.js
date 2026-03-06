@@ -5,7 +5,7 @@ class Arena {
         this.renderer = renderer;
         this.guys = [];
         this.minPop = -5;
-        this.maxPop = 25;
+        this.maxPop = 50;
         this.multPop = 2;
         this.popReward = POP_REWARD;
         this.ptCost = PT_COST;
@@ -33,6 +33,9 @@ class Arena {
         pg.human = true;
         pg.showAtt = '';
         pg.state = GUY_OK;
+
+        // Sort by popularity descending
+        this.guys.sort((a, b) => b.pop - a.pop);
 
         // Show roster
         await this.showRoster2('Arena Roster');
@@ -319,12 +322,14 @@ class Arena {
             `<div class="roster2-row">` +
             `<div class="r2-icon" style="background:${gy.color}"></div>` +
             `<span class="r2-name" style="${gy.human ? 'color:var(--text-bright)' : ''}">${gy.name}</span>` +
-            `<span class="r2-info">${lpad(gy.calcAttStr(), 3)} (${lpad(gy.calcPoints(), 3)}) ` +
-            `p${lpad(gy.pop, 3)}, ${lpad(gy.gold, 5)}C</span></div>`
+            `<span class="r2-info">${lpad(gy.pop, 3)} (${gy.calcAttStr()}/${gy.calcPoints()})</span></div>`
         ).join('');
 
+        const human = this.guys.find(g => g.human);
+        const goldLine = human ? `<div style="margin-top:12px;color:var(--gold)">You have ${human.gold}C</div>` : '';
+
         overlay.innerHTML = `<div class="overlay-panel">` +
-            `<h2>${title}</h2>${rosterHTML}` +
+            `<h2>${title}</h2>${rosterHTML}${goldLine}` +
             `<div class="hint">Press any key</div></div>`;
 
         await input.waitKey();
