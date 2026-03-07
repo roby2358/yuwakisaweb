@@ -52,16 +52,16 @@ const STAT_COST = { skill: 1, str: 2, health: 1, weapon: 3, armor: 3 };
 
 // ---- Archetypes ----
 const ARCHETYPES = [
-    { name: 'Standard',   skill: 20, str: 10, health: 12, weapon:  9, armor: 6 },
-    { name: 'Rock',       skill: 14, str: 14, health: 15, weapon: 14, armor: 3 },
-    { name: 'Brick',      skill: 15, str: 14, health: 15, weapon:  4, armor: 9 },
-    { name: 'Speedster',  skill: 31, str:  6, health:  8, weapon:  7, armor: 0 },
-    { name: 'Master',     skill: 33, str:  6, health: 20, weapon: 18, armor: 0 },
-    { name: 'Wall',       skill: 12, str: 12, health: 18, weapon:  4, armor: 12 },
-    { name: 'Slasher',    skill: 10, str:  8, health: 10, weapon: 24, armor: 0 },
-    { name: 'Specialist', skill: 64, str:  4, health: 10, weapon:  4, armor: 0 },
-    { name: 'Monster',    skill: 15, str: 15, health: 17, weapon: 14, armor: 3 },
-    { name: 'Strongman',  skill: 25, str: 24, health: 15, weapon:  6, armor: 0 },
+    { name: 'Standard',   skill: 20, str: 10, health: 20, weapon:  7, armor: 6 },
+    { name: 'Rock',       skill: 10, str: 20, health: 20, weapon:  6, armor: 4 },
+    { name: 'Brick',      skill: 10, str: 15, health: 30, weapon:  3, armor: 7 },
+    { name: 'Speedster',  skill: 25, str: 25, health: 10, weapon:  5, armor: 0 },
+    { name: 'Master',     skill: 35, str:  5, health: 20, weapon: 12, armor: 0 },
+    { name: 'Wall',       skill: 10, str:  5, health: 40, weapon:  0, armor: 13 },
+    { name: 'Slasher',    skill: 20, str: 15, health: 15, weapon: 12, armor: 0 },
+    { name: 'Specialist', skill: 30, str: 10, health: 20, weapon:  7, armor: 3 },
+    { name: 'Monster',    skill: 10, str: 15, health: 25, weapon:  9, armor: 3 },
+    { name: 'Strongman',  skill: 10, str: 21, health: 30, weapon:  3, armor: 3 },
 ];
 
 // ---- Hex geometry (pointy-top, odd-r offset) ----
