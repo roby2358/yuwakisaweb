@@ -215,11 +215,11 @@ class Combat {
             const ci = guyClosest(this.guys, g.x, g.y);
             if (ci === -1) return;
             g.target = this.guys[ci];
-            const dir = this.map.delta(g.x, g.y, g.target.x, g.target.y);
-            const pos = this.map.closein(dir, g.x, g.y);
-            if (pos.x !== g.x || pos.y !== g.y) {
+            const occupied = (x, y) => guyAt(this.guys, x, y) !== -1;
+            const step = this.map.bfsStep(g.x, g.y, g.target.x, g.target.y, occupied);
+            if (step && (step.x !== g.x || step.y !== g.y)) {
                 g.blank(renderer, this.map);
-                g.x = pos.x; g.y = pos.y;
+                g.x = step.x; g.y = step.y;
                 g.show(renderer, this.map);
             }
             g.rest(g.state = GUY_MOVE);

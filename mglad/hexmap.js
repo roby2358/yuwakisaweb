@@ -72,6 +72,39 @@ class HexMap {
     // Direction from one hex to another
     delta(x1, y1, x2, y2) { return hexDirTo(x1, y1, x2, y2); }
 
+    // BFS: return first step toward (tx,ty) avoiding blocked terrain and occupied hexes.
+    // occupied is a function(x,y)->bool for dynamically blocked cells (other guys).
+    // Returns {x,y} of the first step, or null if no path found.
+    bfsStep(sx, sy, tx, ty, occupied) {
+        const key = (x, y) => y * this.w + x;
+        const start = key(sx, sy), goal = key(tx, ty);
+        const came = new Map();  // key -> previous key
+        const queue = [start];
+        came.set(start, -1);
+
+        while (queue.length) {
+            const cur = queue.shift();
+            const cx = cur % this.w, cy = (cur - cx) / this.w;
+            if (cur === goal) {
+                // Trace back to the first step from start
+                let step = cur;
+                while (came.get(step) !== start) step = came.get(step);
+                return { x: step % this.w, y: (step - step % this.w) / this.w };
+            }
+            for (let d = 0; d < 6; d++) {
+                const n = hexNeighbor(cx, cy, d);
+                if (!this.inBounds(n.x, n.y) || this.isBlocked(n.x, n.y)) continue;
+                const nk = key(n.x, n.y);
+                if (came.has(nk)) continue;
+                // Allow the goal hex even if occupied (we want to path to adjacent)
+                if (nk !== goal && occupied(n.x, n.y)) continue;
+                came.set(nk, cur);
+                queue.push(nk);
+            }
+        }
+        return null;
+    }
+
     // Random placement
     rndSpot(avoidFlags) {
         for (let t = 0; t < 500; t++) {
