@@ -156,9 +156,7 @@ class Combat {
                 await g.attack(renderer, this.map, g.target);
                 g.rest(g.state = GUY_ATTACK);
                 if (!g.target.health) {
-                    const kp = killPop(g, g.target);
-                    g.pop += kp;
-                    g.kills += kp;
+                    g.kills += killPop(g, g.target);
                     rankGuy(this.guys, n < targ ? n : this.guys.indexOf(g),
                             this.guys.indexOf(g.target));
                     this.rounds = 0;
@@ -214,9 +212,7 @@ class Combat {
                     await g.attack(renderer, this.map, g.target);
                     g.rest(g.state = GUY_ATTACK);
                     if (!g.target.health) {
-                        const kp = killPop(g, g.target);
-                        g.pop += kp;
-                        g.kills += kp;
+                        g.kills += killPop(g, g.target);
                         rankGuy(this.guys, this.guys.indexOf(g),
                                 this.guys.indexOf(g.target));
                         this.rounds = 0;
@@ -247,7 +243,7 @@ class Combat {
             const popBefore = g.pop;
             const placePop = (place--) * mult;
             const killPop = g.kills || 0;
-            g.pop += placePop;
+            g.pop += killPop + placePop;
             let earned = 0;
             if (g.pop > 0)
                 earned = Math.floor(Math.sqrt(g.pop) * POP_REWARD);
@@ -259,15 +255,13 @@ class Combat {
                 if (killPop) lines.push(`<div class="reward-stat">Kills: +${killPop}</div>`);
                 const sign = placePop >= 0 ? '+' : '';
                 lines.push(`<div class="reward-stat">Placement: ${sign}${placePop}</div>`);
-                const total = g.pop - popBefore;
-                const totalSign = total >= 0 ? '+' : '';
                 overlay.classList.remove('hidden');
                 overlay.innerHTML =
                     `<div class="overlay-panel reward-panel">` +
                     `<div class="reward-name" style="color:${g.color}">${g.name}</div>` +
                     lines.join('') +
                     `<div class="reward-stat" style="border-top:1px solid var(--panel-border);padding-top:4px">` +
-                    `Popularity: ${popBefore} → ${g.pop} (${totalSign}${total})</div>` +
+                    `Popularity: ${popBefore} → ${g.pop}</div>` +
                     `<div class="reward-stat" style="color:var(--gold)">Credits earned: ${earned}C</div>` +
                     `<div class="reward-stat">Current credits: ${g.gold}C</div>` +
                     `<div class="hint">Press any key</div></div>`;

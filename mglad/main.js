@@ -30,7 +30,7 @@ async function main() {
 
     // Player setup
     const player = new Guy();
-    player.set('Guy1', 6, 4, 5, 0, 0);
+    player.set('Guy1', 5, 5, 5, 0, 0);
     player.human = true;
     player.showAtt = '';
     player.spriteRow = 0;

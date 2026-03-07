@@ -79,15 +79,15 @@ class Arena {
         const ARM_ONLY   = ['armor'];
 
         const options = [
-            { label: 'Train in Gym',              cost:    0, pts:  1, key: 't', stats: BASE_STATS },
-            { label: 'Extensive Training',         cost:  200, pts:  3, key: 'e', stats: BASE_STATS },
-            { label: 'Outpatient Bioengineering',  cost:  300, pts:  4, key: 'o', stats: ALL_STATS },
-            { label: 'Bioweapon Specialist',       cost:  200, pts:  3, key: 'b', stats: WPN_ONLY },
-            { label: 'Armor Engineering',          cost:  200, pts:  3, key: 'a', stats: ARM_ONLY },
-            { label: 'Minor Bioengineering',       cost:  500, pts:  7, key: 'n', stats: ALL_STATS },
-            { label: 'Major Bioengineering',       cost:  800, pts: 11, key: 'm', stats: ALL_STATS },
-            { label: 'Buy Passage',                cost: 1000, pts:  0, key: 'p', passage: true },
-            { label: 'Quit',                       cost:    0, pts:  0, key: 'q', quit: true },
+            { label: 'Train in Gym',              cost:    0, pts:  1, key: '1', stats: BASE_STATS },
+            { label: 'Extensive Training',         cost:  200, pts:  3, key: '2', stats: BASE_STATS },
+            { label: 'Bioweapon Specialist',       cost:  200, pts:  3, key: '3', stats: WPN_ONLY },
+            { label: 'Armor Engineering',          cost:  200, pts:  3, key: '4', stats: ARM_ONLY },
+            { label: 'Outpatient Bioengineering',  cost:  300, pts:  4, key: '5', stats: ALL_STATS },
+            { label: 'Minor Bioengineering',       cost:  500, pts:  7, key: '6', stats: ALL_STATS },
+            { label: 'Major Bioengineering',       cost:  800, pts: 11, key: '7', stats: ALL_STATS },
+            { label: 'Buy Passage',                cost: 1000, pts:  0, key: '8', passage: true },
+            { label: 'Quit',                       cost:    0, pts:  0, key: '9', quit: true },
         ];
 
         let sel = 0;
@@ -134,12 +134,18 @@ class Arena {
                 render(); continue;
             }
 
+            // Number keys highlight without selecting
+            let numIdx = -1;
+            for (let i = 0; i < options.length; i++)
+                if (options[i].key === k) { numIdx = i; break; }
+            if (numIdx >= 0) {
+                const oo = options[numIdx];
+                if (oo.quit || oo.cost <= guy.gold) { sel = numIdx; render(); }
+                continue;
+            }
+
             let picked = -1;
             if (k === 'enter' || k === ' ') picked = sel;
-            else {
-                for (let i = 0; i < options.length; i++)
-                    if (options[i].key === k) { picked = i; break; }
-            }
             if (picked < 0) continue;
             const o = options[picked];
             if (!o.quit && o.cost > guy.gold) continue;
