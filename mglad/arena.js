@@ -301,7 +301,7 @@ class Arena {
             `<div class="roster2-row">` +
             `<div class="r2-icon" style="background:${gy.color}"></div>` +
             `<span class="r2-name" style="${gy.human ? 'color:var(--text-bright)' : ''}">${gy.name}</span>` +
-            `<span class="r2-info">${lpad(gy.pop, 3)} (${gy.calcAttStr()}/${gy.calcPoints()})</span></div>`
+            `<span class="r2-info">${lpad(gy.pop, 3)} p${gy.calcPoints()}a${gy.calcAttStr()}</span></div>`
         ).join('');
         const human = this.guys.find(g => g.human);
         const goldLine = human ? `<div style="margin-top:12px;color:var(--gold)">You have ${human.gold}C</div>` : '';
@@ -326,7 +326,7 @@ class Arena {
             row.map(gy =>
                 `<div class="pyramid-entry${gy.human ? ' human' : ''}">` +
                 `<div class="p-name" style="color:${gy.color}">${gy.name}</div>` +
-                `<div class="p-pop">Pop: ${gy.pop}</div></div>`
+                `<div class="p-pop">Pop: ${gy.pop} p${gy.calcPoints()}a${gy.calcAttStr()}</div></div>`
             ).join('') + `</div>`
         ).join('');
 

@@ -356,7 +356,7 @@ function renderRoster(el, guys) {
         return `<div class="roster-row${dead}">` +
             `<div class="r-icon" style="background:${g.color}"></div>` +
             `<span class="r-name">${g.name}</span>` +
-            `<span class="r-power">${g.calcAttStr()}</span>` +
+            `<span class="r-power">p${g.calcPoints()}a${g.calcAttStr()}</span>` +
             `<div class="r-bars">` +
             barHTML(g.health, g.health0 || 1, '#ff4444', 30) +
             barHTML(g.att, g.att0 || 1, '#4488ff', 80) +
