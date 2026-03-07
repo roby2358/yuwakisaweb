@@ -26,7 +26,7 @@ An arena holds a ranked roster of 8 gladiators, sorted by popularity (highest fi
 | `base_points` | 30      | Base stat points for generating AI gladiators   |
 | `base_var`    | 6       | Variance when randomizing AI stats              |
 | `pt_cost`     | 100     | Credits per stat point (upgrade currency rate)  |
-| `pop_reward`  | 40      | Multiplier for converting popularity to gold    |
+| `pop_reward`  | 120     | Multiplier for converting popularity to gold    |
 
 ### Promotion and Demotion
 
@@ -45,7 +45,7 @@ The player can also buy a **passage** (1000 credits) to skip to the next tier.
 | Skill   | 1    | Attack accuracy, speed calculation        |
 | Str     | 2    | Damage bonus, fatigue recovery            |
 | Health  | 1    | Hit points, determines survivability      |
-| Weapon  | 2    | Flat bonus to attack rolls                |
+| Weapon  | 3    | Flat bonus to attack rolls                |
 | Armor   | 3    | Flat bonus to defense rolls, damage soak  |
 
 ### Derived Attributes
@@ -61,7 +61,7 @@ The player can also buy a **passage** (1000 credits) to skip to the next tier.
 
 ### Point Value
 
-A gladiator's total point cost: `skill*1 + str*2 + health*1 + weapon*2 + armor*3`
+A gladiator's total point cost: `skill*1 + str*2 + health*1 + weapon*3 + armor*3`
 
 ## Character Archetypes
 
@@ -69,18 +69,18 @@ A gladiator's total point cost: `skill*1 + str*2 + health*1 + weapon*2 + armor*3
 
 | Name       | Skill | Str | Health | Weapon | Armor | Points | Style              |
 |------------|-------|-----|--------|--------|-------|--------|--------------------|
-| Standard   | 20    | 10  | 12     | 9      | 6     | 78     | Balanced           |
-| Rock       | 14    | 14  | 15     | 14     | 3     | 80     | Durable attacker   |
-| Brick      | 15    | 14  | 15     | 4      | 9     | 78     | Defensive tank     |
-| Speedster  | 31    | 6   | 8      | 7      | 0     | 57     | Fast glass cannon  |
-| Master     | 33    | 6   | 20     | 18     | 0     | 101    | Skilled elite      |
-| Wall       | 12    | 12  | 18     | 4      | 12    | 86     | Heavy defense      |
-| Slasher    | 10    | 8   | 10     | 24     | 0     | 74     | Pure weapon damage |
-| Specialist | 64    | 4   | 10     | 4      | 0     | 90     | Extreme skill      |
-| Monster    | 15    | 15  | 17     | 14     | 3     | 83     | Tough brawler      |
-| Strongman  | 25    | 24  | 15     | 6      | 0     | 100    | Raw power          |
+| Standard   | 20    | 10  | 12     | 9      | 6     | 97     | Balanced           |
+| Rock       | 14    | 14  | 15     | 14     | 3     | 108    | Durable attacker   |
+| Brick      | 15    | 14  | 15     | 4      | 9     | 97     | Defensive tank     |
+| Speedster  | 31    | 6   | 8      | 7      | 0     | 72     | Fast glass cannon  |
+| Master     | 33    | 6   | 20     | 18     | 0     | 119    | Skilled elite      |
+| Wall       | 12    | 12  | 18     | 4      | 12    | 102    | Heavy defense      |
+| Slasher    | 10    | 8   | 10     | 24     | 0     | 108    | Pure weapon damage |
+| Specialist | 64    | 4   | 10     | 4      | 0     | 94     | Extreme skill      |
+| Monster    | 15    | 15  | 17     | 14     | 3     | 113    | Tough brawler      |
+| Strongman  | 25    | 24  | 15     | 6      | 0     | 106    | Raw power          |
 
-Player starts as: Skill 6, Str 4, Health 5, Weapon 0, Armor 0 (21 points).
+Player starts as: Skill 6, Str 4, Health 5, Weapon 0, Armor 0 (19 points).
 
 ## AI Generation
 
@@ -216,18 +216,19 @@ The AI (`moveComputer`) follows a simple priority system:
    - Calculate `ra = att + weapon` vs `rd = target.att + target.armor`
    - If fatigued (`att < att0`) AND outmatched (`ra < rd - 1`): **rest/guard**
    - Otherwise, roll `random(0, ra)` vs `random(0, rd)`:
-     - If attacker's roll is lower: **shift position** (move to a different adjacent hex)
+     - If attacker's roll is lower: **shift position** — move to an adjacent hex, preferring directions aligned with the target (sorted by cube-coordinate dot product)
      - Otherwise: **attack**
 
 2. **No adjacent enemy:**
    - Find the **closest** living gladiator (hex distance)
-   - **Move** one step toward them
+   - Use **BFS pathfinding** to find the shortest walkable path, avoiding blocked terrain and occupied hexes (the goal hex is treated as passable so paths can reach adjacent-to-target positions)
+   - **Move** one step along the BFS path
 
 ### Targeting Bias
 
 When multiple enemies are equally valid (adjacent or equidistant), the AI targets the one with the **lowest array index** — which corresponds to the **highest-ranked** gladiator, since the roster is sorted by popularity. This creates natural pressure on top-ranked gladiators: the more popular you are, the more you get targeted.
 
-The AI has no long-term planning, no terrain awareness, and no coordination. It simply moves toward the nearest enemy and attacks when adjacent, with a self-preservation instinct to rest when outmatched.
+The AI has no long-term planning and no coordination. It uses BFS to navigate around terrain obstacles, moves toward the nearest enemy, and attacks when adjacent, with a self-preservation instinct to rest when outmatched.
 
 ## Economy
 
@@ -244,19 +245,21 @@ AI gladiators with less than `PT_COST` (100) gold get a free top-up to 100.
 
 ### Spending Credits (Human Player)
 
-Before each combat, the player chooses from:
+Before each combat, the player chooses a training option. Points are added to a persistent pool (`guy.pts`) — unspent points carry over across rounds. After purchasing, the player is taken to the stat allocation screen, then proceeds to the fight.
 
-| Option                    | Cost   | Stat Points |
-|---------------------------|--------|-------------|
-| Train in Gym              | Free   | 1           |
-| Extensive Training        | 200    | 2           |
-| Hire a Trainer            | 300    | 3           |
-| Outpatient Bioengineering | 500    | 5           |
-| Minor Bioengineering      | 800    | 9           |
-| Major Bioengineering      | 1200   | 14          |
-| Buy Passage               | 1000   | (skip tier) |
+| Option                    | Cost   | Points | Allowed Stats                    |
+|---------------------------|--------|--------|----------------------------------|
+| Train in Gym              | Free   | 1      | Skill, Str, Health               |
+| Extensive Training        | 200    | 3      | Skill, Str, Health               |
+| Outpatient Bioengineering | 300    | 4      | Skill, Str, Health, Weapon, Armor|
+| Bioweapon Specialist      | 200    | 3      | Weapon only                      |
+| Armor Engineering         | 200    | 3      | Armor only                       |
+| Minor Bioengineering      | 500    | 7      | Skill, Str, Health, Weapon, Armor|
+| Major Bioengineering      | 800    | 11     | Skill, Str, Health, Weapon, Armor|
+| Buy Passage               | 1000   | —      | (skip to next tier)              |
+| Quit                      | Free   | —      | (end game)                       |
 
-Stat points are spent on Skill (cost 1), Strength (cost 2), or Health (cost 1). Weapon and Armor are not directly purchasable — they only come from the base archetype scaling.
+In the stat allocation screen, points are spent per-stat at their cost (Skill 1, Str 2, Health 1, Weapon 3, Armor 3). The screen auto-exits when remaining points are insufficient for any available stat. The player can also exit early via the "Done" option.
 
 ### Between-Fight Stat Adjustment (AI)
 
