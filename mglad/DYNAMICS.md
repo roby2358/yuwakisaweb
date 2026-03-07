@@ -234,12 +234,25 @@ The AI has no long-term planning and no coordination. It uses BFS to navigate ar
 
 ### Earning Credits
 
-After combat, gladiators are ranked by survival order (last alive = 1st place). Rewards:
+After combat, popularity changes come from two sources:
 
-```
-pop += place_value * mult_pop    (place_value: 4 for 1st, 3 for 2nd, etc.)
-gold += sqrt(pop) * POP_REWARD   (only if pop > 0)
-```
+1. **Kills**: +1 pop per kill (awarded during combat). Bonus for killing higher-ranked opponents: +2 if target's pop > 2× your pop, +3 if > 3× (only when killer's pop > 0)
+2. **Placement**: based on finishing position × `mult_pop`:
+
+| Place | Base | × mult_pop | Pop change |
+|-------|------|------------|------------|
+| 1st   | 4    | ×2         | +8         |
+| 2nd   | 3    | ×2         | +6         |
+| 3rd   | 2    | ×2         | +4         |
+| 4th   | 1    | ×2         | +2         |
+| 5th   | 0    | ×2         | 0          |
+| 6th   | -1   | ×2         | -2         |
+| 7th   | -2   | ×2         | -4         |
+| 8th   | -3   | ×2         | -6         |
+
+Credits earned: `gold += sqrt(pop) * POP_REWARD` (only if pop > 0).
+
+The human player sees a round wrap-up showing kills, placement, total pop change, and credits earned.
 
 AI gladiators with less than `PT_COST` (100) gold get a free top-up to 100.
 

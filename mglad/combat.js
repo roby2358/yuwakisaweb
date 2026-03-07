@@ -1,5 +1,11 @@
 // combat.js — Combat system: fight loop, AI, rewards
 
+function killPop(killer, target) {
+    if (killer.pop > 0 && target.pop > 3 * killer.pop) return 3;
+    if (killer.pop > 0 && target.pop > 2 * killer.pop) return 2;
+    return 1;
+}
+
 class Combat {
     constructor() {
         this.map = null;
@@ -11,6 +17,7 @@ class Combat {
     async doCombat(renderer, guys, multPop) {
         this.renderer = renderer;
         this.guys = guys;
+        for (const g of guys) g.kills = 0;
         this.genMap();
         this.placeGuys();
         await this.doFight();
@@ -148,7 +155,9 @@ class Combat {
                 await g.attack(renderer, this.map, g.target);
                 g.rest(g.state = GUY_ATTACK);
                 if (!g.target.health) {
-                    g.pop++;
+                    const kp = killPop(g, g.target);
+                    g.pop += kp;
+                    g.kills += kp;
                     rankGuy(this.guys, n < targ ? n : this.guys.indexOf(g),
                             this.guys.indexOf(g.target));
                     this.rounds = 0;
@@ -204,7 +213,9 @@ class Combat {
                     await g.attack(renderer, this.map, g.target);
                     g.rest(g.state = GUY_ATTACK);
                     if (!g.target.health) {
-                        g.pop++;
+                        const kp = killPop(g, g.target);
+                        g.pop += kp;
+                        g.kills += kp;
                         rankGuy(this.guys, this.guys.indexOf(g),
                                 this.guys.indexOf(g.target));
                         this.rounds = 0;
@@ -232,7 +243,10 @@ class Combat {
         const overlay = document.getElementById('overlay');
         let place = 4;
         for (const g of this.guys) {
-            g.pop += (place--) * mult;
+            const popBefore = g.pop;
+            const placePop = (place--) * mult;
+            const killPop = g.kills || 0;
+            g.pop += placePop;
             let earned = 0;
             if (g.pop > 0)
                 earned = Math.floor(Math.sqrt(g.pop) * POP_REWARD);
@@ -240,11 +254,19 @@ class Combat {
             if (!g.human && g.gold < PT_COST) g.gold += PT_COST;
 
             if (g.human) {
+                const lines = [];
+                if (killPop) lines.push(`<div class="reward-stat">Kills: +${killPop}</div>`);
+                const sign = placePop >= 0 ? '+' : '';
+                lines.push(`<div class="reward-stat">Placement: ${sign}${placePop}</div>`);
+                const total = g.pop - popBefore;
+                const totalSign = total >= 0 ? '+' : '';
                 overlay.classList.remove('hidden');
                 overlay.innerHTML =
                     `<div class="overlay-panel reward-panel">` +
                     `<div class="reward-name" style="color:${g.color}">${g.name}</div>` +
-                    `<div class="reward-stat">Popularity: ${g.pop}</div>` +
+                    lines.join('') +
+                    `<div class="reward-stat" style="border-top:1px solid var(--panel-border);padding-top:4px">` +
+                    `Popularity: ${popBefore} → ${g.pop} (${totalSign}${total})</div>` +
                     `<div class="reward-stat" style="color:var(--gold)">Credits earned: ${earned}C</div>` +
                     `<div class="reward-stat">Current credits: ${g.gold}C</div>` +
                     `<div class="hint">Press any key</div></div>`;
