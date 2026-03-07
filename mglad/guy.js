@@ -102,7 +102,7 @@ class Guy {
         const base = archetypes[idx];
         this.base = base;
         this.name = base.name;
-        this.spriteRow = idx;
+        this.spriteRow = base.sprite;
         this.spriteCol = R(0, SPRITE_COLS - 1);
         const fg = R(8, 15);
         this.colorIdx = fg;

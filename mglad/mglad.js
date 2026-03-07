@@ -63,16 +63,16 @@ const STAT_COST = { skill: 1, str: 2, health: 1, weapon: 3, armor: 3 };
 //  - Monster — Bestiarius: the beast-fighter archetype, tough and durable with decent weapon, survives through sheer bulk
 //  - Strongman — Scissor: raw brute power with heavy health, overwhelms through strength rather than finesse
 const ARCHETYPES = [
-    { name: 'Standard',   skill: 20, str: 10, health: 20, weapon:  7, armor: 6 },
-    { name: 'Rock',       skill: 10, str: 20, health: 20, weapon:  6, armor: 4 },
-    { name: 'Brick',      skill: 10, str: 15, health: 30, weapon:  3, armor: 7 },
-    { name: 'Speedster',  skill: 25, str: 25, health: 10, weapon:  5, armor: 0 },
-    { name: 'Master',     skill: 35, str:  5, health: 20, weapon: 12, armor: 0 },
-    { name: 'Wall',       skill: 10, str:  5, health: 40, weapon:  0, armor: 13 },
-    { name: 'Slasher',    skill: 20, str: 15, health: 15, weapon: 12, armor: 0 },
-    { name: 'Specialist', skill: 30, str: 10, health: 20, weapon:  7, armor: 3 },
-    { name: 'Monster',    skill: 10, str: 15, health: 25, weapon:  9, armor: 3 },
-    { name: 'Strongman',  skill: 10, str: 21, health: 30, weapon:  3, armor: 3 },
+    { name: 'Standard',   sprite: 0, skill: 20, str: 10, health: 20, weapon:  7, armor: 6 },
+    { name: 'Rock',       sprite: 1, skill: 10, str: 20, health: 20, weapon:  6, armor: 4 },
+    { name: 'Brick',      sprite: 2, skill: 10, str: 15, health: 30, weapon:  3, armor: 7 },
+    { name: 'Speedster',  sprite: 3, skill: 25, str: 25, health: 10, weapon:  5, armor: 0 },
+    { name: 'Master',     sprite: 4, skill: 35, str:  5, health: 20, weapon: 12, armor: 0 },
+    { name: 'Wall',       sprite: 5, skill: 10, str:  5, health: 40, weapon:  0, armor: 13 },
+    { name: 'Slasher',    sprite: 6, skill: 20, str: 15, health: 15, weapon: 12, armor: 0 },
+    { name: 'Specialist', sprite: 7, skill: 30, str: 10, health: 20, weapon:  7, armor: 3 },
+    { name: 'Monster',    sprite: 8, skill: 10, str: 15, health: 25, weapon:  9, armor: 3 },
+    { name: 'Strongman',  sprite: 9, skill: 10, str: 21, health: 30, weapon:  3, armor: 3 },
 ];
 
 // ---- Hex geometry (pointy-top, odd-r offset) ----
