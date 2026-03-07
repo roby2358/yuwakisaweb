@@ -62,7 +62,6 @@ class Arena {
         const combatants = this.selectCombatants();
         await this.combat.doCombat(this.renderer, combatants, this.multPop);
         await this.restoreGuys(combatants);
-        combatants.sort((a, b) => b.pop - a.pop);
         this.guys.sort((a, b) => b.pop - a.pop);
         await this.showStandings(combatants);
         return await this.promoteGuys();
