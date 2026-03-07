@@ -14,6 +14,7 @@ const POP_REWARD  = 120;
 const ATT_SLOW    = 10;
 const KILL_TIMEOUT = 1200;
 const NUM_GUYS    = 8;
+const ROSTER_SIZE = 40;
 
 // ---- Terrain ----
 const T_CLEAR = 0, T_SAND = 1, T_TREE = 2, T_BUSH = 3, T_ROCK = 4;

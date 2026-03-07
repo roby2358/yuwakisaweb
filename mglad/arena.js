@@ -23,13 +23,13 @@ class Arena {
 
     async genList(player) {
         this.guys = [];
-        for (let i = 0; i < NUM_GUYS; i++) this.guys.push(new Guy());
-        Object.assign(this.guys[NUM_GUYS - 1], player);
+        for (let i = 0; i < ROSTER_SIZE; i++) this.guys.push(new Guy());
+        Object.assign(this.guys[ROSTER_SIZE - 1], player);
 
         for (const g of this.guys)
             if (!g.state || !g.name) this.newGuy(g);
 
-        const pg = this.guys[NUM_GUYS - 1];
+        const pg = this.guys[ROSTER_SIZE - 1];
         pg.human = true;
         pg.showAtt = '';
         pg.state = GUY_OK;
@@ -41,6 +41,17 @@ class Arena {
         await this.showRoster2('Arena Roster');
     }
 
+    selectCombatants() {
+        const human = this.guys.find(g => g.human);
+        const ai = this.guys.filter(g => !g.human);
+        // Shuffle AI roster
+        for (let i = ai.length - 1; i > 0; i--) {
+            const j = R(0, i);
+            [ai[i], ai[j]] = [ai[j], ai[i]];
+        }
+        return ai.slice(0, NUM_GUYS - 1).concat(human);
+    }
+
     async doArena() {
         for (const g of this.guys) {
             if (g.human) {
@@ -48,9 +59,12 @@ class Arena {
                 if (status !== AR_OK) return status;
             }
         }
-        await this.combat.doCombat(this.renderer, this.guys, this.multPop);
-        await this.restoreGuys();
-        await this.showStandings();
+        const combatants = this.selectCombatants();
+        await this.combat.doCombat(this.renderer, combatants, this.multPop);
+        await this.restoreGuys(combatants);
+        combatants.sort((a, b) => b.pop - a.pop);
+        this.guys.sort((a, b) => b.pop - a.pop);
+        await this.showStandings(combatants);
         return await this.promoteGuys();
     }
 
@@ -237,8 +251,8 @@ class Arena {
 
     // ---- Between-fight stat adjustment ----
 
-    async restoreGuys() {
-        for (const g of this.guys) {
+    async restoreGuys(combatants) {
+        for (const g of combatants) {
             g.state = GUY_OK;
             g.health = g.health0;
 
@@ -308,13 +322,13 @@ class Arena {
         return listHTML + goldLine;
     }
 
-    async showStandings() {
+    async showStandings(combatants) {
         document.getElementById('game-container').classList.add('hidden');
         const overlay = document.getElementById('overlay');
         overlay.classList.remove('hidden');
 
-        const g = this.guys;
-        // Pyramid layout: 1, 2, 5
+        const g = combatants;
+        // Pyramid layout: combatants — 1, 2, 5
         const rows = [];
         if (g[0]) rows.push([g[0]]);
         if (g[1] || g[2]) rows.push([g[1], g[2]].filter(Boolean));
@@ -333,7 +347,7 @@ class Arena {
         overlay.innerHTML = `<div class="overlay-panel">` +
             `<h2>Standings</h2>` +
             `<div class="pyramid">${pyramidHTML}</div>` +
-            `<div style="margin-top:16px;border-top:1px solid var(--panel-border);padding-top:12px">${this._rosterHTML()}</div>` +
+            `<div style="margin-top:16px;border-top:1px solid var(--panel-border);padding-top:12px;max-height:300px;overflow-y:auto">${this._rosterHTML()}</div>` +
             `<div class="hint">Press any key</div></div>`;
 
         await input.waitKey();
@@ -345,7 +359,8 @@ class Arena {
         overlay.classList.remove('hidden');
 
         overlay.innerHTML = `<div class="overlay-panel">` +
-            `<h2>${title}</h2>${this._rosterHTML()}` +
+            `<h2>${title}</h2>` +
+            `<div style="max-height:400px;overflow-y:auto">${this._rosterHTML()}</div>` +
             `<div class="hint">Press any key</div></div>`;
 
         await input.waitKey();

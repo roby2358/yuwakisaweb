@@ -14,7 +14,7 @@ Each iteration of the loop is one **arena round**: a buy phase, a combat, stat a
 
 ## Arena Structure
 
-An arena holds a ranked roster of 8 gladiators, sorted by popularity (highest first). One is the human player (starts at the bottom). The rest are AI-generated.
+An arena holds a ranked roster of 40 gladiators (`ROSTER_SIZE`), sorted by popularity (highest first). One is the human player (starts at the bottom). The rest are AI-generated. Each round, 7 random AI gladiators are selected along with the human player to form a combat group of 8 (`NUM_GUYS`). Only combatants are affected by between-fight stat adjustments.
 
 ### Arena Parameters
 
