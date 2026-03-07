@@ -185,7 +185,7 @@ class Combat {
             const ra = g.att + g.weapon;
             const rd = g.target.att + g.target.armor;
 
-            if (g.att < g.att0 && ra < rd - 1) {
+            if (g.att < g.att0 && ra < rd - 1 && g.att * 5 < g.att0 * 4) {
                 await g.showRest(renderer, this.map);
                 g.rest(g.state = GUY_REST);
             } else {
