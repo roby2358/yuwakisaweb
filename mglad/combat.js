@@ -1,8 +1,9 @@
 // combat.js — Combat system: fight loop, AI, rewards
 
 function killPop(killer, target) {
-    if (killer.pop > 0 && target.pop > 3 * killer.pop) return 3;
-    if (killer.pop > 0 && target.pop > 2 * killer.pop) return 2;
+    if (killer.pop <= 0) return 3;
+    if (target.pop > 3 * killer.pop) return 3;
+    if (target.pop > 2 * killer.pop) return 2;
     return 1;
 }
 

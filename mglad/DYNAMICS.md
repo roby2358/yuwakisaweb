@@ -236,7 +236,7 @@ The AI has no long-term planning and no coordination. It uses BFS to navigate ar
 
 After combat, popularity changes come from two sources:
 
-1. **Kills**: +1 pop per kill (awarded during combat). Bonus for killing higher-ranked opponents: +2 if target's pop > 2× your pop, +3 if > 3× (only when killer's pop > 0)
+1. **Kills**: +1 pop per kill (awarded during combat). Bonus for killing higher-ranked opponents: +2 if target's pop > 2× your pop, +3 if > 3×. If the killer's pop is 0 or negative, always +3 (the excitement of getting on the board)
 2. **Placement**: based on finishing position × `mult_pop`:
 
 | Place | Base | × mult_pop | Pop change |
