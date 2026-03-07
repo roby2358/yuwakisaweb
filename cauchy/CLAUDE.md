@@ -14,13 +14,9 @@ Open `index.html` in a browser. No build step, no bundler, no package manager.
 
 All JS files are loaded via `<script>` tags in `index.html` (order matters):
 
-1. **colorwheel.js** — Color space conversions (HSL↔RGB) and color wheel operations. Ported from `examples/colorwheel/ColorWheel.scala`. Exposes global functions: `mod1`, `hslToRgb`, `rgbToHsl`, `pixToRGBLuminosity`, `pixToRGBSaturation`.
+1. **colortheory.js** — `ColorTheory` utility class combining color wheel operations (HSL↔RGB), 8 color scheme generators, and gradient/bands colormap caching. Ported from Scala sources in `examples/colorwheel/`. Static methods for scheme generation (`SchemeGenerators`, `randomScheme`), color conversions, and palette sorting. Instance usage: `new ColorTheory(n, palette)` creates a cached colormap with `.apply(v)`.
 
-2. **schemes.js** — 8 color scheme generators (monochromatic, analogous, triad, complementary, splitComplementary, doubleSplitComplementary, square, compound). Ported from `examples/colorwheel/Schemes.scala`. Exposes `SchemeGenerators` map and `randomScheme`. Each scheme produces a 5-color palette sorted by luminance.
-
-3. **colors.js** — `Colors` class that caches a gradient colormap of size `COLOR_MAP_SIZE` (1024) for fast per-pixel lookup. Also exposes `gradient()` and `bands()` interpolation functions.
-
-4. **index.js** — Main app. Contains `CauchyHeatMap` class (heat source generation, field calculation, rendering) and DOM event wiring. The class uses Cauchy distributions for point count, placement, intensity, and scale parameters.
+2. **index.js** — Main app. Contains `CauchyHeatMap` class (heat source generation, field calculation, rendering) and DOM event wiring. The class uses Cauchy distributions for point count, placement, intensity, and scale parameters.
 
 ### Key data flow
 

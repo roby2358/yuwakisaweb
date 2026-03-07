@@ -230,22 +230,22 @@ class CauchyHeatMap {
 
     generateColorScheme(schemeName) {
         const randomFn = () => this.random();
-        const radial = { a: randomFn(), r: randomR(randomFn) };
-        
+        const radial = { a: randomFn(), r: ColorTheory.randomR(randomFn) };
+
         if (schemeName === 'random') {
-            return randomScheme(randomFn);
+            return ColorTheory.randomScheme(randomFn);
         }
-        
-        const generator = SchemeGenerators[schemeName];
+
+        const generator = ColorTheory.SchemeGenerators[schemeName];
         if (!generator) {
-            return randomScheme(randomFn);
+            return ColorTheory.randomScheme(randomFn);
         }
-        
+
         return generator(radial, randomFn);
     }
 
     getColormapFromScheme(colors) {
-        const colorsObj = new Colors(COLOR_MAP_SIZE, colors);
+        const colorsObj = new ColorTheory(COLOR_MAP_SIZE, colors);
         return (t) => colorsObj.apply(t);
     }
 
