@@ -86,7 +86,7 @@ class Arena {
         const ARM_ONLY   = ['armor'];
 
         const options = [
-            { label: 'Train in Gym',              cost:    0, pts:  1, key: '1', stats: BASE_STATS },
+            { label: 'Train in Gym',              cost:    0, pts:  2, key: '1', stats: BASE_STATS },
             { label: 'Extensive Training',         cost:  200, pts:  3, key: '2', stats: BASE_STATS },
             { label: 'Bioweapon Specialist',       cost:  200, pts:  3, key: '3', stats: WPN_ONLY },
             { label: 'Armor Engineering',          cost:  200, pts:  3, key: '4', stats: ARM_ONLY },
