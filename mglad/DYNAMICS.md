@@ -20,7 +20,7 @@ An arena holds a ranked roster of 8 gladiators, sorted by popularity (highest fi
 
 | Parameter     | Default | Description                                    |
 |---------------|---------|------------------------------------------------|
-| `min_pop`     | -5      | Popularity floor — below this, demoted/removed |
+| `min_pop`     | -10     | Popularity floor — below this, demoted/removed |
 | `max_pop`     | 50      | Popularity ceiling — above this, promoted       |
 | `mult_pop`    | 2       | Popularity multiplier for placement rewards     |
 | `base_points` | 30      | Base stat points for generating AI gladiators   |

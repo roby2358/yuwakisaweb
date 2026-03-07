@@ -4,7 +4,7 @@ class Arena {
     constructor(renderer) {
         this.renderer = renderer;
         this.guys = [];
-        this.minPop = -5;
+        this.minPop = -10;
         this.maxPop = 50;
         this.multPop = 2;
         this.popReward = POP_REWARD;
