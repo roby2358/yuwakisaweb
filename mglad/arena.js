@@ -43,13 +43,19 @@ class Arena {
 
     selectCombatants() {
         const human = this.guys.find(g => g.human);
-        const ai = this.guys.filter(g => !g.human);
-        // Shuffle AI roster
-        for (let i = ai.length - 1; i > 0; i--) {
+        const hi = this.guys.indexOf(human);
+        // Window of 16 around human, clamped to roster bounds
+        const lo = clamp(hi - 8, 0, this.guys.length - 16);
+        const end = Math.min(lo + 16, this.guys.length);
+        const pool = [];
+        for (let i = lo; i < end; i++)
+            if (this.guys[i] !== human) pool.push(this.guys[i]);
+        // Shuffle and pick 7
+        for (let i = pool.length - 1; i > 0; i--) {
             const j = R(0, i);
-            [ai[i], ai[j]] = [ai[j], ai[i]];
+            [pool[i], pool[j]] = [pool[j], pool[i]];
         }
-        return ai.slice(0, NUM_GUYS - 1).concat(human);
+        return pool.slice(0, NUM_GUYS - 1).concat(human);
     }
 
     async doArena() {
