@@ -86,7 +86,7 @@ class Guy {
     calcPoints() { return calcPointsOf(this); }
     calcSpeed()  {
         const s = Math.floor(60 * this.calcPoints() / (this.skill * this.str || 1));
-        return s <= 10 ? 10 : s < 30 ? s : 30;
+        return s <= 10 ? 10 : s < 40 ? s : 40;
     }
 
     advanceTime(ticks) {
@@ -216,15 +216,15 @@ class Guy {
 
     async attack(renderer, hexmap, def) {
         await this.showAttackAnim(renderer, hexmap);
-        const ra = R(1, 6) + R(0, this.att) + this.weapon;
+        const ra = R(1, 6) + R(0, this.att + this.str) + this.weapon;
         const rd = R(1, 6) + Math.floor(R(0, def.att) / 2) + def.armor;
 
-        const detail = `[${6 + this.att + this.weapon}:${6 + def.att + def.armor}] ${ra}-${rd} (${ra - rd + this.str})`;
+        const detail = `[${6 + this.att + this.str + this.weapon}:${6 + def.att + def.armor}] ${ra}-${rd} (${ra - rd})`;
         if (this.showAtt !== null) this.showAtt = detail;
         else if (def.showAtt !== null) def.showAtt = detail;
 
         if (ra >= rd) {
-            const dmg = Math.floor((ra - rd) / 2) + this.str + this.weapon - def.armor;
+            const dmg = Math.floor((ra - rd) / 2) + this.weapon - def.armor;
             await def.hit(renderer, hexmap, dmg);
         } else {
             this.att += ra - rd + this.str - 1;
