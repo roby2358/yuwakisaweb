@@ -1,5 +1,18 @@
 // ColorTheory - Combined color utilities
 // Ported from Scala ColorWheel, Schemes, and Colors
+//
+// Scheme generation:
+//   const randomFn = () => Math.random();
+//   const colors = ColorTheory.randomScheme(randomFn);                     // random 5-color palette
+//   const colors = ColorTheory.SchemeGenerators.triad(radial, randomFn);   // specific scheme
+//
+// Colormap (cached gradient for fast per-pixel lookup):
+//   const colormap = new ColorTheory(1024, colors);
+//   const { r, g, b } = colormap.apply(t);   // t in [0, 1]
+//
+// Conversions:
+//   const [r, g, b] = ColorTheory.hslToRgb(h, s, l);
+//   const hex = ColorTheory.rgbToHex(r, g, b);
 
 class ColorTheory {
     // --- ColorWheel ---
@@ -198,6 +211,16 @@ class ColorTheory {
         const i = Math.floor(randomFn() * schemes.length);
         const radial = { a: randomFn(), r: ColorTheory.randomR(randomFn) };
         return schemes[i](radial, randomFn);
+    }
+
+    // --- Helpers ---
+
+    static rgbToHex(r, g, b) {
+        const toHex = (c) => {
+            const hex = Math.round(c * 255).toString(16);
+            return hex.length === 1 ? '0' + hex : hex;
+        };
+        return '#' + toHex(r) + toHex(g) + toHex(b);
     }
 
     // --- Colors ---

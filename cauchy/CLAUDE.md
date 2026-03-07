@@ -16,7 +16,11 @@ All JS files are loaded via `<script>` tags in `index.html` (order matters):
 
 1. **colortheory.js** — `ColorTheory` utility class combining color wheel operations (HSL↔RGB), 8 color scheme generators, and gradient/bands colormap caching. Ported from Scala sources in `examples/colorwheel/`. Static methods for scheme generation (`SchemeGenerators`, `randomScheme`), color conversions, and palette sorting. Instance usage: `new ColorTheory(n, palette)` creates a cached colormap with `.apply(v)`.
 
-2. **index.js** — Main app. Contains `CauchyHeatMap` class (heat source generation, field calculation, rendering) and DOM event wiring. The class uses Cauchy distributions for point count, placement, intensity, and scale parameters.
+2. **cauchymap.js** — `CauchyMap` class. Pure field math: given sources (position + strength + scale), computes the heat field. Also handles field normalization and clamping. No randomness, no DOM.
+
+3. **cauchyheatmap.js** — `CauchyHeatMap` class. Sampling engine: seeded RNG, Cauchy-driven point count, placement, intensity, and scale generation. `generate()` returns `{ sources, field, pointCount }`.
+
+4. **index.js** — Presentation layer: canvas rendering, color scheme selection via `ColorTheory`, DOM event wiring.
 
 ### Key data flow
 
