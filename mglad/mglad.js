@@ -51,6 +51,17 @@ const AR_OK = 0, AR_QUIT = 1, AR_PASSAGE = 2, AR_PROMOTE = 3, AR_DEMOTE = 4;
 const STAT_COST = { skill: 1, str: 2, health: 1, weapon: 3, armor: 3 };
 
 // ---- Archetypes ----
+//  - Standard — Secutor: balanced pursuit fighter, decent weapon and shield, no glaring weakness
+//  - Rock — Murmillo: heavy hitter with str emphasis, like the classic legionary-style gladiator with a big sword
+//  - Brick — Provocator: endurance fighter with armor and health, wears you down while absorbing punishment
+//  - Speedster — Retiarius: unarmored speed fighter, relies on agility and quick strikes, dies fast if caught
+//  - Master — Dimachaerus: dual-wielding expert, extremely high skill and weapon but fragile body, a technical showman
+//  - Wall — Hoplomachus: tower shield and heavy armor, barely attacks but almost impossible to damage, wins by exhausting
+//   opponents
+//  - Slasher — Thraex: curved sword specialist, all about weapon damage with enough skill to land hits
+//  - Specialist — Sagittarius: precise and methodical, high skill with moderate gear, consistent rather than flashy
+//  - Monster — Bestiarius: the beast-fighter archetype, tough and durable with decent weapon, survives through sheer bulk
+//  - Strongman — Scissor: raw brute power with heavy health, overwhelms through strength rather than finesse
 const ARCHETYPES = [
     { name: 'Standard',   skill: 20, str: 10, health: 20, weapon:  7, armor: 6 },
     { name: 'Rock',       skill: 10, str: 20, health: 20, weapon:  6, armor: 4 },
