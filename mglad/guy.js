@@ -239,6 +239,7 @@ class Guy {
     async hit(renderer, hexmap, dmg) {
         await this.showHit(renderer, hexmap);
         if (dmg < 0) return;
+        if (this.health > 0) this.health--;
         this.att -= dmg;
         while (this.att < 1) {
             if (this.health > 0) this.health--;
