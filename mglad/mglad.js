@@ -75,11 +75,11 @@ const ARCHETYPES = [
 ];
 
 // ---- Hex geometry (pointy-top, odd-r offset) ----
-const HEX_R   = 20;
-const HEX_W   = Math.round(Math.sqrt(3) * HEX_R); // ~35
-const HEX_H   = HEX_R * 2;                        // 40
-const COL_W   = HEX_W;                             // 35
-const ROW_H   = Math.round(HEX_R * 1.5);           // 30
+const HEX_R   = 26;
+const HEX_W   = Math.round(Math.sqrt(3) * HEX_R); // ~45
+const HEX_H   = HEX_R * 2;                        // 52
+const COL_W   = HEX_W;                             // 45
+const ROW_H   = Math.round(HEX_R * 1.5);           // 39
 const ODD_X   = Math.round(HEX_W / 2);             // 17 or 18
 const MAP_PAD = 6;
 

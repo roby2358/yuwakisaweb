@@ -131,6 +131,8 @@ class Guy {
             renderer.drawMonster(this.x, this.y, this.spriteRow, this.spriteCol, this.color);
             if (this.human)
                 renderer.drawHexOutline(this.x, this.y, '#ffffff', 2);
+            if (this.highlighted)
+                renderer.drawHexOutline(this.x, this.y, '#ff2200', 2);
         } else {
             this.blank(renderer, hexmap);
         }
@@ -332,8 +334,9 @@ function barHTML(val, max, color, width) {
         `<div class="bar-empty" style="flex:1"></div></div>`;
 }
 
-function renderStatPanel(el, g) {
-    if (!g || !g.state) { el.innerHTML = ''; return; }
+function renderStatPanel(el, g, highlight) {
+    if (!g || !g.state) { el.innerHTML = ''; el.style.outline = ''; return; }
+    el.style.outline = highlight ? `2px solid ${highlight}` : '';
     el.innerHTML =
         `<div class="name" style="color:${g.color}">${g.name}</div>` +
         `<div class="stat-row"><span class="label">Skill</span><span class="value">${g.skill}</span>` +

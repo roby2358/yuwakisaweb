@@ -106,6 +106,21 @@ class HexRenderer {
         }
     }
 
+    _makeTransparentSprite(srcImg, sx, sy, sw, sh, bgTest) {
+        const c = document.createElement('canvas');
+        c.width = sw;
+        c.height = sh;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(srcImg, sx, sy, sw, sh, 0, 0, sw, sh);
+        const imgData = ctx.getImageData(0, 0, sw, sh);
+        const d = imgData.data;
+        for (let i = 0; i < d.length; i += 4) {
+            if (bgTest(d[i], d[i + 1], d[i + 2])) d[i + 3] = 0;
+        }
+        ctx.putImageData(imgData, 0, 0);
+        return c;
+    }
+
     _processMonsterSprites() {
         this.monsterHex = [];
         const isSilver = (r, g, b) => r > 140 && g > 140 && b > 140 &&
@@ -113,7 +128,7 @@ class HexRenderer {
         for (let row = 0; row < 10; row++) {
             const arr = [];
             for (let col = 0; col < SPRITE_COLS; col++) {
-                arr.push(this._makeTransparentHexSprite(
+                arr.push(this._makeTransparentSprite(
                     this.monsterImg,
                     col * SPRITE_W, row * SPRITE_H, SPRITE_W, SPRITE_H,
                     isSilver
@@ -157,19 +172,50 @@ class HexRenderer {
         this.ctx.drawImage(sprite, cx - sprite.width / 2, cy - sprite.height / 2);
     }
 
+    _roundRectPath(x, y, w, h, r) {
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + r, y);
+        this.ctx.lineTo(x + w - r, y);
+        this.ctx.arcTo(x + w, y, x + w, y + r, r);
+        this.ctx.lineTo(x + w, y + h - r);
+        this.ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+        this.ctx.lineTo(x + r, y + h);
+        this.ctx.arcTo(x, y + h, x, y + h - r, r);
+        this.ctx.lineTo(x, y + r);
+        this.ctx.arcTo(x, y, x + r, y, r);
+        this.ctx.closePath();
+    }
+
     drawMonster(col, row, archetypeIdx, spriteCol, color) {
         const cx = hexCX(col, row), cy = hexCY(col, row);
-        // Draw colored tint circle behind silhouette
-        this.ctx.save();
-        hexPath(this.ctx, cx, cy, HEX_R - 2);
+        const s = SPRITE_W; // counter size = sprite size (32)
+        const x = cx - s / 2, y = cy - s / 2;
+        const r = 4; // corner radius
+        // Colored background fill
         this.ctx.fillStyle = color;
-        this.ctx.globalAlpha = 0.3;
+        this._roundRectPath(x, y, s, s, r);
         this.ctx.fill();
-        this.ctx.globalAlpha = 1.0;
-        this.ctx.restore();
-        // Draw silhouette
+        // Clip silhouette to rounded rect
+        this.ctx.save();
+        this._roundRectPath(x, y, s, s, r);
+        this.ctx.clip();
         const sprite = this.monsterHex[archetypeIdx % 10][spriteCol % SPRITE_COLS];
         this.ctx.drawImage(sprite, cx - sprite.width / 2, cy - sprite.height / 2);
+        this.ctx.restore();
+        // Outline — 1px black, 2px dark gray depth on bottom and right
+        this.ctx.strokeStyle = '#000';
+        this.ctx.lineWidth = 1;
+        this._roundRectPath(x + 0.5, y + 0.5, s - 1, s - 1, r);
+        this.ctx.stroke();
+        this.ctx.strokeStyle = '#888888';
+        this.ctx.lineWidth = 1;
+        for (let i = 0; i < 2; i++) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(x + 2 + i, y + s + 1 + i);
+            this.ctx.arcTo(x + s + 1 + i, y + s + 1 + i, x + s + 1 + i, y + s - r + 1 + i, r);
+            this.ctx.lineTo(x + s + 1 + i, y + 2 + i);
+            this.ctx.stroke();
+        }
     }
 
     drawEffect(col, row, effectType, frame) {
@@ -181,10 +227,12 @@ class HexRenderer {
 
     highlightHex(col, row, color, alpha) {
         const cx = hexCX(col, row), cy = hexCY(col, row);
+        const s = SPRITE_W;
+        const x = cx - s / 2, y = cy - s / 2;
         this.ctx.save();
-        hexPath(this.ctx, cx, cy, HEX_R);
         this.ctx.fillStyle = color;
         this.ctx.globalAlpha = alpha || 0.3;
+        this._roundRectPath(x, y, s, s, 4);
         this.ctx.fill();
         this.ctx.globalAlpha = 1.0;
         this.ctx.restore();
@@ -192,9 +240,11 @@ class HexRenderer {
 
     drawHexOutline(col, row, color, width) {
         const cx = hexCX(col, row), cy = hexCY(col, row);
-        hexPath(this.ctx, cx, cy, HEX_R);
+        const s = SPRITE_W;
+        const x = cx - s / 2, y = cy - s / 2;
         this.ctx.strokeStyle = color;
         this.ctx.lineWidth = width || 1;
+        this._roundRectPath(x + 0.5, y + 0.5, s - 1, s - 1, 4);
         this.ctx.stroke();
     }
 

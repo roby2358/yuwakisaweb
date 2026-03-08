@@ -15,6 +15,42 @@ class Combat {
         this.rounds = 0;
     }
 
+    // ---- Target highlight (stat2 panel + counter outline) ----
+
+    highlightTarget(g, target) {
+        if (g.target && g.target.highlighted) {
+            g.target.highlighted = false;
+            g.target.show(this.renderer, this.map);
+        }
+        g.target = target;
+        target.highlighted = true;
+        renderStatPanel(document.getElementById('stat2'), target, '#ff2200');
+    }
+
+    clearHighlight(g) {
+        if (g.target && g.target.highlighted) {
+            g.target.highlighted = false;
+            renderStatPanel(document.getElementById('stat2'), null);
+        }
+    }
+
+    // ---- Shared combat actions ----
+
+    moveGuy(g, x, y) {
+        g.blank(this.renderer, this.map);
+        g.x = x; g.y = y;
+        g.show(this.renderer, this.map);
+    }
+
+    handleKill(g, gIdx, targIdx) {
+        this.clearHighlight(g);
+        g.kills += killPop(g, g.target);
+        rankGuy(this.guys, gIdx, targIdx);
+        this.rounds = 0;
+    }
+
+    // ---- Fight setup and loop ----
+
     async doCombat(renderer, guys, multPop) {
         this.renderer = renderer;
         this.guys = guys;
@@ -55,14 +91,13 @@ class Combat {
         renderer.drawMap(this.map);
         showAllGuys(guys, renderer, this.map);
 
-        const stat1 = document.getElementById('stat1');
-        const stat2 = document.getElementById('stat2');
         const attInfo = document.getElementById('attack-info');
         const rosterEl = document.getElementById('roster');
         const timerEl = document.getElementById('kill-timer');
 
-        stat1.innerHTML = '';
-        stat2.innerHTML = '';
+        renderStatPanel(document.getElementById('stat1'), null);
+        renderStatPanel(document.getElementById('stat2'), null);
+        guys.forEach(g => g.highlighted = false);
 
         this.rounds = 0;
 
@@ -81,9 +116,8 @@ class Combat {
 
             // Update attack info for human
             const human = guys.find(g => g.human);
-            if (human && human.target) {
+            if (human && human.target)
                 renderAttackInfo(attInfo, human, human.target);
-            }
 
             // Kill timer
             const remaining = KILL_TIMEOUT - this.rounds;
@@ -106,6 +140,8 @@ class Combat {
         timerEl.textContent = '';
     }
 
+    // ---- Human turn ----
+
     async moveHuman(n, tt) {
         const g = this.guys[n];
         if (!g.state) return;
@@ -113,29 +149,22 @@ class Combat {
         if (g.time > 0) return;
 
         const renderer = this.renderer;
-        const stat1 = document.getElementById('stat1');
-        renderStatPanel(stat1, g);
+        renderStatPanel(document.getElementById('stat1'), g);
+        if (g.target && g.target.highlighted)
+            renderStatPanel(document.getElementById('stat2'), g.target, '#ff2200');
 
         input.flush();
         const ev = await input.waitKey();
         const key = ev.key;
 
         if (ev.debug) {
-            if (key === 'k') {
-                await killAllGuys(this.guys, renderer, this.map);
-                return;
-            }
-            if (key === 'm') {
-                renderer.drawMap(this.map);
-                showAllGuys(this.guys, renderer, this.map);
-                return;
-            }
+            if (key === 'k') await killAllGuys(this.guys, renderer, this.map);
+            if (key === 'm') { renderer.drawMap(this.map); showAllGuys(this.guys, renderer, this.map); }
             return;
         }
 
         const dir = KEY_DIR[key];
 
-        // Rest (center: S or space)
         if (dir === 6) {
             await g.showRest(renderer, this.map);
             g.rest(g.state = GUY_REST);
@@ -143,33 +172,29 @@ class Combat {
         }
 
         if (key === 'Escape') return;
+        if (dir === undefined || dir < 0 || dir > 5) return;
 
-        // Movement / attack (hex directions 0-5)
-        if (dir !== undefined && dir >= 0 && dir <= 5) {
-            const pos = this.map.closein(dir, g.x, g.y);
-            const targ = guyAt(this.guys, pos.x, pos.y);
+        const pos = this.map.closein(dir, g.x, g.y);
+        const targ = guyAt(this.guys, pos.x, pos.y);
 
-            if (targ > -1 && targ !== n) {
-                g.target = this.guys[targ];
-                const stat2 = document.getElementById('stat2');
-                renderStatPanel(stat2, g.target);
-                await g.attack(renderer, this.map, g.target);
-                g.rest(g.state = GUY_ATTACK);
-                if (!g.target.health) {
-                    g.kills += killPop(g, g.target);
-                    rankGuy(this.guys, n < targ ? n : this.guys.indexOf(g),
-                            this.guys.indexOf(g.target));
-                    this.rounds = 0;
-                }
-            } else if (pos.x !== g.x || pos.y !== g.y) {
-                g.blank(renderer, this.map);
-                g.x = pos.x; g.y = pos.y;
-                g.show(renderer, this.map);
-                g.rest(g.state = GUY_MOVE);
-            }
+        // Attack adjacent target
+        if (targ > -1 && targ !== n) {
+            this.highlightTarget(g, this.guys[targ]);
+            await g.attack(renderer, this.map, g.target);
+            g.rest(g.state = GUY_ATTACK);
+            if (!g.target.health)
+                this.handleKill(g, n < targ ? n : this.guys.indexOf(g), this.guys.indexOf(g.target));
             return;
         }
+
+        // Move to empty hex
+        if (pos.x !== g.x || pos.y !== g.y) {
+            this.moveGuy(g, pos.x, pos.y);
+            g.rest(g.state = GUY_MOVE);
+        }
     }
+
+    // ---- AI turn ----
 
     async moveComputer(n, tt) {
         const g = this.guys[n];
@@ -178,63 +203,57 @@ class Combat {
         if (g.time > 0) return;
 
         const renderer = this.renderer;
-        const targ = guyAdjacent(this.guys, g.x, g.y);
+        const adjIdx = guyAdjacent(this.guys, g.x, g.y);
 
-        if (targ > -1) {
-            g.target = this.guys[targ];
-            const ra = g.att + g.weapon;
-            const rd = g.target.att + g.target.armor;
+        // No adjacent target — pathfind toward closest
+        if (adjIdx === -1) {
+            const ci = guyClosest(this.guys, g.x, g.y);
+            if (ci !== -1) {
+                g.target = this.guys[ci];
+                const occupied = (x, y) => guyAt(this.guys, x, y) !== -1;
+                const step = this.map.bfsStep(g.x, g.y, g.target.x, g.target.y, occupied);
+                if (step && (step.x !== g.x || step.y !== g.y))
+                    this.moveGuy(g, step.x, step.y);
+                g.rest(g.state = GUY_MOVE);
+            }
+            await delay(30);
+            return;
+        }
 
-            if (g.att < g.att0 && ra < rd - 1 && g.att * 5 < g.att0 * 4) {
-                await g.showRest(renderer, this.map);
-                g.rest(g.state = GUY_REST);
-            } else {
-                if (R(0, ra) < R(0, rd)) {
-                    // Shift position
-                    const dir = this.map.delta(g.x, g.y, g.target.x, g.target.y);
-                    const positions = this.map.getShiftPositions(g.x, g.y, dir);
-                    g.blank(renderer, this.map);
-                    for (const p of positions) {
-                        if (guyAt(this.guys, p.x, p.y) === -1) {
-                            g.x = p.x; g.y = p.y;
-                            break;
-                        }
-                    }
-                    g.show(renderer, this.map);
-                    g.rest(g.state = GUY_MOVE);
-                } else {
-                    // Attack
-                    // Update stat panel if fighting human
-                    if (g.target.human) {
-                        const stat2 = document.getElementById('stat2');
-                        renderStatPanel(stat2, g);
-                    }
-                    await g.attack(renderer, this.map, g.target);
-                    g.rest(g.state = GUY_ATTACK);
-                    if (!g.target.health) {
-                        g.kills += killPop(g, g.target);
-                        rankGuy(this.guys, this.guys.indexOf(g),
-                                this.guys.indexOf(g.target));
-                        this.rounds = 0;
-                    }
+        // Adjacent target found
+        g.target = this.guys[adjIdx];
+        const ra = g.att + g.weapon;
+        const rd = g.target.att + g.target.armor;
+
+        // Rest if fatigued and outmatched
+        if (g.att < g.att0 && ra < rd - 1 && g.att * 5 < g.att0 * 4) {
+            await g.showRest(renderer, this.map);
+            g.rest(g.state = GUY_REST);
+        // Shift position if roll is unfavorable
+        } else if (R(0, ra) < R(0, rd)) {
+            const dir = this.map.delta(g.x, g.y, g.target.x, g.target.y);
+            const positions = this.map.getShiftPositions(g.x, g.y, dir);
+            g.blank(renderer, this.map);
+            for (const p of positions) {
+                if (guyAt(this.guys, p.x, p.y) === -1) {
+                    g.x = p.x; g.y = p.y;
+                    break;
                 }
             }
-        } else {
-            const ci = guyClosest(this.guys, g.x, g.y);
-            if (ci === -1) return;
-            g.target = this.guys[ci];
-            const occupied = (x, y) => guyAt(this.guys, x, y) !== -1;
-            const step = this.map.bfsStep(g.x, g.y, g.target.x, g.target.y, occupied);
-            if (step && (step.x !== g.x || step.y !== g.y)) {
-                g.blank(renderer, this.map);
-                g.x = step.x; g.y = step.y;
-                g.show(renderer, this.map);
-            }
+            g.show(renderer, this.map);
             g.rest(g.state = GUY_MOVE);
+        // Attack
+        } else {
+            await g.attack(renderer, this.map, g.target);
+            g.rest(g.state = GUY_ATTACK);
+            if (!g.target.health)
+                this.handleKill(g, this.guys.indexOf(g), this.guys.indexOf(g.target));
         }
 
         await delay(30);
     }
+
+    // ---- Post-fight rewards ----
 
     async doReward(mult) {
         const overlay = document.getElementById('overlay');
@@ -242,8 +261,8 @@ class Combat {
         for (const g of this.guys) {
             const popBefore = g.pop;
             const placePop = (place--) * mult;
-            const killPop = g.kills || 0;
-            g.pop += killPop + placePop;
+            const kPop = g.kills || 0;
+            g.pop += kPop + placePop;
             let earned = 0;
             if (g.pop > 0)
                 earned = Math.floor(Math.sqrt(g.pop) * POP_REWARD);
@@ -252,7 +271,7 @@ class Combat {
 
             if (g.human) {
                 const lines = [];
-                if (killPop) lines.push(`<div class="reward-stat">Kills: +${killPop}</div>`);
+                if (kPop) lines.push(`<div class="reward-stat">Kills: +${kPop}</div>`);
                 const sign = placePop >= 0 ? '+' : '';
                 lines.push(`<div class="reward-stat">Placement: ${sign}${placePop}</div>`);
                 overlay.classList.remove('hidden');
