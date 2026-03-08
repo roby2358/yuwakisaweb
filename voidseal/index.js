@@ -451,6 +451,14 @@ function startPlayerTurn() {
     phaseInfoEl.classList.remove('enemy-phase');
     endTurnBtn.disabled = false;
 
+    // 10% chance to spawn a random player unit on the tower (if unoccupied)
+    if (Math.random() < 0.10 && !unitAt(0, 0)) {
+        const playerTypes = [UNIT_TYPE.HEXBLADE, UNIT_TYPE.GLITCH_MAGE, UNIT_TYPE.SPORE_MARINE, UNIT_TYPE.PHASE_MONK];
+        const type = playerTypes[Math.floor(Math.random() * playerTypes.length)];
+        createUnit(type, 0, 0);
+        log(`A ${UNIT_STATS[type].name} materializes at the Seal Spire!`, 'info');
+    }
+
     // Heal and reset player units
     for (const u of state.units) {
         if (u.faction === 'player' && u.hp < u.maxHp) {

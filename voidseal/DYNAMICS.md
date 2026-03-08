@@ -79,6 +79,8 @@ The center hex (0,0) features the **Seal Spire** — a white tower with a pulsin
 
 All four units start at the Seal Spire: Phase Monk on the tower (0,0), the other three on adjacent hexes.
 
+**Reinforcements**: Each turn there is a 10% chance a random player unit spawns on the tower (if the hex is unoccupied).
+
 ### Enemy Units — The Hollowed
 
 | Unit | Symbol | ATK | DEF | HP | SPD | Spawn Weight |
@@ -127,7 +129,7 @@ damage = max(1, attacker.ATK - defender.DEF - terrain_defense_bonus)
 
 ## Void Rifts
 
-Rifts are the primary threat and objective. They are generated at the map edges by the terrain system's danger-point placement (3–6 rifts, distributed around the map periphery).
+Rifts are the primary threat and objective. 6 rifts are generated at the map edges, distributed around the map periphery.
 
 ### Rift Properties
 
