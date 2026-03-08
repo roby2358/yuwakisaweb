@@ -128,21 +128,12 @@ function initMap() {
     state.riftsInitial = riftCount;
     updateRiftCount();
 
-    // Place player units near starting location
-    const start = findStartingLocation(state.hexes, MAP_RADIUS);
-    if (!start) return;
-
-    const playerTypes = [UNIT_TYPE.HEXBLADE, UNIT_TYPE.GLITCH_MAGE, UNIT_TYPE.SPORE_MARINE, UNIT_TYPE.PHASE_MONK];
-    const neighbors = hexNeighbors(start.q, start.r);
-    const placements = [{ q: start.q, r: start.r }, ...neighbors];
-    const validPlacements = placements.filter(p => {
-        const hex = state.hexes.get(hexKey(p.q, p.r));
-        return hex && hex.terrain === TERRAIN.PLAINS;
-    });
-
-    for (let i = 0; i < playerTypes.length && i < validPlacements.length; i++) {
-        createUnit(playerTypes[i], validPlacements[i].q, validPlacements[i].r);
-    }
+    // Place player units at fixed positions around the Seal Spire
+    // Phase Monk in the tower, others adjacent
+    createUnit(UNIT_TYPE.PHASE_MONK,    0,  0);
+    createUnit(UNIT_TYPE.HEXBLADE,      1,  0);
+    createUnit(UNIT_TYPE.GLITCH_MAGE,   0,  1);
+    createUnit(UNIT_TYPE.SPORE_MARINE, -1,  1);
 
     // Spawn initial enemies near rifts
     for (const [key, hex] of state.hexes) {
@@ -151,8 +142,8 @@ function initMap() {
         }
     }
 
-    // Center camera on start
-    const startPx = hexToPixel(start.q, start.r);
+    // Center camera on Seal Spire
+    const startPx = hexToPixel(0, 0);
     state.camera.x = startPx.x;
     state.camera.y = startPx.y;
 }
@@ -162,7 +153,7 @@ function spawnEnemyNear(q, r) {
     Rando.shuffle(neighbors);
     for (const n of neighbors) {
         const hex = state.hexes.get(hexKey(n.q, n.r));
-        if (hex && hex.terrain !== TERRAIN.WATER && hex.terrain !== TERRAIN.MOUNTAIN && hex.terrain !== TERRAIN.VOID && !unitAt(n.q, n.r)) {
+        if (hex && hex.terrain !== TERRAIN.WATER && hex.terrain !== TERRAIN.MOUNTAIN && !unitAt(n.q, n.r)) {
             const type = Rando.weighted(ENEMY_SPAWN_WEIGHTS);
             createUnit(type, n.q, n.r);
             return true;
@@ -421,9 +412,15 @@ function voidPhase() {
     // Damage units on void hexes
     for (const unit of [...state.units]) {
         const key = hexKey(unit.q, unit.r);
-        if (state.voidHexes.has(key) && unit.type !== UNIT_TYPE.GLITCH_MAGE) {
+        const onVoid = state.voidHexes.has(key);
+        // Player units take damage on void (except Glitch Mage); enemies take damage OFF void
+        const takeDamage = unit.faction === 'player'
+            ? (onVoid && unit.type !== UNIT_TYPE.GLITCH_MAGE)
+            : !onVoid;
+        if (takeDamage) {
             unit.hp -= VOID_DAMAGE_PER_TURN;
-            log(`${unit.name} takes ${VOID_DAMAGE_PER_TURN} void damage!`, 'void');
+            const reason = unit.faction === 'player' ? 'void damage' : 'reality damage';
+            log(`${unit.name} takes ${VOID_DAMAGE_PER_TURN} ${reason}!`, 'void');
             if (unit.hp <= 0) {
                 log(`${unit.name} is consumed by the Void!`, 'death');
                 removeUnit(unit);
@@ -831,13 +828,14 @@ let cameraStart = { x: 0, y: 0 };
 let hasDragged = false;
 
 canvas.addEventListener('mousedown', (e) => {
+    if (e.button !== 0 && e.button !== 2) return;
     isDragging = true;
     hasDragged = false;
     dragStart = { x: e.clientX, y: e.clientY };
     cameraStart = { ...state.camera };
 });
 
-canvas.addEventListener('mousemove', (e) => {
+window.addEventListener('mousemove', (e) => {
     if (!isDragging) return;
     const dx = e.clientX - dragStart.x;
     const dy = e.clientY - dragStart.y;
@@ -847,21 +845,28 @@ canvas.addEventListener('mousemove', (e) => {
     render();
 });
 
-canvas.addEventListener('mouseup', (e) => {
+window.addEventListener('mouseup', (e) => {
+    if (e.button !== 0 && e.button !== 2) return;
+    const wasDragging = isDragging;
     isDragging = false;
-    if (hasDragged) return;
+    if (!wasDragging || hasDragged) return;
 
+    // Only left-click triggers game actions
+    if (e.button !== 0) return;
     if (state.phase !== 'player' || state.gameOver) return;
 
     const rect = canvas.getBoundingClientRect();
     const sx = e.clientX - rect.left;
     const sy = e.clientY - rect.top;
+    if (sx < 0 || sy < 0 || sx > rect.width || sy > rect.height) return;
     const { x: wx, y: wy } = screenToWorld(sx, sy);
     const { q, r } = pixelToHex(wx, wy);
     const key = hexKey(q, r);
 
     handleClick(q, r, key);
 });
+
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 function handleClick(q, r, key) {
     const clickedUnit = unitAt(q, r);
@@ -978,7 +983,7 @@ overlayBtn.addEventListener('click', () => {
 
 // Show intro
 showOverlay(
-    'WAOWISHA',
+    'VOID SEAL',
     `The Membrane between dimensions has ruptured. Through the tears pour the Hollowed — beings of anti-reality that unmake everything they touch. Ancient sorcerers and rogue technologists have formed an uneasy alliance: the Warband of the Last Coherence. Seal the Void Rifts before the world unravels.`,
     'Begin'
 );
