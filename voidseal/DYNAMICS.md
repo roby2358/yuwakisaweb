@@ -1,4 +1,4 @@
-# Waowisha — Game Dynamics
+# Void Seal — Game Dynamics
 
 This document is the authoritative reference for all game mechanics and numeric values.
 
@@ -27,9 +27,9 @@ Each game turn proceeds through three phases in order:
 
 ### 3. Void Phase (The Unraveling)
 - **Corruption spread**: Each existing Void hex rolls per adjacent non-water, non-void hex to convert it. Chance depends on the target terrain (see The Unraveling)
-- **Rift spawning**: Each active Void Rift decrements its spawn countdown. When it reaches 0, a new enemy spawns on an adjacent passable hex. The countdown resets based on rift strength
+- **Rift spawning**: Each active rift has a random chance per turn to spawn an enemy on an adjacent hex. The chance scales with the number of rifts already sealed (see Void Rifts)
 - **Rift hexes** become Void if not already (original terrain is preserved for movement cost calculation)
-- **Void damage**: All units (player and enemy) standing on Void hexes take 1 damage. Exception: the Glitch Mage is immune to void damage
+- **Void damage**: Player units standing on Void hexes take 1 damage per turn (exception: Glitch Mage is immune). Enemy units take 1 damage per turn on *non-Void* hexes — they are creatures of the void and are harmed by reality
 - **Center check**: If the center hex (0,0) becomes Void, the game ends in defeat
 
 After the Void phase, the turn counter increments and a new Player Phase begins.
@@ -39,7 +39,7 @@ After the Void phase, the turn counter increments and a new Player Phase begins.
 - Hex grid using axial coordinates (q, r), pointy-top orientation
 - Map radius: 16 (large hex grid)
 - Generated via diamond-square heightmap algorithm
-- Camera pans by click-dragging
+- Camera pans by left-click or right-click dragging
 
 ### The Seal Spire
 
@@ -48,6 +48,7 @@ The center hex (0,0) features the **Seal Spire** — a white tower with a pulsin
 - All hexes within 2 hexes of the Spire are cleared to plains or forest terrain at map generation
 - Player units within 2 hexes of the Spire gain +1 regen per turn
 - If the center hex is consumed by Void, the game is lost
+- All player units start at or adjacent to the Spire (Phase Monk on the tower, others surrounding it)
 
 ### Terrain Types
 
@@ -59,7 +60,7 @@ The center hex (0,0) features the **Seal Spire** — a white tower with a pulsin
 | Gold     | 2 | +1 | Hills variant; grants +1 healing |
 | Mountain | Impassable* | +2 | Strongly resists void spread |
 | Water    | Impassable* | 0 | Map border and interior lakes; void cannot spread across water |
-| Void     | 2x original | 0 | Costs 2x the underlying terrain's movement cost; damages units 1 HP/turn |
+| Void     | 2x original | 0 | Costs 2x the underlying terrain's movement cost |
 
 **Void movement examples**: voided plains = 2, voided hills = 4, voided mountains = 2 (impassable falls back to cost 2).
 
@@ -69,18 +70,14 @@ The center hex (0,0) features the **Seal Spire** — a white tower with a pulsin
 
 ### Player Units — The Warband of the Last Coherence
 
-| Unit | Symbol | ATK | DEF | HP | SPD | Role |
+| Unit | Symbol | ATK | DEF | HP | SPD | Special |
 |------|:---:|:---:|:---:|:---:|:---:|------|
-| Hexblade | ⚔ | 5 | 3 | 8 | 2 | Melee striker — crystallized-algorithm sword |
-| Glitch Mage | ✧ | 4 | 1 | 5 | 3 | Ranged glass cannon — exploits bugs in reality; immune to void damage; does not advance on kill |
-| Spore Marine | ⛨ | 3 | 4 | 10 | 2 | Tank and healer — power-armored, bonded with sentient fungus |
-| Phase Monk | ◇ | 3 | 2 | 6 | 4 | Scout — exists partially in multiple dimensions |
+| Hexblade | ⚔ | 5 | 3 | 9 | 2 | Advances onto enemy hex after a kill |
+| Glitch Mage | ✧ | 4 | 1 | 6 | 3 | Immune to void damage. Does not advance on kill |
+| Spore Marine | ⛨ | 3 | 4 | 11 | 2 | Heals self and adjacent allies +1 HP per turn |
+| Phase Monk | ◇ | 3 | 2 | 7 | 4 | Fastest unit — can cross voided terrain quickly |
 
-All four units are placed near the map center at game start.
-
-#### Glitch Mage Special Rules
-- **Void immune**: Takes no damage from standing on Void hexes
-- **Ranged kill**: When the Glitch Mage kills an enemy, it does *not* advance onto the enemy's hex. This means it cannot seal rifts by killing enemies standing on them
+All four units start at the Seal Spire: Phase Monk on the tower (0,0), the other three on adjacent hexes.
 
 ### Enemy Units — The Hollowed
 
@@ -90,13 +87,16 @@ All four units are placed near the map center at game start.
 | Reality Eater | ◈ | 5 | 2 | 5 | 1 | 2 (uncommon) |
 | Hollow Knight | ♛ | 4 | 3 | 6 | 1 | 1 (rare) |
 
-One enemy spawns adjacent to each Void Rift at game start. Additional enemies spawn from rifts on a countdown timer during the Void phase.
+All enemies take 1 damage per turn when standing on non-Void terrain (reality damages them). They are safe on Void hexes.
+
+One enemy spawns adjacent to each Void Rift at game start. Additional enemies spawn from rifts during the Void phase.
 
 ### Unit Display
 
 - Player units: blue circle with symbol, solid border when ready, dashed when moved
 - Enemy units: red circle with symbol
 - HP bar below each unit (green > 50%, yellow > 25%, red below)
+- Clicking any unit shows an info panel (lower-right of canvas) with name, description, special ability, and stats
 
 ## Combat
 
@@ -131,19 +131,21 @@ Rifts are the primary threat and objective. They are generated at the map edges 
 
 ### Rift Properties
 
-- **Strength**: 1–4 (assigned by terrain generator, total strength across all rifts sums to 10)
-- **Spawn countdown**: Decrements each turn during the Void phase. When it hits 0, a new enemy spawns adjacent to the rift and the countdown resets
+- All rifts are equal — there is no strength system
+- Each rift has a random chance per turn to spawn an enemy on an adjacent hex (including void hexes)
+- Spawn chance scales based on how many rifts have been sealed:
 
-### Spawn Rate by Rift Strength
+```
+spawnChance = 10% + (sealed / (initial - 1)) * 20%
+```
 
-| Strength | Turns Between Spawns |
+| Rifts Sealed | Spawn Chance per Rift per Turn |
 |:---:|:---:|
-| 1 | 5 |
-| 2 | 4 |
-| 3 | 3 |
-| 4 | 3 |
+| None | 10% |
+| Half | ~20% |
+| All but one | 30% |
 
-Initial countdown is randomized (1 to max spawn time) so rifts don't all spawn simultaneously.
+This creates escalating pressure — each rift you seal makes the remaining rifts spawn faster.
 
 ## The Unraveling
 
@@ -155,7 +157,8 @@ The Unraveling is the existential threat — the world itself being consumed.
   - Hills / Gold: 6%
   - Mountains: 3%
 - **Original terrain preserved**: When a hex becomes Void, its original terrain type is stored. This determines void movement cost (2x original) and creates uneven spread patterns
-- **Effect on units**: 1 damage per turn to any unit (player or enemy) standing on Void. The Glitch Mage is immune
+- **Effect on player units**: 1 damage per turn standing on Void (Glitch Mage is immune)
+- **Effect on enemy units**: 1 damage per turn standing on *non-Void* terrain (they are creatures of the void)
 - **Water blocks spread**: Void does not spread across water hexes
 - **Escalation**: As more hexes become Void, the frontier grows, accelerating spread — but hills and mountains create natural breakwaters
 - **Sealing rifts does not reverse existing Void** — corrupted hexes stay corrupted. Sealing only stops new enemy spawns and removes one source of spread
@@ -168,7 +171,8 @@ The Unraveling is the existential threat — the world itself being consumed.
 4. Click yellow hex to move, red hex to attack
 5. Click another friendly unmoved unit to switch selection
 6. Click empty space or press Escape to deselect
-7. Click any unit (including moved/enemy) to inspect its stats in the side panel
+7. Click any unit (including moved/enemy) to inspect its stats in the info panel (lower-right overlay on canvas)
+8. Left-click drag or right-click drag to pan the camera
 
 ## Victory and Defeat
 
@@ -195,12 +199,13 @@ Maximum possible healing per turn: 5 HP (resting on a healing terrain hex within
 
 - **Speed vs. Void**: The Unraveling accelerates over time. Delaying to fight enemies means more terrain lost. Plains fall fast; hills and mountains buy time
 - **Seal Spire**: The area around the Spire is a natural safe zone — healing terrain and proximity regen make it a strong fallback position
+- **Escalating spawns**: Sealing rifts increases spawn rate at remaining rifts (10% → 30%). Plan to hit the last rifts quickly before they overwhelm you
+- **Enemy vulnerability**: Enemies take damage on non-void terrain, so intercepting them early (before void reaches your position) means they arrive weakened
 - **Phase Monk**: With 4 speed, the Phase Monk can push through voided plains (cost 2 each) to reach distant rifts, but is fragile
-- **Hexblade**: Highest damage dealer — send it against tough enemies like Reality Eaters
+- **Hexblade**: Highest damage dealer — send it against tough enemies. Advances on kill, making it ideal for clearing a path to a rift
 - **Glitch Mage**: High attack and void-immune with 3 speed, but very low HP/DEF. Does not advance on kill, so cannot seal rifts by combat alone — pair with another unit for rift assault
 - **Spore Marine**: Keep near wounded allies for aura healing; double duty as a tank and support. Resting on a healing terrain hex with aura gives allies up to 5 HP/turn near the Spire
 - **Healing terrain**: Forest and gold hexes provide +1 healing on top of passive regen — good fallback positions
 - **1-step rule**: Any unit can always step onto any adjacent hex, even mountains or water. Use this to cross otherwise impassable terrain one hex at a time in emergencies
-- **Rift priority**: Higher-strength rifts spawn enemies faster and should generally be sealed first
 - **Void traversal**: Voided plains are cheaper to cross (cost 2) than voided hills (cost 4). Plan routes through corrupted flatlands rather than corrupted highlands
-- **Void damage applies to enemies too**: Lure enemies onto Void hexes to soften them up before engaging (but this won't work against the Glitch Mage's enemies — they'll need direct combat)
+- **Lure enemies off void**: Enemies take damage on non-void terrain. Drawing them away from the void frontier weakens them before combat

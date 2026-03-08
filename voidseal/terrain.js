@@ -285,7 +285,7 @@ function distributeRandomly(total, parts) {
 
 // Place danger points on the map edges (only on accessible hexes)
 function placeDangerPoints(hexes, mapRadius, accessibleKeys, dangerSum, maxDangerLevel) {
-    const dangerCount = Rando.int(3, 6);
+    const dangerCount = 6;
     const sizes = distributeRandomly(dangerSum, dangerCount);
 
     const edgeHexes = [];
