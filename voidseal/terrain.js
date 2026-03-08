@@ -1,6 +1,6 @@
 // Terrain Generation using Diamond-Square (Fractal Plasma) Algorithm
 
-import { TERRAIN, RESOURCE_TYPE, DANGER_SPAWN_RATES } from './config.js';
+import { TERRAIN, DANGER_SPAWN_RATES } from './config.js';
 import { hexKey, hexDistance, hexNeighbors, bfsHexes } from './hex.js';
 import { Rando } from './rando.js';
 
@@ -108,7 +108,6 @@ export function generateTerrain(mapRadius) {
                     elevation,
                     isEdge,
                     terrain: null,
-                    resource: null,
                     settlement: null,
                     units: [],
                     dangerPoint: null,
@@ -191,7 +190,7 @@ function scoreStartingHex(hex, hexes, mapRadius, scoreResources) {
         const nHex = hexes.get(hexKey(n.q, n.r));
         if (!nHex) continue;
         if (nHex.terrain === TERRAIN.PLAINS) score += 1;
-        if (scoreResources && nHex.resource) score += 5;
+        if (scoreResources && (nHex.terrain === TERRAIN.FOREST || nHex.terrain === TERRAIN.GOLD)) score += 5;
     }
 
     return score;
@@ -239,58 +238,31 @@ function computeAccessibleHexes(startHex, hexes) {
     return accessible;
 }
 
-// Place resource cells on the map (only on accessible hexes)
+// Convert some plains to forest and some hills to gold (healing terrain variants)
 function placeResources(hexes, mapRadius, accessibleKeys) {
-    // Fixed counts: 3 gold, 8 forests, 3 quarries
     const GOLD_COUNT = 3;
     const FOREST_COUNT = 8;
-    const QUARRY_COUNT = 3;
 
     const plains = [];
     const hills = [];
-    const mountains = [];
 
     for (const [key, hex] of hexes) {
-        // Only consider accessible hexes
         if (!accessibleKeys.has(key)) continue;
-
-        if (hex.terrain === TERRAIN.PLAINS) {
-            plains.push(hex);
-        } else if (hex.terrain === TERRAIN.HILLS) {
-            hills.push(hex);
-        } else if (hex.terrain === TERRAIN.MOUNTAIN) {
-            mountains.push(hex);
-        }
+        if (hex.terrain === TERRAIN.PLAINS) plains.push(hex);
+        else if (hex.terrain === TERRAIN.HILLS) hills.push(hex);
     }
 
-    // Shuffle all arrays
     Rando.shuffle(plains);
     Rando.shuffle(hills);
-    Rando.shuffle(mountains);
 
-    let plainsIdx = 0;
-    let hillsIdx = 0;
-
-    // Place quarries on hills
-    for (let i = 0; i < QUARRY_COUNT && hillsIdx < hills.length; i++) {
-        hills[hillsIdx++].resource = RESOURCE_TYPE.QUARRY;
+    // Convert some plains to forest
+    for (let i = 0; i < FOREST_COUNT && i < plains.length; i++) {
+        plains[i].terrain = TERRAIN.FOREST;
     }
 
-    // Place forests on plains
-    for (let i = 0; i < FOREST_COUNT && plainsIdx < plains.length; i++) {
-        plains[plainsIdx++].resource = RESOURCE_TYPE.FOREST;
-    }
-
-    // Place gold on remaining valid hexes (plains, hills, or mountains)
-    const goldCandidates = [
-        ...plains.slice(plainsIdx),
-        ...hills.slice(hillsIdx),
-        ...mountains  // Gold can now spawn on accessible mountains
-    ];
-    Rando.shuffle(goldCandidates);
-
-    for (let i = 0; i < GOLD_COUNT && i < goldCandidates.length; i++) {
-        goldCandidates[i].resource = RESOURCE_TYPE.GOLD_DEPOSIT;
+    // Convert some hills to gold
+    for (let i = 0; i < GOLD_COUNT && i < hills.length; i++) {
+        hills[i].terrain = TERRAIN.GOLD;
     }
 }
 

@@ -1,22 +1,29 @@
 // Waowisha - Game Configuration
 
 export const HEX_SIZE = 22;
-export const MAP_RADIUS = 8;
+export const MAP_RADIUS = 16;
 
 // --- Terrain ---
 
 export const TERRAIN = {
     WATER: 'water',
     PLAINS: 'plains',
+    FOREST: 'forest',
     HILLS: 'hills',
+    GOLD: 'gold',
     MOUNTAIN: 'mountain',
     VOID: 'void'
 };
 
+// Terrain types that grant +1 healing bonus
+export const HEALING_TERRAIN = new Set([TERRAIN.FOREST, TERRAIN.GOLD]);
+
 export const TERRAIN_COLORS = {
     [TERRAIN.WATER]: '#1a3a5c',
     [TERRAIN.PLAINS]: '#4a6741',
+    [TERRAIN.FOREST]: '#2e5a2e',
     [TERRAIN.HILLS]: '#7a6e3a',
+    [TERRAIN.GOLD]: '#c8a020',
     [TERRAIN.MOUNTAIN]: '#5a4a3a',
     [TERRAIN.VOID]: '#2a0a2a'
 };
@@ -24,7 +31,9 @@ export const TERRAIN_COLORS = {
 export const TERRAIN_MOVEMENT = {
     [TERRAIN.WATER]: Infinity,
     [TERRAIN.PLAINS]: 1,
+    [TERRAIN.FOREST]: 1,
     [TERRAIN.HILLS]: 2,
+    [TERRAIN.GOLD]: 2,
     [TERRAIN.MOUNTAIN]: Infinity,
     [TERRAIN.VOID]: 2   // default; actual cost is 2x original terrain
 };
@@ -32,23 +41,11 @@ export const TERRAIN_MOVEMENT = {
 export const TERRAIN_DEFENSE = {
     [TERRAIN.WATER]: 0,
     [TERRAIN.PLAINS]: 0,
+    [TERRAIN.FOREST]: 0,
     [TERRAIN.HILLS]: 1,
+    [TERRAIN.GOLD]: 1,
     [TERRAIN.MOUNTAIN]: 2,
     [TERRAIN.VOID]: 0
-};
-
-// --- Resources (used by terrain.js, not central to Waowisha gameplay) ---
-
-export const RESOURCE_TYPE = {
-    FOREST: 'forest',
-    QUARRY: 'quarry',
-    GOLD_DEPOSIT: 'gold_deposit'
-};
-
-export const RESOURCE_COLORS = {
-    [RESOURCE_TYPE.FOREST]: '#2e5a2e',
-    [RESOURCE_TYPE.QUARRY]: '#6a7a8a',
-    [RESOURCE_TYPE.GOLD_DEPOSIT]: '#c8a020'
 };
 
 // Danger spawn rates by strength level (turns between spawns)
@@ -74,13 +71,13 @@ export const UNIT_TYPE = {
 };
 
 export const UNIT_STATS = {
-    [UNIT_TYPE.HEXBLADE]:      { name: 'Hexblade',      faction: 'player', attack: 5, defense: 3, maxHp: 8, speed: 2, symbol: '⚔', desc: 'Warrior with a crystallized-algorithm sword' },
-    [UNIT_TYPE.GLITCH_MAGE]:   { name: 'Glitch Mage',   faction: 'player', attack: 4, defense: 1, maxHp: 5, speed: 2, symbol: '✧', desc: 'Casts spells by exploiting bugs in reality' },
-    [UNIT_TYPE.SPORE_MARINE]:  { name: 'Spore Marine',   faction: 'player', attack: 3, defense: 4, maxHp: 10, speed: 2, symbol: '⛨', desc: 'Power-armored soldier bonded with sentient fungus' },
-    [UNIT_TYPE.PHASE_MONK]:    { name: 'Phase Monk',     faction: 'player', attack: 3, defense: 2, maxHp: 6, speed: 4, symbol: '◇', desc: 'Exists partially in multiple dimensions' },
+    [UNIT_TYPE.HEXBLADE]:      { name: 'Hexblade',      faction: 'player', attack: 5, defense: 3, maxHp: 9, speed: 2, symbol: '⚔', desc: 'Warrior with a crystallized-algorithm sword' },
+    [UNIT_TYPE.GLITCH_MAGE]:   { name: 'Glitch Mage',   faction: 'player', attack: 4, defense: 1, maxHp: 6, speed: 3, symbol: '✧', desc: 'Casts spells by exploiting bugs in reality' },
+    [UNIT_TYPE.SPORE_MARINE]:  { name: 'Spore Marine',   faction: 'player', attack: 3, defense: 4, maxHp: 11, speed: 2, symbol: '⛨', desc: 'Power-armored soldier bonded with sentient fungus' },
+    [UNIT_TYPE.PHASE_MONK]:    { name: 'Phase Monk',     faction: 'player', attack: 3, defense: 2, maxHp: 7, speed: 4, symbol: '◇', desc: 'Exists partially in multiple dimensions' },
     [UNIT_TYPE.VOID_THRALL]:   { name: 'Void Thrall',    faction: 'enemy',  attack: 3, defense: 1, maxHp: 4, speed: 2, symbol: '▲', desc: 'Corrupted humanoid servant of the Unraveling' },
-    [UNIT_TYPE.REALITY_EATER]: { name: 'Reality Eater',  faction: 'enemy',  attack: 5, defense: 2, maxHp: 7, speed: 1, symbol: '◈', desc: 'Devours the fabric of existence' },
-    [UNIT_TYPE.HOLLOW_KNIGHT]: { name: 'Hollow Knight',  faction: 'enemy',  attack: 4, defense: 3, maxHp: 6, speed: 2, symbol: '♛', desc: 'An echo of a fallen champion' }
+    [UNIT_TYPE.REALITY_EATER]: { name: 'Reality Eater',  faction: 'enemy',  attack: 5, defense: 2, maxHp: 5, speed: 1, symbol: '◈', desc: 'Devours the fabric of existence' },
+    [UNIT_TYPE.HOLLOW_KNIGHT]: { name: 'Hollow Knight',  faction: 'enemy',  attack: 4, defense: 3, maxHp: 6, speed: 1, symbol: '♛', desc: 'An echo of a fallen champion' }
 };
 
 export const ENEMY_SPAWN_WEIGHTS = [
@@ -93,9 +90,11 @@ export const ENEMY_SPAWN_WEIGHTS = [
 
 // Void spread chance per terrain type (averages ~16%, unevenly)
 export const VOID_SPREAD_CHANCE = {
-    [TERRAIN.PLAINS]: 0.22,
-    [TERRAIN.HILLS]: 0.12,
-    [TERRAIN.MOUNTAIN]: 0.06
+    [TERRAIN.PLAINS]: 0.11,
+    [TERRAIN.FOREST]: 0.11,
+    [TERRAIN.HILLS]: 0.06,
+    [TERRAIN.GOLD]: 0.06,
+    [TERRAIN.MOUNTAIN]: 0.03
 };
 export const VOID_DAMAGE_PER_TURN = 1;         // damage to units standing on void
 export const RIFT_SEAL_TURNS = 1;              // turns a unit must stand on rift to seal it

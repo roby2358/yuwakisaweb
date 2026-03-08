@@ -3,7 +3,7 @@
 
 import {
     HEX_SIZE, MAP_RADIUS, TERRAIN, TERRAIN_COLORS, TERRAIN_MOVEMENT, TERRAIN_DEFENSE,
-    RESOURCE_TYPE, RESOURCE_COLORS,
+    HEALING_TERRAIN,
     UNIT_TYPE, UNIT_STATS, ENEMY_SPAWN_WEIGHTS, DANGER_SPAWN_RATES,
     VOID_SPREAD_CHANCE, VOID_DAMAGE_PER_TURN,
     PLAYER_COLOR, ENEMY_COLOR, VOID_GLOW,
@@ -104,6 +104,15 @@ function enemyUnits() {
 function initMap() {
     state.hexes = generateTerrain(MAP_RADIUS);
     const accessibleKeys = populateTerrain(state.hexes, MAP_RADIUS, 10, 4);
+
+    // Clear area around Seal Spire: 2-hex radius becomes plains (1/3 with forest)
+    for (const [key, hex] of state.hexes) {
+        if (hexDistance(hex.q, hex.r, 0, 0) <= 2) {
+            hex.terrain = Math.random() < 1/3 ? TERRAIN.FOREST : TERRAIN.PLAINS;
+            hex.elevation = Math.min(hex.elevation, 0.4);
+            hex.dangerPoint = null;
+        }
+    }
 
     // Convert danger points into Void Rifts
     let riftCount = 0;
@@ -244,14 +253,18 @@ function attackUnit(attacker, defender) {
         log(`${defender.name} is destroyed!`, 'death');
         const dq = defender.q, dr = defender.r;
         removeUnit(defender);
-        // Attacker moves onto the hex
-        attacker.q = dq;
-        attacker.r = dr;
+        // Attacker moves onto the hex (Glitch Mage stays put)
+        if (attacker.type !== UNIT_TYPE.GLITCH_MAGE) {
+            attacker.q = dq;
+            attacker.r = dr;
+        }
 
-        // Check if this was a rift hex — seal it
-        const hex = state.hexes.get(hexKey(dq, dr));
-        if (hex && hex.isRift) {
-            sealRift(hex);
+        // Check if this was a rift hex — seal it (only if attacker moved onto it)
+        if (attacker.type !== UNIT_TYPE.GLITCH_MAGE) {
+            const hex = state.hexes.get(hexKey(dq, dr));
+            if (hex && hex.isRift) {
+                sealRift(hex);
+            }
         }
     }
 
@@ -407,7 +420,7 @@ function voidPhase() {
     // Damage units on void hexes
     for (const unit of [...state.units]) {
         const key = hexKey(unit.q, unit.r);
-        if (state.voidHexes.has(key)) {
+        if (state.voidHexes.has(key) && unit.type !== UNIT_TYPE.GLITCH_MAGE) {
             unit.hp -= VOID_DAMAGE_PER_TURN;
             log(`${unit.name} takes ${VOID_DAMAGE_PER_TURN} void damage!`, 'void');
             if (unit.hp <= 0) {
@@ -451,13 +464,18 @@ function startPlayerTurn() {
                 heal += 1;
             }
 
-            // 2. Resource hex bonus: +1 on forest/quarry/gold
-            if (hex && hex.resource) {
+            // 2. Healing terrain bonus: +1 on forest/gold
+            if (hex && HEALING_TERRAIN.has(hex.terrain)) {
                 heal += 1;
             }
 
             // 3. Rest bonus: +1 if didn't move last turn
             if (!u.moved) {
+                heal += 1;
+            }
+
+            // 4. Seal Spire proximity: +1 if within 2 hexes of center tower
+            if (hexDistance(u.q, u.r, 0, 0) <= 2) {
                 heal += 1;
             }
 
@@ -633,10 +651,6 @@ function render() {
         // Base terrain color
         let color = TERRAIN_COLORS[hex.terrain] || '#333';
 
-        // Resource tint
-        if (hex.resource) {
-            color = RESOURCE_COLORS[hex.resource] || color;
-        }
 
         // Draw hex
         drawHexPath(ctx, sx, sy, HEX_SIZE);
@@ -673,6 +687,61 @@ function render() {
         ctx.strokeStyle = 'rgba(255,255,255,0.06)';
         ctx.lineWidth = 0.5;
         ctx.stroke();
+    }
+
+    // Draw center tower (Seal Spire)
+    {
+        const centerHex = state.hexes.get(hexKey(0, 0));
+        if (centerHex) {
+            const { x: wx, y: wy } = hexToPixel(0, 0);
+            const { x: sx, y: sy } = worldToScreen(wx, wy);
+            const s = HEX_SIZE;
+
+            // Glowing base ring
+            const basePulse = 0.4 + 0.2 * Math.sin(Date.now() / 800);
+            ctx.beginPath();
+            ctx.arc(sx, sy, s * 0.7, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(255, 255, 255, ${basePulse})`;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Tower body (narrow trapezoid)
+            const tw = s * 0.12;  // top half-width
+            const bw = s * 0.25;  // bottom half-width
+            const th = s * 0.9;   // tower height
+            ctx.beginPath();
+            ctx.moveTo(sx - bw, sy + th * 0.35);
+            ctx.lineTo(sx - tw, sy - th * 0.5);
+            ctx.lineTo(sx + tw, sy - th * 0.5);
+            ctx.lineTo(sx + bw, sy + th * 0.35);
+            ctx.closePath();
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Tower cap (triangle)
+            ctx.beginPath();
+            ctx.moveTo(sx, sy - th * 0.85);
+            ctx.lineTo(sx - tw * 1.4, sy - th * 0.5);
+            ctx.lineTo(sx + tw * 1.4, sy - th * 0.5);
+            ctx.closePath();
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.stroke();
+
+            // Beacon glow at top
+            const glow = 0.5 + 0.3 * Math.sin(Date.now() / 400);
+            const grad = ctx.createRadialGradient(sx, sy - th * 0.85, 0, sx, sy - th * 0.85, s * 0.4);
+            grad.addColorStop(0, `rgba(255, 255, 255, ${glow})`);
+            grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.beginPath();
+            ctx.arc(sx, sy - th * 0.85, s * 0.4, 0, Math.PI * 2);
+            ctx.fillStyle = grad;
+            ctx.fill();
+        }
     }
 
     // Draw highlights
