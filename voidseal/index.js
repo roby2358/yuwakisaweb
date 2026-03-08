@@ -398,10 +398,10 @@ function voidPhase() {
             state.voidHexes.add(key);
         }
 
-        // Spawn chance scales from 5% (no rifts sealed) to 20% (most rifts sealed)
+        // Spawn chance scales from 10% (no rifts sealed) to 30% (most rifts sealed)
         const sealed = state.riftsInitial - state.riftsRemaining;
         const ratio = state.riftsInitial > 1 ? sealed / (state.riftsInitial - 1) : 0;
-        const spawnChance = 0.05 + ratio * 0.15;
+        const spawnChance = 0.10 + ratio * 0.20;
         if (Math.random() < spawnChance) {
             if (spawnEnemyNear(hex.q, hex.r)) {
                 log(`A Void Rift disgorges a creature!`, 'void');
