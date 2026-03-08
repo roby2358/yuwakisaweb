@@ -4,7 +4,7 @@
 import {
     HEX_SIZE, MAP_RADIUS, TERRAIN, TERRAIN_COLORS, TERRAIN_MOVEMENT, TERRAIN_DEFENSE,
     HEALING_TERRAIN,
-    UNIT_TYPE, UNIT_STATS, ENEMY_SPAWN_WEIGHTS, DANGER_SPAWN_RATES,
+    UNIT_TYPE, UNIT_STATS, ENEMY_SPAWN_WEIGHTS,
     VOID_SPREAD_CHANCE, VOID_DAMAGE_PER_TURN,
     PLAYER_COLOR, ENEMY_COLOR, VOID_GLOW,
     HIGHLIGHT_MOVE, HIGHLIGHT_ATTACK, HIGHLIGHT_SELECTED
@@ -25,6 +25,7 @@ const state = {
     phase: 'player',       // 'player' | 'enemy' | 'void'
     gameOver: false,
     riftsRemaining: 0,
+    riftsInitial: 0,
     voidHexes: new Set(),
     camera: { x: 0, y: 0 },
     animating: false
@@ -119,13 +120,12 @@ function initMap() {
     for (const [key, hex] of state.hexes) {
         if (hex.dangerPoint) {
             hex.isRift = true;
-            hex.riftStrength = hex.dangerPoint.strength;
-            hex.turnsUntilSpawn = hex.dangerPoint.turnsUntilSpawn;
             hex.dangerPoint = null;
             riftCount++;
         }
     }
     state.riftsRemaining = riftCount;
+    state.riftsInitial = riftCount;
     updateRiftCount();
 
     // Place player units near starting location
@@ -273,7 +273,6 @@ function attackUnit(attacker, defender) {
 
 function sealRift(hex) {
     hex.isRift = false;
-    hex.riftStrength = 0;
     state.riftsRemaining--;
     log(`A Void Rift has been sealed!`, 'seal');
     updateRiftCount();
@@ -408,12 +407,14 @@ function voidPhase() {
             state.voidHexes.add(key);
         }
 
-        hex.turnsUntilSpawn--;
-        if (hex.turnsUntilSpawn <= 0) {
+        // Spawn chance scales from 5% (no rifts sealed) to 20% (most rifts sealed)
+        const sealed = state.riftsInitial - state.riftsRemaining;
+        const ratio = state.riftsInitial > 1 ? sealed / (state.riftsInitial - 1) : 0;
+        const spawnChance = 0.05 + ratio * 0.15;
+        if (Math.random() < spawnChance) {
             if (spawnEnemyNear(hex.q, hex.r)) {
                 log(`A Void Rift disgorges a creature!`, 'void');
             }
-            hex.turnsUntilSpawn = DANGER_SPAWN_RATES[Math.min(hex.riftStrength - 1, DANGER_SPAWN_RATES.length - 1)];
         }
     }
 

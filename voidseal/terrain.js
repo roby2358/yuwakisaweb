@@ -1,6 +1,6 @@
 // Terrain Generation using Diamond-Square (Fractal Plasma) Algorithm
 
-import { TERRAIN, DANGER_SPAWN_RATES } from './config.js';
+import { TERRAIN } from './config.js';
 import { hexKey, hexDistance, hexNeighbors, bfsHexes } from './hex.js';
 import { Rando } from './rando.js';
 
@@ -303,17 +303,9 @@ function placeDangerPoints(hexes, mapRadius, accessibleKeys, dangerSum, maxDange
 
     Rando.shuffle(edgeHexes);
 
-    // Place danger points with assigned sizes
-    // Spawn rate proportional to size: larger = faster spawns
+    // Place danger points (all equal strength — spawn chance is global)
     for (let i = 0; i < Math.min(dangerCount, edgeHexes.length); i++) {
-        const size = Math.min(maxDangerLevel, sizes[i]);
-        const maxSpawnTime = DANGER_SPAWN_RATES[size - 1];
-        // Randomize initial countdown (1 to maxSpawnTime) so they don't all spawn together
-        const initialCountdown = Rando.int(1, maxSpawnTime);
-        edgeHexes[i].dangerPoint = {
-            strength: size,
-            turnsUntilSpawn: initialCountdown
-        };
+        edgeHexes[i].dangerPoint = true;
     }
 }
 
