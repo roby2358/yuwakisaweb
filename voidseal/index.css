@@ -1,0 +1,264 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background: #0a0a12;
+    color: #c8c8d0;
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+    height: 100vh;
+}
+
+#app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+#top-bar {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 8px 16px;
+    background: #12121e;
+    border-bottom: 1px solid #2a2a3a;
+    flex-shrink: 0;
+}
+
+#title {
+    font-size: 18px;
+    font-weight: bold;
+    letter-spacing: 4px;
+    color: #8060c0;
+    text-shadow: 0 0 10px #6040a060;
+}
+
+#turn-info {
+    color: #a0a0b0;
+    font-size: 14px;
+}
+
+#phase-info {
+    font-size: 14px;
+    color: #60c080;
+}
+
+#phase-info.enemy-phase {
+    color: #ff6060;
+}
+
+#end-turn-btn {
+    margin-left: auto;
+    padding: 6px 18px;
+    background: #2a2a4a;
+    color: #c0c0d0;
+    border: 1px solid #4a4a6a;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+#end-turn-btn:hover {
+    background: #3a3a5a;
+}
+
+#end-turn-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+#main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+#map-canvas {
+    flex: 1;
+    display: block;
+    cursor: crosshair;
+}
+
+#side-panel {
+    width: 240px;
+    flex-shrink: 0;
+    background: #10101a;
+    border-left: 1px solid #2a2a3a;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.panel-section {
+    padding: 12px;
+    border-bottom: 1px solid #1e1e2e;
+}
+
+.panel-section.hidden {
+    display: none;
+}
+
+#unit-name {
+    font-size: 15px;
+    font-weight: bold;
+    color: #e0e0f0;
+    margin-bottom: 4px;
+}
+
+#unit-desc {
+    font-size: 11px;
+    color: #8080a0;
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+#unit-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 12px;
+    font-size: 12px;
+}
+
+.stat-label {
+    color: #7070a0;
+}
+
+.stat-value {
+    color: #c0c0e0;
+    text-align: right;
+}
+
+.stat-value.hp-low {
+    color: #ff6060;
+}
+
+.stat-value.hp-full {
+    color: #60c080;
+}
+
+#log-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#log-title, #obj-title {
+    font-size: 12px;
+    color: #6060a0;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+}
+
+#log {
+    flex: 1;
+    overflow-y: auto;
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+#log::-webkit-scrollbar {
+    width: 4px;
+}
+
+#log::-webkit-scrollbar-thumb {
+    background: #2a2a4a;
+}
+
+.log-entry {
+    padding: 2px 0;
+    border-bottom: 1px solid #1a1a2a;
+}
+
+.log-entry.combat {
+    color: #e08060;
+}
+
+.log-entry.void {
+    color: #a060d0;
+}
+
+.log-entry.info {
+    color: #6090c0;
+}
+
+.log-entry.seal {
+    color: #40d080;
+}
+
+.log-entry.death {
+    color: #ff4040;
+}
+
+#objective {
+    flex-shrink: 0;
+}
+
+#obj-text {
+    font-size: 11px;
+    color: #9090b0;
+    line-height: 1.4;
+    margin-bottom: 6px;
+}
+
+#rift-count {
+    font-size: 13px;
+    color: #a060d0;
+}
+
+/* Overlay */
+
+#overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+#overlay.hidden {
+    display: none;
+}
+
+#overlay-box {
+    background: #14141e;
+    border: 1px solid #3a3a5a;
+    padding: 32px 40px;
+    max-width: 480px;
+    text-align: center;
+}
+
+#overlay-title {
+    font-size: 22px;
+    font-weight: bold;
+    color: #8060c0;
+    letter-spacing: 3px;
+    margin-bottom: 16px;
+    text-shadow: 0 0 15px #6040a060;
+}
+
+#overlay-text {
+    font-size: 13px;
+    color: #a0a0b8;
+    line-height: 1.7;
+    margin-bottom: 24px;
+}
+
+#overlay-btn {
+    padding: 10px 32px;
+    background: #2a2a4a;
+    color: #c0c0e0;
+    border: 1px solid #5050a0;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    letter-spacing: 2px;
+    transition: background 0.15s;
+}
+
+#overlay-btn:hover {
+    background: #3a3a6a;
+}

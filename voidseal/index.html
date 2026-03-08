@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Waowisha — The Unraveling</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <div id="app">
+        <div id="top-bar">
+            <div id="title">WAOWISHA</div>
+            <div id="turn-info">Turn <span id="turn-num">1</span></div>
+            <div id="phase-info">Your Move</div>
+            <button id="end-turn-btn">End Turn</button>
+        </div>
+        <div id="main">
+            <canvas id="map-canvas"></canvas>
+            <div id="side-panel">
+                <div id="unit-info" class="panel-section hidden">
+                    <div id="unit-name"></div>
+                    <div id="unit-desc"></div>
+                    <div id="unit-stats-grid"></div>
+                </div>
+                <div id="log-section" class="panel-section">
+                    <div id="log-title">Battle Log</div>
+                    <div id="log"></div>
+                </div>
+                <div id="objective" class="panel-section">
+                    <div id="obj-title">Objective</div>
+                    <div id="obj-text">Seal all Void Rifts before the Unraveling consumes the world.</div>
+                    <div id="rift-count"></div>
+                </div>
+            </div>
+        </div>
+        <div id="overlay" class="hidden">
+            <div id="overlay-box">
+                <div id="overlay-title"></div>
+                <div id="overlay-text"></div>
+                <button id="overlay-btn">Begin</button>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="index.js"></script>
+</body>
+</html>
