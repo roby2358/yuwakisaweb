@@ -15,13 +15,16 @@
             <button id="end-turn-btn">End Turn</button>
         </div>
         <div id="main">
-            <canvas id="map-canvas"></canvas>
-            <div id="side-panel">
-                <div id="unit-info" class="panel-section hidden">
+            <div id="canvas-wrap">
+                <canvas id="map-canvas"></canvas>
+                <div id="unit-info" class="hidden">
                     <div id="unit-name"></div>
                     <div id="unit-desc"></div>
+                    <div id="unit-special"></div>
                     <div id="unit-stats-grid"></div>
                 </div>
+            </div>
+            <div id="side-panel">
                 <div id="log-section" class="panel-section">
                     <div id="log-title">Battle Log</div>
                     <div id="log"></div>

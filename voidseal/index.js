@@ -574,6 +574,18 @@ function endGame(won) {
 
 // ---- UI ----
 
+const UNIT_SPECIALS = {
+    [UNIT_TYPE.HEXBLADE]:      'Advances onto enemy hex after a kill',
+    [UNIT_TYPE.GLITCH_MAGE]:   'Immune to void damage. Does not advance on kill',
+    [UNIT_TYPE.SPORE_MARINE]:  'Heals self and adjacent allies +1 HP per turn',
+    [UNIT_TYPE.PHASE_MONK]:    'Fastest unit — can cross voided terrain quickly',
+    [UNIT_TYPE.VOID_THRALL]:   'Takes damage outside the void',
+    [UNIT_TYPE.REALITY_EATER]: 'Takes damage outside the void. High attack',
+    [UNIT_TYPE.HOLLOW_KNIGHT]: 'Takes damage outside the void. Tough and slow',
+};
+
+const unitSpecialEl = document.getElementById('unit-special');
+
 function showUnitInfo(unit) {
     if (!unit) {
         unitInfoEl.classList.add('hidden');
@@ -584,17 +596,12 @@ function showUnitInfo(unit) {
     unitNameEl.textContent = `${unit.symbol} ${unit.name}`;
     unitNameEl.style.color = unit.faction === 'player' ? PLAYER_COLOR : ENEMY_COLOR;
     unitDescEl.textContent = stats.desc;
+    unitSpecialEl.textContent = UNIT_SPECIALS[unit.type] || '';
 
     const hpRatio = unit.hp / unit.maxHp;
     const hpClass = hpRatio <= 0.3 ? 'hp-low' : hpRatio >= 1 ? 'hp-full' : '';
 
-    unitStatsEl.innerHTML = `
-        <span class="stat-label">HP</span><span class="stat-value ${hpClass}">${unit.hp}/${unit.maxHp}</span>
-        <span class="stat-label">ATK</span><span class="stat-value">${unit.attack}</span>
-        <span class="stat-label">DEF</span><span class="stat-value">${unit.defense}</span>
-        <span class="stat-label">SPD</span><span class="stat-value">${unit.speed}</span>
-        <span class="stat-label">Moved</span><span class="stat-value">${unit.moved ? 'Yes' : 'No'}</span>
-    `;
+    unitStatsEl.innerHTML = `<span class="stat-label">HP</span> <span class="stat-value ${hpClass}">${unit.hp}/${unit.maxHp}</span> <span class="stat-label">ATK</span> <span class="stat-value">${unit.attack}</span> <span class="stat-label">DEF</span> <span class="stat-value">${unit.defense}</span> <span class="stat-label">SPD</span> <span class="stat-value">${unit.speed}</span>`;
 }
 
 function updateRiftCount() {
