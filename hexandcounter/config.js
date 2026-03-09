@@ -17,7 +17,7 @@ export const MOVEMENT_COST = {
     [TERRAIN.PLAINS]: 1,
     [TERRAIN.HILLS]: 2,
     [TERRAIN.MOUNTAIN]: Infinity,
-    [TERRAIN.FOREST]: 1,
+    [TERRAIN.FOREST]: 2,
     [TERRAIN.GOLD]: 2,
     [TERRAIN.QUARRY]: 2
 };

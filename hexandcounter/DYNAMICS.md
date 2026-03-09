@@ -12,7 +12,7 @@
 | Terrain  | Cost      |
 |----------|-----------|
 | Plains   | 1         |
-| Forest   | 1         |
+| Forest   | 2         |
 | Hills    | 2         |
 | Gold     | 2         |
 | Quarry   | 2         |
