@@ -51,11 +51,11 @@ const ARTIFACTS = [
     { id: 6,  name: 'Bellowing Horn',      role: 'combat',    template: 'activated', desc: 'Push enemies away from Evascor',   cooldown: 3, effect: 'push_adjacent_enemies' },
     { id: 7,  name: 'Ember Rod',           role: 'combat',    template: 'one_use',   desc: 'Kill all enemies near Evascor',    effect: 'kill_enemies_in_radius', value: 2 },
     { id: 8,  name: "Puppeteer's Thread",  role: 'combat',    template: 'targeted',  desc: 'Enemy attacks its own allies',     cooldown: 5, range: 3, effect: 'enemy_attacks_allies' },
-    { id: 9,  name: 'Prism of Far Light',  role: 'scouting',  template: 'activated', desc: 'Reveal hexes around Hecto',        cooldown: 3, effect: 'reveal_hexes_radius', value: 8 },
+    { id: 9,  name: 'Prism of Far Light',  role: 'scouting',  template: 'activated', desc: 'Reveal hidden artifacts within 8 hexes',  cooldown: 3, effect: 'reveal_hexes_radius', value: 8 },
     { id: 10, name: 'Danger Sense Amulet', role: 'scouting',  template: 'passive',   desc: 'Spawn hexes are highlighted',      effect: 'show_spawn_hexes' },
     { id: 11, name: 'Whispering Veil',     role: 'scouting',  template: 'activated', desc: "Reveal Jhirle's target",           cooldown: 5, effect: 'show_jhirle_target' },
     { id: 12, name: 'Cloak of Fading',     role: 'survival',  template: 'activated', desc: 'Monsters ignore Hecto 2 turns',    cooldown: 6, effect: 'hecto_invisible', duration: 2 },
-    { id: 13, name: 'Stoneblood Elixir',   role: 'survival',  template: 'activated', desc: "Hecto can't die but can't move",   cooldown: 4, effect: 'hecto_invulnerable', duration: 1 },
+    { id: 13, name: 'Stoneblood Elixir',   role: 'survival',  template: 'passive',   desc: "Hecto survives monsters but freezes in place",   effect: 'hecto_invulnerable' },
     { id: 14, name: 'Iron Skull Helm',     role: 'survival',  template: 'passive',   desc: 'Negate first stun',                effect: 'negate_stun' },
     { id: 15, name: 'Blazing Mantle',      role: 'survival',  template: 'activated', desc: 'Evascor routine +2 this turn',     cooldown: 4, effect: 'routine_boost', value: 2, duration: 1 },
     { id: 16, name: 'Thornbark Seed',      role: 'terrain',   template: 'targeted',  desc: 'Grow forest on target area',       cooldown: 5, range: 4, effect: 'grow_forest' },
@@ -66,6 +66,385 @@ const ARTIFACTS = [
 ];
 
 const ARTIFACT_BY_ID = new Map(ARTIFACTS.map(a => [a.id, a]));
+
+// ============================================================
+// Data — Effect Functions
+// ============================================================
+
+const EFFECT_FUNCTIONS = {
+    // --- Mobility ---
+    hecto_move_cost_1: {
+        activate(gs, def) {
+            gs.flags.hectoTerrainCostOne = def.duration || 1;
+            notify('Wind Striders: all terrain costs 1!');
+            if (gs.selectedUnit === 'hecto') computeReachable();
+        }
+    },
+    teleport_hecto: {
+        validate(gs, q, r, def) {
+            const hex = gs.hexes.get(hexKey(q, r));
+            if (!hex) return false;
+            if (HECTO_COST[hex.terrain] === undefined) return false;
+            const occ = buildOccupiedSet(gs);
+            if (occ.has(hexKey(q, r))) return false;
+            // Need a passable adjacent hex for Evascor too
+            const eSpot = hexNeighbors(q, r).some(n => {
+                const nh = gs.hexes.get(hexKey(n.q, n.r));
+                return nh && EVASCOR_COST[nh.terrain] !== undefined && !occ.has(hexKey(n.q, n.r));
+            });
+            if (!eSpot) return false;
+            return hexDistance(gs.hecto.q, gs.hecto.r, q, r) <= def.range;
+        },
+        apply(gs, q, r) {
+            const occ = buildOccupiedSet(gs);
+            gs.hecto.q = q;
+            gs.hecto.r = r;
+            // Place Evascor on nearest passable adjacent hex
+            for (const n of hexNeighbors(q, r)) {
+                const nh = gs.hexes.get(hexKey(n.q, n.r));
+                if (nh && EVASCOR_COST[nh.terrain] !== undefined && !occ.has(hexKey(n.q, n.r))) {
+                    gs.evascor.q = n.q;
+                    gs.evascor.r = n.r;
+                    break;
+                }
+            }
+            notify('Hecto and Evascor teleport!');
+            checkScrollPickup(q, r);
+            checkArtifactClaim(q, r);
+        }
+    },
+    convert_water_to_plains: {
+        validate(gs, q, r, def) {
+            const hex = gs.hexes.get(hexKey(q, r));
+            if (!hex) return false;
+            if (hex.terrain !== TERRAIN.WATER) return false;
+            return hexDistance(gs.hecto.q, gs.hecto.r, q, r) <= def.range;
+        },
+        apply(gs, q, r) {
+            const hex = gs.hexes.get(hexKey(q, r));
+            hex.terrain = TERRAIN.PLAINS;
+            notify('Water becomes solid ground!');
+        }
+    },
+    move_evascor_to_hex: {
+        validate(gs, q, r, def) {
+            const hex = gs.hexes.get(hexKey(q, r));
+            if (!hex) return false;
+            if (EVASCOR_COST[hex.terrain] === undefined) return false;
+            const occ = buildOccupiedSet(gs);
+            if (occ.has(hexKey(q, r))) return false;
+            return hexDistance(gs.hecto.q, gs.hecto.r, q, r) <= def.range;
+        },
+        apply(gs, q, r) {
+            gs.evascor.q = q;
+            gs.evascor.r = r;
+            notify('Evascor warps!');
+        }
+    },
+
+    // --- Combat ---
+    kill_enemy_at_hex: {
+        validate(gs, q, r, def) {
+            if (!gs.enemies.some(e => e.q === q && e.r === r)) return false;
+            return hexDistance(gs.hecto.q, gs.hecto.r, q, r) <= def.range;
+        },
+        apply(gs, q, r) {
+            gs.enemies = gs.enemies.filter(e => !(e.q === q && e.r === r));
+            notify('Gauntlet of Ruin strikes!');
+        }
+    },
+    push_adjacent_enemies: {
+        activate(gs) {
+            const adj = gs.enemies.filter(e =>
+                hexDistance(gs.evascor.q, gs.evascor.r, e.q, e.r) === 1
+            );
+            for (const e of adj) {
+                const dq = e.q - gs.evascor.q;
+                const dr = e.r - gs.evascor.r;
+                for (let step = 0; step < 2; step++) {
+                    const nq = e.q + dq;
+                    const nr = e.r + dr;
+                    const hex = gs.hexes.get(hexKey(nq, nr));
+                    if (!hex || !isAccessible(hex.terrain) || hex.terrain === TERRAIN.MOUNTAIN) break;
+                    e.q = nq;
+                    e.r = nr;
+                }
+            }
+            notify(`Horn pushes ${adj.length} enemies back!`);
+        }
+    },
+    kill_enemies_in_radius: {
+        activate(gs, def) {
+            const range = def.value || 2;
+            const killed = gs.enemies.filter(e =>
+                hexDistance(gs.evascor.q, gs.evascor.r, e.q, e.r) <= range
+            );
+            gs.enemies = gs.enemies.filter(e =>
+                hexDistance(gs.evascor.q, gs.evascor.r, e.q, e.r) > range
+            );
+            notify(`Ember Rod incinerates ${killed.length} enemies!`);
+        }
+    },
+    enemy_attacks_allies: {
+        validate(gs, q, r, def) {
+            if (!gs.enemies.some(e => e.q === q && e.r === r)) return false;
+            return hexDistance(gs.hecto.q, gs.hecto.r, q, r) <= def.range;
+        },
+        apply(gs, q, r) {
+            const adjKilled = gs.enemies.filter(e =>
+                !(e.q === q && e.r === r) && hexDistance(e.q, e.r, q, r) === 1
+            );
+            gs.enemies = gs.enemies.filter(e => !adjKilled.includes(e));
+            notify(`Thread turns ${adjKilled.length} enemies against each other!`);
+        }
+    },
+
+    // --- Scouting ---
+    reveal_hexes_radius: {
+        activate(gs, def) {
+            const range = def.value || 8;
+            let count = 0;
+            for (const art of gs.artifacts) {
+                if (art.revealed || art.claimed) continue;
+                if (hexDistance(gs.hecto.q, gs.hecto.r, art.q, art.r) <= range) {
+                    art.revealed = true;
+                    count++;
+                }
+            }
+            if (count > 0) notify(`Prism reveals ${count} artifact${count > 1 ? 's' : ''}!`);
+            else notify('Prism reveals nothing new nearby.');
+        }
+    },
+    show_spawn_hexes: {
+        // Passive — handled in render
+    },
+    show_jhirle_target: {
+        activate(gs) {
+            if (!gs.jhirle.active) {
+                notify('Jhirle is not yet in the Wilds.');
+                return false;
+            }
+            gs.flags.showJhirleTarget = true;
+            if (gs.jhirle.targetId) {
+                const def = ARTIFACT_BY_ID.get(gs.jhirle.targetId);
+                if (def) notify(`Jhirle seeks: ${def.name}`);
+                else notify('Jhirle is heading to a city.');
+            } else {
+                notify('Jhirle has no target.');
+            }
+        }
+    },
+
+    // --- Survival ---
+    hecto_invisible: {
+        activate(gs, def) {
+            gs.flags.hectoInvisible = def.duration || 2;
+            notify('Hecto fades from sight!');
+        }
+    },
+    hecto_invulnerable: {
+        activate(gs, def) {
+            gs.flags.hectoInvulnerable = def.duration || 1;
+            notify("Hecto can't die but can't move!");
+        }
+    },
+    negate_stun: {
+        // Passive — handled in evascorCombat
+    },
+    routine_boost: {
+        activate(gs, def) {
+            gs.flags.routineBoost = def.value || 2;
+            notify(`Evascor routine boosted to ${gs.evascor.routineBase + gs.flags.routineBoost}!`);
+        }
+    },
+
+    // --- Terrain Control ---
+    grow_forest: {
+        validate(gs, q, r, def) {
+            const hex = gs.hexes.get(hexKey(q, r));
+            if (!hex) return false;
+            if (!isAccessible(hex.terrain) || hex.terrain === TERRAIN.WATER) return false;
+            if (hex.terrain === TERRAIN.CITY) return false;
+            return hexDistance(gs.hecto.q, gs.hecto.r, q, r) <= def.range;
+        },
+        apply(gs, q, r) {
+            const hex = gs.hexes.get(hexKey(q, r));
+            if (hex) hex.terrain = TERRAIN.FOREST;
+            const neighbors = hexNeighbors(q, r);
+            let converted = 0;
+            for (const n of neighbors) {
+                if (converted >= 2) break;
+                const nh = gs.hexes.get(hexKey(n.q, n.r));
+                if (nh && isAccessible(nh.terrain) && nh.terrain !== TERRAIN.WATER && nh.terrain !== TERRAIN.CITY) {
+                    nh.terrain = TERRAIN.FOREST;
+                    converted++;
+                }
+            }
+            notify('Forest springs up!');
+        }
+    },
+    pull_enemies_toward: {
+        activate(gs, def) {
+            const range = def.value || 3;
+            const toMove = gs.enemies.filter(e =>
+                hexDistance(gs.evascor.q, gs.evascor.r, e.q, e.r) <= range
+            );
+            for (const e of toMove) {
+                const neighbors = hexNeighbors(e.q, e.r);
+                let best = null;
+                let bestDist = hexDistance(e.q, e.r, gs.evascor.q, gs.evascor.r);
+                for (const n of neighbors) {
+                    const hex = gs.hexes.get(hexKey(n.q, n.r));
+                    if (!hex || !isAccessible(hex.terrain)) continue;
+                    const d = hexDistance(n.q, n.r, gs.evascor.q, gs.evascor.r);
+                    if (d < bestDist) { bestDist = d; best = n; }
+                }
+                if (best) { e.q = best.q; e.r = best.r; }
+            }
+            notify(`Lodestone pulls ${toMove.length} enemies closer!`);
+        }
+    },
+    enemies_skip_movement: {
+        activate(gs) {
+            gs.flags.enemiesSkipMovement = true;
+            notify('Dusk Lantern freezes all monsters!');
+        }
+    },
+
+    // --- Wildcards ---
+    place_decoy: {
+        validate(gs, q, r) {
+            const hex = gs.hexes.get(hexKey(q, r));
+            if (!hex) return false;
+            return isAccessible(hex.terrain) && hex.terrain !== TERRAIN.WATER;
+        },
+        apply(gs, q, r, def) {
+            gs.decoy = { q, r, turnsLeft: def.duration || 3 };
+            notify('A decoy shimmers into existence!');
+        }
+    },
+    gain_bonus_mp: {
+        activate(gs, def) {
+            gs.mp += def.value || 5;
+            notify(`Quicksilver Flask grants ${def.value || 5} bonus MP!`);
+            if (gs.selectedUnit) computeReachable();
+        }
+    },
+};
+
+// ============================================================
+// Artifact Activation
+// ============================================================
+
+function hasPassiveArtifact(gs, effectName) {
+    return gs.inventory.some(inv => {
+        const def = ARTIFACT_BY_ID.get(inv.id);
+        return def.template === 'passive' && def.effect === effectName && !inv.spent;
+    });
+}
+
+function activateArtifact(invIndex) {
+    const gs = gameState;
+    if (gs.gameOver) return;
+    if (gs.mp < 1) {
+        notify('Need 1 MP to activate!');
+        return;
+    }
+
+    const inv = gs.inventory[invIndex];
+    if (!inv || inv.spent) return;
+    if (inv.cooldownRemaining > 0) {
+        notify('Artifact is on cooldown!');
+        return;
+    }
+
+    const def = ARTIFACT_BY_ID.get(inv.id);
+    if (def.template === 'passive') return;
+
+    const fn = EFFECT_FUNCTIONS[def.effect];
+    if (!fn) return;
+
+    // Targeted effect — enter targeting mode (MP deducted on apply)
+    if (fn.validate) {
+        enterTargeting(invIndex);
+        return;
+    }
+
+    // Immediate effect
+    const result = fn.activate(gs, def);
+    if (result === false) return;
+
+    gs.mp -= 1;
+    showArtifactActivation(def);
+
+    if (def.template === 'one_use') {
+        gs.inventory.splice(invIndex, 1);
+    } else if (def.cooldown > 0) {
+        inv.cooldownRemaining = def.cooldown;
+    }
+
+    if (gs.mp <= 0) { deselectUnit(); endTurn(); return; }
+    if (gs.selectedUnit) computeReachable();
+    updateHUD();
+    render();
+}
+
+function enterTargeting(invIndex) {
+    const gs = gameState;
+    gs.targetingArtifact = invIndex;
+    gs.targetingValid = new Set();
+
+    const inv = gs.inventory[invIndex];
+    const def = ARTIFACT_BY_ID.get(inv.id);
+    const fn = EFFECT_FUNCTIONS[def.effect];
+
+    for (const [key, hex] of gs.hexes) {
+        if (fn.validate(gs, hex.q, hex.r, def)) {
+            gs.targetingValid.add(key);
+        }
+    }
+
+    gs.selectedUnit = null;
+    gs.reachable = null;
+
+    notify(`${def.name}: click a target hex (Esc to cancel)`);
+    updateHUD();
+    render();
+}
+
+function cancelTargeting() {
+    const gs = gameState;
+    gs.targetingArtifact = null;
+    gs.targetingValid = null;
+    updateHUD();
+    render();
+}
+
+function applyTargetedEffect(q, r) {
+    const gs = gameState;
+    const invIndex = gs.targetingArtifact;
+    const inv = gs.inventory[invIndex];
+    const def = ARTIFACT_BY_ID.get(inv.id);
+    const fn = EFFECT_FUNCTIONS[def.effect];
+
+    fn.apply(gs, q, r, def);
+    gs.mp -= 1;
+    showArtifactActivation(def);
+
+    if (def.template === 'one_use') {
+        gs.inventory.splice(invIndex, 1);
+    } else if (def.cooldown > 0) {
+        inv.cooldownRemaining = def.cooldown;
+    }
+
+    gs.targetingArtifact = null;
+    gs.targetingValid = null;
+
+    if (gs.mp <= 0) { deselectUnit(); endTurn(); return; }
+    if (gs.selectedUnit) computeReachable();
+    updateHUD();
+    render();
+}
 
 // ============================================================
 // Data — Seer's Visions
@@ -397,6 +776,17 @@ function newGameState() {
         jhirle: { q: 0, r: 0, active: false, knownArtifacts: new Set(), targetId: null, noProgressTurns: 0, claimCount: 0, lastDist: Infinity },
         jhirlePending: [],
         gameOver: false,
+        targetingArtifact: null,
+        targetingValid: null,
+        decoy: null,
+        flags: {
+            hectoInvisible: 0,
+            hectoInvulnerable: 0,
+            hectoTerrainCostOne: 0,
+            routineBoost: 0,
+            enemiesSkipMovement: false,
+            showJhirleTarget: false,
+        },
     };
 }
 
@@ -439,6 +829,17 @@ function selectUnit(unit) {
         notify('Evascor is stunned and cannot move');
         return;
     }
+    if (unit === 'hecto' && hasPassiveArtifact(gs, 'hecto_invulnerable')) {
+        const adjMonster = gs.enemies.some(e => hexDistance(gs.hecto.q, gs.hecto.r, e.q, e.r) === 1);
+        if (adjMonster) {
+            notify("Stoneblood Elixir: Hecto is frozen until Evascor clears the threat");
+            return;
+        }
+    }
+    if (unit === 'hecto' && gs.flags.hectoInvulnerable > 0) {
+        notify("Hecto can't move while protected");
+        return;
+    }
     gs.selectedUnit = unit;
     computeReachable();
     updateHUD();
@@ -458,6 +859,7 @@ function computeReachable() {
     const unit = gs.selectedUnit;
     const pos = gs[unit];
     const costTable = unit === 'hecto' ? HECTO_COST : EVASCOR_COST;
+    const flatCost = unit === 'hecto' && gs.flags.hectoTerrainCostOne > 0;
 
     const blocked = buildOccupiedSet(gs);
     blocked.delete(hexKey(pos.q, pos.r)); // don't block self
@@ -473,7 +875,7 @@ function computeReachable() {
     gs.reachable = bfsHexes(pos, gs.hexes, hex => {
         const key = hexKey(hex.q, hex.r);
         if (blocked.has(key)) return Infinity;
-        const base = costTable[hex.terrain];
+        const base = flatCost ? (costTable[hex.terrain] !== undefined ? 1 : Infinity) : costTable[hex.terrain];
         if (base === undefined) return Infinity;
         if (artifactKeys.has(key)) return base + 2;
         return base;
@@ -636,12 +1038,21 @@ function decayMonsters() {
 
 function moveMonsters() {
     const gs = gameState;
+    if (gs.flags.enemiesSkipMovement) return;
+
     const occupied = buildOccupiedSet(gs);
 
     // Build visible target list once per turn
-    const targets = [gs.evascor];
-    if (!isHiddenInForest(gs.hecto, gs.hexes)) targets.push(gs.hecto);
-    if (gs.jhirle.active && !isHiddenInForest(gs.jhirle, gs.hexes)) targets.push(gs.jhirle);
+    const targets = [];
+    if (gs.decoy && gs.decoy.turnsLeft > 0) {
+        // Decoy overrides all other targets
+        targets.push(gs.decoy);
+    } else {
+        targets.push(gs.evascor);
+        const hectoHidden = isHiddenInForest(gs.hecto, gs.hexes) || gs.flags.hectoInvisible > 0;
+        if (!hectoHidden) targets.push(gs.hecto);
+        if (gs.jhirle.active && !isHiddenInForest(gs.jhirle, gs.hexes)) targets.push(gs.jhirle);
+    }
 
     for (const enemy of gs.enemies) {
         const target = nearestOf(enemy.q, enemy.r, targets);
@@ -684,7 +1095,7 @@ function evascorCombat() {
     const gs = gameState;
     if (gs.evascor.stunned) return;
 
-    const routine = gs.evascor.routineBase;
+    const routine = gs.evascor.routineBase + gs.flags.routineBoost;
     const adjacent = gs.enemies.filter(e =>
         hexDistance(gs.evascor.q, gs.evascor.r, e.q, e.r) === 1
     );
@@ -703,6 +1114,17 @@ function evascorCombat() {
     // Overflow stun
     if (adjacent.length <= routine) return;
 
+    // Iron Skull Helm — negate first stun
+    const helmIdx = gs.inventory.findIndex(inv => {
+        const def = ARTIFACT_BY_ID.get(inv.id);
+        return def.effect === 'negate_stun' && !inv.spent;
+    });
+    if (helmIdx !== -1) {
+        gs.inventory.splice(helmIdx, 1);
+        notify('Iron Skull Helm shatters, negating the stun!');
+        return;
+    }
+
     gs.evascor.stunCount++;
     gs.evascor.stunned = true;
     if (gs.evascor.stunCount >= 3) {
@@ -716,6 +1138,7 @@ function evascorCombat() {
 function hectoDeathCheck() {
     const gs = gameState;
     if (gs.gameOver) return;
+    if (gs.flags.hectoInvulnerable > 0 || hasPassiveArtifact(gs, 'hecto_invulnerable')) return;
 
     const dist = hexDistance(gs.hecto.q, gs.hecto.r, gs.evascor.q, gs.evascor.r);
     if (dist <= 3) return;
@@ -822,6 +1245,7 @@ function jhirleRetarget() {
     j.targetId = pick.id;
     j.noProgressTurns = 0;
     j.lastDist = pick.dist;
+    gs.flags.showJhirleTarget = false;
 }
 
 function jhirleMoveToward(target) {
@@ -1018,6 +1442,27 @@ function endTurn() {
 
     checkQuarryHealing();
 
+    // Decrement artifact cooldowns
+    for (const inv of gs.inventory) {
+        if (inv.cooldownRemaining > 0) inv.cooldownRemaining--;
+    }
+
+    // Decrement flags
+    if (gs.flags.hectoInvisible > 0) gs.flags.hectoInvisible--;
+    if (gs.flags.hectoInvulnerable > 0) gs.flags.hectoInvulnerable--;
+    if (gs.flags.hectoTerrainCostOne > 0) gs.flags.hectoTerrainCostOne--;
+    gs.flags.routineBoost = 0;
+    gs.flags.enemiesSkipMovement = false;
+
+    // Decrement decoy
+    if (gs.decoy) {
+        gs.decoy.turnsLeft--;
+        if (gs.decoy.turnsLeft <= 0) {
+            gs.decoy = null;
+            notify('The decoy fades away.');
+        }
+    }
+
     gs.turn++;
     gs.mp = PLAYER_MP;
     updateHUD();
@@ -1144,6 +1589,21 @@ function render() {
         ctx.stroke();
     }
 
+    // Spawn hex highlights (Danger Sense Amulet passive)
+    if (hasPassiveArtifact(gs, 'show_spawn_hexes')) {
+        for (const [key, hex] of gs.hexes) {
+            if (hex.isEdge || !isAccessible(hex.terrain) || hex.terrain === TERRAIN.MOUNTAIN) continue;
+            const d = hexDistance(hex.q, hex.r, gs.hecto.q, gs.hecto.r);
+            if (d < 3 || d > 12) continue;
+            const { x, y } = hexToScreen(hex.q, hex.r);
+            if (x < -HEX_SIZE * 2 || x > canvas.width + HEX_SIZE * 2 ||
+                y < -HEX_SIZE * 2 || y > canvas.height + HEX_SIZE * 2) continue;
+            drawHexPath(ctx, x, y, HEX_SIZE);
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.1)';
+            ctx.fill();
+        }
+    }
+
     // Reachable highlights
     if (gs.reachable) {
         for (const [key] of gs.reachable) {
@@ -1151,6 +1611,17 @@ function render() {
             const { x, y } = hexToScreen(q, r);
             drawHexPath(ctx, x, y, HEX_SIZE);
             ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+            ctx.fill();
+        }
+    }
+
+    // Targeting highlights
+    if (gs.targetingValid) {
+        for (const key of gs.targetingValid) {
+            const [q, r] = key.split(',').map(Number);
+            const { x, y } = hexToScreen(q, r);
+            drawHexPath(ctx, x, y, HEX_SIZE);
+            ctx.fillStyle = 'rgba(255, 165, 0, 0.35)';
             ctx.fill();
         }
     }
@@ -1184,10 +1655,28 @@ function render() {
         drawCounter(x, y, enemy.color, 'M');
     }
 
+    // Decoy
+    if (gs.decoy) {
+        const dScreen = hexToScreen(gs.decoy.q, gs.decoy.r);
+        drawCounter(dScreen.x, dScreen.y, '#ff6600', 'D');
+    }
+
     // Jhirle
     if (gs.jhirle.active) {
         const jScreen = hexToScreen(gs.jhirle.q, gs.jhirle.r);
         drawCounter(jScreen.x, jScreen.y, JHIRLE_COLOR, 'J');
+    }
+
+    // Jhirle target highlight (Whispering Veil)
+    if (gs.flags.showJhirleTarget && gs.jhirle.active && gs.jhirle.targetId) {
+        const art = gs.artifacts.find(a => a.id === gs.jhirle.targetId && !a.claimed);
+        if (art) {
+            const { x, y } = hexToScreen(art.q, art.r);
+            drawHexPath(ctx, x, y, HEX_SIZE + 2);
+            ctx.strokeStyle = '#cc66ff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
     }
 
     drawTether(gs);
@@ -1199,6 +1688,26 @@ function render() {
 
     // Hecto
     const hScreen = hexToScreen(gs.hecto.q, gs.hecto.r);
+    // Passive aura
+    const hasPassive = gs.inventory.some(inv => {
+        const def = ARTIFACT_BY_ID.get(inv.id);
+        return def.template === 'passive' && !inv.spent;
+    });
+    const hasActiveFlag = gs.flags.hectoInvisible > 0 || gs.flags.hectoInvulnerable > 0 ||
+        gs.flags.hectoTerrainCostOne > 0;
+    if (hasPassive || hasActiveFlag) {
+        ctx.save();
+        const auraR = COUNTER_SIZE * 0.8;
+        const grad = ctx.createRadialGradient(hScreen.x, hScreen.y, COUNTER_SIZE * 0.3, hScreen.x, hScreen.y, auraR);
+        grad.addColorStop(0, 'rgba(100, 160, 255, 0.25)');
+        grad.addColorStop(0.6, 'rgba(100, 160, 255, 0.1)');
+        grad.addColorStop(1, 'rgba(100, 160, 255, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(hScreen.x, hScreen.y, auraR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
     drawCounter(hScreen.x, hScreen.y, HECTO_COLOR, 'H');
     if (gs.selectedUnit === 'hecto') drawSelectionRing(hScreen.x, hScreen.y);
 
@@ -1235,10 +1744,22 @@ function updateHUD() {
     // Inventory
     const invEl = document.getElementById('inventory');
     if (gs.inventory.length > 0) {
-        invEl.innerHTML = gs.inventory.map(inv => {
+        invEl.innerHTML = gs.inventory.map((inv, i) => {
             const def = ARTIFACT_BY_ID.get(inv.id);
-            const state = inv.spent ? ' (spent)' : inv.cooldownRemaining > 0 ? ` (CD:${inv.cooldownRemaining})` : '';
-            return `<span class="inv-item">[${def.name}${state}]</span>`;
+            if (def.template === 'passive') {
+                return `<span class="inv-item inv-passive">[${def.name} PASSIVE]</span>`;
+            }
+            const onCooldown = inv.cooldownRemaining > 0;
+            const isTargeting = gs.targetingArtifact === i;
+            let label = def.name;
+            if (def.template === 'one_use') label += ' \u{1f525}';
+            if (onCooldown) label += ` CD:${inv.cooldownRemaining}`;
+
+            const cls = ['inv-btn'];
+            if (onCooldown) cls.push('inv-cd');
+            if (isTargeting) cls.push('inv-targeting');
+
+            return `<button class="${cls.join(' ')}" data-inv="${i}" ${onCooldown ? 'disabled' : ''}>[${label}]</button>`;
         }).join(' ');
     } else {
         invEl.innerHTML = '<span class="inv-empty">No artifacts</span>';
@@ -1252,6 +1773,56 @@ function updateHUD() {
         ).join('');
     } else {
         visEl.innerHTML = '';
+    }
+
+    updateArtifactInfo();
+}
+
+let artifactInfoTimer = null;
+
+function showArtifactActivation(def) {
+    const el = document.getElementById('artifact-info');
+    el.innerHTML = `<div class="info-name">${def.name}</div><div class="info-desc">${def.desc}</div>`;
+    el.classList.remove('hidden');
+    clearTimeout(artifactInfoTimer);
+    artifactInfoTimer = setTimeout(() => updateArtifactInfo(), 3000);
+}
+
+function updateArtifactInfo() {
+    const gs = gameState;
+    if (!gs) return;
+    const el = document.getElementById('artifact-info');
+
+    const lines = [];
+
+    // Active flags
+    if (gs.flags.hectoInvisible > 0)
+        lines.push(`Cloak of Fading: invisible (${gs.flags.hectoInvisible} turns)`);
+    if (gs.flags.hectoInvulnerable > 0)
+        lines.push(`Stoneblood Elixir: invulnerable, immobile`);
+    if (gs.flags.hectoTerrainCostOne > 0)
+        lines.push(`Wind Striders: all terrain costs 1`);
+    if (gs.flags.routineBoost > 0)
+        lines.push(`Blazing Mantle: routine +${gs.flags.routineBoost}`);
+    if (gs.flags.enemiesSkipMovement)
+        lines.push(`Dusk Lantern: monsters frozen`);
+    if (gs.flags.showJhirleTarget)
+        lines.push(`Whispering Veil: tracking Jhirle`);
+    if (gs.decoy)
+        lines.push(`Mirror of Echoes: decoy active (${gs.decoy.turnsLeft} turns)`);
+
+    // Passive artifacts
+    for (const inv of gs.inventory) {
+        const def = ARTIFACT_BY_ID.get(inv.id);
+        if (def.template !== 'passive' || inv.spent) continue;
+        lines.push(`${def.name}: ${def.desc}`);
+    }
+
+    if (lines.length > 0) {
+        el.innerHTML = lines.map(l => `<div class="info-passive">${l}</div>`).join('');
+        el.classList.remove('hidden');
+    } else {
+        el.classList.add('hidden');
     }
 }
 
@@ -1288,6 +1859,18 @@ canvas.addEventListener('mousedown', e => {
     if (!gs || gs.gameOver) return;
 
     const hex = screenToHex(e.clientX, e.clientY);
+
+    // Targeting mode — artifact effect
+    if (gs.targetingArtifact !== null) {
+        const key = hexKey(hex.q, hex.r);
+        if (gs.targetingValid && gs.targetingValid.has(key)) {
+            applyTargetedEffect(hex.q, hex.r);
+        } else {
+            cancelTargeting();
+        }
+        return;
+    }
+
     const clicked = unitAt(hex.q, hex.r, gs);
 
     if (gs.selectedUnit) {
@@ -1334,6 +1917,10 @@ document.getElementById('unit-evascor').addEventListener('click', () => {
 document.getElementById('end-turn').addEventListener('click', () => { endTurn(); canvas.focus(); });
 
 window.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && gameState && gameState.targetingArtifact !== null) {
+        cancelTargeting();
+        return;
+    }
     if (e.key !== ' ' && e.key !== 'Enter') return;
     e.preventDefault();
     e.stopPropagation();
@@ -1341,6 +1928,13 @@ window.addEventListener('keydown', e => {
         document.activeElement.blur();
     }
     endTurn();
+});
+
+document.getElementById('inventory').addEventListener('click', e => {
+    const btn = e.target.closest('[data-inv]');
+    if (!btn) return;
+    const idx = parseInt(btn.dataset.inv);
+    activateArtifact(idx);
 });
 
 document.getElementById('new-game').addEventListener('click', initGame);
