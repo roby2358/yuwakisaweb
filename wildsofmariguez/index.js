@@ -37,6 +37,12 @@ const EVASCOR_COLOR = '#888888';
 const JHIRLE_COLOR = '#9944cc';
 const SCROLL_COLOR = '#d2b48c';
 const ARTIFACT_COLOR = '#4488ff';
+const MONSTER_ICONS = [
+    '\u{1F479}', '\u{1F47A}', '\u{1F47E}', '\u{1F47F}',
+    '\u{1F409}', '\u{1F987}', '\u{1F43A}', '\u{1F577}',
+    '\u{1F982}', '\u{2620}',  '\u{1F480}', '\u{1F417}',
+    '\u{1F40D}', '\u{1F98E}',
+];
 
 // ============================================================
 // Data — Artifacts
@@ -662,6 +668,10 @@ function monsterColor() {
     return ColorTheory.rgbToHex(r, g, b);
 }
 
+function monsterIcon() {
+    return Rando.choice(MONSTER_ICONS);
+}
+
 function buildOccupiedSet(gs) {
     const occupied = new Set();
     occupied.add(hexKey(gs.hecto.q, gs.hecto.r));
@@ -1153,6 +1163,11 @@ function claimArtifact(art) {
 
     const def = ARTIFACT_BY_ID.get(art.id);
     notify(`Claimed: ${def.name} \u2014 ${def.desc}`);
+
+    if (gs.inventory.length === 3) {
+        showAlert('<h2>Three Artifacts Claimed!</h2><p>Hecto has what he came for. Now get him to a <strong>city on the eastern border</strong> with Evascor within 3 hexes to escape the Wilds.</p><p>The monsters are swarming. Move fast.</p>');
+    }
+
     if (gs.selectedUnit) computeReachable();
     updateHUD();
     render();
@@ -1211,7 +1226,7 @@ function spawnMonsters() {
     for (let i = 0; i < spawnCount && i < candidates.length; i++) {
         if (Math.random() > 0.2) continue;
         const h = candidates[i];
-        gs.enemies.push({ q: h.q, r: h.r, color: monsterColor() });
+        gs.enemies.push({ q: h.q, r: h.r, color: monsterColor(), icon: monsterIcon() });
     }
 }
 
@@ -1624,6 +1639,10 @@ function jhirleClaimCheck() {
     const def = ARTIFACT_BY_ID.get(art.id);
     notify(`Jhirle claimed ${def.name}! (${j.claimCount}/4)`);
 
+    if (j.claimCount === 4) {
+        showAlert('<h2>Jhirle Has Four Artifacts!</h2><p>She is heading for a <strong>city on the eastern border</strong>. If she reaches one, all is lost.</p><p>Block her path with Evascor or beat her to the finish.</p>');
+    }
+
     jhirleRetarget();
 }
 
@@ -1906,20 +1925,20 @@ function render() {
     // Scrolls
     for (const scroll of gs.scrolls) {
         const { x, y } = hexToScreen(scroll.q, scroll.r);
-        drawCounter(x, y, SCROLL_COLOR, 'S');
+        drawCounter(x, y, SCROLL_COLOR, '\u{1F4DC}');
     }
 
     // Revealed artifacts
     for (const art of gs.artifacts) {
         if (!art.revealed || art.claimed) continue;
         const { x, y } = hexToScreen(art.q, art.r);
-        drawCounter(x, y, ARTIFACT_COLOR, 'A');
+        drawCounter(x, y, ARTIFACT_COLOR, '\u{2728}');
     }
 
     // Monsters
     for (const enemy of gs.enemies) {
         const { x, y } = hexToScreen(enemy.q, enemy.r);
-        drawCounter(x, y, enemy.color, 'M');
+        drawCounter(x, y, enemy.color, enemy.icon || 'M');
     }
 
     // Decoy
@@ -2102,6 +2121,26 @@ function updateArtifactInfo() {
 // ============================================================
 // Notification
 // ============================================================
+
+function showAlert(html) {
+    const el = document.getElementById('alert-panel');
+    document.getElementById('alert-text').innerHTML = html;
+    el.classList.remove('hidden');
+
+    const dismiss = () => {
+        el.classList.add('hidden');
+        el.removeEventListener('click', dismiss);
+        window.removeEventListener('keydown', onKey);
+    };
+    const onKey = (e) => {
+        if (e.key === ' ' || e.key === 'Enter' || e.key === 'Escape') {
+            e.preventDefault();
+            dismiss();
+        }
+    };
+    el.addEventListener('click', dismiss);
+    window.addEventListener('keydown', onKey);
+}
 
 let notifyTimer = null;
 function notify(msg) {
