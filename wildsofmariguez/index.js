@@ -49,7 +49,7 @@ const ARTIFACTS = [
     { id: 4,  name: 'Tremor Stone',        role: 'mobility',  template: 'targeted',  desc: 'Warp Evascor to target hex',       cooldown: 4, range: 3, effect: 'move_evascor_to_hex' },
     { id: 5,  name: 'Gauntlet of Ruin',    role: 'combat',    template: 'targeted',  desc: 'Kill one enemy on target hex',     cooldown: 4, range: 2, effect: 'kill_enemy_at_hex' },
     { id: 6,  name: 'Bellowing Horn',      role: 'combat',    template: 'activated', desc: 'Push enemies away from Evascor',   cooldown: 3, effect: 'push_adjacent_enemies' },
-    { id: 7,  name: 'Ember Rod',           role: 'combat',    template: 'one_use',   desc: 'Kill all enemies near Evascor',    effect: 'kill_enemies_in_radius', value: 2 },
+    { id: 7,  name: 'Ember Rod',           role: 'combat',    template: 'activated', desc: 'Kill all enemies near Evascor',    cooldown: 4, effect: 'kill_enemies_in_radius', value: 2 },
     { id: 8,  name: "Puppeteer's Thread",  role: 'combat',    template: 'targeted',  desc: 'Enemy attacks its own allies',     cooldown: 5, range: 3, effect: 'enemy_attacks_allies' },
     { id: 9,  name: 'Prism of Far Light',  role: 'scouting',  template: 'activated', desc: 'Reveal hidden artifacts within 8 hexes',  cooldown: 3, effect: 'reveal_hexes_radius', value: 8 },
     { id: 10, name: 'Danger Sense Amulet', role: 'scouting',  template: 'passive',   desc: 'Spawn hexes are highlighted',      effect: 'show_spawn_hexes' },
@@ -61,8 +61,29 @@ const ARTIFACTS = [
     { id: 16, name: 'Thornbark Seed',      role: 'terrain',   template: 'targeted',  desc: 'Grow forest on target area',       cooldown: 5, range: 4, effect: 'grow_forest' },
     { id: 17, name: 'Lodestone',           role: 'terrain',   template: 'activated', desc: 'Pull nearby enemies to Evascor',   cooldown: 3, effect: 'pull_enemies_toward', value: 3 },
     { id: 18, name: 'Dusk Lantern',        role: 'terrain',   template: 'activated', desc: 'Monsters skip movement next turn', cooldown: 5, effect: 'enemies_skip_movement' },
-    { id: 19, name: 'Mirror of Echoes',    role: 'wildcard',  template: 'one_use',   desc: 'Place decoy that lures monsters',  effect: 'place_decoy', duration: 3 },
-    { id: 20, name: 'Quicksilver Flask',   role: 'wildcard',  template: 'one_use',   desc: 'Gain 5 bonus MP this turn',        effect: 'gain_bonus_mp', value: 5 },
+    { id: 19, name: 'Mirror of Echoes',    role: 'wildcard',  template: 'activated', desc: 'Place decoy that lures monsters',  cooldown: 4, effect: 'place_decoy', duration: 3 },
+    { id: 20, name: 'Quicksilver Flask',   role: 'wildcard',  template: 'activated', desc: 'Gain 5 bonus MP this turn',        cooldown: 4, effect: 'gain_bonus_mp', value: 5 },
+    // --- New artifacts ---
+    { id: 21, name: 'Whirlwind Cape',      role: 'mobility',  template: 'activated', desc: 'Swap Hecto and Evascor positions',          cooldown: 0, effect: 'swap_positions' },
+    { id: 22, name: "Pathfinder's Compass", role: 'mobility',  template: 'passive',   desc: 'Forest and hills cost 1 for Hecto',        effect: 'hecto_terrain_discount' },
+    { id: 23, name: 'Gravity Anchor',      role: 'mobility',  template: 'passive',   desc: 'Tether range extends to 5',                effect: 'extend_tether' },
+    { id: 24, name: 'Stone Stride Boots',  role: 'mobility',  template: 'passive',   desc: 'Hecto can cross mountains at cost 3',      effect: 'hecto_cross_mountains' },
+    { id: 25, name: 'Serpent Fang',        role: 'combat',    template: 'targeted',  desc: 'Immobilize target monster 2 turns',         cooldown: 4, range: 3, effect: 'immobilize_monster', duration: 2 },
+    { id: 26, name: 'Spider Silk Snare',   role: 'combat',    template: 'targeted',  desc: 'Web: freeze monsters near target hex',      cooldown: 3, range: 4, effect: 'web_area', duration: 2 },
+    { id: 27, name: 'Scorpion Tail',       role: 'combat',    template: 'passive',   desc: 'On stun, kill ALL adjacent enemies',        effect: 'stun_massacre' },
+    { id: 28, name: 'Wolf Howl',           role: 'combat',    template: 'activated', desc: 'Scatter all monsters within 4 of Evascor',  cooldown: 4, effect: 'scatter_enemies', value: 4 },
+    { id: 29, name: 'Crystal Eye',         role: 'scouting',  template: 'activated', desc: "Reveal what Jhirle knows",                  cooldown: 5, effect: 'reveal_jhirle_knowledge' },
+    { id: 30, name: 'Dream Catcher',       role: 'scouting',  template: 'activated', desc: 'No monsters spawn next turn',               cooldown: 3, effect: 'suppress_spawns' },
+    { id: 31, name: 'Soul Lantern',        role: 'scouting',  template: 'passive',   desc: 'Monster spawn count reduced by 1',          effect: 'reduce_spawns' },
+    { id: 32, name: 'Shadow Cloak',        role: 'survival',  template: 'passive',   desc: 'Hecto hidden from monsters on all terrain', effect: 'hecto_always_hidden' },
+    { id: 33, name: 'Phoenix Feather',     role: 'survival',  template: 'activated', desc: 'If Hecto would die, teleport to Evascor',   cooldown: 4, effect: 'phoenix_feather', duration: 2 },
+    { id: 34, name: 'Healing Spring',      role: 'survival',  template: 'passive',   desc: 'Evascor also heals stun on forest',         effect: 'forest_heals' },
+    { id: 35, name: 'Shield of Mirrors',   role: 'survival',  template: 'passive',   desc: 'On stun, reflect: kill 3 adjacent (one-time)', effect: 'reflect_stun' },
+    { id: 36, name: 'Flame Tongue',        role: 'terrain',   template: 'activated', desc: 'Burn all forest within 2 to plains',        cooldown: 4, effect: 'burn_forest', value: 2 },
+    { id: 37, name: 'Toad Idol',           role: 'terrain',   template: 'targeted',  desc: 'Convert target plains to water',            cooldown: 5, range: 3, effect: 'create_water' },
+    { id: 38, name: 'Earthquake Drum',     role: 'terrain',   template: 'activated', desc: 'Collapse mountains within 3 to hills',      cooldown: 5, effect: 'collapse_mountains', value: 3 },
+    { id: 39, name: 'Mimic Mask',          role: 'wildcard',  template: 'activated', desc: 'Force Jhirle to drop target and retarget',  cooldown: 6, effect: 'force_jhirle_retarget' },
+    { id: 40, name: 'Time Sand Vial',      role: 'wildcard',  template: 'activated', desc: 'Take an extra turn (5 MP, no enemy phase)', cooldown: 4, effect: 'extra_turn' },
 ];
 
 const ARTIFACT_BY_ID = new Map(ARTIFACTS.map(a => [a.id, a]));
@@ -328,6 +349,160 @@ const EFFECT_FUNCTIONS = {
             gs.mp += def.value || 5;
             notify(`Quicksilver Flask grants ${def.value || 5} bonus MP!`);
             if (gs.selectedUnit) computeReachable();
+        }
+    },
+
+    // --- New effects ---
+    swap_positions: {
+        activate(gs) {
+            const hq = gs.hecto.q, hr = gs.hecto.r;
+            gs.hecto.q = gs.evascor.q; gs.hecto.r = gs.evascor.r;
+            gs.evascor.q = hq; gs.evascor.r = hr;
+            notify('Hecto and Evascor swap!');
+            checkScrollPickup(gs.hecto.q, gs.hecto.r);
+            checkArtifactClaim(gs.hecto.q, gs.hecto.r);
+        }
+    },
+    hecto_terrain_discount: { /* passive — checked in computeReachable */ },
+    extend_tether: { /* passive — checked in hectoDeathCheck */ },
+    hecto_cross_mountains: { /* passive — checked in computeReachable */ },
+    immobilize_monster: {
+        validate(gs, q, r, def) {
+            if (!gs.enemies.some(e => e.q === q && e.r === r)) return false;
+            return hexDistance(gs.hecto.q, gs.hecto.r, q, r) <= def.range;
+        },
+        apply(gs, q, r, def) {
+            const target = gs.enemies.find(e => e.q === q && e.r === r);
+            if (target) target.frozen = def.duration || 2;
+            notify('Monster immobilized!');
+        }
+    },
+    web_area: {
+        validate(gs, q, r, def) {
+            const hex = gs.hexes.get(hexKey(q, r));
+            if (!hex) return false;
+            const hasMonster = gs.enemies.some(e => hexDistance(e.q, e.r, q, r) <= 1);
+            if (!hasMonster) return false;
+            return hexDistance(gs.hecto.q, gs.hecto.r, q, r) <= def.range;
+        },
+        apply(gs, q, r, def) {
+            let count = 0;
+            for (const e of gs.enemies) {
+                if (hexDistance(e.q, e.r, q, r) <= 1) {
+                    e.frozen = def.duration || 2;
+                    count++;
+                }
+            }
+            notify(`Web traps ${count} monsters!`);
+        }
+    },
+    stun_massacre: { /* passive — checked in evascorCombat */ },
+    scatter_enemies: {
+        activate(gs, def) {
+            const range = def.value || 4;
+            const toScatter = gs.enemies.filter(e =>
+                hexDistance(gs.evascor.q, gs.evascor.r, e.q, e.r) <= range
+            );
+            for (const e of toScatter) {
+                for (let step = 0; step < 2; step++) {
+                    const neighbors = hexNeighbors(e.q, e.r);
+                    let best = null;
+                    let bestDist = hexDistance(e.q, e.r, gs.evascor.q, gs.evascor.r);
+                    for (const n of neighbors) {
+                        const hex = gs.hexes.get(hexKey(n.q, n.r));
+                        if (!hex || !isAccessible(hex.terrain) || hex.terrain === TERRAIN.MOUNTAIN) continue;
+                        const d = hexDistance(n.q, n.r, gs.evascor.q, gs.evascor.r);
+                        if (d > bestDist) { bestDist = d; best = n; }
+                    }
+                    if (best) { e.q = best.q; e.r = best.r; }
+                }
+            }
+            notify(`Wolf Howl scatters ${toScatter.length} monsters!`);
+        }
+    },
+    reveal_jhirle_knowledge: {
+        activate(gs) {
+            if (!gs.jhirle.active) { notify('Jhirle is not yet in the Wilds.'); return false; }
+            let count = 0;
+            for (const id of gs.jhirle.knownArtifacts) {
+                const art = gs.artifacts.find(a => a.id === id && !a.claimed && !a.revealed);
+                if (art) { art.revealed = true; count++; }
+            }
+            notify(count > 0 ? `Crystal Eye reveals ${count} artifacts Jhirle knows!` : "Jhirle knows nothing you don't.");
+        }
+    },
+    suppress_spawns: {
+        activate(gs) {
+            gs.flags.suppressSpawns = true;
+            notify('Dream Catcher: no monsters spawn next turn.');
+        }
+    },
+    reduce_spawns: { /* passive — checked in spawnMonsters */ },
+    hecto_always_hidden: { /* passive — checked in moveMonsters */ },
+    phoenix_feather: {
+        activate(gs, def) {
+            gs.flags.phoenixFeather = def.duration || 2;
+            notify('Phoenix Feather: Hecto is protected from death!');
+        }
+    },
+    forest_heals: { /* passive — checked in checkQuarryHealing */ },
+    reflect_stun: { /* passive — checked in evascorCombat */ },
+    burn_forest: {
+        activate(gs, def) {
+            const range = def.value || 2;
+            let count = 0;
+            for (const [, hex] of gs.hexes) {
+                if (hex.terrain !== TERRAIN.FOREST) continue;
+                if (hexDistance(hex.q, hex.r, gs.hecto.q, gs.hecto.r) > range) continue;
+                hex.terrain = TERRAIN.PLAINS;
+                count++;
+            }
+            notify(`Flame Tongue burns ${count} forest hexes!`);
+        }
+    },
+    create_water: {
+        validate(gs, q, r, def) {
+            const hex = gs.hexes.get(hexKey(q, r));
+            if (!hex || hex.terrain !== TERRAIN.PLAINS) return false;
+            const occ = buildOccupiedSet(gs);
+            if (occ.has(hexKey(q, r))) return false;
+            return hexDistance(gs.hecto.q, gs.hecto.r, q, r) <= def.range;
+        },
+        apply(gs, q, r) {
+            const hex = gs.hexes.get(hexKey(q, r));
+            hex.terrain = TERRAIN.WATER;
+            notify('Plains flood into water!');
+        }
+    },
+    collapse_mountains: {
+        activate(gs, def) {
+            const range = def.value || 3;
+            let count = 0;
+            for (const [, hex] of gs.hexes) {
+                if (hex.terrain !== TERRAIN.MOUNTAIN) continue;
+                if (hexDistance(hex.q, hex.r, gs.hecto.q, gs.hecto.r) > range) continue;
+                hex.terrain = TERRAIN.HILLS;
+                count++;
+            }
+            notify(`Earthquake collapses ${count} mountains!`);
+        }
+    },
+    force_jhirle_retarget: {
+        activate(gs) {
+            if (!gs.jhirle.active) { notify('Jhirle is not yet in the Wilds.'); return false; }
+            const oldTarget = gs.jhirle.targetId;
+            const pick = jhirlePickTarget(oldTarget);
+            gs.jhirle.targetId = pick.id || null;
+            gs.jhirle.noProgressTurns = 0;
+            gs.jhirle.lastDist = pick.dist;
+            gs.flags.showJhirleTarget = false;
+            notify('Mimic Mask confuses Jhirle!');
+        }
+    },
+    extra_turn: {
+        activate(gs) {
+            gs.flags.extraTurn = true;
+            notify('Time Sand Vial: take an extra turn!');
         }
     },
 };
@@ -786,6 +961,9 @@ function newGameState() {
             routineBoost: 0,
             enemiesSkipMovement: false,
             showJhirleTarget: false,
+            suppressSpawns: false,
+            phoenixFeather: 0,
+            extraTurn: false,
         },
     };
 }
@@ -860,6 +1038,8 @@ function computeReachable() {
     const pos = gs[unit];
     const costTable = unit === 'hecto' ? HECTO_COST : EVASCOR_COST;
     const flatCost = unit === 'hecto' && gs.flags.hectoTerrainCostOne > 0;
+    const hasCompass = unit === 'hecto' && hasPassiveArtifact(gs, 'hecto_terrain_discount');
+    const hasMountainBoots = unit === 'hecto' && hasPassiveArtifact(gs, 'hecto_cross_mountains');
 
     const blocked = buildOccupiedSet(gs);
     blocked.delete(hexKey(pos.q, pos.r)); // don't block self
@@ -875,7 +1055,18 @@ function computeReachable() {
     gs.reachable = bfsHexes(pos, gs.hexes, hex => {
         const key = hexKey(hex.q, hex.r);
         if (blocked.has(key)) return Infinity;
-        const base = flatCost ? (costTable[hex.terrain] !== undefined ? 1 : Infinity) : costTable[hex.terrain];
+        let base;
+        if (unit === 'hecto') {
+            base = costTable[hex.terrain];
+            // Stone Stride Boots: mountains passable at cost 3
+            if (base === undefined && hasMountainBoots && hex.terrain === TERRAIN.MOUNTAIN) base = 3;
+            // Pathfinder's Compass: forest/hills cost 1
+            if (hasCompass && (hex.terrain === TERRAIN.FOREST || hex.terrain === TERRAIN.HILLS)) base = 1;
+            // Wind Striders: everything costs 1
+            if (flatCost && base !== undefined) base = 1;
+        } else {
+            base = costTable[hex.terrain];
+        }
         if (base === undefined) return Infinity;
         if (artifactKeys.has(key)) return base + 2;
         return base;
@@ -1001,7 +1192,9 @@ function showDropPrompt(newArt) {
 
 function spawnMonsters() {
     const gs = gameState;
-    const spawnCount = gs.inventory.length + 1;
+    if (gs.flags.suppressSpawns) { gs.flags.suppressSpawns = false; return; }
+    let spawnCount = gs.inventory.length + 1;
+    if (hasPassiveArtifact(gs, 'reduce_spawns')) spawnCount = Math.max(0, spawnCount - 1);
     const occupied = buildOccupiedSet(gs);
 
     const candidates = [];
@@ -1049,12 +1242,16 @@ function moveMonsters() {
         targets.push(gs.decoy);
     } else {
         targets.push(gs.evascor);
-        const hectoHidden = isHiddenInForest(gs.hecto, gs.hexes) || gs.flags.hectoInvisible > 0;
+        const hectoHidden = isHiddenInForest(gs.hecto, gs.hexes) || gs.flags.hectoInvisible > 0 ||
+            hasPassiveArtifact(gs, 'hecto_always_hidden');
         if (!hectoHidden) targets.push(gs.hecto);
         if (gs.jhirle.active && !isHiddenInForest(gs.jhirle, gs.hexes)) targets.push(gs.jhirle);
     }
 
     for (const enemy of gs.enemies) {
+        // Frozen monsters can't move
+        if (enemy.frozen && enemy.frozen > 0) continue;
+
         const target = nearestOf(enemy.q, enemy.r, targets);
 
         // Hesitate near Evascor
@@ -1125,6 +1322,34 @@ function evascorCombat() {
         return;
     }
 
+    // Scorpion Tail — on stun, kill ALL adjacent enemies (one-time)
+    const scorpionIdx = gs.inventory.findIndex(inv => {
+        const def = ARTIFACT_BY_ID.get(inv.id);
+        return def.effect === 'stun_massacre' && !inv.spent;
+    });
+    if (scorpionIdx !== -1) {
+        gs.enemies = gs.enemies.filter(e =>
+            hexDistance(gs.evascor.q, gs.evascor.r, e.q, e.r) > 1
+        );
+        gs.inventory.splice(scorpionIdx, 1);
+        notify('Scorpion Tail: all adjacent enemies destroyed!');
+    }
+
+    // Shield of Mirrors — on stun, kill 3 adjacent (one-time)
+    const mirrorIdx = gs.inventory.findIndex(inv => {
+        const def = ARTIFACT_BY_ID.get(inv.id);
+        return def.effect === 'reflect_stun' && !inv.spent;
+    });
+    if (mirrorIdx !== -1) {
+        const adj = gs.enemies.filter(e =>
+            hexDistance(gs.evascor.q, gs.evascor.r, e.q, e.r) === 1
+        );
+        const reflected = adj.slice(0, 3);
+        gs.enemies = gs.enemies.filter(e => !reflected.includes(e));
+        gs.inventory.splice(mirrorIdx, 1);
+        notify(`Shield of Mirrors reflects: ${reflected.length} enemies killed!`);
+    }
+
     gs.evascor.stunCount++;
     gs.evascor.stunned = true;
     if (gs.evascor.stunCount >= 3) {
@@ -1140,13 +1365,33 @@ function hectoDeathCheck() {
     if (gs.gameOver) return;
     if (gs.flags.hectoInvulnerable > 0 || hasPassiveArtifact(gs, 'hecto_invulnerable')) return;
 
+    const tetherRange = hasPassiveArtifact(gs, 'extend_tether') ? 5 : 3;
     const dist = hexDistance(gs.hecto.q, gs.hecto.r, gs.evascor.q, gs.evascor.r);
-    if (dist <= 3) return;
+    if (dist <= tetherRange) return;
 
     const adjacentMonster = gs.enemies.some(e =>
         hexDistance(gs.hecto.q, gs.hecto.r, e.q, e.r) === 1
     );
     if (!adjacentMonster) return;
+
+    // Phoenix Feather — teleport to safety
+    if (gs.flags.phoenixFeather > 0) {
+        gs.flags.phoenixFeather = 0;
+        gs.hecto.q = gs.evascor.q;
+        gs.hecto.r = gs.evascor.r;
+        // Nudge to adjacent hex if overlapping
+        const neighbors = hexNeighbors(gs.evascor.q, gs.evascor.r);
+        for (const n of neighbors) {
+            const hex = gs.hexes.get(hexKey(n.q, n.r));
+            if (hex && HECTO_COST[hex.terrain] !== undefined) {
+                gs.hecto.q = n.q;
+                gs.hecto.r = n.r;
+                break;
+            }
+        }
+        notify('Phoenix Feather saves Hecto! Teleported to Evascor.');
+        return;
+    }
 
     gs.gameOver = 'hecto_died';
     notify('A monster caught Hecto too far from Evascor! Game over.');
@@ -1156,11 +1401,13 @@ function checkQuarryHealing() {
     const gs = gameState;
     const eHex = gs.hexes.get(hexKey(gs.evascor.q, gs.evascor.r));
     if (!eHex) return;
-    if (eHex.terrain !== TERRAIN.QUARRY) return;
+    const healsOnForest = hasPassiveArtifact(gs, 'forest_heals');
+    if (eHex.terrain !== TERRAIN.QUARRY && !(healsOnForest && eHex.terrain === TERRAIN.FOREST)) return;
     if (!gs.evascor.stunned) return;
 
     gs.evascor.stunned = false;
-    notify('Evascor rests at the quarry. Stun cleared.');
+    const source = eHex.terrain === TERRAIN.FOREST ? 'forest' : 'quarry';
+    notify(`Evascor rests at the ${source}. Stun cleared.`);
 }
 
 // ============================================================
@@ -1424,6 +1671,19 @@ function endTurn() {
     if (gs.gameOver) return;
     deselectUnit();
 
+    // Extra turn — skip enemy/Jhirle phases, just reset MP
+    if (gs.flags.extraTurn) {
+        gs.flags.extraTurn = false;
+        for (const inv of gs.inventory) {
+            if (inv.cooldownRemaining > 0) inv.cooldownRemaining--;
+        }
+        gs.turn++;
+        gs.mp = PLAYER_MP;
+        updateHUD();
+        render();
+        return;
+    }
+
     checkWinCondition();
     if (gs.gameOver) { updateHUD(); render(); return; }
 
@@ -1451,8 +1711,14 @@ function endTurn() {
     if (gs.flags.hectoInvisible > 0) gs.flags.hectoInvisible--;
     if (gs.flags.hectoInvulnerable > 0) gs.flags.hectoInvulnerable--;
     if (gs.flags.hectoTerrainCostOne > 0) gs.flags.hectoTerrainCostOne--;
+    if (gs.flags.phoenixFeather > 0) gs.flags.phoenixFeather--;
     gs.flags.routineBoost = 0;
     gs.flags.enemiesSkipMovement = false;
+
+    // Decrement frozen on monsters
+    for (const e of gs.enemies) {
+        if (e.frozen && e.frozen > 0) e.frozen--;
+    }
 
     // Decrement decoy
     if (gs.decoy) {
@@ -1536,12 +1802,13 @@ function drawTether(gs) {
     const hScreen = hexToScreen(gs.hecto.q, gs.hecto.r);
     const eScreen = hexToScreen(gs.evascor.q, gs.evascor.r);
     const dist = hexDistance(gs.hecto.q, gs.hecto.r, gs.evascor.q, gs.evascor.r);
+    const tetherRange = hasPassiveArtifact(gs, 'extend_tether') ? 5 : 3;
 
     ctx.beginPath();
     ctx.moveTo(hScreen.x, hScreen.y);
     ctx.lineTo(eScreen.x, eScreen.y);
-    ctx.strokeStyle = dist > 3 ? 'rgba(255, 80, 80, 0.5)' : 'rgba(255, 255, 255, 0.2)';
-    ctx.lineWidth = dist > 3 ? 2 : 1;
+    ctx.strokeStyle = dist > tetherRange ? 'rgba(255, 80, 80, 0.5)' : 'rgba(255, 255, 255, 0.2)';
+    ctx.lineWidth = dist > tetherRange ? 2 : 1;
     ctx.setLineDash([4, 4]);
     ctx.stroke();
     ctx.setLineDash([]);
@@ -1808,6 +2075,12 @@ function updateArtifactInfo() {
         lines.push(`Dusk Lantern: monsters frozen`);
     if (gs.flags.showJhirleTarget)
         lines.push(`Whispering Veil: tracking Jhirle`);
+    if (gs.flags.suppressSpawns)
+        lines.push(`Dream Catcher: no spawns next turn`);
+    if (gs.flags.phoenixFeather > 0)
+        lines.push(`Phoenix Feather: death protection (${gs.flags.phoenixFeather} turns)`);
+    if (gs.flags.extraTurn)
+        lines.push(`Time Sand Vial: extra turn pending`);
     if (gs.decoy)
         lines.push(`Mirror of Echoes: decoy active (${gs.decoy.turnsLeft} turns)`);
 
