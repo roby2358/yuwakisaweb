@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>King of Mariguez</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <canvas id="game" tabindex="0"></canvas>
+    <div id="hud">
+        <div id="hud-top">
+            <span id="turn-info">Turn 1</span>
+            <span id="mp-info">MP: 5/5</span>
+        </div>
+        <div id="hud-units">
+            <span id="unit-hecto" class="unit-btn" data-unit="hecto">[H] Hecto</span>
+            <span id="unit-evascor" class="unit-btn" data-unit="evascor">[E] Evascor</span>
+        </div>
+        <div id="jhirle-info"></div>
+        <div id="inventory"></div>
+        <div id="visions"></div>
+        <div id="hud-actions">
+            <button id="end-turn">End Turn</button>
+            <button id="new-game">New Game</button>
+        </div>
+    </div>
+    <div id="drop-prompt" class="prompt hidden">
+        <div>Inventory full! Drop one:</div>
+        <div class="drop-list"></div>
+        <button class="drop-cancel">Cancel</button>
+    </div>
+    <div id="notification" class="hidden"></div>
+    <script type="module" src="index.js"></script>
+</body>
+</html>

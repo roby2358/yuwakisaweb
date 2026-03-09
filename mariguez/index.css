@@ -1,0 +1,143 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
+#game { display: block; cursor: default; }
+#hud {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: rgba(0, 0, 0, 0.8);
+    color: #eee;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 14px;
+    z-index: 10;
+    user-select: none;
+    min-width: 200px;
+}
+#hud-top {
+    display: flex;
+    gap: 16px;
+}
+#hud-units {
+    display: flex;
+    gap: 10px;
+}
+.unit-btn {
+    padding: 2px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+.unit-btn:hover {
+    outline: 1px solid #888;
+}
+.unit-btn.selected {
+    outline: 2px solid #fff;
+}
+.unit-btn[data-unit="hecto"] {
+    color: #fff;
+    background: #cc3333;
+}
+.unit-btn[data-unit="evascor"] {
+    color: #fff;
+    background: #666;
+}
+.unit-btn.stunned {
+    opacity: 0.5;
+}
+#inventory {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.inv-item {
+    color: #8cf;
+    font-size: 12px;
+}
+.inv-empty {
+    color: #666;
+    font-size: 12px;
+}
+#visions {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.vision {
+    color: #aac;
+    font-style: italic;
+    font-size: 12px;
+}
+#hud-actions {
+    display: flex;
+    gap: 8px;
+}
+#hud button {
+    background: #444;
+    color: #eee;
+    border: 1px solid #666;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 13px;
+}
+#hud button:hover { background: #555; }
+#hud button:focus, .unit-btn:focus { outline: none; }
+.prompt {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.9);
+    color: #eee;
+    padding: 16px 24px;
+    border-radius: 8px;
+    border: 1px solid #666;
+    font-family: monospace;
+    font-size: 14px;
+    z-index: 30;
+    text-align: center;
+    min-width: 240px;
+}
+.prompt.hidden {
+    display: none;
+}
+.prompt button, .drop-btn {
+    background: #444;
+    color: #eee;
+    border: 1px solid #666;
+    padding: 4px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 13px;
+}
+.prompt button:hover, .drop-btn:hover { background: #555; }
+.drop-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 10px 0;
+}
+#notification {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.85);
+    color: #eee;
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 14px;
+    z-index: 20;
+    transition: opacity 0.3s;
+}
+#notification.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
