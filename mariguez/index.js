@@ -1,9 +1,9 @@
-// index.js — King of Mariguez
+// index.js — Wilds of Mariguez
 
 import { HEX_SIZE, TERRAIN, HECTO_COST, EVASCOR_COST, ACCESSIBLE, LIGHT_VARIANT, PLAYER_MP, MAP_COLS, MAP_ROWS } from './config.js';
 
 const CITY_COUNT = 3;
-import { hexToPixel, pixelToHex, hexKey, hexNeighbors, hexDistance, bfsHexes, drawHexPath } from './hex.js';
+import { hexToPixel, pixelToHex, hexKey, hexNeighbors, hexDistance, bfsHexes, findPath, drawHexPath } from './hex.js';
 import { Rando } from './rando.js';
 import { ColorTheory } from './colortheory.js';
 
@@ -829,35 +829,43 @@ function jhirleMoveToward(target) {
     const j = gs.jhirle;
     const evascorKey = hexKey(gs.evascor.q, gs.evascor.r);
     const danger = buildMonsterDangerSet(gs.enemies);
+    const jhirleKey = hexKey(j.q, j.r);
 
-    // BFS from Jhirle's position with her movement costs
-    const costs = bfsHexes(j, gs.hexes, hex => {
-        const key = hexKey(hex.q, hex.r);
-        if (key === evascorKey) return Infinity;
-        if (danger.has(key)) return Infinity;
-        if (!isAccessible(hex.terrain)) return Infinity;
+    // Full A* path to target, then walk along it spending MP
+    const path = findPath(
+        j, target,
+        (q, r) => {
+            const key = hexKey(q, r);
+            if (key === jhirleKey) return true;
+            if (key === evascorKey) return false;
+            if (danger.has(key)) return false;
+            const hex = gs.hexes.get(key);
+            if (!hex) return false;
+            return isAccessible(hex.terrain);
+        },
+        (q, r) => {
+            const hex = gs.hexes.get(hexKey(q, r));
+            if (!hex) return Infinity;
+            const cost = HECTO_COST[hex.terrain];
+            if (cost === undefined) return Infinity;
+            return cost;
+        },
+        Infinity
+    );
+
+    if (!path || path.length < 2) return;
+
+    // Walk along path spending up to JHIRLE_MP
+    let remaining = JHIRLE_MP;
+    for (let i = 1; i < path.length; i++) {
+        const hex = gs.hexes.get(hexKey(path[i].q, path[i].r));
+        if (!hex) break;
         const cost = HECTO_COST[hex.terrain];
-        if (cost === undefined) return Infinity;
-        return cost;
-    }, JHIRLE_MP);
-
-    // Find the reachable hex closest to target
-    let bestKey = null;
-    let bestDist = hexDistance(j.q, j.r, target.q, target.r);
-
-    for (const [key] of costs) {
-        const [q, r] = key.split(',').map(Number);
-        const d = hexDistance(q, r, target.q, target.r);
-        if (d < bestDist) {
-            bestDist = d;
-            bestKey = key;
-        }
+        if (cost === undefined || cost > remaining) break;
+        remaining -= cost;
+        j.q = path[i].q;
+        j.r = path[i].r;
     }
-
-    if (!bestKey) return;
-    const [q, r] = bestKey.split(',').map(Number);
-    j.q = q;
-    j.r = r;
 }
 
 function jhirleTarget(gs) {
@@ -874,10 +882,21 @@ function jhirleTarget(gs) {
         return bestCity;
     }
 
-    // Otherwise, head for nearest known unclaimed artifact
-    if (!j.targetId) return null;
-    const art = gs.artifacts.find(a => a.id === j.targetId && !a.claimed);
-    return art || null;
+    // Head for nearest known unclaimed artifact
+    if (j.targetId) {
+        const art = gs.artifacts.find(a => a.id === j.targetId && !a.claimed);
+        if (art) return art;
+    }
+
+    // No target — hide in nearest forest
+    let bestForest = null;
+    let bestDist = Infinity;
+    for (const [, hex] of gs.hexes) {
+        if (hex.terrain !== TERRAIN.FOREST) continue;
+        const d = hexDistance(j.q, j.r, hex.q, hex.r);
+        if (d < bestDist) { bestDist = d; bestForest = hex; }
+    }
+    return bestForest;
 }
 
 function moveJhirle() {
@@ -1381,9 +1400,16 @@ function initGame() {
     gameState.scrolls = scrollPositions.map(pos => ({ q: pos.q, r: pos.r }));
     gameState.visions = generateVisions(hexes, gameState.artifacts);
 
-    centerOn(gameState.hecto.q, gameState.hecto.r);
+    // Set canvas size first so pan calculation has correct dimensions
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // Align map so units (on the eastern edge) appear on the right, Wilds fill leftward
+    const p = hexToPixel(gameState.hecto.q, gameState.hecto.r);
+    panX = canvas.width - p.x - HEX_SIZE * 4;
+    panY = canvas.height / 2 - p.y;
     updateHUD();
-    resize();
+    render();
 }
 
 function resize() {

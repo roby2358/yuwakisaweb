@@ -1,8 +1,8 @@
-# SPEC.md — King of Mariguez
+# SPEC.md — Wilds of Mariguez
 
 ## Purpose
 
-King of Mariguez is a single-player turn-based tactical game played on a procedurally generated hex grid. The player controls two units — Hecto (a fragile scholar) and Evascor (an indestructible stone giant) — who share a single pool of movement points. The goal is to collect 3 of 7 hidden artifacts scattered across a hostile wilderness, then escape to the map edge with both units alive.
+Wilds of Mariguez is a single-player turn-based tactical game played on a procedurally generated hex grid. The player controls two units — Hecto (a fragile scholar) and Evascor (an indestructible stone giant) — who share a single pool of movement points. The goal is to collect 3 of 7 hidden artifacts scattered across a hostile wilderness, then escape to the map edge with both units alive.
 
 Artifacts are discovered through two mechanisms: scrolls (which reveal exact locations but alert a rival NPC) and the Seer's visions (cryptic terrain clues that allow secret discovery). A rival NPC, Jhirle, competes for the same artifacts using information the player reveals. Monsters spawn with increasing frequency as the player claims artifacts.
 

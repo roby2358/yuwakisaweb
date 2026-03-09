@@ -1,4 +1,4 @@
-# DYNAMICS.md — King of Mariguez
+# DYNAMICS.md — Wilds of Mariguez
 
 ## Theme
 
@@ -10,16 +10,15 @@
 
 ```
 1. Player spends MP moving Hecto and/or Evascor (shared pool of 5)
-   - When Hecto enters a scroll hex, auto-pickup: reveal one hidden artifact location
-2. Player activates artifact abilities (costs MP or free)
-3. Player clicks End Turn (or runs out of MP)
-4. Claim check: if Hecto is on an artifact hex (revealed OR hidden) and conditions met, claim it. Hidden claims don't alert Jhirle.
-5. Combat: Evascor auto-kills up to [routine] adjacent enemies. Overflow stuns him.
-6. Death check: if monster adjacent to Hecto and Hecto > 3 hexes from Evascor, Hecto dies → game over
-7. Enemy phase: spawn new monsters, move existing monsters 1 hex toward nearest player unit
-8. Jhirle phase: move Jhirle toward nearest *revealed* unclaimed artifact (she only knows what Hecto has revealed, with 1-turn delay). She won't enter Evascor's hex.
-9. Jhirle claim: if Jhirle is on an artifact hex, she takes it (removed from map)
-10. Decrement cooldowns. Increment turn counter. Reset MP to 5.
+   - Scroll pickup and artifact claiming happen during movement (baked into costs)
+2. Player clicks End Turn (or runs out of MP)
+3. Win check: Hecto on city + Evascor within 3 + 3 artifacts → victory
+4. Combat: Evascor auto-kills up to [routine] adjacent enemies. Overflow stuns him.
+5. Death check: if monster adjacent to Hecto and Hecto > 3 hexes from Evascor → game over
+6. Enemy phase: spawn monsters (3-12 hex ring around Hecto, 20% each), decay distant monsters, move monsters toward nearest visible target (Hecto, Evascor, Jhirle)
+7. Jhirle phase: learn pending reveals, retarget, A* pathfind + move up to 4 MP, claim check
+8. Quarry healing: if Evascor on quarry, clear stun
+9. Increment turn counter. Reset MP to 5.
 ```
 
 Everything below must fit inside this loop.
@@ -28,12 +27,12 @@ Everything below must fit inside this loop.
 
 ## Units
 
-**Hecto** (yellow counter, "H")
-- Movement cost = terrain cost (plains 1, forest 2, hills 2, quarry 2)
+**Hecto** (red counter, "H")
+- Movement cost = terrain cost (plains 1, forest 2, hills 2, quarry 2, city 1, gold 1)
 - Cannot enter water or mountain
 - Dies if adjacent to a monster and more than 3 hexes from Evascor at step 6
 - Only unit that can **read scrolls** (auto-pickup on entering a scroll hex, no MP cost)
-- Only unit that can claim artifacts (must be on a *revealed* artifact hex)
+- Only unit that can claim artifacts (must be on artifact hex, Evascor within 3, costs +2 MP baked into movement)
 
 **Evascor** (gray counter, "E")
 - Movement cost = 1 per hex regardless of terrain
@@ -46,9 +45,11 @@ Everything below must fit inside this loop.
 **Jhirle** (purple counter, "J")
 - Appears on a random map edge the turn after the player claims artifact #1
 - **She can't read scrolls** — just like the story, she needs Hecto. She only learns about artifact locations that Hecto has revealed via scrolls. Every scroll Hecto reads is information she gains too (she's watching). She learns the location **1 turn after** Hecto reveals it (the delay represents her spying and catching up to the information). When she first spawns, she immediately inherits ALL currently revealed artifact locations (she's been watching since before she appeared).
-- Has **4 movement points** per turn. Uses BFS pathfinding through terrain — water and mountains block her, forests cost her extra.
+- Has **4 movement points** per turn. Uses A* pathfinding to target (full map range), then walks along the path spending MP with Hecto's terrain costs. Water and mountains block her, forests cost her extra.
 - **Cannot move within 2 hexes of any monster.** She fears the Wilds. This means the player's monster cloud acts as a natural barrier — if monsters sit between Jhirle and an artifact, she has to detour. Players can use Evascor to herd monsters into blocking positions, or simply let the natural spawn pattern slow her down.
 - She commits to one target at a time. She switches targets when: (a) her current one is claimed by player or by her, (b) a closer revealed artifact appears, or (c) she's made no progress toward her target for 3 consecutive turns (blocked by Evascor or terrain). On retarget from blocking, she picks the next nearest revealed unclaimed artifact.
+- **Forest hides Jhirle from monsters** the same way it hides Hecto. Monsters skip Jhirle as a target when she's on forest.
+- When she has no known target, she retreats to the nearest forest hex and hides.
 - Cannot be attacked or killed. But she CAN be blocked — she won't enter a hex occupied by Evascor. (Hecto can't stop her, but Evascor's massive frame in a doorway is another matter.) This gives the player one piece of counterplay: park Evascor on a chokepoint to slow her down, at the cost of splitting the pair.
 - If she reaches an artifact hex, that artifact is removed from the game.
 - **After claiming 4 artifacts, she must return to a city** on the eastern border to win. If she reaches a city with 4 artifacts → game over.
@@ -164,13 +165,15 @@ Uses the existing terrain generation. Costs are for Hecto only (Evascor always p
 | Terrain | Hecto Cost | Evascor Cost | Special |
 |---|---|---|---|
 | Plains | 1 | 1 | None |
-| Forest | 2 | 1 | Monsters don't path toward Hecto here (they path toward Evascor instead) |
+| Forest | 2 | 1 | Hecto and Jhirle hidden from monsters (monsters skip them as targets) |
 | Hills | 2 | 1 | None |
 | Water | impassable | impassable | Barrier |
 | Mountain | impassable | 2 | Only Evascor can cross |
 | Quarry | 2 | 1 | Evascor heals (clear stun, reset routine) when ending turn here |
+| Gold | 1 | 1 | None |
+| City | 1 | 1 | Win/lose destination on eastern border |
 
-Forest hiding rule implementation: when computing monster pathfinding target, if Hecto is on forest, monsters use Evascor's position as target instead. Simple conditional in the pathfinding target selection.
+Forest hiding rule: when computing monster pathfinding targets, if a unit is on forest, monsters skip it. Monsters always path toward Evascor (he can't hide). Dark terrain variants exist for inaccessible hexes — BFS from start position illuminates reachable terrain at game init.
 
 ---
 
@@ -180,10 +183,10 @@ Forest hiding rule implementation: when computing monster pathfinding target, if
 Each game places 7 artifacts on passable, non-edge hexes spread across the map (minimum 8 hexes apart). Drawn randomly from the pool of 20. **Artifacts are hidden until revealed by scrolls** — they exist on the map but aren't shown to the player. Jhirle knows where they all are from the start.
 
 ### Claiming
-Artifact must be **revealed** (by scroll). Hecto must be on the artifact hex. Both Hecto and Evascor must be within 3 hexes of each other. Costs 2 MP. That's it — one claiming rule for all artifacts.
+Hecto must be on the artifact hex (revealed OR hidden). Evascor must be within 3 hexes. The +2 MP claim cost is baked into movement (BFS adds 2 to the entry cost of artifact hexes). One claiming rule for all artifacts.
 
 ### Carrying
-Max 3 artifacts. If claiming a 4th, player picks one to drop (it's gone).
+Max 5 artifacts. If claiming a 6th, player picks one to drop (it's gone).
 
 ### Artifact Effect Templates
 
