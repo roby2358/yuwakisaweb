@@ -30,6 +30,32 @@
         <div class="drop-list"></div>
         <button class="drop-cancel">Cancel</button>
     </div>
+    <div id="intro-panel">
+        <h1>Wilds of Mariguez</h1>
+        <p>Hecto, a scholar of ancient texts, and Evascor, his stone giant guardian, venture into the Wilds to recover lost artifacts before a rival, Jhirle, claims them first.</p>
+        <div class="intro-section">
+            <h2>Units</h2>
+            <p><span class="intro-h">Hecto</span> reads scrolls, solves visions, and claims artifacts. Terrain slows him &mdash; forests and hills cost 2 MP. He dies if a monster catches him too far from Evascor.</p>
+            <p><span class="intro-e">Evascor</span> moves 1 hex per step regardless of terrain and can cross mountains. He automatically fights adjacent monsters each turn, but too many at once will stun him. Three stuns and he falls.</p>
+            <p>Both share <strong>5 MP per turn</strong>. Click a unit to select, click a hex to move.</p>
+        </div>
+        <div class="intro-section">
+            <h2>Artifacts &amp; Scrolls</h2>
+            <p><strong>Scrolls</strong> are visible on the map. Walk Hecto over one to reveal a hidden artifact &mdash; but Jhirle learns its location one turn later.</p>
+            <p>The <strong>Seer's visions</strong> describe terrain near hidden artifacts. Find the matching spot and claim it secretly &mdash; Jhirle never learns.</p>
+            <p>To <strong>claim</strong>, move Hecto onto the artifact with Evascor within 3 hexes. Costs 2 extra MP. Max 5 in inventory.</p>
+        </div>
+        <div class="intro-section">
+            <h2>Threats</h2>
+            <p><strong>Monsters</strong> spawn near Hecto and swarm toward the nearest unit. Hecto hides from them in forest. Evascor fears nothing.</p>
+            <p><strong>Jhirle</strong> appears after your first claim. She races for artifacts you've revealed and must be outrun, blocked, or outsmarted.</p>
+        </div>
+        <div class="intro-section">
+            <h2>Victory</h2>
+            <p>Claim <strong>3 artifacts</strong>, then get Hecto to a city on the eastern border with Evascor within 3 hexes.</p>
+        </div>
+        <button id="begin-btn">Begin</button>
+    </div>
     <div id="artifact-info" class="hidden"></div>
     <div id="notification" class="hidden"></div>
     <script type="module" src="index.js"></script>

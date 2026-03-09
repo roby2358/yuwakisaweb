@@ -2211,6 +2211,10 @@ document.getElementById('inventory').addEventListener('click', e => {
 });
 
 document.getElementById('new-game').addEventListener('click', initGame);
+document.getElementById('begin-btn').addEventListener('click', () => {
+    document.getElementById('intro-panel').classList.add('hidden');
+    canvas.focus();
+});
 
 // ============================================================
 // Init

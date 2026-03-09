@@ -139,6 +139,72 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
     gap: 6px;
     margin: 10px 0;
 }
+#intro-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(5, 5, 15, 0.95);
+    color: #ddd;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: monospace;
+    padding: 20px;
+    overflow-y: auto;
+}
+#intro-panel.hidden { display: none; }
+#intro-panel h1 {
+    color: #c8a860;
+    font-size: 32px;
+    margin-bottom: 8px;
+    letter-spacing: 2px;
+}
+#intro-panel > p {
+    color: #aaa;
+    font-size: 14px;
+    max-width: 520px;
+    text-align: center;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+.intro-section {
+    max-width: 520px;
+    width: 100%;
+    margin-bottom: 14px;
+}
+.intro-section h2 {
+    color: #8cf;
+    font-size: 15px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid #334;
+    padding-bottom: 3px;
+}
+.intro-section p {
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 4px 0;
+    color: #bbb;
+}
+.intro-h { color: #cc3333; font-weight: bold; }
+.intro-e { color: #aaa; font-weight: bold; }
+#begin-btn {
+    margin-top: 20px;
+    background: #c8a860;
+    color: #111;
+    border: none;
+    padding: 10px 40px;
+    border-radius: 5px;
+    font-family: monospace;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    letter-spacing: 1px;
+}
+#begin-btn:hover { background: #dabb70; }
 #artifact-info {
     position: fixed;
     bottom: 50px;
