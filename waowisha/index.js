@@ -1,7 +1,7 @@
 // index.js — Waowisha rendering, input, and UI
 
 import { HEX_SIZE, TERRAIN_INFO, UNIT_TYPES, ENEMY_TYPES, STRUCTURE_TYPES,
-    PRODUCTION_RECIPES, RECIPES, ALL_R0, ALL_P1 } from './config.js';
+    PRODUCTION_RECIPES, RECIPES, ALL_R0, ALL_P1, SLOT_COLORS } from './config.js';
 import { hexToPixel, pixelToHex, hexKey, parseHexKey, hexDistance, drawHexPath } from './hex.js';
 import { createGame, selectUnit, deselectUnit, moveUnit, recruitUnit,
     startBuild, assignRecipe, endTurn, canAfford, computeReachable,
@@ -87,35 +87,33 @@ function drawCounter(cx, cy, color, label, isSelected) {
 }
 
 function drawStructure(cx, cy, sDef, buildProgress) {
-    const s = 16;
+    const s = HEX_SIZE * 1.4;
     if (sDef.category === 'defense') {
-        // Triangle for defense
+        // Circle for defense
         ctx.beginPath();
-        ctx.moveTo(cx, cy-s/2-2);
-        ctx.lineTo(cx-s/2, cy+s/2-2);
-        ctx.lineTo(cx+s/2, cy+s/2-2);
+        ctx.arc(cx, cy, s/2, 0, Math.PI * 2);
         ctx.closePath();
         ctx.fillStyle = buildProgress > 0 ? '#554' : '#aa8';
         ctx.fill();
-        ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5; ctx.stroke();
     } else {
         // Square for production
-        roundRect(ctx, cx-s/2, cy-s/2-2, s, s, 2);
+        roundRect(ctx, cx - s/2, cy - s/2, s, s, 3);
         ctx.fillStyle = buildProgress > 0 ? '#445' : '#88a';
         ctx.fill();
-        ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5; ctx.stroke();
     }
     // Label
     ctx.fillStyle = '#fff';
-    ctx.font = 'bold 9px monospace';
+    ctx.font = 'bold 12px monospace';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const label = sDef.name.charAt(0);
-    ctx.fillText(label, cx, cy-1);
+    ctx.fillText(label, cx, cy);
 
     if (buildProgress > 0) {
         ctx.fillStyle = '#ee8';
-        ctx.font = '8px monospace';
-        ctx.fillText(buildProgress + 't', cx, cy + 9);
+        ctx.font = '9px monospace';
+        ctx.fillText(buildProgress + 't', cx, cy + s/2 - 4);
     }
 }
 
@@ -144,7 +142,7 @@ function render() {
         }
 
         // Resource capacity indicator (small dot)
-        if (info && info.resource && hex.resourceCapacity > 0 && state.visible.has(hexKey(hex.q, hex.r))) {
+        if (info && info.resource && state.visible.has(hexKey(hex.q, hex.r))) {
             ctx.fillStyle = 'rgba(255,255,255,0.5)';
             ctx.beginPath();
             ctx.arc(x, y + HEX_SIZE * 0.55, 3, 0, Math.PI * 2);
@@ -238,9 +236,10 @@ function updateHUD() {
     const slots = [...ALL_R0, ...ALL_P1, 'P2a','P2b','P2c','P2d','P3a','P3b','P3c','P3d'];
     for (const slot of slots) {
         const amt = state.stockpile[slot] || 0;
-        if (amt > 0) {
+        if (slot in state.stockpile) {
             const name = state.names[slot] || slot;
-            stockHTML += `<span class="stock-item"><span class="stock-label">${name}:</span> <span class="stock-value">${amt}</span></span>`;
+            const color = SLOT_COLORS[slot] || '#888';
+            stockHTML += `<span class="stock-item"><span class="stock-dot" style="color:${color}">\u2B22</span><span class="stock-label">${name}:</span> <span class="stock-value">${amt}</span></span>`;
         }
     }
     stockEl.innerHTML = stockHTML || '<span class="stock-label">No resources</span>';
@@ -487,8 +486,19 @@ window.addEventListener('keydown', e => {
     }
 });
 
-// New Game
-document.getElementById('new-game').addEventListener('click', initGame);
+// ---- Intro ----
+function showIntro() {
+    document.getElementById('intro').classList.remove('hidden');
+}
+
+function hideIntro() {
+    document.getElementById('intro').classList.add('hidden');
+}
+
+document.getElementById('intro-begin').addEventListener('click', () => {
+    hideIntro();
+    initGame();
+});
 
 // ---- Init ----
 function initGame() {
@@ -496,9 +506,16 @@ function initGame() {
     state = createGame(seed);
     const { q, r } = parseHexKey(state.settlement);
     hidePanel();
-    resize(); // sets canvas size
+    resize();
     centerOn(q, r);
     render();
 }
 
-initGame();
+// New Game shows intro again
+document.getElementById('new-game').addEventListener('click', () => {
+    showIntro();
+});
+
+// Initial canvas sizing
+resize();
+showIntro();

@@ -3,7 +3,7 @@
 import { HEX_SIZE, TERRAIN, TERRAIN_INFO, UNIT_TYPES, ENEMY_TYPES, SPOILS,
     RECIPES, STRUCTURE_TYPES, PRODUCTION_RECIPES, CRT, CRT_COLUMNS,
     SUPPLY_CRATE, VISIBILITY_RANGE, SURGE_INTERVAL, WINDFALL_CHANCE,
-    BASE_SPAWN_CHANCE, RESOURCE_CAPACITY_MIN, RESOURCE_CAPACITY_MAX,
+    BASE_SPAWN_CHANCE,
     DRIFT_CHARGE_RANGE, DRIFT_CHARGE_RADIUS, ALL_R0, ALL_P1, MAP_SIZE
 } from './config.js';
 import { hexKey, parseHexKey, hexNeighbors, hexDistance, hexesInRange, bfsHexes, findPath } from './hex.js';
@@ -62,7 +62,7 @@ function generateMap(rng) {
 
             hexes.set(hexKey(q, r), {
                 q, r, col, row, elevation, isEdge,
-                terrain: null, resourceCapacity: 0
+                terrain: null
             });
         }
     }
@@ -87,14 +87,6 @@ function generateMap(rng) {
     placeResourceClusters(hexes, rng, TERRAIN.GROVE, 8, 5, 8);
     placeResourceClusters(hexes, rng, TERRAIN.MIRE, 6, 4, 7);
     placeResourceClusters(hexes, rng, TERRAIN.SCARP, 7, 4, 7);
-
-    // Set resource capacities
-    for (const hex of hexes.values()) {
-        const info = TERRAIN_INFO[hex.terrain];
-        if (info && info.resource) {
-            hex.resourceCapacity = Rando.int(RESOURCE_CAPACITY_MIN, RESOURCE_CAPACITY_MAX, rng);
-        }
-    }
 
     return hexes;
 }
@@ -226,37 +218,34 @@ export function computeReachable(state, unitId) {
     const mp = unitDef.mp;
 
     const enemyKeys = new Set(state.enemies.map(e => hexKey(e.q, e.r)));
-    const friendlyKeys = new Map();
-    for (const u of state.units) {
-        const k = hexKey(u.q, u.r);
-        friendlyKeys.set(k, (friendlyKeys.get(k) || 0) + 1);
-    }
+    const friendlyKeys = new Set(state.units.filter(u => u.id !== unitId).map(u => hexKey(u.q, u.r)));
 
     const costs = bfsHexes(
         { q: unit.q, r: unit.r },
         state.map,
         hex => {
             const k = hexKey(hex.q, hex.r);
-            // Can move onto enemy hex (initiates combat)
+            // Friendly-occupied hexes block movement (can't pass through)
+            if (friendlyKeys.has(k)) return Infinity;
+            // Enemy hexes are reachable (initiates combat) but block further pathing
             if (enemyKeys.has(k)) return TERRAIN_INFO[hex.terrain].moveCost;
-            // Stacking limit: max 2 friendly
-            const count = friendlyKeys.get(k) || 0;
-            if (count >= 2 && !(hex.q === unit.q && hex.r === unit.r)) return Infinity;
             return TERRAIN_INFO[hex.terrain].moveCost;
         },
         mp
     );
     costs.delete(hexKey(unit.q, unit.r));
 
-    // Minimum 1-hex move: add adjacent passable hexes not already in costs
+    // Remove friendly-occupied hexes from results (shouldn't be there, but safety)
+    for (const k of friendlyKeys) costs.delete(k);
+
+    // Minimum 1-hex move: add adjacent passable unoccupied hexes not already in costs
     for (const n of hexNeighbors(unit.q, unit.r)) {
         const k = hexKey(n.q, n.r);
+        if (friendlyKeys.has(k)) continue;
         const hex = state.map.get(k);
         if (!hex) continue;
         if (TERRAIN_INFO[hex.terrain].moveCost === Infinity) continue;
         if (!costs.has(k)) {
-            const count = friendlyKeys.get(k) || 0;
-            if (count >= 2) continue;
             costs.set(k, TERRAIN_INFO[hex.terrain].moveCost);
         }
     }
@@ -417,13 +406,12 @@ export function recruitUnit(state, unitType) {
     const { q, r } = parseHexKey(state.settlement);
     const neighbors = hexNeighbors(q, r);
     let placed = false;
+    const occupied = new Set(state.units.map(u => hexKey(u.q, u.r)));
     for (const n of neighbors) {
         const k = hexKey(n.q, n.r);
+        if (occupied.has(k)) continue;
         const hex = state.map.get(k);
         if (!hex || TERRAIN_INFO[hex.terrain].moveCost === Infinity) continue;
-        // Check stacking
-        const count = state.units.filter(u => hexKey(u.q, u.r) === k).length;
-        if (count >= 2) continue;
         state.units.push({
             id: newId(), type: unitType, q: n.q, r: n.r,
             moved: true, carrying: null
@@ -568,26 +556,42 @@ export function endTurn(state) {
     deselectUnit(state);
 }
 
-function productionPhase(state) {
-    // Gatherers collect resources
+const GATHER_RANGE = 2;
+
+function gatherResources(state) {
+    // Each resource hex can only be harvested once per turn
+    const harvested = new Set();
+
     for (const unit of state.units) {
         const def = UNIT_TYPES[unit.type];
         if (!def.gather) continue;
-        const hex = state.map.get(hexKey(unit.q, unit.r));
-        if (!hex) continue;
-        const info = TERRAIN_INFO[hex.terrain];
-        if (!info || !info.resource) continue;
-        if (hex.resourceCapacity <= 0) continue;
 
-        const amount = Math.min(def.gather, hex.resourceCapacity);
-        hex.resourceCapacity -= amount;
-        state.stockpile[info.resource] = (state.stockpile[info.resource] || 0) + amount;
+        // Find harvestable hexes within range, sorted nearest first
+        const candidates = [];
+        for (const h of hexesInRange(unit.q, unit.r, GATHER_RANGE)) {
+            const k = hexKey(h.q, h.r);
+            if (harvested.has(k)) continue;
+            const hex = state.map.get(k);
+            if (!hex) continue;
+            const info = TERRAIN_INFO[hex.terrain];
+            if (!info || !info.resource) continue;
+            candidates.push({ hex, key: k, dist: hexDistance(unit.q, unit.r, h.q, h.r) });
+        }
+        candidates.sort((a, b) => a.dist - b.dist);
 
-        // Deplete terrain
-        if (hex.resourceCapacity <= 0) {
-            hex.terrain = TERRAIN.PALE;
+        let remaining = def.gather;
+        for (const c of candidates) {
+            if (remaining <= 0) break;
+            const res = TERRAIN_INFO[c.hex.terrain].resource;
+            state.stockpile[res] = (state.stockpile[res] || 0) + 1;
+            remaining--;
+            harvested.add(c.key);
         }
     }
+}
+
+function productionPhase(state) {
+    gatherResources(state);
 
     // Production buildings process recipes
     for (const s of state.structures) {
@@ -815,7 +819,6 @@ function seekNearestResource(state, enemy) {
     let nearest = null, nearestDist = Infinity;
     for (const hex of state.map.values()) {
         if (!TERRAIN_INFO[hex.terrain].resource) continue;
-        if (hex.resourceCapacity <= 0) continue;
         const d = hexDistance(enemy.q, enemy.r, hex.q, hex.r);
         if (d < nearestDist) { nearestDist = d; nearest = hex; }
     }
@@ -890,7 +893,6 @@ function resolveWindfall(state) {
                     const h = state.map.get(hexKey(n.q, n.r));
                     if (h && h.terrain === TERRAIN.PALE) {
                         h.terrain = TERRAIN.VEIN;
-                        h.resourceCapacity = 12;
                         state.log.push('Windfall: Rich Vein discovered!');
                         return;
                     }
@@ -929,12 +931,12 @@ function resolveWindfall(state) {
 function recruitFree(state, type) {
     const { q, r } = parseHexKey(state.settlement);
     const neighbors = hexNeighbors(q, r);
+    const occupied = new Set(state.units.map(u => hexKey(u.q, u.r)));
     for (const n of neighbors) {
         const k = hexKey(n.q, n.r);
+        if (occupied.has(k)) continue;
         const hex = state.map.get(k);
         if (!hex || TERRAIN_INFO[hex.terrain].moveCost === Infinity) continue;
-        const count = state.units.filter(u => hexKey(u.q, u.r) === k).length;
-        if (count >= 2) continue;
         state.units.push({ id: newId(), type, q: n.q, r: n.r, moved: true, carrying: null });
         return;
     }
@@ -962,18 +964,7 @@ function productionPhaseBuildings(state) {
 }
 
 function productionPhaseGather(state) {
-    for (const unit of state.units) {
-        const def = UNIT_TYPES[unit.type];
-        if (!def.gather) continue;
-        const hex = state.map.get(hexKey(unit.q, unit.r));
-        if (!hex) continue;
-        const info = TERRAIN_INFO[hex.terrain];
-        if (!info || !info.resource || hex.resourceCapacity <= 0) continue;
-        const amount = Math.min(def.gather, hex.resourceCapacity);
-        hex.resourceCapacity -= amount;
-        state.stockpile[info.resource] = (state.stockpile[info.resource] || 0) + amount;
-        if (hex.resourceCapacity <= 0) hex.terrain = TERRAIN.PALE;
-    }
+    gatherResources(state);
 }
 
 function checkMandate(state) {

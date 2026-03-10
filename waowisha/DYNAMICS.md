@@ -86,7 +86,7 @@ Unit type names (Warden, Gatherer, etc.) are fixed — they're roles, not substa
 
 **Movement:** Standard hex wargame. Select unit, see highlighted reachable hexes (BFS within MP budget accounting for terrain costs). Click to move. Each unit moves once per turn. **Driver: Never Let a Unit Feel Stuck** — minimum 1 hex movement onto any non-impassable adjacent hex regardless of MP remaining.
 
-**Stacking:** Max 2 friendly units per hex. No stacking with enemies (entering enemy hex = combat).
+**No stacking:** Only one friendly unit per hex. Friendly units block movement (can't pass through). Entering an enemy hex initiates combat.
 
 ---
 

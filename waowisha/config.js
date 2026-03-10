@@ -89,10 +89,17 @@ export const VISIBILITY_RANGE = 4;
 export const SURGE_INTERVAL = 10;
 export const WINDFALL_CHANCE = 0.05;
 export const BASE_SPAWN_CHANCE = 1/3; // ~5-6 on d6
-export const RESOURCE_CAPACITY_MIN = 8;
-export const RESOURCE_CAPACITY_MAX = 12;
 export const DRIFT_CHARGE_RANGE = 3;
 export const DRIFT_CHARGE_RADIUS = 2;
 
 export const ALL_R0 = ['R0a', 'R0b', 'R0c', 'R0d'];
 export const ALL_P1 = ['P1a', 'P1b', 'P1c', 'P1d'];
+
+// Color dot for each resource/product slot (derived from source terrain)
+const V = '#8a5cc4', G = '#3d8a4e', M = '#6a7a3d', S = '#7a6a5a';
+export const SLOT_COLORS = {
+    R0a: V, R0b: G, R0c: M, R0d: S,
+    P1a: V, P1b: G, P1c: M, P1d: S,
+    P2a: V, P2b: V, P2c: S, P2d: M, // primary input terrain
+    P3a: V, P3b: V, P3c: S, P3d: M,
+};

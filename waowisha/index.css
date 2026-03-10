@@ -19,6 +19,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
 
 #stockpile { margin-bottom: 6px; line-height: 1.6; }
 .stock-item { display: inline-block; margin-right: 8px; padding: 1px 5px; border-radius: 3px; background: #222; }
+.stock-dot { margin-right: 2px; font-size: 10px; }
 .stock-label { color: #aaa; }
 .stock-value { color: #eee; font-weight: bold; }
 
@@ -55,3 +56,39 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
     overflow-y: auto; user-select: none;
 }
 .log-entry { margin-bottom: 2px; }
+
+/* Intro overlay */
+#intro {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.92);
+    display: flex; align-items: center; justify-content: center;
+    font-family: monospace; color: #ddd;
+}
+#intro.hidden { display: none; }
+#intro-inner {
+    max-width: 520px; padding: 30px 36px;
+    background: #1a1a1a; border: 1px solid #444; border-radius: 8px;
+}
+#intro h1 {
+    font-size: 32px; color: #daa520; margin-bottom: 8px;
+    letter-spacing: 3px; text-align: center;
+}
+.intro-flavor {
+    color: #999; font-style: italic; text-align: center;
+    margin-bottom: 18px; line-height: 1.5;
+}
+.intro-section { margin-bottom: 14px; }
+.intro-section b { color: #ee8; display: block; margin-bottom: 4px; }
+.intro-section p { color: #bbb; line-height: 1.5; margin: 0; }
+.intro-section ul { color: #bbb; line-height: 1.7; padding-left: 18px; margin: 0; }
+.intro-section li b { display: inline; color: #eee; }
+.intro-names { color: #888; font-size: 11px; text-align: center; }
+.intro-names b { display: inline; color: #aaa; }
+#intro-begin {
+    display: block; width: 100%; margin-top: 20px;
+    background: #daa520; color: #111; border: none;
+    padding: 12px; border-radius: 5px; cursor: pointer;
+    font-family: monospace; font-size: 16px; font-weight: bold;
+    letter-spacing: 2px;
+}
+#intro-begin:hover { background: #e8b830; }
