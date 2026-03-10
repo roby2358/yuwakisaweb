@@ -3,7 +3,7 @@
 import { HEX_SIZE, TERRAIN, TERRAIN_INFO, UNIT_TYPES, ENEMY_TYPES, SPOILS,
     RECIPES, STRUCTURE_TYPES, PRODUCTION_RECIPES, CRT, CRT_COLUMNS,
     SUPPLY_CRATE, VISIBILITY_RANGE, SURGE_INTERVAL, WINDFALL_CHANCE,
-    BASE_SPAWN_CHANCE,
+    BASE_SPAWN_CHANCE, GATHER_RANGE,
     DRIFT_CHARGE_RANGE, DRIFT_CHARGE_RADIUS, ALL_R0, ALL_P1, MAP_SIZE
 } from './config.js';
 import { hexKey, parseHexKey, hexNeighbors, hexDistance, hexesInRange, bfsHexes, findPath } from './hex.js';
@@ -12,6 +12,51 @@ import { generateGameNames } from './names.js';
 
 let nextId = 1;
 function newId() { return nextId++; }
+
+// ---- Stockpile Helpers ----
+
+function afford(stockpile, cost) {
+    for (const [res, amt] of Object.entries(cost)) {
+        if ((stockpile[res] || 0) < amt) return false;
+    }
+    return true;
+}
+
+function spend(stockpile, cost) {
+    for (const [res, amt] of Object.entries(cost)) {
+        stockpile[res] -= amt;
+    }
+}
+
+function refund(stockpile, cost) {
+    for (const [res, amt] of Object.entries(cost)) {
+        stockpile[res] = (stockpile[res] || 0) + amt;
+    }
+}
+
+function addStock(stockpile, res, amount) {
+    stockpile[res] = (stockpile[res] || 0) + amount;
+}
+
+// ---- Placement Helper ----
+
+function placeNearSettlement(state, type) {
+    const { q, r } = parseHexKey(state.settlement);
+    const occupied = new Set(state.units.map(u => hexKey(u.q, u.r)));
+    for (const n of hexNeighbors(q, r)) {
+        const k = hexKey(n.q, n.r);
+        if (occupied.has(k)) continue;
+        const hex = state.map.get(k);
+        if (!hex || TERRAIN_INFO[hex.terrain].moveCost === Infinity) continue;
+        const unit = {
+            id: newId(), type, q: n.q, r: n.r,
+            mp: UNIT_TYPES[type].mp, carrying: null
+        };
+        state.units.push(unit);
+        return unit;
+    }
+    return null;
+}
 
 // ---- Map Generation ----
 
@@ -101,7 +146,7 @@ function placeResourceClusters(hexes, rng, terrainType, numClusters, minSize, ma
     let placed = 0;
     for (let i = 0; i < pale.length && placed < numClusters; i++) {
         const seed = pale[i];
-        if (seed.terrain !== TERRAIN.PALE) continue; // may have been claimed by prior cluster
+        if (seed.terrain !== TERRAIN.PALE) continue;
         const size = Rando.int(minSize, maxSize, rng);
         const cluster = growCluster(hexes, seed, size, rng);
         if (cluster.length >= minSize) {
@@ -142,13 +187,11 @@ function growCluster(hexes, start, targetSize, rng) {
 // ---- Settlement Placement ----
 
 function findSettlement(hexes) {
-    // Find center-ish Pale hex
     let best = null, bestScore = -Infinity;
     const midCol = MAP_SIZE / 2, midRow = MAP_SIZE / 2;
     for (const hex of hexes.values()) {
         if (hex.terrain !== TERRAIN.PALE) continue;
         const dist = Math.abs(hex.col - midCol) + Math.abs(hex.row - midRow);
-        // Count passable neighbors
         let passNeighbors = 0;
         for (const n of hexNeighbors(hex.q, hex.r)) {
             const h = hexes.get(hexKey(n.q, n.r));
@@ -164,17 +207,14 @@ function findSettlement(hexes) {
 
 function generateMandate(rng) {
     const goals = [];
-    // 6 goals: first 3 are Tier 2, last 3 are Tier 3
     const t2 = ['P2a', 'P2b', 'P2c', 'P2d'];
     const t3 = ['P3a', 'P3b', 'P3c', 'P3d'];
     Rando.shuffle(t2, rng);
     Rando.shuffle(t3, rng);
 
-    // 3 Tier 2 goals
     for (let i = 0; i < 3; i++) {
         goals.push({ product: t2[i], quantity: Rando.int(2, 4, rng), produced: 0, revealed: i < 2 });
     }
-    // 3 Tier 3 goals
     for (let i = 0; i < 3; i++) {
         goals.push({ product: t3[i], quantity: Rando.int(1, 3, rng), produced: 0, revealed: false });
     }
@@ -183,22 +223,27 @@ function generateMandate(rng) {
 
 // ---- Visibility ----
 
+function unitOnTower(state, unit) {
+    return state.structures.find(s =>
+        STRUCTURE_TYPES[s.type].category === 'defense' && s.buildProgress <= 0
+        && s.q === unit.q && s.r === unit.r
+    );
+}
+
 export function computeVisibility(state) {
     const visible = new Set();
-    // Units provide visibility
     for (const unit of state.units) {
-        const range = VISIBILITY_RANGE + (unit.type === 'seeker' ? UNIT_TYPES.seeker.reveal : 0);
+        let range = VISIBILITY_RANGE + (unit.type === 'seeker' ? UNIT_TYPES.seeker.reveal : 0);
+        if (unitOnTower(state, unit)) range += 3;
         for (const h of hexesInRange(unit.q, unit.r, range)) {
             visible.add(hexKey(h.q, h.r));
         }
     }
-    // Structures provide visibility
     for (const s of state.structures) {
         for (const h of hexesInRange(s.q, s.r, VISIBILITY_RANGE)) {
             visible.add(hexKey(h.q, h.r));
         }
     }
-    // Settlement
     if (state.settlement) {
         const { q, r } = parseHexKey(state.settlement);
         for (const h of hexesInRange(q, r, VISIBILITY_RANGE)) {
@@ -214,9 +259,7 @@ export function computeReachable(state, unitId) {
     const unit = state.units.find(u => u.id === unitId);
     if (!unit || unit.mp <= 0) return new Map();
 
-    const unitDef = UNIT_TYPES[unit.type];
     const mp = unit.mp;
-
     const enemyKeys = new Set(state.enemies.map(e => hexKey(e.q, e.r)));
     const friendlyKeys = new Set(state.units.filter(u => u.id !== unitId).map(u => hexKey(u.q, u.r)));
 
@@ -225,17 +268,12 @@ export function computeReachable(state, unitId) {
         state.map,
         hex => {
             const k = hexKey(hex.q, hex.r);
-            // Friendly-occupied hexes block movement (can't pass through)
             if (friendlyKeys.has(k)) return Infinity;
-            // Enemy hexes are reachable (initiates combat) but block further pathing
-            if (enemyKeys.has(k)) return TERRAIN_INFO[hex.terrain].moveCost;
             return TERRAIN_INFO[hex.terrain].moveCost;
         },
         mp
     );
     costs.delete(hexKey(unit.q, unit.r));
-
-    // Remove friendly-occupied hexes from results (shouldn't be there, but safety)
     for (const k of friendlyKeys) costs.delete(k);
 
     // Minimum 1-hex move: add adjacent passable unoccupied hexes not already in costs
@@ -268,19 +306,14 @@ function resolveCRT(attackerStr, defenderStr, rng) {
     return CRT[col][roll];
 }
 
-function grantSpoils(state, enemyType, rng) {
+function grantSpoils(state, enemyType) {
     const spoil = SPOILS[enemyType];
     if (!spoil) return;
-    if (spoil.R0) {
-        for (let i = 0; i < spoil.R0; i++) {
-            const res = Rando.choice(ALL_R0, rng);
-            state.stockpile[res] = (state.stockpile[res] || 0) + 1;
-        }
-    }
-    if (spoil.P1) {
-        for (let i = 0; i < spoil.P1; i++) {
-            const res = Rando.choice(ALL_P1, rng);
-            state.stockpile[res] = (state.stockpile[res] || 0) + 1;
+    for (const [key, count] of Object.entries(spoil)) {
+        const pool = key === 'R0' ? ALL_R0 : key === 'P1' ? ALL_P1 : null;
+        if (!pool) continue;
+        for (let i = 0; i < count; i++) {
+            addStock(state.stockpile, Rando.choice(pool, state.rng), 1);
         }
     }
 }
@@ -295,13 +328,11 @@ export function createGame(seed) {
     const settlement = findSettlement(map);
     const { q: sq, r: sr } = parseHexKey(settlement);
 
-    // Starting stockpile from supply crate
     const stockpile = {};
     for (const [res, amt] of Object.entries(SUPPLY_CRATE)) {
         stockpile[res] = amt;
     }
 
-    // Starting Warden
     const warden = {
         id: newId(), type: 'warden', q: sq, r: sr,
         mp: UNIT_TYPES.warden.mp, carrying: null
@@ -320,8 +351,8 @@ export function createGame(seed) {
         log: [],
         selectedUnit: null,
         reachable: new Map(),
-        buildMode: null,  // structureType if in build mode
-        calmNextTurn: false, // windfall: no spawns next turn
+        buildMode: null,
+        calmNextTurn: false,
     };
 
     state.visible = computeVisibility(state);
@@ -358,15 +389,17 @@ export function moveUnit(state, unitId, tq, tr) {
         let totalStr = unitDef.strength;
         for (const other of state.units) {
             if (other.id === unit.id) continue;
-            const dist = hexDistance(other.q, other.r, tq, tr);
-            if (dist === 1) totalStr += UNIT_TYPES[other.type].strength;
+            if (hexDistance(other.q, other.r, tq, tr) !== 1) continue;
+            let str = UNIT_TYPES[other.type].strength;
+            if (unitOnTower(state, other)) str += 2;
+            totalStr += str;
         }
 
         const result = resolveCRT(totalStr, enemy.strength, state.rng);
         state.log.push(`Attack ${state.names[enemy.type] || enemy.type}: ${result}`);
 
         if (result === 'DE' || result === 'EX') {
-            grantSpoils(state, enemy.type, state.rng);
+            grantSpoils(state, enemy.type);
             state.enemies.splice(enemyIdx, 1);
         }
         if (result === 'AE' || result === 'EX') {
@@ -382,7 +415,7 @@ export function moveUnit(state, unitId, tq, tr) {
     }
 
     // Normal move — subtract cost
-    const cost = state.reachable.get(targetKey) || 0;
+    const cost = state.reachable.get(targetKey);
     unit.q = tq; unit.r = tr;
     unit.mp = Math.max(0, unit.mp - cost);
     deselectUnit(state);
@@ -392,40 +425,13 @@ export function moveUnit(state, unitId, tq, tr) {
 export function recruitUnit(state, unitType) {
     const def = UNIT_TYPES[unitType];
     if (!def || !def.cost) return false;
+    if (!afford(state.stockpile, def.cost)) return false;
 
-    // Check cost
-    for (const [res, amt] of Object.entries(def.cost)) {
-        if ((state.stockpile[res] || 0) < amt) return false;
-    }
+    spend(state.stockpile, def.cost);
 
-    // Pay cost
-    for (const [res, amt] of Object.entries(def.cost)) {
-        state.stockpile[res] -= amt;
-    }
-
-    // Place adjacent to settlement
-    const { q, r } = parseHexKey(state.settlement);
-    const neighbors = hexNeighbors(q, r);
-    let placed = false;
-    const occupied = new Set(state.units.map(u => hexKey(u.q, u.r)));
-    for (const n of neighbors) {
-        const k = hexKey(n.q, n.r);
-        if (occupied.has(k)) continue;
-        const hex = state.map.get(k);
-        if (!hex || TERRAIN_INFO[hex.terrain].moveCost === Infinity) continue;
-        state.units.push({
-            id: newId(), type: unitType, q: n.q, r: n.r,
-            mp: UNIT_TYPES[unitType].mp, carrying: null
-        });
-        placed = true;
-        break;
-    }
-
+    const placed = placeNearSettlement(state, unitType);
     if (!placed) {
-        // Refund
-        for (const [res, amt] of Object.entries(def.cost)) {
-            state.stockpile[res] = (state.stockpile[res] || 0) + amt;
-        }
+        refund(state.stockpile, def.cost);
         return false;
     }
 
@@ -441,21 +447,13 @@ export function startBuild(state, unitId, structureType) {
 
     const sDef = STRUCTURE_TYPES[structureType];
     if (!sDef) return false;
+    if (!afford(state.stockpile, sDef.cost)) return false;
 
-    // Check cost
-    for (const [res, amt] of Object.entries(sDef.cost)) {
-        if ((state.stockpile[res] || 0) < amt) return false;
-    }
-
-    // Check no structure already on this hex
     const k = hexKey(unit.q, unit.r);
     if (state.structures.some(s => hexKey(s.q, s.r) === k)) return false;
     if (k === state.settlement) return false;
 
-    // Pay cost
-    for (const [res, amt] of Object.entries(sDef.cost)) {
-        state.stockpile[res] -= amt;
-    }
+    spend(state.stockpile, sDef.cost);
 
     state.structures.push({
         id: newId(), type: structureType, q: unit.q, r: unit.r,
@@ -485,15 +483,11 @@ export function deployCharge(state, unitId, tq, tr) {
     const unit = state.units.find(u => u.id === unitId);
     if (!unit || unit.carrying !== 'P3d') return false;
     if (hexDistance(unit.q, unit.r, tq, tr) > DRIFT_CHARGE_RANGE) return false;
+    if (!state.visible.has(hexKey(tq, tr))) return false;
 
-    // Check visibility
-    const targetKey = hexKey(tq, tr);
-    if (!state.visible.has(targetKey)) return false;
-
-    // Destroy all enemies in radius
     const blastZone = new Set(hexesInRange(tq, tr, DRIFT_CHARGE_RADIUS).map(h => hexKey(h.q, h.r)));
     const killed = state.enemies.filter(e => blastZone.has(hexKey(e.q, e.r)));
-    for (const e of killed) grantSpoils(state, e.type, state.rng);
+    for (const e of killed) grantSpoils(state, e.type);
     state.enemies = state.enemies.filter(e => !blastZone.has(hexKey(e.q, e.r)));
 
     unit.carrying = null;
@@ -511,10 +505,7 @@ export function pickUpCharge(state, unitId) {
 }
 
 export function canAfford(state, cost) {
-    for (const [res, amt] of Object.entries(cost)) {
-        if ((state.stockpile[res] || 0) < amt) return false;
-    }
-    return true;
+    return afford(state.stockpile, cost);
 }
 
 // ---- End Turn ----
@@ -522,19 +513,10 @@ export function canAfford(state, cost) {
 export function endTurn(state) {
     if (state.gameOver || state.victory) return;
 
-    // Reset unit moved flags at the start (they'll be set again next player phase)
-    // But first: run automated phases
-
-    // 1. Production Phase
     productionPhase(state);
-
-    // 2. Defense Phase
     defensePhase(state);
-
-    // 3. Drift Phase
     driftPhase(state);
 
-    // 4. Spawn Phase
     if (!state.calmNextTurn) {
         spawnPhase(state);
     } else {
@@ -542,32 +524,27 @@ export function endTurn(state) {
         state.log.push('The Drift is calm this turn.');
     }
 
-    // 5. Windfall check
     if (Rando.bool(WINDFALL_CHANCE, state.rng)) {
         resolveWindfall(state);
     }
 
-    // 6. Check mandate
     checkMandate(state);
 
-    // 7. Advance turn
     state.turn++;
     for (const unit of state.units) unit.mp = UNIT_TYPES[unit.type].mp;
     state.visible = computeVisibility(state);
     deselectUnit(state);
 }
 
-const GATHER_RANGE = 2;
+// ---- Gathering ----
 
 function gatherResources(state) {
-    // Each resource hex can only be harvested once per turn
     const harvested = new Set();
 
     for (const unit of state.units) {
         const def = UNIT_TYPES[unit.type];
         if (!def.gather) continue;
 
-        // Find harvestable hexes within range, sorted nearest first
         const candidates = [];
         for (const h of hexesInRange(unit.q, unit.r, GATHER_RANGE)) {
             const k = hexKey(h.q, h.r);
@@ -583,54 +560,38 @@ function gatherResources(state) {
         let remaining = def.gather;
         for (const c of candidates) {
             if (remaining <= 0) break;
-            const res = TERRAIN_INFO[c.hex.terrain].resource;
-            state.stockpile[res] = (state.stockpile[res] || 0) + 1;
+            addStock(state.stockpile, TERRAIN_INFO[c.hex.terrain].resource, 1);
             remaining--;
             harvested.add(c.key);
         }
     }
 }
 
-function productionPhase(state) {
-    gatherResources(state);
+// ---- Production ----
 
-    // Production buildings process recipes
+function advanceBuilding(s, state) {
+    const builder = state.units.find(u => u.id === s.builderId);
+    if (!builder || hexKey(builder.q, builder.r) !== hexKey(s.q, s.r)) return;
+    s.buildProgress = Math.max(0, s.buildProgress - 1);
+    if (s.buildProgress === 0) {
+        state.log.push(`${STRUCTURE_TYPES[s.type].name} complete!`);
+        s.builderId = null;
+    }
+}
+
+function runProduction(state) {
     for (const s of state.structures) {
-        if (s.buildProgress > 0) {
-            // Check if builder is still on hex
-            const builder = state.units.find(u => u.id === s.builderId);
-            if (builder && hexKey(builder.q, builder.r) === hexKey(s.q, s.r)) {
-                const builderDef = UNIT_TYPES[builder.type];
-                s.buildProgress = Math.max(0, s.buildProgress - 1);
-                if (s.buildProgress === 0) {
-                    state.log.push(`${STRUCTURE_TYPES[s.type].name} complete!`);
-                    s.builderId = null;
-                }
-            }
-            continue;
-        }
-
+        if (s.buildProgress > 0) continue;
         const sDef = STRUCTURE_TYPES[s.type];
         if (sDef.category !== 'production') continue;
         if (!s.recipe) continue;
-
         const recipe = RECIPES[s.recipe];
         if (!recipe) continue;
+        if (!afford(state.stockpile, recipe.inputs)) continue;
 
-        // Check inputs
-        let canProduce = true;
-        for (const [res, amt] of Object.entries(recipe.inputs)) {
-            if ((state.stockpile[res] || 0) < amt) { canProduce = false; break; }
-        }
-        if (!canProduce) continue;
+        spend(state.stockpile, recipe.inputs);
+        addStock(state.stockpile, s.recipe, 1);
 
-        // Consume inputs, produce output
-        for (const [res, amt] of Object.entries(recipe.inputs)) {
-            state.stockpile[res] -= amt;
-        }
-        state.stockpile[s.recipe] = (state.stockpile[s.recipe] || 0) + 1;
-
-        // Check mandate progress
         for (const goal of state.mandate) {
             if (goal.product === s.recipe && goal.produced < goal.quantity) {
                 goal.produced++;
@@ -640,42 +601,44 @@ function productionPhase(state) {
     }
 }
 
+function productionPhase(state) {
+    gatherResources(state);
+
+    for (const s of state.structures) {
+        if (s.buildProgress > 0) advanceBuilding(s, state);
+    }
+
+    runProduction(state);
+}
+
+// ---- Defense ----
+
 function defensePhase(state) {
-    // Each tower fires once at a visible enemy in range
     for (const s of state.structures) {
         if (s.buildProgress > 0) continue;
         const sDef = STRUCTURE_TYPES[s.type];
         if (sDef.category !== 'defense') continue;
 
-        const inRange = state.enemies.filter(e => {
-            const dist = hexDistance(s.q, s.r, e.q, e.r);
-            return dist <= sDef.range && state.visible.has(hexKey(e.q, e.r));
-        });
-
+        const inRange = state.enemies.filter(e =>
+            hexDistance(s.q, s.r, e.q, e.r) <= sDef.range
+            && state.visible.has(hexKey(e.q, e.r))
+        );
         if (inRange.length === 0) continue;
 
         if (sDef.targeting === 'all') {
-            // Ward Pylon: hit all
-            const killed = [];
-            for (const e of inRange) {
-                if (sDef.power >= e.strength) killed.push(e);
-            }
-            for (const e of killed) {
-                grantSpoils(state, e.type, state.rng);
-            }
+            const killed = inRange.filter(e => sDef.power >= e.strength);
+            for (const e of killed) grantSpoils(state, e.type);
             state.enemies = state.enemies.filter(e => !killed.includes(e));
             if (killed.length > 0) state.log.push(`${sDef.name} destroyed ${killed.length} enemies`);
         } else {
-            // Single target
-            let target;
-            if (sDef.targeting === 'weakest') {
-                inRange.sort((a, b) => a.strength - b.strength || hexDistance(s.q, s.r, a.q, a.r) - hexDistance(s.q, s.r, b.q, b.r));
-            } else {
-                inRange.sort((a, b) => b.strength - a.strength || hexDistance(s.q, s.r, a.q, a.r) - hexDistance(s.q, s.r, b.q, b.r));
-            }
-            target = inRange[0];
+            const sortDir = sDef.targeting === 'weakest' ? 1 : -1;
+            inRange.sort((a, b) =>
+                sortDir * (a.strength - b.strength)
+                || hexDistance(s.q, s.r, a.q, a.r) - hexDistance(s.q, s.r, b.q, b.r)
+            );
+            const target = inRange[0];
             if (sDef.power >= target.strength) {
-                grantSpoils(state, target.type, state.rng);
+                grantSpoils(state, target.type);
                 state.enemies = state.enemies.filter(e => e !== target);
                 state.log.push(`${sDef.name} destroyed a ${state.names[target.type] || target.type}`);
             }
@@ -683,32 +646,27 @@ function defensePhase(state) {
     }
 }
 
-function driftPhase(state) {
-    // Brood Mothers spawn E0s
+// ---- Drift Phase (Enemy Turn) ----
+
+function spawnBroodlings(state) {
     const newE0s = [];
     for (const e of state.enemies) {
         if (e.type !== 'broodMother') continue;
-        const neighbors = hexNeighbors(e.q, e.r);
-        const valid = neighbors.filter(n => {
+        const valid = hexNeighbors(e.q, e.r).filter(n => {
             const h = state.map.get(hexKey(n.q, n.r));
             return h && TERRAIN_INFO[h.terrain].moveCost < Infinity;
         });
-        if (valid.length > 0) {
-            const spot = Rando.choice(valid, state.rng);
-            newE0s.push({
-                id: newId(), type: 'E0', q: spot.q, r: spot.r,
-                speed: 1, strength: ENEMY_TYPES.E0.strength
-            });
-        }
+        if (valid.length === 0) continue;
+        const spot = Rando.choice(valid, state.rng);
+        newE0s.push({
+            id: newId(), type: 'E0', q: spot.q, r: spot.r,
+            speed: 1, strength: ENEMY_TYPES.E0.strength
+        });
     }
     state.enemies.push(...newE0s);
+}
 
-    // Move all enemies
-    for (const enemy of state.enemies) {
-        moveEnemy(state, enemy);
-    }
-
-    // Check enemy-on-unit combat
+function resolveEnemyUnitCombat(state) {
     for (const enemy of [...state.enemies]) {
         const ek = hexKey(enemy.q, enemy.r);
         const unit = state.units.find(u => hexKey(u.q, u.r) === ek);
@@ -721,15 +679,16 @@ function driftPhase(state) {
         } else if (enemy.strength === unitDef.strength) {
             state.log.push(`Exchange: ${unitDef.name} and ${state.names[enemy.type] || enemy.type} both destroyed`);
             state.units = state.units.filter(u => u.id !== unit.id);
-            grantSpoils(state, enemy.type, state.rng);
+            grantSpoils(state, enemy.type);
             state.enemies = state.enemies.filter(e => e !== enemy);
         } else {
-            grantSpoils(state, enemy.type, state.rng);
+            grantSpoils(state, enemy.type);
             state.enemies = state.enemies.filter(e => e !== enemy);
         }
     }
+}
 
-    // Check enemy-on-structure combat
+function resolveEnemyStructureCombat(state) {
     for (const enemy of [...state.enemies]) {
         const ek = hexKey(enemy.q, enemy.r);
         const struct = state.structures.find(s => hexKey(s.q, s.r) === ek && s.buildProgress === 0);
@@ -739,23 +698,33 @@ function driftPhase(state) {
             state.log.push(`${state.names[enemy.type] || enemy.type} destroyed ${sDef.name}!`);
             state.structures = state.structures.filter(s => s !== struct);
         } else {
-            grantSpoils(state, enemy.type, state.rng);
+            grantSpoils(state, enemy.type);
             state.enemies = state.enemies.filter(e => e !== enemy);
         }
     }
+}
 
-    // Check if enemy reached settlement
+function checkSettlement(state) {
     for (const enemy of state.enemies) {
-        if (hexKey(enemy.q, enemy.r) === state.settlement) {
-            const defender = state.units.find(u => hexKey(u.q, u.r) === state.settlement);
-            if (!defender) {
-                state.gameOver = true;
-                state.log.push('The Drift has reached The Loom. Game Over.');
-                return;
-            }
+        if (hexKey(enemy.q, enemy.r) !== state.settlement) continue;
+        const defender = state.units.find(u => hexKey(u.q, u.r) === state.settlement);
+        if (!defender) {
+            state.gameOver = true;
+            state.log.push('The Drift has reached The Loom. Game Over.');
+            return;
         }
     }
 }
+
+function driftPhase(state) {
+    spawnBroodlings(state);
+    for (const enemy of state.enemies) moveEnemy(state, enemy);
+    resolveEnemyUnitCombat(state);
+    resolveEnemyStructureCombat(state);
+    checkSettlement(state);
+}
+
+// ---- Enemy Movement ----
 
 function moveEnemy(state, enemy) {
     const eDef = ENEMY_TYPES[enemy.type];
@@ -765,17 +734,17 @@ function moveEnemy(state, enemy) {
         let target = null;
 
         if (eDef.behavior === 'random') {
-            // Random walk
-            const neighbors = hexNeighbors(enemy.q, enemy.r);
-            const valid = neighbors.filter(n => {
+            const valid = hexNeighbors(enemy.q, enemy.r).filter(n => {
                 const h = state.map.get(hexKey(n.q, n.r));
                 return h && TERRAIN_INFO[h.terrain].moveCost < Infinity;
             });
-            if (valid.length > 0) {
-                target = Rando.choice(valid, state.rng);
-            }
+            if (valid.length > 0) target = Rando.choice(valid, state.rng);
         } else if (eDef.behavior === 'seekUnit') {
-            target = seekNearest(state, enemy, [...state.units.map(u => ({q:u.q,r:u.r})), ...state.structures.map(s => ({q:s.q,r:s.r}))]);
+            const targets = [
+                ...state.units.map(u => ({q:u.q,r:u.r})),
+                ...state.structures.map(s => ({q:s.q,r:s.r}))
+            ];
+            target = seekNearest(state, enemy, targets);
         } else if (eDef.behavior === 'seekSettlement') {
             const { q, r } = parseHexKey(state.settlement);
             target = seekTarget(state, enemy, q, r);
@@ -827,13 +796,13 @@ function seekNearestResource(state, enemy) {
     return seekTarget(state, enemy, nearest.q, nearest.r);
 }
 
+// ---- Spawn Phase ----
+
 function spawnPhase(state) {
-    // Base spawn
     if (Rando.bool(BASE_SPAWN_CHANCE, state.rng)) {
         spawnEnemyOnEdge(state, 'E0');
     }
 
-    // Surge check
     if (state.turn % SURGE_INTERVAL === 0) {
         const surgeStrength = Math.floor(Math.pow(state.turn / SURGE_INTERVAL, 2));
         state.log.push(`Surge! ${surgeStrength} enemies incoming.`);
@@ -849,13 +818,13 @@ function spawnPhase(state) {
 }
 
 function spawnEnemyOnEdge(state, type) {
-    const edgeHexes = [];
+    let edgeHexes = [];
     for (const hex of state.map.values()) {
         if (hex.isEdge && TERRAIN_INFO[hex.terrain].moveCost < Infinity) {
             edgeHexes.push(hex);
         }
     }
-    // Also use hexes adjacent to edge Deep/Crag that are passable
+    // Fallback: hexes adjacent to edge
     if (edgeHexes.length === 0) {
         for (const hex of state.map.values()) {
             if (!hex.isEdge) continue;
@@ -879,36 +848,35 @@ function spawnEnemyOnEdge(state, type) {
     });
 }
 
+// ---- Windfalls ----
+
 function resolveWindfall(state) {
     const roll = Rando.int(1, 6, state.rng);
     switch (roll) {
         case 1: {
-            // Rich Vein: turn a Pale hex near a Vein into Vein
             const veins = [];
             for (const hex of state.map.values()) {
                 if (hex.terrain === TERRAIN.VEIN) veins.push(hex);
             }
-            if (veins.length > 0) {
-                const v = Rando.choice(veins, state.rng);
-                for (const n of hexNeighbors(v.q, v.r)) {
-                    const h = state.map.get(hexKey(n.q, n.r));
-                    if (h && h.terrain === TERRAIN.PALE) {
-                        h.terrain = TERRAIN.VEIN;
-                        state.log.push('Windfall: Rich Vein discovered!');
-                        return;
-                    }
+            if (veins.length === 0) break;
+            const v = Rando.choice(veins, state.rng);
+            for (const n of hexNeighbors(v.q, v.r)) {
+                const h = state.map.get(hexKey(n.q, n.r));
+                if (h && h.terrain === TERRAIN.PALE) {
+                    h.terrain = TERRAIN.VEIN;
+                    state.log.push('Windfall: Rich Vein discovered!');
+                    return;
                 }
             }
             break;
         }
         case 2:
-            // Wandering Sentinel
             state.log.push('Windfall: A Sentinel wanders to The Loom!');
-            recruitFree(state, 'sentinel');
+            placeNearSettlement(state, 'sentinel');
             break;
         case 3: {
             const res = Rando.choice(ALL_R0, state.rng);
-            state.stockpile[res] = (state.stockpile[res] || 0) + 3;
+            addStock(state.stockpile, res, 3);
             state.log.push(`Windfall: Cache of 3 ${state.names[res]}!`);
             break;
         }
@@ -917,56 +885,17 @@ function resolveWindfall(state) {
             state.log.push('Windfall: A calm settles over the land.');
             break;
         case 5:
-            // Double production this turn (already produced, so produce again)
             state.log.push('Windfall: Resonance! Production doubled this turn.');
-            productionPhaseBuildings(state);
+            runProduction(state);
             break;
         case 6:
-            // Double gather (already gathered, so gather again)
             state.log.push('Windfall: Bountiful harvest!');
-            productionPhaseGather(state);
+            gatherResources(state);
             break;
     }
 }
 
-function recruitFree(state, type) {
-    const { q, r } = parseHexKey(state.settlement);
-    const neighbors = hexNeighbors(q, r);
-    const occupied = new Set(state.units.map(u => hexKey(u.q, u.r)));
-    for (const n of neighbors) {
-        const k = hexKey(n.q, n.r);
-        if (occupied.has(k)) continue;
-        const hex = state.map.get(k);
-        if (!hex || TERRAIN_INFO[hex.terrain].moveCost === Infinity) continue;
-        state.units.push({ id: newId(), type, q: n.q, r: n.r, mp: UNIT_TYPES[type].mp, carrying: null });
-        return;
-    }
-}
-
-function productionPhaseBuildings(state) {
-    for (const s of state.structures) {
-        if (s.buildProgress > 0) continue;
-        const sDef = STRUCTURE_TYPES[s.type];
-        if (sDef.category !== 'production') continue;
-        if (!s.recipe) continue;
-        const recipe = RECIPES[s.recipe];
-        if (!recipe) continue;
-        let canProduce = true;
-        for (const [res, amt] of Object.entries(recipe.inputs)) {
-            if ((state.stockpile[res] || 0) < amt) { canProduce = false; break; }
-        }
-        if (!canProduce) continue;
-        for (const [res, amt] of Object.entries(recipe.inputs)) state.stockpile[res] -= amt;
-        state.stockpile[s.recipe] = (state.stockpile[s.recipe] || 0) + 1;
-        for (const goal of state.mandate) {
-            if (goal.product === s.recipe && goal.produced < goal.quantity) { goal.produced++; break; }
-        }
-    }
-}
-
-function productionPhaseGather(state) {
-    gatherResources(state);
-}
+// ---- Mandate ----
 
 function checkMandate(state) {
     let allComplete = true;
@@ -974,7 +903,6 @@ function checkMandate(state) {
     for (const goal of state.mandate) {
         if (goal.revealed && goal.produced >= goal.quantity) {
             if (revealNext) continue;
-            // Reveal next unrevealed goal
             const next = state.mandate.find(g => !g.revealed);
             if (next) { next.revealed = true; revealNext = true; }
         }

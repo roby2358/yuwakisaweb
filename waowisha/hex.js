@@ -164,19 +164,6 @@ export function bfsHexes(startHex, hexes, movementCost, maxCost) {
     return costs;
 }
 
-// Get all hexes reachable by a unit with given movement points
-// Returns a Map of hexKey -> cost (excluding the starting hex)
-export function getReachableHexes(startHex, hexes, movementPoints, terrainMovement) {
-    const costs = bfsHexes(
-        startHex,
-        hexes,
-        hex => terrainMovement[hex.terrain] ?? Infinity,
-        movementPoints
-    );
-    costs.delete(hexKey(startHex.q, startHex.r));
-    return costs;
-}
-
 // A* pathfinding state container
 class PathfinderState {
     constructor(start, end) {

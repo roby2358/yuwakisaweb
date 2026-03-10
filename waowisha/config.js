@@ -89,6 +89,7 @@ export const VISIBILITY_RANGE = 4;
 export const SURGE_INTERVAL = 10;
 export const WINDFALL_CHANCE = 0.05;
 export const BASE_SPAWN_CHANCE = 1/3; // ~5-6 on d6
+export const GATHER_RANGE = 2;
 export const DRIFT_CHARGE_RANGE = 3;
 export const DRIFT_CHARGE_RADIUS = 2;
 
