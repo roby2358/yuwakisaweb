@@ -464,9 +464,12 @@ export function startBuild(state, unitId, structureType) {
     if (!sDef) return false;
     if (!afford(state.stockpile, sDef.cost)) return false;
 
-    const k = hexKey(unit.q, unit.r);
-    if (state.structures.some(s => hexKey(s.q, s.r) === k)) return false;
-    if (k === state.settlement) return false;
+    // Must be at least 2 hexes from any structure or the settlement
+    const { q: sq, r: sr } = parseHexKey(state.settlement);
+    if (hexDistance(unit.q, unit.r, sq, sr) < 2) return false;
+    for (const s of state.structures) {
+        if (hexDistance(unit.q, unit.r, s.q, s.r) < 2) return false;
+    }
 
     spend(state.stockpile, sDef.cost);
 
