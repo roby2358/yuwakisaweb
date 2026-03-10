@@ -134,6 +134,16 @@ The tables below use slot names (R0a, P1a, etc.) to define the fixed structure. 
 
 **Tier 3 names are two-word compounds** — both words generated. E.g., "Vorithal Spenk" instead of "Beacon Core."
 
+### Consumables
+
+P3d is unique among Tier 3 products — it's a **one-use area weapon** rather than a building material.
+
+**P3d — Drift Charge:** Any unit can carry and deploy it. During the Player Phase, select a unit carrying a P3d, then target any visible hex within range 3 of that unit. All enemies within radius 2 of the target hex are destroyed, regardless of strength. The P3d is consumed.
+
+- Drift Charges are produced by the Atelier like any Tier 3 product and stored in the global stockpile.
+- A unit "picks up" a charge by being assigned one from the stockpile (a player action during the Player Phase, like assigning a recipe). The unit can then deploy it on a later turn. One charge per unit.
+- **The Mandate tension:** The Mandate may require "Produce 3 P3d." Every charge detonated is one you'll need to produce again. Use it now to survive, or hoard it for the goal? **Driver: Double-Edged Mechanics Are Gold.**
+
 ### Production Buildings
 
 Structures built on hexes by units with Build ability. Each processes one recipe per turn automatically if inputs are available in the global stockpile.
@@ -239,6 +249,21 @@ When an enemy moves onto a hex containing a player unit:
 - If equal: both destroyed (exchange)
 
 **No dice for enemy-on-unit combat.** Enemies are numerous enough that individual randomness isn't needed — the randomness is in where they are and how fast they move.
+
+### Spoils
+
+When an enemy is destroyed (by unit combat, tower fire, or Drift Charge), it drops resources into the global stockpile based on its strength:
+
+| Enemy | Strength | Drop |
+|-------|----------|------|
+| **E0** | 1 | 1 random R0 |
+| **E2** | 1 | 1 random R0 |
+| **E1** | 2 | 2 random R0 (rolled independently) |
+| **Brood Mother** | 4 | 1 random P1 + 2 random R0 |
+
+The drop is a random R0 resource (R0a-R0d, equal probability) or for Brood Mothers, a random refined product (P1a-P1d) plus raw materials — as if the Drift had been absorbing the land's resources and you're reclaiming them.
+
+**Driver: Revenge as Fuel.** Hunting the E1 that killed your Gatherer isn't just catharsis — it pays. Brood Mothers are worth hunting proactively: the P1 drop skips a Refinery cycle. This also softens the defense-vs-economy tension slightly: fighting IS gathering, just less efficient and riskier. **Driver: Double-Edged Mechanics** — engaging enemies yields resources but risks units.
 
 When a player unit moves onto an enemy hex (player-initiated attack), use the **CRT:**
 
@@ -363,6 +388,14 @@ The player's home base. Center of the map. A named hex: **"The Loom"** (because 
 - Starting Warden spawns here
 - If an enemy reaches The Loom and no unit defends it, **game over**
 
+### Supply Crate
+
+The Loom starts with a **supply crate** — a small cache of materials left from whoever was here before. Contents: **4 R0d, 2 R0a, 2 R0b, 2 R0c.** Added to the stockpile at game start.
+
+This lets the player recruit a Gatherer on turn 1 (costs 3 R0d) and still have 1 R0d + some of everything else to work with. The Warden can immediately head out to scout while the Gatherer starts harvesting. Eliminates the "10 turns of walking before anything happens" dead zone.
+
+**Driver: Accumulation and Windfall.** The crate is a small windfall at the start — just enough to feel like you have options, not enough to skip the early grind entirely.
+
 **Driver: Home Bases Give the Map Emotional Weight.** The Loom is home. Everything you build radiates outward from it. Defending it is non-negotiable. Venturing far from it is brave.
 
 **Driver: Guardianship.** The Loom is the thing you protect. Losing it isn't just a loss condition — it's a failure of stewardship.
@@ -372,9 +405,9 @@ The player's home base. Center of the map. A named hex: **"The Loom"** (because 
 ## Strategies
 
 ### Early Game (Turns 1-20)
-**Pattern:** Explore with Warden. Identify nearest resource clusters. Recruit first Gatherer (needs 3 R0d — find a Scarp cluster). Begin harvesting. Drop a Spike or two at natural chokepoints between The Loom and map edges (1 R0d each, Warden can build with Build(1) in 1 turn). Build first Refinery around turn 15-20.
+**Pattern:** Supply crate gives you 4 R0d — recruit a Gatherer immediately (3 R0d) and send the Warden out to scout. Gatherer starts harvesting the nearest Scarp cluster. Warden identifies resource clusters and drops a Spike at a natural chokepoint (1 R0d from the crate). Build first Refinery around turn 12-15 once R0d is flowing.
 
-**Tension:** The Warden is your only unit. Gathering means not scouting. Scouting means not gathering. First Gatherer breaks this logjam. Early Spikes buy time but the Warden building them isn't gathering.
+**Tension:** The supply crate jumpstarts things but runs out fast. Where to send the Warden first? Scout toward Veins (R0a, needed for Sentinels) or toward the map edge (spot threats early)? The Gatherer is alone and defenseless (str 0) — how far from The Loom do you dare send it?
 
 ### Mid Game (Turns 20-50)
 **Pattern:** 2-3 Gatherers working resource clusters. First Refinery producing Tier 1 goods. First Sentinel recruited for defense. Mason recruited to build Foundry and Watch Posts at chokepoints. Send a Seeker toward fog-covered map edges to spot Brood Mothers before they nest. Watch Posts at chokepoints near distant resource clusters protect Gatherers.
@@ -382,7 +415,7 @@ The player's home base. Center of the map. A named hex: **"The Loom"** (because 
 **Tension:** Surges are growing (turn 30 = 9 enemies). Brood Mothers may have appeared. Splitting workforce between gathering, building, and defense. First Mandate goals should be completing. Spikes start crumbling to E1s — upgrade to Watch Posts at critical chokepoints.
 
 ### Late Game (Turns 50-100+)
-**Pattern:** Multiple production buildings running. Atelier online for Tier 3. Beacon Towers and Longbows at key positions — Longbows behind defended lines to sweep E0 swarms before they reach inner defenses. Sentinels patrolling perimeter, hunting Brood Mothers before they nest. Racing to complete final Mandate goals.
+**Pattern:** Multiple production buildings running. Atelier online for Tier 3. Beacon Towers and Longbows at key positions — Longbows behind defended lines to sweep E0 swarms before they reach inner defenses. Sentinels patrolling perimeter, hunting Brood Mothers before they nest. Drift Charges held in reserve for emergencies — or spent to crack a Brood Mother nest that's gotten out of hand (but every charge detonated is one more to produce for the Mandate). Racing to complete final Mandate goals.
 
 **Tension:** Surges are massive (turn 80 = 64 enemies). Brood Mother nests in fog producing swarms. Every unit matters. A Gatherer lost to a surprise E1 sets production back 5+ turns. Longbows are expensive (P3c each) and fragile (power 2) — losing one to an E1 that slipped through is devastating. Seekers become critical for fog intelligence.
 
@@ -451,6 +484,7 @@ Unit {
   strength: number
   abilities: Ability[]
   moved: boolean  // has moved this turn
+  carrying: slot | null  // P3d if carrying a Drift Charge
 }
 
 Enemy {
