@@ -203,6 +203,30 @@ function findSettlement(hexes) {
     return best ? hexKey(best.q, best.r) : null;
 }
 
+// ---- Starter Veins ----
+
+function placeStarterVeins(hexes, sq, sr, rng) {
+    const terrains = [TERRAIN.VEIN, TERRAIN.GROVE, TERRAIN.MIRE, TERRAIN.SCARP];
+    const ring = hexesInRange(sq, sr, 5).filter(h => hexDistance(sq, sr, h.q, h.r) === 5);
+    Rando.shuffle(ring, rng);
+
+    for (const terrain of terrains) {
+        const spot = ring.find(h => {
+            const hex = hexes.get(hexKey(h.q, h.r));
+            return hex && hex.terrain === TERRAIN.PALE;
+        });
+        if (!spot) continue;
+        const seed = hexes.get(hexKey(spot.q, spot.r));
+        const cluster = growCluster(hexes, seed, Rando.int(3, 5, rng), rng);
+        for (const h of cluster) h.terrain = terrain;
+        // Remove used spots from ring
+        const used = new Set(cluster.map(h => hexKey(h.q, h.r)));
+        for (let i = ring.length - 1; i >= 0; i--) {
+            if (used.has(hexKey(ring[i].q, ring[i].r))) ring.splice(i, 1);
+        }
+    }
+}
+
 // ---- Mandate Generation ----
 
 function generateMandate(rng) {
@@ -342,6 +366,7 @@ export function createGame(seed) {
     const map = generateMap(rng);
     const settlement = findSettlement(map);
     const { q: sq, r: sr } = parseHexKey(settlement);
+    placeStarterVeins(map, sq, sr, rng);
 
     const stockpile = {};
     for (const [res, amt] of Object.entries(SUPPLY_CRATE)) {
@@ -454,6 +479,15 @@ export function recruitUnit(state, unitType) {
     return true;
 }
 
+export function canBuildHere(state, q, r) {
+    const { q: sq, r: sr } = parseHexKey(state.settlement);
+    if (hexDistance(q, r, sq, sr) < 3) return false;
+    for (const s of state.structures) {
+        if (hexDistance(q, r, s.q, s.r) < 3) return false;
+    }
+    return true;
+}
+
 export function startBuild(state, unitId, structureType) {
     const unit = state.units.find(u => u.id === unitId);
     if (!unit) return false;
@@ -463,13 +497,7 @@ export function startBuild(state, unitId, structureType) {
     const sDef = STRUCTURE_TYPES[structureType];
     if (!sDef) return false;
     if (!afford(state.stockpile, sDef.cost)) return false;
-
-    // Must be at least 2 hexes from any structure or the settlement
-    const { q: sq, r: sr } = parseHexKey(state.settlement);
-    if (hexDistance(unit.q, unit.r, sq, sr) < 2) return false;
-    for (const s of state.structures) {
-        if (hexDistance(unit.q, unit.r, s.q, s.r) < 2) return false;
-    }
+    if (!canBuildHere(state, unit.q, unit.r)) return false;
 
     spend(state.stockpile, sDef.cost);
 

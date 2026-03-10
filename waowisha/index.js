@@ -4,7 +4,7 @@ import { HEX_SIZE, TERRAIN_INFO, UNIT_TYPES, ENEMY_TYPES, STRUCTURE_TYPES,
     PRODUCTION_RECIPES, RECIPES, ALL_R0, ALL_P1, SLOT_COLORS } from './config.js';
 import { hexToPixel, pixelToHex, hexKey, parseHexKey, hexDistance, drawHexPath } from './hex.js';
 import { createGame, selectUnit, deselectUnit, moveUnit, recruitUnit,
-    startBuild, assignRecipe, endTurn, canAfford, computeReachable,
+    startBuild, canBuildHere, assignRecipe, endTurn, canAfford, computeReachable,
     deployCharge, pickUpCharge, computeVisibility, computeGathered } from './game.js';
 
 // ---- Constants ----
@@ -299,9 +299,7 @@ function showUnitPanel(unit) {
 
     // Build options (available even after moving — move then build on same turn)
     if (def.build) {
-        const k = hexKey(unit.q, unit.r);
-        const hasStruct = state.structures.some(s => hexKey(s.q, s.r) === k);
-        if (!hasStruct && k !== state.settlement) {
+        if (canBuildHere(state, unit.q, unit.r)) {
             html += '<div style="margin:4px 0;color:#aaa">Build:</div>';
             for (const [type, sDef] of Object.entries(STRUCTURE_TYPES)) {
                 const affordable = canAfford(state, sDef.cost);
