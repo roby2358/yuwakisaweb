@@ -195,7 +195,7 @@ function render() {
         const isSel = state.selectedUnit === unit.id;
         drawCounter(x, y, def.color, def.symbol, isSel);
         // Moved indicator
-        if (unit.moved) {
+        if (unit.mp <= 0) {
             ctx.fillStyle = 'rgba(0,0,0,0.3)';
             roundRect(ctx, x-COUNTER_SIZE/2, y-COUNTER_SIZE/2, COUNTER_SIZE, COUNTER_SIZE, 4);
             ctx.fill();
@@ -393,8 +393,17 @@ function handleClick(q, r, key) {
     if (state.selectedUnit) {
         const sel = state.units.find(u => u.id === state.selectedUnit);
         if (sel && hexKey(sel.q, sel.r) === key) {
-            // Clicked selected unit again — show panel
-            showUnitPanel(sel);
+            // Clicked selected unit again — deselect
+            deselectUnit(state);
+            hidePanel();
+            render();
+            return;
+        }
+        if (clickedUnit) {
+            // Clicked another unit — select it instead
+            deselectUnit(state);
+            selectUnit(state, clickedUnit.id);
+            showUnitPanel(clickedUnit);
             render();
             return;
         }

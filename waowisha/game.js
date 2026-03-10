@@ -212,10 +212,10 @@ export function computeVisibility(state) {
 
 export function computeReachable(state, unitId) {
     const unit = state.units.find(u => u.id === unitId);
-    if (!unit || unit.moved) return new Map();
+    if (!unit || unit.mp <= 0) return new Map();
 
     const unitDef = UNIT_TYPES[unit.type];
-    const mp = unitDef.mp;
+    const mp = unit.mp;
 
     const enemyKeys = new Set(state.enemies.map(e => hexKey(e.q, e.r)));
     const friendlyKeys = new Set(state.units.filter(u => u.id !== unitId).map(u => hexKey(u.q, u.r)));
@@ -304,7 +304,7 @@ export function createGame(seed) {
     // Starting Warden
     const warden = {
         id: newId(), type: 'warden', q: sq, r: sr,
-        moved: false, carrying: null
+        mp: UNIT_TYPES.warden.mp, carrying: null
     };
 
     const state = {
@@ -374,16 +374,17 @@ export function moveUnit(state, unitId, tq, tr) {
             deselectUnit(state);
             return result;
         }
-        // Attacker survives — move to hex
+        // Attacker survives — move to hex and spend all remaining MP
         unit.q = tq; unit.r = tr;
-        unit.moved = true;
+        unit.mp = 0;
         deselectUnit(state);
         return result;
     }
 
-    // Normal move
+    // Normal move — subtract cost
+    const cost = state.reachable.get(targetKey) || 0;
     unit.q = tq; unit.r = tr;
-    unit.moved = true;
+    unit.mp = Math.max(0, unit.mp - cost);
     deselectUnit(state);
     return 'move';
 }
@@ -414,7 +415,7 @@ export function recruitUnit(state, unitType) {
         if (!hex || TERRAIN_INFO[hex.terrain].moveCost === Infinity) continue;
         state.units.push({
             id: newId(), type: unitType, q: n.q, r: n.r,
-            moved: true, carrying: null
+            mp: UNIT_TYPES[unitType].mp, carrying: null
         });
         placed = true;
         break;
@@ -463,7 +464,7 @@ export function startBuild(state, unitId, structureType) {
         builderId: unit.id
     });
 
-    unit.moved = true;
+    unit.mp = 0;
     state.log.push(`Building ${sDef.name}`);
     deselectUnit(state);
     return true;
@@ -551,7 +552,7 @@ export function endTurn(state) {
 
     // 7. Advance turn
     state.turn++;
-    for (const unit of state.units) unit.moved = false;
+    for (const unit of state.units) unit.mp = UNIT_TYPES[unit.type].mp;
     state.visible = computeVisibility(state);
     deselectUnit(state);
 }
@@ -937,7 +938,7 @@ function recruitFree(state, type) {
         if (occupied.has(k)) continue;
         const hex = state.map.get(k);
         if (!hex || TERRAIN_INFO[hex.terrain].moveCost === Infinity) continue;
-        state.units.push({ id: newId(), type, q: n.q, r: n.r, moved: true, carrying: null });
+        state.units.push({ id: newId(), type, q: n.q, r: n.r, mp: UNIT_TYPES[type].mp, carrying: null });
         return;
     }
 }
