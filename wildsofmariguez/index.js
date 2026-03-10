@@ -1524,10 +1524,12 @@ function jhirleMoveToward(target) {
             const key = hexKey(q, r);
             if (key === jhirleKey) return true;
             if (key === evascorKey) return false;
-            if (danger.has(key)) return false;
             const hex = gs.hexes.get(key);
             if (!hex) return false;
-            return isAccessible(hex.terrain);
+            if (!isAccessible(hex.terrain)) return false;
+            // Jhirle avoids monster danger zone, but forest hides her
+            if (danger.has(key) && hex.terrain !== TERRAIN.FOREST) return false;
+            return true;
         },
         (q, r) => {
             const hex = gs.hexes.get(hexKey(q, r));
