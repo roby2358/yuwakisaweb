@@ -1252,6 +1252,19 @@ function moveMonsters() {
 
     const occupied = buildOccupiedSet(gs);
 
+    // Hecto is vulnerable if not hidden, not invulnerable, and outside tether range
+    const hectoInvulnerable = gs.flags.hectoInvulnerable > 0 || hasPassiveArtifact(gs, 'hecto_invulnerable');
+    const hectoHidden = isHiddenInForest(gs.hecto, gs.hexes) || gs.flags.hectoInvisible > 0 ||
+        hasPassiveArtifact(gs, 'hecto_always_hidden');
+    const tetherRange = hasPassiveArtifact(gs, 'extend_tether') ? 5 : 3;
+    const tetherDist = hexDistance(gs.hecto.q, gs.hecto.r, gs.evascor.q, gs.evascor.r);
+    const hectoProtected = hectoInvulnerable || hectoHidden || tetherDist <= tetherRange;
+
+    // If Hecto is unprotected, monsters can move onto his hex
+    if (!hectoProtected) {
+        occupied.delete(hexKey(gs.hecto.q, gs.hecto.r));
+    }
+
     // Build visible target list once per turn
     const targets = [];
     if (gs.decoy && gs.decoy.turnsLeft > 0) {
@@ -1259,8 +1272,6 @@ function moveMonsters() {
         targets.push(gs.decoy);
     } else {
         targets.push(gs.evascor);
-        const hectoHidden = isHiddenInForest(gs.hecto, gs.hexes) || gs.flags.hectoInvisible > 0 ||
-            hasPassiveArtifact(gs, 'hecto_always_hidden');
         if (!hectoHidden) targets.push(gs.hecto);
         if (gs.jhirle.active && !isHiddenInForest(gs.jhirle, gs.hexes)) targets.push(gs.jhirle);
     }
@@ -1305,6 +1316,9 @@ function moveMonsters() {
             enemy.r = bestNeighbor.r;
             enemy.movePath.push({ q: enemy.q, r: enemy.r });
             occupied.add(hexKey(enemy.q, enemy.r));
+
+            // Monster landed on Hecto — stop moving
+            if (enemy.q === gs.hecto.q && enemy.r === gs.hecto.r) break;
         }
 
         // Rewind to start for animation
@@ -1401,38 +1415,36 @@ function evascorCombat() {
 function hectoDeathCheck() {
     const gs = gameState;
     if (gs.gameOver) return;
-    if (gs.flags.hectoInvulnerable > 0 || hasPassiveArtifact(gs, 'hecto_invulnerable')) return;
 
-    const tetherRange = hasPassiveArtifact(gs, 'extend_tether') ? 5 : 3;
-    const dist = hexDistance(gs.hecto.q, gs.hecto.r, gs.evascor.q, gs.evascor.r);
-    if (dist <= tetherRange) return;
-
-    const adjacentMonster = gs.enemies.some(e =>
-        hexDistance(gs.hecto.q, gs.hecto.r, e.q, e.r) === 1
+    // Check if any monster is on Hecto's hex
+    const killerMonster = gs.enemies.some(e =>
+        e.q === gs.hecto.q && e.r === gs.hecto.r
     );
-    if (!adjacentMonster) return;
+    if (!killerMonster) return;
 
     // Phoenix Feather — teleport to safety
     if (gs.flags.phoenixFeather > 0) {
         gs.flags.phoenixFeather = 0;
-        gs.hecto.q = gs.evascor.q;
-        gs.hecto.r = gs.evascor.r;
-        // Nudge to adjacent hex if overlapping
+        // Nudge to adjacent passable hex near Evascor
         const neighbors = hexNeighbors(gs.evascor.q, gs.evascor.r);
         for (const n of neighbors) {
             const hex = gs.hexes.get(hexKey(n.q, n.r));
             if (hex && HECTO_COST[hex.terrain] !== undefined) {
                 gs.hecto.q = n.q;
                 gs.hecto.r = n.r;
-                break;
+                notify('Phoenix Feather saves Hecto! Teleported to Evascor.');
+                return;
             }
         }
+        // Fallback: place on Evascor
+        gs.hecto.q = gs.evascor.q;
+        gs.hecto.r = gs.evascor.r;
         notify('Phoenix Feather saves Hecto! Teleported to Evascor.');
         return;
     }
 
     gs.gameOver = 'hecto_died';
-    notify('A monster caught Hecto too far from Evascor! Game over.');
+    notify('A monster caught Hecto! Game over.');
 }
 
 function checkQuarryHealing() {
@@ -1746,9 +1758,6 @@ function endTurn() {
 function finishTurn() {
     const gs = gameState;
 
-    hectoDeathCheck();
-    if (gs.gameOver) { updateHUD(); render(); return; }
-
     spawnMonsters();
     decayMonsters();
     moveMonsters();
@@ -1765,6 +1774,9 @@ function finishTurn() {
 
 function finishTurnAfterMonsters() {
     const gs = gameState;
+
+    hectoDeathCheck();
+    if (gs.gameOver) { updateHUD(); render(); return; }
 
     runJhirlePhase();
     if (gs.gameOver) { updateHUD(); render(); return; }
@@ -1950,6 +1962,36 @@ function animateMonsterMoves(hop, callback) {
     setTimeout(() => animateMonsterMoves(hop + 1, callback), 200);
 }
 
+function drawDeathBang(gs) {
+    const { x, y } = hexToScreen(gs.hecto.q, gs.hecto.r);
+    const spikes = 12;
+    const outerR = HEX_SIZE * 1.4;
+    const innerR = HEX_SIZE * 0.5;
+
+    ctx.save();
+    ctx.beginPath();
+    for (let i = 0; i < spikes * 2; i++) {
+        const angle = (i * Math.PI) / spikes - Math.PI / 2;
+        const r = i % 2 === 0 ? outerR : innerR;
+        const px = x + Math.cos(angle) * r;
+        const py = y + Math.sin(angle) * r;
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = '#dd2200';
+    ctx.fill();
+    ctx.strokeStyle = '#ffaa00';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold ' + Math.floor(HEX_SIZE * 0.9) + 'px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('!', x, y);
+    ctx.restore();
+}
+
 function drawGameOverOverlay(gs) {
     ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -2116,6 +2158,7 @@ function render() {
 
     drawCombatFlash(gs);
 
+    if (gs.gameOver === 'hecto_died') drawDeathBang(gs);
     if (gs.gameOver) drawGameOverOverlay(gs);
 }
 
