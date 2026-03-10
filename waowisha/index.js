@@ -1,41 +1,21 @@
-// index.js — Hex & Counters game
+// index.js — Waowisha rendering, input, and UI
 
-import { HEX_SIZE, TERRAIN, MOVEMENT_COST, PLAYER_MP, MAP_COLS, MAP_ROWS } from './config.js';
-import { hexToPixel, pixelToHex, hexKey, hexNeighbors, bfsHexes, drawHexPath } from './hex.js';
-import { Rando } from './rando.js';
-import { ColorTheory } from './colortheory.js';
+import { HEX_SIZE, TERRAIN_INFO, UNIT_TYPES, ENEMY_TYPES, STRUCTURE_TYPES,
+    PRODUCTION_RECIPES, RECIPES, ALL_R0, ALL_P1 } from './config.js';
+import { hexToPixel, pixelToHex, hexKey, parseHexKey, hexDistance, drawHexPath } from './hex.js';
+import { createGame, selectUnit, deselectUnit, moveUnit, recruitUnit,
+    startBuild, assignRecipe, endTurn, canAfford, computeReachable,
+    deployCharge, pickUpCharge, computeVisibility } from './game.js';
 
-// ---- Display constants ----
-const COUNTER_SIZE = 28;
-const TERRAIN_COLORS = {
-    [TERRAIN.WATER]: '#2a6faa',
-    [TERRAIN.PLAINS]: '#7db344',
-    [TERRAIN.HILLS]: '#c4a44a',
-    [TERRAIN.MOUNTAIN]: '#7a7a7a',
-    [TERRAIN.FOREST]: '#2d6e2d',
-    [TERRAIN.GOLD]: '#d4a017',
-    [TERRAIN.QUARRY]: '#9e8c6c',
-};
-const PLAYER_COLOR = '#daa520';
-const TARGET_COLOR = '#ff6600';
-let enemyColors = [];
+// ---- Constants ----
+const COUNTER_SIZE = 26;
 
-// ---- Game state ----
-let hexes = null;
-let player = null;
-let target = null;
-let enemies = [];
-let selected = false;
-let reachable = null;
-let turn = 1;
-let mp = PLAYER_MP;
-let gameWon = false;
+// ---- State ----
+let state = null;
 
-// ---- View state ----
+// ---- View ----
 let panX = 0, panY = 0;
-let panning = false;
-let panStartX = 0, panStartY = 0;
-let panOrigX = 0, panOrigY = 0;
+let panning = false, panStartX = 0, panStartY = 0, panOrigX = 0, panOrigY = 0;
 
 // ---- Canvas ----
 const canvas = document.getElementById('game');
@@ -53,438 +33,329 @@ function hexToScreen(q, r) {
     const p = hexToPixel(q, r);
     return { x: p.x + panX, y: p.y + panY };
 }
+function screenToHex(sx, sy) { return pixelToHex(sx - panX, sy - panY); }
 
-function screenToHex(sx, sy) {
-    return pixelToHex(sx - panX, sy - panY);
-}
-
-// ---- Heightmap generation (diamond-square) ----
-function diamondSquare(size, roughness) {
-    const grid = new Float64Array(size * size);
-    const get = (x, y) => grid[y * size + x];
-    const set = (x, y, v) => { grid[y * size + x] = v; };
-
-    set(0, 0, Math.random());
-    set(size - 1, 0, Math.random());
-    set(0, size - 1, Math.random());
-    set(size - 1, size - 1, Math.random());
-
-    let step = size - 1;
-    let scale = roughness;
-    while (step > 1) {
-        const half = step / 2;
-        for (let y = half; y < size - 1; y += step)
-            for (let x = half; x < size - 1; x += step)
-                set(x, y, (get(x - half, y - half) + get(x + half, y - half) +
-                    get(x - half, y + half) + get(x + half, y + half)) / 4 +
-                    (Math.random() - 0.5) * scale);
-        for (let y = 0; y < size; y += half)
-            for (let x = (y + half) % step; x < size; x += step) {
-                let sum = 0, cnt = 0;
-                if (x >= half) { sum += get(x - half, y); cnt++; }
-                if (x + half < size) { sum += get(x + half, y); cnt++; }
-                if (y >= half) { sum += get(x, y - half); cnt++; }
-                if (y + half < size) { sum += get(x, y + half); cnt++; }
-                set(x, y, sum / cnt + (Math.random() - 0.5) * scale);
-            }
-        step = half;
-        scale *= roughness;
-    }
-
-    let min = Infinity, max = -Infinity;
-    for (let i = 0; i < grid.length; i++) { min = Math.min(min, grid[i]); max = Math.max(max, grid[i]); }
-    for (let i = 0; i < grid.length; i++) grid[i] = (grid[i] - min) / (max - min) * 100;
-    return grid;
-}
-
-// ---- Map generation ----
-function generateRectGrid() {
-    const hexes = new Map();
-    const hm = diamondSquare(129, 0.55);
-
-    for (let row = 0; row < MAP_ROWS; row++) {
-        const qOffset = -Math.floor(row / 2);
-        for (let col = 0; col < MAP_COLS; col++) {
-            const q = col + qOffset;
-            const r = row;
-            const gx = Math.round(col / (MAP_COLS - 1) * 128);
-            const gy = Math.round(row / (MAP_ROWS - 1) * 128);
-            const elevation = hm[gy * 129 + gx];
-            const isEdge = row === 0 || row === MAP_ROWS - 1 || col === 0 || col === MAP_COLS - 1;
-
-            hexes.set(hexKey(q, r), {
-                q, r, col, row, elevation, isEdge,
-                terrain: null, resource: null,
-                units: [], controlled: false
-            });
-        }
-    }
-    return hexes;
-}
-
-function assignTerrain() {
-    const inner = [];
-    for (const [, hex] of hexes) {
-        if (hex.isEdge) { hex.terrain = TERRAIN.WATER; continue; }
-        inner.push(hex);
-    }
-    inner.sort((a, b) => a.elevation - b.elevation);
-    const n = inner.length;
-
-    // Base terrain by elevation percentile
-    for (let i = 0; i < n; i++) {
-        const pct = i / n;
-        if (pct < 0.25) inner[i].terrain = TERRAIN.WATER;
-        else if (pct < 0.85) inner[i].terrain = TERRAIN.PLAINS;
-        else if (pct < 0.95) inner[i].terrain = TERRAIN.HILLS;
-        else inner[i].terrain = TERRAIN.MOUNTAIN;
-    }
-
-    // Scatter forests among plains (~10% of total)
-    const plains = inner.filter(h => h.terrain === TERRAIN.PLAINS);
-    Rando.shuffle(plains);
-    const forestCount = Math.round(n * 0.10);
-    const goldCount = Math.max(3, Math.round(n * 0.01));
-    let idx = 0;
-    for (let i = 0; i < forestCount && idx < plains.length; i++, idx++)
-        plains[idx].terrain = TERRAIN.FOREST;
-    for (let i = 0; i < goldCount && idx < plains.length; i++, idx++)
-        plains[idx].terrain = TERRAIN.GOLD;
-
-    // Scatter quarries among hills (~2% of total)
-    const hills = inner.filter(h => h.terrain === TERRAIN.HILLS);
-    Rando.shuffle(hills);
-    const quarryCount = Math.max(2, Math.round(n * 0.02));
-    for (let i = 0; i < quarryCount && i < hills.length; i++)
-        hills[i].terrain = TERRAIN.QUARRY;
-}
-
-function placePlayerAndTarget() {
-    const passable = [];
-    for (const [, hex] of hexes) {
-        if (hex.isEdge) continue;
-        if (hex.terrain === TERRAIN.WATER || hex.terrain === TERRAIN.MOUNTAIN) continue;
-        passable.push(hex);
-    }
-    // Sort by column position for true left/right
-    passable.sort((a, b) => a.col - b.col);
-
-    const leftSlice = passable.slice(0, Math.max(5, Math.floor(passable.length * 0.03)));
-    const ph = Rando.choice(leftSlice);
-    player = { q: ph.q, r: ph.r };
-
-    const rightSlice = passable.slice(-Math.max(5, Math.floor(passable.length * 0.03)));
-    const th = Rando.choice(rightSlice);
-    target = { q: th.q, r: th.r };
-}
-
-function initGame() {
-    let attempts = 0;
-    do {
-        hexes = generateRectGrid();
-        assignTerrain();
-        placePlayerAndTarget();
-        attempts++;
-    } while (!hasPath(player, target) && attempts < 20);
-
-    spawnEnemies();
-    turn = 1;
-    mp = PLAYER_MP;
-    selected = false;
-    reachable = null;
-    gameWon = false;
-    centerOn(player);
-    resize();
-}
-
-function hasPath(from, to) {
-    if (!from || !to) return false;
-    const costs = bfsHexes(from, hexes, hex => {
-        const c = MOVEMENT_COST[hex.terrain];
-        return c === undefined ? Infinity : c;
-    }, Infinity);
-    return costs.has(hexKey(to.q, to.r));
-}
-
-function spawnEnemies() {
-    const count = Rando.int(1, 6) + Rando.int(1, 6);
-    enemies = [];
-    const occupied = new Set([hexKey(player.q, player.r), hexKey(target.q, target.r)]);
-    const candidates = [];
-    for (const [key, hex] of hexes) {
-        if (hex.isEdge) continue;
-        if (hex.terrain === TERRAIN.WATER || hex.terrain === TERRAIN.MOUNTAIN) continue;
-        if (occupied.has(key)) continue;
-        candidates.push(hex);
-    }
-    Rando.shuffle(candidates);
-    for (let i = 0; i < count && i < candidates.length; i++) {
-        const h = candidates[i];
-        enemies.push({ q: h.q, r: h.r });
-        occupied.add(hexKey(h.q, h.r));
-    }
-
-    // Generate unique colors for each enemy using ColorTheory
-    enemyColors = [];
-    const scheme = ColorTheory.randomScheme(() => Math.random());
-    for (let i = 0; i < enemies.length; i++) {
-        const [r, g, b] = scheme[i % scheme.length];
-        enemyColors.push(ColorTheory.rgbToHex(r, g, b));
-    }
-}
-
-function centerOn(hex) {
-    const p = hexToPixel(hex.q, hex.r);
+function centerOn(q, r) {
+    const p = hexToPixel(q, r);
     panX = canvas.width / 2 - p.x;
     panY = canvas.height / 2 - p.y;
 }
 
-// ---- Game logic ----
-function selectPlayer() {
-    selected = true;
-    computeReachable();
+// ---- Drawing helpers ----
+function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y);
+    ctx.arcTo(x+w, y, x+w, y+r, r); ctx.lineTo(x+w, y+h-r);
+    ctx.arcTo(x+w, y+h, x+w-r, y+h, r); ctx.lineTo(x+r, y+h);
+    ctx.arcTo(x, y+h, x, y+h-r, r); ctx.lineTo(x, y+r);
+    ctx.arcTo(x, y, x+r, y, r); ctx.closePath();
 }
 
-function deselectPlayer() {
-    selected = false;
-    reachable = null;
+function contrastText(hexColor) {
+    const r = parseInt(hexColor.slice(1,3),16)/255;
+    const g = parseInt(hexColor.slice(3,5),16)/255;
+    const b = parseInt(hexColor.slice(5,7),16)/255;
+    return (0.2126*r + 0.7152*g + 0.0722*b) > 0.4 ? '#000' : '#fff';
 }
 
-function computeReachable() {
-    if (mp <= 0) { reachable = new Map(); return; }
-    const enemyKeys = new Set(enemies.map(e => hexKey(e.q, e.r)));
-    reachable = bfsHexes(player, hexes, hex => {
-        if (enemyKeys.has(hexKey(hex.q, hex.r))) return Infinity;
-        return MOVEMENT_COST[hex.terrain] ?? Infinity;
-    }, mp);
-    reachable.delete(hexKey(player.q, player.r));
-}
-
-function movePlayer(q, r) {
-    const key = hexKey(q, r);
-    const cost = reachable.get(key);
-    if (cost === undefined) return;
-
-    player.q = q;
-    player.r = r;
-    mp -= cost;
-
-    if (q === target.q && r === target.r) {
-        gameWon = true;
-        deselectPlayer();
-        render();
-        return;
+function drawCounter(cx, cy, color, label, isSelected) {
+    const s = COUNTER_SIZE, x = cx-s/2, y = cy-s/2, r = 4;
+    // Shadow
+    ctx.strokeStyle = '#888'; ctx.lineWidth = 1;
+    for (let i = 0; i < 2; i++) {
+        ctx.beginPath();
+        ctx.moveTo(x+r+i, y+s+1+i);
+        ctx.arcTo(x+s+1+i, y+s+1+i, x+s+1+i, y+s-r+1+i, r);
+        ctx.lineTo(x+s+1+i, y+r+i);
+        ctx.stroke();
     }
+    // Body
+    roundRect(ctx, x, y, s, s, r);
+    ctx.fillStyle = color; ctx.fill();
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke();
+    // Label
+    ctx.fillStyle = contrastText(color);
+    ctx.font = `bold ${Math.floor(s*0.55)}px monospace`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(label, cx, cy+1);
+    // Selection ring
+    if (isSelected) {
+        const ss = s + 4;
+        roundRect(ctx, cx-ss/2, cy-ss/2, ss, ss, 6);
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+    }
+}
 
-    if (mp > 0) {
-        computeReachable();
+function drawStructure(cx, cy, sDef, buildProgress) {
+    const s = 16;
+    if (sDef.category === 'defense') {
+        // Triangle for defense
+        ctx.beginPath();
+        ctx.moveTo(cx, cy-s/2-2);
+        ctx.lineTo(cx-s/2, cy+s/2-2);
+        ctx.lineTo(cx+s/2, cy+s/2-2);
+        ctx.closePath();
+        ctx.fillStyle = buildProgress > 0 ? '#554' : '#aa8';
+        ctx.fill();
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke();
     } else {
-        deselectPlayer();
+        // Square for production
+        roundRect(ctx, cx-s/2, cy-s/2-2, s, s, 2);
+        ctx.fillStyle = buildProgress > 0 ? '#445' : '#88a';
+        ctx.fill();
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke();
     }
-    render();
-}
+    // Label
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 9px monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const label = sDef.name.charAt(0);
+    ctx.fillText(label, cx, cy-1);
 
-function endTurn() {
-    if (gameWon) return;
-    deselectPlayer();
-    moveEnemies();
-    turn++;
-    mp = PLAYER_MP;
-    render();
-}
-
-function moveEnemies() {
-    const occupied = new Set([hexKey(player.q, player.r)]);
-    for (const e of enemies) occupied.add(hexKey(e.q, e.r));
-
-    for (const enemy of enemies) {
-        const neighbors = hexNeighbors(enemy.q, enemy.r);
-        const valid = neighbors.filter(n => {
-            const key = hexKey(n.q, n.r);
-            const hex = hexes.get(key);
-            if (!hex) return false;
-            if (hex.terrain === TERRAIN.WATER || hex.terrain === TERRAIN.MOUNTAIN) return false;
-            if (occupied.has(key)) return false;
-            return true;
-        });
-        if (valid.length > 0) {
-            occupied.delete(hexKey(enemy.q, enemy.r));
-            const dest = Rando.choice(valid);
-            enemy.q = dest.q;
-            enemy.r = dest.r;
-            occupied.add(hexKey(enemy.q, enemy.r));
-        }
+    if (buildProgress > 0) {
+        ctx.fillStyle = '#ee8';
+        ctx.font = '8px monospace';
+        ctx.fillText(buildProgress + 't', cx, cy + 9);
     }
 }
 
 // ---- Rendering ----
 function render() {
+    if (!state) return;
     ctx.fillStyle = '#111';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Terrain
-    for (const [, hex] of hexes) {
+    for (const hex of state.map.values()) {
         const { x, y } = hexToScreen(hex.q, hex.r);
-        if (x < -HEX_SIZE * 2 || x > canvas.width + HEX_SIZE * 2 ||
-            y < -HEX_SIZE * 2 || y > canvas.height + HEX_SIZE * 2) continue;
+        if (x < -50 || x > canvas.width+50 || y < -50 || y > canvas.height+50) continue;
+
         drawHexPath(ctx, x, y, HEX_SIZE);
-        ctx.fillStyle = TERRAIN_COLORS[hex.terrain] || '#555';
+        const info = TERRAIN_INFO[hex.terrain];
+        ctx.fillStyle = info ? info.color : '#555';
         ctx.fill();
-        ctx.strokeStyle = '#00000044';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-    }
+        ctx.strokeStyle = '#00000044'; ctx.lineWidth = 1; ctx.stroke();
 
-    // Target marker
-    if (target && !gameWon) {
-        const { x, y } = hexToScreen(target.q, target.r);
-        drawHexPath(ctx, x, y, HEX_SIZE);
-        ctx.strokeStyle = TARGET_COLOR;
-        ctx.lineWidth = 3;
-        ctx.stroke();
-        ctx.fillStyle = TARGET_COLOR;
-        ctx.font = 'bold 16px monospace';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('\u2605', x, y);
-    }
-
-    // Reachable highlights
-    if (reachable) {
-        for (const [key] of reachable) {
-            const [q, r] = key.split(',').map(Number);
-            const { x, y } = hexToScreen(q, r);
+        // Fog overlay
+        if (!state.visible.has(hexKey(hex.q, hex.r))) {
             drawHexPath(ctx, x, y, HEX_SIZE);
-            ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fill();
+        }
+
+        // Resource capacity indicator (small dot)
+        if (info && info.resource && hex.resourceCapacity > 0 && state.visible.has(hexKey(hex.q, hex.r))) {
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.beginPath();
+            ctx.arc(x, y + HEX_SIZE * 0.55, 3, 0, Math.PI * 2);
             ctx.fill();
         }
     }
 
-    // Enemies
-    for (let i = 0; i < enemies.length; i++) {
-        const { x, y } = hexToScreen(enemies[i].q, enemies[i].r);
-        drawCounter(x, y, enemyColors[i] || '#cc3333', 'E');
+    // Settlement marker
+    if (state.settlement) {
+        const { q, r } = parseHexKey(state.settlement);
+        const { x, y } = hexToScreen(q, r);
+        drawHexPath(ctx, x, y, HEX_SIZE);
+        ctx.strokeStyle = '#daa520'; ctx.lineWidth = 3; ctx.stroke();
+        ctx.fillStyle = '#daa520';
+        ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('LOOM', x, y + HEX_SIZE * 0.55);
     }
 
-    // Player
-    if (player) {
-        const { x, y } = hexToScreen(player.q, player.r);
-        drawCounter(x, y, PLAYER_COLOR, 'P');
-        if (selected) {
-            const s = COUNTER_SIZE + 4;
-            roundRect(ctx, x - s / 2, y - s / 2, s, s, 6);
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 2;
-            ctx.stroke();
+    // Reachable highlights
+    for (const [key] of state.reachable) {
+        const { q, r } = parseHexKey(key);
+        const { x, y } = hexToScreen(q, r);
+        drawHexPath(ctx, x, y, HEX_SIZE);
+        // Color reachable hexes with enemies red
+        const hasEnemy = state.enemies.some(e => hexKey(e.q, e.r) === key);
+        ctx.fillStyle = hasEnemy ? 'rgba(255,80,80,0.35)' : 'rgba(255,255,0,0.25)';
+        ctx.fill();
+    }
+
+    // Structures
+    for (const s of state.structures) {
+        const { x, y } = hexToScreen(s.q, s.r);
+        const sDef = STRUCTURE_TYPES[s.type];
+        drawStructure(x, y, sDef, s.buildProgress);
+    }
+
+    // Enemies (only visible)
+    for (const enemy of state.enemies) {
+        if (!state.visible.has(hexKey(enemy.q, enemy.r))) continue;
+        const { x, y } = hexToScreen(enemy.q, enemy.r);
+        const eDef = ENEMY_TYPES[enemy.type];
+        const label = enemy.type === 'broodMother' ? 'B' : eDef.symbol.toUpperCase();
+        drawCounter(x, y, eDef.color, label, false);
+    }
+
+    // Player units
+    for (const unit of state.units) {
+        const { x, y } = hexToScreen(unit.q, unit.r);
+        const def = UNIT_TYPES[unit.type];
+        const isSel = state.selectedUnit === unit.id;
+        drawCounter(x, y, def.color, def.symbol, isSel);
+        // Moved indicator
+        if (unit.moved) {
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            roundRect(ctx, x-COUNTER_SIZE/2, y-COUNTER_SIZE/2, COUNTER_SIZE, COUNTER_SIZE, 4);
+            ctx.fill();
+        }
+        // Carrying indicator
+        if (unit.carrying) {
+            ctx.fillStyle = '#f80';
+            ctx.beginPath();
+            ctx.arc(x + COUNTER_SIZE/2 - 3, y - COUNTER_SIZE/2 + 3, 4, 0, Math.PI*2);
+            ctx.fill();
         }
     }
 
-    // Victory overlay
-    if (gameWon) {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    // Victory / Game Over overlay
+    if (state.victory || state.gameOver) {
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#fff';
+        ctx.fillStyle = state.victory ? '#6a4' : '#a33';
         ctx.font = 'bold 48px monospace';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('VICTORY!', canvas.width / 2, canvas.height / 2 - 30);
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(state.victory ? 'MANDATE FULFILLED' : 'THE LOOM HAS FALLEN', canvas.width/2, canvas.height/2-30);
+        ctx.fillStyle = '#ddd';
         ctx.font = '20px monospace';
-        ctx.fillText('Reached target in ' + turn + ' turns', canvas.width / 2, canvas.height / 2 + 20);
+        ctx.fillText(`Turn ${state.turn}`, canvas.width/2, canvas.height/2+20);
     }
 
     updateHUD();
+    updateLog();
 }
 
-function roundRect(ctx, x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.arcTo(x + w, y, x + w, y + r, r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
-    ctx.lineTo(x + r, y + h);
-    ctx.arcTo(x, y + h, x, y + h - r, r);
-    ctx.lineTo(x, y + r);
-    ctx.arcTo(x, y, x + r, y, r);
-    ctx.closePath();
+// ---- HUD ----
+function updateHUD() {
+    document.getElementById('turn-info').textContent = `Turn ${state.turn}`;
+
+    // Stockpile
+    const stockEl = document.getElementById('stockpile');
+    let stockHTML = '';
+    const slots = [...ALL_R0, ...ALL_P1, 'P2a','P2b','P2c','P2d','P3a','P3b','P3c','P3d'];
+    for (const slot of slots) {
+        const amt = state.stockpile[slot] || 0;
+        if (amt > 0) {
+            const name = state.names[slot] || slot;
+            stockHTML += `<span class="stock-item"><span class="stock-label">${name}:</span> <span class="stock-value">${amt}</span></span>`;
+        }
+    }
+    stockEl.innerHTML = stockHTML || '<span class="stock-label">No resources</span>';
+
+    // Mandate
+    const mandEl = document.getElementById('mandate');
+    let mandHTML = '<b>The Mandate:</b><br>';
+    for (const goal of state.mandate) {
+        const name = state.names[goal.product] || goal.product;
+        if (!goal.revealed) {
+            mandHTML += '<div class="goal goal-hidden">???</div>';
+        } else if (goal.produced >= goal.quantity) {
+            mandHTML += `<div class="goal goal-done">${name}: ${goal.produced}/${goal.quantity}</div>`;
+        } else {
+            mandHTML += `<div class="goal goal-active">${name}: ${goal.produced}/${goal.quantity}</div>`;
+        }
+    }
+    mandEl.innerHTML = mandHTML;
 }
 
-function contrastText(hexColor) {
-    const r = parseInt(hexColor.slice(1, 3), 16) / 255;
-    const g = parseInt(hexColor.slice(3, 5), 16) / 255;
-    const b = parseInt(hexColor.slice(5, 7), 16) / 255;
-    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    return lum > 0.4 ? '#000' : '#fff';
+function updateLog() {
+    const logEl = document.getElementById('log');
+    const entries = state.log.slice(-12);
+    logEl.innerHTML = entries.map(e => `<div class="log-entry">${e}</div>`).join('');
+    logEl.scrollTop = logEl.scrollHeight;
 }
 
-function drawCounter(cx, cy, color, label) {
-    const labelColor = contrastText(color);
-    const s = COUNTER_SIZE;
-    const x = cx - s / 2, y = cy - s / 2;
-    const r = 4;
+// ---- Panel (context menu for actions) ----
+function showPanel(title, content) {
+    const panel = document.getElementById('panel');
+    document.getElementById('panel-title').textContent = title;
+    document.getElementById('panel-content').innerHTML = content;
+    panel.classList.remove('hidden');
+}
 
-    // Depth shadow: 2 gray L-shaped lines on bottom-right
-    ctx.strokeStyle = '#888';
-    ctx.lineWidth = 1;
-    for (let i = 0; i < 2; i++) {
-        ctx.beginPath();
-        ctx.moveTo(x + r + i, y + s + 1 + i);
-        ctx.arcTo(x + s + 1 + i, y + s + 1 + i, x + s + 1 + i, y + s - r + 1 + i, r);
-        ctx.lineTo(x + s + 1 + i, y + r + i);
-        ctx.stroke();
+function hidePanel() {
+    document.getElementById('panel').classList.add('hidden');
+}
+
+function showUnitPanel(unit) {
+    const def = UNIT_TYPES[unit.type];
+    let html = `<div style="margin-bottom:6px">${def.name} | STR:${def.strength} MP:${def.mp}</div>`;
+
+    // Build options (available even after moving — move then build on same turn)
+    if (def.build) {
+        const k = hexKey(unit.q, unit.r);
+        const hasStruct = state.structures.some(s => hexKey(s.q, s.r) === k);
+        if (!hasStruct && k !== state.settlement) {
+            html += '<div style="margin:4px 0;color:#aaa">Build:</div>';
+            for (const [type, sDef] of Object.entries(STRUCTURE_TYPES)) {
+                const affordable = canAfford(state, sDef.cost);
+                const costStr = Object.entries(sDef.cost).map(([r,a]) => `${a} ${state.names[r]||r}`).join(', ');
+                html += `<button data-build="${type}" ${affordable?'':'disabled'}>${sDef.name} (${costStr})</button>`;
+            }
+        }
     }
 
-    // Body
-    roundRect(ctx, x, y, s, s, r);
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+    // Recruit options (if on settlement)
+    if (hexKey(unit.q, unit.r) === state.settlement) {
+        html += '<div style="margin:4px 0;color:#aaa">Recruit:</div>';
+        for (const [type, uDef] of Object.entries(UNIT_TYPES)) {
+            if (!uDef.cost) continue;
+            const affordable = canAfford(state, uDef.cost);
+            const costStr = Object.entries(uDef.cost).map(([r,a]) => `${a} ${state.names[r]||r}`).join(', ');
+            html += `<button data-recruit="${type}" ${affordable?'':'disabled'}>${uDef.name} (${costStr})</button>`;
+        }
+    }
 
-    // Label — pick white or black text for contrast
-    ctx.fillStyle = labelColor;
-    ctx.font = 'bold ' + Math.floor(s * 0.55) + 'px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(label, cx, cy + 1);
+    // Drift Charge
+    if (unit.carrying === 'P3d') {
+        html += `<button data-action="deploy-charge">Deploy Drift Charge (range 3)</button>`;
+    } else if (!unit.carrying && (state.stockpile.P3d || 0) > 0) {
+        html += `<button data-action="pickup-charge">Pick Up Drift Charge</button>`;
+    }
+
+    showPanel(def.name, html);
 }
 
-function updateHUD() {
-    document.getElementById('turn-info').textContent = 'Turn ' + turn;
-    document.getElementById('mp-info').textContent = 'MP: ' + mp + '/' + PLAYER_MP;
+function showStructurePanel(struct) {
+    const sDef = STRUCTURE_TYPES[struct.type];
+    if (struct.buildProgress > 0) {
+        showPanel(sDef.name, `<div>Under construction: ${struct.buildProgress} turns remaining</div>`);
+        return;
+    }
+    if (sDef.category !== 'production') {
+        showPanel(sDef.name, `<div>Range: ${sDef.range} | Power: ${sDef.power}</div>`);
+        return;
+    }
+
+    const recipes = PRODUCTION_RECIPES[sDef.tier] || [];
+    let html = `<div style="margin-bottom:4px">Current: ${struct.recipe ? (state.names[struct.recipe]||struct.recipe) : 'None'}</div>`;
+    html += '<div style="margin:4px 0;color:#aaa">Recipes:</div>';
+    for (const recipe of recipes) {
+        const r = RECIPES[recipe];
+        const inputStr = Object.entries(r.inputs).map(([s,a]) => `${a} ${state.names[s]||s}`).join(' + ');
+        const active = struct.recipe === recipe;
+        html += `<button data-recipe="${recipe}" data-struct="${struct.id}" ${active?'style="border-color:#ee8"':''}>${state.names[recipe]||recipe} (${inputStr})</button>`;
+    }
+    showPanel(sDef.name, html);
 }
 
-// ---- Input handling ----
+// ---- Input ----
 canvas.addEventListener('mousedown', e => {
     if (e.button === 2) {
         panning = true;
-        panStartX = e.clientX;
-        panStartY = e.clientY;
-        panOrigX = panX;
-        panOrigY = panY;
+        panStartX = e.clientX; panStartY = e.clientY;
+        panOrigX = panX; panOrigY = panY;
         e.preventDefault();
         return;
     }
 
-    if (e.button === 0 && !gameWon) {
+    if (e.button === 0 && state && !state.gameOver && !state.victory) {
         const hex = screenToHex(e.clientX, e.clientY);
         const key = hexKey(hex.q, hex.r);
-
-        if (selected) {
-            if (hex.q === player.q && hex.r === player.r) {
-                deselectPlayer();
-            } else if (reachable && reachable.has(key)) {
-                movePlayer(hex.q, hex.r);
-            } else {
-                deselectPlayer();
-            }
-        } else {
-            if (hex.q === player.q && hex.r === player.r) {
-                selectPlayer();
-            }
-        }
-        render();
+        handleClick(hex.q, hex.r, key);
     }
 });
 
@@ -496,17 +367,138 @@ canvas.addEventListener('mousemove', e => {
     }
 });
 
-canvas.addEventListener('mouseup', e => {
-    if (e.button === 2) panning = false;
-});
-
+canvas.addEventListener('mouseup', e => { if (e.button === 2) panning = false; });
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 
-document.getElementById('end-turn').addEventListener('click', endTurn);
-window.addEventListener('keydown', e => {
-    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); endTurn(); }
+function handleClick(q, r, key) {
+    // Deploy charge mode
+    if (state.buildMode === 'deploy-charge' && state.selectedUnit) {
+        const unit = state.units.find(u => u.id === state.selectedUnit);
+        if (unit && hexDistance(unit.q, unit.r, q, r) <= 3) {
+            deployCharge(state, unit.id, q, r);
+            state.buildMode = null;
+            hidePanel();
+            state.visible = computeVisibility(state);
+            render();
+            return;
+        }
+        state.buildMode = null;
+        state.log.push('Cancelled.');
+        render();
+        return;
+    }
+
+    const clickedUnit = state.units.find(u => hexKey(u.q, u.r) === key);
+    const clickedStruct = state.structures.find(s => hexKey(s.q, s.r) === key);
+
+    if (state.selectedUnit) {
+        const sel = state.units.find(u => u.id === state.selectedUnit);
+        if (sel && hexKey(sel.q, sel.r) === key) {
+            // Clicked selected unit again — show panel
+            showUnitPanel(sel);
+            render();
+            return;
+        }
+        if (state.reachable.has(key)) {
+            const result = moveUnit(state, state.selectedUnit, q, r);
+            hidePanel();
+            state.visible = computeVisibility(state);
+            render();
+            return;
+        }
+        // Clicked elsewhere — deselect
+        deselectUnit(state);
+        hidePanel();
+    }
+
+    if (clickedUnit) {
+        selectUnit(state, clickedUnit.id);
+        showUnitPanel(clickedUnit);
+    } else if (clickedStruct) {
+        showStructurePanel(clickedStruct);
+    } else {
+        hidePanel();
+    }
+    render();
+}
+
+// Panel button handlers
+document.getElementById('panel-content').addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+
+    if (btn.dataset.build) {
+        const unit = state.units.find(u => u.id === state.selectedUnit);
+        if (unit) {
+            startBuild(state, unit.id, btn.dataset.build);
+            hidePanel();
+            state.visible = computeVisibility(state);
+            render();
+        }
+    }
+    if (btn.dataset.recruit) {
+        recruitUnit(state, btn.dataset.recruit);
+        hidePanel();
+        state.visible = computeVisibility(state);
+        render();
+    }
+    if (btn.dataset.recipe) {
+        assignRecipe(state, parseInt(btn.dataset.struct), btn.dataset.recipe);
+        // Refresh panel
+        const struct = state.structures.find(s => s.id === parseInt(btn.dataset.struct));
+        if (struct) showStructurePanel(struct);
+        render();
+    }
+    if (btn.dataset.action === 'pickup-charge') {
+        const unit = state.units.find(u => u.id === state.selectedUnit);
+        if (unit) {
+            pickUpCharge(state, unit.id);
+            showUnitPanel(unit);
+            render();
+        }
+    }
+    if (btn.dataset.action === 'deploy-charge') {
+        state.log.push('Click a hex within range 3 to deploy Drift Charge.');
+        state.buildMode = 'deploy-charge';
+        render();
+    }
 });
+
+// End Turn
+document.getElementById('end-turn').addEventListener('click', () => {
+    if (!state || state.gameOver || state.victory) return;
+    endTurn(state);
+    hidePanel();
+    render();
+});
+
+window.addEventListener('keydown', e => {
+    if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        if (!state || state.gameOver || state.victory) return;
+        endTurn(state);
+        hidePanel();
+        render();
+    }
+    if (e.key === 'Escape') {
+        deselectUnit(state);
+        hidePanel();
+        render();
+    }
+});
+
+// New Game
 document.getElementById('new-game').addEventListener('click', initGame);
 
-// ---- Start ----
+// ---- Init ----
+function initGame() {
+    const seed = Date.now();
+    state = createGame(seed);
+    const { q, r } = parseHexKey(state.settlement);
+    hidePanel();
+    resize(); // sets canvas size
+    centerOn(q, r);
+    render();
+}
+
 initGame();

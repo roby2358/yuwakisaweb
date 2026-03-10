@@ -3,17 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hex &amp; Counters</title>
+    <title>Waowisha</title>
     <link rel="stylesheet" href="index.css">
 </head>
 <body>
     <canvas id="game"></canvas>
     <div id="hud">
-        <span id="turn-info">Turn 1</span>
-        <span id="mp-info">MP: 5/5</span>
-        <button id="end-turn">End Turn</button>
-        <button id="new-game">New Game</button>
+        <div id="hud-top">
+            <span id="turn-info">Turn 1</span>
+            <button id="end-turn">End Turn</button>
+            <button id="new-game">New Game</button>
+        </div>
+        <div id="stockpile"></div>
+        <div id="mandate"></div>
     </div>
+    <div id="panel" class="hidden">
+        <div id="panel-title"></div>
+        <div id="panel-content"></div>
+    </div>
+    <div id="log"></div>
     <script type="module" src="index.js"></script>
 </body>
 </html>

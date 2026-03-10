@@ -1,41 +1,46 @@
 // Random Number Utilities
 
 export class Rando {
-    static shuffle(array) {
+    // Seeded PRNG (mulberry32)
+    static seeded(seed) {
+        let s = seed | 0;
+        return () => {
+            s = s + 0x6D2B79F5 | 0;
+            let t = Math.imul(s ^ s >>> 15, 1 | s);
+            t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+            return ((t ^ t >>> 14) >>> 0) / 4294967296;
+        };
+    }
+
+    static shuffle(array, rng = Math.random) {
         for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
+            const j = Math.floor(rng() * (i + 1));
             [array[i], array[j]] = [array[j], array[i]];
         }
         return array;
     }
 
-    static choice(array) {
+    static choice(array, rng = Math.random) {
         if (array.length === 0) return null;
-        return array[Math.floor(Math.random() * array.length)];
+        return array[Math.floor(rng() * array.length)];
     }
 
-    static int(min, max) {
-        return min + Math.floor(Math.random() * (max - min + 1));
+    static int(min, max, rng = Math.random) {
+        return min + Math.floor(rng() * (max - min + 1));
     }
 
-    static gaussian() {
-        const u1 = Math.random();
-        const u2 = Math.random();
-        return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+    static float(min, max, rng = Math.random) {
+        return min + rng() * (max - min);
     }
 
-    static float(min, max) {
-        return min + Math.random() * (max - min);
+    static bool(probability = 0.5, rng = Math.random) {
+        return rng() < probability;
     }
 
-    static bool(probability = 0.5) {
-        return Math.random() < probability;
-    }
-
-    static weighted(weighted) {
+    static weighted(weighted, rng = Math.random) {
         if (weighted.length === 0) return null;
         const totalWeight = weighted.reduce((sum, w) => sum + w.weight, 0);
-        let roll = Math.random() * totalWeight;
+        let roll = rng() * totalWeight;
         for (const { item, weight } of weighted) {
             roll -= weight;
             if (roll <= 0) return item;
