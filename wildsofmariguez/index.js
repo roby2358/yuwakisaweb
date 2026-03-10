@@ -1226,7 +1226,9 @@ function spawnMonsters() {
     for (let i = 0; i < spawnCount && i < candidates.length; i++) {
         if (Math.random() > 0.2) continue;
         const h = candidates[i];
-        gs.enemies.push({ q: h.q, r: h.r, color: monsterColor(), icon: monsterIcon() });
+        const roll = Math.floor(Math.random() * 6) + 1;
+        const speed = roll <= 3 ? 1 : roll <= 5 ? 2 : 3;
+        gs.enemies.push({ q: h.q, r: h.r, color: monsterColor(), icon: monsterIcon(), speed });
     }
 }
 
@@ -1264,6 +1266,8 @@ function moveMonsters() {
     }
 
     for (const enemy of gs.enemies) {
+        enemy.movePath = [];
+
         // Frozen monsters can't move
         if (enemy.frozen && enemy.frozen > 0) continue;
 
@@ -1273,29 +1277,41 @@ function moveMonsters() {
         const distToEvascor = hexDistance(enemy.q, enemy.r, gs.evascor.q, gs.evascor.r);
         if (distToEvascor <= 3 && Math.random() < 0.5) continue;
 
-        // Greedy move: pick neighbor closest to target
-        const neighbors = hexNeighbors(enemy.q, enemy.r);
-        let bestNeighbor = null;
-        let bestDist = hexDistance(enemy.q, enemy.r, target.q, target.r);
+        const startQ = enemy.q, startR = enemy.r;
 
-        for (const n of neighbors) {
-            const key = hexKey(n.q, n.r);
-            const hex = gs.hexes.get(key);
-            if (!hex) continue;
-            if (!isAccessible(hex.terrain)) continue;
-            if (occupied.has(key)) continue;
-            const d = hexDistance(n.q, n.r, target.q, target.r);
-            if (d < bestDist) {
-                bestDist = d;
-                bestNeighbor = n;
+        // Greedy move: up to [speed] steps toward target
+        const steps = enemy.speed || 1;
+        for (let step = 0; step < steps; step++) {
+            const neighbors = hexNeighbors(enemy.q, enemy.r);
+            let bestNeighbor = null;
+            let bestDist = hexDistance(enemy.q, enemy.r, target.q, target.r);
+
+            for (const n of neighbors) {
+                const key = hexKey(n.q, n.r);
+                const hex = gs.hexes.get(key);
+                if (!hex) continue;
+                if (!isAccessible(hex.terrain)) continue;
+                if (occupied.has(key)) continue;
+                const d = hexDistance(n.q, n.r, target.q, target.r);
+                if (d < bestDist) {
+                    bestDist = d;
+                    bestNeighbor = n;
+                }
             }
+
+            if (!bestNeighbor) break;
+            occupied.delete(hexKey(enemy.q, enemy.r));
+            enemy.q = bestNeighbor.q;
+            enemy.r = bestNeighbor.r;
+            enemy.movePath.push({ q: enemy.q, r: enemy.r });
+            occupied.add(hexKey(enemy.q, enemy.r));
         }
 
-        if (!bestNeighbor) continue;
-        occupied.delete(hexKey(enemy.q, enemy.r));
-        enemy.q = bestNeighbor.q;
-        enemy.r = bestNeighbor.r;
-        occupied.add(hexKey(enemy.q, enemy.r));
+        // Rewind to start for animation
+        if (enemy.movePath.length > 0) {
+            enemy.q = startQ;
+            enemy.r = startR;
+        }
     }
 }
 
@@ -1305,7 +1321,7 @@ function moveMonsters() {
 
 function evascorCombat() {
     const gs = gameState;
-    if (gs.evascor.stunned) return;
+    if (gs.evascor.stunned) return [];
 
     const routine = gs.evascor.routineBase + gs.flags.routineBoost;
     const adjacent = gs.enemies.filter(e =>
@@ -1314,6 +1330,7 @@ function evascorCombat() {
 
     // Kill up to [routine] adjacent enemies
     const killed = adjacent.slice(0, routine);
+    const killPositions = killed.map(k => ({ q: k.q, r: k.r }));
     for (const k of killed) {
         const idx = gs.enemies.indexOf(k);
         if (idx !== -1) gs.enemies.splice(idx, 1);
@@ -1324,7 +1341,7 @@ function evascorCombat() {
     }
 
     // Overflow stun
-    if (adjacent.length <= routine) return;
+    if (adjacent.length <= routine) return killPositions;
 
     // Iron Skull Helm — negate first stun
     const helmIdx = gs.inventory.findIndex(inv => {
@@ -1334,7 +1351,7 @@ function evascorCombat() {
     if (helmIdx !== -1) {
         gs.inventory.splice(helmIdx, 1);
         notify('Iron Skull Helm shatters, negating the stun!');
-        return;
+        return killPositions;
     }
 
     // Scorpion Tail — on stun, kill ALL adjacent enemies (one-time)
@@ -1343,6 +1360,10 @@ function evascorCombat() {
         return def.effect === 'stun_massacre' && !inv.spent;
     });
     if (scorpionIdx !== -1) {
+        const extraKills = gs.enemies.filter(e =>
+            hexDistance(gs.evascor.q, gs.evascor.r, e.q, e.r) === 1
+        );
+        for (const k of extraKills) killPositions.push({ q: k.q, r: k.r });
         gs.enemies = gs.enemies.filter(e =>
             hexDistance(gs.evascor.q, gs.evascor.r, e.q, e.r) > 1
         );
@@ -1360,6 +1381,7 @@ function evascorCombat() {
             hexDistance(gs.evascor.q, gs.evascor.r, e.q, e.r) === 1
         );
         const reflected = adj.slice(0, 3);
+        for (const k of reflected) killPositions.push({ q: k.q, r: k.r });
         gs.enemies = gs.enemies.filter(e => !reflected.includes(e));
         gs.inventory.splice(mirrorIdx, 1);
         notify(`Shield of Mirrors reflects: ${reflected.length} enemies killed!`);
@@ -1373,6 +1395,7 @@ function evascorCombat() {
     } else {
         notify(`Evascor is stunned! (${gs.evascor.stunCount}/3)`);
     }
+    return killPositions;
 }
 
 function hectoDeathCheck() {
@@ -1708,8 +1731,20 @@ function endTurn() {
     checkWinCondition();
     if (gs.gameOver) { updateHUD(); render(); return; }
 
-    evascorCombat();
+    const killPositions = evascorCombat();
     if (gs.gameOver) { updateHUD(); render(); return; }
+
+    if (killPositions && killPositions.length > 0) {
+        gs.combatFlash = killPositions;
+        render();
+        animateCombatFlash(() => finishTurn());
+    } else {
+        finishTurn();
+    }
+}
+
+function finishTurn() {
+    const gs = gameState;
 
     hectoDeathCheck();
     if (gs.gameOver) { updateHUD(); render(); return; }
@@ -1717,6 +1752,19 @@ function endTurn() {
     spawnMonsters();
     decayMonsters();
     moveMonsters();
+
+    // Check if any monsters have move paths to animate
+    const hasMovePaths = gs.enemies.some(e => e.movePath && e.movePath.length > 0);
+    if (hasMovePaths) {
+        render();
+        animateMonsterMoves(0, () => finishTurnAfterMonsters());
+    } else {
+        finishTurnAfterMonsters();
+    }
+}
+
+function finishTurnAfterMonsters() {
+    const gs = gameState;
 
     runJhirlePhase();
     if (gs.gameOver) { updateHUD(); render(); return; }
@@ -1833,6 +1881,73 @@ function drawTether(gs) {
     ctx.setLineDash([4, 4]);
     ctx.stroke();
     ctx.setLineDash([]);
+}
+
+function drawCombatFlash(gs) {
+    if (!gs.combatFlash) return;
+    const eScreen = hexToScreen(gs.evascor.q, gs.evascor.r);
+    const progress = gs.combatFlashFrame / gs.combatFlashTotal;
+
+    // White sword arc sweeping out
+    const maxRadius = HEX_SIZE * 2.5;
+    const radius = COUNTER_SIZE * 0.3 + progress * maxRadius;
+    const arcWidth = 4 * (1 - progress * 0.5);
+    const alpha = 1 - progress;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(eScreen.x, eScreen.y, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+    ctx.lineWidth = arcWidth;
+    ctx.stroke();
+    // Inner glow
+    ctx.beginPath();
+    ctx.arc(eScreen.x, eScreen.y, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(200, 220, 255, ${alpha * 0.4})`;
+    ctx.lineWidth = arcWidth * 3;
+    ctx.stroke();
+    ctx.restore();
+}
+
+function animateCombatFlash(callback) {
+    const gs = gameState;
+    const totalFrames = 20;
+    gs.combatFlashFrame = 0;
+    gs.combatFlashTotal = totalFrames;
+
+    function step() {
+        gs.combatFlashFrame++;
+        render();
+        if (gs.combatFlashFrame < totalFrames) {
+            requestAnimationFrame(step);
+        } else {
+            gs.combatFlash = null;
+            callback();
+        }
+    }
+    requestAnimationFrame(step);
+}
+
+function animateMonsterMoves(hop, callback) {
+    const gs = gameState;
+    const maxHops = gs.enemies.reduce((m, e) => Math.max(m, (e.movePath || []).length), 0);
+
+    if (hop >= maxHops) {
+        // Clear move paths
+        for (const e of gs.enemies) e.movePath = null;
+        callback();
+        return;
+    }
+
+    // Advance each monster that has a hop at this index
+    for (const enemy of gs.enemies) {
+        if (enemy.movePath && enemy.movePath[hop]) {
+            enemy.q = enemy.movePath[hop].q;
+            enemy.r = enemy.movePath[hop].r;
+        }
+    }
+
+    render();
+    setTimeout(() => animateMonsterMoves(hop + 1, callback), 200);
 }
 
 function drawGameOverOverlay(gs) {
@@ -1998,6 +2113,8 @@ function render() {
     }
     drawCounter(hScreen.x, hScreen.y, HECTO_COLOR, 'H');
     if (gs.selectedUnit === 'hecto') drawSelectionRing(hScreen.x, hScreen.y);
+
+    drawCombatFlash(gs);
 
     if (gs.gameOver) drawGameOverOverlay(gs);
 }
