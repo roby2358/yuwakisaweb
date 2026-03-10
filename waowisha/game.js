@@ -230,6 +230,21 @@ function unitOnTower(state, unit) {
     );
 }
 
+export function computeGathered(state) {
+    const gathered = new Set();
+    for (const unit of state.units) {
+        if (!UNIT_TYPES[unit.type].gather) continue;
+        for (const h of hexesInRange(unit.q, unit.r, GATHER_RANGE)) {
+            const k = hexKey(h.q, h.r);
+            const hex = state.map.get(k);
+            if (!hex) continue;
+            const info = TERRAIN_INFO[hex.terrain];
+            if (info && info.resource) gathered.add(k);
+        }
+    }
+    return gathered;
+}
+
 export function computeVisibility(state) {
     const visible = new Set();
     for (const unit of state.units) {

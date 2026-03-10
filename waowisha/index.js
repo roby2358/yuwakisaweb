@@ -5,7 +5,7 @@ import { HEX_SIZE, TERRAIN_INFO, UNIT_TYPES, ENEMY_TYPES, STRUCTURE_TYPES,
 import { hexToPixel, pixelToHex, hexKey, parseHexKey, hexDistance, drawHexPath } from './hex.js';
 import { createGame, selectUnit, deselectUnit, moveUnit, recruitUnit,
     startBuild, assignRecipe, endTurn, canAfford, computeReachable,
-    deployCharge, pickUpCharge, computeVisibility } from './game.js';
+    deployCharge, pickUpCharge, computeVisibility, computeGathered } from './game.js';
 
 // ---- Constants ----
 const COUNTER_SIZE = 26;
@@ -95,13 +95,19 @@ function drawStructure(cx, cy, sDef, buildProgress) {
         ctx.closePath();
         ctx.fillStyle = buildProgress > 0 ? '#554' : '#aa8';
         ctx.fill();
-        ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5;
+        if (buildProgress > 0) ctx.setLineDash([4, 3]);
+        ctx.stroke();
+        ctx.setLineDash([]);
     } else {
         // Square for production
         roundRect(ctx, cx - s/2, cy - s/2, s, s, 3);
         ctx.fillStyle = buildProgress > 0 ? '#445' : '#88a';
         ctx.fill();
-        ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5;
+        if (buildProgress > 0) ctx.setLineDash([4, 3]);
+        ctx.stroke();
+        ctx.setLineDash([]);
     }
     // Label
     ctx.fillStyle = '#fff';
@@ -123,6 +129,8 @@ function render() {
     ctx.fillStyle = '#111';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    const gathered = computeGathered(state);
+
     // Terrain
     for (const hex of state.map.values()) {
         const { x, y } = hexToScreen(hex.q, hex.r);
@@ -141,12 +149,18 @@ function render() {
             ctx.fill();
         }
 
-        // Resource capacity indicator (small dot)
+        // Resource indicator: * if being gathered, dot otherwise
         if (info && info.resource && state.visible.has(hexKey(hex.q, hex.r))) {
             ctx.fillStyle = 'rgba(255,255,255,0.5)';
-            ctx.beginPath();
-            ctx.arc(x, y + HEX_SIZE * 0.55, 3, 0, Math.PI * 2);
-            ctx.fill();
+            if (gathered.has(hexKey(hex.q, hex.r))) {
+                ctx.font = 'bold 12px monospace';
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText('*', x, y + HEX_SIZE * 0.55);
+            } else {
+                ctx.beginPath();
+                ctx.arc(x, y + HEX_SIZE * 0.55, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
     }
 
