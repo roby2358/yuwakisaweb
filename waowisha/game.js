@@ -3,7 +3,7 @@
 import { HEX_SIZE, TERRAIN, TERRAIN_INFO, UNIT_TYPES, ENEMY_TYPES, SPOILS,
     RECIPES, STRUCTURE_TYPES, PRODUCTION_RECIPES, CRT, CRT_COLUMNS,
     SUPPLY_CRATE, VISIBILITY_RANGE, SURGE_INTERVAL, WINDFALL_CHANCE,
-    BASE_SPAWN_CHANCE, GATHER_RANGE,
+    BASE_SPAWN_CHANCE, GATHER_RANGE, HARVESTER_RANGE,
     DRIFT_CHARGE_RANGE, DRIFT_CHARGE_RADIUS, ALL_R0, ALL_P1, MAP_SIZE
 } from './config.js';
 import { hexKey, parseHexKey, hexNeighbors, hexDistance, hexesInRange, bfsHexes, findPath } from './hex.js';
@@ -36,6 +36,14 @@ function refund(stockpile, cost) {
 
 function addStock(stockpile, res, amount) {
     stockpile[res] = (stockpile[res] || 0) + amount;
+}
+
+function scaleInputs(inputs, multiplier) {
+    const scaled = {};
+    for (const [res, amt] of Object.entries(inputs)) {
+        scaled[res] = amt * multiplier;
+    }
+    return scaled;
 }
 
 // ---- Placement Helper ----
@@ -266,6 +274,16 @@ export function computeGathered(state) {
             if (info && info.resource) gathered.add(k);
         }
     }
+    for (const s of state.structures) {
+        if (s.buildProgress > 0 || s.type !== 'harvesterPlant') continue;
+        for (const h of hexesInRange(s.q, s.r, HARVESTER_RANGE)) {
+            const k = hexKey(h.q, h.r);
+            const hex = state.map.get(k);
+            if (!hex) continue;
+            const info = TERRAIN_INFO[hex.terrain];
+            if (info && info.resource) gathered.add(k);
+        }
+    }
     return gathered;
 }
 
@@ -373,6 +391,13 @@ export function createGame(seed) {
         stockpile[res] = amt;
     }
 
+    const recipeMultiplier = Rando.int(7, 12, rng);
+
+    const harvesterCost = {};
+    harvesterCost[Rando.choice(ALL_P1, rng)] = Rando.int(7, 10, rng);
+    const p2Slots = ['P2a', 'P2b', 'P2c', 'P2d'];
+    harvesterCost[Rando.choice(p2Slots, rng)] = Rando.int(2, 3, rng);
+
     const warden = {
         id: newId(), type: 'warden', q: sq, r: sr,
         mp: UNIT_TYPES.warden.mp, carrying: null
@@ -384,6 +409,8 @@ export function createGame(seed) {
         enemies: [],
         structures: [],
         stockpile,
+        recipeMultiplier,
+        harvesterCost,
         mandate: generateMandate(rng),
         settlement,
         visible: new Set(),
@@ -550,6 +577,25 @@ export function pickUpCharge(state, unitId) {
     return true;
 }
 
+export function upgradeGatherer(state, unitId) {
+    const unit = state.units.find(u => u.id === unitId);
+    if (!unit || unit.type !== 'gatherer') return false;
+    if (!afford(state.stockpile, state.harvesterCost)) return false;
+    if (!canBuildHere(state, unit.q, unit.r)) return false;
+
+    spend(state.stockpile, state.harvesterCost);
+
+    state.structures.push({
+        id: newId(), type: 'harvesterPlant', q: unit.q, r: unit.r,
+        recipe: null, buildProgress: 0, builderId: null
+    });
+
+    state.units = state.units.filter(u => u.id !== unitId);
+    deselectUnit(state);
+    state.log.push('Gatherer upgraded to Harvester Plant!');
+    return true;
+}
+
 export function canAfford(state, cost) {
     return afford(state.stockpile, cost);
 }
@@ -585,31 +631,9 @@ export function endTurn(state) {
 // ---- Gathering ----
 
 function gatherResources(state) {
-    const harvested = new Set();
-
-    for (const unit of state.units) {
-        const def = UNIT_TYPES[unit.type];
-        if (!def.gather) continue;
-
-        const candidates = [];
-        for (const h of hexesInRange(unit.q, unit.r, GATHER_RANGE)) {
-            const k = hexKey(h.q, h.r);
-            if (harvested.has(k)) continue;
-            const hex = state.map.get(k);
-            if (!hex) continue;
-            const info = TERRAIN_INFO[hex.terrain];
-            if (!info || !info.resource) continue;
-            candidates.push({ hex, key: k, dist: hexDistance(unit.q, unit.r, h.q, h.r) });
-        }
-        candidates.sort((a, b) => a.dist - b.dist);
-
-        let remaining = def.gather;
-        for (const c of candidates) {
-            if (remaining <= 0) break;
-            addStock(state.stockpile, TERRAIN_INFO[c.hex.terrain].resource, 1);
-            remaining--;
-            harvested.add(c.key);
-        }
+    for (const k of computeGathered(state)) {
+        const hex = state.map.get(k);
+        addStock(state.stockpile, TERRAIN_INFO[hex.terrain].resource, 1);
     }
 }
 
@@ -625,17 +649,23 @@ function advanceBuilding(s, state) {
     }
 }
 
+export function recipeInputs(state, recipeKey) {
+    const recipe = RECIPES[recipeKey];
+    if (!recipe) return null;
+    return scaleInputs(recipe.inputs, state.recipeMultiplier);
+}
+
 function runProduction(state) {
     for (const s of state.structures) {
         if (s.buildProgress > 0) continue;
         const sDef = STRUCTURE_TYPES[s.type];
         if (sDef.category !== 'production') continue;
         if (!s.recipe) continue;
-        const recipe = RECIPES[s.recipe];
-        if (!recipe) continue;
-        if (!afford(state.stockpile, recipe.inputs)) continue;
+        const scaled = recipeInputs(state, s.recipe);
+        if (!scaled) continue;
+        if (!afford(state.stockpile, scaled)) continue;
 
-        spend(state.stockpile, recipe.inputs);
+        spend(state.stockpile, scaled);
         addStock(state.stockpile, s.recipe, 1);
 
         for (const goal of state.mandate) {

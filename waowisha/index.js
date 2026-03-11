@@ -5,7 +5,8 @@ import { HEX_SIZE, TERRAIN_INFO, UNIT_TYPES, ENEMY_TYPES, STRUCTURE_TYPES,
 import { hexToPixel, pixelToHex, hexKey, parseHexKey, hexDistance, drawHexPath } from './hex.js';
 import { createGame, selectUnit, deselectUnit, moveUnit, recruitUnit,
     startBuild, canBuildHere, assignRecipe, endTurn, canAfford, computeReachable,
-    deployCharge, pickUpCharge, computeVisibility, computeGathered } from './game.js';
+    deployCharge, pickUpCharge, upgradeGatherer, recipeInputs,
+    computeVisibility, computeGathered } from './game.js';
 
 // ---- Constants ----
 const COUNTER_SIZE = 26;
@@ -295,18 +296,27 @@ function hidePanel() {
 
 function showUnitPanel(unit) {
     const def = UNIT_TYPES[unit.type];
-    let html = `<div style="margin-bottom:6px">${def.name} | STR:${def.strength} MP:${def.mp}</div>`;
+    let html = `<div style="margin-bottom:6px">${def.name} | STR:${def.strength} MP:${unit.mp}/${def.mp}</div>`;
 
-    // Build options (available even after moving — move then build on same turn)
+    // Build options
     if (def.build) {
         if (canBuildHere(state, unit.q, unit.r)) {
             html += '<div style="margin:4px 0;color:#aaa">Build:</div>';
             for (const [type, sDef] of Object.entries(STRUCTURE_TYPES)) {
+                if (!sDef.cost) continue;
                 const affordable = canAfford(state, sDef.cost);
                 const costStr = Object.entries(sDef.cost).map(([r,a]) => `${a} ${state.names[r]||r}`).join(', ');
                 html += `<button data-build="${type}" ${affordable?'':'disabled'}>${sDef.name} (${costStr})</button>`;
             }
         }
+    }
+
+    // Upgrade Gatherer to Harvester Plant
+    if (unit.type === 'gatherer' && canBuildHere(state, unit.q, unit.r)) {
+        const affordable = canAfford(state, state.harvesterCost);
+        const costStr = Object.entries(state.harvesterCost).map(([r,a]) => `${a} ${state.names[r]||r}`).join(', ');
+        html += '<div style="margin:4px 0;color:#aaa">Upgrade:</div>';
+        html += `<button data-action="upgrade-gatherer" ${affordable?'':'disabled'}>Harvester Plant (${costStr})</button>`;
     }
 
     // Recruit options (if on settlement)
@@ -327,30 +337,47 @@ function showUnitPanel(unit) {
         html += `<button data-action="pickup-charge">Pick Up Drift Charge</button>`;
     }
 
+    // Combined: show structure actions if unit is on a completed building
+    const struct = state.structures.find(s => hexKey(s.q, s.r) === hexKey(unit.q, unit.r));
+    if (struct) {
+        html += structurePanelHTML(struct);
+    }
+
     showPanel(def.name, html);
+}
+
+function structurePanelHTML(struct) {
+    const sDef = STRUCTURE_TYPES[struct.type];
+    let html = `<div style="margin:6px 0 4px;border-top:1px solid #444;padding-top:6px;color:#ee8">${sDef.name}</div>`;
+
+    if (struct.buildProgress > 0) {
+        html += `<div>Under construction: ${struct.buildProgress} turns remaining</div>`;
+        return html;
+    }
+    if (sDef.category === 'harvest') {
+        html += `<div>Gathering range: ${sDef.range}</div>`;
+        return html;
+    }
+    if (sDef.category !== 'production') {
+        html += `<div>Range: ${sDef.range} | Power: ${sDef.power}</div>`;
+        return html;
+    }
+
+    const recipes = PRODUCTION_RECIPES[sDef.tier] || [];
+    html += `<div style="margin-bottom:4px">Current: ${struct.recipe ? (state.names[struct.recipe]||struct.recipe) : 'None'}</div>`;
+    html += '<div style="margin:4px 0;color:#aaa">Recipes (×' + state.recipeMultiplier + '):</div>';
+    for (const recipe of recipes) {
+        const scaled = recipeInputs(state, recipe);
+        const inputStr = Object.entries(scaled).map(([s,a]) => `${a} ${state.names[s]||s}`).join(' + ');
+        const active = struct.recipe === recipe;
+        html += `<button data-recipe="${recipe}" data-struct="${struct.id}" ${active?'style="border-color:#ee8"':''}>${state.names[recipe]||recipe} (${inputStr})</button>`;
+    }
+    return html;
 }
 
 function showStructurePanel(struct) {
     const sDef = STRUCTURE_TYPES[struct.type];
-    if (struct.buildProgress > 0) {
-        showPanel(sDef.name, `<div>Under construction: ${struct.buildProgress} turns remaining</div>`);
-        return;
-    }
-    if (sDef.category !== 'production') {
-        showPanel(sDef.name, `<div>Range: ${sDef.range} | Power: ${sDef.power}</div>`);
-        return;
-    }
-
-    const recipes = PRODUCTION_RECIPES[sDef.tier] || [];
-    let html = `<div style="margin-bottom:4px">Current: ${struct.recipe ? (state.names[struct.recipe]||struct.recipe) : 'None'}</div>`;
-    html += '<div style="margin:4px 0;color:#aaa">Recipes:</div>';
-    for (const recipe of recipes) {
-        const r = RECIPES[recipe];
-        const inputStr = Object.entries(r.inputs).map(([s,a]) => `${a} ${state.names[s]||s}`).join(' + ');
-        const active = struct.recipe === recipe;
-        html += `<button data-recipe="${recipe}" data-struct="${struct.id}" ${active?'style="border-color:#ee8"':''}>${state.names[recipe]||recipe} (${inputStr})</button>`;
-    }
-    showPanel(sDef.name, html);
+    showPanel(sDef.name, structurePanelHTML(struct));
 }
 
 // ---- Input ----
@@ -481,6 +508,15 @@ document.getElementById('panel-content').addEventListener('click', e => {
         state.log.push('Click a hex within range 3 to deploy Drift Charge.');
         state.buildMode = 'deploy-charge';
         render();
+    }
+    if (btn.dataset.action === 'upgrade-gatherer') {
+        const unit = state.units.find(u => u.id === state.selectedUnit);
+        if (unit) {
+            upgradeGatherer(state, unit.id);
+            hidePanel();
+            state.visible = computeVisibility(state);
+            render();
+        }
     }
 });
 

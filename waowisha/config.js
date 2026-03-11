@@ -18,8 +18,8 @@ export const TERRAIN_INFO = {
 };
 
 export const UNIT_TYPES = {
-    warden:   { name: 'Warden',   symbol: 'W', color: '#daa520', mp: 4, strength: 2, gather: 1, build: 1, reveal: 0, cost: null },
-    gatherer: { name: 'Gatherer', symbol: 'G', color: '#66bb6a', mp: 5, strength: 0, gather: 2, build: 0, reveal: 0, cost: { R0d: 3 } },
+    warden:   { name: 'Warden',   symbol: 'W', color: '#daa520', mp: 4, strength: 2, gather: 7, build: 1, reveal: 0, cost: null },
+    gatherer: { name: 'Gatherer', symbol: 'G', color: '#66bb6a', mp: 5, strength: 0, gather: 7, build: 0, reveal: 0, cost: { R0d: 3 } },
     sentinel: { name: 'Sentinel', symbol: 'S', color: '#e53935', mp: 4, strength: 3, gather: 0, build: 0, reveal: 0, cost: { R0d: 2, R0a: 2 } },
     mason:    { name: 'Mason',    symbol: 'M', color: '#8d6e63', mp: 3, strength: 1, gather: 0, build: 2, reveal: 0, cost: { R0d: 2, R0c: 1 } },
     seeker:   { name: 'Seeker',   symbol: 'K', color: '#42a5f5', mp: 6, strength: 1, gather: 0, build: 0, reveal: 3, cost: { R0b: 1, R0a: 1 } },
@@ -64,6 +64,7 @@ export const STRUCTURE_TYPES = {
     beaconTower: { name: 'Beacon Tower',  category: 'defense', cost: { P3a: 1 }, buildTime: 3, range: 3, power: 3, targeting: 'strongest' },
     wardPylon:   { name: 'Ward Pylon',    category: 'defense', cost: { P3b: 1 }, buildTime: 3, range: 3, power: 4, targeting: 'all' },
     longbow:     { name: 'Longbow',       category: 'defense', cost: { P3c: 1 }, buildTime: 3, range: 8, power: 2, targeting: 'weakest' },
+    harvesterPlant: { name: 'Harvester Plant', category: 'harvest', range: 3, power: 1 },
 };
 
 // Which recipes each production tier can process
@@ -89,7 +90,8 @@ export const VISIBILITY_RANGE = 4;
 export const SURGE_INTERVAL = 10;
 export const WINDFALL_CHANCE = 0.05;
 export const BASE_SPAWN_CHANCE = 1/3; // ~5-6 on d6
-export const GATHER_RANGE = 2;
+export const GATHER_RANGE = 1;
+export const HARVESTER_RANGE = 3;
 export const DRIFT_CHARGE_RANGE = 3;
 export const DRIFT_CHARGE_RADIUS = 2;
 
