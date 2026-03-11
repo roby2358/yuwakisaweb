@@ -278,10 +278,10 @@ function movePlayer(q, r) {
 
     if (mp > 0) {
         computeReachable();
+        render();
     } else {
-        deselectPlayer();
+        endTurn();
     }
-    render();
 }
 
 function endTurn() {
@@ -506,7 +506,15 @@ document.getElementById('end-turn').addEventListener('click', endTurn);
 window.addEventListener('keydown', e => {
     if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); endTurn(); }
 });
-document.getElementById('new-game').addEventListener('click', initGame);
+document.getElementById('new-game').addEventListener('click', () => {
+    initGame();
+    document.getElementById('intro-panel').classList.remove('hidden');
+});
+
+const introPanel = document.getElementById('intro-panel');
+document.getElementById('begin-btn').addEventListener('click', () => {
+    introPanel.classList.add('hidden');
+});
 
 // ---- Start ----
 initGame();
