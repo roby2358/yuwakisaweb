@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(grep:*)",
+      "Bash(node -e \"\n// Quick syntax check by importing modules\nimport\\('./config.js'\\).then\\(\\(\\) => console.log\\('config.js OK'\\)\\)\n  .catch\\(e => console.error\\('config.js:', e.message\\)\\);\nimport\\('./hex.js'\\).then\\(\\(\\) => console.log\\('hex.js OK'\\)\\)\n  .catch\\(e => console.error\\('hex.js:', e.message\\)\\);\nimport\\('./rando.js'\\).then\\(\\(\\) => console.log\\('rando.js OK'\\)\\)\n  .catch\\(e => console.error\\('rando.js:', e.message\\)\\);\nimport\\('./terrain.js'\\).then\\(\\(\\) => console.log\\('terrain.js OK'\\)\\)\n  .catch\\(e => console.error\\('terrain.js:', e.message\\)\\);\n\" 2>&1)",
+      "Bash(wc -l /mnt/c/work/yuwakisaweb/weavers/*.js /mnt/c/work/yuwakisaweb/weavers/*.css /mnt/c/work/yuwakisaweb/weavers/*.html /mnt/c/work/yuwakisaweb/weavers/*.md 2>/dev/null)",
+      "WebFetch(domain:localhost)",
+      "Bash(kill %1 2>/dev/null; echo \"cleaned up\")"
+    ]
+  }
+}
