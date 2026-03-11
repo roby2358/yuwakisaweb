@@ -1,6 +1,6 @@
 // index.js — Waowisha rendering, input, and UI
 
-import { HEX_SIZE, TERRAIN_INFO, UNIT_TYPES, ENEMY_TYPES, STRUCTURE_TYPES,
+import { HEX_SIZE, TERRAIN, TERRAIN_INFO, UNIT_TYPES, ENEMY_TYPES, STRUCTURE_TYPES,
     PRODUCTION_RECIPES, RECIPES, ALL_R0, ALL_P1, SLOT_COLORS, UPGRADE_PATH } from './config.js';
 import { hexToPixel, pixelToHex, hexKey, parseHexKey, hexDistance, drawHexPath } from './hex.js';
 import { createGame, selectUnit, deselectUnit, moveUnit, recruitUnit,
@@ -192,6 +192,13 @@ function render() {
         const { x, y } = hexToScreen(s.q, s.r);
         const sDef = STRUCTURE_TYPES[s.type];
         drawStructure(x, y, sDef, s.buildProgress);
+        // Idle indicator for production buildings without a recipe
+        if (sDef.category === 'production' && s.buildProgress === 0 && !s.recipe) {
+            ctx.fillStyle = '#ee8';
+            ctx.beginPath();
+            ctx.arc(x, y + HEX_SIZE * 0.55, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 
     // Enemies (only visible)
@@ -209,10 +216,15 @@ function render() {
         const def = UNIT_TYPES[unit.type];
         const isSel = state.selectedUnit === unit.id;
         drawCounter(x, y, def.color, def.symbol, isSel);
-        // Moved indicator
+        // Moved indicator / MP dot
         if (unit.mp <= 0) {
             ctx.fillStyle = 'rgba(0,0,0,0.3)';
             roundRect(ctx, x-COUNTER_SIZE/2, y-COUNTER_SIZE/2, COUNTER_SIZE, COUNTER_SIZE, 4);
+            ctx.fill();
+        } else {
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(x, y + COUNTER_SIZE/2 - 3, 2.5, 0, Math.PI * 2);
             ctx.fill();
         }
         // Carrying indicator
@@ -294,6 +306,15 @@ function hidePanel() {
     document.getElementById('panel').classList.add('hidden');
 }
 
+function showEnemyPanel(enemy) {
+    const eDef = ENEMY_TYPES[enemy.type];
+    const name = state.names[enemy.type] || enemy.type;
+    const speed = Array.isArray(eDef.speed) ? `${eDef.speed[0]}-${eDef.speed[1]}` : eDef.speed;
+    let html = `<div>STR:${eDef.strength} SPD:${speed}</div>`;
+    html += `<div style="margin-top:4px;color:#aaa">${eDef.behavior}</div>`;
+    showPanel(name, html);
+}
+
 function showUnitPanel(unit) {
     const def = UNIT_TYPES[unit.type];
     let stats = `STR:${def.strength} MP:${unit.mp}/${def.mp}`;
@@ -314,19 +335,22 @@ function showUnitPanel(unit) {
 
     // Build options
     if (def.build) {
-        if (canBuildHere(state, unit.q, unit.r)) {
-            html += '<div style="margin:4px 0;color:#aaa">Build:</div>';
-            for (const [type, sDef] of Object.entries(STRUCTURE_TYPES)) {
-                if (!sDef.cost) continue;
-                const affordable = canAfford(state, sDef.cost);
-                const costStr = Object.entries(sDef.cost).map(([r,a]) => `${a} ${state.names[r]||r}`).join(', ');
-                html += `<button data-build="${type}" ${affordable?'':'disabled'}>${sDef.name} (${costStr})</button>`;
-            }
+        let buildHtml = '';
+        for (const [type, sDef] of Object.entries(STRUCTURE_TYPES)) {
+            if (!sDef.cost) continue;
+            if (!canBuildHere(state, unit.q, unit.r, type)) continue;
+            const affordable = canAfford(state, sDef.cost);
+            const costStr = Object.entries(sDef.cost).map(([r,a]) => `${a} ${state.names[r]||r}`).join(', ');
+            buildHtml += `<button data-build="${type}" ${affordable?'':'disabled'}>${sDef.name} (${costStr})</button>`;
+        }
+        if (buildHtml) {
+            html += '<div style="margin:4px 0;color:#aaa">Build:</div>' + buildHtml;
         }
     }
 
-    // Upgrade Gatherer to Harvester Plant
-    if (unit.type === 'gatherer' && canBuildHere(state, unit.q, unit.r)) {
+    // Upgrade Gatherer to Harvester Plant (must be on clear terrain)
+    const unitHex = state.map.get(hexKey(unit.q, unit.r));
+    if (unit.type === 'gatherer' && unitHex && unitHex.terrain === TERRAIN.PALE && canBuildHere(state, unit.q, unit.r)) {
         const affordable = canAfford(state, state.harvesterCost);
         const costStr = Object.entries(state.harvesterCost).map(([r,a]) => `${a} ${state.names[r]||r}`).join(', ');
         html += '<div style="margin:4px 0;color:#aaa">Upgrade:</div>';
@@ -379,7 +403,7 @@ function structurePanelHTML(struct) {
 
     const recipes = PRODUCTION_RECIPES[sDef.tier] || [];
     html += `<div style="margin-bottom:4px">Current: ${struct.recipe ? (state.names[struct.recipe]||struct.recipe) : 'None'}</div>`;
-    html += '<div style="margin:4px 0;color:#aaa">Recipes (×' + state.recipeMultiplier + '):</div>';
+    html += '<div style="margin:4px 0;color:#aaa">Recipes:</div>';
     for (const recipe of recipes) {
         const scaled = recipeInputs(state, recipe);
         const inputStr = Object.entries(scaled).map(([s,a]) => `${a} ${state.names[s]||s}`).join(' + ');
@@ -478,7 +502,12 @@ function handleClick(q, r, key) {
     } else if (clickedStruct) {
         showStructurePanel(clickedStruct);
     } else {
-        hidePanel();
+        const clickedEnemy = state.enemies.find(e => hexKey(e.q, e.r) === key && state.visible.has(key));
+        if (clickedEnemy) {
+            showEnemyPanel(clickedEnemy);
+        } else {
+            hidePanel();
+        }
     }
     render();
 }

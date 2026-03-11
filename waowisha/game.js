@@ -1,7 +1,7 @@
 // game.js — Waowisha game state and logic
 
 import { HEX_SIZE, TERRAIN, TERRAIN_INFO, UNIT_TYPES, ENEMY_TYPES, SPOILS,
-    RECIPES, STRUCTURE_TYPES, PRODUCTION_RECIPES, CRT, CRT_COLUMNS,
+    RECIPES, STRUCTURE_TYPES, PRODUCTION_RECIPES, CRT, CRT_COLUMNS, RANGED_CRT,
     SUPPLY_CRATE, VISIBILITY_RANGE, SURGE_INTERVAL, WINDFALL_CHANCE,
     BASE_SPAWN_CHANCE, GATHER_RANGE, HARVESTER_RANGE,
     DRIFT_CHARGE_RANGE, DRIFT_CHARGE_RADIUS, ALL_R0, ALL_P1, MAP_SIZE,
@@ -317,6 +317,7 @@ export function computeReachable(state, unitId) {
     const unit = state.units.find(u => u.id === unitId);
     if (!unit || unit.mp <= 0) return new Map();
 
+    const def = UNIT_TYPES[unit.type];
     const mp = unit.mp;
     const enemyKeys = new Set(state.enemies.map(e => hexKey(e.q, e.r)));
     const friendlyKeys = new Set(state.units.filter(u => u.id !== unitId).map(u => hexKey(u.q, u.r)));
@@ -346,22 +347,51 @@ export function computeReachable(state, unitId) {
         }
     }
 
+    // Sentinel-track (melee): can only attack adjacent enemies with >= half MP
+    if (def.melee) {
+        const halfMp = Math.ceil(def.mp / 2);
+        for (const k of enemyKeys) {
+            if (!costs.has(k)) continue;
+            const { q, r } = parseHexKey(k);
+            if (hexDistance(unit.q, unit.r, q, r) !== 1 || unit.mp < halfMp) {
+                costs.delete(k);
+            }
+        }
+    }
+
+    // Ranged units: add visible enemy hexes within range as attack targets
+    if (def.range) {
+        for (const enemy of state.enemies) {
+            const k = hexKey(enemy.q, enemy.r);
+            if (!state.visible.has(k)) continue;
+            if (hexDistance(unit.q, unit.r, enemy.q, enemy.r) <= def.range) {
+                if (!costs.has(k)) costs.set(k, 0);
+            }
+        }
+    }
+
     return costs;
 }
 
 // ---- Combat ----
 
-function resolveCRT(attackerStr, defenderStr, rng) {
+function crtColumn(attackerStr, defenderStr) {
     const ratio = attackerStr / defenderStr;
-    let col;
-    if (ratio < 0.75) col = '1:2';
-    else if (ratio < 1.5) col = '1:1';
-    else if (ratio < 2.5) col = '2:1';
-    else if (ratio < 3.5) col = '3:1';
-    else col = '4:1';
+    if (ratio < 0.75) return '1:2';
+    if (ratio < 1.5) return '1:1';
+    if (ratio < 2.5) return '2:1';
+    if (ratio < 3.5) return '3:1';
+    return '4:1';
+}
 
-    const roll = Rando.int(0, 5, rng);
-    return CRT[col][roll];
+function resolveCRT(attackerStr, defenderStr, rng) {
+    const col = crtColumn(attackerStr, defenderStr);
+    return CRT[col][Rando.int(0, 5, rng)];
+}
+
+function resolveRangedCRT(attackerPower, defenderStr, rng) {
+    const col = crtColumn(attackerPower, defenderStr);
+    return RANGED_CRT[col][Rando.int(0, 5, rng)];
 }
 
 function grantSpoils(state, enemyType) {
@@ -392,12 +422,14 @@ export function createGame(seed) {
         stockpile[res] = amt;
     }
 
-    const recipeMultiplier = Rando.int(7, 12, rng);
+    const recipeRates = {};
+    for (const key of Object.keys(RECIPES)) {
+        recipeRates[key] = Rando.int(7, 12, rng);
+    }
 
     const harvesterCost = {};
-    harvesterCost[Rando.choice(ALL_P1, rng)] = Rando.int(7, 10, rng);
-    const p2Slots = ['P2a', 'P2b', 'P2c', 'P2d'];
-    harvesterCost[Rando.choice(p2Slots, rng)] = Rando.int(2, 3, rng);
+    harvesterCost[Rando.choice(ALL_R0, rng)] = Rando.int(7, 10, rng);
+    harvesterCost[Rando.choice(ALL_P1, rng)] = Rando.int(2, 3, rng);
 
     const warden = {
         id: newId(), type: 'warden', q: sq, r: sr,
@@ -410,7 +442,7 @@ export function createGame(seed) {
         enemies: [],
         structures: [],
         stockpile,
-        recipeMultiplier,
+        recipeRates,
         harvesterCost,
         mandate: generateMandate(rng),
         settlement,
@@ -446,14 +478,27 @@ export function moveUnit(state, unitId, tq, tr) {
     if (!unit) return null;
 
     const targetKey = hexKey(tq, tr);
+    const unitDef = UNIT_TYPES[unit.type];
 
     // Check if enemy on target hex — initiate combat
     const enemyIdx = state.enemies.findIndex(e => hexKey(e.q, e.r) === targetKey);
     if (enemyIdx >= 0) {
         const enemy = state.enemies[enemyIdx];
-        const unitDef = UNIT_TYPES[unit.type];
 
-        // Get adjacent friendly units for multi-unit attack
+        // Ranged attack: use ranged CRT, don't advance
+        if (unitDef.range) {
+            const result = resolveRangedCRT(unitDef.power, enemy.strength, state.rng);
+            state.log.push(`${unitDef.name} fires at ${state.names[enemy.type] || enemy.type}: ${result}`);
+            if (result === 'DE') {
+                grantSpoils(state, enemy.type);
+                state.enemies.splice(enemyIdx, 1);
+            }
+            unit.mp = 0;
+            deselectUnit(state);
+            return result;
+        }
+
+        // Melee attack: get adjacent friendly support
         let totalStr = unitDef.strength;
         for (const other of state.units) {
             if (other.id === unit.id) continue;
@@ -507,7 +552,8 @@ export function recruitUnit(state, unitType) {
     return true;
 }
 
-export function canBuildHere(state, q, r) {
+export function canBuildHere(state, q, r, structureType) {
+    if (structureType === 'spike') return true;
     const { q: sq, r: sr } = parseHexKey(state.settlement);
     if (hexDistance(q, r, sq, sr) < 3) return false;
     for (const s of state.structures) {
@@ -525,7 +571,7 @@ export function startBuild(state, unitId, structureType) {
     const sDef = STRUCTURE_TYPES[structureType];
     if (!sDef) return false;
     if (!afford(state.stockpile, sDef.cost)) return false;
-    if (!canBuildHere(state, unit.q, unit.r)) return false;
+    if (!canBuildHere(state, unit.q, unit.r, structureType)) return false;
 
     spend(state.stockpile, sDef.cost);
 
@@ -581,6 +627,8 @@ export function pickUpCharge(state, unitId) {
 export function upgradeGatherer(state, unitId) {
     const unit = state.units.find(u => u.id === unitId);
     if (!unit || unit.type !== 'gatherer') return false;
+    const hex = state.map.get(hexKey(unit.q, unit.r));
+    if (!hex || hex.terrain !== TERRAIN.PALE) return false;
     if (!afford(state.stockpile, state.harvesterCost)) return false;
     if (!canBuildHere(state, unit.q, unit.r)) return false;
 
@@ -671,7 +719,7 @@ function advanceBuilding(s, state) {
 export function recipeInputs(state, recipeKey) {
     const recipe = RECIPES[recipeKey];
     if (!recipe) return null;
-    return scaleInputs(recipe.inputs, state.recipeMultiplier);
+    return scaleInputs(recipe.inputs, state.recipeRates[recipeKey]);
 }
 
 function runProduction(state) {

@@ -21,23 +21,23 @@ export const UNIT_TYPES = {
     warden:   { name: 'Warden',   symbol: 'W', color: '#daa520', mp: 4, strength: 2, gather: 7, build: 1, reveal: 0, cost: null },
     gatherer: { name: 'Gatherer', symbol: 'G', color: '#66bb6a', mp: 5, strength: 0, gather: 7, build: 0, reveal: 0, cost: { R0d: 3 } },
     mason:    { name: 'Mason',    symbol: 'M', color: '#8d6e63', mp: 3, strength: 1, gather: 0, build: 2, reveal: 0, cost: { R0d: 2, R0c: 1 } },
-    // Sentinel line (melee)
-    sentinel: { name: 'Sentinel', symbol: 'S', color: '#e53935', mp: 4, strength: 3,  gather: 0, build: 0, reveal: 0, cost: { R0d: 2, R0a: 2 } },
-    bulwark:  { name: 'Bulwark',  symbol: 'B', color: '#c62828', mp: 4, strength: 4,  gather: 0, build: 0, reveal: 0, cost: null },
-    ironclad: { name: 'Ironclad', symbol: 'I', color: '#b71c1c', mp: 5, strength: 6,  gather: 0, build: 0, reveal: 0, cost: null },
-    aegis:    { name: 'Aegis',    symbol: 'A', color: '#a01010', mp: 5, strength: 8,  gather: 0, build: 0, reveal: 0, cost: null },
-    // Longbow line (ranged)
-    longbow:  { name: 'Longbow',  symbol: 'L', color: '#c4a35c', mp: 2, strength: 1, gather: 0, build: 0, reveal: 0, range: 8,  power: 2, targeting: 'weakest', cost: { R0c: 2, R0a: 1 } },
-    arbalest: { name: 'Arbalest', symbol: 'X', color: '#b8963a', mp: 2, strength: 1, gather: 0, build: 0, reveal: 0, range: 8,  power: 3, targeting: 'weakest', cost: null },
-    culverin: { name: 'Culverin', symbol: 'C', color: '#a8862a', mp: 3, strength: 1, gather: 0, build: 0, reveal: 0, range: 9,  power: 4, targeting: 'weakest', cost: null },
-    lancet:   { name: 'Lancet',   symbol: 'N', color: '#98761a', mp: 3, strength: 1, gather: 0, build: 0, reveal: 0, range: 10, power: 6, targeting: 'weakest', cost: null },
+    // Sentinel line (melee — must be adjacent + half MP to attack)
+    sentinel: { name: 'Sentinel', symbol: 'S', color: '#e53935', mp: 3, strength: 3,  gather: 0, build: 0, reveal: 0, melee: true, cost: { R0d: 2, R0a: 2 } },
+    bulwark:  { name: 'Bulwark',  symbol: 'B', color: '#c62828', mp: 3, strength: 4,  gather: 0, build: 0, reveal: 0, melee: true, cost: null },
+    ironclad: { name: 'Ironclad', symbol: 'I', color: '#b71c1c', mp: 4, strength: 6,  gather: 0, build: 0, reveal: 0, melee: true, cost: null },
+    aegis:    { name: 'Aegis',    symbol: 'A', color: '#a01010', mp: 4, strength: 8,  gather: 0, build: 0, reveal: 0, melee: true, cost: null },
+    // Longbow line (ranged — attack from distance, don't advance)
+    longbow:  { name: 'Longbow',  symbol: 'L', color: '#c4a35c', mp: 4, strength: 1, gather: 0, build: 0, reveal: 0, range: 8,  power: 2, targeting: 'weakest', cost: { R0c: 2, R0a: 1 } },
+    arbalest: { name: 'Arbalest', symbol: 'X', color: '#b8963a', mp: 4, strength: 1, gather: 0, build: 0, reveal: 0, range: 8,  power: 3, targeting: 'weakest', cost: null },
+    culverin: { name: 'Culverin', symbol: 'C', color: '#a8862a', mp: 5, strength: 1, gather: 0, build: 0, reveal: 0, range: 9,  power: 4, targeting: 'weakest', cost: null },
+    lancet:   { name: 'Lancet',   symbol: 'N', color: '#98761a', mp: 5, strength: 1, gather: 0, build: 0, reveal: 0, range: 10, power: 6, targeting: 'weakest', cost: null },
     // Seeker line (scout, develops ranged attack)
     seeker:   { name: 'Seeker',   symbol: 'K', color: '#42a5f5', mp: 6, strength: 1, gather: 0, build: 0, reveal: 3, cost: { R0b: 1, R0a: 1 } },
     ranger:   { name: 'Ranger',   symbol: 'R', color: '#1e88e5', mp: 7, strength: 1, gather: 0, build: 0, reveal: 4, cost: null },
     farseer:  { name: 'Farseer',  symbol: 'F', color: '#1565c0', mp: 7, strength: 1, gather: 0, build: 0, reveal: 5, range: 4, power: 1, targeting: 'weakest', cost: null },
     oracle:   { name: 'Oracle',   symbol: 'O', color: '#0d47a1', mp: 7, strength: 1, gather: 0, build: 0, reveal: 7, range: 6, power: 2, targeting: 'weakest', cost: null },
     // Pinnacles (unique — only one level-5 unit allowed across all lines)
-    titan:      { name: 'Titan',      symbol: '\u2605', color: '#ff4444', mp: 6, strength: 12, gather: 0, build: 0, reveal: 0, unique: true, cost: null },
+    titan:      { name: 'Titan',      symbol: '\u2605', color: '#ff4444', mp: 6, strength: 12, gather: 0, build: 0, reveal: 0, melee: true, unique: true, cost: null },
     devastator: { name: 'Devastator', symbol: '\u2605', color: '#ffaa00', mp: 3, strength: 2,  gather: 0, build: 0, reveal: 0, range: 14, power: 8, targeting: 'weakest', unique: true, cost: null },
     prophet:    { name: 'Prophet',    symbol: '\u2605', color: '#4488ff', mp: 8, strength: 2,  gather: 0, build: 0, reveal: 10, range: 8, power: 4, targeting: 'weakest', unique: true, cost: null },
 };
@@ -113,6 +113,15 @@ export const CRT = {
     '1:2': ['AE','AE','AE','EX','EX','DE'],
     '1:1': ['AE','AE','EX','DE','DE','DE'],
     '2:1': ['EX','DE','DE','DE','DE','DE'],
+    '3:1': ['DE','DE','DE','DE','DE','DE'],
+    '4:1': ['DE','DE','DE','DE','DE','DE'],
+};
+
+// Ranged CRT: no AE (attacker safe), miss at low odds
+export const RANGED_CRT = {
+    '1:2': ['--','--','--','--','DE','DE'],
+    '1:1': ['--','--','--','DE','DE','DE'],
+    '2:1': ['--','DE','DE','DE','DE','DE'],
     '3:1': ['DE','DE','DE','DE','DE','DE'],
     '4:1': ['DE','DE','DE','DE','DE','DE'],
 };
