@@ -4,7 +4,8 @@ import { HEX_SIZE, TERRAIN, TERRAIN_INFO, UNIT_TYPES, ENEMY_TYPES, SPOILS,
     RECIPES, STRUCTURE_TYPES, PRODUCTION_RECIPES, CRT, CRT_COLUMNS,
     SUPPLY_CRATE, VISIBILITY_RANGE, SURGE_INTERVAL, WINDFALL_CHANCE,
     BASE_SPAWN_CHANCE, GATHER_RANGE, HARVESTER_RANGE,
-    DRIFT_CHARGE_RANGE, DRIFT_CHARGE_RADIUS, ALL_R0, ALL_P1, MAP_SIZE
+    DRIFT_CHARGE_RANGE, DRIFT_CHARGE_RADIUS, ALL_R0, ALL_P1, MAP_SIZE,
+    UPGRADE_PATH
 } from './config.js';
 import { hexKey, parseHexKey, hexNeighbors, hexDistance, hexesInRange, bfsHexes, findPath } from './hex.js';
 import { Rando } from './rando.js';
@@ -290,7 +291,7 @@ export function computeGathered(state) {
 export function computeVisibility(state) {
     const visible = new Set();
     for (const unit of state.units) {
-        let range = VISIBILITY_RANGE + (unit.type === 'seeker' ? UNIT_TYPES.seeker.reveal : 0);
+        let range = VISIBILITY_RANGE + (UNIT_TYPES[unit.type].reveal || 0);
         if (unitOnTower(state, unit)) range += 3;
         for (const h of hexesInRange(unit.q, unit.r, range)) {
             visible.add(hexKey(h.q, h.r));
@@ -596,6 +597,24 @@ export function upgradeGatherer(state, unitId) {
     return true;
 }
 
+export function upgradeUnit(state, unitId) {
+    const unit = state.units.find(u => u.id === unitId);
+    if (!unit) return false;
+    const path = UPGRADE_PATH[unit.type];
+    if (!path) return false;
+
+    const nextDef = UNIT_TYPES[path.next];
+    if (nextDef.unique && state.units.some(u => UNIT_TYPES[u.type].unique)) return false;
+    if (!afford(state.stockpile, path.cost)) return false;
+
+    spend(state.stockpile, path.cost);
+    const oldName = UNIT_TYPES[unit.type].name;
+    unit.type = path.next;
+    unit.mp = 0;
+    state.log.push(`${oldName} upgraded to ${nextDef.name}!`);
+    return true;
+}
+
 export function canAfford(state, cost) {
     return afford(state.stockpile, cost);
 }
@@ -689,36 +708,47 @@ function productionPhase(state) {
 
 // ---- Defense ----
 
+function resolveRangedAttack(state, q, r, name, range, power, targeting) {
+    const inRange = state.enemies.filter(e =>
+        hexDistance(q, r, e.q, e.r) <= range
+        && state.visible.has(hexKey(e.q, e.r))
+    );
+    if (inRange.length === 0) return;
+
+    if (targeting === 'all') {
+        const killed = inRange.filter(e => power >= e.strength);
+        for (const e of killed) grantSpoils(state, e.type);
+        state.enemies = state.enemies.filter(e => !killed.includes(e));
+        if (killed.length > 0) state.log.push(`${name} destroyed ${killed.length} enemies`);
+    } else {
+        const sortDir = targeting === 'weakest' ? 1 : -1;
+        inRange.sort((a, b) =>
+            sortDir * (a.strength - b.strength)
+            || hexDistance(q, r, a.q, a.r) - hexDistance(q, r, b.q, b.r)
+        );
+        const target = inRange[0];
+        if (power >= target.strength) {
+            grantSpoils(state, target.type);
+            state.enemies = state.enemies.filter(e => e !== target);
+            state.log.push(`${name} destroyed a ${state.names[target.type] || target.type}`);
+        }
+    }
+}
+
 function defensePhase(state) {
+    // Defense structures
     for (const s of state.structures) {
         if (s.buildProgress > 0) continue;
         const sDef = STRUCTURE_TYPES[s.type];
         if (sDef.category !== 'defense') continue;
+        resolveRangedAttack(state, s.q, s.r, sDef.name, sDef.range, sDef.power, sDef.targeting);
+    }
 
-        const inRange = state.enemies.filter(e =>
-            hexDistance(s.q, s.r, e.q, e.r) <= sDef.range
-            && state.visible.has(hexKey(e.q, e.r))
-        );
-        if (inRange.length === 0) continue;
-
-        if (sDef.targeting === 'all') {
-            const killed = inRange.filter(e => sDef.power >= e.strength);
-            for (const e of killed) grantSpoils(state, e.type);
-            state.enemies = state.enemies.filter(e => !killed.includes(e));
-            if (killed.length > 0) state.log.push(`${sDef.name} destroyed ${killed.length} enemies`);
-        } else {
-            const sortDir = sDef.targeting === 'weakest' ? 1 : -1;
-            inRange.sort((a, b) =>
-                sortDir * (a.strength - b.strength)
-                || hexDistance(s.q, s.r, a.q, a.r) - hexDistance(s.q, s.r, b.q, b.r)
-            );
-            const target = inRange[0];
-            if (sDef.power >= target.strength) {
-                grantSpoils(state, target.type);
-                state.enemies = state.enemies.filter(e => e !== target);
-                state.log.push(`${sDef.name} destroyed a ${state.names[target.type] || target.type}`);
-            }
-        }
+    // Ranged units
+    for (const unit of state.units) {
+        const def = UNIT_TYPES[unit.type];
+        if (!def.range) continue;
+        resolveRangedAttack(state, unit.q, unit.r, def.name, def.range, def.power, def.targeting);
     }
 }
 

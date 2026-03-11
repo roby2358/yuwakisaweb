@@ -1,11 +1,11 @@
 // index.js — Waowisha rendering, input, and UI
 
 import { HEX_SIZE, TERRAIN_INFO, UNIT_TYPES, ENEMY_TYPES, STRUCTURE_TYPES,
-    PRODUCTION_RECIPES, RECIPES, ALL_R0, ALL_P1, SLOT_COLORS } from './config.js';
+    PRODUCTION_RECIPES, RECIPES, ALL_R0, ALL_P1, SLOT_COLORS, UPGRADE_PATH } from './config.js';
 import { hexToPixel, pixelToHex, hexKey, parseHexKey, hexDistance, drawHexPath } from './hex.js';
 import { createGame, selectUnit, deselectUnit, moveUnit, recruitUnit,
     startBuild, canBuildHere, assignRecipe, endTurn, canAfford, computeReachable,
-    deployCharge, pickUpCharge, upgradeGatherer, recipeInputs,
+    deployCharge, pickUpCharge, upgradeGatherer, upgradeUnit, recipeInputs,
     computeVisibility, computeGathered } from './game.js';
 
 // ---- Constants ----
@@ -296,7 +296,21 @@ function hidePanel() {
 
 function showUnitPanel(unit) {
     const def = UNIT_TYPES[unit.type];
-    let html = `<div style="margin-bottom:6px">${def.name} | STR:${def.strength} MP:${unit.mp}/${def.mp}</div>`;
+    let stats = `STR:${def.strength} MP:${unit.mp}/${def.mp}`;
+    if (def.range) stats += ` RNG:${def.range} PWR:${def.power}`;
+    if (def.reveal) stats += ` VIS:+${def.reveal}`;
+    let html = `<div style="margin-bottom:6px">${def.name} | ${stats}</div>`;
+
+    // Unit upgrade (sentinel/longbow/seeker lines)
+    const path = UPGRADE_PATH[unit.type];
+    if (path) {
+        const nextDef = UNIT_TYPES[path.next];
+        const blocked = nextDef.unique && state.units.some(u => UNIT_TYPES[u.type].unique);
+        const affordable = !blocked && canAfford(state, path.cost);
+        const costStr = Object.entries(path.cost).map(([r,a]) => `${a} ${state.names[r]||r}`).join(', ');
+        const label = nextDef.unique ? `${nextDef.name} (unique)` : nextDef.name;
+        html += `<button data-action="upgrade-unit" ${affordable?'':'disabled'}>Upgrade to ${label} (${costStr})</button>`;
+    }
 
     // Build options
     if (def.build) {
@@ -508,6 +522,15 @@ document.getElementById('panel-content').addEventListener('click', e => {
         state.log.push('Click a hex within range 3 to deploy Drift Charge.');
         state.buildMode = 'deploy-charge';
         render();
+    }
+    if (btn.dataset.action === 'upgrade-unit') {
+        const unit = state.units.find(u => u.id === state.selectedUnit);
+        if (unit) {
+            upgradeUnit(state, unit.id);
+            state.visible = computeVisibility(state);
+            showUnitPanel(unit);
+            render();
+        }
     }
     if (btn.dataset.action === 'upgrade-gatherer') {
         const unit = state.units.find(u => u.id === state.selectedUnit);
