@@ -498,6 +498,83 @@ export function createGame(seed) {
     return state;
 }
 
+export function saveGame(state) {
+    const mapArray = [];
+    for (const [key, hex] of state.map) {
+        mapArray.push([key, hex]);
+    }
+    const data = {
+        seed: state.seed,
+        rngState: state.rng.getState(),
+        names: state.names,
+        turn: state.turn,
+        map: mapArray,
+        units: state.units,
+        enemies: state.enemies,
+        structures: state.structures,
+        stockpile: state.stockpile,
+        recipeRates: state.recipeRates,
+        harvesterCost: state.harvesterCost,
+        mandate: state.mandate,
+        settlement: state.settlement,
+        gameOver: state.gameOver,
+        victory: state.victory,
+        calmNextTurn: state.calmNextTurn,
+        nextId: nextId,
+    };
+    localStorage.setItem('waowisha-save', JSON.stringify(data));
+}
+
+export function loadGame() {
+    const raw = localStorage.getItem('waowisha-save');
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+
+    const rng = Rando.seeded(data.seed);
+    rng.setState(data.rngState);
+    nextId = data.nextId;
+
+    const map = new Map();
+    for (const [key, hex] of data.map) {
+        map.set(key, hex);
+    }
+
+    const state = {
+        seed: data.seed,
+        rng,
+        names: data.names,
+        turn: data.turn,
+        map,
+        units: data.units,
+        enemies: data.enemies,
+        structures: data.structures,
+        stockpile: data.stockpile,
+        recipeRates: data.recipeRates,
+        harvesterCost: data.harvesterCost,
+        mandate: data.mandate,
+        settlement: data.settlement,
+        visible: new Set(),
+        gameOver: data.gameOver,
+        victory: data.victory,
+        log: [],
+        selectedUnit: null,
+        reachable: new Map(),
+        buildMode: null,
+        calmNextTurn: data.calmNextTurn,
+    };
+
+    state.visible = computeVisibility(state);
+    return state;
+}
+
+export function hasSavedGame() {
+    return localStorage.getItem('waowisha-save') !== null;
+}
+
+export function clearSave() {
+    localStorage.removeItem('waowisha-save');
+}
+
 // ---- Player Actions ----
 
 export function selectUnit(state, unitId) {

@@ -8,6 +8,7 @@ import { createGame, selectUnit, deselectUnit, moveUnit, recruitUnit,
     canAfford, computeReachable,
     deployCharge, pickUpCharge, upgradeGatherer, upgradeUnit, recipeInputs,
     computeVisibility, computeGathered,
+    saveGame, loadGame, hasSavedGame, clearSave,
     cheatSpawnEnemies, cheatMaterials, cheatSpawnUnits, cheatElevate } from './game.js';
 
 // ---- Constants ----
@@ -665,6 +666,7 @@ document.getElementById('panel-content').addEventListener('click', e => {
 function dismissBangs() {
     if (!state || !state.pendingFinish) return false;
     finishTurn(state);
+    saveGame(state);
     state.visible = computeVisibility(state);
     hidePanel();
     render();
@@ -676,6 +678,7 @@ document.getElementById('end-turn').addEventListener('click', () => {
     if (!state || state.gameOver || state.victory) return;
     if (dismissBangs()) return;
     endTurn(state);
+    if (!state.pendingFinish) saveGame(state);
     hidePanel();
     render();
 });
@@ -693,6 +696,7 @@ window.addEventListener('keydown', e => {
         e.preventDefault();
         if (!state || state.gameOver || state.victory) return;
         endTurn(state);
+        if (!state.pendingFinish) saveGame(state);
         hidePanel();
         render();
     }
@@ -757,12 +761,31 @@ function showCheatPanel() {
 
 // ---- Intro ----
 function showIntro() {
+    const continueBtn = document.getElementById('intro-continue');
+    if (hasSavedGame()) {
+        continueBtn.classList.remove('hidden');
+    } else {
+        continueBtn.classList.add('hidden');
+    }
     document.getElementById('intro').classList.remove('hidden');
 }
 
 function hideIntro() {
     document.getElementById('intro').classList.add('hidden');
 }
+
+document.getElementById('intro-continue').addEventListener('click', () => {
+    hideIntro();
+    const loaded = loadGame();
+    if (loaded) {
+        state = loaded;
+        const { q, r } = parseHexKey(state.settlement);
+        hidePanel();
+        resize();
+        centerOn(q, r);
+        render();
+    }
+});
 
 document.getElementById('intro-begin').addEventListener('click', () => {
     hideIntro();
@@ -773,6 +796,7 @@ document.getElementById('intro-begin').addEventListener('click', () => {
 function initGame() {
     const seed = Date.now();
     state = createGame(seed);
+    saveGame(state);
     const { q, r } = parseHexKey(state.settlement);
     hidePanel();
     resize();
