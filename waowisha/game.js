@@ -1171,7 +1171,11 @@ function spawnPhase(state) {
     }
 
     if (state.turn % SURGE_INTERVAL === 0) {
-        const surgeStrength = Math.floor(Math.pow(state.turn / SURGE_INTERVAL, 2));
+        const phase = state.turn / SURGE_INTERVAL;
+        const minWave = Math.min(phase * 3, 30);
+        const maxWave = Math.min(phase * 10, 100);
+        const wave = 0.5 + 0.5 * Math.sin(phase * Math.PI / 3);
+        const surgeStrength = Math.floor(minWave + (maxWave - minWave) * wave);
         state.log.push(`Surge! ${surgeStrength} enemies incoming.`);
 
         for (let i = 0; i < surgeStrength; i++) {
