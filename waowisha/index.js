@@ -4,7 +4,7 @@ import { HEX_SIZE, TERRAIN, TERRAIN_INFO, UNIT_TYPES, ENEMY_TYPES, STRUCTURE_TYP
     PRODUCTION_RECIPES, RECIPES, ALL_R0, ALL_P1, SLOT_COLORS, UPGRADE_PATH } from './config.js';
 import { hexToPixel, pixelToHex, hexKey, parseHexKey, hexDistance, drawHexPath } from './hex.js';
 import { createGame, selectUnit, deselectUnit, moveUnit, recruitUnit,
-    startBuild, canBuildHere, assignRecipe, endTurn, canAfford, computeReachable,
+    startBuild, canBuildHere, demolish, assignRecipe, endTurn, canAfford, computeReachable,
     deployCharge, pickUpCharge, upgradeGatherer, upgradeUnit, recipeInputs,
     computeVisibility, computeGathered } from './game.js';
 
@@ -348,6 +348,15 @@ function showUnitPanel(unit) {
         }
     }
 
+    // Demolish option (builders on a hex with a structure)
+    if (def.build) {
+        const structureHere = state.structures.find(s => s.q === unit.q && s.r === unit.r);
+        if (structureHere) {
+            const sName = STRUCTURE_TYPES[structureHere.type].name;
+            html += `<button data-action="demolish" style="color:#f66">Demolish ${sName}</button>`;
+        }
+    }
+
     // Upgrade Gatherer to Harvester Plant (must be on clear terrain)
     const unitHex = state.map.get(hexKey(unit.q, unit.r));
     if (unit.type === 'gatherer' && unitHex && unitHex.terrain === TERRAIN.PALE && canBuildHere(state, unit.q, unit.r)) {
@@ -538,6 +547,15 @@ document.getElementById('panel-content').addEventListener('click', e => {
         const struct = state.structures.find(s => s.id === parseInt(btn.dataset.struct));
         if (struct) showStructurePanel(struct);
         render();
+    }
+    if (btn.dataset.action === 'demolish') {
+        const unit = state.units.find(u => u.id === state.selectedUnit);
+        if (unit) {
+            demolish(state, unit.id);
+            hidePanel();
+            state.visible = computeVisibility(state);
+            render();
+        }
     }
     if (btn.dataset.action === 'pickup-charge') {
         const unit = state.units.find(u => u.id === state.selectedUnit);

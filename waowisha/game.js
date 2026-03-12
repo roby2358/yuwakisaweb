@@ -423,8 +423,10 @@ export function createGame(seed) {
     }
 
     const recipeRates = {};
-    for (const key of Object.keys(RECIPES)) {
-        recipeRates[key] = Rando.int(7, 12, rng);
+    for (const [key, recipe] of Object.entries(RECIPES)) {
+        if (recipe.tier === 1) recipeRates[key] = Rando.int(7, 12, rng);
+        else if (recipe.tier === 2) recipeRates[key] = Rando.int(3, 6, rng);
+        else recipeRates[key] = Rando.int(2, 3, rng);
     }
 
     const harvesterCost = {};
@@ -492,6 +494,19 @@ export function moveUnit(state, unitId, tq, tr) {
             if (result === 'DE') {
                 grantSpoils(state, enemy.type);
                 state.enemies.splice(enemyIdx, 1);
+                // AoE splash: also kill weak enemies on adjacent hexes
+                if (unitDef.targeting === 'aoe') {
+                    const splashHexes = new Set();
+                    for (const n of hexNeighbors(tq, tr)) {
+                        splashHexes.add(hexKey(n.q, n.r));
+                    }
+                    const splash = state.enemies.filter(e =>
+                        splashHexes.has(hexKey(e.q, e.r)) && unitDef.power >= e.strength
+                    );
+                    for (const e of splash) grantSpoils(state, e.type);
+                    state.enemies = state.enemies.filter(e => !splash.includes(e));
+                    if (splash.length > 0) state.log.push(`Splash destroyed ${splash.length} more`);
+                }
             }
             unit.mp = 0;
             deselectUnit(state);
@@ -553,7 +568,10 @@ export function recruitUnit(state, unitType) {
 }
 
 export function canBuildHere(state, q, r, structureType) {
-    if (structureType === 'spike') return true;
+    if (hexKey(q, r) === state.settlement) return false;
+    if (structureType === 'spike') {
+        return !state.structures.some(s => s.q === q && s.r === r);
+    }
     const { q: sq, r: sr } = parseHexKey(state.settlement);
     if (hexDistance(q, r, sq, sr) < 3) return false;
     for (const s of state.structures) {
@@ -584,6 +602,24 @@ export function startBuild(state, unitId, structureType) {
 
     unit.mp = 0;
     state.log.push(`Building ${sDef.name}`);
+    deselectUnit(state);
+    return true;
+}
+
+export function demolish(state, unitId) {
+    const unit = state.units.find(u => u.id === unitId);
+    if (!unit) return false;
+    const unitDef = UNIT_TYPES[unit.type];
+    if (!unitDef.build) return false;
+
+    const idx = state.structures.findIndex(s => s.q === unit.q && s.r === unit.r);
+    if (idx === -1) return false;
+
+    const s = state.structures[idx];
+    const sDef = STRUCTURE_TYPES[s.type];
+    state.structures.splice(idx, 1);
+    unit.mp = 0;
+    state.log.push(`Demolished ${sDef.name}`);
     deselectUnit(state);
     return true;
 }
@@ -763,7 +799,22 @@ function resolveRangedAttack(state, q, r, name, range, power, targeting) {
     );
     if (inRange.length === 0) return;
 
-    if (targeting === 'all') {
+    if (targeting === 'aoe') {
+        // Pick the strongest enemy in range as the center of the blast
+        const sorted = [...inRange].sort((a, b) => b.strength - a.strength
+            || hexDistance(q, r, a.q, a.r) - hexDistance(q, r, b.q, b.r));
+        const center = sorted[0];
+        // Hit the center hex and all adjacent hexes
+        const blastHexes = new Set();
+        blastHexes.add(hexKey(center.q, center.r));
+        for (const n of hexNeighbors(center.q, center.r)) {
+            blastHexes.add(hexKey(n.q, n.r));
+        }
+        const hit = state.enemies.filter(e => blastHexes.has(hexKey(e.q, e.r)) && power >= e.strength);
+        for (const e of hit) grantSpoils(state, e.type);
+        state.enemies = state.enemies.filter(e => !hit.includes(e));
+        if (hit.length > 0) state.log.push(`${name} bombards area, destroyed ${hit.length} enemies`);
+    } else if (targeting === 'all') {
         const killed = inRange.filter(e => power >= e.strength);
         for (const e of killed) grantSpoils(state, e.type);
         state.enemies = state.enemies.filter(e => !killed.includes(e));

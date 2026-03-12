@@ -36,10 +36,16 @@ export const UNIT_TYPES = {
     ranger:   { name: 'Ranger',   symbol: 'R', color: '#1e88e5', mp: 7, strength: 1, gather: 0, build: 0, reveal: 4, cost: null },
     farseer:  { name: 'Farseer',  symbol: 'F', color: '#1565c0', mp: 7, strength: 1, gather: 0, build: 0, reveal: 5, range: 4, power: 1, targeting: 'weakest', cost: null },
     oracle:   { name: 'Oracle',   symbol: 'O', color: '#0d47a1', mp: 7, strength: 1, gather: 0, build: 0, reveal: 7, range: 6, power: 2, targeting: 'weakest', cost: null },
+    // Siege line (slow, long range, AoE — hits target hex + neighbors)
+    catapult:   { name: 'Catapult',   symbol: 'T', color: '#7e57c2', mp: 2, strength: 1, gather: 0, build: 0, reveal: 0, range: 10, power: 2, targeting: 'aoe', cost: { R0a: 2, R0c: 2 } },
+    trebuchet:  { name: 'Trebuchet',  symbol: 'U', color: '#6a3db5', mp: 2, strength: 1, gather: 0, build: 0, reveal: 0, range: 12, power: 3, targeting: 'aoe', cost: null },
+    bombard:    { name: 'Bombard',    symbol: 'D', color: '#5629a8', mp: 2, strength: 1, gather: 0, build: 0, reveal: 0, range: 14, power: 5, targeting: 'aoe', cost: null },
+    leviathan:  { name: 'Leviathan',  symbol: 'V', color: '#42159b', mp: 2, strength: 1, gather: 0, build: 0, reveal: 0, range: 16, power: 7, targeting: 'aoe', cost: null },
     // Pinnacles (unique — only one level-5 unit allowed across all lines)
     titan:      { name: 'Titan',      symbol: '\u2605', color: '#ff4444', mp: 6, strength: 12, gather: 0, build: 0, reveal: 0, melee: true, unique: true, cost: null },
     devastator: { name: 'Devastator', symbol: '\u2605', color: '#ffaa00', mp: 3, strength: 2,  gather: 0, build: 0, reveal: 0, range: 14, power: 8, targeting: 'weakest', unique: true, cost: null },
     prophet:    { name: 'Prophet',    symbol: '\u2605', color: '#4488ff', mp: 8, strength: 2,  gather: 0, build: 0, reveal: 10, range: 8, power: 4, targeting: 'weakest', unique: true, cost: null },
+    worldbreaker:{ name: 'Worldbreaker',symbol: '\u2605', color: '#aa44ff', mp: 3, strength: 2,  gather: 0, build: 0, reveal: 0, range: 18, power: 10, targeting: 'aoe', unique: true, cost: null },
 };
 
 // Unit upgrade chains: type → { next, cost }
@@ -57,6 +63,10 @@ export const UPGRADE_PATH = {
     ranger:   { next: 'farseer',  cost: { P2a: 2 } },
     farseer:  { next: 'oracle',   cost: { P3b: 1 } },
     oracle:   { next: 'prophet',    cost: { P3a: 1, P3b: 1, P3c: 1, P3d: 1 } },
+    catapult:  { next: 'trebuchet',  cost: { P1c: 3 } },
+    trebuchet: { next: 'bombard',    cost: { P2d: 2 } },
+    bombard:   { next: 'leviathan',  cost: { P3d: 1 } },
+    leviathan: { next: 'worldbreaker', cost: { P3a: 1, P3b: 1, P3c: 1, P3d: 1 } },
 };
 
 export const ENEMY_TYPES = {
@@ -75,18 +85,18 @@ export const SPOILS = {
 };
 
 export const RECIPES = {
-    P1a: { inputs: { R0a: 2 }, tier: 1 },
-    P1b: { inputs: { R0b: 2 }, tier: 1 },
-    P1c: { inputs: { R0c: 2 }, tier: 1 },
-    P1d: { inputs: { R0d: 2 }, tier: 1 },
+    P1a: { inputs: { R0a: 1 }, tier: 1 },
+    P1b: { inputs: { R0b: 1 }, tier: 1 },
+    P1c: { inputs: { R0c: 1 }, tier: 1 },
+    P1d: { inputs: { R0d: 1 }, tier: 1 },
     P2a: { inputs: { P1a: 1, P1b: 1 }, tier: 2 },
     P2b: { inputs: { P1a: 1, P1c: 1 }, tier: 2 },
     P2c: { inputs: { P1d: 1, P1b: 1 }, tier: 2 },
     P2d: { inputs: { P1c: 1, P1d: 1 }, tier: 2 },
-    P3a: { inputs: { P2a: 1, P1d: 1 }, tier: 3 },
-    P3b: { inputs: { P2b: 1, P1b: 1 }, tier: 3 },
-    P3c: { inputs: { P2c: 1, P1a: 1 }, tier: 3 },
-    P3d: { inputs: { P2d: 1, R0b: 1 }, tier: 3 },
+    P3a: { inputs: { P2a: 1, P2d: 1 }, tier: 3 },
+    P3b: { inputs: { P2b: 1 }, tier: 3 },
+    P3c: { inputs: { P2c: 1, P2a: 1 }, tier: 3 },
+    P3d: { inputs: { P2d: 1, P2b: 1 }, tier: 3 },
 };
 
 export const STRUCTURE_TYPES = {
