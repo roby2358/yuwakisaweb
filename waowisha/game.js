@@ -47,6 +47,43 @@ function scaleInputs(inputs, multiplier) {
     return scaled;
 }
 
+// ---- Death Tracking ----
+
+function markEnemyDead(state, enemy) {
+    enemy.dead = true;
+    if (!state.bangs) state.bangs = [];
+    state.bangs.push({ q: enemy.q, r: enemy.r, color: 'enemy' });
+}
+
+function markEnemyDeadAt(state, enemy, q, r) {
+    enemy.dead = true;
+    if (!state.bangs) state.bangs = [];
+    state.bangs.push({ q, r, color: 'enemy' });
+}
+
+function markUnitDead(state, unit) {
+    unit.dead = true;
+    if (!state.bangs) state.bangs = [];
+    state.bangs.push({ q: unit.q, r: unit.r, color: 'unit' });
+}
+
+function markUnitDeadAt(state, unit, q, r) {
+    unit.dead = true;
+    if (!state.bangs) state.bangs = [];
+    state.bangs.push({ q, r, color: 'unit' });
+}
+
+export function sweepDead(state) {
+    state.enemies = state.enemies.filter(e => !e.dead);
+    state.units = state.units.filter(u => !u.dead);
+    // Clear deferred movement positions
+    for (const enemy of state.enemies) {
+        delete enemy.preQ;
+        delete enemy.preR;
+    }
+    state.bangs = [];
+}
+
 // ---- Placement Helper ----
 
 function placeNearSettlement(state, type) {
@@ -708,9 +745,23 @@ export function canAfford(state, cost) {
 export function endTurn(state) {
     if (state.gameOver || state.victory) return;
 
+    state.bangs = [];
     productionPhase(state);
     defensePhase(state);
     driftPhase(state);
+
+    // If there are deaths, pause here — index.js will call finishTurn after displaying bangs
+    if (state.bangs.length > 0) {
+        state.pendingFinish = true;
+        return;
+    }
+
+    finishTurn(state);
+}
+
+export function finishTurn(state) {
+    state.pendingFinish = false;
+    sweepDead(state);
 
     if (!state.calmNextTurn) {
         spawnPhase(state);
@@ -726,7 +777,10 @@ export function endTurn(state) {
     checkMandate(state);
 
     state.turn++;
-    for (const unit of state.units) unit.mp = UNIT_TYPES[unit.type].mp;
+    for (const unit of state.units) {
+        if (unit.dead) continue;
+        unit.mp = UNIT_TYPES[unit.type].mp;
+    }
     state.visible = computeVisibility(state);
     deselectUnit(state);
 }
@@ -794,7 +848,8 @@ function productionPhase(state) {
 
 function resolveRangedAttack(state, q, r, name, range, power, targeting) {
     const inRange = state.enemies.filter(e =>
-        hexDistance(q, r, e.q, e.r) <= range
+        !e.dead
+        && hexDistance(q, r, e.q, e.r) <= range
         && state.visible.has(hexKey(e.q, e.r))
     );
     if (inRange.length === 0) return;
@@ -810,14 +865,12 @@ function resolveRangedAttack(state, q, r, name, range, power, targeting) {
         for (const n of hexNeighbors(center.q, center.r)) {
             blastHexes.add(hexKey(n.q, n.r));
         }
-        const hit = state.enemies.filter(e => blastHexes.has(hexKey(e.q, e.r)) && power >= e.strength);
-        for (const e of hit) grantSpoils(state, e.type);
-        state.enemies = state.enemies.filter(e => !hit.includes(e));
+        const hit = inRange.filter(e => blastHexes.has(hexKey(e.q, e.r)) && power >= e.strength);
+        for (const e of hit) { grantSpoils(state, e.type); markEnemyDead(state, e); }
         if (hit.length > 0) state.log.push(`${name} bombards area, destroyed ${hit.length} enemies`);
     } else if (targeting === 'all') {
         const killed = inRange.filter(e => power >= e.strength);
-        for (const e of killed) grantSpoils(state, e.type);
-        state.enemies = state.enemies.filter(e => !killed.includes(e));
+        for (const e of killed) { grantSpoils(state, e.type); markEnemyDead(state, e); }
         if (killed.length > 0) state.log.push(`${name} destroyed ${killed.length} enemies`);
     } else {
         const sortDir = targeting === 'weakest' ? 1 : -1;
@@ -828,7 +881,7 @@ function resolveRangedAttack(state, q, r, name, range, power, targeting) {
         const target = inRange[0];
         if (power >= target.strength) {
             grantSpoils(state, target.type);
-            state.enemies = state.enemies.filter(e => e !== target);
+            markEnemyDead(state, target);
             state.log.push(`${name} destroyed a ${state.names[target.type] || target.type}`);
         }
     }
@@ -856,6 +909,7 @@ function defensePhase(state) {
 function spawnBroodlings(state) {
     const newE0s = [];
     for (const e of state.enemies) {
+        if (e.dead) continue;
         if (e.type !== 'broodMother') continue;
         const valid = hexNeighbors(e.q, e.r).filter(n => {
             const h = state.map.get(hexKey(n.q, n.r));
@@ -873,28 +927,34 @@ function spawnBroodlings(state) {
 
 function resolveEnemyUnitCombat(state) {
     for (const enemy of [...state.enemies]) {
+        if (enemy.dead) continue;
         const ek = hexKey(enemy.q, enemy.r);
-        const unit = state.units.find(u => hexKey(u.q, u.r) === ek);
+        const unit = state.units.find(u => !u.dead && hexKey(u.q, u.r) === ek);
         if (!unit) continue;
+
+        // Enemy's source hex (where it attacked from)
+        const srcQ = enemy.prevQ !== undefined ? enemy.prevQ : enemy.q;
+        const srcR = enemy.prevR !== undefined ? enemy.prevR : enemy.r;
 
         const unitDef = UNIT_TYPES[unit.type];
         if (enemy.strength > unitDef.strength) {
             state.log.push(`${state.names[enemy.type] || enemy.type} destroyed your ${unitDef.name}!`);
-            state.units = state.units.filter(u => u.id !== unit.id);
+            markUnitDead(state, unit); // yellow bang on unit's hex (target)
         } else if (enemy.strength === unitDef.strength) {
             state.log.push(`Exchange: ${unitDef.name} and ${state.names[enemy.type] || enemy.type} both destroyed`);
-            state.units = state.units.filter(u => u.id !== unit.id);
+            markUnitDead(state, unit); // yellow bang on unit's hex
             grantSpoils(state, enemy.type);
-            state.enemies = state.enemies.filter(e => e !== enemy);
+            markEnemyDeadAt(state, enemy, srcQ, srcR); // red bang on source
         } else {
             grantSpoils(state, enemy.type);
-            state.enemies = state.enemies.filter(e => e !== enemy);
+            markEnemyDeadAt(state, enemy, srcQ, srcR); // red bang on source
         }
     }
 }
 
 function resolveEnemyStructureCombat(state) {
     for (const enemy of [...state.enemies]) {
+        if (enemy.dead) continue;
         const ek = hexKey(enemy.q, enemy.r);
         const struct = state.structures.find(s => hexKey(s.q, s.r) === ek && s.buildProgress === 0);
         if (!struct) continue;
@@ -903,16 +963,19 @@ function resolveEnemyStructureCombat(state) {
             state.log.push(`${state.names[enemy.type] || enemy.type} destroyed ${sDef.name}!`);
             state.structures = state.structures.filter(s => s !== struct);
         } else {
+            const bangQ = enemy.prevQ !== undefined ? enemy.prevQ : enemy.q;
+            const bangR = enemy.prevR !== undefined ? enemy.prevR : enemy.r;
             grantSpoils(state, enemy.type);
-            state.enemies = state.enemies.filter(e => e !== enemy);
+            markEnemyDeadAt(state, enemy, bangQ, bangR);
         }
     }
 }
 
 function checkSettlement(state) {
     for (const enemy of state.enemies) {
+        if (enemy.dead) continue;
         if (hexKey(enemy.q, enemy.r) !== state.settlement) continue;
-        const defender = state.units.find(u => hexKey(u.q, u.r) === state.settlement);
+        const defender = state.units.find(u => !u.dead && hexKey(u.q, u.r) === state.settlement);
         if (!defender) {
             state.gameOver = true;
             state.log.push('The Drift has reached The Loom. Game Over.');
@@ -923,7 +986,15 @@ function checkSettlement(state) {
 
 function driftPhase(state) {
     spawnBroodlings(state);
-    for (const enemy of state.enemies) moveEnemy(state, enemy);
+    // Save pre-move positions for all enemies (for deferred visual movement)
+    for (const enemy of state.enemies) {
+        enemy.preQ = enemy.q;
+        enemy.preR = enemy.r;
+    }
+    for (const enemy of state.enemies) {
+        if (enemy.dead) continue;
+        moveEnemy(state, enemy);
+    }
     resolveEnemyUnitCombat(state);
     resolveEnemyStructureCombat(state);
     checkSettlement(state);
@@ -958,6 +1029,8 @@ function moveEnemy(state, enemy) {
         }
 
         if (target) {
+            enemy.prevQ = enemy.q;
+            enemy.prevR = enemy.r;
             enemy.q = target.q;
             enemy.r = target.r;
         }

@@ -4,7 +4,8 @@ import { HEX_SIZE, TERRAIN, TERRAIN_INFO, UNIT_TYPES, ENEMY_TYPES, STRUCTURE_TYP
     PRODUCTION_RECIPES, RECIPES, ALL_R0, ALL_P1, SLOT_COLORS, UPGRADE_PATH } from './config.js';
 import { hexToPixel, pixelToHex, hexKey, parseHexKey, hexDistance, drawHexPath } from './hex.js';
 import { createGame, selectUnit, deselectUnit, moveUnit, recruitUnit,
-    startBuild, canBuildHere, demolish, assignRecipe, endTurn, canAfford, computeReachable,
+    startBuild, canBuildHere, demolish, assignRecipe, endTurn, finishTurn, sweepDead,
+    canAfford, computeReachable,
     deployCharge, pickUpCharge, upgradeGatherer, upgradeUnit, recipeInputs,
     computeVisibility, computeGathered,
     cheatSpawnEnemies, cheatMaterials, cheatSpawnUnits, cheatElevate } from './game.js';
@@ -125,6 +126,39 @@ function drawStructure(cx, cy, sDef, buildProgress) {
     }
 }
 
+// ---- Bang Effect ----
+// Seeded random for consistent bang shapes within a render frame
+let bangSeed = 1;
+function bangRand() {
+    bangSeed = (bangSeed * 16807 + 0) % 2147483647;
+    return (bangSeed & 0x7fffffff) / 0x7fffffff;
+}
+
+function drawBang(cx, cy, color) {
+    const spikes = 7 + Math.floor(bangRand() * 5);
+    const outerR = HEX_SIZE * 0.7 + bangRand() * HEX_SIZE * 0.3;
+    const innerR = outerR * 0.35 + bangRand() * outerR * 0.15;
+    const angleOff = bangRand() * Math.PI * 2;
+
+    ctx.beginPath();
+    for (let i = 0; i < spikes * 2; i++) {
+        const angle = angleOff + (i * Math.PI) / spikes;
+        const r = i % 2 === 0 ? outerR : innerR + bangRand() * innerR * 0.4;
+        const px = cx + Math.cos(angle) * r;
+        const py = cy + Math.sin(angle) * r;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 0.85;
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.globalAlpha = 1.0;
+}
+
 // ---- Rendering ----
 function render() {
     if (!state) return;
@@ -202,17 +236,21 @@ function render() {
         }
     }
 
-    // Enemies (only visible)
+    // Enemies (only visible; show at pre-move position during bang display, including dead)
     for (const enemy of state.enemies) {
-        if (!state.visible.has(hexKey(enemy.q, enemy.r))) continue;
-        const { x, y } = hexToScreen(enemy.q, enemy.r);
+        if (enemy.dead && !state.pendingFinish) continue;
+        const showQ = state.pendingFinish && enemy.preQ !== undefined ? enemy.preQ : enemy.q;
+        const showR = state.pendingFinish && enemy.preR !== undefined ? enemy.preR : enemy.r;
+        if (!state.visible.has(hexKey(showQ, showR))) continue;
+        const { x, y } = hexToScreen(showQ, showR);
         const eDef = ENEMY_TYPES[enemy.type];
-        const label = enemy.type === 'broodMother' ? 'B' : eDef.symbol.toUpperCase();
+        const label = enemy.type === 'broodMother' ? 'B' : eDef.symbol;
         drawCounter(x, y, eDef.color, label, false);
     }
 
-    // Player units
+    // Player units (show dead during bang display, skip dead otherwise)
     for (const unit of state.units) {
+        if (unit.dead && !state.pendingFinish) continue;
         const { x, y } = hexToScreen(unit.q, unit.r);
         const def = UNIT_TYPES[unit.type];
         const isSel = state.selectedUnit === unit.id;
@@ -234,6 +272,16 @@ function render() {
             ctx.beginPath();
             ctx.arc(x + COUNTER_SIZE/2 - 3, y - COUNTER_SIZE/2 + 3, 4, 0, Math.PI*2);
             ctx.fill();
+        }
+    }
+
+    // Bang effects for combat deaths (drawn on top)
+    if (state.bangs && state.bangs.length > 0) {
+        bangSeed = state.turn * 7 + 13;
+        for (const bang of state.bangs) {
+            const { x, y } = hexToScreen(bang.q, bang.r);
+            const color = bang.color === 'enemy' ? '#ff2222' : '#ffdd00';
+            drawBang(x, y, color);
         }
     }
 
@@ -430,6 +478,10 @@ function showStructurePanel(struct) {
 
 // ---- Input ----
 canvas.addEventListener('mousedown', e => {
+    if (state && state.pendingFinish && e.button === 0) {
+        dismissBangs();
+        return;
+    }
     if (e.button === 2) {
         panning = true;
         panStartX = e.clientX; panStartY = e.clientY;
@@ -609,9 +661,20 @@ document.getElementById('panel-content').addEventListener('click', e => {
     }
 });
 
+// Dismiss bangs and finish the turn
+function dismissBangs() {
+    if (!state || !state.pendingFinish) return false;
+    finishTurn(state);
+    state.visible = computeVisibility(state);
+    hidePanel();
+    render();
+    return true;
+}
+
 // End Turn
 document.getElementById('end-turn').addEventListener('click', () => {
     if (!state || state.gameOver || state.victory) return;
+    if (dismissBangs()) return;
     endTurn(state);
     hidePanel();
     render();
@@ -621,6 +684,11 @@ let cheatMode = null;
 let lastBacktick = 0;
 
 window.addEventListener('keydown', e => {
+    if (state && state.pendingFinish) {
+        e.preventDefault();
+        dismissBangs();
+        return;
+    }
     if (e.key === ' ' || e.key === 'Enter') {
         e.preventDefault();
         if (!state || state.gameOver || state.victory) return;
