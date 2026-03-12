@@ -1010,11 +1010,23 @@ function moveEnemy(state, enemy) {
         let target = null;
 
         if (eDef.behavior === 'random') {
-            const valid = hexNeighbors(enemy.q, enemy.r).filter(n => {
-                const h = state.map.get(hexKey(n.q, n.r));
-                return h && TERRAIN_INFO[h.terrain].moveCost < Infinity;
-            });
-            if (valid.length > 0) target = Rando.choice(valid, state.rng);
+            // Stampede: if 5+ other enemies within range 2, seek nearest unit/structure
+            const nearbyCount = state.enemies.filter(e =>
+                e !== enemy && !e.dead && hexDistance(enemy.q, enemy.r, e.q, e.r) <= 2
+            ).length;
+            if (nearbyCount >= 5) {
+                const targets = [
+                    ...state.units.filter(u => !u.dead).map(u => ({q:u.q,r:u.r})),
+                    ...state.structures.map(s => ({q:s.q,r:s.r}))
+                ];
+                target = seekNearest(state, enemy, targets);
+            } else {
+                const valid = hexNeighbors(enemy.q, enemy.r).filter(n => {
+                    const h = state.map.get(hexKey(n.q, n.r));
+                    return h && TERRAIN_INFO[h.terrain].moveCost < Infinity;
+                });
+                if (valid.length > 0) target = Rando.choice(valid, state.rng);
+            }
         } else if (eDef.behavior === 'seekUnit') {
             const targets = [
                 ...state.units.map(u => ({q:u.q,r:u.r})),
