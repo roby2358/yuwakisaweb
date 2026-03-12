@@ -6,7 +6,8 @@ import { hexToPixel, pixelToHex, hexKey, parseHexKey, hexDistance, drawHexPath }
 import { createGame, selectUnit, deselectUnit, moveUnit, recruitUnit,
     startBuild, canBuildHere, demolish, assignRecipe, endTurn, canAfford, computeReachable,
     deployCharge, pickUpCharge, upgradeGatherer, upgradeUnit, recipeInputs,
-    computeVisibility, computeGathered } from './game.js';
+    computeVisibility, computeGathered,
+    cheatSpawnEnemies, cheatMaterials, cheatSpawnUnits, cheatElevate } from './game.js';
 
 // ---- Constants ----
 const COUNTER_SIZE = 26;
@@ -473,6 +474,24 @@ function handleClick(q, r, key) {
         return;
     }
 
+    // Cheat click modes
+    if (cheatMode === 'spawn-enemies') {
+        cheatSpawnEnemies(state, q, r);
+        cheatMode = null;
+        state.visible = computeVisibility(state);
+        hidePanel();
+        render();
+        return;
+    }
+    if (cheatMode === 'spawn-units') {
+        cheatSpawnUnits(state, q, r);
+        cheatMode = null;
+        state.visible = computeVisibility(state);
+        hidePanel();
+        render();
+        return;
+    }
+
     const clickedUnit = state.units.find(u => hexKey(u.q, u.r) === key);
     const clickedStruct = state.structures.find(s => hexKey(s.q, s.r) === key);
 
@@ -598,6 +617,9 @@ document.getElementById('end-turn').addEventListener('click', () => {
     render();
 });
 
+let cheatMode = null;
+let lastBacktick = 0;
+
 window.addEventListener('keydown', e => {
     if (e.key === ' ' || e.key === 'Enter') {
         e.preventDefault();
@@ -607,11 +629,63 @@ window.addEventListener('keydown', e => {
         render();
     }
     if (e.key === 'Escape') {
+        cheatMode = null;
         deselectUnit(state);
         hidePanel();
         render();
     }
+    if (!state || state.gameOver || state.victory) return;
+    if (e.key === '`') {
+        const now = Date.now();
+        if (now - lastBacktick < 400) {
+            showCheatPanel();
+            lastBacktick = 0;
+            return;
+        }
+        lastBacktick = now;
+    }
+    if (e.key === 'b' && lastBacktick > 0) {
+        lastBacktick = 0;
+        cheatMode = 'spawn-enemies';
+        state.log.push('CHEAT: Click hex to spawn enemies');
+        render();
+    }
+    if (e.key === 'm' && lastBacktick > 0) {
+        lastBacktick = 0;
+        cheatMaterials(state);
+        render();
+    }
+    if (e.key === 't' && lastBacktick > 0) {
+        lastBacktick = 0;
+        cheatMode = 'spawn-units';
+        state.log.push('CHEAT: Click hex to spawn units');
+        render();
+    }
+    if (e.key === 'e' && lastBacktick > 0) {
+        lastBacktick = 0;
+        if (state.selectedUnit) {
+            cheatElevate(state, state.selectedUnit);
+            const unit = state.units.find(u => u.id === state.selectedUnit);
+            if (unit) showUnitPanel(unit);
+            state.visible = computeVisibility(state);
+            render();
+        }
+    }
 });
+
+function showCheatPanel() {
+    const panel = document.getElementById('panel-content');
+    panel.innerHTML = `
+        <div style="color:#ff0;margin-bottom:8px">Cheat Codes</div>
+        <div style="color:#aaa;font-size:12px">
+            <div>\`b — spawn enemies on clicked hex</div>
+            <div>\`m — +100 all resources</div>
+            <div>\`t — spawn friendly units on clicked hex</div>
+            <div>\`e — elevate selected unit</div>
+            <div>Esc — cancel</div>
+        </div>`;
+    document.getElementById('panel').classList.remove('hidden');
+}
 
 // ---- Intro ----
 function showIntro() {

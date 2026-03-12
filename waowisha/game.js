@@ -1118,3 +1118,59 @@ function checkMandate(state) {
         state.log.push(`The Mandate is fulfilled in ${state.turn} turns!`);
     }
 }
+
+// ---- Cheat Functions ----
+
+export function cheatSpawnEnemies(state, q, r) {
+    const hexes = [{ q, r }, ...hexNeighbors(q, r)];
+    const types = ['E0', 'E1', 'E2', 'broodMother', 'E0', 'E1', 'E2'];
+    for (let i = 0; i < 7; i++) {
+        const h = hexes[i];
+        if (!state.map.has(hexKey(h.q, h.r))) continue;
+        const type = types[i];
+        const eDef = ENEMY_TYPES[type];
+        const speed = Array.isArray(eDef.speed) ? eDef.speed[1] : eDef.speed;
+        state.enemies.push({
+            id: newId(), type, q: h.q, r: h.r,
+            speed, strength: eDef.strength
+        });
+    }
+    state.log.push('CHEAT: Spawned enemies');
+}
+
+export function cheatMaterials(state) {
+    const slots = ['R0a','R0b','R0c','R0d','P1a','P1b','P1c','P1d','P2a','P2b','P2c','P2d','P3a','P3b','P3c','P3d'];
+    for (const s of slots) {
+        state.stockpile[s] = (state.stockpile[s] || 0) + 100;
+    }
+    state.log.push('CHEAT: +100 all resources');
+}
+
+export function cheatSpawnUnits(state, q, r) {
+    const hexes = [{ q, r }, ...hexNeighbors(q, r)];
+    const types = ['sentinel', 'longbow', 'seeker', 'catapult', 'mason', 'gatherer', 'sentinel'];
+    let placed = 0;
+    for (let i = 0; i < 7; i++) {
+        const h = hexes[i];
+        if (!state.map.has(hexKey(h.q, h.r))) continue;
+        if (state.units.some(u => u.q === h.q && u.r === h.r)) continue;
+        const type = types[i];
+        state.units.push({
+            id: newId(), type, q: h.q, r: h.r,
+            mp: UNIT_TYPES[type].mp, carrying: null
+        });
+        placed++;
+    }
+    state.log.push(`CHEAT: Spawned ${placed} units`);
+}
+
+export function cheatElevate(state, unitId) {
+    const unit = state.units.find(u => u.id === unitId);
+    if (!unit) return false;
+    const path = UPGRADE_PATH[unit.type];
+    if (!path) return false;
+    unit.type = path.next;
+    unit.mp = UNIT_TYPES[path.next].mp;
+    state.log.push(`CHEAT: Elevated to ${UNIT_TYPES[path.next].name}`);
+    return true;
+}
