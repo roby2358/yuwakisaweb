@@ -175,7 +175,7 @@ function render() {
 
         drawHexPath(ctx, x, y, HEX_SIZE);
         const info = TERRAIN_INFO[hex.terrain];
-        ctx.fillStyle = info ? info.color : '#555';
+        ctx.fillStyle = (state.terrainColors && state.terrainColors[hex.terrain]) || (info ? info.color : '#555');
         ctx.fill();
         ctx.strokeStyle = '#00000044'; ctx.lineWidth = 1; ctx.stroke();
 
@@ -316,7 +316,7 @@ function updateHUD() {
         const amt = state.stockpile[slot] || 0;
         if (slot in state.stockpile) {
             const name = state.names[slot] || slot;
-            const color = SLOT_COLORS[slot] || '#888';
+            const color = (state.slotColors && state.slotColors[slot]) || SLOT_COLORS[slot] || '#888';
             stockHTML += `<span class="stock-item"><span class="stock-dot" style="color:${color}">\u2B22</span><span class="stock-label">${name}:</span> <span class="stock-value">${amt}</span></span>`;
         }
     }

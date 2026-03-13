@@ -465,6 +465,33 @@ export function createGame(seed) {
         enemyColors[enemyKeys[i]] = ColorTheory.rgbToHex(r, g, b);
     }
 
+    // Generate quad (square) color scheme for resource terrain
+    const terrainHue = rng();
+    const terrainR = 0.35 + rng() * 0.15; // radial 0.35-0.50 → medium saturation terrain
+    const terrainRadial = { a: terrainHue, r: terrainR };
+    const palette = ColorTheory.square(terrainRadial, rng);
+    // square gives 5 colors sorted by luminance; skip darkest (index 0), take remaining 4
+    const pick = [palette[1], palette[2], palette[3], palette[4]];
+    const resourceTerrains = [TERRAIN.VEIN, TERRAIN.GROVE, TERRAIN.MIRE, TERRAIN.SCARP];
+    const terrainColors = {};
+    for (let i = 0; i < 4; i++) {
+        const [cr, cg, cb] = pick[i];
+        terrainColors[resourceTerrains[i]] = ColorTheory.rgbToHex(cr, cg, cb);
+    }
+    // Derive slot colors from their source terrain
+    const slotColors = {};
+    for (const [terrain, info] of Object.entries(TERRAIN_INFO)) {
+        if (!info.resource) continue;
+        slotColors[info.resource] = terrainColors[Number(terrain)];
+    }
+    // P1 inherits from R0 source, P2/P3 from primary input
+    slotColors.P1a = slotColors.R0a; slotColors.P1b = slotColors.R0b;
+    slotColors.P1c = slotColors.R0c; slotColors.P1d = slotColors.R0d;
+    slotColors.P2a = slotColors.R0a; slotColors.P2b = slotColors.R0a;
+    slotColors.P2c = slotColors.R0d; slotColors.P2d = slotColors.R0c;
+    slotColors.P3a = slotColors.R0a; slotColors.P3b = slotColors.R0a;
+    slotColors.P3c = slotColors.R0d; slotColors.P3d = slotColors.R0c;
+
     const stockpile = {};
     for (const [res, amt] of Object.entries(SUPPLY_CRATE)) {
         stockpile[res] = amt;
@@ -495,6 +522,8 @@ export function createGame(seed) {
         recipeRates,
         harvesterCost,
         enemyColors,
+        terrainColors,
+        slotColors,
         mandate: generateMandate(rng),
         settlement,
         visible: new Set(),
@@ -528,6 +557,8 @@ export function saveGame(state) {
         recipeRates: state.recipeRates,
         harvesterCost: state.harvesterCost,
         enemyColors: state.enemyColors,
+        terrainColors: state.terrainColors,
+        slotColors: state.slotColors,
         mandate: state.mandate,
         settlement: state.settlement,
         gameOver: state.gameOver,
@@ -565,6 +596,8 @@ export function loadGame() {
         recipeRates: data.recipeRates,
         harvesterCost: data.harvesterCost,
         enemyColors: data.enemyColors,
+        terrainColors: data.terrainColors || {},
+        slotColors: data.slotColors || {},
         mandate: data.mandate,
         settlement: data.settlement,
         visible: new Set(),
