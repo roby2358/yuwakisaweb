@@ -10,6 +10,7 @@ import { HEX_SIZE, TERRAIN, TERRAIN_INFO, UNIT_TYPES, ENEMY_TYPES, SPOILS,
 import { hexKey, parseHexKey, hexNeighbors, hexDistance, hexesInRange, bfsHexes, findPath } from './hex.js';
 import { Rando } from './rando.js';
 import { generateGameNames } from './names.js';
+import { ColorTheory } from './colortheory.js';
 
 let nextId = 1;
 function newId() { return nextId++; }
@@ -454,6 +455,16 @@ export function createGame(seed) {
     const { q: sq, r: sr } = parseHexKey(settlement);
     placeStarterVeins(map, sq, sr, rng);
 
+    // Generate monochrome enemy palette from a random hue
+    const enemyHue = rng();
+    const enemyRadials = [0.50, 0.38, 0.26, 0.10]; // dark to bright
+    const enemyKeys = ['E0', 'E1', 'E2', 'broodMother'];
+    const enemyColors = {};
+    for (let i = 0; i < 4; i++) {
+        const [r, g, b] = ColorTheory.pixToRGBLuminosity({ a: enemyHue, r: enemyRadials[i] });
+        enemyColors[enemyKeys[i]] = ColorTheory.rgbToHex(r, g, b);
+    }
+
     const stockpile = {};
     for (const [res, amt] of Object.entries(SUPPLY_CRATE)) {
         stockpile[res] = amt;
@@ -483,6 +494,7 @@ export function createGame(seed) {
         stockpile,
         recipeRates,
         harvesterCost,
+        enemyColors,
         mandate: generateMandate(rng),
         settlement,
         visible: new Set(),
@@ -515,6 +527,7 @@ export function saveGame(state) {
         stockpile: state.stockpile,
         recipeRates: state.recipeRates,
         harvesterCost: state.harvesterCost,
+        enemyColors: state.enemyColors,
         mandate: state.mandate,
         settlement: state.settlement,
         gameOver: state.gameOver,
@@ -551,6 +564,7 @@ export function loadGame() {
         stockpile: data.stockpile,
         recipeRates: data.recipeRates,
         harvesterCost: data.harvesterCost,
+        enemyColors: data.enemyColors,
         mandate: data.mandate,
         settlement: data.settlement,
         visible: new Set(),
@@ -926,6 +940,7 @@ function productionPhase(state) {
 function resolveRangedAttack(state, q, r, name, range, power, targeting) {
     const inRange = state.enemies.filter(e =>
         !e.dead
+        && e.type !== 'broodMother'
         && hexDistance(q, r, e.q, e.r) <= range
         && state.visible.has(hexKey(e.q, e.r))
     );

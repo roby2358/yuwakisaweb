@@ -70,10 +70,10 @@ export const UPGRADE_PATH = {
 };
 
 export const ENEMY_TYPES = {
-    E0:          { strength: 1, speed: 1,    behavior: 'random',         symbol: 'm', color: '#555' },
-    E1:          { strength: 2, speed: [1,3], behavior: 'seekUnit',      symbol: 'h', color: '#833' },
-    E2:          { strength: 1, speed: 2,    behavior: 'seekSettlement', symbol: 't', color: '#538' },
-    broodMother: { strength: 4, speed: 1,    behavior: 'seekResource',   symbol: 'B', color: '#a22' },
+    E0:          { strength: 1, speed: 1,    behavior: 'random',         symbol: 'm', color: '#5a3030' },
+    E1:          { strength: 2, speed: [1,3], behavior: 'seekUnit',      symbol: 'h', color: '#8b3a3a' },
+    E2:          { strength: 1, speed: 2,    behavior: 'seekSettlement', symbol: 't', color: '#b84444' },
+    broodMother: { strength: 4, speed: 1,    behavior: 'seekResource',   symbol: 'B', color: '#ee5555' },
 };
 
 // Spoils dropped on kill

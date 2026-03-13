@@ -246,7 +246,8 @@ function render() {
         const { x, y } = hexToScreen(showQ, showR);
         const eDef = ENEMY_TYPES[enemy.type];
         const label = enemy.type === 'broodMother' ? 'B' : eDef.symbol;
-        drawCounter(x, y, eDef.color, label, false);
+        const eColor = (state.enemyColors && state.enemyColors[enemy.type]) || eDef.color;
+        drawCounter(x, y, eColor, label, false);
     }
 
     // Player units (show dead during bang display, skip dead otherwise)
