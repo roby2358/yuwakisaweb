@@ -278,15 +278,23 @@ function placeStarterVeins(hexes, sq, sr, rng) {
 
 function generateMandate(rng) {
     const goals = [];
+    const t1 = ['P1a', 'P1b', 'P1c', 'P1d'];
     const t2 = ['P2a', 'P2b', 'P2c', 'P2d'];
     const t3 = ['P3a', 'P3b', 'P3c', 'P3d'];
+    Rando.shuffle(t1, rng);
     Rando.shuffle(t2, rng);
     Rando.shuffle(t3, rng);
 
-    for (let i = 0; i < 3; i++) {
-        goals.push({ product: t2[i], quantity: Rando.int(2, 4, rng), produced: 0, revealed: i < 2 });
+    // 2 P1 goals (revealed, short-term)
+    for (let i = 0; i < 2; i++) {
+        goals.push({ product: t1[i], quantity: Rando.int(3, 5, rng), produced: 0, revealed: true });
     }
-    for (let i = 0; i < 3; i++) {
+    // 2 P2 goals (first revealed, second hidden)
+    for (let i = 0; i < 2; i++) {
+        goals.push({ product: t2[i], quantity: Rando.int(2, 4, rng), produced: 0, revealed: i < 1 });
+    }
+    // 2 P3 goals (all hidden)
+    for (let i = 0; i < 2; i++) {
         goals.push({ product: t3[i], quantity: Rando.int(1, 3, rng), produced: 0, revealed: false });
     }
     return goals;
@@ -520,6 +528,7 @@ export function createGame(seed) {
         structures: [],
         stockpile,
         recipeRates,
+        recipeAssignments: {},
         harvesterCost,
         enemyColors,
         terrainColors,
@@ -555,6 +564,7 @@ export function saveGame(state) {
         structures: state.structures,
         stockpile: state.stockpile,
         recipeRates: state.recipeRates,
+        recipeAssignments: state.recipeAssignments,
         harvesterCost: state.harvesterCost,
         enemyColors: state.enemyColors,
         terrainColors: state.terrainColors,
@@ -594,6 +604,7 @@ export function loadGame() {
         structures: data.structures,
         stockpile: data.stockpile,
         recipeRates: data.recipeRates,
+        recipeAssignments: data.recipeAssignments || {},
         harvesterCost: data.harvesterCost,
         enemyColors: data.enemyColors,
         terrainColors: data.terrainColors || {},
@@ -756,7 +767,6 @@ export function startBuild(state, unitId, structureType) {
 
     state.structures.push({
         id: newId(), type: structureType, q: unit.q, r: unit.r,
-        recipe: null,
         buildProgress: Math.ceil(sDef.buildTime / unitDef.build),
         builderId: unit.id
     });
@@ -779,20 +789,60 @@ export function demolish(state, unitId) {
     const s = state.structures[idx];
     const sDef = STRUCTURE_TYPES[s.type];
     state.structures.splice(idx, 1);
+
+    // If production building, remove a counter if over-assigned
+    if (sDef.category === 'production') {
+        const tier = sDef.tier;
+        const available = tierBuildingCount(state, tier);
+        const assigned = tierAssignmentSum(state, tier);
+        if (assigned > available) {
+            // Remove from the recipe with the most counters
+            const slots = PRODUCTION_RECIPES[tier] || [];
+            let maxSlot = null, maxCount = 0;
+            for (const slot of slots) {
+                const c = state.recipeAssignments[slot] || 0;
+                if (c > maxCount) { maxCount = c; maxSlot = slot; }
+            }
+            if (maxSlot) state.recipeAssignments[maxSlot]--;
+        }
+    }
+
     unit.mp = 0;
     state.log.push(`Demolished ${sDef.name}`);
     deselectUnit(state);
     return true;
 }
 
-export function assignRecipe(state, structureId, recipe) {
-    const s = state.structures.find(st => st.id === structureId);
-    if (!s || s.buildProgress > 0) return false;
-    const sDef = STRUCTURE_TYPES[s.type];
-    if (sDef.category !== 'production') return false;
-    const validRecipes = PRODUCTION_RECIPES[sDef.tier];
-    if (!validRecipes || !validRecipes.includes(recipe)) return false;
-    s.recipe = recipe;
+function tierAssignmentSum(state, tier) {
+    const slots = PRODUCTION_RECIPES[tier] || [];
+    let sum = 0;
+    for (const slot of slots) {
+        sum += state.recipeAssignments[slot] || 0;
+    }
+    return sum;
+}
+
+function tierBuildingCount(state, tier) {
+    let count = 0;
+    for (const s of state.structures) {
+        const sd = STRUCTURE_TYPES[s.type];
+        if (sd.category === 'production' && sd.tier === tier && s.buildProgress === 0) count++;
+    }
+    return count;
+}
+
+export function assignRecipe(state, recipe) {
+    const recipeDef = RECIPES[recipe];
+    if (!recipeDef) return false;
+    const tier = recipeDef.tier;
+    if (tierAssignmentSum(state, tier) >= tierBuildingCount(state, tier)) return false;
+    state.recipeAssignments[recipe] = (state.recipeAssignments[recipe] || 0) + 1;
+    return true;
+}
+
+export function unassignRecipe(state, recipe) {
+    if (!state.recipeAssignments[recipe] || state.recipeAssignments[recipe] <= 0) return false;
+    state.recipeAssignments[recipe]--;
     return true;
 }
 
@@ -937,22 +987,21 @@ export function recipeInputs(state, recipeKey) {
 }
 
 function runProduction(state) {
-    for (const s of state.structures) {
-        if (s.buildProgress > 0) continue;
-        const sDef = STRUCTURE_TYPES[s.type];
-        if (sDef.category !== 'production') continue;
-        if (!s.recipe) continue;
-        const scaled = recipeInputs(state, s.recipe);
-        if (!scaled) continue;
-        if (!afford(state.stockpile, scaled)) continue;
+    for (const [recipe, count] of Object.entries(state.recipeAssignments)) {
+        if (!count || count <= 0) continue;
+        for (let i = 0; i < count; i++) {
+            const scaled = recipeInputs(state, recipe);
+            if (!scaled) continue;
+            if (!afford(state.stockpile, scaled)) continue;
 
-        spend(state.stockpile, scaled);
-        addStock(state.stockpile, s.recipe, 1);
+            spend(state.stockpile, scaled);
+            addStock(state.stockpile, recipe, 1);
 
-        for (const goal of state.mandate) {
-            if (goal.product === s.recipe && goal.produced < goal.quantity) {
-                goal.produced++;
-                break;
+            for (const goal of state.mandate) {
+                if (goal.product === recipe && goal.produced < goal.quantity) {
+                    goal.produced++;
+                    break;
+                }
             }
         }
     }

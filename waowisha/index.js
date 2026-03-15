@@ -1,10 +1,10 @@
 // index.js — Waowisha rendering, input, and UI
 
 import { HEX_SIZE, TERRAIN, TERRAIN_INFO, UNIT_TYPES, ENEMY_TYPES, STRUCTURE_TYPES,
-    PRODUCTION_RECIPES, RECIPES, ALL_R0, ALL_P1, SLOT_COLORS, UPGRADE_PATH } from './config.js';
+    PRODUCTION_RECIPES, ALL_R0, ALL_P1, SLOT_COLORS, UPGRADE_PATH } from './config.js';
 import { hexToPixel, pixelToHex, hexKey, parseHexKey, hexDistance, drawHexPath } from './hex.js';
 import { createGame, selectUnit, deselectUnit, moveUnit, recruitUnit,
-    startBuild, canBuildHere, demolish, assignRecipe, endTurn, finishTurn, sweepDead,
+    startBuild, canBuildHere, demolish, assignRecipe, unassignRecipe, endTurn, finishTurn, sweepDead,
     canAfford, computeReachable,
     deployCharge, pickUpCharge, upgradeGatherer, upgradeUnit, recipeInputs,
     computeVisibility, computeGathered,
@@ -16,6 +16,8 @@ const COUNTER_SIZE = 26;
 
 // ---- State ----
 let state = null;
+let resourceScreen = false;
+let rsHitRegions = [];
 
 // ---- View ----
 let panX = 0, panY = 0;
@@ -160,9 +162,296 @@ function drawBang(cx, cy, color) {
     ctx.globalAlpha = 1.0;
 }
 
+// ---- Resource Screen ----
+
+function enterResourceScreen() {
+    resourceScreen = true;
+    hidePanel();
+    document.getElementById('stockpile').style.display = 'none';
+    document.getElementById('mandate').style.display = 'none';
+    render();
+}
+
+function exitResourceScreen() {
+    resourceScreen = false;
+    document.getElementById('stockpile').style.display = '';
+    document.getElementById('mandate').style.display = '';
+    render();
+}
+
+function renderResourceScreen() {
+    ctx.fillStyle = '#111';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    rsHitRegions = [];
+
+    const gathered = computeGathered(state);
+    const gatherRates = {};
+    for (const slot of ALL_R0) gatherRates[slot] = 0;
+    for (const k of gathered) {
+        const hex = state.map.get(k);
+        if (!hex) continue;
+        const info = TERRAIN_INFO[hex.terrain];
+        if (info && info.resource) gatherRates[info.resource]++;
+    }
+
+    const prodBuildings = { 1: [], 2: [], 3: [] };
+    for (const s of state.structures) {
+        const sDef = STRUCTURE_TYPES[s.type];
+        if (sDef.category !== 'production' || s.buildProgress > 0) continue;
+        prodBuildings[sDef.tier].push(s);
+    }
+
+    const pad = 16;
+    const colW = (canvas.width - pad * 2) / 4;
+    const titleY = 28;
+    const headerY = 58;
+    const poolTop = 74;
+    const rowStart = 130;
+    const rowH = 46;
+    const ctrSz = 20;
+
+    // Title
+    ctx.fillStyle = '#ee8';
+    ctx.font = 'bold 16px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Resource Management', canvas.width / 2, titleY);
+
+    const tiers = [
+        { label: 'Raw', slots: ALL_R0, tier: 0 },
+        { label: 'Refined', slots: ['P1a','P1b','P1c','P1d'], tier: 1, bName: 'Refinery', bLetter: 'R' },
+        { label: 'Processed', slots: ['P2a','P2b','P2c','P2d'], tier: 2, bName: 'Foundry', bLetter: 'F' },
+        { label: 'Advanced', slots: ['P3a','P3b','P3c','P3d'], tier: 3, bName: 'Atelier', bLetter: 'A' },
+    ];
+
+    for (let col = 0; col < 4; col++) {
+        const t = tiers[col];
+        const cx = pad + col * colW;
+        const cw = colW - 6;
+
+        // Column separator
+        if (col > 0) {
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(cx - 3, headerY - 12);
+            ctx.lineTo(cx - 3, rowStart + 4 * rowH + 4);
+            ctx.stroke();
+        }
+
+        // Column header
+        ctx.fillStyle = '#ee8';
+        ctx.font = 'bold 13px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(t.label, cx + cw / 2, headerY);
+
+        // Counter pool for production tiers
+        if (t.tier > 0) {
+            const blds = prodBuildings[t.tier];
+            const totalAssigned = t.slots.reduce((sum, s) => sum + (state.recipeAssignments[s] || 0), 0);
+            const unassignedCount = blds.length - totalAssigned;
+            const poolCx = cx + cw / 2;
+
+            if (blds.length === 0) {
+                ctx.fillStyle = '#444';
+                ctx.font = '10px monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('No ' + t.bName + 's built', poolCx, poolTop + 16);
+            } else if (unassignedCount <= 0) {
+                ctx.fillStyle = '#555';
+                ctx.font = '10px monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('All assigned', poolCx, poolTop + 16);
+            } else {
+                ctx.fillStyle = '#777';
+                ctx.font = '10px monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('Unassigned:', poolCx, poolTop + 4);
+                // Draw unassigned counter tokens
+                const gap = ctrSz + 3;
+                const totalW = unassignedCount * gap - 3;
+                const startX = poolCx - totalW / 2;
+                for (let i = 0; i < unassignedCount; i++) {
+                    const tx = startX + i * gap + ctrSz / 2;
+                    const ty = poolTop + 22;
+                    roundRect(ctx, tx - ctrSz/2, ty - ctrSz/2, ctrSz, ctrSz, 3);
+                    ctx.fillStyle = '#88a'; ctx.fill();
+                    ctx.strokeStyle = '#555'; ctx.lineWidth = 1; ctx.stroke();
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold ' + Math.floor(ctrSz * 0.55) + 'px monospace';
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.fillText(t.bLetter, tx, ty);
+                }
+            }
+        } else {
+            // R0 column - show gathering info
+            ctx.fillStyle = '#555';
+            ctx.font = '10px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('From gatherers & harvesters', cx + cw / 2, poolTop + 16);
+        }
+
+        // Material rows
+        for (let row = 0; row < 4; row++) {
+            const slot = t.slots[row];
+            const ry = rowStart + row * rowH;
+            const slotColor = (state.slotColors && state.slotColors[slot]) || SLOT_COLORS[slot] || '#888';
+            const name = state.names[slot] || slot;
+            const qty = state.stockpile[slot] || 0;
+            const isMandate = state.mandate.some(g => g.product === slot && g.revealed && g.produced < g.quantity);
+
+            // Compute +N
+            let plusN = 0;
+            if (t.tier === 0) {
+                plusN = gatherRates[slot] || 0;
+            } else {
+                const assignedCount = state.recipeAssignments[slot] || 0;
+                if (assignedCount > 0) {
+                    const scaled = recipeInputs(state, slot);
+                    if (scaled) {
+                        let maxInput = Infinity;
+                        for (const [res, amt] of Object.entries(scaled)) {
+                            maxInput = Math.min(maxInput, Math.floor((state.stockpile[res] || 0) / amt));
+                        }
+                        plusN = Math.min(assignedCount, maxInput);
+                    }
+                }
+            }
+
+            // Row background
+            const rx = cx + 2;
+            const rw = cw - 4;
+            const rh = rowH - 4;
+            roundRect(ctx, rx, ry, rw, rh, 4);
+            ctx.fillStyle = isMandate ? '#daa520' : (t.tier > 0 ? '#1e1e2a' : '#1e2a1e');
+            ctx.fill();
+            ctx.strokeStyle = isMandate ? '#b8860b' : '#333'; ctx.lineWidth = 1; ctx.stroke();
+
+            const midY = ry + rh / 2;
+            const textColor = isMandate ? '#111' : '#ccc';
+
+            // +N
+            ctx.fillStyle = isMandate ? (plusN > 0 ? '#1a4a1a' : '#555') : (plusN > 0 ? '#6a4' : '#555');
+            ctx.font = 'bold 13px monospace';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('+' + plusN, rx + 28, midY);
+
+            // Separator
+            ctx.fillStyle = isMandate ? '#888' : '#444';
+            ctx.textAlign = 'center';
+            ctx.fillText('|', rx + 34, midY);
+
+            // Color dot
+            ctx.fillStyle = slotColor;
+            ctx.beginPath();
+            ctx.arc(rx + 44, midY, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Name
+            ctx.fillStyle = textColor;
+            ctx.font = '12px monospace';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            const maxChars = Math.max(6, Math.floor((rw - 120) / 7.2));
+            const dn = name.length > maxChars ? name.slice(0, maxChars) + '..' : name;
+            ctx.fillText(dn, rx + 52, midY);
+
+            // Quantity
+            ctx.fillStyle = isMandate ? '#000' : '#eee';
+            ctx.font = 'bold 12px monospace';
+            const nameW = ctx.measureText(dn + ' ').width;
+            ctx.fillText(String(qty), rx + 52 + nameW, midY);
+
+            // Assigned counters on the right
+            if (t.tier > 0) {
+                const assignedN = state.recipeAssignments[slot] || 0;
+                for (let i = 0; i < assignedN; i++) {
+                    const ctX = rx + rw - 6 - (assignedN - i) * (ctrSz + 2) + ctrSz / 2;
+                    const ctY = midY;
+                    roundRect(ctx, ctX - ctrSz/2, ctY - ctrSz/2, ctrSz, ctrSz, 3);
+                    ctx.fillStyle = '#88a'; ctx.fill();
+                    ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke();
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold ' + Math.floor(ctrSz * 0.55) + 'px monospace';
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.fillText(t.bLetter, ctX, ctY);
+
+                    rsHitRegions.push({
+                        type: 'counter',
+                        x: ctX - ctrSz/2, y: ctY - ctrSz/2, w: ctrSz, h: ctrSz,
+                        slot: slot
+                    });
+                }
+
+                // Row click region for assigning
+                rsHitRegions.push({
+                    type: 'row',
+                    x: rx, y: ry, w: rw, h: rh,
+                    slot: slot
+                });
+            }
+        }
+    }
+
+    // Return button
+    const btnW = 140, btnH = 32;
+    const btnX = (canvas.width - btnW) / 2;
+    const btnY = rowStart + 4 * rowH + 16;
+    roundRect(ctx, btnX, btnY, btnW, btnH, 5);
+    ctx.fillStyle = '#444'; ctx.fill();
+    ctx.strokeStyle = '#666'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = '#ddd';
+    ctx.font = 'bold 13px monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('Return', btnX + btnW / 2, btnY + btnH / 2);
+    rsHitRegions.push({ type: 'return', x: btnX, y: btnY, w: btnW, h: btnH });
+
+    updateHUD();
+    updateLog();
+}
+
+function handleResourceScreenClick(mx, my) {
+    // Check counter hits first (on top of rows)
+    for (const r of rsHitRegions) {
+        if (r.type !== 'counter') continue;
+        if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) {
+            unassignRecipe(state, r.slot);
+            saveGame(state);
+            render();
+            return;
+        }
+    }
+    // Then rows and buttons
+    for (const r of rsHitRegions) {
+        if (r.type === 'counter') continue;
+        if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) {
+            if (r.type === 'return') {
+                exitResourceScreen();
+                return;
+            }
+            if (r.type === 'row') {
+                assignRecipe(state, r.slot);
+                saveGame(state);
+                render();
+                return;
+            }
+        }
+    }
+}
+
 // ---- Rendering ----
 function render() {
     if (!state) return;
+    if (resourceScreen) {
+        renderResourceScreen();
+        return;
+    }
     ctx.fillStyle = '#111';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -223,13 +512,27 @@ function render() {
         ctx.fill();
     }
 
+    // Precompute which tiers have unassigned counters
+    const idleTiers = new Set();
+    for (let tier = 1; tier <= 3; tier++) {
+        let available = 0;
+        for (const s of state.structures) {
+            const sd = STRUCTURE_TYPES[s.type];
+            if (sd.category === 'production' && sd.tier === tier && s.buildProgress === 0) available++;
+        }
+        const slots = PRODUCTION_RECIPES[tier] || [];
+        let assigned = 0;
+        for (const slot of slots) assigned += state.recipeAssignments[slot] || 0;
+        if (assigned < available) idleTiers.add(tier);
+    }
+
     // Structures
     for (const s of state.structures) {
         const { x, y } = hexToScreen(s.q, s.r);
         const sDef = STRUCTURE_TYPES[s.type];
         drawStructure(x, y, sDef, s.buildProgress);
-        // Idle indicator for production buildings without a recipe
-        if (sDef.category === 'production' && s.buildProgress === 0 && !s.recipe) {
+        // Idle indicator for production tiers with unassigned counters
+        if (sDef.category === 'production' && s.buildProgress === 0 && idleTiers.has(sDef.tier)) {
             ctx.fillStyle = '#ee8';
             ctx.beginPath();
             ctx.arc(x, y + HEX_SIZE * 0.55, 2.5, 0, Math.PI * 2);
@@ -461,15 +764,7 @@ function structurePanelHTML(struct) {
         return html;
     }
 
-    const recipes = PRODUCTION_RECIPES[sDef.tier] || [];
-    html += `<div style="margin-bottom:4px">Current: ${struct.recipe ? (state.names[struct.recipe]||struct.recipe) : 'None'}</div>`;
-    html += '<div style="margin:4px 0;color:#aaa">Recipes:</div>';
-    for (const recipe of recipes) {
-        const scaled = recipeInputs(state, recipe);
-        const inputStr = Object.entries(scaled).map(([s,a]) => `${a} ${state.names[s]||s}`).join(' + ');
-        const active = struct.recipe === recipe;
-        html += `<button data-recipe="${recipe}" data-struct="${struct.id}" ${active?'style="border-color:#ee8"':''}>${state.names[recipe]||recipe} (${inputStr})</button>`;
-    }
+    html += `<button data-action="manage-resources">Manage Resources</button>`;
     return html;
 }
 
@@ -484,7 +779,12 @@ canvas.addEventListener('mousedown', e => {
         dismissBangs();
         return;
     }
+    if (e.button === 0 && resourceScreen) {
+        handleResourceScreenClick(e.clientX, e.clientY);
+        return;
+    }
     if (e.button === 2) {
+        if (resourceScreen) return;
         panning = true;
         panStartX = e.clientX; panStartY = e.clientY;
         panOrigX = panX; panOrigY = panY;
@@ -614,12 +914,8 @@ document.getElementById('panel-content').addEventListener('click', e => {
         state.visible = computeVisibility(state);
         render();
     }
-    if (btn.dataset.recipe) {
-        assignRecipe(state, parseInt(btn.dataset.struct), btn.dataset.recipe);
-        // Refresh panel
-        const struct = state.structures.find(s => s.id === parseInt(btn.dataset.struct));
-        if (struct) showStructurePanel(struct);
-        render();
+    if (btn.dataset.action === 'manage-resources') {
+        enterResourceScreen();
     }
     if (btn.dataset.action === 'demolish') {
         const unit = state.units.find(u => u.id === state.selectedUnit);
@@ -702,6 +998,10 @@ window.addEventListener('keydown', e => {
         render();
     }
     if (e.key === 'Escape') {
+        if (resourceScreen) {
+            exitResourceScreen();
+            return;
+        }
         cheatMode = null;
         deselectUnit(state);
         hidePanel();
@@ -808,6 +1108,13 @@ function initGame() {
 // New Game shows intro again
 document.getElementById('new-game').addEventListener('click', () => {
     showIntro();
+});
+
+// Stockpile click opens resource screen
+document.getElementById('stockpile').addEventListener('click', () => {
+    if (state && !state.gameOver && !state.victory) {
+        enterResourceScreen();
+    }
 });
 
 // Initial canvas sizing
