@@ -218,6 +218,17 @@ function renderResourceScreen() {
     ctx.textBaseline = 'middle';
     ctx.fillText('Resource Management', canvas.width / 2, titleY);
 
+    // Precompute consumption rates: how much of each resource is consumed by assigned recipes
+    const consumeRates = {};
+    for (const [recipe, count] of Object.entries(state.recipeAssignments)) {
+        if (!count || count <= 0) continue;
+        const scaled = recipeInputs(state, recipe);
+        if (!scaled) continue;
+        for (const [res, amt] of Object.entries(scaled)) {
+            consumeRates[res] = (consumeRates[res] || 0) + amt * count;
+        }
+    }
+
     // ---- Top Section: Materials Inventory ----
     const allSlots = [
         { label: 'Raw', slots: ALL_R0, tier: 0 },
@@ -287,22 +298,38 @@ function renderResourceScreen() {
             const midY = ry + rh / 2;
             const textColor = isMandate ? '#111' : '#ccc';
 
+            const minusN = consumeRates[slot] || 0;
+
             // +N
             ctx.fillStyle = isMandate ? (plusN > 0 ? '#1a4a1a' : '#555') : (plusN > 0 ? '#6a4' : '#555');
-            ctx.font = 'bold 12px monospace';
+            ctx.font = 'bold 11px monospace';
             ctx.textAlign = 'right';
             ctx.textBaseline = 'middle';
-            ctx.fillText('+' + plusN, rx + 26, midY);
+            ctx.fillText('+' + plusN, rx + 22, midY);
 
             // Separator
             ctx.fillStyle = isMandate ? '#888' : '#444';
+            ctx.font = '11px monospace';
             ctx.textAlign = 'center';
-            ctx.fillText('|', rx + 32, midY);
+            ctx.fillText('|', rx + 27, midY);
+
+            // -N
+            ctx.fillStyle = isMandate ? (minusN > 0 ? '#6a1a1a' : '#555') : (minusN > 0 ? '#a44' : '#555');
+            ctx.font = 'bold 11px monospace';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('-' + minusN, rx + 48, midY);
+
+            // Separator
+            ctx.fillStyle = isMandate ? '#888' : '#444';
+            ctx.font = '11px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('|', rx + 53, midY);
 
             // Color dot
             ctx.fillStyle = slotColor;
             ctx.beginPath();
-            ctx.arc(rx + 42, midY, 4, 0, Math.PI * 2);
+            ctx.arc(rx + 63, midY, 4, 0, Math.PI * 2);
             ctx.fill();
 
             // Name
@@ -310,15 +337,15 @@ function renderResourceScreen() {
             ctx.font = '11px monospace';
             ctx.textAlign = 'left';
             ctx.textBaseline = 'middle';
-            const maxChars = Math.max(5, Math.floor((rw - 100) / 6.6));
+            const maxChars = Math.max(4, Math.floor((rw - 120) / 6.6));
             const dn = name.length > maxChars ? name.slice(0, maxChars) + '..' : name;
-            ctx.fillText(dn, rx + 50, midY);
+            ctx.fillText(dn, rx + 71, midY);
 
             // Quantity
             ctx.fillStyle = isMandate ? '#000' : '#eee';
             ctx.font = 'bold 11px monospace';
             const nameW = ctx.measureText(dn + ' ').width;
-            ctx.fillText(String(qty), rx + 50 + nameW, midY);
+            ctx.fillText(String(qty), rx + 71 + nameW, midY);
         }
     }
 

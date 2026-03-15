@@ -1136,6 +1136,21 @@ function resolveEnemyStructureCombat(state) {
         if (enemy.strength > sDef.power) {
             state.log.push(`${state.names[enemy.type] || enemy.type} destroyed ${sDef.name}!`);
             state.structures = state.structures.filter(s => s !== struct);
+            // If production building, remove a counter if over-assigned
+            if (sDef.category === 'production') {
+                const tier = sDef.tier;
+                const available = tierBuildingCount(state, tier);
+                const assigned = tierAssignmentSum(state, tier);
+                if (assigned > available) {
+                    const slots = PRODUCTION_RECIPES[tier] || [];
+                    let maxSlot = null, maxCount = 0;
+                    for (const slot of slots) {
+                        const c = state.recipeAssignments[slot] || 0;
+                        if (c > maxCount) { maxCount = c; maxSlot = slot; }
+                    }
+                    if (maxSlot) state.recipeAssignments[maxSlot]--;
+                }
+            }
         } else {
             const bangQ = enemy.prevQ !== undefined ? enemy.prevQ : enemy.q;
             const bangR = enemy.prevR !== undefined ? enemy.prevR : enemy.r;
