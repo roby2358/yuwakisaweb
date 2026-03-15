@@ -206,3 +206,63 @@ Line 1: `tag` extracts the operator from quoted code. The language can see insid
 Line 2: `children` extracts the operands from `(+ 1 2)`, `make-node` attaches them to `*` instead, `eval` executes the result as `(* 1 2)`. The language performed surgery on its own code and ran the result.
 
 That's homoiconicity. That's LISP. The syntax is Markdown.
+
+## How MIAL Leverages Markdown's Tree Structure
+
+Markdown isn't just a convenient surface syntax. Its structural features — headings, nested bullet lists, inline code spans — map onto LISP concepts so directly that the parser has almost nothing to do. Each Markdown feature pulls weight that classic LISP syntax has to encode implicitly or through convention.
+
+### Headings are `defun`
+
+In classic LISP, function definitions are expressions like everything else: `(defun factorial (n) ...)`. The definition name, parameter list, and body are all elements of the same flat list, distinguished only by position.
+
+Markdown headings are structurally different from body content. `# factorial` is not a bullet — it's a section boundary. MIAL uses this to make definitions a syntactic category, not a convention. The parser doesn't need to recognize `defun` as a keyword or count positions in a flat list. A heading IS a definition. Everything under it IS the body. The structure enforces what LISP leaves to the programmer.
+
+### Nesting is parentheses
+
+LISP's parentheses exist to encode tree structure into a flat character stream. Every `(` opens a nesting level, every `)` closes one. The programmer mentally tracks depth.
+
+Markdown bullet indentation IS nesting. Two spaces in, one level deeper. The tree structure is spatial — visible in the shape of the text on screen. No brackets to match, no depth to count. The parser reads indentation levels and builds the tree directly, using an indent-tracking stack that produces exactly the structure the evaluator needs with zero post-processing.
+
+This isn't cosmetic. A LISP expression like `(if (<= n 1) 1 (* n (factorial (- n 1))))` has seven nesting levels encoded by parentheses in a single line. The same expression in MIAL:
+
+```markdown
+* if
+  * <=
+    * n
+    * `1`
+  * `1`
+  * *
+    * n
+    * factorial
+      * -
+        * n
+        * `1`
+```
+
+Every nesting level is visible. The tree structure is the text layout.
+
+### Backticks distinguish literals from symbols
+
+Classic LISP distinguishes symbols from literals by type: `42` is a number, `"hello"` is a string, `factorial` is a symbol. But bare words are always symbols, and there's no unified syntax for "this is a literal value."
+
+Markdown's inline code spans (`` `...` ``) provide exactly this distinction. `` `42` `` is a literal. `` `"hello"` `` is a literal. `factorial` without backticks is a symbol. The backtick is a universal literal marker — one syntactic feature that covers numbers, strings, booleans, and null.
+
+### Multi-child nodes are n-ary by default
+
+A cons cell holds exactly two things. To represent `(+ 1 2 3)`, classic LISP builds a linked list of pairs: `(+ . (1 . (2 . (3 . nil))))`. The three-argument call is encoded as a chain of binary cells.
+
+A Markdown bullet can have any number of sub-bullets. `{ value: '+', children: [1, 2, 3] }` is the natural representation — the parser produces it directly. MIAL's labeled tree is n-ary by default, not binary. This means the node shape matches the intent (a function applied to three arguments) rather than encoding it through a chain of pairs.
+
+This is why MIAL has two primitive sets. The labeled tree (`tag`/`children`/`make-node`) handles n-ary code nodes naturally. Flat data lists (`car`/`cdr`/`cons`/`list`) handle ordered sequences. Classic LISP needed one primitive set because cons cells were the only structure. MIAL can afford two because Markdown gave it a richer structure to start with.
+
+### Multi-expression bodies are implicit
+
+In classic LISP, a function body with multiple expressions requires `progn` or `begin` to sequence them: `(defun foo () (progn (do-a) (do-b)))`. The sequencing is explicit syntax.
+
+In MIAL, a definition with multiple top-level bullets under a heading has multiple body expressions naturally. The runner collects `def.children.slice(1)` (everything after the parameter spec) as the body array and evaluates them in sequence. Multiple bullets under a heading just ARE a multi-expression body. No sequencing keyword needed.
+
+### The parser is 30 lines
+
+The consequence of all this structural alignment: the parser (`parseMarkdown`) is roughly 30 lines of code. It doesn't need a tokenizer. It doesn't need a recursive descent grammar. It splits on newlines, checks for `#` (heading) or `*`/`-` (bullet), reads indentation, and builds the tree. Markdown already did the hard work of encoding tree structure into text.
+
+Classic LISP's parser is also simple — matching parentheses is easy. But MIAL's parser is simple for a different reason: it's not parsing structure FROM syntax, it's reading structure that's ALREADY THERE in the visual layout of the document. The tree is the text.
