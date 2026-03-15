@@ -264,7 +264,9 @@ const setupStandardLibrary = (env, logFn) => {
   setVar(env, 'and', (a, b) => node(isTruthy(a) && isTruthy(b)));
   setVar(env, 'or', (a, b) => node(isTruthy(a) || isTruthy(b)));
   setVar(env, 'not', (a) => node(!isTruthy(a)));
-  setVar(env, 'atom?', (a) => node(!a.children || a.children.length === 0));
+  setVar(env, 'null?', (a) => node(a.value === null && a.children.length === 0));
+  setVar(env, 'atom?', (a) => node(a.children.length === 0));
+  setVar(env, 'list?', (a) => node(a.value === null && a.children.length > 0));
 
   // Tree primitives — code introspection and construction
   setVar(env, 'tag', (n) => node(n.value));
