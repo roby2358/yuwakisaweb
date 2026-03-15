@@ -195,7 +195,72 @@ const EXAMPLE_CODES = {
   * \`"gcd(48, 18) ="\`
   * gcd
     * \`48\`
-    * \`18\``
+    * \`18\``,
+
+  'quote-and-constants': `# pi
+* \`3.14\`
+
+# double
+* x
+* *
+  * x
+  * \`2\`
+
+# main
+* print
+  * double
+    * pi
+* print-ast
+  * quote
+    * +
+      * \`1\`
+      * \`2\``,
+
+  'tree-surgery': `# main
+* print
+  * tag
+    * quote
+      * +
+        * \`1\`
+        * \`2\`
+* print
+  * eval
+    * make-node
+      * quote
+        * *
+      * children
+        * quote
+          * +
+            * \`1\`
+            * \`2\``,
+
+  'data-lists': `# main
+* print
+  * car
+    * cons
+      * \`10\`
+      * cons
+        * \`20\`
+        * cons
+          * \`30\`
+          * quote
+            * null
+* print
+  * car
+    * cdr
+      * list
+        * \`1\`
+        * \`2\`
+        * \`3\``,
+
+  'lambda-roundtrip': `# main
+* print-ast
+  * quote
+    * lambda
+      * x
+      * +
+        * x
+        * \`1\``
 };
 
 const DEFAULT_CODE = EXAMPLE_CODES.factorial;
@@ -234,11 +299,7 @@ const initApp = () => {
       clearAST();
       return;
     }
-    const astJson = JSON.stringify(ast, (key, value) => {
-      if (key === 'indent') return undefined;
-      return value;
-    }, 2);
-    astOutput.querySelector('pre').textContent = astJson;
+    astOutput.querySelector('pre').textContent = nodeToMarkdown(ast);
   };
 
   const handleRun = () => {
