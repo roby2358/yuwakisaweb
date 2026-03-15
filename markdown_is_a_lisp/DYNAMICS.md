@@ -63,7 +63,8 @@ The bullet text becomes `.value`. Sub-bullets become `.children`. Indentation (2
 
 - `` `42` `` → `node(42)` (number)
 - `` `"hello"` `` → `node({ string: 'hello' })` (string literal)
-- `` `true` `` → `node({ string: 'true' })` (parsed as string — no special boolean syntax)
+- `` `true` `` → `node(true)`, `` `false` `` → `node(false)` (boolean)
+- `` `null` `` → `node(null)` (null)
 
 Bare words (no backticks) are symbols: `factorial` → `node('factorial')`.
 
@@ -217,7 +218,9 @@ A data list:
 
 `cons` flattens when prepending to an existing list: `(cons a (list b c))` → `{ value: null, children: [a, b, c] }`, not nested.
 
-`cdr` of a two-element list returns the second element directly (classic cons pair behavior). `cdr` of a single-element list throws.
+`cdr` on a data list (null-valued node) always returns a data list: two or more children returns a list of the rest, one child or fewer returns an empty list (`node(null)`). This ensures `atom?` on the result of `cdr` only returns true at the actual end of the list, making recursive list traversal predictable.
+
+`cdr` on a cons pair (non-null value) returns the second child directly — classic cons pair behavior.
 
 ### The interop point
 
@@ -252,6 +255,20 @@ setVar(env, 'eq', (a, b) => node(a.value === b.value));
 ```
 
 The string literal wrapper `{ string: '...' }` requires explicit handling in the specific builtins that encounter it: `+` (concatenation), `eq`/`!=` (comparison), and `print` (output formatting). Each handles it inline rather than through a general-purpose extraction function. This keeps the boundary between node-land and raw-JS-land explicit and local.
+
+### Standard library reference
+
+| Category | Builtins |
+|---|---|
+| Arithmetic | `+` `-` `*` `/` `%` |
+| Comparison | `<=` `>=` `<` `>` `eq` `!=` |
+| Logic | `and` `or` `not` `atom?` |
+| Tree primitives | `tag` `children` `make-node` |
+| List primitives | `car` `cdr` `cons` `list` |
+| I/O | `print` `print-ast` |
+| Meta | `parse` |
+
+`atom?` returns `true` if its argument has no children, `false` otherwise. This is one of McCarthy's original seven primitives, required for writing recursive list and tree traversals — it's the base case test that tells you when to stop recursing into `.children`.
 
 ## `nodeToMarkdown`: The Round-Trip
 
