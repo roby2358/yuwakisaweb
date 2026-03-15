@@ -20,6 +20,9 @@ const parseContent = (text) => {
     if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
       return node({ string: val.slice(1, -1) });
     }
+    if (val === 'null') return node(null);
+    if (val === 'true') return node(true);
+    if (val === 'false') return node(false);
     const num = Number(val);
     if (!isNaN(num) && isFinite(num) && val === String(num)) {
       return node(num);
