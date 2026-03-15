@@ -54,7 +54,24 @@ body {
 
 .header-actions {
   display: flex;
+  align-items: center;
   gap: 0.75rem;
+}
+
+/* Compact Toggle */
+.compact-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  cursor: pointer;
+  user-select: none;
+}
+
+.compact-toggle input[type="checkbox"] {
+  accent-color: #34d399;
+  cursor: pointer;
 }
 
 /* Buttons */

@@ -12,9 +12,8 @@ const getIndentLevel = (line) => {
   return Math.floor(match[1].replace(/\t/g, '  ').length / 2);
 };
 
-const parseContent = (text) => {
-  text = text.trim().replace(/^[-*]\s+/, '');
-  const literalMatch = text.match(/^`([^`]+)`$/);
+const parseToken = (token) => {
+  const literalMatch = token.match(/^`([^`]+)`$/);
   if (literalMatch) {
     let val = literalMatch[1];
     if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
@@ -29,7 +28,38 @@ const parseContent = (text) => {
     }
     return node({ string: val });
   }
-  return node(text);
+  return node(token);
+};
+
+const tokenize = (text) => {
+  const tokens = [];
+  let i = 0;
+  while (i < text.length) {
+    if (text[i] === ' ' || text[i] === '\t') { i++; continue; }
+    if (text[i] === '`') {
+      const end = text.indexOf('`', i + 1);
+      if (end !== -1) {
+        tokens.push(text.slice(i, end + 1));
+        i = end + 1;
+        continue;
+      }
+    }
+    let end = i;
+    while (end < text.length && text[end] !== ' ' && text[end] !== '\t' && text[end] !== '`') end++;
+    tokens.push(text.slice(i, end));
+    i = end;
+  }
+  return tokens;
+};
+
+const parseContent = (text) => {
+  text = text.trim().replace(/^[-*]\s+/, '');
+  const tokens = tokenize(text);
+  if (tokens.length === 0) return node('');
+  const head = parseToken(tokens[0]);
+  if (tokens.length === 1) return head;
+  head.children = tokens.slice(1).map(t => parseToken(t));
+  return head;
 };
 
 const findParentInStack = (stack, indent) => {
@@ -59,7 +89,7 @@ const parseMarkdown = (input) => {
     if (currentDef && (trimLine.startsWith('-') || trimLine.startsWith('*'))) {
       const indent = getIndentLevel(line);
       const parsed = parseContent(trimLine);
-      const n = node(parsed.value, []);
+      const n = node(parsed.value, parsed.children ? [...parsed.children] : []);
       n._indent = indent;
 
       const parent = findParentInStack(stack, indent);
@@ -89,13 +119,14 @@ const formatValue = (val) => {
   return String(val);
 };
 
-const nodeToMarkdown = (n, indent) => {
+const nodeToMarkdown = (n, indent, compact) => {
   if (indent === undefined) indent = 0;
+  if (compact === undefined) compact = false;
 
   if (n && n._isLambda) {
     const prefix = '  '.repeat(indent);
-    const paramLines = n.params.map(p => '  '.repeat(indent + 1) + '* ' + p).join('\n');
-    const bodyLines = n.body.map(b => nodeToMarkdown(b, indent + 1)).join('\n');
+    const paramLines = n.params.map(p => '  '.repeat(indent + 1) + '- ' + p).join('\n');
+    const bodyLines = n.body.map(b => nodeToMarkdown(b, indent + 1, compact)).join('\n');
     return `${prefix}* lambda\n${paramLines}\n${bodyLines}`;
   }
 
@@ -103,25 +134,43 @@ const nodeToMarkdown = (n, indent) => {
     return n.map(d => {
       if (d._isDef) {
         const header = `# ${d.name}`;
-        const body = d.children.map(c => nodeToMarkdown(c, 0)).join('\n');
+        const body = d.children.map(c => nodeToMarkdown(c, 0, compact)).join('\n');
         return body ? `${header}\n${body}` : header;
       }
-      return nodeToMarkdown(d, 0);
+      return nodeToMarkdown(d, 0, compact);
     }).join('\n\n');
   }
 
-  if (!n || typeof n !== 'object') return '  '.repeat(indent) + '* ' + formatValue(n);
+  if (!n || typeof n !== 'object') return '  '.repeat(indent) + '- ' + formatValue(n);
 
   const prefix = '  '.repeat(indent);
 
   // Data list (null-valued node with children) — render children as sibling bullets
   if (n.value === null && n.children.length > 0) {
-    return n.children.map(c => nodeToMarkdown(c, indent)).join('\n');
+    return n.children.map(c => nodeToMarkdown(c, indent, compact)).join('\n');
   }
 
-  const line = `${prefix}* ${formatValue(n.value)}`;
+  const line = `${prefix}- ${formatValue(n.value)}`;
   if (!n.children || n.children.length === 0) return line;
-  const childrenMd = n.children.map(c => nodeToMarkdown(c, indent + 1)).join('\n');
+
+  if (compact) {
+    // Collect leading atoms onto the same line, break out at first compound child
+    const inlineParts = [];
+    let breakIdx = 0;
+    for (; breakIdx < n.children.length; breakIdx++) {
+      const c = n.children[breakIdx];
+      if (c && c.children && c.children.length > 0) break;
+      if (c && c._isLambda) break;
+      inlineParts.push(formatValue(c.value));
+    }
+    const remaining = n.children.slice(breakIdx);
+    const inlineStr = inlineParts.length > 0 ? ' ' + inlineParts.join(' ') : '';
+    if (remaining.length === 0) return `${line}${inlineStr}`;
+    const remainingMd = remaining.map(c => nodeToMarkdown(c, indent + 1, compact)).join('\n');
+    return `${line}${inlineStr}\n${remainingMd}`;
+  }
+
+  const childrenMd = n.children.map(c => nodeToMarkdown(c, indent + 1, compact)).join('\n');
   return `${line}\n${childrenMd}`;
 };
 

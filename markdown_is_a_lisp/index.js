@@ -272,6 +272,7 @@ const initApp = () => {
   const runBtn = document.getElementById('runBtn');
   const resetBtn = document.getElementById('resetBtn');
   const clearBtn = document.getElementById('clearBtn');
+  const compactToggle = document.getElementById('compactToggle');
 
   codeEditor.value = DEFAULT_CODE;
 
@@ -323,9 +324,17 @@ const initApp = () => {
     }
   };
 
+  const handleCompactToggle = () => {
+    const compact = compactToggle.checked;
+    const code = codeEditor.value;
+    const defs = parseMarkdown(code);
+    codeEditor.value = nodeToMarkdown(defs, 0, compact);
+  };
+
   runBtn.addEventListener('click', handleRun);
   resetBtn.addEventListener('click', handleReset);
   clearBtn.addEventListener('click', clearConsole);
+  compactToggle.addEventListener('change', handleCompactToggle);
 
   const exampleLinks = document.querySelectorAll('.example-link');
   exampleLinks.forEach(link => {
