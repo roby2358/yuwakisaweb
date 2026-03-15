@@ -6,7 +6,7 @@ import { hexToPixel, pixelToHex, hexKey, parseHexKey, hexDistance, drawHexPath }
 import { createGame, selectUnit, deselectUnit, moveUnit, recruitUnit,
     startBuild, canBuildHere, demolish, assignRecipe, unassignRecipe, endTurn, finishTurn, sweepDead,
     canAfford, computeReachable,
-    deployCharge, pickUpCharge, upgradeGatherer, upgradeUnit, recipeInputs,
+    deployCharge, pickUpCharge, upgradeGatherer, upgradeUnit, recipeInputs, recipeOutput, recipeTier,
     computeVisibility, computeGathered,
     saveGame, loadGame, hasSavedGame, clearSave,
     cheatSpawnEnemies, cheatMaterials, cheatSpawnUnits, cheatElevate } from './game.js';
@@ -268,11 +268,12 @@ function renderResourceScreen() {
             const qty = state.stockpile[slot] || 0;
             const isMandate = state.mandate.some(g => g.product === slot && g.revealed && g.produced < g.quantity);
 
-            // Compute +N
+            // Compute +N (base recipe + any discovered recipes producing this slot)
             let plusN = 0;
             if (t.tier === 0) {
                 plusN = gatherRates[slot] || 0;
             } else {
+                // Base recipe
                 const assignedCount = state.recipeAssignments[slot] || 0;
                 if (assignedCount > 0) {
                     const scaled = recipeInputs(state, slot);
@@ -281,7 +282,22 @@ function renderResourceScreen() {
                         for (const [res, amt] of Object.entries(scaled)) {
                             maxInput = Math.min(maxInput, Math.floor((state.stockpile[res] || 0) / amt));
                         }
-                        plusN = Math.min(assignedCount, maxInput);
+                        plusN += Math.min(assignedCount, maxInput);
+                    }
+                }
+                // Discovered recipes that output this slot
+                if (state.discoveredRecipes) {
+                    for (const [dk, disc] of Object.entries(state.discoveredRecipes)) {
+                        if (disc.output !== slot) continue;
+                        const dCount = state.recipeAssignments[dk] || 0;
+                        if (dCount <= 0) continue;
+                        const dScaled = recipeInputs(state, dk);
+                        if (!dScaled) continue;
+                        let dMax = Infinity;
+                        for (const [res, amt] of Object.entries(dScaled)) {
+                            dMax = Math.min(dMax, Math.floor((state.stockpile[res] || 0) / amt));
+                        }
+                        plusN += Math.min(dCount, dMax);
                     }
                 }
             }
@@ -375,13 +391,138 @@ function renderResourceScreen() {
         { tier: 3, bLetter: 'A', bName: 'Atelier', slots: ['P3a','P3b','P3c','P3d'], col: 3 },
     ];
 
+    // Collect discovered recipes per tier
+    const discByTier = { 1: [], 2: [], 3: [] };
+    if (state.discoveredRecipes) {
+        for (const [key, rec] of Object.entries(state.discoveredRecipes)) {
+            discByTier[rec.tier].push(key);
+        }
+    }
+
     const poolRowY = recipeTop;
+
+    function drawRecipeRow(recipeKey, outputSlot, curY, cx, cw, bLetter) {
+        const scaled = recipeInputs(state, recipeKey);
+        const baseDef = RECIPES[recipeKey] || state.discoveredRecipes[recipeKey];
+        const inputEntries = Object.entries(scaled || baseDef.inputs);
+        const thisRowH = inputEntries.length > 1 ? recipeRowH2 : recipeRowH1;
+        const ry = curY;
+        const rx = cx + 2;
+        const rw = cw - 4;
+        const rh = thisRowH - 4;
+        const midY = ry + rh / 2;
+        const isMandate = state.mandate.some(g => g.product === outputSlot && g.revealed && g.produced < g.quantity);
+        const isDisc = !!state.discoveredRecipes[recipeKey];
+
+        // Row background
+        roundRect(ctx, rx, ry, rw, rh, 4);
+        ctx.fillStyle = isMandate ? '#3a3520' : (isDisc ? '#1a2420' : '#1a1a24');
+        ctx.fill();
+        ctx.strokeStyle = isMandate ? '#b8860b' : (isDisc ? '#2a3a2a' : '#2a2a3a');
+        ctx.lineWidth = 1; ctx.stroke();
+
+        // Input resources — stacked vertically on the left
+        const inputX = rx + 4;
+        const lineH = 15;
+        const inputBlockTop = midY - (inputEntries.length - 1) * lineH / 2;
+        for (let ii = 0; ii < inputEntries.length; ii++) {
+            const [res, amt] = inputEntries[ii];
+            const resColor = (state.slotColors && state.slotColors[res]) || SLOT_COLORS[res] || '#888';
+            const resName = state.names[res] || res;
+            const lineY = inputBlockTop + ii * lineH;
+
+            ctx.fillStyle = '#aaa';
+            ctx.font = '11px monospace';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(String(amt), inputX + 16, lineY);
+
+            ctx.fillStyle = resColor;
+            ctx.beginPath();
+            ctx.arc(inputX + 24, lineY, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#aaa';
+            ctx.font = '11px monospace';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            const maxInputChars = Math.max(4, Math.floor((rw * 0.45 - 34) / 6.6));
+            const tn = resName.length > maxInputChars ? resName.slice(0, maxInputChars - 1) + '..' : resName;
+            ctx.fillText(tn, inputX + 32, lineY);
+        }
+
+        // Arrow
+        const arrowX = rx + rw * 0.52;
+        ctx.fillStyle = '#666';
+        ctx.font = '13px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('\u2192', arrowX, midY);
+
+        // Output: "1 <dot> Name"
+        const outX = arrowX + 12;
+        const outColor = (state.slotColors && state.slotColors[outputSlot]) || SLOT_COLORS[outputSlot] || '#888';
+        const outName = state.names[outputSlot] || outputSlot;
+
+        ctx.fillStyle = isMandate ? '#ee8' : '#ddd';
+        ctx.font = 'bold 11px monospace';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('1', outX + 4, midY);
+
+        ctx.fillStyle = outColor;
+        ctx.beginPath();
+        ctx.arc(outX + 12, midY, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = isMandate ? '#ee8' : '#ddd';
+        ctx.font = 'bold 11px monospace';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        const maxOutChars = Math.max(4, Math.floor((rw * 0.44 - 20) / 6.6));
+        const on = outName.length > maxOutChars ? outName.slice(0, maxOutChars - 1) + '..' : outName;
+        ctx.fillText(on, outX + 20, midY);
+
+        // Assigned counters on the right edge
+        const assignedN = state.recipeAssignments[recipeKey] || 0;
+        for (let i = 0; i < assignedN; i++) {
+            const ctX = rx + rw - 6 - (assignedN - i) * (ctrSz + 2) + ctrSz / 2;
+            const ctY = midY;
+            roundRect(ctx, ctX - ctrSz/2, ctY - ctrSz/2, ctrSz, ctrSz, 3);
+            ctx.fillStyle = '#88a'; ctx.fill();
+            ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke();
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold ' + Math.floor(ctrSz * 0.55) + 'px monospace';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(bLetter, ctX, ctY);
+
+            rsHitRegions.push({
+                type: 'counter',
+                x: ctX - ctrSz/2, y: ctY - ctrSz/2, w: ctrSz, h: ctrSz,
+                slot: recipeKey
+            });
+        }
+
+        // Row click region for assigning
+        rsHitRegions.push({
+            type: 'row',
+            x: rx, y: ry, w: rw, h: rh,
+            slot: recipeKey
+        });
+
+        return thisRowH;
+    }
 
     for (const tg of recipeTiers) {
         const cx = pad + tg.col * colW;
         const cw = colW - 6;
         const bldCount = prodBuildings[tg.tier];
-        const totalAssigned = tg.slots.reduce((sum, s) => sum + (state.recipeAssignments[s] || 0), 0);
+
+        // Total assigned includes base + discovered
+        let totalAssigned = tg.slots.reduce((sum, s) => sum + (state.recipeAssignments[s] || 0), 0);
+        for (const dk of discByTier[tg.tier]) {
+            totalAssigned += state.recipeAssignments[dk] || 0;
+        }
         const unassignedCount = bldCount - totalAssigned;
 
         // Column separator
@@ -401,7 +542,6 @@ function renderResourceScreen() {
             ctx.textBaseline = 'middle';
             ctx.fillText('No ' + tg.bName.toLowerCase() + 's', poolCx, poolRowY + 6);
         } else {
-            // Draw unassigned counter tokens centered
             const gap = ctrSz + 3;
             if (unassignedCount > 0) {
                 const totalW = unassignedCount * gap - 3;
@@ -426,119 +566,16 @@ function renderResourceScreen() {
             }
         }
 
-        // Recipe rows
+        // Base recipe rows
         let curY = poolRowY + 22;
         for (const slot of tg.slots) {
-            const recipe = RECIPES[slot];
-            const scaled = recipeInputs(state, slot);
-            const inputEntries = Object.entries(scaled || recipe.inputs);
-            const thisRowH = inputEntries.length > 1 ? recipeRowH2 : recipeRowH1;
-            const ry = curY;
-            const rx = cx + 2;
-            const rw = cw - 4;
-            const rh = thisRowH - 4;
-            const midY = ry + rh / 2;
-            const isMandate = state.mandate.some(g => g.product === slot && g.revealed && g.produced < g.quantity);
+            curY += drawRecipeRow(slot, slot, curY, cx, cw, tg.bLetter);
+        }
 
-            // Row background
-            roundRect(ctx, rx, ry, rw, rh, 4);
-            ctx.fillStyle = isMandate ? '#3a3520' : '#1a1a24';
-            ctx.fill();
-            ctx.strokeStyle = isMandate ? '#b8860b' : '#2a2a3a'; ctx.lineWidth = 1; ctx.stroke();
-
-            // Input resources — stacked vertically on the left
-            const inputX = rx + 4;
-            const lineH = 15;
-            const inputBlockTop = midY - (inputEntries.length - 1) * lineH / 2;
-            for (let ii = 0; ii < inputEntries.length; ii++) {
-                const [res, amt] = inputEntries[ii];
-                const resColor = (state.slotColors && state.slotColors[res]) || SLOT_COLORS[res] || '#888';
-                const resName = state.names[res] || res;
-                const lineY = inputBlockTop + ii * lineH;
-
-                // Quantity
-                ctx.fillStyle = '#aaa';
-                ctx.font = '11px monospace';
-                ctx.textAlign = 'right';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(String(amt), inputX + 16, lineY);
-
-                // Color dot
-                ctx.fillStyle = resColor;
-                ctx.beginPath();
-                ctx.arc(inputX + 24, lineY, 3.5, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Name (truncate to fit column)
-                ctx.fillStyle = '#aaa';
-                ctx.font = '11px monospace';
-                ctx.textAlign = 'left';
-                ctx.textBaseline = 'middle';
-                const maxInputChars = Math.max(4, Math.floor((rw * 0.45 - 34) / 6.6));
-                const tn = resName.length > maxInputChars ? resName.slice(0, maxInputChars - 1) + '..' : resName;
-                ctx.fillText(tn, inputX + 32, lineY);
-            }
-
-            // Arrow
-            const arrowX = rx + rw * 0.52;
-            ctx.fillStyle = '#666';
-            ctx.font = '13px monospace';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('\u2192', arrowX, midY);
-
-            // Output: "1 <dot> Name"
-            const outX = arrowX + 12;
-            const outColor = (state.slotColors && state.slotColors[slot]) || SLOT_COLORS[slot] || '#888';
-            const outName = state.names[slot] || slot;
-
-            ctx.fillStyle = isMandate ? '#ee8' : '#ddd';
-            ctx.font = 'bold 11px monospace';
-            ctx.textAlign = 'right';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('1', outX + 4, midY);
-
-            ctx.fillStyle = outColor;
-            ctx.beginPath();
-            ctx.arc(outX + 12, midY, 4, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.fillStyle = isMandate ? '#ee8' : '#ddd';
-            ctx.font = 'bold 11px monospace';
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'middle';
-            const maxOutChars = Math.max(4, Math.floor((rw * 0.44 - 20) / 6.6));
-            const on = outName.length > maxOutChars ? outName.slice(0, maxOutChars - 1) + '..' : outName;
-            ctx.fillText(on, outX + 20, midY);
-
-            // Assigned counters on the right edge
-            const assignedN = state.recipeAssignments[slot] || 0;
-            for (let i = 0; i < assignedN; i++) {
-                const ctX = rx + rw - 6 - (assignedN - i) * (ctrSz + 2) + ctrSz / 2;
-                const ctY = midY;
-                roundRect(ctx, ctX - ctrSz/2, ctY - ctrSz/2, ctrSz, ctrSz, 3);
-                ctx.fillStyle = '#88a'; ctx.fill();
-                ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke();
-                ctx.fillStyle = '#fff';
-                ctx.font = 'bold ' + Math.floor(ctrSz * 0.55) + 'px monospace';
-                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillText(tg.bLetter, ctX, ctY);
-
-                rsHitRegions.push({
-                    type: 'counter',
-                    x: ctX - ctrSz/2, y: ctY - ctrSz/2, w: ctrSz, h: ctrSz,
-                    slot: slot
-                });
-            }
-
-            // Row click region for assigning
-            rsHitRegions.push({
-                type: 'row',
-                x: rx, y: ry, w: rw, h: rh,
-                slot: slot
-            });
-
-            curY += thisRowH;
+        // Discovered recipe rows
+        for (const dk of discByTier[tg.tier]) {
+            const disc = state.discoveredRecipes[dk];
+            curY += drawRecipeRow(dk, disc.output, curY, cx, cw, tg.bLetter);
         }
     }
 
@@ -613,6 +650,19 @@ function render() {
                 ctx.arc(x, y + HEX_SIZE * 0.55, 3, 0, Math.PI * 2);
                 ctx.fill();
             }
+        }
+    }
+
+    // Recipe scrolls
+    if (state.scrolls) {
+        for (const key of state.scrolls) {
+            if (!state.visible.has(key)) continue;
+            const { q, r } = parseHexKey(key);
+            const { x, y } = hexToScreen(q, r);
+            ctx.fillStyle = '#ee8';
+            ctx.font = '16px serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('\uD83D\uDCDC', x, y);
         }
     }
 

@@ -516,6 +516,21 @@ export function createGame(seed) {
     harvesterCost[Rando.choice(ALL_R0, rng)] = Rando.int(7, 10, rng);
     harvesterCost[Rando.choice(ALL_P1, rng)] = Rando.int(2, 3, rng);
 
+    // Scatter recipe scrolls across the map
+    const scrollCandidates = [];
+    for (const hex of map.values()) {
+        if (hex.terrain === TERRAIN.DEEP || hex.terrain === TERRAIN.CRAG) continue;
+        if (hexKey(hex.q, hex.r) === settlement) continue;
+        if (hexDistance(hex.q, hex.r, sq, sr) < 6) continue;
+        scrollCandidates.push(hex);
+    }
+    Rando.shuffle(scrollCandidates, rng);
+    const scrolls = [];
+    for (let i = 0; i < Math.min(12, scrollCandidates.length); i++) {
+        const h = scrollCandidates[i];
+        scrolls.push(hexKey(h.q, h.r));
+    }
+
     const warden = {
         id: newId(), type: 'warden', q: sq, r: sr,
         mp: UNIT_TYPES.warden.mp, carrying: null
@@ -542,6 +557,8 @@ export function createGame(seed) {
         reachable: new Map(),
         buildMode: null,
         calmNextTurn: false,
+        scrolls,
+        discoveredRecipes: {},
     };
 
     state.visible = computeVisibility(state);
@@ -574,6 +591,8 @@ export function saveGame(state) {
         gameOver: state.gameOver,
         victory: state.victory,
         calmNextTurn: state.calmNextTurn,
+        scrolls: state.scrolls,
+        discoveredRecipes: state.discoveredRecipes,
         nextId: nextId,
     };
     localStorage.setItem('waowisha-save', JSON.stringify(data));
@@ -619,6 +638,8 @@ export function loadGame() {
         reachable: new Map(),
         buildMode: null,
         calmNextTurn: data.calmNextTurn,
+        scrolls: data.scrolls || [],
+        discoveredRecipes: data.discoveredRecipes || {},
     };
 
     state.visible = computeVisibility(state);
@@ -718,8 +739,55 @@ export function moveUnit(state, unitId, tq, tr) {
     const cost = state.reachable.get(targetKey);
     unit.q = tq; unit.r = tr;
     unit.mp = Math.max(0, unit.mp - cost);
+
+    // Check for recipe scroll pickup
+    const scrollIdx = state.scrolls ? state.scrolls.indexOf(targetKey) : -1;
+    if (scrollIdx >= 0) {
+        state.scrolls.splice(scrollIdx, 1);
+        discoverScroll(state);
+    }
+
     deselectUnit(state);
     return 'move';
+}
+
+function discoverScroll(state) {
+    const rng = state.rng;
+    const tier = Rando.int(1, 3, rng);
+    const outputs = PRODUCTION_RECIPES[tier];
+    const output = Rando.choice(outputs, rng);
+
+    // Pick inputs from the tier below
+    let inputPool;
+    if (tier === 1) inputPool = ALL_R0;
+    else if (tier === 2) inputPool = ALL_P1;
+    else inputPool = ['P2a', 'P2b', 'P2c', 'P2d'];
+
+    // 1 or 2 inputs
+    const numInputs = tier === 1 ? 1 : Rando.int(1, 2, rng);
+    const inputs = {};
+    const chosen = [];
+    for (let i = 0; i < numInputs; i++) {
+        let pick;
+        do { pick = Rando.choice(inputPool, rng); } while (chosen.includes(pick));
+        chosen.push(pick);
+        inputs[pick] = 1;
+    }
+
+    // Rate: how many input units per 1 output (randomized around base)
+    let rate;
+    if (tier === 1) rate = Rando.int(5, 14, rng);
+    else if (tier === 2) rate = Rando.int(2, 8, rng);
+    else rate = Rando.int(1, 4, rng);
+
+    const key = 'disc_' + newId();
+    state.discoveredRecipes[key] = { inputs, tier, output };
+    state.recipeRates[key] = rate;
+
+    // Build a description for the log
+    const inputDesc = Object.keys(inputs).map(r => state.names[r] || r).join(' + ');
+    const outName = state.names[output] || output;
+    state.log.push(`Scroll found! New recipe: ${rate} ${inputDesc} \u2192 1 ${outName}`);
 }
 
 export function recruitUnit(state, unitType) {
@@ -792,19 +860,7 @@ export function demolish(state, unitId) {
 
     // If production building, remove a counter if over-assigned
     if (sDef.category === 'production') {
-        const tier = sDef.tier;
-        const available = tierBuildingCount(state, tier);
-        const assigned = tierAssignmentSum(state, tier);
-        if (assigned > available) {
-            // Remove from the recipe with the most counters
-            const slots = PRODUCTION_RECIPES[tier] || [];
-            let maxSlot = null, maxCount = 0;
-            for (const slot of slots) {
-                const c = state.recipeAssignments[slot] || 0;
-                if (c > maxCount) { maxCount = c; maxSlot = slot; }
-            }
-            if (maxSlot) state.recipeAssignments[maxSlot]--;
-        }
+        removeOverassigned(state, sDef.tier);
     }
 
     unit.mp = 0;
@@ -814,12 +870,34 @@ export function demolish(state, unitId) {
 }
 
 function tierAssignmentSum(state, tier) {
-    const slots = PRODUCTION_RECIPES[tier] || [];
     let sum = 0;
-    for (const slot of slots) {
+    for (const slot of allTierRecipes(state, tier)) {
         sum += state.recipeAssignments[slot] || 0;
     }
     return sum;
+}
+
+function allTierRecipes(state, tier) {
+    const slots = [...(PRODUCTION_RECIPES[tier] || [])];
+    if (state.discoveredRecipes) {
+        for (const [key, rec] of Object.entries(state.discoveredRecipes)) {
+            if (rec.tier === tier) slots.push(key);
+        }
+    }
+    return slots;
+}
+
+function removeOverassigned(state, tier) {
+    const available = tierBuildingCount(state, tier);
+    const assigned = tierAssignmentSum(state, tier);
+    if (assigned <= available) return;
+    const slots = allTierRecipes(state, tier);
+    let maxSlot = null, maxCount = 0;
+    for (const slot of slots) {
+        const c = state.recipeAssignments[slot] || 0;
+        if (c > maxCount) { maxCount = c; maxSlot = slot; }
+    }
+    if (maxSlot) state.recipeAssignments[maxSlot]--;
 }
 
 function tierBuildingCount(state, tier) {
@@ -832,7 +910,7 @@ function tierBuildingCount(state, tier) {
 }
 
 export function assignRecipe(state, recipe) {
-    const recipeDef = RECIPES[recipe];
+    const recipeDef = RECIPES[recipe] || (state.discoveredRecipes && state.discoveredRecipes[recipe]);
     if (!recipeDef) return false;
     const tier = recipeDef.tier;
     if (tierAssignmentSum(state, tier) >= tierBuildingCount(state, tier)) return false;
@@ -981,24 +1059,37 @@ function advanceBuilding(s, state) {
 }
 
 export function recipeInputs(state, recipeKey) {
-    const recipe = RECIPES[recipeKey];
+    const recipe = RECIPES[recipeKey] || (state.discoveredRecipes && state.discoveredRecipes[recipeKey]);
     if (!recipe) return null;
     return scaleInputs(recipe.inputs, state.recipeRates[recipeKey]);
+}
+
+export function recipeOutput(state, recipeKey) {
+    const disc = state.discoveredRecipes && state.discoveredRecipes[recipeKey];
+    if (disc) return disc.output;
+    return recipeKey;
+}
+
+export function recipeTier(state, recipeKey) {
+    const recipe = RECIPES[recipeKey] || (state.discoveredRecipes && state.discoveredRecipes[recipeKey]);
+    if (!recipe) return 0;
+    return recipe.tier;
 }
 
 function runProduction(state) {
     for (const [recipe, count] of Object.entries(state.recipeAssignments)) {
         if (!count || count <= 0) continue;
+        const output = recipeOutput(state, recipe);
         for (let i = 0; i < count; i++) {
             const scaled = recipeInputs(state, recipe);
             if (!scaled) continue;
             if (!afford(state.stockpile, scaled)) continue;
 
             spend(state.stockpile, scaled);
-            addStock(state.stockpile, recipe, 1);
+            addStock(state.stockpile, output, 1);
 
             for (const goal of state.mandate) {
-                if (goal.product === recipe && goal.produced < goal.quantity) {
+                if (goal.product === output && goal.produced < goal.quantity) {
                     goal.produced++;
                     break;
                 }
@@ -1138,18 +1229,7 @@ function resolveEnemyStructureCombat(state) {
             state.structures = state.structures.filter(s => s !== struct);
             // If production building, remove a counter if over-assigned
             if (sDef.category === 'production') {
-                const tier = sDef.tier;
-                const available = tierBuildingCount(state, tier);
-                const assigned = tierAssignmentSum(state, tier);
-                if (assigned > available) {
-                    const slots = PRODUCTION_RECIPES[tier] || [];
-                    let maxSlot = null, maxCount = 0;
-                    for (const slot of slots) {
-                        const c = state.recipeAssignments[slot] || 0;
-                        if (c > maxCount) { maxCount = c; maxSlot = slot; }
-                    }
-                    if (maxSlot) state.recipeAssignments[maxSlot]--;
-                }
+                removeOverassigned(state, sDef.tier);
             }
         } else {
             const bangQ = enemy.prevQ !== undefined ? enemy.prevQ : enemy.q;

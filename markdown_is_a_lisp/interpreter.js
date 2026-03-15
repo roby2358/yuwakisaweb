@@ -115,6 +115,7 @@ const formatValue = (val) => {
   if (val === null) return '`null`';
   if (typeof val === 'number') return `\`${val}\``;
   if (typeof val === 'boolean') return `\`${val}\``;
+  if (typeof val === 'object' && val !== null && 'error' in val) return `\`ERROR: ${val.error}\``;
   if (typeof val === 'object' && val !== null && 'string' in val) return `\`"${val.string}"\``;
   return String(val);
 };
@@ -185,14 +186,22 @@ const createEnv = (parent) => ({ parent, vars: {} });
 const getVar = (env, name) => {
   if (name in env.vars) return env.vars[name];
   if (env.parent) return getVar(env.parent, name);
-  throw new Error(`Undefined symbol: ${name}`);
+  return makeError(name, 'undefined symbol');
 };
 
 const setVar = (env, name, val) => { env.vars[name] = val; };
 
 const isSelfEvaluating = (val) =>
   typeof val === 'number' || typeof val === 'boolean' || val === null ||
-  (typeof val === 'object' && val !== null && 'string' in val);
+  (typeof val === 'object' && val !== null && 'string' in val) ||
+  (typeof val === 'object' && val !== null && 'error' in val);
+
+const makeError = (symbol, reason) => node(
+  { error: `${symbol}: ${reason}` },
+  [node(symbol, [node({ string: reason })])]
+);
+const addTrace = (err, reason) => node(err.value, [...err.children, node({ string: reason })]);
+const isError = (n) => n && typeof n === 'object' && n.value && typeof n.value === 'object' && 'error' in n.value;
 
 const isTruthy = (n) => {
   if (!n || typeof n !== 'object') return !!n;
@@ -216,13 +225,17 @@ const makeClosure = (paramNames, bodyNodes, env) => ({
 
 const evaluateIf = (n, env) => {
   const test = evaluate(n.children[0], env);
+  if (isError(test)) return addTrace(test, 'in if condition');
   if (isTruthy(test)) return evaluate(n.children[1], env);
   return n.children[2] ? evaluate(n.children[2], env) : node(null);
 };
 
 const evaluateBody = (bodyNodes, env) => {
   let result = node(null);
-  for (const n of bodyNodes) result = evaluate(n, env);
+  for (const n of bodyNodes) {
+    result = evaluate(n, env);
+    if (isError(result)) return addTrace(result, 'in body');
+  }
   return result;
 };
 
@@ -246,25 +259,36 @@ const evaluate = (n, env) => {
 
   // Special forms
   if (opName === 'quote') return n.children[0];
-  if (opName === 'eval') return evaluate(evaluate(n.children[0], env), env);
+  if (opName === 'eval') {
+    const inner = evaluate(n.children[0], env);
+    if (isError(inner)) return addTrace(inner, 'in eval');
+    return evaluate(inner, env);
+  }
   if (opName === 'if') return evaluateIf(n, env);
   if (opName === 'lambda') return evaluateLambda(n, env);
 
   // Function call
   const proc = getVar(env, opName);
+  if (isError(proc)) return proc;
   const args = n.children.map(child => evaluate(child, env));
+  const firstErr = args.find(isError);
+  if (firstErr) return addTrace(firstErr, `in argument to ${opName}`);
 
   if (proc && proc._isLambda) {
     const localEnv = createEnv(proc.env);
     proc.params.forEach((p, i) => setVar(localEnv, p, args[i]));
-    return evaluateBody(proc.body, localEnv);
+    const result = evaluateBody(proc.body, localEnv);
+    if (isError(result)) return addTrace(result, `in call to ${opName}`);
+    return result;
   }
 
   if (typeof proc === 'function') {
-    return proc(...args);
+    const result = proc(...args);
+    if (isError(result)) return addTrace(result, `in ${opName}`);
+    return result;
   }
 
-  throw new Error(`Attempt to call non-function: ${opName}`);
+  return makeError(opName, 'not a function');
 };
 
 /**
@@ -316,6 +340,7 @@ const setupStandardLibrary = (env, logFn) => {
   setVar(env, 'null?', (a) => node(a.value === null && a.children.length === 0));
   setVar(env, 'atom?', (a) => node(a.children.length === 0));
   setVar(env, 'list?', (a) => node(a.value === null && a.children.length > 0));
+  setVar(env, 'error?', (a) => node(isError(a)));
 
   // Tree primitives — code introspection and construction
   setVar(env, 'tag', (n) => node(n.value));
@@ -334,7 +359,7 @@ const setupStandardLibrary = (env, logFn) => {
 
   // List primitives — flat data lists (null-valued nodes)
   setVar(env, 'car', (n) => {
-    if (!n.children || n.children.length === 0) throw new Error('car: empty list');
+    if (!n.children || n.children.length === 0) return makeError('car', 'empty list');
     return n.children[0];
   });
 
@@ -345,7 +370,7 @@ const setupStandardLibrary = (env, logFn) => {
       return node(null, n.children.slice(1));
     }
     // Cons pair: return second child directly
-    if (!n.children || n.children.length < 2) throw new Error('cdr: insufficient elements');
+    if (!n.children || n.children.length < 2) return makeError('cdr', 'insufficient elements');
     if (n.children.length === 2) return n.children[1];
     return node(null, n.children.slice(1));
   });
@@ -365,6 +390,7 @@ const setupStandardLibrary = (env, logFn) => {
   setVar(env, 'print', (...args) => {
     const out = args.map(a => {
       const v = a.value;
+      if (typeof v === 'object' && v !== null && 'error' in v) return `ERROR: ${v.error}`;
       if (typeof v === 'object' && v !== null && 'string' in v) return v.string;
       return String(v);
     }).join(' ');
@@ -427,19 +453,18 @@ const runMarkdownIsALISP = (code, logFn) => {
     setupStandardLibrary(globalEnv, logFn);
     defs.forEach(def => registerDefinition(def, globalEnv));
 
-    try {
-      const main = getVar(globalEnv, 'main');
-      if (main && main._isLambda) {
-        const localEnv = createEnv(main.env);
-        evaluateBody(main.body, localEnv);
+    const main = getVar(globalEnv, 'main');
+    if (isError(main)) {
+      logFn(`No '# main' definition found.`);
+    } else if (main && main._isLambda) {
+      const localEnv = createEnv(main.env);
+      const result = evaluateBody(main.body, localEnv);
+      if (isError(result)) {
+        logFn(`Error: ${result.value.error}`);
       }
       logFn(`\n--- Execution Finished ---`);
-    } catch (e) {
-      if (e.message && e.message.includes('Undefined symbol: main')) {
-        logFn(`No '# main' definition found.`);
-      } else {
-        throw e;
-      }
+    } else {
+      logFn(`\n--- Execution Finished ---`);
     }
 
     return defs;
