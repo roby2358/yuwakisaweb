@@ -261,6 +261,7 @@ const setupStandardLibrary = (env, logFn) => {
   setVar(env, 'and', (a, b) => node(isTruthy(a) && isTruthy(b)));
   setVar(env, 'or', (a, b) => node(isTruthy(a) || isTruthy(b)));
   setVar(env, 'not', (a) => node(!isTruthy(a)));
+  setVar(env, 'atom?', (a) => node(!a.children || a.children.length === 0));
 
   // Tree primitives — code introspection and construction
   setVar(env, 'tag', (n) => node(n.value));
@@ -284,6 +285,12 @@ const setupStandardLibrary = (env, logFn) => {
   });
 
   setVar(env, 'cdr', (n) => {
+    if (n.value === null) {
+      // Data list: always return a data list
+      if (!n.children || n.children.length <= 1) return node(null);
+      return node(null, n.children.slice(1));
+    }
+    // Cons pair: return second child directly
     if (!n.children || n.children.length < 2) throw new Error('cdr: insufficient elements');
     if (n.children.length === 2) return n.children[1];
     return node(null, n.children.slice(1));
