@@ -1477,6 +1477,12 @@ function checkMandate(state) {
     }
 }
 
+export function newMandate(state) {
+    state.mandate = generateMandate(state.rng);
+    state.victory = false;
+    state.log.push('A new Mandate has arrived!');
+}
+
 // ---- Cheat Functions ----
 
 export function cheatSpawnEnemies(state, q, r) {

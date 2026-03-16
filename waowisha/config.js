@@ -51,6 +51,7 @@ export const UNIT_TYPES = {
 // Unit upgrade chains: type → { next, cost }
 // Tier 1→2 costs P1, 2→3 costs P2, 3→4 costs P3, 4→5 costs all four P3 materials
 export const UPGRADE_PATH = {
+    gatherer: { next: 'sentinel', cost: { R0d: 1, R0a: 1 } },
     sentinel: { next: 'bulwark',  cost: { P1d: 3 } },
     bulwark:  { next: 'ironclad', cost: { P2b: 2 } },
     ironclad: { next: 'aegis',    cost: { P3a: 1 } },

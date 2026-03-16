@@ -6,7 +6,7 @@ import { hexToPixel, pixelToHex, hexKey, parseHexKey, hexDistance, drawHexPath }
 import { createGame, selectUnit, deselectUnit, moveUnit, recruitUnit,
     startBuild, canBuildHere, demolish, assignRecipe, unassignRecipe, endTurn, finishTurn, sweepDead,
     canAfford, computeReachable,
-    deployCharge, pickUpCharge, upgradeGatherer, upgradeUnit, recipeInputs, recipeOutput, recipeTier,
+    deployCharge, pickUpCharge, upgradeGatherer, upgradeUnit, newMandate, recipeInputs, recipeOutput, recipeTier,
     computeVisibility, computeGathered,
     saveGame, loadGame, hasSavedGame, clearSave,
     cheatSpawnEnemies, cheatMaterials, cheatSpawnUnits, cheatElevate } from './game.js';
@@ -688,32 +688,11 @@ function render() {
         ctx.fill();
     }
 
-    // Precompute which tiers have unassigned counters
-    const idleTiers = new Set();
-    for (let tier = 1; tier <= 3; tier++) {
-        let available = 0;
-        for (const s of state.structures) {
-            const sd = STRUCTURE_TYPES[s.type];
-            if (sd.category === 'production' && sd.tier === tier && s.buildProgress === 0) available++;
-        }
-        const slots = PRODUCTION_RECIPES[tier] || [];
-        let assigned = 0;
-        for (const slot of slots) assigned += state.recipeAssignments[slot] || 0;
-        if (assigned < available) idleTiers.add(tier);
-    }
-
     // Structures
     for (const s of state.structures) {
         const { x, y } = hexToScreen(s.q, s.r);
         const sDef = STRUCTURE_TYPES[s.type];
         drawStructure(x, y, sDef, s.buildProgress);
-        // Idle indicator for production tiers with unassigned counters
-        if (sDef.category === 'production' && s.buildProgress === 0 && idleTiers.has(sDef.tier)) {
-            ctx.fillStyle = '#ee8';
-            ctx.beginPath();
-            ctx.arc(x, y + HEX_SIZE * 0.55, 2.5, 0, Math.PI * 2);
-            ctx.fill();
-        }
     }
 
     // Enemies (only visible; show at pre-move position during bang display, including dead)
@@ -747,11 +726,23 @@ function render() {
             ctx.arc(x, y + COUNTER_SIZE/2 - 3, 2.5, 0, Math.PI * 2);
             ctx.fill();
         }
-        // Carrying indicator
+        // Carrying indicator — sparkle for drift charge
         if (unit.carrying) {
+            const sx = x + COUNTER_SIZE/2 - 3;
+            const sy = y - COUNTER_SIZE/2 + 3;
+            const r = 4;
             ctx.fillStyle = '#f80';
             ctx.beginPath();
-            ctx.arc(x + COUNTER_SIZE/2 - 3, y - COUNTER_SIZE/2 + 3, 4, 0, Math.PI*2);
+            // 4-pointed star sparkle
+            for (let i = 0; i < 8; i++) {
+                const angle = (i * Math.PI) / 4 - Math.PI / 2;
+                const dist = i % 2 === 0 ? r : r * 0.3;
+                const px = sx + Math.cos(angle) * dist;
+                const py = sy + Math.sin(angle) * dist;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
             ctx.fill();
         }
     }
@@ -767,16 +758,19 @@ function render() {
     }
 
     // Victory / Game Over overlay
-    if (state.victory || state.gameOver) {
+    if (state.gameOver) {
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = state.victory ? '#6a4' : '#a33';
+        ctx.fillStyle = '#a33';
         ctx.font = 'bold 48px monospace';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(state.victory ? 'MANDATE FULFILLED' : 'THE LOOM HAS FALLEN', canvas.width/2, canvas.height/2-30);
+        ctx.fillText('THE LOOM HAS FALLEN', canvas.width/2, canvas.height/2-30);
         ctx.fillStyle = '#ddd';
         ctx.font = '20px monospace';
         ctx.fillText(`Turn ${state.turn}`, canvas.width/2, canvas.height/2+20);
+    }
+    if (state.victory) {
+        showVictoryPanel();
     }
 
     updateHUD();
@@ -947,6 +941,14 @@ function structurePanelHTML(struct) {
 function showStructurePanel(struct) {
     const sDef = STRUCTURE_TYPES[struct.type];
     showPanel(sDef.name, structurePanelHTML(struct));
+}
+
+function showVictoryPanel() {
+    let html = `<div style="color:#6a4;font-size:18px;margin-bottom:8px">Mandate Fulfilled</div>`;
+    html += `<div style="margin-bottom:12px">Turn ${state.turn}</div>`;
+    html += `<button data-action="new-mandate">New Mandate</button>`;
+    html += `<button data-action="victory-new-game">New Game</button>`;
+    showPanel('Victory', html);
 }
 
 // ---- Input ----
@@ -1133,6 +1135,17 @@ document.getElementById('panel-content').addEventListener('click', e => {
             state.visible = computeVisibility(state);
             render();
         }
+    }
+    if (btn.dataset.action === 'new-mandate') {
+        newMandate(state);
+        saveGame(state);
+        hidePanel();
+        render();
+    }
+    if (btn.dataset.action === 'victory-new-game') {
+        hidePanel();
+        clearSave();
+        showIntro();
     }
 });
 
