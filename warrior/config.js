@@ -100,9 +100,9 @@ export const ENEMY_TYPE = {
 
 export const ENEMY_DEFS = {
     [ENEMY_TYPE.VOID_STALKER]: {
-        name: 'Void Stalker', label: 'V', hp: 15, attack: 5, defense: 1,
+        name: 'Void Stalker', label: 'V', hp: 15, attack: 5, rangedAttack: 3, defense: 1,
         speed: 2, detectRange: 5, xp: 15, gold: 2, behavior: 'chase',
-        chaosSpawned: true
+        range: 2, chaosSpawned: true
     },
     [ENEMY_TYPE.BREACH_CRAWLER]: {
         name: 'Breach Crawler', label: 'C', hp: 30, attack: 8, defense: 4,
@@ -112,7 +112,7 @@ export const ENEMY_DEFS = {
     [ENEMY_TYPE.FLUX_ARCHER]: {
         name: 'Flux Archer', label: 'A', hp: 12, attack: 6, defense: 1,
         speed: 1, detectRange: 5, xp: 20, gold: 3, behavior: 'kite',
-        range: 2, chaosSpawned: false
+        range: 4, chaosSpawned: false
     },
     [ENEMY_TYPE.PHASE_WRAITH]: {
         name: 'Phase Wraith', label: 'W', hp: 20, attack: 7, defense: 2,
@@ -120,14 +120,14 @@ export const ENEMY_DEFS = {
         teleportRange: 3, teleportChance: 0.3, chaosSpawned: true
     },
     [ENEMY_TYPE.BREACH_GUARDIAN]: {
-        name: 'Breach Guardian', label: 'G', hp: 50, attack: 10, defense: 3,
+        name: 'Breach Guardian', label: 'G', hp: 50, attack: 10, rangedAttack: 8, defense: 3,
         speed: 1, detectRange: 3, xp: 80, gold: 10, behavior: 'guard',
-        guardRadius: 2, chaosSpawned: true
+        range: 3, guardRadius: 2, chaosSpawned: true
     },
     [ENEMY_TYPE.UNRAVELER]: {
-        name: 'The Unraveler', label: 'U', hp: 100, attack: 12, defense: 4,
+        name: 'The Unraveler', label: 'U', hp: 100, attack: 12, rangedAttack: 6, defense: 4,
         speed: 1, detectRange: 6, xp: 200, gold: 0, behavior: 'boss',
-        range: 3, spawnInterval: 3, chaosSpawned: true
+        range: 4, spawnInterval: 3, chaosSpawned: true
     }
 };
 

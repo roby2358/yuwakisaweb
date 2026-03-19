@@ -351,6 +351,10 @@ function playerWeaponRange() {
     return range;
 }
 
+function isEngaged() {
+    return enemies.some(e => hexDistance(player.q, player.r, e.q, e.r) === 1);
+}
+
 // ================================================================
 // ENEMIES
 // ================================================================
@@ -443,9 +447,14 @@ function updateVision() {
 // COMBAT
 // ================================================================
 
+function rollDamage(strength) {
+    return Rando.bellCurve(strength);
+}
+
 function dealDamageToEnemy(enemy, damage, source) {
     const def = ENEMY_DEFS[enemy.type];
-    const actualDmg = Math.max(1, damage - def.defense);
+    const rolled = rollDamage(damage);
+    const actualDmg = Math.max(1, rolled - def.defense);
     enemy.hp -= actualDmg;
     logCombat(`${source}: ${actualDmg} dmg to ${def.name}`, 'log-dmg');
     if (enemy.hp <= 0) {
@@ -467,12 +476,12 @@ function dealDamageToPlayer(damage, source, isSkillDamage) {
         logCombat('Dodged!', 'log-info');
         return;
     }
+    const rolled = rollDamage(damage);
     let def = playerDefense();
     if (isSkillDamage) {
-        // Warding reduces skill damage
-        damage = Math.round(damage * (1 - player.stats.warding / 100));
+        def += Math.round(player.stats.warding / 100 * rolled);
     }
-    const actualDmg = Math.max(1, damage - def);
+    const actualDmg = Math.max(1, rolled - def);
     player.hp -= actualDmg;
     logCombat(`${source}: ${actualDmg} dmg to you`, 'log-dmg');
     if (player.hp <= 0) {
@@ -1020,15 +1029,22 @@ async function runEnemyPhase() {
         // Attack
         const newDist = hexDistance(enemy.q, enemy.r, player.q, player.r);
         if (newDist === 1 && (!def.range || def.behavior !== 'kite')) {
-            // Melee attack
             dealDamageToPlayer(def.attack, def.name, false);
             await animDelay(150);
             render();
-        } else if (def.range && newDist <= def.range && newDist > 0 && hasLOS(enemy, player)) {
-            // Ranged attack
-            dealDamageToPlayer(def.attack, `${def.name} (ranged)`, false);
+        }
+        if (def.rangedAttack && def.range && newDist <= def.range && newDist > 1 && hasLOS(enemy, player)) {
+            // Enemies with rangedAttack fire it in addition to melee
+            dealDamageToPlayer(def.rangedAttack, `${def.name} (ranged)`, false);
             await animDelay(150);
             render();
+        } else if (!def.rangedAttack && def.range && newDist <= def.range && newDist > 1 && hasLOS(enemy, player)) {
+            // Pure ranged enemies (Flux Archer) only fire if not in melee
+            if (newDist > 1) {
+                dealDamageToPlayer(def.attack, `${def.name} (ranged)`, false);
+                await animDelay(150);
+                render();
+            }
         }
 
         // Boss spawning
@@ -1071,6 +1087,10 @@ async function runEnemyPhase() {
     // Start new turn
     turn++;
     mp = playerMP();
+    if (isEngaged()) {
+        mp = Math.max(1, Math.floor(mp / 2));
+        logCombat('Engaged! Half MP.', 'log-info');
+    }
     usedSkillsThisTurn.clear();
     phase = 'player';
     render();

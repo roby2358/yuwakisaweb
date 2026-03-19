@@ -32,6 +32,12 @@ export class Rando {
         return Math.random() < probability;
     }
 
+    static bellCurve(strength) {
+        const cap = strength * 2;
+        const roll = Rando.int(1, cap) + Rando.int(1, cap) + Rando.int(1, cap);
+        return Math.round(roll / 3);
+    }
+
     static weighted(weighted) {
         if (weighted.length === 0) return null;
         const totalWeight = weighted.reduce((sum, w) => sum + w.weight, 0);
