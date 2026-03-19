@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warrior</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <canvas id="game"></canvas>
+
+    <!-- Top HUD -->
+    <div id="hud">
+        <span id="turn-info">Turn 1</span>
+        <span id="hp-bar-wrap" class="bar-wrap">HP <span class="bar"><span id="hp-fill" class="bar-fill hp-fill"></span></span> <span id="hp-text">80/80</span></span>
+        <span id="ae-bar-wrap" class="bar-wrap">AE <span class="bar"><span id="ae-fill" class="bar-fill ae-fill"></span></span> <span id="ae-text">9/9</span></span>
+        <span id="mp-info">MP: 5/5</span>
+        <span id="level-info">Lv 1</span>
+        <span id="xp-bar-wrap" class="bar-wrap">XP <span class="bar"><span id="xp-fill" class="bar-fill xp-fill"></span></span> <span id="xp-text">0/50</span></span>
+        <span id="gold-info">0g</span>
+        <button id="end-turn">End Turn</button>
+        <button id="btn-char" class="panel-btn">C</button>
+        <button id="btn-skills" class="panel-btn">S</button>
+        <button id="btn-inv" class="panel-btn">I</button>
+        <button id="new-game">New</button>
+    </div>
+
+    <!-- Bottom context bar -->
+    <div id="context-bar">
+        <span id="ctx-terrain">Plains</span>
+        <span id="ctx-entity"></span>
+    </div>
+
+    <!-- Skill bar -->
+    <div id="skill-bar">
+        <div class="skill-slot" data-slot="0"><span class="skill-key">1</span><span class="skill-name">-</span></div>
+        <div class="skill-slot" data-slot="1"><span class="skill-key">2</span><span class="skill-name">-</span></div>
+        <div class="skill-slot" data-slot="2"><span class="skill-key">3</span><span class="skill-name">-</span></div>
+        <div class="skill-slot" data-slot="3"><span class="skill-key">4</span><span class="skill-name">-</span></div>
+    </div>
+
+    <!-- Character panel -->
+    <div id="char-panel" class="side-panel hidden">
+        <h3>Character</h3>
+        <div id="char-stats"></div>
+        <div id="char-derived"></div>
+        <div id="char-equipment"></div>
+        <button class="panel-close">&times;</button>
+    </div>
+
+    <!-- Skills panel -->
+    <div id="skills-panel" class="side-panel hidden">
+        <h3>Skills</h3>
+        <div id="skills-list"></div>
+        <button class="panel-close">&times;</button>
+    </div>
+
+    <!-- Inventory panel -->
+    <div id="inv-panel" class="side-panel hidden">
+        <h3>Inventory</h3>
+        <div id="inv-gold"></div>
+        <div id="inv-list"></div>
+        <button class="panel-close">&times;</button>
+    </div>
+
+    <!-- Dialog overlay (haven, camp, shop, level-up, skill choice) -->
+    <div id="dialog-overlay" class="hidden">
+        <div id="dialog-box">
+            <div id="dialog-title"></div>
+            <div id="dialog-body"></div>
+            <div id="dialog-buttons"></div>
+        </div>
+    </div>
+
+    <!-- Game over / victory overlay -->
+    <div id="endgame-overlay" class="hidden">
+        <div id="endgame-box">
+            <div id="endgame-title"></div>
+            <div id="endgame-body"></div>
+            <button id="endgame-newgame">New Game</button>
+        </div>
+    </div>
+
+    <!-- Combat log -->
+    <div id="combat-log"></div>
+
+    <script type="module" src="index.js"></script>
+</body>
+</html>

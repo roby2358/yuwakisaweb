@@ -1,0 +1,192 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
+#game { display: block; cursor: default; }
+
+/* ---- HUD ---- */
+#hud {
+    position: fixed; top: 8px; left: 8px; right: 8px;
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    background: rgba(0,0,0,0.8); color: #ddd;
+    padding: 6px 12px; border-radius: 6px;
+    font: 13px/1.4 monospace; z-index: 10; user-select: none;
+}
+#hud button {
+    background: #333; color: #ddd; border: 1px solid #555;
+    padding: 3px 10px; border-radius: 4px; cursor: pointer;
+    font: 12px monospace;
+}
+#hud button:hover { background: #555; }
+.panel-btn { min-width: 28px; text-align: center; }
+
+/* Resource bars */
+.bar-wrap { display: flex; align-items: center; gap: 4px; }
+.bar {
+    display: inline-block; width: 60px; height: 10px;
+    background: #333; border-radius: 3px; overflow: hidden; vertical-align: middle;
+}
+.bar-fill { display: block; height: 100%; border-radius: 3px; transition: width 0.2s; }
+.hp-fill { background: #4caf50; }
+.ae-fill { background: #7c4dff; }
+.xp-fill { background: #ffc107; }
+
+/* ---- Context bar ---- */
+#context-bar {
+    position: fixed; bottom: 8px; left: 8px; right: 8px;
+    background: rgba(0,0,0,0.8); color: #ddd;
+    padding: 6px 12px; border-radius: 6px;
+    font: 13px monospace; z-index: 10; user-select: none;
+    display: flex; gap: 16px;
+}
+
+/* ---- Skill bar ---- */
+#skill-bar {
+    position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 4px; z-index: 10; user-select: none;
+}
+.skill-slot {
+    background: rgba(0,0,0,0.8); border: 1px solid #555;
+    padding: 4px 10px; border-radius: 4px; cursor: pointer;
+    font: 12px monospace; color: #ddd; text-align: center;
+    min-width: 80px; display: flex; flex-direction: column; align-items: center;
+}
+.skill-slot:hover { border-color: #aaa; }
+.skill-slot.active { border-color: #7c4dff; background: rgba(124,77,255,0.2); }
+.skill-slot.disabled { opacity: 0.4; cursor: default; }
+.skill-slot.used { opacity: 0.5; }
+.skill-key { font-size: 10px; color: #888; }
+.skill-name { font-size: 11px; }
+
+/* ---- Side panels ---- */
+.side-panel {
+    position: fixed; top: 0; right: 0; width: 300px; height: 100%;
+    background: rgba(10,10,15,0.95); color: #ddd; z-index: 20;
+    padding: 16px; overflow-y: auto;
+    font: 13px/1.6 monospace; border-left: 1px solid #444;
+}
+.side-panel.hidden { display: none; }
+.side-panel h3 { margin-bottom: 12px; color: #fff; font-size: 16px; border-bottom: 1px solid #444; padding-bottom: 6px; }
+.panel-close {
+    position: absolute; top: 8px; right: 12px;
+    background: none; border: none; color: #888; font-size: 20px; cursor: pointer;
+}
+.panel-close:hover { color: #fff; }
+.stat-row { display: flex; justify-content: space-between; align-items: center; padding: 2px 0; }
+.stat-row .plus-btn {
+    background: #4caf50; color: #fff; border: none; border-radius: 3px;
+    width: 22px; height: 22px; cursor: pointer; font: bold 14px monospace;
+}
+.stat-row .plus-btn:hover { background: #66bb6a; }
+.equip-section { margin-top: 12px; border-top: 1px solid #333; padding-top: 8px; }
+.equip-item { padding: 4px 0; border-bottom: 1px solid #222; }
+.equip-item .item-name { color: #ffc107; }
+.derived-section { margin-top: 8px; color: #aaa; font-size: 12px; }
+
+/* Inventory */
+.inv-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 4px; border-bottom: 1px solid #222;
+}
+.inv-item.equipped { background: rgba(255,193,7,0.1); }
+.inv-item button {
+    background: #333; color: #ddd; border: 1px solid #555;
+    padding: 2px 8px; border-radius: 3px; cursor: pointer; font: 11px monospace;
+}
+.inv-item button:hover { background: #555; }
+
+/* Skills list */
+.skill-entry { padding: 6px 4px; border-bottom: 1px solid #222; }
+.skill-entry .s-name { color: #b388ff; }
+.skill-entry .s-cost { color: #888; }
+.skill-entry .s-desc { color: #aaa; font-size: 11px; }
+
+/* ---- Dialog ---- */
+#dialog-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    display: flex; align-items: center; justify-content: center; z-index: 30;
+}
+#dialog-overlay.hidden { display: none; }
+#dialog-box {
+    background: rgba(15,15,20,0.97); border: 1px solid #555; border-radius: 8px;
+    padding: 20px 28px; max-width: 400px; width: 90%;
+    font: 14px/1.6 monospace; color: #ddd; text-align: center;
+}
+#dialog-title { font-size: 18px; font-weight: bold; margin-bottom: 12px; color: #fff; }
+#dialog-body { margin-bottom: 16px; text-align: left; }
+#dialog-buttons { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+#dialog-buttons button {
+    background: #333; color: #ddd; border: 1px solid #555;
+    padding: 6px 18px; border-radius: 4px; cursor: pointer; font: 13px monospace;
+}
+#dialog-buttons button:hover { background: #555; }
+#dialog-buttons button.primary { background: #1b5e20; border-color: #4caf50; }
+#dialog-buttons button.primary:hover { background: #2e7d32; }
+
+/* Stat allocation in dialog */
+.alloc-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; }
+.alloc-row button {
+    background: #4caf50; color: #fff; border: none; border-radius: 3px;
+    width: 24px; height: 24px; cursor: pointer; font: bold 14px monospace;
+}
+.alloc-row button:hover { background: #66bb6a; }
+
+/* Skill choice in dialog */
+.skill-choice {
+    background: #1a1a2e; border: 1px solid #444; border-radius: 6px;
+    padding: 10px; margin: 6px 0; cursor: pointer; text-align: left;
+}
+.skill-choice:hover { border-color: #7c4dff; background: #1a1a3e; }
+.skill-choice .sc-name { color: #b388ff; font-weight: bold; }
+.skill-choice .sc-cost { color: #888; }
+.skill-choice .sc-desc { color: #aaa; font-size: 12px; }
+
+/* Shop items in dialog */
+.shop-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 4px; border-bottom: 1px solid #222; text-align: left;
+}
+.shop-item button {
+    background: #333; color: #ddd; border: 1px solid #555;
+    padding: 2px 10px; border-radius: 3px; cursor: pointer; font: 11px monospace;
+}
+.shop-item button:hover { background: #555; }
+.shop-item button:disabled { opacity: 0.4; cursor: default; }
+
+/* ---- Endgame overlay ---- */
+#endgame-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    display: flex; align-items: center; justify-content: center; z-index: 40;
+}
+#endgame-overlay.hidden { display: none; }
+#endgame-box {
+    background: rgba(10,10,15,0.97); border: 1px solid #666; border-radius: 8px;
+    padding: 30px 40px; text-align: center;
+    font: 14px/1.8 monospace; color: #ddd;
+}
+#endgame-title { font-size: 36px; font-weight: bold; margin-bottom: 16px; }
+#endgame-body { margin-bottom: 20px; }
+#endgame-newgame {
+    background: #333; color: #ddd; border: 1px solid #666;
+    padding: 8px 24px; border-radius: 4px; cursor: pointer; font: 14px monospace;
+}
+#endgame-newgame:hover { background: #555; }
+
+/* ---- Combat log ---- */
+#combat-log {
+    position: fixed; bottom: 70px; left: 8px; width: 280px; max-height: 160px;
+    overflow-y: auto; z-index: 10; pointer-events: none;
+    font: 12px/1.5 monospace;
+}
+#combat-log .log-entry {
+    background: rgba(0,0,0,0.7); color: #ddd; padding: 2px 8px;
+    border-radius: 3px; margin-bottom: 2px;
+    animation: log-fade 4s forwards;
+}
+#combat-log .log-dmg { color: #ef5350; }
+#combat-log .log-heal { color: #66bb6a; }
+#combat-log .log-info { color: #90caf9; }
+#combat-log .log-gold { color: #ffc107; }
+#combat-log .log-xp { color: #ce93d8; }
+@keyframes log-fade {
+    0%, 70% { opacity: 1; }
+    100% { opacity: 0; }
+}
