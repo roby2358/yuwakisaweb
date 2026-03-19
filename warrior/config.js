@@ -73,9 +73,9 @@ export const POI = {
 };
 
 export const POI_SYMBOLS = {
-    [POI.HAVEN]: '\u2726',   // ✦ shield-like
-    [POI.CAMP]: '\u2618',    // ☘ campfire-like
-    [POI.RUIN]: '\u2692',    // ⚒ ruins
+    [POI.HAVEN]: '\u{1F3F0}', // 🏰 castle
+    [POI.CAMP]: '\u26FA',    // ⛺ tent
+    [POI.RUIN]: '\u26EB',    // ⛫ castle ruins
     [POI.BREACH]: '\u058D',  // ֍ swirl
     [POI.MAW]: '\u2738'      // ✸ pulsing star
 };
@@ -125,7 +125,7 @@ export const ENEMY_DEFS = {
         range: 3, guardRadius: 2, chaosSpawned: true
     },
     [ENEMY_TYPE.UNRAVELER]: {
-        name: 'The Unraveler', label: 'U', hp: 100, attack: 12, rangedAttack: 6, defense: 4,
+        name: 'The Unraveler', label: '\u{1F480}', hp: 100, attack: 12, rangedAttack: 6, defense: 4,
         speed: 1, detectRange: 6, xp: 200, gold: 0, behavior: 'boss',
         range: 4, spawnInterval: 3, chaosSpawned: true
     }

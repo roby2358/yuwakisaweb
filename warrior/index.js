@@ -81,7 +81,7 @@ function contrastText(hexColor) {
     return (0.2126 * r + 0.7152 * g + 0.0722 * b) > 0.4 ? '#000' : '#fff';
 }
 
-function drawCounter(cx, cy, color, label, hpPct, labelColor) {
+function drawCounter(cx, cy, color, label, hpPct, labelColor, atk, def) {
     const s = COUNTER_SIZE;
     const x = cx - s / 2, y = cy - s / 2;
     const r = 4;
@@ -102,7 +102,18 @@ function drawCounter(cx, cy, color, label, hpPct, labelColor) {
     ctx.fillStyle = labelColor || contrastText(color);
     ctx.font = 'bold ' + Math.floor(s * 0.55) + 'px monospace';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(label, cx, cy + 1);
+    ctx.fillText(label, cx, cy - 2);
+    // Attack and defense stats
+    if (atk !== undefined) {
+        const statColor = labelColor || contrastText(color);
+        ctx.font = Math.floor(s * 0.32) + 'px monospace';
+        ctx.fillStyle = statColor;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(atk, x + 2, y + s - 1);
+        ctx.textAlign = 'right';
+        ctx.fillText(def, x + s - 2, y + s - 1);
+    }
     // HP bar under counter
     if (hpPct !== undefined && hpPct < 1) {
         const bw = s, bh = 3, bx = cx - bw / 2, by = cy + s / 2 + 3;
@@ -1278,7 +1289,7 @@ function render() {
         // Gold indicator
         if (hex.terrain === TERRAIN.GOLD && !hex.goldLooted) {
             ctx.fillStyle = '#ffd700';
-            ctx.font = 'bold 10px monospace';
+            ctx.font = 'bold ' + Math.floor(HEX_SIZE * 1.2) + 'px monospace';
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText('$', x, y);
         }
@@ -1345,14 +1356,17 @@ function render() {
         const { x, y } = hexToScreen(enemy.q, enemy.r);
         const def = ENEMY_DEFS[enemy.type];
         const color = enemyColor(enemy.type);
-        drawCounter(x, y, color, def.label, enemy.hp / enemy.maxHp);
+        drawCounter(x, y, color, def.label, enemy.hp / enemy.maxHp, undefined, def.attack, def.defense);
     }
 
     // Player
     if (player) {
         const { x, y } = hexToScreen(player.q, player.r);
         const playerLabelColor = phase === 'player' ? '#000' : '#b8941a';
-        drawCounter(x, y, PLAYER_COLOR, 'C', player.hp / playerMaxHP(), playerLabelColor);
+        const wep = getWeapon();
+        const pAtk = (wep ? wep.damage : 0) + (wep && wep.type === 'ranged' ? player.stats.reflex : player.stats.might);
+        const pDef = playerDefense();
+        drawCounter(x, y, PLAYER_COLOR, 'C', player.hp / playerMaxHP(), playerLabelColor, pAtk, pDef);
         if (selected) {
             const s = COUNTER_SIZE + 4;
             roundRect(ctx, x - s / 2, y - s / 2, s, s, 6);
