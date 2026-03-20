@@ -806,11 +806,6 @@ function executeSkill(skillId, targetQ, targetR) {
         }
     }
     targeting = null;
-    if (!gameOver && mp <= 0 && phase === 'player') {
-        endTurn();
-    } else {
-        render();
-    }
 }
 
 function getSkillTargets(skillId) {
@@ -922,6 +917,10 @@ function computeReachable() {
     }
 }
 
+function checkEndTurn() {
+    if (!gameOver && mp <= 0 && phase === 'player') endTurn();
+}
+
 function movePlayer(q, r) {
     const key = hexKey(q, r);
     const cost = reachable.get(key);
@@ -932,14 +931,7 @@ function movePlayer(q, r) {
     mp -= cost;
     updateVision();
     checkHexEntry();
-    if (gameOver) return;
-
-    if (mp <= 0 && phase === 'player') {
-        endTurn();
-    } else {
-        deselectPlayer();
-        render();
-    }
+    deselectPlayer();
 }
 
 function moveAndAttack(enemyQ, enemyR) {
@@ -989,13 +981,7 @@ function moveAndAttack(enemyQ, enemyR) {
         }
     }
 
-    if (gameOver) return;
-    if (mp <= 0 && phase === 'player') {
-        endTurn();
-    } else {
-        deselectPlayer();
-        render();
-    }
+    deselectPlayer();
 }
 
 function checkHexEntry() {
@@ -2082,15 +2068,15 @@ canvas.addEventListener('mousedown', e => {
                 if (targeting.skill === '__ranged__') {
                     rangedAttack(hex.q, hex.r);
                     targeting = null;
-                    if (!gameOver) endTurn();
                 } else {
                     executeSkill(targeting.skill, hex.q, hex.r);
                 }
             } else {
                 targeting = null;
-                render();
-                updateSkillBar();
             }
+            render();
+            updateSkillBar();
+            checkEndTurn();
             return;
         }
 
@@ -2111,6 +2097,7 @@ canvas.addEventListener('mousedown', e => {
         }
         render();
         updateSkillBar();
+        checkEndTurn();
     }
 });
 
@@ -2210,9 +2197,10 @@ function activateSkillSlot(slotIdx) {
     if (usedSkillsThisTurn.has(skillId)) { logCombat('Already used this turn!', 'log-info'); return; }
 
     if (skill.target === SKILL_TARGET.SELF || skill.target === SKILL_TARGET.AOE_SELF) {
-        // Execute immediately
         executeSkill(skillId, player.q, player.r);
+        render();
         updateSkillBar();
+        checkEndTurn();
         return;
     }
 
