@@ -1865,9 +1865,11 @@ function showCampDialog(poi) {
 
 function showShopDialog(poi) {
     let bodyHtml = `<div style="margin-bottom:8px;color:#ffc107">Your gold: ${player.gold}</div>`;
+    const owned = new Set([...Object.values(player.equipment).filter(Boolean), ...player.inventory]);
     for (const item of poi.shopItems) {
         const equip = ALL_EQUIPMENT[item.id];
         if (!equip) continue;
+        if (owned.has(item.id)) continue;
         bodyHtml += `<div class="shop-item">
             <div><span>${item.name}</span><br><span style="color:#aaa;font-size:11px">${itemStatLine(equip)}</span></div>
             <button data-id="${item.id}" data-price="${item.price}" ${player.gold < item.price ? 'disabled' : ''}>Buy ${item.price}g</button>
