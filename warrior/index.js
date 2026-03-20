@@ -90,10 +90,14 @@ function contrastText(hexColor) {
     return (0.2126 * r + 0.7152 * g + 0.0722 * b) > 0.4 ? '#000' : '#fff';
 }
 
-function drawCounter(cx, cy, color, label, hpPct, labelColor, atk, def, mov) {
+// stats: { atk, def, mov } — all required for player/enemy counters
+// hpPct: 0..1 — draws HP bar when < 1; pass 1 to skip bar
+// labelColor: explicit text color; pass null to auto-contrast
+function drawCounter(cx, cy, color, label, hpPct, labelColor, stats) {
     const s = COUNTER_SIZE;
     const x = cx - s / 2, y = cy - s / 2;
     const r = 4;
+    const textColor = labelColor || contrastText(color);
     // Shadow
     ctx.strokeStyle = '#888'; ctx.lineWidth = 1;
     for (let i = 0; i < 2; i++) {
@@ -108,25 +112,22 @@ function drawCounter(cx, cy, color, label, hpPct, labelColor, atk, def, mov) {
     ctx.fillStyle = color; ctx.fill();
     ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke();
     // Label
-    ctx.fillStyle = labelColor || contrastText(color);
+    ctx.fillStyle = textColor;
     ctx.font = 'bold ' + Math.floor(s * 0.55) + 'px monospace';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(label, cx, cy - 2);
     // Stats: atk-def bottom-left, movement bottom-right
-    if (atk !== undefined) {
-        const statColor = labelColor || contrastText(color);
+    if (stats) {
         ctx.font = Math.floor(s * 0.28) + 'px monospace';
-        ctx.fillStyle = statColor;
+        ctx.fillStyle = textColor;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'bottom';
-        ctx.fillText(atk + '-' + def, x + 1, y + s - 1);
-        if (mov !== undefined) {
-            ctx.textAlign = 'right';
-            ctx.fillText(mov, x + s - 1, y + s - 1);
-        }
+        ctx.fillText(stats.atk + '-' + stats.def, x + 1, y + s - 1);
+        ctx.textAlign = 'right';
+        ctx.fillText(stats.mov, x + s - 1, y + s - 1);
     }
     // HP bar under counter
-    if (hpPct !== undefined && hpPct < 1) {
+    if (hpPct < 1) {
         const bw = s, bh = 3, bx = cx - bw / 2, by = cy + s / 2 + 3;
         ctx.fillStyle = '#333'; ctx.fillRect(bx, by, bw, bh);
         const g = Math.round(hpPct * 255);
@@ -528,13 +529,9 @@ function updateVision() {
 // COMBAT
 // ================================================================
 
-function rollDamage(strength) {
-    return Rando.bellCurve(strength);
-}
-
 function dealDamageToEnemy(enemy, damage, source) {
     const def = getDef(enemy.type);
-    const rolled = rollDamage(damage);
+    const rolled = Rando.bellCurve(damage);
     const actualDmg = Math.max(1, rolled - def.defense);
     enemy.hp -= actualDmg;
     logCombat(`${source}: ${actualDmg} dmg to ${def.name}`, 'log-dmg');
@@ -557,7 +554,7 @@ function dealDamageToPlayer(damage, source, isSkillDamage) {
         logCombat('Dodged!', 'log-info');
         return;
     }
-    const rolled = rollDamage(damage);
+    const rolled = Rando.bellCurve(damage);
     let def = playerDefense();
     if (isSkillDamage) {
         def += Math.round(player.stats.warding / 100 * rolled);
@@ -683,6 +680,15 @@ function gainXP(amount) {
 // SKILL EXECUTION
 // ================================================================
 
+function enemyAt(q, r) { return enemies.find(e => e.q === q && e.r === r); }
+
+function applyAoeDamage(skillName, dmg, range) {
+    for (const h of hexesInRange(player.q, player.r, range)) {
+        const enemy = enemyAt(h.q, h.r);
+        if (enemy) dealDamageToEnemy(enemy, dmg, skillName);
+    }
+}
+
 function executeSkill(skillId, targetQ, targetR) {
     const skill = SKILLS[skillId];
     if (!skill) return;
@@ -692,40 +698,39 @@ function executeSkill(skillId, targetQ, targetR) {
     player.aether -= skill.cost;
     usedSkillsThisTurn.add(skillId);
 
+    let usedMP = true; // most skills consume MP; free actions set this false
+
     switch (skillId) {
         case 'restore': {
             const range = 1 + Math.floor(player.level / 3);
-            const inRange = hexesInRange(player.q, player.r, range);
-            const shatteredHexes = [];
-            for (const h of inRange) {
-                const hex = hexes.get(hexKey(h.q, h.r));
-                if (hex && UNSHATTERED_VERSION[hex.terrain] !== undefined) shatteredHexes.push(hex);
-            }
+            const shatteredHexes = hexesInRange(player.q, player.r, range)
+                .map(h => hexes.get(hexKey(h.q, h.r)))
+                .filter(h => h && UNSHATTERED_VERSION[h.terrain] !== undefined);
             if (shatteredHexes.length === 0) {
                 logCombat('No shattered terrain in range!', 'log-info');
                 usedSkillsThisTurn.delete(skillId);
+                usedMP = false;
                 break;
             }
             const totalCost = shatteredHexes.length * 2;
             if (player.aether < totalCost) {
                 logCombat(`Need ${totalCost} AE for ${shatteredHexes.length} hexes!`, 'log-info');
                 usedSkillsThisTurn.delete(skillId);
+                usedMP = false;
                 break;
             }
             player.aether -= totalCost;
             for (const hex of shatteredHexes) hex.terrain = UNSHATTERED_VERSION[hex.terrain];
             gainXP(shatteredHexes.length * 3);
             logCombat(`Restored ${shatteredHexes.length} hexes!`, 'log-heal');
-            if (!skill.freeAction) mp = 0;
             break;
         }
         case 'void_strike': {
-            const enemy = enemies.find(e => e.q === targetQ && e.r === targetR);
+            const enemy = enemyAt(targetQ, targetR);
             if (!enemy) break;
             const wep = getWeapon();
             const dmg = (wep ? wep.damage : 1) + player.stats.might + player.stats.warding;
             dealDamageToEnemy(enemy, dmg, 'Void Strike');
-            if (!skill.freeAction) mp = 0;
             break;
         }
         case 'phase_step': {
@@ -734,48 +739,37 @@ function executeSkill(skillId, targetQ, targetR) {
             updateVision();
             logCombat('Phase Step!', 'log-info');
             checkHexEntry();
+            usedMP = false; // free action
             break;
         }
         case 'cosmic_bolt': {
-            const enemy = enemies.find(e => e.q === targetQ && e.r === targetR);
+            const enemy = enemyAt(targetQ, targetR);
             if (!enemy) break;
-            const dmg = skill.baseDamage + player.stats.warding;
-            dealDamageToEnemy(enemy, dmg, 'Cosmic Bolt');
-            if (!skill.freeAction) mp = 0;
+            dealDamageToEnemy(enemy, skill.baseDamage + player.stats.warding, 'Cosmic Bolt');
             break;
         }
         case 'warp_shield': {
             warpShieldTurns = skill.duration;
             logCombat('Warp Shield active!', 'log-info');
-            if (!skill.freeAction) mp = 0;
             break;
         }
         case 'breach_pulse': {
             const dmg = skill.baseDamage + player.stats.warding;
-            const inRange = hexesInRange(player.q, player.r, skill.range);
-            for (const h of inRange) {
-                const enemy = enemies.find(e => e.q === h.q && e.r === h.r);
-                if (enemy) dealDamageToEnemy(enemy, dmg, 'Breach Pulse');
-            }
-            if (!skill.freeAction) mp = 0;
+            applyAoeDamage('Breach Pulse', dmg, skill.range);
             break;
         }
         case 'mending_light': {
             const heal = skill.baseHeal + player.stats.vigor * 3;
             player.hp = Math.min(playerMaxHP(), player.hp + heal);
             logCombat(`Healed ${heal} HP`, 'log-heal');
-            if (!skill.freeAction) mp = 0;
             break;
         }
         case 'gravity_well': {
-            const inRange = hexesInRange(player.q, player.r, skill.range);
-            for (const h of inRange) {
-                const enemy = enemies.find(e => e.q === h.q && e.r === h.r);
+            for (const h of hexesInRange(player.q, player.r, skill.range)) {
+                const enemy = enemyAt(h.q, h.r);
                 if (!enemy) continue;
-                // Pull 1 hex closer
-                const neighbors = hexNeighbors(enemy.q, enemy.r);
                 let closest = null, closestDist = Infinity;
-                for (const n of neighbors) {
+                for (const n of hexNeighbors(enemy.q, enemy.r)) {
                     const d = hexDistance(n.q, n.r, player.q, player.r);
                     const hex = hexes.get(hexKey(n.q, n.r));
                     if (!hex || !isPassable(hex)) continue;
@@ -786,29 +780,21 @@ function executeSkill(skillId, targetQ, targetR) {
                 if (closest) { enemy.q = closest.q; enemy.r = closest.r; }
             }
             logCombat('Gravity Well!', 'log-info');
-            if (!skill.freeAction) mp = 0;
             break;
         }
         case 'dimensional_rend': {
-            const enemy = enemies.find(e => e.q === targetQ && e.r === targetR);
+            const enemy = enemyAt(targetQ, targetR);
             if (!enemy) break;
             const wep = getWeapon();
-            const dmg = (wep ? wep.damage : 1) * 3;
-            dealDamageToEnemy(enemy, dmg, 'Dimensional Rend');
-            if (!skill.freeAction) mp = 0;
+            dealDamageToEnemy(enemy, (wep ? wep.damage : 1) * 3, 'Dimensional Rend');
             break;
         }
         case 'starfall': {
-            const dmg = skill.baseDamage + player.stats.warding * 2;
-            const inRange = hexesInRange(player.q, player.r, skill.range);
-            for (const h of inRange) {
-                const enemy = enemies.find(e => e.q === h.q && e.r === h.r);
-                if (enemy) dealDamageToEnemy(enemy, dmg, 'Starfall');
-            }
-            if (!skill.freeAction) mp = 0;
+            applyAoeDamage('Starfall', skill.baseDamage + player.stats.warding * 2, skill.range);
             break;
         }
     }
+    if (usedMP && !skill.freeAction) mp = 0;
     targeting = null;
 }
 
@@ -1013,10 +999,9 @@ function checkHexEntry() {
         showRuinDialog(poi);
     } else if (poi.type === POI.BREACH && poi.guardianDefeated && !poi.closed) {
         closeBreach(poi);
-    } else if (poi.type === POI.MAW && breachesClosed < 2) {
-        logCombat('The Maw resists you. Seal at least 2 breaches first.', 'log-info');
-    } else if (poi.type === POI.MAW && poi.guardianDefeated && !poi.closed) {
-        endGame(true);
+    } else if (poi.type === POI.MAW) {
+        if (breachesClosed < 2) logCombat('The Maw resists you. Seal at least 2 breaches first.', 'log-info');
+        else if (poi.guardianDefeated && !poi.closed) endGame(true);
     }
 }
 
@@ -1047,15 +1032,173 @@ function endTurn() {
     runEnemyPhase();
 }
 
+// Returns true if either of the enemy's before/after positions is currently visible.
+function enemyIsVisible(enemy, prevKey) {
+    return visible.has(prevKey) || visible.has(hexKey(enemy.q, enemy.r));
+}
+
+function moveEnemyStep(enemy, def, dist, aggro, prefersRanged, occupied) {
+    if (def.behavior === 'guard') {
+        if (hexDistance(enemy.q, enemy.r, enemy.homeQ, enemy.homeR) > (def.guardRadius || 2)) {
+            moveEnemyToward(enemy, enemy.homeQ, enemy.homeR, occupied);
+            return true;
+        }
+        if (dist <= aggro) {
+            const next = getNextStepToward(enemy, player.q, player.r, occupied);
+            if (next && hexDistance(next.q, next.r, enemy.homeQ, enemy.homeR) <= (def.guardRadius || 2)) {
+                occupied.delete(hexKey(enemy.q, enemy.r));
+                enemy.q = next.q; enemy.r = next.r;
+                occupied.add(hexKey(enemy.q, enemy.r));
+                return true;
+            }
+        }
+        return false;
+    }
+    if (def.behavior === 'kite') {
+        if (dist <= aggro) {
+            if (dist < 2) moveEnemyAway(enemy, player.q, player.r, occupied);
+            else if (dist > 3) moveEnemyToward(enemy, player.q, player.r, occupied);
+            return true;
+        }
+        if (Rando.bool(0.5)) { wanderEnemy(enemy, occupied); return true; }
+        return false;
+    }
+    if (def.behavior === 'boss') {
+        if (dist <= aggro) { moveEnemyToward(enemy, player.q, player.r, occupied); return true; }
+        return false;
+    }
+    // chase or default
+    if (dist <= aggro && !prefersRanged) {
+        moveEnemyToward(enemy, player.q, player.r, occupied);
+        return true;
+    }
+    if (!prefersRanged && Rando.bool(0.5)) {
+        wanderEnemy(enemy, occupied);
+        return true;
+    }
+    return false;
+}
+
+function enemyAttacks(enemy, def, prefersRanged, newDist) {
+    if (def.behavior === 'guard' || def.behavior === 'boss') {
+        if (newDist === 1) {
+            dealDamageToPlayer(def.attack, def.name, false);
+            return true;
+        }
+        if (def.rangedAttack && def.range && newDist <= def.range && hasLOS(enemy, player)) {
+            dealDamageToPlayer(def.rangedAttack, `${def.name} (ranged)`, false);
+            return true;
+        }
+        return false;
+    }
+    if (def.behavior === 'kite') {
+        if (Rando.bool(0.5) && def.range && newDist <= def.range && newDist > 1 && hasLOS(enemy, player)) {
+            dealDamageToPlayer(def.attack, `${def.name} (ranged)`, false);
+            return true;
+        }
+        return false;
+    }
+    if (prefersRanged) {
+        if (def.rangedAttack && def.range && newDist <= def.range && hasLOS(enemy, player)) {
+            dealDamageToPlayer(def.rangedAttack, `${def.name} (ranged)`, false);
+            return true;
+        }
+        return false;
+    }
+    if (newDist === 1) {
+        dealDamageToPlayer(def.attack, def.name, false);
+        return true;
+    }
+    return false;
+}
+
+function tryBossSpawn(enemy, def, occupied) {
+    if (def.behavior !== 'boss') return;
+    if (enemy.turnsSinceSpawn === 0) return;
+    if (enemy.turnsSinceSpawn % (def.spawnInterval || 3) !== 0) return;
+    const adj = hexNeighbors(enemy.q, enemy.r).filter(n => {
+        const k = hexKey(n.q, n.r);
+        const h = hexes.get(k);
+        return h && isPassable(h) && !occupied.has(k);
+    });
+    if (adj.length === 0) return;
+    const spot = Rando.choice(adj);
+    const spawned = spawnEnemy(ENEMY_TYPE.VOID_STALKER, spot.q, spot.r);
+    if (spawned) {
+        occupied.add(hexKey(spot.q, spot.r));
+        logCombat('The Unraveler spawns a Void Stalker!', 'log-info');
+    }
+}
+
+function tryTerrainShatter(enemy, def) {
+    if (!def.chaosSpawned || !Rando.bool(0.02)) return;
+    const eHex = hexes.get(hexKey(enemy.q, enemy.r));
+    if (eHex && SHATTERED_VERSION[eHex.terrain] !== undefined) {
+        eHex.terrain = SHATTERED_VERSION[eHex.terrain];
+    }
+}
+
+async function runWildlifeTurn(enemy, def, aggro, occupied) {
+    const dist = hexDistance(enemy.q, enemy.r, player.q, player.r);
+    const prevKey = hexKey(enemy.q, enemy.r);
+    if (dist <= aggro) {
+        moveWildlifeToward(enemy, player.q, player.r, occupied);
+        if (enemyIsVisible(enemy, prevKey)) { await animDelay(80); render(); }
+        if (hexDistance(enemy.q, enemy.r, player.q, player.r) === 1) {
+            dealDamageToPlayer(def.attack, def.name, false);
+            await animDelay(150); render();
+        }
+    } else if (Rando.bool(0.3)) {
+        wanderWildlife(enemy, occupied);
+    }
+}
+
+async function runChaosTurn(enemy, def, occupied) {
+    const dist = hexDistance(enemy.q, enemy.r, player.q, player.r);
+    const aggro = def.aggroRange || def.detectRange || 0;
+    const prevKey = hexKey(enemy.q, enemy.r);
+
+    // Phase Wraith teleport
+    if (def.behavior === 'teleport' && Math.random() < (def.teleportChance || 0.3)) {
+        const valid = hexesInRange(player.q, player.r, def.teleportRange).filter(t => {
+            const k = hexKey(t.q, t.r);
+            const h = hexes.get(k);
+            return h && isPassable(h) && !occupied.has(k) && !(t.q === player.q && t.r === player.r);
+        });
+        if (valid.length > 0) {
+            occupied.delete(hexKey(enemy.q, enemy.r));
+            const dest = Rando.choice(valid);
+            enemy.q = dest.q; enemy.r = dest.r;
+            occupied.add(hexKey(enemy.q, enemy.r));
+            if (enemyIsVisible(enemy, prevKey)) { await animDelay(100); render(); }
+        }
+    }
+
+    // Ranged-capable chasers (Void Stalker): 50% prefer ranged, skip closing in
+    const prefersRanged = def.rangedAttack && def.behavior === 'chase' && Rando.bool(0.5);
+
+    let moved = false;
+    const speed = def.speed || 1;
+    for (let step = 0; step < speed; step++) {
+        if (moveEnemyStep(enemy, def, dist, aggro, prefersRanged, occupied)) moved = true;
+    }
+    if (moved && enemyIsVisible(enemy, prevKey)) { await animDelay(80); render(); }
+
+    const newDist = hexDistance(enemy.q, enemy.r, player.q, player.r);
+    const attacked = enemyAttacks(enemy, def, prefersRanged, newDist);
+    if (attacked) { await animDelay(150); render(); }
+
+    tryBossSpawn(enemy, def, occupied);
+    tryTerrainShatter(enemy, def);
+}
+
 async function runEnemyPhase() {
     // Natural HP recovery
     player.hp = Math.min(playerMaxHP(), player.hp + 1);
-    // Vitality Stone regen
     const art = getArtifact();
     if (art && art.special === 'regen') {
         player.hp = Math.min(playerMaxHP(), player.hp + art.regenAmount);
     }
-    // Warp Shield countdown
     if (warpShieldTurns > 0) warpShieldTurns--;
 
     const occupied = new Set([hexKey(player.q, player.r)]);
@@ -1064,162 +1207,13 @@ async function runEnemyPhase() {
     for (const enemy of [...enemies]) {
         if (gameOver) break;
         const def = getDef(enemy.type);
-        const dist = hexDistance(enemy.q, enemy.r, player.q, player.r);
-        const isVisible = visible.has(hexKey(enemy.q, enemy.r));
         const aggro = def.aggroRange || def.detectRange || 0;
         enemy.turnsSinceSpawn++;
 
-        // Wildlife: passive unless aggroed
         if (def.behavior === 'wildlife') {
-            if (dist <= aggro) {
-                // Aggroed: chase and attack
-                moveWildlifeToward(enemy, player.q, player.r, occupied);
-                if (isVisible || visible.has(hexKey(enemy.q, enemy.r))) {
-                    await animDelay(80);
-                    render();
-                }
-                const newDist = hexDistance(enemy.q, enemy.r, player.q, player.r);
-                if (newDist === 1) {
-                    dealDamageToPlayer(def.attack, def.name, false);
-                    await animDelay(150);
-                    render();
-                }
-            } else if (Rando.bool(0.3)) {
-                wanderWildlife(enemy, occupied);
-            }
-            continue;
-        }
-
-        // Phase Wraith teleport
-        if (def.behavior === 'teleport' && Math.random() < (def.teleportChance || 0.3)) {
-            const targets = hexesInRange(player.q, player.r, def.teleportRange);
-            const valid = targets.filter(t => {
-                const k = hexKey(t.q, t.r);
-                const h = hexes.get(k);
-                return h && isPassable(h) && !occupied.has(k) && !(t.q === player.q && t.r === player.r);
-            });
-            if (valid.length > 0) {
-                occupied.delete(hexKey(enemy.q, enemy.r));
-                const dest = Rando.choice(valid);
-                enemy.q = dest.q; enemy.r = dest.r;
-                occupied.add(hexKey(enemy.q, enemy.r));
-                if (isVisible || visible.has(hexKey(enemy.q, enemy.r))) {
-                    await animDelay(100);
-                    render();
-                }
-            }
-        }
-
-        // Ranged-capable chasers (Void Stalker): 50% prefer ranged, skip closing in
-        const prefersRanged = def.rangedAttack && def.behavior === 'chase' && Rando.bool(0.5);
-
-        // Movement (chaos enemies: aggro = detectRange)
-        let moved = false;
-        const speed = def.speed || 1;
-        for (let step = 0; step < speed; step++) {
-            if (def.behavior === 'guard') {
-                if (hexDistance(enemy.q, enemy.r, enemy.homeQ, enemy.homeR) > (def.guardRadius || 2)) {
-                    moveEnemyToward(enemy, enemy.homeQ, enemy.homeR, occupied);
-                    moved = true;
-                } else if (dist <= aggro) {
-                    const next = getNextStepToward(enemy, player.q, player.r, occupied);
-                    if (next && hexDistance(next.q, next.r, enemy.homeQ, enemy.homeR) <= (def.guardRadius || 2)) {
-                        occupied.delete(hexKey(enemy.q, enemy.r));
-                        enemy.q = next.q; enemy.r = next.r;
-                        occupied.add(hexKey(enemy.q, enemy.r));
-                        moved = true;
-                    }
-                }
-            } else if (def.behavior === 'kite') {
-                if (dist <= aggro) {
-                    if (dist < 2) {
-                        moveEnemyAway(enemy, player.q, player.r, occupied);
-                    } else if (dist > 3) {
-                        moveEnemyToward(enemy, player.q, player.r, occupied);
-                    }
-                    moved = true;
-                } else if (Rando.bool(0.5)) {
-                    wanderEnemy(enemy, occupied);
-                    moved = true;
-                }
-            } else if (def.behavior === 'boss') {
-                if (dist <= aggro) {
-                    moveEnemyToward(enemy, player.q, player.r, occupied);
-                    moved = true;
-                }
-            } else {
-                // chase or default
-                if (dist <= aggro && !prefersRanged) {
-                    moveEnemyToward(enemy, player.q, player.r, occupied);
-                    moved = true;
-                } else if (!prefersRanged && Rando.bool(0.5)) {
-                    wanderEnemy(enemy, occupied);
-                    moved = true;
-                }
-            }
-        }
-        if (moved && (isVisible || visible.has(hexKey(enemy.q, enemy.r)))) {
-            await animDelay(80);
-            render();
-        }
-
-        // Attack — each enemy does melee OR ranged, never both
-        const newDist = hexDistance(enemy.q, enemy.r, player.q, player.r);
-        let attacked = false;
-        if (def.behavior === 'guard' || def.behavior === 'boss') {
-            // Melee if adjacent, otherwise ranged
-            if (newDist === 1) {
-                dealDamageToPlayer(def.attack, def.name, false);
-                attacked = true;
-            } else if (def.rangedAttack && def.range && newDist <= def.range && hasLOS(enemy, player)) {
-                dealDamageToPlayer(def.rangedAttack, `${def.name} (ranged)`, false);
-                attacked = true;
-            }
-        } else if (def.behavior === 'kite') {
-            // 50% chance to fire ranged
-            if (Rando.bool(0.5) && def.range && newDist <= def.range && newDist > 1 && hasLOS(enemy, player)) {
-                dealDamageToPlayer(def.attack, `${def.name} (ranged)`, false);
-                attacked = true;
-            }
-        } else if (prefersRanged) {
-            // Void Stalker chose ranged this turn
-            if (def.rangedAttack && def.range && newDist <= def.range && hasLOS(enemy, player)) {
-                dealDamageToPlayer(def.rangedAttack, `${def.name} (ranged)`, false);
-                attacked = true;
-            }
-        } else if (newDist === 1) {
-            // Melee-only or Void Stalker chose close
-            dealDamageToPlayer(def.attack, def.name, false);
-            attacked = true;
-        }
-        if (attacked) {
-            await animDelay(150);
-            render();
-        }
-
-        // Boss spawning
-        if (def.behavior === 'boss' && enemy.turnsSinceSpawn > 0 && enemy.turnsSinceSpawn % (def.spawnInterval || 3) === 0) {
-            const adj = hexNeighbors(enemy.q, enemy.r).filter(n => {
-                const k = hexKey(n.q, n.r);
-                const h = hexes.get(k);
-                return h && isPassable(h) && !occupied.has(k);
-            });
-            if (adj.length > 0) {
-                const spot = Rando.choice(adj);
-                const spawned = spawnEnemy(ENEMY_TYPE.VOID_STALKER, spot.q, spot.r);
-                if (spawned) {
-                    occupied.add(hexKey(spot.q, spot.r));
-                    logCombat('The Unraveler spawns a Void Stalker!', 'log-info');
-                }
-            }
-        }
-
-        // Terrain shattering (2% chance, chaos units only)
-        if (def.chaosSpawned && Rando.bool(0.02)) {
-            const eHex = hexes.get(hexKey(enemy.q, enemy.r));
-            if (eHex && SHATTERED_VERSION[eHex.terrain] !== undefined) {
-                eHex.terrain = SHATTERED_VERSION[eHex.terrain];
-            }
+            await runWildlifeTurn(enemy, def, aggro, occupied);
+        } else {
+            await runChaosTurn(enemy, def, occupied);
         }
     }
 
@@ -1279,17 +1273,10 @@ function moveEnemyToward(enemy, tq, tr, occupied) {
 }
 
 function moveEnemyAway(enemy, fromQ, fromR, occupied) {
-    const neighbors = hexNeighbors(enemy.q, enemy.r);
-    const valid = neighbors.filter(n => {
-        const k = hexKey(n.q, n.r);
-        const h = hexes.get(k);
-        return h && isPassable(h) && !occupied.has(k) && !(n.q === player.q && n.r === player.r);
-    });
+    const valid = validAdjacentMoves(enemy, occupied, false);
     if (valid.length === 0) return;
     valid.sort((a, b) => hexDistance(b.q, b.r, fromQ, fromR) - hexDistance(a.q, a.r, fromQ, fromR));
-    occupied.delete(hexKey(enemy.q, enemy.r));
-    enemy.q = valid[0].q; enemy.r = valid[0].r;
-    occupied.add(hexKey(enemy.q, enemy.r));
+    moveEnemyToNearest(enemy, valid, occupied);
 }
 
 function getNextStepToward(enemy, tq, tr, occupied) {
@@ -1315,13 +1302,29 @@ function getNextStepToward(enemy, tq, tr, occupied) {
     return null;
 }
 
-function wanderEnemy(enemy, occupied) {
-    const neighbors = hexNeighbors(enemy.q, enemy.r);
-    const valid = neighbors.filter(n => {
+// Returns passable, unoccupied neighbors that are not the player's hex.
+// avoidShattered: wildlife stays off shattered terrain.
+function validAdjacentMoves(enemy, occupied, avoidShattered) {
+    return hexNeighbors(enemy.q, enemy.r).filter(n => {
         const k = hexKey(n.q, n.r);
         const h = hexes.get(k);
-        return h && isPassable(h) && !occupied.has(k) && !(n.q === player.q && n.r === player.r);
+        if (!h || !isPassable(h) || occupied.has(k)) return false;
+        if (n.q === player.q && n.r === player.r) return false;
+        if (avoidShattered && UNSHATTERED_VERSION[h.terrain] !== undefined) return false;
+        return true;
     });
+}
+
+function moveEnemyToNearest(enemy, valid, occupied) {
+    if (valid.length === 0) return;
+    occupied.delete(hexKey(enemy.q, enemy.r));
+    const dest = valid[0];
+    enemy.q = dest.q; enemy.r = dest.r;
+    occupied.add(hexKey(enemy.q, enemy.r));
+}
+
+function wanderEnemy(enemy, occupied) {
+    const valid = validAdjacentMoves(enemy, occupied, false);
     if (valid.length > 0) {
         occupied.delete(hexKey(enemy.q, enemy.r));
         const dest = Rando.choice(valid);
@@ -1331,33 +1334,14 @@ function wanderEnemy(enemy, occupied) {
 }
 
 function moveWildlifeToward(enemy, tq, tr, occupied) {
-    const neighbors = hexNeighbors(enemy.q, enemy.r);
-    const valid = neighbors.filter(n => {
-        const k = hexKey(n.q, n.r);
-        const h = hexes.get(k);
-        if (!h || !isPassable(h) || occupied.has(k)) return false;
-        if (n.q === player.q && n.r === player.r) return false;
-        if (UNSHATTERED_VERSION[h.terrain] !== undefined) return false;
-        return true;
-    });
+    const valid = validAdjacentMoves(enemy, occupied, true);
     if (valid.length === 0) return;
     valid.sort((a, b) => hexDistance(a.q, a.r, tq, tr) - hexDistance(b.q, b.r, tq, tr));
-    occupied.delete(hexKey(enemy.q, enemy.r));
-    enemy.q = valid[0].q; enemy.r = valid[0].r;
-    occupied.add(hexKey(enemy.q, enemy.r));
+    moveEnemyToNearest(enemy, valid, occupied);
 }
 
 function wanderWildlife(enemy, occupied) {
-    const neighbors = hexNeighbors(enemy.q, enemy.r);
-    const valid = neighbors.filter(n => {
-        const k = hexKey(n.q, n.r);
-        const h = hexes.get(k);
-        if (!h || !isPassable(h) || occupied.has(k)) return false;
-        if (n.q === player.q && n.r === player.r) return false;
-        // Wildlife avoids shattered terrain
-        if (UNSHATTERED_VERSION[h.terrain] !== undefined) return false;
-        return true;
-    });
+    const valid = validAdjacentMoves(enemy, occupied, true);
     if (valid.length > 0) {
         occupied.delete(hexKey(enemy.q, enemy.r));
         const dest = Rando.choice(valid);
@@ -1555,7 +1539,7 @@ function render() {
         const { x, y } = hexToScreen(enemy.q, enemy.r);
         const def = getDef(enemy.type);
         const color = enemyColor(enemy.type);
-        drawCounter(x, y, color, def.label, enemy.hp / enemy.maxHp, undefined, def.attack, def.defense, def.speed || 1);
+        drawCounter(x, y, color, def.label, enemy.hp / enemy.maxHp, null, { atk: def.attack, def: def.defense, mov: def.speed || 1 });
     }
 
     // Player
@@ -1565,7 +1549,7 @@ function render() {
         const wep = getWeapon();
         const pAtk = (wep ? wep.damage : 0) + (wep && wep.type === 'ranged' ? player.stats.reflex : player.stats.might);
         const pDef = playerDefense();
-        drawCounter(x, y, PLAYER_COLOR, 'C', player.hp / playerMaxHP(), playerLabelColor, pAtk, pDef, mp);
+        drawCounter(x, y, PLAYER_COLOR, 'C', player.hp / playerMaxHP(), playerLabelColor, { atk: pAtk, def: pDef, mov: mp });
         if (selected) {
             const s = COUNTER_SIZE + 4;
             roundRect(ctx, x - s / 2, y - s / 2, s, s, 6);
