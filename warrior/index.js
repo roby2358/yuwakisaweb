@@ -1,19 +1,20 @@
 // index.js — Warrior: Tactical Hex RPG
 
 import {
-    HEX_SIZE, TERRAIN, TERRAIN_NAMES, MOVEMENT_COST, PLAYER_MP, MAP_COLS, MAP_ROWS,
-    BASE_VISION, MAX_ENEMIES, STARTING_STATS, STAT_POINTS_PER_LEVEL, MAX_DODGE,
-    maxHP, maxAether, xpForLevel,
+    HEX_SIZE, TERRAIN, TERRAIN_NAMES, MOVEMENT_COST,
+    MAX_ENEMIES, STAT_POINTS_PER_LEVEL,
+    xpForLevel,
     POI, POI_SYMBOLS, POI_COLORS,
-    ENEMY_TYPE, ENEMY_DEFS,
+    ENEMY_TYPE,
     EQUIP_SLOT, WEAPONS, ARMORS, ARTIFACTS, ALL_EQUIPMENT,
     SKILL_TARGET, SKILLS, SKILL_UNLOCK_LEVELS,
-    TERRAIN_DEFENSE_BONUS, TERRAIN_RANGE_BONUS,
     SHATTERED_VERSION, UNSHATTERED_VERSION
 } from './config.js';
-import { hexToPixel, pixelToHex, hexKey, parseHexKey, hexNeighbors, hexDistance, hexesInRange, bfsHexes, drawHexPath, findPath } from './hex.js';
+import { hexToPixel, pixelToHex, hexKey, parseHexKey, hexNeighbors, hexDistance, hexesInRange, bfsHexes, drawHexPath } from './hex.js';
 import { Rando } from './rando.js';
-import { ColorTheory } from './colortheory.js';
+import { Player } from './player.js';
+import { GameWorld } from './world.js';
+import { EnemyManager } from './enemies.js';
 
 // ---- Display constants ----
 const COUNTER_SIZE = 28;
@@ -34,28 +35,19 @@ const TERRAIN_COLORS = {
 const PLAYER_COLOR = '#daa520';
 
 // ---- Game state ----
-let hexes = null;           // Map<string, hex>
+let world = null;           // GameWorld instance
 let player = null;          // { q, r, stats, hp, aether, xp, level, gold, equipment, skills, inventory, statPoints, ... }
-let enemies = [];           // [{ q, r, type, hp, maxHp, homeQ, homeR, ... }]
-let pois = [];              // [{ q, r, type, closed, looted, shopItems, guardianId, ... }]
+let em = null;              // EnemyManager instance
 let selected = false;
 let reachable = null;       // Map<string, cost>
 let attackable = null;      // Set<string> — enemy hexes within melee reach
 let turn = 1;
-let mp = PLAYER_MP;
 let phase = 'player';       // 'player' | 'enemy' | 'animating' | 'dialog'
 let gameOver = false;
 let gameWon = false;
-let breachesClosed = 0;
 let enemiesDefeated = 0;
-let revealed = new Set();   // hexKeys that have been seen
-let visible = new Set();    // hexKeys currently in vision
 let targeting = null;       // { skill, validHexes: Set } or null
-let warpShieldTurns = 0;    // turns remaining on Warp Shield
-let usedSkillsThisTurn = new Set();
 let hoveredHex = null;
-let enemyNextId = 0;
-let creatureDefs = {};  // generated each game: { creature_0: { name, label, ... }, ... }
 
 // ---- View state ----
 let panX = 0, panY = 0;
@@ -71,7 +63,7 @@ window.addEventListener('resize', resize);
 function hexToScreen(q, r) { const p = hexToPixel(q, r); return { x: p.x + panX, y: p.y + panY }; }
 function screenToHex(sx, sy) { return pixelToHex(sx - panX, sy - panY); }
 
-function getDef(type) { return ENEMY_DEFS[type] || creatureDefs[type]; }
+function playerTerrain() { return world.getHex(player.q, player.r)?.terrain; }
 
 // ---- Drawing helpers ----
 function roundRect(ctx, x, y, w, h, r) {
@@ -137,392 +129,14 @@ function drawCounter(cx, cy, color, label, hpPct, labelColor, stats) {
     }
 }
 
-// ================================================================
-// MAP GENERATION
-// ================================================================
-
-function diamondSquare(size, roughness) {
-    const grid = new Float64Array(size * size);
-    const get = (x, y) => grid[y * size + x];
-    const set = (x, y, v) => { grid[y * size + x] = v; };
-    set(0, 0, Math.random()); set(size - 1, 0, Math.random());
-    set(0, size - 1, Math.random()); set(size - 1, size - 1, Math.random());
-    let step = size - 1, scale = roughness;
-    while (step > 1) {
-        const half = step / 2;
-        for (let y = half; y < size - 1; y += step)
-            for (let x = half; x < size - 1; x += step)
-                set(x, y, (get(x - half, y - half) + get(x + half, y - half) +
-                    get(x - half, y + half) + get(x + half, y + half)) / 4 +
-                    (Math.random() - 0.5) * scale);
-        for (let y = 0; y < size; y += half)
-            for (let x = (y + half) % step; x < size; x += step) {
-                let sum = 0, cnt = 0;
-                if (x >= half) { sum += get(x - half, y); cnt++; }
-                if (x + half < size) { sum += get(x + half, y); cnt++; }
-                if (y >= half) { sum += get(x, y - half); cnt++; }
-                if (y + half < size) { sum += get(x, y + half); cnt++; }
-                set(x, y, sum / cnt + (Math.random() - 0.5) * scale);
-            }
-        step = half; scale *= roughness;
-    }
-    let min = Infinity, max = -Infinity;
-    for (let i = 0; i < grid.length; i++) { min = Math.min(min, grid[i]); max = Math.max(max, grid[i]); }
-    for (let i = 0; i < grid.length; i++) grid[i] = (grid[i] - min) / (max - min) * 100;
-    return grid;
-}
-
-function generateRectGrid() {
-    const map = new Map();
-    const hm = diamondSquare(129, 0.55);
-    for (let row = 0; row < MAP_ROWS; row++) {
-        const qOffset = -Math.floor(row / 2);
-        for (let col = 0; col < MAP_COLS; col++) {
-            const q = col + qOffset, r = row;
-            const gx = Math.round(col / (MAP_COLS - 1) * 128);
-            const gy = Math.round(row / (MAP_ROWS - 1) * 128);
-            const elevation = hm[gy * 129 + gx];
-            const isEdge = row === 0 || row === MAP_ROWS - 1 || col === 0 || col === MAP_COLS - 1;
-            map.set(hexKey(q, r), {
-                q, r, col, row, elevation, isEdge,
-                terrain: null, poi: null, goldLooted: false
-            });
-        }
-    }
-    return map;
-}
-
-function assignTerrain() {
-    const inner = [];
-    for (const [, hex] of hexes) {
-        if (hex.isEdge) { hex.terrain = TERRAIN.WATER; continue; }
-        inner.push(hex);
-    }
-    inner.sort((a, b) => a.elevation - b.elevation);
-    const n = inner.length;
-    for (let i = 0; i < n; i++) {
-        const pct = i / n;
-        if (pct < 0.25) inner[i].terrain = TERRAIN.WATER;
-        else if (pct < 0.85) inner[i].terrain = TERRAIN.PLAINS;
-        else if (pct < 0.95) inner[i].terrain = TERRAIN.HILLS;
-        else inner[i].terrain = TERRAIN.MOUNTAIN;
-    }
-    const plains = inner.filter(h => h.terrain === TERRAIN.PLAINS);
-    Rando.shuffle(plains);
-    let idx = 0;
-    const forestCount = Math.round(n * 0.10);
-    const goldCount = Math.max(3, Math.round(n * 0.01));
-    for (let i = 0; i < forestCount && idx < plains.length; i++, idx++) plains[idx].terrain = TERRAIN.FOREST;
-    for (let i = 0; i < goldCount && idx < plains.length; i++, idx++) plains[idx].terrain = TERRAIN.GOLD;
-    const hills = inner.filter(h => h.terrain === TERRAIN.HILLS);
-    Rando.shuffle(hills);
-    const quarryCount = Math.max(2, Math.round(n * 0.02));
-    for (let i = 0; i < quarryCount && i < hills.length; i++) hills[i].terrain = TERRAIN.QUARRY;
-}
-
-function isPassable(hex) {
-    return hex && !hex.isEdge && hex.terrain !== TERRAIN.WATER && hex.terrain !== TERRAIN.MOUNTAIN;
-}
-
-function passableHexes() {
-    const result = [];
-    for (const [, hex] of hexes) if (isPassable(hex)) result.push(hex);
-    return result;
-}
-
-// ================================================================
-// POINTS OF INTEREST
-// ================================================================
-
-function placePOIs() {
-    pois = [];
-    const candidates = passableHexes();
-    const used = new Set();
-    const MIN_DIST = 6;
-
-    function place(type, count, preferRight) {
-        let pool = candidates.filter(h => !used.has(hexKey(h.q, h.r)));
-        if (preferRight) pool.sort((a, b) => b.col - a.col);
-        else Rando.shuffle(pool);
-
-        let placed = 0;
-        for (const hex of pool) {
-            if (placed >= count) break;
-            const key = hexKey(hex.q, hex.r);
-            // Minimum distance check
-            let tooClose = false;
-            for (const poi of pois) {
-                if (hexDistance(hex.q, hex.r, poi.q, poi.r) < MIN_DIST) { tooClose = true; break; }
-            }
-            if (tooClose) continue;
-            used.add(key);
-            hex.poi = type;
-            const poi = { q: hex.q, r: hex.r, type, id: pois.length };
-            if (type === POI.HAVEN) poi.shopItems = generateShopItems();
-            if (type === POI.RUIN) { poi.looted = false; poi.loot = generateRuinLoot(); poi.ruinEnemies = Rando.int(1, 3); }
-            if (type === POI.BREACH) { poi.closed = false; poi.guardianId = null; }
-            if (type === POI.MAW) { poi.closed = false; poi.guardianId = null; }
-            pois.push(poi);
-            placed++;
-        }
-        return placed;
-    }
-
-    place(POI.HAVEN, Rando.int(2, 3), false);
-    place(POI.CAMP, Rando.int(4, 6), false);
-    place(POI.RUIN, Rando.int(3, 5), false);
-    place(POI.BREACH, Rando.int(3, 4), false);
-    place(POI.MAW, 1, true);
-}
-
-function generateShopItems() {
-    const pool = [...WEAPONS.filter(w => w.tier > 0), ...ARMORS.filter(a => a.tier > 0), ...ARTIFACTS.filter(a => a.id !== 'maw_compass')];
-    Rando.shuffle(pool);
-    return pool.slice(0, Rando.int(3, 5));
-}
-
-function generateRuinLoot() {
-    const pool = [...WEAPONS.filter(w => w.tier >= 1 && w.tier <= 2), ...ARMORS.filter(a => a.tier >= 1), ...ARTIFACTS.filter(a => a.tier >= 1 && a.id !== 'maw_compass')];
-    return Rando.choice(pool);
-}
-
-// ================================================================
-// PLAYER
-// ================================================================
-
-function createPlayer(startHex) {
-    const stats = { ...STARTING_STATS };
-    return {
-        q: startHex.q, r: startHex.r,
-        stats,
-        hp: maxHP(stats.vigor), aether: maxAether(stats.warding),
-        xp: 0, level: 1, gold: 0,
-        equipment: {
-            [EQUIP_SLOT.WEAPON]: 'rusty_blade',
-            [EQUIP_SLOT.ARMOR]: 'worn_leather',
-            [EQUIP_SLOT.ARTIFACT]: null
-        },
-        skills: ['restore', null, null, null],
-        inventory: [],  // item ids
-        statPoints: 0,
-        pendingSkillChoice: false
-    };
-}
-
-function getWeapon() { return ALL_EQUIPMENT[player.equipment[EQUIP_SLOT.WEAPON]]; }
-function getArmor() { return ALL_EQUIPMENT[player.equipment[EQUIP_SLOT.ARMOR]]; }
-function getArtifact() { return player.equipment[EQUIP_SLOT.ARTIFACT] ? ALL_EQUIPMENT[player.equipment[EQUIP_SLOT.ARTIFACT]] : null; }
-
-function playerDefense() {
-    const armor = getArmor();
-    let def = armor ? armor.defense : 0;
-    const hex = hexes.get(hexKey(player.q, player.r));
-    if (hex) def += TERRAIN_DEFENSE_BONUS[hex.terrain] || 0;
-    return def;
-}
-
-function playerMaxHP() {
-    let hp = maxHP(player.stats.vigor);
-    const armor = getArmor();
-    if (armor && armor.special === 'hp_bonus') hp += armor.hpBonus;
-    return hp;
-}
-
-function playerMaxAether() {
-    let ae = maxAether(player.stats.warding);
-    const art = getArtifact();
-    if (art && art.special === 'aether_bonus') ae += art.aetherBonus;
-    return ae;
-}
-
-function playerVision() {
-    let v = BASE_VISION;
-    const armor = getArmor();
-    if (armor && armor.special === 'vision_bonus') v += armor.visionBonus;
-    const art = getArtifact();
-    if (art && art.special === 'vision_bonus') v += art.visionBonus;
-    return v;
-}
-
-function playerMP() {
-    let m = PLAYER_MP;
-    const armor = getArmor();
-    if (armor && armor.special === 'mp_penalty') m -= armor.mpPenalty;
-    return Math.max(1, m);
-}
-
-function playerMeleeDamage(enemy) {
-    const wep = getWeapon();
-    let dmg = (wep ? wep.damage : 1) + player.stats.might;
-    if (wep && wep.special === 'chaos_bonus' && getDef(enemy.type).chaosSpawned) dmg += 2;
-    return dmg;
-}
-
-function playerRangedDamage() {
-    const wep = getWeapon();
-    return (wep ? wep.damage : 1) + player.stats.reflex;
-}
-
-function playerDodge() { return Math.min(player.stats.reflex, MAX_DODGE); }
-
-function playerWeaponRange() {
-    const wep = getWeapon();
-    if (!wep || wep.type !== 'ranged') return 0;
-    let range = wep.range;
-    const hex = hexes.get(hexKey(player.q, player.r));
-    if (hex) range += TERRAIN_RANGE_BONUS[hex.terrain] || 0;
-    return range;
-}
-
-function isEngaged() {
-    return enemies.some(e => hexDistance(player.q, player.r, e.q, e.r) === 1);
-}
-
-// ================================================================
-// ENEMIES
-// ================================================================
-
-function spawnEnemy(type, q, r, homeQ, homeR) {
-    if (enemies.length >= MAX_ENEMIES) return null;
-    const def = getDef(type);
-    const e = {
-        id: enemyNextId++, type, q, r, hp: def.hp, maxHp: def.hp,
-        homeQ: homeQ ?? q, homeR: homeR ?? r, turnsSinceSpawn: 0
-    };
-    enemies.push(e);
-    return e;
-}
-
-function spawnInitialEnemies() {
-    const passable = passableHexes();
-    const occupied = new Set([hexKey(player.q, player.r)]);
-    for (const poi of pois) occupied.add(hexKey(poi.q, poi.r));
-
-    // Void Stalkers: 2d4
-    const vsCount = Rando.int(1, 4) + Rando.int(1, 4);
-    const faCount = Rando.int(1, 3);
-    const pool = passable.filter(h => !occupied.has(hexKey(h.q, h.r)));
-    Rando.shuffle(pool);
-    let pi = 0;
-    for (let i = 0; i < vsCount && pi < pool.length; i++, pi++) {
-        const h = pool[pi];
-        spawnEnemy(ENEMY_TYPE.VOID_STALKER, h.q, h.r);
-        occupied.add(hexKey(h.q, h.r));
-    }
-    for (let i = 0; i < faCount && pi < pool.length; i++, pi++) {
-        const h = pool[pi];
-        spawnEnemy(ENEMY_TYPE.FLUX_ARCHER, h.q, h.r);
-        occupied.add(hexKey(h.q, h.r));
-    }
-
-    // Breach guardians and crawlers
-    for (const poi of pois) {
-        if (poi.type !== POI.BREACH && poi.type !== POI.MAW) continue;
-        const neighbors = hexNeighbors(poi.q, poi.r).filter(n => {
-            const hex = hexes.get(hexKey(n.q, n.r));
-            return hex && isPassable(hex) && !occupied.has(hexKey(n.q, n.r));
-        });
-        Rando.shuffle(neighbors);
-
-        const guardType = poi.type === POI.MAW ? ENEMY_TYPE.UNRAVELER : ENEMY_TYPE.BREACH_GUARDIAN;
-        if (neighbors.length > 0) {
-            const gn = neighbors.shift();
-            const g = spawnEnemy(guardType, gn.q, gn.r, poi.q, poi.r);
-            if (g) { poi.guardianId = g.id; occupied.add(hexKey(gn.q, gn.r)); }
-        }
-        // 1-2 crawlers near breaches
-        if (poi.type === POI.BREACH) {
-            const crawlerCount = Rando.int(1, 2);
-            for (let i = 0; i < crawlerCount && neighbors.length > 0; i++) {
-                const cn = neighbors.shift();
-                spawnEnemy(ENEMY_TYPE.BREACH_CRAWLER, cn.q, cn.r, poi.q, poi.r);
-                occupied.add(hexKey(cn.q, cn.r));
-            }
-        }
-    }
-}
-
-// ================================================================
-// WILDLIFE CREATURES
-// ================================================================
-
-function generateCreatureName() {
-    const predators = ['tiger', 'lion', 'cheetah', 'wolf', 'bear', 'hawk', 'shark', 'viper', 'panther', 'cobra', 'eagle', 'falcon'];
-    const prefixes = ['Ash', 'Vel', 'Dra', 'Gor', 'Mur', 'Thr', 'Zan', 'Kri', 'Vor', 'Eld', 'Grim', 'Sar', 'Fen', 'Bal', 'Rix', 'Nar', 'Osi', 'Bry', 'Cal', 'Dul'];
-    const suffixes = ['ax', 'or', 'ith', 'old', 'un', 'ek', 'ang', 'us', 'ar', 'on', 'ine', 'oth', 'usk', 'el', 'arn', 'ox'];
-    const pred = Rando.choice(predators);
-    const prefix = Rando.choice(prefixes);
-    const suffix = Rando.choice(suffixes);
-    return prefix + pred + suffix;
-}
-
-function generateCreatureTypes() {
-    creatureDefs = {};
-    const usedNames = new Set();
-    const palette = ColorTheory.randomScheme(() => Math.random());
-    for (let i = 0; i < 12; i++) {
-        let name;
-        do { name = generateCreatureName(); } while (usedNames.has(name));
-        usedNames.add(name);
-        const attack = 3 + Math.floor(i * 9 / 11); // 3 to 12 spread across 12 types
-        const hp = attack * 4 + Rando.int(-3, 3);
-        const defense = Math.floor(attack / 4);
-        const xp = attack * 2;
-        const gold = Math.max(1, Math.floor(attack / 3));
-        const detectRange = Math.min(7, 4 + Math.floor(attack / 4));
-        const aggroRange = Rando.int(3, detectRange);
-        // Pick a color from the palette, cycling through and varying lightness
-        const baseColor = palette[i % palette.length];
-        const [h, s, l] = ColorTheory.rgbToHsl(baseColor[0], baseColor[1], baseColor[2]);
-        const varied = ColorTheory.hslToRgb(h, Math.min(1, s + 0.1), Math.max(0.3, Math.min(0.7, l + Rando.float(-0.15, 0.15))));
-        const color = ColorTheory.rgbToHex(varied[0], varied[1], varied[2]);
-        creatureDefs[`creature_${i}`] = {
-            name, label: name[0], hp, attack, defense,
-            speed: 1, detectRange, aggroRange, xp, gold,
-            behavior: 'wildlife', chaosSpawned: false, color
-        };
-    }
-}
-
-function spawnInitialCreatures() {
-    const occupied = new Set([hexKey(player.q, player.r)]);
-    for (const e of enemies) occupied.add(hexKey(e.q, e.r));
-    for (const poi of pois) occupied.add(hexKey(poi.q, poi.r));
-    const pool = passableHexes().filter(h => {
-        const k = hexKey(h.q, h.r);
-        return !occupied.has(k) && !visible.has(k) && UNSHATTERED_VERSION[h.terrain] === undefined;
-    });
-    Rando.shuffle(pool);
-    const types = Object.keys(creatureDefs);
-    const count = Math.min(20, pool.length);
-    for (let i = 0; i < count; i++) {
-        const type = Rando.choice(types);
-        spawnEnemy(type, pool[i].q, pool[i].r);
-    }
-}
 
 // ================================================================
 // FOG OF WAR
 // ================================================================
 
-function updateVision() {
-    visible = new Set();
-    const radius = playerVision();
-    const inRange = hexesInRange(player.q, player.r, radius);
-    for (const h of inRange) {
-        const key = hexKey(h.q, h.r);
-        if (hexes.has(key)) { visible.add(key); revealed.add(key); }
-    }
-    // Maw compass reveals the maw
-    const art = getArtifact();
-    if (art && art.special === 'reveal_maw') {
-        for (const poi of pois) {
-            if (poi.type === POI.MAW) {
-                const key = hexKey(poi.q, poi.r);
-                revealed.add(key);
-            }
-        }
-    }
+function refreshVision() {
+    const art = player.artifact();
+    world.updateVision(player.q, player.r, player.vision(), !!(art && art.special === 'reveal_maw'));
 }
 
 // ================================================================
@@ -530,7 +144,7 @@ function updateVision() {
 // ================================================================
 
 function dealDamageToEnemy(enemy, damage, source) {
-    const def = getDef(enemy.type);
+    const def = em.getDef(enemy.type);
     const rolled = Rando.bellCurve(damage);
     const actualDmg = Math.max(1, rolled - def.defense);
     enemy.hp -= actualDmg;
@@ -544,18 +158,18 @@ function dealDamageToEnemy(enemy, damage, source) {
 
 function dealDamageToPlayer(damage, source, isSkillDamage) {
     // Warp Shield check
-    if (warpShieldTurns > 0) {
-        warpShieldTurns = 0;
+    if (player.warpShieldTurns > 0) {
+        player.warpShieldTurns = 0;
         logCombat('Warp Shield absorbed the hit!', 'log-info');
         return;
     }
     // Dodge check
-    if (Math.random() * 100 < playerDodge()) {
+    if (Math.random() * 100 < player.dodge()) {
         logCombat('Dodged!', 'log-info');
         return;
     }
     const rolled = Rando.bellCurve(damage);
-    let def = playerDefense();
+    let def = player.defense(playerTerrain());
     if (isSkillDamage) {
         def += Math.round(player.stats.warding / 100 * rolled);
     }
@@ -569,16 +183,15 @@ function dealDamageToPlayer(damage, source, isSkillDamage) {
 }
 
 function killEnemy(enemy) {
-    const def = getDef(enemy.type);
-    const idx = enemies.indexOf(enemy);
-    if (idx >= 0) enemies.splice(idx, 1);
+    const def = em.getDef(enemy.type);
+    em.remove(enemy);
     enemiesDefeated++;
     const goldGain = Rando.int(1, 5) + (def.gold || 0);
     player.gold += goldGain;
     logCombat(`${def.name} defeated!`, 'log-info');
     logCombat(`+${goldGain}g`, 'log-gold');
     if (def.chaosSpawned) {
-        player.aether = Math.min(playerMaxAether(), player.aether + 1);
+        player.aether = Math.min(player.maxAether(), player.aether + 1);
         logCombat('+1 AE', 'log-info');
     }
     gainXP(def.xp);
@@ -599,7 +212,7 @@ function killEnemy(enemy) {
     }
 
     // Check if breach can be closed
-    for (const poi of pois) {
+    for (const poi of world.pois) {
         if ((poi.type === POI.BREACH || poi.type === POI.MAW) && poi.guardianId === enemy.id) {
             poi.guardianDefeated = true;
             logCombat(`The guardian falls! Step on the breach to seal it.`, 'log-info');
@@ -614,37 +227,37 @@ function guessSlot(item) {
 }
 
 function meleeAttack(enemy) {
-    const dmg = playerMeleeDamage(enemy);
-    const wep = getWeapon();
+    const dmg = player.meleeDamage(em.getDef(enemy.type));
+    const wep = player.weapon();
     const killed = dealDamageToEnemy(enemy, dmg, 'Melee');
 
     // Cleave: hit adjacent enemies too
     if (wep && wep.special === 'cleave') {
         const adj = hexNeighbors(enemy.q, enemy.r);
         for (const n of adj) {
-            const adjEnemy = enemies.find(e => e.q === n.q && e.r === n.r);
+            const adjEnemy = em.enemies.find(e => e.q === n.q && e.r === n.r);
             if (adjEnemy) dealDamageToEnemy(adjEnemy, dmg, 'Cleave');
         }
     }
 
     if (!killed) {
         // Counter-attack
-        const def = getDef(enemy.type);
+        const def = em.getDef(enemy.type);
         dealDamageToPlayer(def.attack, `${def.name} counters`, false);
     }
     return killed;
 }
 
 function rangedAttack(targetQ, targetR) {
-    const enemy = enemies.find(e => e.q === targetQ && e.r === targetR);
+    const enemy = em.enemies.find(e => e.q === targetQ && e.r === targetR);
     if (!enemy) return;
-    const wep = getWeapon();
-    let dmg = playerRangedDamage();
+    const wep = player.weapon();
+    let dmg = player.rangedDamage();
     if (wep && wep.special === 'ignore_defense') {
         // Deal full damage, ignoring defense
         const actualDmg = Math.max(1, dmg);
         enemy.hp -= actualDmg;
-        logCombat(`Ranged: ${actualDmg} dmg to ${getDef(enemy.type).name}`, 'log-dmg');
+        logCombat(`Ranged: ${actualDmg} dmg to ${em.getDef(enemy.type).name}`, 'log-dmg');
         if (enemy.hp <= 0) killEnemy(enemy);
     } else {
         dealDamageToEnemy(enemy, dmg, 'Ranged');
@@ -653,7 +266,7 @@ function rangedAttack(targetQ, targetR) {
     if (!wep || wep.special !== 'free_ranged') {
         player.aether = Math.max(0, player.aether - 1);
     }
-    mp = 0; // ends movement
+    player.mp = 0; // ends movement
 }
 
 function gainXP(amount) {
@@ -663,8 +276,8 @@ function gainXP(amount) {
     if (player.xp >= needed && player.level < 10) {
         player.level++;
         player.xp -= needed;
-        player.hp = playerMaxHP();
-        player.aether = playerMaxAether();
+        player.hp = player.maxHP();
+        player.aether = player.maxAether();
         player.statPoints += STAT_POINTS_PER_LEVEL;
         logCombat(`LEVEL UP! Now level ${player.level}`, 'log-info');
         // Check skill unlock
@@ -680,11 +293,9 @@ function gainXP(amount) {
 // SKILL EXECUTION
 // ================================================================
 
-function enemyAt(q, r) { return enemies.find(e => e.q === q && e.r === r); }
-
 function applyAoeDamage(skillName, dmg, range) {
     for (const h of hexesInRange(player.q, player.r, range)) {
-        const enemy = enemyAt(h.q, h.r);
+        const enemy = em.enemyAt(h.q, h.r);
         if (enemy) dealDamageToEnemy(enemy, dmg, skillName);
     }
 }
@@ -693,10 +304,10 @@ function executeSkill(skillId, targetQ, targetR) {
     const skill = SKILLS[skillId];
     if (!skill) return;
     if (player.aether < skill.cost) { logCombat('Not enough Aether!', 'log-info'); return; }
-    if (usedSkillsThisTurn.has(skillId)) { logCombat('Already used this turn!', 'log-info'); return; }
+    if (player.usedSkillsThisTurn.has(skillId)) { logCombat('Already used this turn!', 'log-info'); return; }
 
     player.aether -= skill.cost;
-    usedSkillsThisTurn.add(skillId);
+    player.usedSkillsThisTurn.add(skillId);
 
     let usedMP = true; // most skills consume MP; free actions set this false
 
@@ -704,18 +315,18 @@ function executeSkill(skillId, targetQ, targetR) {
         case 'restore': {
             const range = 1 + Math.floor(player.level / 3);
             const shatteredHexes = hexesInRange(player.q, player.r, range)
-                .map(h => hexes.get(hexKey(h.q, h.r)))
+                .map(h => world.getHex(h.q, h.r))
                 .filter(h => h && UNSHATTERED_VERSION[h.terrain] !== undefined);
             if (shatteredHexes.length === 0) {
                 logCombat('No shattered terrain in range!', 'log-info');
-                usedSkillsThisTurn.delete(skillId);
+                player.usedSkillsThisTurn.delete(skillId);
                 usedMP = false;
                 break;
             }
             const totalCost = shatteredHexes.length * 2;
             if (player.aether < totalCost) {
                 logCombat(`Need ${totalCost} AE for ${shatteredHexes.length} hexes!`, 'log-info');
-                usedSkillsThisTurn.delete(skillId);
+                player.usedSkillsThisTurn.delete(skillId);
                 usedMP = false;
                 break;
             }
@@ -726,9 +337,9 @@ function executeSkill(skillId, targetQ, targetR) {
             break;
         }
         case 'void_strike': {
-            const enemy = enemyAt(targetQ, targetR);
+            const enemy = em.enemyAt(targetQ, targetR);
             if (!enemy) break;
-            const wep = getWeapon();
+            const wep = player.weapon();
             const dmg = (wep ? wep.damage : 1) + player.stats.might + player.stats.warding;
             dealDamageToEnemy(enemy, dmg, 'Void Strike');
             break;
@@ -736,20 +347,20 @@ function executeSkill(skillId, targetQ, targetR) {
         case 'phase_step': {
             player.q = targetQ;
             player.r = targetR;
-            updateVision();
+            refreshVision();
             logCombat('Phase Step!', 'log-info');
             checkHexEntry();
             usedMP = false; // free action
             break;
         }
         case 'cosmic_bolt': {
-            const enemy = enemyAt(targetQ, targetR);
+            const enemy = em.enemyAt(targetQ, targetR);
             if (!enemy) break;
             dealDamageToEnemy(enemy, skill.baseDamage + player.stats.warding, 'Cosmic Bolt');
             break;
         }
         case 'warp_shield': {
-            warpShieldTurns = skill.duration;
+            player.warpShieldTurns = skill.duration;
             logCombat('Warp Shield active!', 'log-info');
             break;
         }
@@ -760,20 +371,20 @@ function executeSkill(skillId, targetQ, targetR) {
         }
         case 'mending_light': {
             const heal = skill.baseHeal + player.stats.vigor * 3;
-            player.hp = Math.min(playerMaxHP(), player.hp + heal);
+            player.hp = Math.min(player.maxHP(), player.hp + heal);
             logCombat(`Healed ${heal} HP`, 'log-heal');
             break;
         }
         case 'gravity_well': {
             for (const h of hexesInRange(player.q, player.r, skill.range)) {
-                const enemy = enemyAt(h.q, h.r);
+                const enemy = em.enemyAt(h.q, h.r);
                 if (!enemy) continue;
                 let closest = null, closestDist = Infinity;
                 for (const n of hexNeighbors(enemy.q, enemy.r)) {
                     const d = hexDistance(n.q, n.r, player.q, player.r);
-                    const hex = hexes.get(hexKey(n.q, n.r));
-                    if (!hex || !isPassable(hex)) continue;
-                    if (enemies.some(e2 => e2 !== enemy && e2.q === n.q && e2.r === n.r)) continue;
+                    const hex = world.getHex(n.q, n.r);
+                    if (!hex || !world.isPassable(hex)) continue;
+                    if (em.enemies.some(e2 => e2 !== enemy && e2.q === n.q && e2.r === n.r)) continue;
                     if (n.q === player.q && n.r === player.r) continue;
                     if (d < closestDist) { closestDist = d; closest = n; }
                 }
@@ -783,9 +394,9 @@ function executeSkill(skillId, targetQ, targetR) {
             break;
         }
         case 'dimensional_rend': {
-            const enemy = enemyAt(targetQ, targetR);
+            const enemy = em.enemyAt(targetQ, targetR);
             if (!enemy) break;
-            const wep = getWeapon();
+            const wep = player.weapon();
             dealDamageToEnemy(enemy, (wep ? wep.damage : 1) * 3, 'Dimensional Rend');
             break;
         }
@@ -794,7 +405,7 @@ function executeSkill(skillId, targetQ, targetR) {
             break;
         }
     }
-    if (usedMP && !skill.freeAction) mp = 0;
+    if (usedMP && !skill.freeAction) player.mp = 0;
     targeting = null;
 }
 
@@ -810,7 +421,7 @@ function getSkillTargets(skillId) {
         case SKILL_TARGET.MELEE: {
             const adj = hexNeighbors(player.q, player.r);
             for (const n of adj) {
-                if (enemies.some(e => e.q === n.q && e.r === n.r)) targets.add(hexKey(n.q, n.r));
+                if (em.enemies.some(e => e.q === n.q && e.r === n.r)) targets.add(hexKey(n.q, n.r));
             }
             break;
         }
@@ -819,7 +430,7 @@ function getSkillTargets(skillId) {
             const inRange = hexesInRange(player.q, player.r, range);
             for (const h of inRange) {
                 if (h.q === player.q && h.r === player.r) continue;
-                if (enemies.some(e => e.q === h.q && e.r === h.r) && hasLOS(player, h)) {
+                if (em.enemies.some(e => e.q === h.q && e.r === h.r) && world.hasLOS(player, h)) {
                     targets.add(hexKey(h.q, h.r));
                 }
             }
@@ -831,10 +442,10 @@ function getSkillTargets(skillId) {
             for (const h of inRange) {
                 const key = hexKey(h.q, h.r);
                 if (h.q === player.q && h.r === player.r) continue;
-                const hex = hexes.get(key);
-                if (!hex || !isPassable(hex)) continue;
-                if (enemies.some(e => e.q === h.q && e.r === h.r)) continue;
-                if (visible.has(key)) targets.add(key);
+                const hex = world.getHex(h.q, h.r);
+                if (!hex || !world.isPassable(hex)) continue;
+                if (em.enemies.some(e => e.q === h.q && e.r === h.r)) continue;
+                if (world.visible.has(key)) targets.add(key);
             }
             break;
         }
@@ -845,25 +456,6 @@ function getSkillTargets(skillId) {
     return targets;
 }
 
-function hasLOS(from, to) {
-    // Simple LOS: check hexes along the line for mountains
-    const dist = hexDistance(from.q, from.r, to.q, to.r);
-    if (dist <= 1) return true;
-    for (let i = 1; i < dist; i++) {
-        const t = i / dist;
-        const midQ = from.q + (to.q - from.q) * t;
-        const midR = from.r + (to.r - from.r) * t;
-        // Round to nearest hex
-        const s = -midQ - midR;
-        let rq = Math.round(midQ), rr = Math.round(midR), rs = Math.round(s);
-        const qd = Math.abs(rq - midQ), rd = Math.abs(rr - midR), sd = Math.abs(rs - s);
-        if (qd > rd && qd > sd) rq = -rr - rs;
-        else if (rd > sd) rr = -rq - rs;
-        const hex = hexes.get(hexKey(rq, rr));
-        if (hex && hex.terrain === TERRAIN.MOUNTAIN) return false;
-    }
-    return true;
-}
 
 // ================================================================
 // MOVEMENT & TURN LOGIC
@@ -882,12 +474,12 @@ function deselectPlayer() {
 }
 
 function computeReachable() {
-    if (mp <= 0) { reachable = new Map(); attackable = new Set(); return; }
-    const enemyKeys = new Set(enemies.map(e => hexKey(e.q, e.r)));
-    reachable = bfsHexes(player, hexes, hex => {
+    if (player.mp <= 0) { reachable = new Map(); attackable = new Set(); return; }
+    const enemyKeys = new Set(em.enemies.map(e => hexKey(e.q, e.r)));
+    reachable = bfsHexes(player, world.hexes, hex => {
         if (enemyKeys.has(hexKey(hex.q, hex.r))) return Infinity;
         return MOVEMENT_COST[hex.terrain] ?? Infinity;
-    }, mp);
+    }, player.mp);
     reachable.delete(hexKey(player.q, player.r));
 
     // Attackable: enemy hexes adjacent to any reachable hex (or current position)
@@ -908,7 +500,7 @@ function computeReachable() {
 }
 
 function checkEndTurn() {
-    if (!gameOver && mp <= 0 && phase === 'player') endTurn();
+    if (!gameOver && player.mp <= 0 && phase === 'player') endTurn();
 }
 
 function movePlayer(q, r) {
@@ -918,14 +510,14 @@ function movePlayer(q, r) {
 
     player.q = q;
     player.r = r;
-    mp -= cost;
-    updateVision();
+    player.mp -= cost;
+    refreshVision();
     checkHexEntry();
     deselectPlayer();
 }
 
 function moveAndAttack(enemyQ, enemyR) {
-    const enemy = enemies.find(e => e.q === enemyQ && e.r === enemyR);
+    const enemy = em.enemies.find(e => e.q === enemyQ && e.r === enemyR);
     if (!enemy) return;
 
     // Find best adjacent hex to attack from
@@ -950,22 +542,22 @@ function moveAndAttack(enemyQ, enemyR) {
     if (bestCost > 0) {
         player.q = bestHex.q;
         player.r = bestHex.r;
-        mp -= bestCost;
-        updateVision();
+        player.mp -= bestCost;
+        refreshVision();
     }
 
     // Attack
     const killed = meleeAttack(enemy);
     if (killed) {
         // Move onto the killed enemy's hex
-        const hex = hexes.get(hexKey(enemyQ, enemyR));
-        if (hex && isPassable(hex)) {
+        const hex = world.getHex(enemyQ, enemyR);
+        if (hex && world.isPassable(hex)) {
             const moveCost = MOVEMENT_COST[hex.terrain] ?? 1;
-            if (mp >= moveCost) {
+            if (player.mp >= moveCost) {
                 player.q = enemyQ;
                 player.r = enemyR;
-                mp -= moveCost;
-                updateVision();
+                player.mp -= moveCost;
+                refreshVision();
                 checkHexEntry();
             }
         }
@@ -975,8 +567,7 @@ function moveAndAttack(enemyQ, enemyR) {
 }
 
 function checkHexEntry() {
-    const key = hexKey(player.q, player.r);
-    const hex = hexes.get(key);
+    const hex = world.getHex(player.q, player.r);
     if (!hex) return;
 
     // Gold pickup
@@ -988,7 +579,7 @@ function checkHexEntry() {
     }
 
     // POI interaction
-    const poi = pois.find(p => p.q === player.q && p.r === player.r);
+    const poi = world.poiAt(player.q, player.r);
     if (!poi) return;
 
     if (poi.type === POI.HAVEN) {
@@ -1000,22 +591,21 @@ function checkHexEntry() {
     } else if (poi.type === POI.BREACH && poi.guardianDefeated && !poi.closed) {
         closeBreach(poi);
     } else if (poi.type === POI.MAW) {
-        if (breachesClosed < 2) logCombat('The Maw resists you. Seal at least 2 breaches first.', 'log-info');
+        if (world.breachesClosed < 2) logCombat('The Maw resists you. Seal at least 2 breaches first.', 'log-info');
         else if (poi.guardianDefeated && !poi.closed) endGame(true);
     }
 }
 
 function closeBreach(poi) {
-    poi.closed = true;
-    breachesClosed++;
-    logCombat(`Breach sealed! (${breachesClosed} total)`, 'log-info');
+    world.closeBreach(poi);
+    logCombat(`Breach sealed! (${world.breachesClosed} total)`, 'log-info');
     render();
 }
 
 function manualEndTurn() {
     if (gameOver || phase !== 'player') return;
-    if (mp > 0) {
-        const poi = pois.find(p => p.q === player.q && p.r === player.r);
+    if (player.mp > 0) {
+        const poi = world.poiAt(player.q, player.r);
         if (poi && (poi.type === POI.HAVEN || poi.type === POI.CAMP)) {
             if (poi.type === POI.HAVEN) showHavenDialog(poi);
             else showCampDialog(poi);
@@ -1034,17 +624,17 @@ function endTurn() {
 
 // Returns true if either of the enemy's before/after positions is currently visible.
 function enemyIsVisible(enemy, prevKey) {
-    return visible.has(prevKey) || visible.has(hexKey(enemy.q, enemy.r));
+    return world.visible.has(prevKey) || world.visible.has(hexKey(enemy.q, enemy.r));
 }
 
 function moveEnemyStep(enemy, def, dist, aggro, prefersRanged, occupied) {
     if (def.behavior === 'guard') {
         if (hexDistance(enemy.q, enemy.r, enemy.homeQ, enemy.homeR) > (def.guardRadius || 2)) {
-            moveEnemyToward(enemy, enemy.homeQ, enemy.homeR, occupied);
+            em.moveEnemyToward(enemy, enemy.homeQ, enemy.homeR, occupied, world);
             return true;
         }
         if (dist <= aggro) {
-            const next = getNextStepToward(enemy, player.q, player.r, occupied);
+            const next = em.getNextStepToward(enemy, player.q, player.r, occupied, world);
             if (next && hexDistance(next.q, next.r, enemy.homeQ, enemy.homeR) <= (def.guardRadius || 2)) {
                 occupied.delete(hexKey(enemy.q, enemy.r));
                 enemy.q = next.q; enemy.r = next.r;
@@ -1056,24 +646,24 @@ function moveEnemyStep(enemy, def, dist, aggro, prefersRanged, occupied) {
     }
     if (def.behavior === 'kite') {
         if (dist <= aggro) {
-            if (dist < 2) moveEnemyAway(enemy, player.q, player.r, occupied);
-            else if (dist > 3) moveEnemyToward(enemy, player.q, player.r, occupied);
+            if (dist < 2) em.moveEnemyAway(enemy, player.q, player.r, occupied, player.q, player.r, world);
+            else if (dist > 3) em.moveEnemyToward(enemy, player.q, player.r, occupied, world);
             return true;
         }
-        if (Rando.bool(0.5)) { wanderEnemy(enemy, occupied); return true; }
+        if (Rando.bool(0.5)) { em.wanderEnemy(enemy, occupied, player.q, player.r, world); return true; }
         return false;
     }
     if (def.behavior === 'boss') {
-        if (dist <= aggro) { moveEnemyToward(enemy, player.q, player.r, occupied); return true; }
+        if (dist <= aggro) { em.moveEnemyToward(enemy, player.q, player.r, occupied, world); return true; }
         return false;
     }
     // chase or default
     if (dist <= aggro && !prefersRanged) {
-        moveEnemyToward(enemy, player.q, player.r, occupied);
+        em.moveEnemyToward(enemy, player.q, player.r, occupied, world);
         return true;
     }
     if (!prefersRanged && Rando.bool(0.5)) {
-        wanderEnemy(enemy, occupied);
+        em.wanderEnemy(enemy, occupied, player.q, player.r, world);
         return true;
     }
     return false;
@@ -1085,21 +675,21 @@ function enemyAttacks(enemy, def, prefersRanged, newDist) {
             dealDamageToPlayer(def.attack, def.name, false);
             return true;
         }
-        if (def.rangedAttack && def.range && newDist <= def.range && hasLOS(enemy, player)) {
+        if (def.rangedAttack && def.range && newDist <= def.range && world.hasLOS(enemy, player)) {
             dealDamageToPlayer(def.rangedAttack, `${def.name} (ranged)`, false);
             return true;
         }
         return false;
     }
     if (def.behavior === 'kite') {
-        if (Rando.bool(0.5) && def.range && newDist <= def.range && newDist > 1 && hasLOS(enemy, player)) {
+        if (Rando.bool(0.5) && def.range && newDist <= def.range && newDist > 1 && world.hasLOS(enemy, player)) {
             dealDamageToPlayer(def.attack, `${def.name} (ranged)`, false);
             return true;
         }
         return false;
     }
     if (prefersRanged) {
-        if (def.rangedAttack && def.range && newDist <= def.range && hasLOS(enemy, player)) {
+        if (def.rangedAttack && def.range && newDist <= def.range && world.hasLOS(enemy, player)) {
             dealDamageToPlayer(def.rangedAttack, `${def.name} (ranged)`, false);
             return true;
         }
@@ -1118,12 +708,12 @@ function tryBossSpawn(enemy, def, occupied) {
     if (enemy.turnsSinceSpawn % (def.spawnInterval || 3) !== 0) return;
     const adj = hexNeighbors(enemy.q, enemy.r).filter(n => {
         const k = hexKey(n.q, n.r);
-        const h = hexes.get(k);
-        return h && isPassable(h) && !occupied.has(k);
+        const h = world.getHex(n.q, n.r);
+        return h && world.isPassable(h) && !occupied.has(k);
     });
     if (adj.length === 0) return;
     const spot = Rando.choice(adj);
-    const spawned = spawnEnemy(ENEMY_TYPE.VOID_STALKER, spot.q, spot.r);
+    const spawned = em.spawn(ENEMY_TYPE.VOID_STALKER, spot.q, spot.r);
     if (spawned) {
         occupied.add(hexKey(spot.q, spot.r));
         logCombat('The Unraveler spawns a Void Stalker!', 'log-info');
@@ -1132,7 +722,7 @@ function tryBossSpawn(enemy, def, occupied) {
 
 function tryTerrainShatter(enemy, def) {
     if (!def.chaosSpawned || !Rando.bool(0.02)) return;
-    const eHex = hexes.get(hexKey(enemy.q, enemy.r));
+    const eHex = world.getHex(enemy.q, enemy.r);
     if (eHex && SHATTERED_VERSION[eHex.terrain] !== undefined) {
         eHex.terrain = SHATTERED_VERSION[eHex.terrain];
     }
@@ -1142,14 +732,14 @@ async function runWildlifeTurn(enemy, def, aggro, occupied) {
     const dist = hexDistance(enemy.q, enemy.r, player.q, player.r);
     const prevKey = hexKey(enemy.q, enemy.r);
     if (dist <= aggro) {
-        moveWildlifeToward(enemy, player.q, player.r, occupied);
+        em.moveWildlifeToward(enemy, player.q, player.r, occupied, player.q, player.r, world);
         if (enemyIsVisible(enemy, prevKey)) { await animDelay(80); render(); }
         if (hexDistance(enemy.q, enemy.r, player.q, player.r) === 1) {
             dealDamageToPlayer(def.attack, def.name, false);
             await animDelay(150); render();
         }
     } else if (Rando.bool(0.3)) {
-        wanderWildlife(enemy, occupied);
+        em.wanderWildlife(enemy, occupied, player.q, player.r, world);
     }
 }
 
@@ -1162,8 +752,8 @@ async function runChaosTurn(enemy, def, occupied) {
     if (def.behavior === 'teleport' && Math.random() < (def.teleportChance || 0.3)) {
         const valid = hexesInRange(player.q, player.r, def.teleportRange).filter(t => {
             const k = hexKey(t.q, t.r);
-            const h = hexes.get(k);
-            return h && isPassable(h) && !occupied.has(k) && !(t.q === player.q && t.r === player.r);
+            const h = world.getHex(t.q, t.r);
+            return h && world.isPassable(h) && !occupied.has(k) && !(t.q === player.q && t.r === player.r);
         });
         if (valid.length > 0) {
             occupied.delete(hexKey(enemy.q, enemy.r));
@@ -1194,19 +784,19 @@ async function runChaosTurn(enemy, def, occupied) {
 
 async function runEnemyPhase() {
     // Natural HP recovery
-    player.hp = Math.min(playerMaxHP(), player.hp + 1);
-    const art = getArtifact();
+    player.hp = Math.min(player.maxHP(), player.hp + 1);
+    const art = player.artifact();
     if (art && art.special === 'regen') {
-        player.hp = Math.min(playerMaxHP(), player.hp + art.regenAmount);
+        player.hp = Math.min(player.maxHP(), player.hp + art.regenAmount);
     }
-    if (warpShieldTurns > 0) warpShieldTurns--;
+    if (player.warpShieldTurns > 0) player.warpShieldTurns--;
 
     const occupied = new Set([hexKey(player.q, player.r)]);
-    for (const e of enemies) occupied.add(hexKey(e.q, e.r));
+    for (const e of em.enemies) occupied.add(hexKey(e.q, e.r));
 
-    for (const enemy of [...enemies]) {
+    for (const enemy of [...em.enemies]) {
         if (gameOver) break;
-        const def = getDef(enemy.type);
+        const def = em.getDef(enemy.type);
         const aggro = def.aggroRange || def.detectRange || 0;
         enemy.turnsSinceSpawn++;
 
@@ -1220,17 +810,17 @@ async function runEnemyPhase() {
     if (gameOver) return;
 
     // Spawn phase
-    for (const poi of pois) {
+    for (const poi of world.pois) {
         if (poi.type === POI.BREACH && !poi.closed && Math.random() < 0.15) {
             const adj = hexNeighbors(poi.q, poi.r).filter(n => {
                 const k = hexKey(n.q, n.r);
-                const h = hexes.get(k);
-                return h && isPassable(h) && !occupied.has(k);
+                const h = world.getHex(n.q, n.r);
+                return h && world.isPassable(h) && !occupied.has(k);
             });
-            if (adj.length > 0 && enemies.length < MAX_ENEMIES) {
+            if (adj.length > 0 && em.enemies.length < MAX_ENEMIES) {
                 const spot = Rando.choice(adj);
                 const type = Rando.bool(0.6) ? ENEMY_TYPE.VOID_STALKER : ENEMY_TYPE.PHASE_WRAITH;
-                spawnEnemy(type, spot.q, spot.r, poi.q, poi.r);
+                em.spawn(type, spot.q, spot.r, poi.q, poi.r);
                 occupied.add(hexKey(spot.q, spot.r));
             }
         }
@@ -1238,116 +828,29 @@ async function runEnemyPhase() {
 
     // Wildlife spawn (2% chance per turn)
     if (Rando.bool(0.02)) {
-        const types = Object.keys(creatureDefs);
+        const types = Object.keys(em.creatureDefs);
         if (types.length > 0) {
-            const pool = passableHexes().filter(h => {
+            const pool = world.passableHexes().filter(h => {
                 const k = hexKey(h.q, h.r);
-                return !occupied.has(k) && !visible.has(k) && UNSHATTERED_VERSION[h.terrain] === undefined;
+                return !occupied.has(k) && !world.visible.has(k) && UNSHATTERED_VERSION[h.terrain] === undefined;
             });
             if (pool.length > 0) {
                 const spot = Rando.choice(pool);
-                spawnEnemy(Rando.choice(types), spot.q, spot.r);
+                em.spawn(Rando.choice(types), spot.q, spot.r);
             }
         }
     }
 
     // Start new turn
     turn++;
-    mp = playerMP();
-    if (isEngaged()) {
-        mp = Math.max(1, Math.floor(mp / 2));
+    player.mp = player.maxMP();
+    if (player.isEngaged(em.enemies)) {
+        player.mp = Math.max(1, Math.floor(player.mp / 2));
         logCombat('Engaged! Half MP.', 'log-info');
     }
-    usedSkillsThisTurn.clear();
+    player.usedSkillsThisTurn.clear();
     phase = 'player';
     render();
-}
-
-function moveEnemyToward(enemy, tq, tr, occupied) {
-    const next = getNextStepToward(enemy, tq, tr, occupied);
-    if (next) {
-        occupied.delete(hexKey(enemy.q, enemy.r));
-        enemy.q = next.q; enemy.r = next.r;
-        occupied.add(hexKey(enemy.q, enemy.r));
-    }
-}
-
-function moveEnemyAway(enemy, fromQ, fromR, occupied) {
-    const valid = validAdjacentMoves(enemy, occupied, false);
-    if (valid.length === 0) return;
-    valid.sort((a, b) => hexDistance(b.q, b.r, fromQ, fromR) - hexDistance(a.q, a.r, fromQ, fromR));
-    moveEnemyToNearest(enemy, valid, occupied);
-}
-
-function getNextStepToward(enemy, tq, tr, occupied) {
-    // Use A* to find path, take first step
-    const path = findPath(
-        { q: enemy.q, r: enemy.r },
-        { q: tq, r: tr },
-        (q, r) => {
-            const k = hexKey(q, r);
-            const h = hexes.get(k);
-            if (!h || !isPassable(h)) return false;
-            if (occupied.has(k) && !(q === tq && r === tr)) return false;
-            return true;
-        },
-        (q, r) => MOVEMENT_COST[hexes.get(hexKey(q, r))?.terrain] ?? Infinity,
-        1000
-    );
-    if (path && path.length >= 2) {
-        const next = path[1];
-        const k = hexKey(next.q, next.r);
-        if (!occupied.has(k) && !(next.q === player.q && next.r === player.r)) return next;
-    }
-    return null;
-}
-
-// Returns passable, unoccupied neighbors that are not the player's hex.
-// avoidShattered: wildlife stays off shattered terrain.
-function validAdjacentMoves(enemy, occupied, avoidShattered) {
-    return hexNeighbors(enemy.q, enemy.r).filter(n => {
-        const k = hexKey(n.q, n.r);
-        const h = hexes.get(k);
-        if (!h || !isPassable(h) || occupied.has(k)) return false;
-        if (n.q === player.q && n.r === player.r) return false;
-        if (avoidShattered && UNSHATTERED_VERSION[h.terrain] !== undefined) return false;
-        return true;
-    });
-}
-
-function moveEnemyToNearest(enemy, valid, occupied) {
-    if (valid.length === 0) return;
-    occupied.delete(hexKey(enemy.q, enemy.r));
-    const dest = valid[0];
-    enemy.q = dest.q; enemy.r = dest.r;
-    occupied.add(hexKey(enemy.q, enemy.r));
-}
-
-function wanderEnemy(enemy, occupied) {
-    const valid = validAdjacentMoves(enemy, occupied, false);
-    if (valid.length > 0) {
-        occupied.delete(hexKey(enemy.q, enemy.r));
-        const dest = Rando.choice(valid);
-        enemy.q = dest.q; enemy.r = dest.r;
-        occupied.add(hexKey(enemy.q, enemy.r));
-    }
-}
-
-function moveWildlifeToward(enemy, tq, tr, occupied) {
-    const valid = validAdjacentMoves(enemy, occupied, true);
-    if (valid.length === 0) return;
-    valid.sort((a, b) => hexDistance(a.q, a.r, tq, tr) - hexDistance(b.q, b.r, tq, tr));
-    moveEnemyToNearest(enemy, valid, occupied);
-}
-
-function wanderWildlife(enemy, occupied) {
-    const valid = validAdjacentMoves(enemy, occupied, true);
-    if (valid.length > 0) {
-        occupied.delete(hexKey(enemy.q, enemy.r));
-        const dest = Rando.choice(valid);
-        enemy.q = dest.q; enemy.r = dest.r;
-        occupied.add(hexKey(enemy.q, enemy.r));
-    }
 }
 
 function animDelay(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -1360,43 +863,30 @@ function initGame() {
     gameOver = false;
     gameWon = false;
     turn = 1;
-    breachesClosed = 0;
     enemiesDefeated = 0;
-    enemies = [];
-    pois = [];
     selected = false;
     reachable = null;
     attackable = null;
     targeting = null;
-    warpShieldTurns = 0;
-    usedSkillsThisTurn.clear();
-    revealed = new Set();
-    visible = new Set();
-    enemyNextId = 0;
 
-    let attempts = 0;
-    do {
-        hexes = generateRectGrid();
-        assignTerrain();
-        placePOIs();
-        attempts++;
-    } while (attempts < 20 && !validateMap());
+    world = new GameWorld();
+    world.generate();
 
     // Find starting haven (leftmost)
-    const havens = pois.filter(p => p.type === POI.HAVEN);
+    const havens = world.havens();
     havens.sort((a, b) => {
-        const ha = hexes.get(hexKey(a.q, a.r));
-        const hb = hexes.get(hexKey(b.q, b.r));
+        const ha = world.getHex(a.q, a.r);
+        const hb = world.getHex(b.q, b.r);
         return (ha?.col || 0) - (hb?.col || 0);
     });
-    const startHaven = havens[0] || pois[0];
+    const startHaven = havens[0] || world.pois[0];
 
-    player = createPlayer(startHaven);
-    mp = playerMP();
-    updateVision();
-    generateCreatureTypes();
-    spawnInitialEnemies();
-    spawnInitialCreatures();
+    player = new Player(startHaven.q, startHaven.r);
+    refreshVision();
+    em = new EnemyManager();
+    em.generateCreatureTypes();
+    em.spawnInitial(world, player.q, player.r);
+    em.spawnInitialCreatures(world, player.q, player.r, world.visible);
     centerOn(player);
 
     // Close panels and overlays
@@ -1409,20 +899,6 @@ function initGame() {
     updateSkillBar();
 }
 
-function validateMap() {
-    const havens = pois.filter(p => p.type === POI.HAVEN);
-    const maw = pois.find(p => p.type === POI.MAW);
-    if (havens.length === 0 || !maw) return false;
-    return hasPath(havens[0], maw);
-}
-
-function hasPath(from, to) {
-    const costs = bfsHexes(from, hexes, hex => {
-        const c = MOVEMENT_COST[hex.terrain];
-        return c === undefined ? Infinity : c;
-    }, Infinity);
-    return costs.has(hexKey(to.q, to.r));
-}
 
 function centerOn(hex) {
     const p = hexToPixel(hex.q, hex.r);
@@ -1439,13 +915,13 @@ function render() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Terrain
-    for (const [key, hex] of hexes) {
+    for (const [key, hex] of world.hexes) {
         const { x, y } = hexToScreen(hex.q, hex.r);
         if (x < -HEX_SIZE * 2 || x > canvas.width + HEX_SIZE * 2 ||
             y < -HEX_SIZE * 2 || y > canvas.height + HEX_SIZE * 2) continue;
 
-        const isRevealed = revealed.has(key);
-        const isVisible = visible.has(key);
+        const isRevealed = world.revealed.has(key);
+        const isVisible = world.visible.has(key);
 
         if (!isRevealed) {
             // Black fog
@@ -1479,7 +955,7 @@ function render() {
 
         // POI symbols
         if (hex.poi) {
-            const poi = pois.find(p => p.q === hex.q && p.r === hex.r);
+            const poi = world.poiAt(hex.q, hex.r);
             if (poi) {
                 // Once revealed, POIs always show on the map
                 const showPoi = isVisible || isRevealed;
@@ -1533,11 +1009,11 @@ function render() {
     }
 
     // Enemies (only visible ones)
-    for (const enemy of enemies) {
+    for (const enemy of em.enemies) {
         const ek = hexKey(enemy.q, enemy.r);
-        if (!visible.has(ek)) continue;
+        if (!world.visible.has(ek)) continue;
         const { x, y } = hexToScreen(enemy.q, enemy.r);
-        const def = getDef(enemy.type);
+        const def = em.getDef(enemy.type);
         const color = enemyColor(enemy.type);
         drawCounter(x, y, color, def.label, enemy.hp / enemy.maxHp, null, { atk: def.attack, def: def.defense, mov: def.speed || 1 });
     }
@@ -1546,17 +1022,17 @@ function render() {
     if (player) {
         const { x, y } = hexToScreen(player.q, player.r);
         const playerLabelColor = phase === 'player' ? '#000' : '#b8941a';
-        const wep = getWeapon();
+        const wep = player.weapon();
         const pAtk = (wep ? wep.damage : 0) + (wep && wep.type === 'ranged' ? player.stats.reflex : player.stats.might);
-        const pDef = playerDefense();
-        drawCounter(x, y, PLAYER_COLOR, 'C', player.hp / playerMaxHP(), playerLabelColor, { atk: pAtk, def: pDef, mov: mp });
+        const pDef = player.defense(playerTerrain());
+        drawCounter(x, y, PLAYER_COLOR, 'C', player.hp / player.maxHP(), playerLabelColor, { atk: pAtk, def: pDef, mov: player.mp });
         if (selected) {
             const s = COUNTER_SIZE + 4;
             roundRect(ctx, x - s / 2, y - s / 2, s, s, 6);
             ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
         }
         // Warp Shield indicator
-        if (warpShieldTurns > 0) {
+        if (player.warpShieldTurns > 0) {
             ctx.strokeStyle = '#7c4dff'; ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.arc(x, y, COUNTER_SIZE / 2 + 6, 0, Math.PI * 2);
@@ -1568,7 +1044,7 @@ function render() {
 }
 
 function enemyColor(type) {
-    const def = getDef(type);
+    const def = em.getDef(type);
     if (def && def.color) return def.color;
     switch (type) {
         case ENEMY_TYPE.VOID_STALKER: return '#cc3333';
@@ -1587,7 +1063,7 @@ function enemyColor(type) {
 
 function updateHUD() {
     document.getElementById('turn-info').textContent = 'Turn ' + turn;
-    const mhp = playerMaxHP();
+    const mhp = player.maxHP();
     document.getElementById('hp-text').textContent = player.hp + '/' + mhp;
     document.getElementById('hp-fill').style.width = (player.hp / mhp * 100) + '%';
     // HP bar color
@@ -1597,10 +1073,10 @@ function updateHUD() {
     else if (hpPct > 0.25) hpFill.style.background = '#ff9800';
     else hpFill.style.background = '#f44336';
 
-    const mae = playerMaxAether();
+    const mae = player.maxAether();
     document.getElementById('ae-text').textContent = player.aether + '/' + mae;
     document.getElementById('ae-fill').style.width = (player.aether / mae * 100) + '%';
-    document.getElementById('mp-info').textContent = 'MP: ' + mp + '/' + playerMP();
+    document.getElementById('mp-info').textContent = 'MP: ' + player.mp + '/' + player.maxMP();
     document.getElementById('level-info').textContent = 'Lv ' + player.level;
     const xpNeeded = player.level < 10 ? xpForLevel(player.level + 1) : null;
     document.getElementById('xp-text').textContent = player.xp + '/' + (xpNeeded ?? '---');
@@ -1609,12 +1085,12 @@ function updateHUD() {
 
     // Context bar
     if (hoveredHex) {
-        const hex = hexes.get(hexKey(hoveredHex.q, hoveredHex.r));
-        if (hex && revealed.has(hexKey(hex.q, hex.r))) {
+        const hex = world.getHex(hoveredHex.q, hoveredHex.r);
+        if (hex && world.revealed.has(hexKey(hex.q, hex.r))) {
             document.getElementById('ctx-terrain').textContent = TERRAIN_NAMES[hex.terrain] || 'Unknown';
-            const enemy = enemies.find(e => e.q === hoveredHex.q && e.r === hoveredHex.r && visible.has(hexKey(e.q, e.r)));
+            const enemy = em.enemies.find(e => e.q === hoveredHex.q && e.r === hoveredHex.r && world.visible.has(hexKey(e.q, e.r)));
             if (enemy) {
-                const def = getDef(enemy.type);
+                const def = em.getDef(enemy.type);
                 document.getElementById('ctx-entity').textContent = `${def.name} (HP ${enemy.hp}/${enemy.maxHp})`;
             } else {
                 document.getElementById('ctx-entity').textContent = '';
@@ -1634,9 +1110,9 @@ function updateSkillBar() {
         if (skillId) {
             const skill = SKILLS[skillId];
             nameEl.textContent = skill.name;
-            const canUse = player.aether >= skill.cost && !usedSkillsThisTurn.has(skillId) && phase === 'player' && !gameOver;
+            const canUse = player.aether >= skill.cost && !player.usedSkillsThisTurn.has(skillId) && phase === 'player' && !gameOver;
             slot.classList.toggle('disabled', !canUse);
-            slot.classList.toggle('used', usedSkillsThisTurn.has(skillId));
+            slot.classList.toggle('used', player.usedSkillsThisTurn.has(skillId));
             slot.classList.toggle('active', targeting && targeting.skill === skillId);
         } else {
             nameEl.textContent = '-';
@@ -1663,13 +1139,13 @@ function updateCharPanel() {
 
     // Derived
     const derived = document.getElementById('char-derived');
-    const wep = getWeapon();
+    const wep = player.weapon();
     derived.innerHTML = `<div class="derived-section">
         <div>Attack: ${wep ? wep.damage : 0} + ${wep?.type === 'ranged' ? player.stats.reflex : player.stats.might}</div>
-        <div>Defense: ${playerDefense()}</div>
-        <div>Dodge: ${playerDodge()}%</div>
-        <div>Vision: ${playerVision()}</div>
-        <div>MP: ${playerMP()}</div>
+        <div>Defense: ${player.defense(playerTerrain())}</div>
+        <div>Dodge: ${player.dodge()}%</div>
+        <div>Vision: ${player.vision()}</div>
+        <div>MP: ${player.maxMP()}</div>
     </div>`;
 
     // Equipment
@@ -1689,8 +1165,8 @@ function updateCharPanel() {
             const stat = btn.dataset.stat;
             player.stats[stat]++;
             player.statPoints--;
-            player.hp = Math.min(player.hp, playerMaxHP());
-            player.aether = Math.min(player.aether, playerMaxAether());
+            player.hp = Math.min(player.hp, player.maxHP());
+            player.aether = Math.min(player.aether, player.maxAether());
             updateCharPanel();
             updateHUD();
             updateSkillBar();
@@ -1764,8 +1240,8 @@ function updateInvPanel() {
                 player.equipment[slot] = null;
                 player.inventory.push(id);
             }
-            player.hp = Math.min(player.hp, playerMaxHP());
-            player.aether = Math.min(player.aether, playerMaxAether());
+            player.hp = Math.min(player.hp, player.maxHP());
+            player.aether = Math.min(player.aether, player.maxAether());
             updateInvPanel();
             updateCharPanel();
             updateHUD();
@@ -1843,9 +1319,9 @@ function showHavenDialog(poi) {
     showDialog(POI_SYMBOLS[POI.HAVEN] + ' Haven', '<p>A place of safety amid the chaos.</p>', [
         {
             label: 'Rest', cls: 'primary', action: () => {
-                player.hp = playerMaxHP();
-                player.aether = playerMaxAether();
-                mp = 0;
+                player.hp = player.maxHP();
+                player.aether = player.maxAether();
+                player.mp = 0;
                 logCombat('Fully rested.', 'log-heal');
                 checkEndTurn();
             }
@@ -1859,11 +1335,11 @@ function showCampDialog(poi) {
     showDialog(POI_SYMBOLS[POI.CAMP] + ' Camp', '<p>A brief respite from the wilds.</p>', [
         {
             label: 'Rest', cls: 'primary', action: () => {
-                const healAmt = Math.floor(playerMaxHP() * 0.5);
-                player.hp = Math.min(playerMaxHP(), player.hp + healAmt);
-                const aeAmt = Math.floor(playerMaxAether() * 0.5);
-                player.aether = Math.min(playerMaxAether(), player.aether + aeAmt);
-                mp = 0;
+                const healAmt = Math.floor(player.maxHP() * 0.5);
+                player.hp = Math.min(player.maxHP(), player.hp + healAmt);
+                const aeAmt = Math.floor(player.maxAether() * 0.5);
+                player.aether = Math.min(player.maxAether(), player.aether + aeAmt);
+                player.mp = 0;
                 logCombat(`Rested: +${healAmt} HP, +${aeAmt} AE`, 'log-heal');
                 checkEndTurn();
             }
@@ -1939,17 +1415,17 @@ function showRuinDialog(poi) {
     }
 
     // Spawn ruin enemies nearby
-    const occupied = new Set(enemies.map(e => hexKey(e.q, e.r)));
+    const occupied = new Set(em.enemies.map(e => hexKey(e.q, e.r)));
     occupied.add(hexKey(player.q, player.r));
     const adj = hexNeighbors(poi.q, poi.r).filter(n => {
-        const h = hexes.get(hexKey(n.q, n.r));
-        return h && isPassable(h) && !occupied.has(hexKey(n.q, n.r));
+        const h = world.getHex(n.q, n.r);
+        return h && world.isPassable(h) && !occupied.has(hexKey(n.q, n.r));
     });
     Rando.shuffle(adj);
     const spawnCount = Math.min(poi.ruinEnemies || 1, adj.length);
     for (let i = 0; i < spawnCount; i++) {
         const type = Rando.bool(0.5) ? ENEMY_TYPE.VOID_STALKER : ENEMY_TYPE.FLUX_ARCHER;
-        spawnEnemy(type, adj[i].q, adj[i].r);
+        em.spawn(type, adj[i].q, adj[i].r);
     }
     if (spawnCount > 0) body += `<p style="color:#ef5350">Enemies emerge from the shadows!</p>`;
 
@@ -1986,8 +1462,8 @@ function showLevelUpDialog() {
             player.statPoints--;
             document.getElementById(`alloc-${stat}`).textContent = player.stats[stat];
             document.getElementById('alloc-remaining').textContent = 'Remaining: ' + player.statPoints;
-            player.hp = Math.min(player.hp, playerMaxHP());
-            player.aether = Math.min(player.aether, playerMaxAether());
+            player.hp = Math.min(player.hp, player.maxHP());
+            player.aether = Math.min(player.aether, player.maxAether());
             updateHUD();
         });
     });
@@ -2047,7 +1523,7 @@ function endGame(won) {
         <div>Turns: ${turn}</div>
         <div>Level: ${player.level}</div>
         <div>Enemies defeated: ${enemiesDefeated}</div>
-        <div>Breaches sealed: ${breachesClosed}</div>
+        <div>Breaches sealed: ${world.breachesClosed}</div>
     `;
     overlay.classList.remove('hidden');
 }
@@ -2192,14 +1668,14 @@ window.addEventListener('keydown', e => {
 });
 
 function activateRangedWeapon() {
-    const wep = getWeapon();
+    const wep = player.weapon();
     if (!wep || wep.type !== 'ranged') { logCombat('No ranged weapon!', 'log-info'); return; }
     const cost = wep.special === 'free_ranged' ? 0 : 1;
     if (player.aether < cost) { logCombat('Not enough Aether!', 'log-info'); return; }
-    const range = playerWeaponRange();
+    const range = player.weaponRange(playerTerrain());
     const validHexes = new Set();
     for (const h of hexesInRange(player.q, player.r, range)) {
-        if (enemies.some(en => en.q === h.q && en.r === h.r && visible.has(hexKey(en.q, en.r))) && hasLOS(player, h)) {
+        if (em.enemies.some(en => en.q === h.q && en.r === h.r && world.visible.has(hexKey(en.q, en.r))) && world.hasLOS(player, h)) {
             validHexes.add(hexKey(h.q, h.r));
         }
     }
@@ -2216,7 +1692,7 @@ function activateSkillSlot(slotIdx) {
     if (!skillId) return;
     const skill = SKILLS[skillId];
     if (player.aether < skill.cost) { logCombat('Not enough Aether!', 'log-info'); return; }
-    if (usedSkillsThisTurn.has(skillId)) { logCombat('Already used this turn!', 'log-info'); return; }
+    if (player.usedSkillsThisTurn.has(skillId)) { logCombat('Already used this turn!', 'log-info'); return; }
 
     if (skill.target === SKILL_TARGET.SELF || skill.target === SKILL_TARGET.AOE_SELF) {
         executeSkill(skillId, player.q, player.r);
