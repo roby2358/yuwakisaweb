@@ -580,6 +580,10 @@ function killEnemy(enemy) {
     player.gold += goldGain;
     logCombat(`${def.name} defeated!`, 'log-info');
     logCombat(`+${goldGain}g`, 'log-gold');
+    if (def.chaosSpawned) {
+        player.aether = Math.min(playerMaxAether(), player.aether + 1);
+        logCombat('+1 AE', 'log-info');
+    }
     gainXP(def.xp);
 
     // Breach guardian drop
@@ -1031,11 +1035,12 @@ function endTurn() {
 }
 
 async function runEnemyPhase() {
+    // Natural HP recovery
+    player.hp = Math.min(playerMaxHP(), player.hp + 1);
     // Vitality Stone regen
     const art = getArtifact();
     if (art && art.special === 'regen') {
-        const heal = art.regenAmount;
-        player.hp = Math.min(playerMaxHP(), player.hp + heal);
+        player.hp = Math.min(playerMaxHP(), player.hp + art.regenAmount);
     }
     // Warp Shield countdown
     if (warpShieldTurns > 0) warpShieldTurns--;

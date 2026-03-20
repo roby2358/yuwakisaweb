@@ -169,7 +169,7 @@ export const ENEMY_DEFS = {
 export const EQUIP_SLOT = { WEAPON: 'weapon', ARMOR: 'armor', ARTIFACT: 'artifact' };
 
 export const WEAPONS = [
-    { id: 'rusty_blade', name: 'Rusty Blade', type: 'melee', damage: 4, range: 0, special: null, price: 0, tier: 0 },
+    { id: 'rusty_blade', name: 'Rusty Blade', type: 'melee', damage: 1, range: 0, special: null, price: 0, tier: 0 },
     { id: 'void_cleaver', name: 'Void Cleaver', type: 'melee', damage: 7, range: 0, special: 'chaos_bonus', price: 40, tier: 1 },
     { id: 'starforged_sword', name: 'Starforged Sword', type: 'melee', damage: 10, range: 0, special: null, price: 100, tier: 2 },
     { id: 'dimensional_edge', name: 'Dimensional Edge', type: 'melee', damage: 12, range: 0, special: 'cleave', price: 150, tier: 3 },
@@ -179,7 +179,7 @@ export const WEAPONS = [
 ];
 
 export const ARMORS = [
-    { id: 'worn_leather', name: 'Worn Leather', defense: 2, special: null, price: 0, tier: 0 },
+    { id: 'worn_leather', name: 'Worn Leather', defense: 1, special: null, price: 0, tier: 0 },
     { id: 'warded_mail', name: 'Warded Mail', defense: 4, special: 'hp_bonus', hpBonus: 10, price: 50, tier: 1 },
     { id: 'chaosweave_cloak', name: 'Chaosweave Cloak', defense: 3, special: 'vision_bonus', visionBonus: 2, price: 45, tier: 1 },
     { id: 'starplate', name: 'Starplate', defense: 6, special: 'mp_penalty', mpPenalty: 1, price: 120, tier: 2 },
