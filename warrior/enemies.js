@@ -56,6 +56,7 @@ export class EnemyManager {
         ];
 
         const usedNames = new Set();
+        const palette = ColorTheory.randomScheme(() => Math.random());
 
         for (let i = 0; i < 12; i++) {
             let name;
@@ -63,7 +64,7 @@ export class EnemyManager {
                 const prefix = Rando.choice(prefixes);
                 const predator = Rando.choice(predators);
                 const suffix = Rando.choice(suffixes);
-                name = prefix + suffix + ' ' + predator;
+                name = prefix + predator + suffix;
             } while (usedNames.has(name));
             usedNames.add(name);
 
@@ -75,12 +76,10 @@ export class EnemyManager {
             const detectRange = Math.min(7, 4 + Math.floor(attack / 4));
             const aggroRange = Rando.int(3, detectRange);
 
-            const scheme = ColorTheory.randomScheme(() => Math.random());
-            const baseColor = scheme[0];
-            const h = (baseColor.h + Rando.int(-20, 20) / 360) % 1;
-            const s = Math.min(1, Math.max(0.3, baseColor.s + Rando.int(-10, 10) / 100));
-            const l = Math.min(0.7, Math.max(0.3, baseColor.l + Rando.int(-10, 10) / 100));
-            const color = { h, s, l };
+            const baseColor = palette[i % palette.length];
+            const [bh, bs, bl] = ColorTheory.rgbToHsl(baseColor[0], baseColor[1], baseColor[2]);
+            const varied = ColorTheory.hslToRgb(bh, Math.min(1, bs + 0.1), Math.max(0.3, Math.min(0.7, bl + Rando.float(-0.15, 0.15))));
+            const color = ColorTheory.rgbToHex(varied[0], varied[1], varied[2]);
 
             const typeKey = 'creature_' + i;
             this.creatureDefs[typeKey] = {
@@ -127,7 +126,7 @@ export class EnemyManager {
                 this.spawn(ENEMY_TYPE.BREACH_GUARDIAN, poi.q, poi.r, poi.q, poi.r);
                 // 1-2 crawlers near each breach
                 const nearby = hexesInRange(poi.q, poi.r, 2)
-                    .filter(h => world.isPassable(h.q, h.r) && !this.enemyAt(h.q, h.r)
+                    .filter(h => world.isPassable(world.getHex(h.q, h.r)) && !this.enemyAt(h.q, h.r)
                         && !(h.q === poi.q && h.r === poi.r));
                 const numCrawlers = Rando.int(1, 2);
                 for (let i = 0; i < numCrawlers; i++) {
@@ -165,7 +164,7 @@ export class EnemyManager {
     validAdjacentMoves(enemy, occupied, avoidShattered, playerQ, playerR, world) {
         return hexNeighbors(enemy.q, enemy.r).filter(n => {
             const key = hexKey(n.q, n.r);
-            if (!world.isPassable(n.q, n.r)) return false;
+            if (!world.isPassable(world.getHex(n.q, n.r))) return false;
             if (occupied.has(key)) return false;
             if (n.q === playerQ && n.r === playerR) return false;
             if (avoidShattered) {
@@ -224,7 +223,7 @@ export class EnemyManager {
 
     getNextStepToward(enemy, tq, tr, occupied, world) {
         const isPassable = (q, r) => {
-            if (!world.isPassable(q, r)) return false;
+            if (!world.isPassable(world.getHex(q, r))) return false;
             const key = hexKey(q, r);
             // Allow the target hex through even if occupied
             if (q === tq && r === tr) return true;
@@ -236,9 +235,10 @@ export class EnemyManager {
             return MOVEMENT_COST[hex.terrain] || 1;
         };
         const path = findPath({ q: enemy.q, r: enemy.r }, { q: tq, r: tr }, isPassable, movementCost);
-        if (path && path.length > 1) {
-            return path[1];
-        }
-        return null;
+        if (!path || path.length < 2) return null;
+        const next = path[1];
+        const nextKey = hexKey(next.q, next.r);
+        if (occupied.has(nextKey)) return null;
+        return next;
     }
 }

@@ -797,6 +797,7 @@ async function runEnemyPhase() {
     for (const enemy of [...em.enemies]) {
         if (gameOver) break;
         const def = em.getDef(enemy.type);
+        if (!def) continue;
         const aggro = def.aggroRange || def.detectRange || 0;
         enemy.turnsSinceSpawn++;
 
@@ -1012,8 +1013,9 @@ function render() {
     for (const enemy of em.enemies) {
         const ek = hexKey(enemy.q, enemy.r);
         if (!world.visible.has(ek)) continue;
-        const { x, y } = hexToScreen(enemy.q, enemy.r);
         const def = em.getDef(enemy.type);
+        if (!def) { console.warn('Missing def for enemy type:', enemy.type); continue; }
+        const { x, y } = hexToScreen(enemy.q, enemy.r);
         const color = enemyColor(enemy.type);
         drawCounter(x, y, color, def.label, enemy.hp / enemy.maxHp, null, { atk: def.attack, def: def.defense, mov: def.speed || 1 });
     }
