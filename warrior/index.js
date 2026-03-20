@@ -1027,6 +1027,19 @@ function closeBreach(poi) {
     render();
 }
 
+function manualEndTurn() {
+    if (gameOver || phase !== 'player') return;
+    if (mp > 0) {
+        const poi = pois.find(p => p.q === player.q && p.r === player.r);
+        if (poi && (poi.type === POI.HAVEN || poi.type === POI.CAMP)) {
+            if (poi.type === POI.HAVEN) showHavenDialog(poi);
+            else showCampDialog(poi);
+            return;
+        }
+    }
+    endTurn();
+}
+
 function endTurn() {
     if (gameOver) return;
     deselectPlayer();
@@ -1097,6 +1110,9 @@ async function runEnemyPhase() {
             }
         }
 
+        // Ranged-capable chasers (Void Stalker): 50% prefer ranged, skip closing in
+        const prefersRanged = def.rangedAttack && def.behavior === 'chase' && Rando.bool(0.5);
+
         // Movement (chaos enemies: aggro = detectRange)
         let moved = false;
         const speed = def.speed || 1;
@@ -1133,10 +1149,10 @@ async function runEnemyPhase() {
                 }
             } else {
                 // chase or default
-                if (dist <= aggro) {
+                if (dist <= aggro && !prefersRanged) {
                     moveEnemyToward(enemy, player.q, player.r, occupied);
                     moved = true;
-                } else if (Rando.bool(0.5)) {
+                } else if (!prefersRanged && Rando.bool(0.5)) {
                     wanderEnemy(enemy, occupied);
                     moved = true;
                 }
@@ -1147,23 +1163,38 @@ async function runEnemyPhase() {
             render();
         }
 
-        // Attack
+        // Attack — each enemy does melee OR ranged, never both
         const newDist = hexDistance(enemy.q, enemy.r, player.q, player.r);
-        if (newDist === 1 && (!def.range || def.behavior !== 'kite')) {
-            dealDamageToPlayer(def.attack, def.name, false);
-            await animDelay(150);
-            render();
-        }
-        if (def.rangedAttack && def.range && newDist <= def.range && newDist > 1 && hasLOS(enemy, player)) {
-            dealDamageToPlayer(def.rangedAttack, `${def.name} (ranged)`, false);
-            await animDelay(150);
-            render();
-        } else if (!def.rangedAttack && def.range && newDist <= def.range && newDist > 1 && hasLOS(enemy, player)) {
-            if (newDist > 1) {
-                dealDamageToPlayer(def.attack, `${def.name} (ranged)`, false);
-                await animDelay(150);
-                render();
+        let attacked = false;
+        if (def.behavior === 'guard' || def.behavior === 'boss') {
+            // Melee if adjacent, otherwise ranged
+            if (newDist === 1) {
+                dealDamageToPlayer(def.attack, def.name, false);
+                attacked = true;
+            } else if (def.rangedAttack && def.range && newDist <= def.range && hasLOS(enemy, player)) {
+                dealDamageToPlayer(def.rangedAttack, `${def.name} (ranged)`, false);
+                attacked = true;
             }
+        } else if (def.behavior === 'kite') {
+            // 50% chance to fire ranged
+            if (Rando.bool(0.5) && def.range && newDist <= def.range && newDist > 1 && hasLOS(enemy, player)) {
+                dealDamageToPlayer(def.attack, `${def.name} (ranged)`, false);
+                attacked = true;
+            }
+        } else if (prefersRanged) {
+            // Void Stalker chose ranged this turn
+            if (def.rangedAttack && def.range && newDist <= def.range && hasLOS(enemy, player)) {
+                dealDamageToPlayer(def.rangedAttack, `${def.name} (ranged)`, false);
+                attacked = true;
+            }
+        } else if (newDist === 1) {
+            // Melee-only or Void Stalker chose close
+            dealDamageToPlayer(def.attack, def.name, false);
+            attacked = true;
+        }
+        if (attacked) {
+            await animDelay(150);
+            render();
         }
 
         // Boss spawning
@@ -1271,7 +1302,6 @@ function getNextStepToward(enemy, tq, tr, occupied) {
             const h = hexes.get(k);
             if (!h || !isPassable(h)) return false;
             if (occupied.has(k) && !(q === tq && r === tr)) return false;
-            if (q === player.q && r === player.r) return false;
             return true;
         },
         (q, r) => MOVEMENT_COST[hexes.get(hexKey(q, r))?.terrain] ?? Infinity,
@@ -1831,7 +1861,9 @@ function showHavenDialog(poi) {
             label: 'Rest', cls: 'primary', action: () => {
                 player.hp = playerMaxHP();
                 player.aether = playerMaxAether();
+                mp = 0;
                 logCombat('Fully rested.', 'log-heal');
+                checkEndTurn();
             }
         },
         { label: 'Shop', action: () => showShopDialog(poi) },
@@ -1847,7 +1879,9 @@ function showCampDialog(poi) {
                 player.hp = Math.min(playerMaxHP(), player.hp + healAmt);
                 const aeAmt = Math.floor(playerMaxAether() * 0.5);
                 player.aether = Math.min(playerMaxAether(), player.aether + aeAmt);
+                mp = 0;
                 logCombat(`Rested: +${healAmt} HP, +${aeAmt} AE`, 'log-heal');
+                checkEndTurn();
             }
         },
         { label: 'Leave' }
@@ -2122,7 +2156,7 @@ canvas.addEventListener('contextmenu', e => {
 });
 
 document.getElementById('end-turn').addEventListener('click', () => {
-    if (phase === 'player' && !gameOver) endTurn();
+    if (phase === 'player' && !gameOver) manualEndTurn();
 });
 
 document.getElementById('new-game').addEventListener('click', () => {
@@ -2153,7 +2187,7 @@ window.addEventListener('keydown', e => {
 
     if (e.key === ' ' || e.key === 'e' || e.key === 'E') {
         e.preventDefault();
-        if (phase === 'player') endTurn();
+        if (phase === 'player') manualEndTurn();
     } else if (e.key === 'Escape') {
         if (targeting) { targeting = null; render(); updateSkillBar(); }
         else { deselectPlayer(); closeAllPanels(); render(); }
