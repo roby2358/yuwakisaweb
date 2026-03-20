@@ -753,7 +753,11 @@ async function runChaosTurn(enemy, def, occupied) {
         const valid = hexesInRange(player.q, player.r, def.teleportRange).filter(t => {
             const k = hexKey(t.q, t.r);
             const h = world.getHex(t.q, t.r);
-            return h && world.isPassable(h) && !occupied.has(k) && !(t.q === player.q && t.r === player.r);
+            if (!h || !world.isPassable(h) || occupied.has(k)) return false;
+            if (t.q === player.q && t.r === player.r) return false;
+            const poi = world.poiAt(t.q, t.r);
+            if (poi && poi.type === POI.HAVEN) return false;
+            return true;
         });
         if (valid.length > 0) {
             occupied.delete(hexKey(enemy.q, enemy.r));
