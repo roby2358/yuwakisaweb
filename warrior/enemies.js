@@ -121,9 +121,11 @@ export class EnemyManager {
         // Spawn guardians and crawlers at breach/maw POIs
         for (const poi of world.pois) {
             if (poi.type === POI.MAW) {
-                this.spawn(ENEMY_TYPE.UNRAVELER, poi.q, poi.r, poi.q, poi.r);
+                const g = this.spawn(ENEMY_TYPE.UNRAVELER, poi.q, poi.r, poi.q, poi.r);
+                if (g) poi.guardianId = g.id;
             } else if (poi.type === POI.BREACH) {
-                this.spawn(ENEMY_TYPE.BREACH_GUARDIAN, poi.q, poi.r, poi.q, poi.r);
+                const g = this.spawn(ENEMY_TYPE.BREACH_GUARDIAN, poi.q, poi.r, poi.q, poi.r);
+                if (g) poi.guardianId = g.id;
                 // 1-2 crawlers near each breach
                 const nearby = hexesInRange(poi.q, poi.r, 2)
                     .filter(h => world.isPassable(world.getHex(h.q, h.r)) && !this.enemyAt(h.q, h.r)
