@@ -90,7 +90,7 @@ function contrastText(hexColor) {
     return (0.2126 * r + 0.7152 * g + 0.0722 * b) > 0.4 ? '#000' : '#fff';
 }
 
-function drawCounter(cx, cy, color, label, hpPct, labelColor, atk, def) {
+function drawCounter(cx, cy, color, label, hpPct, labelColor, atk, def, mov) {
     const s = COUNTER_SIZE;
     const x = cx - s / 2, y = cy - s / 2;
     const r = 4;
@@ -112,16 +112,18 @@ function drawCounter(cx, cy, color, label, hpPct, labelColor, atk, def) {
     ctx.font = 'bold ' + Math.floor(s * 0.55) + 'px monospace';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(label, cx, cy - 2);
-    // Attack and defense stats
+    // Stats: atk-def bottom-left, movement bottom-right
     if (atk !== undefined) {
         const statColor = labelColor || contrastText(color);
-        ctx.font = Math.floor(s * 0.32) + 'px monospace';
+        ctx.font = Math.floor(s * 0.28) + 'px monospace';
         ctx.fillStyle = statColor;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'bottom';
-        ctx.fillText(atk, x + 2, y + s - 1);
-        ctx.textAlign = 'right';
-        ctx.fillText(def, x + s - 2, y + s - 1);
+        ctx.fillText(atk + '-' + def, x + 1, y + s - 1);
+        if (mov !== undefined) {
+            ctx.textAlign = 'right';
+            ctx.fillText(mov, x + s - 1, y + s - 1);
+        }
     }
     // HP bar under counter
     if (hpPct !== undefined && hpPct < 1) {
@@ -1532,7 +1534,7 @@ function render() {
         const { x, y } = hexToScreen(enemy.q, enemy.r);
         const def = getDef(enemy.type);
         const color = enemyColor(enemy.type);
-        drawCounter(x, y, color, def.label, enemy.hp / enemy.maxHp, undefined, def.attack, def.defense);
+        drawCounter(x, y, color, def.label, enemy.hp / enemy.maxHp, undefined, def.attack, def.defense, def.speed || 1);
     }
 
     // Player
@@ -1542,7 +1544,7 @@ function render() {
         const wep = getWeapon();
         const pAtk = (wep ? wep.damage : 0) + (wep && wep.type === 'ranged' ? player.stats.reflex : player.stats.might);
         const pDef = playerDefense();
-        drawCounter(x, y, PLAYER_COLOR, 'C', player.hp / playerMaxHP(), playerLabelColor, pAtk, pDef);
+        drawCounter(x, y, PLAYER_COLOR, 'C', player.hp / playerMaxHP(), playerLabelColor, pAtk, pDef, mp);
         if (selected) {
             const s = COUNTER_SIZE + 4;
             roundRect(ctx, x - s / 2, y - s / 2, s, s, 6);
