@@ -301,7 +301,7 @@ function createPlayer(startHex) {
             [EQUIP_SLOT.ARMOR]: 'worn_leather',
             [EQUIP_SLOT.ARTIFACT]: null
         },
-        skills: ['void_strike', 'restore', null, null],
+        skills: ['restore', null, null, null],
         inventory: [],  // item ids
         statPoints: 0,
         pendingSkillChoice: false
@@ -1972,22 +1972,21 @@ function showLevelUpDialog() {
 
 function showSkillChoiceDialog() {
     player.pendingSkillChoice = false;
-    // Pick 2 skills the player doesn't have, appropriate for current level
     const available = Object.values(SKILLS).filter(s =>
         s.minLevel <= player.level &&
         !player.skills.includes(s.id)
     );
     if (available.length === 0) return;
-    Rando.shuffle(available);
-    const choices = available.slice(0, 2);
+    available.sort((a, b) => a.minLevel - b.minLevel || a.cost - b.cost);
 
-    let body = '<p>Choose a new skill:</p>';
-    for (const skill of choices) {
+    let body = '<p>Choose a new skill:</p><div style="max-height:260px;overflow-y:auto">';
+    for (const skill of available) {
         body += `<div class="skill-choice" data-skill="${skill.id}">
             <div><span class="sc-name">${skill.name}</span> <span class="sc-cost">(${skill.cost} AE)</span></div>
             <div class="sc-desc">${skill.desc}</div>
         </div>`;
     }
+    body += '</div>';
 
     showDialog('New Skill!', body, []);
 
