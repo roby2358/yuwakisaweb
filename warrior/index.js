@@ -55,6 +55,7 @@ let warpShieldTurns = 0;    // turns remaining on Warp Shield
 let usedSkillsThisTurn = new Set();
 let hoveredHex = null;
 let enemyNextId = 0;
+let creatureDefs = {};  // generated each game: { creature_0: { name, label, ... }, ... }
 
 // ---- View state ----
 let panX = 0, panY = 0;
@@ -69,6 +70,8 @@ window.addEventListener('resize', resize);
 // ---- Coordinate helpers ----
 function hexToScreen(q, r) { const p = hexToPixel(q, r); return { x: p.x + panX, y: p.y + panY }; }
 function screenToHex(sx, sy) { return pixelToHex(sx - panX, sy - panY); }
+
+function getDef(type) { return ENEMY_DEFS[type] || creatureDefs[type]; }
 
 // ---- Drawing helpers ----
 function roundRect(ctx, x, y, w, h, r) {
@@ -348,7 +351,7 @@ function playerMP() {
 function playerMeleeDamage(enemy) {
     const wep = getWeapon();
     let dmg = (wep ? wep.damage : 1) + player.stats.might;
-    if (wep && wep.special === 'chaos_bonus' && ENEMY_DEFS[enemy.type].chaosSpawned) dmg += 2;
+    if (wep && wep.special === 'chaos_bonus' && getDef(enemy.type).chaosSpawned) dmg += 2;
     return dmg;
 }
 
@@ -378,7 +381,7 @@ function isEngaged() {
 
 function spawnEnemy(type, q, r, homeQ, homeR) {
     if (enemies.length >= MAX_ENEMIES) return null;
-    const def = ENEMY_DEFS[type];
+    const def = getDef(type);
     const e = {
         id: enemyNextId++, type, q, r, hp: def.hp, maxHp: def.hp,
         homeQ: homeQ ?? q, homeR: homeR ?? r, turnsSinceSpawn: 0
@@ -437,6 +440,63 @@ function spawnInitialEnemies() {
 }
 
 // ================================================================
+// WILDLIFE CREATURES
+// ================================================================
+
+function generateCreatureName() {
+    const predators = ['tiger', 'lion', 'cheetah', 'wolf', 'bear', 'hawk', 'shark', 'viper', 'panther', 'cobra', 'eagle', 'falcon'];
+    const prefixes = ['Ash', 'Vel', 'Dra', 'Gor', 'Mur', 'Thr', 'Zan', 'Kri', 'Vor', 'Eld', 'Grim', 'Sar', 'Fen', 'Bal', 'Rix', 'Nar', 'Osi', 'Bry', 'Cal', 'Dul'];
+    const suffixes = ['ax', 'or', 'ith', 'old', 'un', 'ek', 'ang', 'us', 'ar', 'on', 'ine', 'oth', 'usk', 'el', 'arn', 'ox'];
+    const pred = Rando.choice(predators);
+    const prefix = Rando.choice(prefixes);
+    const suffix = Rando.choice(suffixes);
+    return prefix + pred + suffix;
+}
+
+function generateCreatureTypes() {
+    creatureDefs = {};
+    const usedNames = new Set();
+    const palette = ColorTheory.randomScheme(() => Math.random());
+    for (let i = 0; i < 12; i++) {
+        let name;
+        do { name = generateCreatureName(); } while (usedNames.has(name));
+        usedNames.add(name);
+        const attack = 3 + Math.floor(i * 9 / 11); // 3 to 12 spread across 12 types
+        const hp = attack * 4 + Rando.int(-3, 3);
+        const defense = Math.floor(attack / 4);
+        const xp = attack * 2;
+        const gold = Math.max(1, Math.floor(attack / 3));
+        // Pick a color from the palette, cycling through and varying lightness
+        const baseColor = palette[i % palette.length];
+        const [h, s, l] = ColorTheory.rgbToHsl(baseColor[0], baseColor[1], baseColor[2]);
+        const varied = ColorTheory.hslToRgb(h, Math.min(1, s + 0.1), Math.max(0.3, Math.min(0.7, l + Rando.float(-0.15, 0.15))));
+        const color = ColorTheory.rgbToHex(varied[0], varied[1], varied[2]);
+        creatureDefs[`creature_${i}`] = {
+            name, label: name[0], hp, attack, defense,
+            speed: 1, detectRange: 0, xp, gold,
+            behavior: 'wildlife', chaosSpawned: false, color
+        };
+    }
+}
+
+function spawnInitialCreatures() {
+    const occupied = new Set([hexKey(player.q, player.r)]);
+    for (const e of enemies) occupied.add(hexKey(e.q, e.r));
+    for (const poi of pois) occupied.add(hexKey(poi.q, poi.r));
+    const pool = passableHexes().filter(h => {
+        const k = hexKey(h.q, h.r);
+        return !occupied.has(k) && !visible.has(k) && UNSHATTERED_VERSION[h.terrain] === undefined;
+    });
+    Rando.shuffle(pool);
+    const types = Object.keys(creatureDefs);
+    const count = Math.min(20, pool.length);
+    for (let i = 0; i < count; i++) {
+        const type = Rando.choice(types);
+        spawnEnemy(type, pool[i].q, pool[i].r);
+    }
+}
+
+// ================================================================
 // FOG OF WAR
 // ================================================================
 
@@ -469,7 +529,7 @@ function rollDamage(strength) {
 }
 
 function dealDamageToEnemy(enemy, damage, source) {
-    const def = ENEMY_DEFS[enemy.type];
+    const def = getDef(enemy.type);
     const rolled = rollDamage(damage);
     const actualDmg = Math.max(1, rolled - def.defense);
     enemy.hp -= actualDmg;
@@ -508,7 +568,7 @@ function dealDamageToPlayer(damage, source, isSkillDamage) {
 }
 
 function killEnemy(enemy) {
-    const def = ENEMY_DEFS[enemy.type];
+    const def = getDef(enemy.type);
     const idx = enemies.indexOf(enemy);
     if (idx >= 0) enemies.splice(idx, 1);
     enemiesDefeated++;
@@ -564,7 +624,7 @@ function meleeAttack(enemy) {
 
     if (!killed) {
         // Counter-attack
-        const def = ENEMY_DEFS[enemy.type];
+        const def = getDef(enemy.type);
         dealDamageToPlayer(def.attack, `${def.name} counters`, false);
     }
     return killed;
@@ -579,7 +639,7 @@ function rangedAttack(targetQ, targetR) {
         // Deal full damage, ignoring defense
         const actualDmg = Math.max(1, dmg);
         enemy.hp -= actualDmg;
-        logCombat(`Ranged: ${actualDmg} dmg to ${ENEMY_DEFS[enemy.type].name}`, 'log-dmg');
+        logCombat(`Ranged: ${actualDmg} dmg to ${getDef(enemy.type).name}`, 'log-dmg');
         if (enemy.hp <= 0) killEnemy(enemy);
     } else {
         dealDamageToEnemy(enemy, dmg, 'Ranged');
@@ -995,7 +1055,7 @@ async function runEnemyPhase() {
 
     for (const enemy of [...enemies]) {
         if (gameOver) break;
-        const def = ENEMY_DEFS[enemy.type];
+        const def = getDef(enemy.type);
         const dist = hexDistance(enemy.q, enemy.r, player.q, player.r);
         enemy.turnsSinceSpawn++;
 
@@ -1049,6 +1109,9 @@ async function runEnemyPhase() {
                     wanderEnemy(enemy, occupied);
                     moved = true;
                 }
+            } else if (def.behavior === 'wildlife') {
+                wanderWildlife(enemy, occupied);
+                moved = true;
             } else if (def.behavior === 'boss') {
                 if (dist <= (def.detectRange || 6)) {
                     moveEnemyToward(enemy, player.q, player.r, occupied);
@@ -1070,9 +1133,10 @@ async function runEnemyPhase() {
             render();
         }
 
-        // Attack
+        // Attack (wildlife doesn't initiate)
         const newDist = hexDistance(enemy.q, enemy.r, player.q, player.r);
-        if (newDist === 1 && (!def.range || def.behavior !== 'kite')) {
+        if (def.behavior === 'wildlife') { /* passive — only counter-attacks */ }
+        else if (newDist === 1 && (!def.range || def.behavior !== 'kite')) {
             dealDamageToPlayer(def.attack, def.name, false);
             await animDelay(150);
             render();
@@ -1108,8 +1172,8 @@ async function runEnemyPhase() {
             }
         }
 
-        // Terrain shattering (2% chance)
-        if (Rando.bool(0.02)) {
+        // Terrain shattering (2% chance, chaos units only)
+        if (def.chaosSpawned && Rando.bool(0.02)) {
             const eHex = hexes.get(hexKey(enemy.q, enemy.r));
             if (eHex && SHATTERED_VERSION[eHex.terrain] !== undefined) {
                 eHex.terrain = SHATTERED_VERSION[eHex.terrain];
@@ -1132,6 +1196,21 @@ async function runEnemyPhase() {
                 const type = Rando.bool(0.6) ? ENEMY_TYPE.VOID_STALKER : ENEMY_TYPE.PHASE_WRAITH;
                 spawnEnemy(type, spot.q, spot.r, poi.q, poi.r);
                 occupied.add(hexKey(spot.q, spot.r));
+            }
+        }
+    }
+
+    // Wildlife spawn (2% chance per turn)
+    if (Rando.bool(0.02)) {
+        const types = Object.keys(creatureDefs);
+        if (types.length > 0) {
+            const pool = passableHexes().filter(h => {
+                const k = hexKey(h.q, h.r);
+                return !occupied.has(k) && !visible.has(k) && UNSHATTERED_VERSION[h.terrain] === undefined;
+            });
+            if (pool.length > 0) {
+                const spot = Rando.choice(pool);
+                spawnEnemy(Rando.choice(types), spot.q, spot.r);
             }
         }
     }
@@ -1210,6 +1289,25 @@ function wanderEnemy(enemy, occupied) {
     }
 }
 
+function wanderWildlife(enemy, occupied) {
+    const neighbors = hexNeighbors(enemy.q, enemy.r);
+    const valid = neighbors.filter(n => {
+        const k = hexKey(n.q, n.r);
+        const h = hexes.get(k);
+        if (!h || !isPassable(h) || occupied.has(k)) return false;
+        if (n.q === player.q && n.r === player.r) return false;
+        // Wildlife avoids shattered terrain
+        if (UNSHATTERED_VERSION[h.terrain] !== undefined) return false;
+        return true;
+    });
+    if (valid.length > 0) {
+        occupied.delete(hexKey(enemy.q, enemy.r));
+        const dest = Rando.choice(valid);
+        enemy.q = dest.q; enemy.r = dest.r;
+        occupied.add(hexKey(enemy.q, enemy.r));
+    }
+}
+
 function animDelay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // ================================================================
@@ -1254,7 +1352,9 @@ function initGame() {
     player = createPlayer(startHaven);
     mp = playerMP();
     updateVision();
+    generateCreatureTypes();
     spawnInitialEnemies();
+    spawnInitialCreatures();
     centerOn(player);
 
     // Close panels and overlays
@@ -1395,7 +1495,7 @@ function render() {
         const ek = hexKey(enemy.q, enemy.r);
         if (!visible.has(ek)) continue;
         const { x, y } = hexToScreen(enemy.q, enemy.r);
-        const def = ENEMY_DEFS[enemy.type];
+        const def = getDef(enemy.type);
         const color = enemyColor(enemy.type);
         drawCounter(x, y, color, def.label, enemy.hp / enemy.maxHp, undefined, def.attack, def.defense);
     }
@@ -1426,6 +1526,8 @@ function render() {
 }
 
 function enemyColor(type) {
+    const def = getDef(type);
+    if (def && def.color) return def.color;
     switch (type) {
         case ENEMY_TYPE.VOID_STALKER: return '#cc3333';
         case ENEMY_TYPE.BREACH_CRAWLER: return '#8B4513';
@@ -1470,7 +1572,7 @@ function updateHUD() {
             document.getElementById('ctx-terrain').textContent = TERRAIN_NAMES[hex.terrain] || 'Unknown';
             const enemy = enemies.find(e => e.q === hoveredHex.q && e.r === hoveredHex.r && visible.has(hexKey(e.q, e.r)));
             if (enemy) {
-                const def = ENEMY_DEFS[enemy.type];
+                const def = getDef(enemy.type);
                 document.getElementById('ctx-entity').textContent = `${def.name} (HP ${enemy.hp}/${enemy.maxHp})`;
             } else {
                 document.getElementById('ctx-entity').textContent = '';

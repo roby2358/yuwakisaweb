@@ -80,7 +80,7 @@ export const PLAYER_MP = 4;
 export const MAP_COLS = 60;
 export const MAP_ROWS = 40;
 export const BASE_VISION = 6;
-export const MAX_ENEMIES = 20;
+export const MAX_ENEMIES = 60;
 
 // ---- Player defaults ----
 export const STARTING_STATS = { might: 3, reflex: 3, warding: 2, vigor: 3 };
