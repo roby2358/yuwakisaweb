@@ -466,6 +466,8 @@ function generateCreatureTypes() {
         const defense = Math.floor(attack / 4);
         const xp = attack * 2;
         const gold = Math.max(1, Math.floor(attack / 3));
+        const detectRange = Math.min(7, 4 + Math.floor(attack / 4));
+        const aggroRange = Rando.int(3, detectRange);
         // Pick a color from the palette, cycling through and varying lightness
         const baseColor = palette[i % palette.length];
         const [h, s, l] = ColorTheory.rgbToHsl(baseColor[0], baseColor[1], baseColor[2]);
@@ -473,7 +475,7 @@ function generateCreatureTypes() {
         const color = ColorTheory.rgbToHex(varied[0], varied[1], varied[2]);
         creatureDefs[`creature_${i}`] = {
             name, label: name[0], hp, attack, defense,
-            speed: 1, detectRange: 0, xp, gold,
+            speed: 1, detectRange, aggroRange, xp, gold,
             behavior: 'wildlife', chaosSpawned: false, color
         };
     }
@@ -1057,7 +1059,30 @@ async function runEnemyPhase() {
         if (gameOver) break;
         const def = getDef(enemy.type);
         const dist = hexDistance(enemy.q, enemy.r, player.q, player.r);
+        const isVisible = visible.has(hexKey(enemy.q, enemy.r));
+        const aggro = def.aggroRange || def.detectRange || 0;
         enemy.turnsSinceSpawn++;
+
+        // Wildlife: passive unless aggroed
+        if (def.behavior === 'wildlife') {
+            if (dist <= aggro) {
+                // Aggroed: chase and attack
+                moveWildlifeToward(enemy, player.q, player.r, occupied);
+                if (isVisible || visible.has(hexKey(enemy.q, enemy.r))) {
+                    await animDelay(80);
+                    render();
+                }
+                const newDist = hexDistance(enemy.q, enemy.r, player.q, player.r);
+                if (newDist === 1) {
+                    dealDamageToPlayer(def.attack, def.name, false);
+                    await animDelay(150);
+                    render();
+                }
+            } else if (Rando.bool(0.3)) {
+                wanderWildlife(enemy, occupied);
+            }
+            continue;
+        }
 
         // Phase Wraith teleport
         if (def.behavior === 'teleport' && Math.random() < (def.teleportChance || 0.3)) {
@@ -1072,22 +1097,22 @@ async function runEnemyPhase() {
                 const dest = Rando.choice(valid);
                 enemy.q = dest.q; enemy.r = dest.r;
                 occupied.add(hexKey(enemy.q, enemy.r));
-                await animDelay(100);
-                render();
+                if (isVisible || visible.has(hexKey(enemy.q, enemy.r))) {
+                    await animDelay(100);
+                    render();
+                }
             }
         }
 
-        // Movement
+        // Movement (chaos enemies: aggro = detectRange)
         let moved = false;
         const speed = def.speed || 1;
         for (let step = 0; step < speed; step++) {
             if (def.behavior === 'guard') {
-                // Stay within guard radius of home
                 if (hexDistance(enemy.q, enemy.r, enemy.homeQ, enemy.homeR) > (def.guardRadius || 2)) {
                     moveEnemyToward(enemy, enemy.homeQ, enemy.homeR, occupied);
                     moved = true;
-                } else if (dist <= (def.detectRange || 3)) {
-                    // Chase if within detection range but stay close to home
+                } else if (dist <= aggro) {
                     const next = getNextStepToward(enemy, player.q, player.r, occupied);
                     if (next && hexDistance(next.q, next.r, enemy.homeQ, enemy.homeR) <= (def.guardRadius || 2)) {
                         occupied.delete(hexKey(enemy.q, enemy.r));
@@ -1097,8 +1122,7 @@ async function runEnemyPhase() {
                     }
                 }
             } else if (def.behavior === 'kite') {
-                // Try to maintain 2-3 hex distance
-                if (dist <= (def.detectRange || 5)) {
+                if (dist <= aggro) {
                     if (dist < 2) {
                         moveEnemyAway(enemy, player.q, player.r, occupied);
                     } else if (dist > 3) {
@@ -1109,17 +1133,14 @@ async function runEnemyPhase() {
                     wanderEnemy(enemy, occupied);
                     moved = true;
                 }
-            } else if (def.behavior === 'wildlife') {
-                wanderWildlife(enemy, occupied);
-                moved = true;
             } else if (def.behavior === 'boss') {
-                if (dist <= (def.detectRange || 6)) {
+                if (dist <= aggro) {
                     moveEnemyToward(enemy, player.q, player.r, occupied);
                     moved = true;
                 }
             } else {
                 // chase or default
-                if (dist <= (def.detectRange || 5)) {
+                if (dist <= aggro) {
                     moveEnemyToward(enemy, player.q, player.r, occupied);
                     moved = true;
                 } else if (Rando.bool(0.5)) {
@@ -1128,26 +1149,23 @@ async function runEnemyPhase() {
                 }
             }
         }
-        if (moved) {
+        if (moved && (isVisible || visible.has(hexKey(enemy.q, enemy.r)))) {
             await animDelay(80);
             render();
         }
 
-        // Attack (wildlife doesn't initiate)
+        // Attack
         const newDist = hexDistance(enemy.q, enemy.r, player.q, player.r);
-        if (def.behavior === 'wildlife') { /* passive — only counter-attacks */ }
-        else if (newDist === 1 && (!def.range || def.behavior !== 'kite')) {
+        if (newDist === 1 && (!def.range || def.behavior !== 'kite')) {
             dealDamageToPlayer(def.attack, def.name, false);
             await animDelay(150);
             render();
         }
         if (def.rangedAttack && def.range && newDist <= def.range && newDist > 1 && hasLOS(enemy, player)) {
-            // Enemies with rangedAttack fire it in addition to melee
             dealDamageToPlayer(def.rangedAttack, `${def.name} (ranged)`, false);
             await animDelay(150);
             render();
         } else if (!def.rangedAttack && def.range && newDist <= def.range && newDist > 1 && hasLOS(enemy, player)) {
-            // Pure ranged enemies (Flux Archer) only fire if not in melee
             if (newDist > 1) {
                 dealDamageToPlayer(def.attack, `${def.name} (ranged)`, false);
                 await animDelay(150);
@@ -1287,6 +1305,23 @@ function wanderEnemy(enemy, occupied) {
         enemy.q = dest.q; enemy.r = dest.r;
         occupied.add(hexKey(enemy.q, enemy.r));
     }
+}
+
+function moveWildlifeToward(enemy, tq, tr, occupied) {
+    const neighbors = hexNeighbors(enemy.q, enemy.r);
+    const valid = neighbors.filter(n => {
+        const k = hexKey(n.q, n.r);
+        const h = hexes.get(k);
+        if (!h || !isPassable(h) || occupied.has(k)) return false;
+        if (n.q === player.q && n.r === player.r) return false;
+        if (UNSHATTERED_VERSION[h.terrain] !== undefined) return false;
+        return true;
+    });
+    if (valid.length === 0) return;
+    valid.sort((a, b) => hexDistance(a.q, a.r, tq, tr) - hexDistance(b.q, b.r, tq, tr));
+    occupied.delete(hexKey(enemy.q, enemy.r));
+    enemy.q = valid[0].q; enemy.r = valid[0].r;
+    occupied.add(hexKey(enemy.q, enemy.r));
 }
 
 function wanderWildlife(enemy, occupied) {
