@@ -8,7 +8,8 @@ import {
     ENEMY_TYPE, ENEMY_DEFS,
     EQUIP_SLOT, WEAPONS, ARMORS, ARTIFACTS, ALL_EQUIPMENT,
     SKILL_TARGET, SKILLS, SKILL_UNLOCK_LEVELS,
-    TERRAIN_DEFENSE_BONUS, TERRAIN_RANGE_BONUS
+    TERRAIN_DEFENSE_BONUS, TERRAIN_RANGE_BONUS,
+    SHATTERED_VERSION, UNSHATTERED_VERSION
 } from './config.js';
 import { hexToPixel, pixelToHex, hexKey, parseHexKey, hexNeighbors, hexDistance, hexesInRange, bfsHexes, drawHexPath, findPath } from './hex.js';
 import { Rando } from './rando.js';
@@ -24,6 +25,11 @@ const TERRAIN_COLORS = {
     [TERRAIN.FOREST]: '#2d6e2d',
     [TERRAIN.GOLD]: '#d4a017',
     [TERRAIN.QUARRY]: '#9e8c6c',
+    [TERRAIN.SHATTERED_PLAINS]: '#6b2222',
+    [TERRAIN.SHATTERED_HILLS]: '#7a2828',
+    [TERRAIN.SHATTERED_FOREST]: '#3a1212',
+    [TERRAIN.SHATTERED_GOLD]: '#8b2222',
+    [TERRAIN.SHATTERED_QUARRY]: '#5a2525',
 };
 const PLAYER_COLOR = '#daa520';
 
@@ -290,7 +296,7 @@ function createPlayer(startHex) {
             [EQUIP_SLOT.ARMOR]: 'worn_leather',
             [EQUIP_SLOT.ARTIFACT]: null
         },
-        skills: ['void_strike', null, null, null],
+        skills: ['void_strike', 'restore', null, null],
         inventory: [],  // item ids
         statPoints: 0,
         pendingSkillChoice: false
@@ -619,6 +625,32 @@ function executeSkill(skillId, targetQ, targetR) {
     usedSkillsThisTurn.add(skillId);
 
     switch (skillId) {
+        case 'restore': {
+            const range = 1 + Math.floor(player.level / 3);
+            const inRange = hexesInRange(player.q, player.r, range);
+            const shatteredHexes = [];
+            for (const h of inRange) {
+                const hex = hexes.get(hexKey(h.q, h.r));
+                if (hex && UNSHATTERED_VERSION[hex.terrain] !== undefined) shatteredHexes.push(hex);
+            }
+            if (shatteredHexes.length === 0) {
+                logCombat('No shattered terrain in range!', 'log-info');
+                usedSkillsThisTurn.delete(skillId);
+                break;
+            }
+            const totalCost = shatteredHexes.length * 2;
+            if (player.aether < totalCost) {
+                logCombat(`Need ${totalCost} AE for ${shatteredHexes.length} hexes!`, 'log-info');
+                usedSkillsThisTurn.delete(skillId);
+                break;
+            }
+            player.aether -= totalCost;
+            for (const hex of shatteredHexes) hex.terrain = UNSHATTERED_VERSION[hex.terrain];
+            gainXP(shatteredHexes.length * 3);
+            logCombat(`Restored ${shatteredHexes.length} hexes!`, 'log-heal');
+            if (!skill.freeAction) mp = 0;
+            break;
+        }
         case 'void_strike': {
             const enemy = enemies.find(e => e.q === targetQ && e.r === targetR);
             if (!enemy) break;
@@ -908,10 +940,11 @@ function checkHexEntry() {
     if (!hex) return;
 
     // Gold pickup
-    if (hex.terrain === TERRAIN.GOLD && !hex.goldLooted) {
+    if ((hex.terrain === TERRAIN.GOLD || hex.terrain === TERRAIN.SHATTERED_GOLD) && !hex.goldLooted) {
         hex.goldLooted = true;
-        player.gold += 10;
-        logCombat('+10g (gold deposit)', 'log-gold');
+        const goldAmt = hex.terrain === TERRAIN.SHATTERED_GOLD ? 20 : 10;
+        player.gold += goldAmt;
+        logCombat(`+${goldAmt}g (gold deposit)`, 'log-gold');
     }
 
     // POI interaction
@@ -1072,6 +1105,14 @@ async function runEnemyPhase() {
                     occupied.add(hexKey(spot.q, spot.r));
                     logCombat('The Unraveler spawns a Void Stalker!', 'log-info');
                 }
+            }
+        }
+
+        // Terrain shattering (2% chance)
+        if (Rando.bool(0.02)) {
+            const eHex = hexes.get(hexKey(enemy.q, enemy.r));
+            if (eHex && SHATTERED_VERSION[eHex.terrain] !== undefined) {
+                eHex.terrain = SHATTERED_VERSION[eHex.terrain];
             }
         }
     }
@@ -1287,7 +1328,7 @@ function render() {
         }
 
         // Gold indicator
-        if (hex.terrain === TERRAIN.GOLD && !hex.goldLooted) {
+        if ((hex.terrain === TERRAIN.GOLD || hex.terrain === TERRAIN.SHATTERED_GOLD) && !hex.goldLooted) {
             ctx.fillStyle = '#ffd700';
             ctx.font = 'bold ' + Math.floor(HEX_SIZE * 1.2) + 'px monospace';
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';

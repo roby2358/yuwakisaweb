@@ -9,7 +9,12 @@ export const TERRAIN = {
     MOUNTAIN: 3,
     FOREST: 4,
     GOLD: 5,
-    QUARRY: 6
+    QUARRY: 6,
+    SHATTERED_PLAINS: 7,
+    SHATTERED_HILLS: 8,
+    SHATTERED_FOREST: 9,
+    SHATTERED_GOLD: 10,
+    SHATTERED_QUARRY: 11
 };
 
 export const TERRAIN_NAMES = {
@@ -19,7 +24,12 @@ export const TERRAIN_NAMES = {
     [TERRAIN.MOUNTAIN]: 'Mountain',
     [TERRAIN.FOREST]: 'Forest',
     [TERRAIN.GOLD]: 'Gold Deposit',
-    [TERRAIN.QUARRY]: 'Quarry'
+    [TERRAIN.QUARRY]: 'Quarry',
+    [TERRAIN.SHATTERED_PLAINS]: 'Shattered Plains',
+    [TERRAIN.SHATTERED_HILLS]: 'Shattered Hills',
+    [TERRAIN.SHATTERED_FOREST]: 'Shattered Forest',
+    [TERRAIN.SHATTERED_GOLD]: 'Shattered Gold Deposit',
+    [TERRAIN.SHATTERED_QUARRY]: 'Shattered Quarry'
 };
 
 export const MOVEMENT_COST = {
@@ -29,17 +39,41 @@ export const MOVEMENT_COST = {
     [TERRAIN.MOUNTAIN]: Infinity,
     [TERRAIN.FOREST]: 2,
     [TERRAIN.GOLD]: 1,
-    [TERRAIN.QUARRY]: 2
+    [TERRAIN.QUARRY]: 2,
+    [TERRAIN.SHATTERED_PLAINS]: 2,
+    [TERRAIN.SHATTERED_HILLS]: 3,
+    [TERRAIN.SHATTERED_FOREST]: 3,
+    [TERRAIN.SHATTERED_GOLD]: 2,
+    [TERRAIN.SHATTERED_QUARRY]: 3
 };
 
-// +1 defense in forest
+// Shattered <-> normal terrain lookups
+export const SHATTERED_VERSION = {
+    [TERRAIN.PLAINS]: TERRAIN.SHATTERED_PLAINS,
+    [TERRAIN.HILLS]: TERRAIN.SHATTERED_HILLS,
+    [TERRAIN.FOREST]: TERRAIN.SHATTERED_FOREST,
+    [TERRAIN.GOLD]: TERRAIN.SHATTERED_GOLD,
+    [TERRAIN.QUARRY]: TERRAIN.SHATTERED_QUARRY
+};
+
+export const UNSHATTERED_VERSION = {
+    [TERRAIN.SHATTERED_PLAINS]: TERRAIN.PLAINS,
+    [TERRAIN.SHATTERED_HILLS]: TERRAIN.HILLS,
+    [TERRAIN.SHATTERED_FOREST]: TERRAIN.FOREST,
+    [TERRAIN.SHATTERED_GOLD]: TERRAIN.GOLD,
+    [TERRAIN.SHATTERED_QUARRY]: TERRAIN.QUARRY
+};
+
+// +1 defense in forest (including shattered)
 export const TERRAIN_DEFENSE_BONUS = {
-    [TERRAIN.FOREST]: 1
+    [TERRAIN.FOREST]: 1,
+    [TERRAIN.SHATTERED_FOREST]: 1
 };
 
-// +1 ranged range on hills
+// +1 ranged range on hills (including shattered)
 export const TERRAIN_RANGE_BONUS = {
-    [TERRAIN.HILLS]: 1
+    [TERRAIN.HILLS]: 1,
+    [TERRAIN.SHATTERED_HILLS]: 1
 };
 
 export const PLAYER_MP = 4;
@@ -176,6 +210,10 @@ export const SKILL_TARGET = {
 };
 
 export const SKILLS = {
+    restore: {
+        id: 'restore', name: 'Restore', cost: 0, target: SKILL_TARGET.AOE_SELF,
+        desc: 'Restore shattered terrain. 2 AE per hex. Range: 1 + Lv/3.', minLevel: 0
+    },
     void_strike: {
         id: 'void_strike', name: 'Void Strike', cost: 1, target: SKILL_TARGET.MELEE,
         desc: 'Melee attack: weapon + Might + Warding. No counter-attack.', minLevel: 1
