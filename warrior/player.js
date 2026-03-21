@@ -17,6 +17,7 @@ export class Player {
         this.level = 1;
         this.gold = 0;
         this.equipment = { weapon: 'rusty_blade', armor: 'worn_leather', artifact: null };
+        this.learnedSkills = new Set(['restore']);
         this.skills = ['restore', null, null, null];
         this.inventory = ['stick_bow'];
         this.statPoints = 0;
@@ -24,6 +25,7 @@ export class Player {
         this.mp = PLAYER_MP;
         this.warpShieldTurns = 0;
         this.usedSkillsThisTurn = new Set();
+        this.movedThisTurn = false;
     }
 
     weapon() {
@@ -44,6 +46,9 @@ export class Player {
         const arm = this.armor();
         let def = arm ? arm.defense : 0;
         def += TERRAIN_DEFENSE_BONUS[terrainType] || 0;
+        if (arm && arm.special === 'last_stand' && this.hp <= this.maxHP() / 2) {
+            def += arm.lastStandBonus;
+        }
         return def;
     }
 
@@ -81,16 +86,24 @@ export class Player {
         const wep = this.weapon();
         let dmg = (wep ? wep.damage : 1) + this.stats.might;
         if (wep && wep.special === 'chaos_bonus' && enemyDef.chaosSpawned) dmg += 2;
+        if (wep && wep.special === 'momentum' && this.movedThisTurn) dmg += wep.momentumBonus;
         return dmg;
     }
 
-    rangedDamage() {
+    rangedDamage(dist) {
         const wep = this.weapon();
-        return (wep ? wep.damage : 1) + this.stats.reflex;
+        let dmg = (wep ? wep.damage : 1) + this.stats.reflex;
+        if (wep && wep.special === 'sniper' && dist !== undefined && dist >= wep.range) {
+            dmg += wep.sniperBonus;
+        }
+        return dmg;
     }
 
     dodge() {
-        return Math.min(this.stats.reflex, MAX_DODGE);
+        let d = Math.min(this.stats.reflex, MAX_DODGE);
+        const arm = this.armor();
+        if (arm && arm.special === 'dodge_bonus') d += arm.dodgeBonus;
+        return d;
     }
 
     weaponRange(terrainType) {

@@ -53,6 +53,7 @@ let gameWon = false;
 let enemiesDefeated = 0;
 let targeting = null;       // { skill, validHexes: Set } or null
 let hoveredHex = null;
+let threatOverlay = null;   // Map<string, number> or null — threat heatmap for Ground Weeps
 
 // ---- View state ----
 let panX = 0, panY = 0;
@@ -150,10 +151,19 @@ function refreshVision() {
 // COMBAT
 // ================================================================
 
-function dealDamageToEnemy(enemy, damage, source) {
+function enemyDefense(enemy) {
+    const def = em.getDef(enemy.type);
+    let d = def.defense;
+    if (enemy.defReduction) d = Math.max(0, d - enemy.defReduction);
+    return d;
+}
+
+function dealDamageToEnemy(enemy, damage, source, opts = {}) {
     const def = em.getDef(enemy.type);
     const rolled = Rando.bellCurve(damage);
-    const actualDmg = Math.max(1, rolled - def.defense);
+    let eDef = enemyDefense(enemy);
+    if (opts.pierceAmount) eDef = Math.max(0, eDef - opts.pierceAmount);
+    const actualDmg = Math.max(1, rolled - eDef);
     enemy.hp -= actualDmg;
     logCombat(`${source}: ${actualDmg} dmg to ${def.name}`, 'log-dmg');
     if (enemy.hp <= 0) {
@@ -163,17 +173,23 @@ function dealDamageToEnemy(enemy, damage, source) {
     return false;
 }
 
-function dealDamageToPlayer(damage, source, isSkillDamage) {
+function dealDamageToPlayer(damage, source, isSkillDamage, opts = {}) {
+    const arm = player.armor();
+    // Ranged immune check
+    if (opts.isRanged && arm && arm.special === 'ranged_immune') {
+        logCombat('Wraithskin negates ranged attack!', 'log-info');
+        return null;
+    }
     // Warp Shield check
     if (player.warpShieldTurns > 0) {
         player.warpShieldTurns = 0;
         logCombat('Warp Shield absorbed the hit!', 'log-info');
-        return;
+        return null;
     }
     // Dodge check
     if (Math.random() * 100 < player.dodge()) {
         logCombat('Dodged!', 'log-info');
-        return;
+        return null;
     }
     const rolled = Rando.bellCurve(damage);
     let def = playerDefense();
@@ -183,10 +199,18 @@ function dealDamageToPlayer(damage, source, isSkillDamage) {
     const actualDmg = Math.max(1, rolled - def);
     player.hp -= actualDmg;
     logCombat(`${source}: ${actualDmg} dmg to you`, 'log-dmg');
+    // Thorns: reflect damage to melee attacker
+    if (opts.attacker && !opts.isRanged && arm && arm.special === 'thorns') {
+        const thornDmg = arm.thornsDamage;
+        opts.attacker.hp -= thornDmg;
+        logCombat(`Thorns: ${thornDmg} dmg to ${em.getDef(opts.attacker.type).name}`, 'log-dmg');
+        if (opts.attacker.hp <= 0) killEnemy(opts.attacker);
+    }
     if (player.hp <= 0) {
         player.hp = 0;
         endGame(false);
     }
+    return actualDmg;
 }
 
 function killEnemy(enemy) {
@@ -200,6 +224,13 @@ function killEnemy(enemy) {
     if (def.chaosSpawned) {
         player.aether = Math.min(player.maxAether(), player.aether + 1);
         logCombat('+1 AE', 'log-info');
+    }
+    // Heal on kill (armor special)
+    const arm = player.armor();
+    if (arm && arm.special === 'heal_on_kill') {
+        const healAmt = arm.healOnKill;
+        player.hp = Math.min(player.maxHP(), player.hp + healAmt);
+        logCombat(`+${healAmt} HP (heal on kill)`, 'log-heal');
     }
     gainXP(def.xp);
 
@@ -257,7 +288,35 @@ function rollNonMagicalDrops(min, max) {
 function meleeAttack(enemy) {
     const dmg = player.meleeDamage(em.getDef(enemy.type));
     const wep = player.weapon();
-    const killed = dealDamageToEnemy(enemy, dmg, 'Melee');
+    const opts = {};
+    if (wep && wep.special === 'armor_pierce') opts.pierceAmount = wep.pierceAmount;
+    const killed = dealDamageToEnemy(enemy, dmg, 'Melee', opts);
+
+    // Defense shred: permanently reduce enemy defense
+    if (!killed && wep && wep.special === 'defense_shred') {
+        enemy.defReduction = (enemy.defReduction || 0) + 1;
+        logCombat(`Nullblade shreds 1 defense!`, 'log-info');
+    }
+
+    // Lifesteal
+    if (wep && wep.special === 'lifesteal') {
+        const heal = wep.lifestealAmount;
+        player.hp = Math.min(player.maxHP(), player.hp + heal);
+        logCombat(`+${heal} HP (lifesteal)`, 'log-heal');
+    }
+
+    // Aether siphon
+    if (wep && wep.special === 'aether_siphon') {
+        player.aether = Math.min(player.maxAether(), player.aether + 1);
+        logCombat('+1 AE (siphon)', 'log-info');
+    }
+
+    // Recoil: self-damage
+    if (wep && wep.special === 'recoil') {
+        player.hp -= wep.recoilDamage;
+        logCombat(`Recoil: ${wep.recoilDamage} dmg to you`, 'log-dmg');
+        if (player.hp <= 0) { player.hp = 0; endGame(false); }
+    }
 
     // Cleave: hit adjacent enemies too
     if (wep && wep.special === 'cleave') {
@@ -269,27 +328,114 @@ function meleeAttack(enemy) {
     }
 
     if (!killed) {
-        // Counter-attack
+        // Counter-attack (riposte halves counter damage)
         const def = em.getDef(enemy.type);
-        dealDamageToPlayer(def.attack, `${def.name} counters`, false);
+        let counterDmg = def.attack;
+        if (wep && wep.special === 'riposte') counterDmg = Math.floor(counterDmg / 2);
+        dealDamageToPlayer(counterDmg, `${def.name} counters`, false, { attacker: enemy });
     }
     return killed;
+}
+
+function knockbackHex(fromQ, fromR, targetQ, targetR) {
+    // Push target 1 hex away from source
+    const dq = targetQ - fromQ, dr = targetR - fromR;
+    // Normalize to nearest hex direction
+    const dirs = [
+        { q: 1, r: 0 }, { q: 1, r: -1 }, { q: 0, r: -1 },
+        { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 }
+    ];
+    let best = dirs[0], bestDot = -Infinity;
+    for (const d of dirs) {
+        const dot = d.q * dq + d.r * dr;
+        if (dot > bestDot) { bestDot = dot; best = d; }
+    }
+    return { q: targetQ + best.q, r: targetR + best.r };
 }
 
 function rangedAttack(targetQ, targetR) {
     const enemy = em.enemies.find(e => e.q === targetQ && e.r === targetR);
     if (!enemy) return;
     const wep = player.weapon();
-    let dmg = player.rangedDamage();
+    const dist = hexDistance(player.q, player.r, targetQ, targetR);
+    let dmg = player.rangedDamage(dist);
+
+    // Fire primary shot
     if (wep && wep.special === 'ignore_defense') {
-        // Deal full damage, ignoring defense
         const actualDmg = Math.max(1, dmg);
         enemy.hp -= actualDmg;
         logCombat(`Ranged: ${actualDmg} dmg to ${em.getDef(enemy.type).name}`, 'log-dmg');
         if (enemy.hp <= 0) killEnemy(enemy);
+    } else if (wep && wep.special === 'double_shot') {
+        dealDamageToEnemy(enemy, dmg, 'Shot 1');
+        if (enemy.hp > 0) dealDamageToEnemy(enemy, dmg, 'Shot 2');
     } else {
         dealDamageToEnemy(enemy, dmg, 'Ranged');
     }
+
+    // Burn: mark target for damage next turn
+    if (wep && wep.special === 'burn' && enemy.hp > 0) {
+        enemy.burnDamage = (enemy.burnDamage || 0) + wep.burnDamage;
+        logCombat(`${em.getDef(enemy.type).name} is burning!`, 'log-dmg');
+    }
+
+    // Chain: flat damage to one adjacent enemy
+    if (wep && wep.special === 'chain') {
+        const adj = hexNeighbors(targetQ, targetR);
+        for (const n of adj) {
+            const chainTarget = em.enemies.find(e => e.q === n.q && e.r === n.r && e !== enemy);
+            if (chainTarget) {
+                const chainDmg = Math.max(1, wep.chainDamage - enemyDefense(chainTarget));
+                chainTarget.hp -= chainDmg;
+                logCombat(`Chain: ${chainDmg} dmg to ${em.getDef(chainTarget.type).name}`, 'log-dmg');
+                if (chainTarget.hp <= 0) killEnemy(chainTarget);
+                break;
+            }
+        }
+    }
+
+    // Splash: flat damage to all adjacent enemies
+    if (wep && wep.special === 'splash') {
+        const adj = hexNeighbors(targetQ, targetR);
+        for (const n of adj) {
+            const splashTarget = em.enemies.find(e => e.q === n.q && e.r === n.r && e !== enemy);
+            if (splashTarget) {
+                const sDmg = Math.max(1, wep.splashDamage - enemyDefense(splashTarget));
+                splashTarget.hp -= sDmg;
+                logCombat(`Splash: ${sDmg} dmg to ${em.getDef(splashTarget.type).name}`, 'log-dmg');
+                if (splashTarget.hp <= 0) killEnemy(splashTarget);
+            }
+        }
+    }
+
+    // Piercing: continue through target to hit next enemy in line
+    if (wep && wep.special === 'piercing') {
+        const kb = knockbackHex(player.q, player.r, targetQ, targetR);
+        const dq = kb.q - targetQ, dr = kb.r - targetR;
+        for (let i = 1; i <= wep.range - dist; i++) {
+            const pq = targetQ + dq * i, pr = targetR + dr * i;
+            const pierceTarget = em.enemies.find(e => e.q === pq && e.r === pr);
+            if (pierceTarget) {
+                dealDamageToEnemy(pierceTarget, dmg, 'Pierce');
+                break;
+            }
+            const hex = world.getHex(pq, pr);
+            if (!hex || hex.terrain === TERRAIN.MOUNTAIN) break;
+        }
+    }
+
+    // Knockback: push target 1 hex away
+    if (wep && wep.special === 'knockback' && enemy.hp > 0) {
+        const dest = knockbackHex(player.q, player.r, targetQ, targetR);
+        const hex = world.getHex(dest.q, dest.r);
+        const occupied = em.enemies.some(e => e.q === dest.q && e.r === dest.r);
+        if (hex && world.isPassable(hex) && !occupied && !(dest.q === player.q && dest.r === player.r)) {
+            enemy.q = dest.q;
+            enemy.r = dest.r;
+            logCombat(`Knocked back!`, 'log-info');
+        }
+    }
+
     // Ranged attack costs 1 aether (unless free or non-magical)
     if (wep && wep.magical && wep.special !== 'free_ranged') {
         player.aether = Math.max(0, player.aether - 1);
@@ -325,6 +471,47 @@ function applyAoeDamage(skillName, dmg, range) {
     for (const h of hexesInRange(player.q, player.r, range)) {
         const enemy = em.enemyAt(h.q, h.r);
         if (enemy) dealDamageToEnemy(enemy, dmg, skillName);
+    }
+}
+
+function applyAoeDamageAt(skillName, dmg, centerQ, centerR, range) {
+    for (const h of hexesInRange(centerQ, centerR, range)) {
+        const enemy = em.enemyAt(h.q, h.r);
+        if (enemy) dealDamageToEnemy(enemy, dmg, skillName);
+    }
+}
+
+function pushEnemyAway(enemy, fromQ, fromR) {
+    const dest = knockbackHex(fromQ, fromR, enemy.q, enemy.r);
+    const hex = world.getHex(dest.q, dest.r);
+    const occupied = em.enemies.some(e => e !== enemy && e.q === dest.q && e.r === dest.r);
+    if (hex && world.isPassable(hex) && !occupied && !(dest.q === player.q && dest.r === player.r)) {
+        enemy.q = dest.q;
+        enemy.r = dest.r;
+    }
+}
+
+function chainBounce(skillName, dmg, startQ, startR, bounceCount, bounceRange, hitSet, useBellCurve) {
+    let curQ = startQ, curR = startR;
+    for (let i = 0; i < bounceCount; i++) {
+        let closest = null, closestDist = Infinity;
+        for (const enemy of em.enemies) {
+            if (hitSet.has(enemy)) continue;
+            const d = hexDistance(curQ, curR, enemy.q, enemy.r);
+            if (d <= bounceRange && d < closestDist) { closestDist = d; closest = enemy; }
+        }
+        if (!closest) break;
+        hitSet.add(closest);
+        if (useBellCurve) {
+            dealDamageToEnemy(closest, dmg, `${skillName} bounce`);
+        } else {
+            const eDef = enemyDefense(closest);
+            const actualDmg = Math.max(1, dmg - eDef);
+            closest.hp -= actualDmg;
+            logCombat(`${skillName} chain: ${actualDmg} dmg to ${em.getDef(closest.type).name}`, 'log-dmg');
+            if (closest.hp <= 0) killEnemy(closest);
+        }
+        curQ = closest.q; curR = closest.r;
     }
 }
 
@@ -463,6 +650,283 @@ function executeSkill(skillId, targetQ, targetR) {
             applyAoeDamage('Starfall', skill.baseDamage + player.stats.warding * 2, skill.range);
             break;
         }
+        case 'shockwave': {
+            const dmg = skill.baseDamage + player.stats.might;
+            const hits = [];
+            for (const h of hexesInRange(player.q, player.r, skill.range)) {
+                const enemy = em.enemyAt(h.q, h.r);
+                if (enemy) {
+                    dealDamageToEnemy(enemy, dmg, 'Shockwave');
+                    if (enemy.hp > 0) hits.push(enemy);
+                }
+            }
+            for (const enemy of hits) pushEnemyAway(enemy, player.q, player.r);
+            logCombat('Shockwave!', 'log-info');
+            break;
+        }
+        case 'siphon_strike': {
+            const enemy = em.enemyAt(targetQ, targetR);
+            if (!enemy) break;
+            const wep = player.weapon();
+            const dmg = (wep ? wep.damage : 1) + player.stats.might;
+            const rolled = Rando.bellCurve(dmg);
+            const eDef = enemyDefense(enemy);
+            const actualDmg = Math.max(1, rolled - eDef);
+            enemy.hp -= actualDmg;
+            logCombat(`Siphon Strike: ${actualDmg} dmg to ${em.getDef(enemy.type).name}`, 'log-dmg');
+            player.hp = Math.min(player.maxHP(), player.hp + actualDmg);
+            logCombat(`+${actualDmg} HP (siphon)`, 'log-heal');
+            if (enemy.hp <= 0) killEnemy(enemy);
+            break;
+        }
+        case 'piercing_shot': {
+            const enemy = em.enemyAt(targetQ, targetR);
+            if (!enemy) break;
+            const dmg = skill.baseDamage + player.stats.reflex;
+            const actualDmg = Math.max(1, dmg);
+            enemy.hp -= actualDmg;
+            logCombat(`Piercing Shot: ${actualDmg} dmg to ${em.getDef(enemy.type).name}`, 'log-dmg');
+            if (enemy.hp <= 0) killEnemy(enemy);
+            break;
+        }
+        case 'chain_lightning': {
+            const enemy = em.enemyAt(targetQ, targetR);
+            if (!enemy) break;
+            const dmg = skill.baseDamage + player.stats.warding;
+            dealDamageToEnemy(enemy, dmg, 'Chain Lightning');
+            const hitSet = new Set([enemy]);
+            chainBounce('Chain Lightning', skill.chainDamage, targetQ, targetR, skill.chainCount, skill.chainRange, hitSet, false);
+            break;
+        }
+        case 'immolate': {
+            const enemy = em.enemyAt(targetQ, targetR);
+            if (!enemy) break;
+            const wep = player.weapon();
+            const dmg = (wep ? wep.damage : 1) + player.stats.might;
+            dealDamageToEnemy(enemy, dmg, 'Immolate');
+            if (enemy.hp > 0) {
+                enemy.burnDamage = (enemy.burnDamage || 0) + skill.burnDamage;
+                logCombat(`${em.getDef(enemy.type).name} is burning!`, 'log-dmg');
+            }
+            break;
+        }
+        case 'sundering_blow': {
+            const enemy = em.enemyAt(targetQ, targetR);
+            if (!enemy) break;
+            const wep = player.weapon();
+            const dmg = (wep ? wep.damage : 1) + player.stats.might;
+            dealDamageToEnemy(enemy, dmg, 'Sundering Blow');
+            if (enemy.hp > 0) {
+                enemy.defReduction = (enemy.defReduction || 0) + skill.shredAmount;
+                logCombat(`Sundered ${skill.shredAmount} defense!`, 'log-info');
+            }
+            break;
+        }
+        case 'meteor': {
+            const dmg = skill.baseDamage + player.stats.warding;
+            applyAoeDamageAt('Meteor', dmg, targetQ, targetR, skill.aoeRange);
+            logCombat('Meteor!', 'log-info');
+            break;
+        }
+        case 'execute': {
+            const enemy = em.enemyAt(targetQ, targetR);
+            if (!enemy) break;
+            const wep = player.weapon();
+            const dmg = (wep ? wep.damage : 1) * 2 + player.stats.might * 2;
+            dealDamageToEnemy(enemy, dmg, 'Execute');
+            break;
+        }
+        case 'ricochet': {
+            const enemy = em.enemyAt(targetQ, targetR);
+            if (!enemy) break;
+            const dmg = skill.baseDamage + player.stats.reflex;
+            dealDamageToEnemy(enemy, dmg, 'Ricochet');
+            const hitSet = new Set([enemy]);
+            chainBounce('Ricochet', dmg, targetQ, targetR, skill.bounceCount, skill.bounceRange, hitSet, true);
+            break;
+        }
+        case 'void_salvo': {
+            const enemy = em.enemyAt(targetQ, targetR);
+            if (!enemy) break;
+            const dmg = skill.baseDamage + player.stats.reflex;
+            for (let i = 0; i < skill.shotCount; i++) {
+                if (enemy.hp <= 0) break;
+                dealDamageToEnemy(enemy, dmg, `Salvo ${i + 1}`);
+            }
+            break;
+        }
+        // ---- Non-combat skills ----
+        case 'aether_tap': {
+            let cleanCount = 0;
+            for (const h of hexesInRange(player.q, player.r, skill.range)) {
+                const hex = world.getHex(h.q, h.r);
+                if (!hex || !world.isPassable(hex)) continue;
+                // Healthy = not shattered, not distressed
+                if (UNSHATTERED_VERSION[hex.terrain] !== undefined) continue;
+                if (UNDISTRESSED_VERSION[hex.terrain] !== undefined) continue;
+                cleanCount++;
+            }
+            const aeGain = Math.floor(cleanCount / 3);
+            if (aeGain <= 0) {
+                logCombat('No healthy land nearby!', 'log-info');
+                player.usedSkillsThisTurn.delete(skillId);
+                usedMP = false;
+                break;
+            }
+            player.aether = Math.min(player.maxAether(), player.aether + aeGain);
+            logCombat(`Aether Tap: +${aeGain} AE (${cleanCount} clean hexes)`, 'log-info');
+            player.mp = 0;
+            break;
+        }
+        case 'farsight': {
+            const farRange = skill.range || 12;
+            for (const h of hexesInRange(player.q, player.r, farRange)) {
+                const key = hexKey(h.q, h.r);
+                if (world.hexes.has(key)) {
+                    world.revealed.add(key);
+                    world.visible.add(key);
+                }
+            }
+            logCombat('Farsight! Vision expanded.', 'log-info');
+            usedMP = false; // free action
+            break;
+        }
+        case 'prospect': {
+            // Reveal gold hexes within range
+            let revealed = 0;
+            for (const h of hexesInRange(player.q, player.r, skill.revealRange)) {
+                const hex = world.getHex(h.q, h.r);
+                if (hex && (hex.terrain === TERRAIN.GOLD || hex.terrain === TERRAIN.SHATTERED_GOLD || hex.terrain === TERRAIN.DISTRESSED_GOLD)) {
+                    const key = hexKey(h.q, h.r);
+                    if (!world.revealed.has(key)) revealed++;
+                    world.revealed.add(key);
+                }
+            }
+            // 20% chance to create a gold deposit on current hex (plains only)
+            const pHex = world.getHex(player.q, player.r);
+            if (pHex && pHex.terrain === TERRAIN.PLAINS && !pHex.goldLooted && Rando.bool(0.2)) {
+                pHex.terrain = TERRAIN.GOLD;
+                logCombat('Struck gold beneath your feet!', 'log-gold');
+            }
+            if (revealed > 0) logCombat(`Prospect: revealed ${revealed} gold deposit${revealed > 1 ? 's' : ''}`, 'log-gold');
+            else logCombat('Prospect: sensed the earth.', 'log-info');
+            break;
+        }
+        case 'commune': {
+            let poiCount = 0;
+            for (const poi of world.pois) {
+                const key = hexKey(poi.q, poi.r);
+                if (!world.revealed.has(key)) poiCount++;
+                world.revealed.add(key);
+            }
+            if (poiCount > 0) logCombat(`Commune: revealed ${poiCount} location${poiCount > 1 ? 's' : ''}!`, 'log-info');
+            else logCombat('Commune: the world has no more secrets.', 'log-info');
+            break;
+        }
+        case 'salvage': {
+            let deposits = 0;
+            for (const h of hexesInRange(player.q, player.r, skill.range)) {
+                if (h.q === player.q && h.r === player.r) continue; // adjacent only
+                const hex = world.getHex(h.q, h.r);
+                if (!hex) continue;
+                // Only shattered non-gold hexes become gold deposits
+                if (UNSHATTERED_VERSION[hex.terrain] !== undefined && hex.terrain !== TERRAIN.SHATTERED_GOLD) {
+                    hex.terrain = TERRAIN.SHATTERED_GOLD;
+                    hex.goldLooted = false;
+                    deposits++;
+                }
+            }
+            if (deposits === 0) {
+                logCombat('No shattered terrain nearby to salvage!', 'log-info');
+                player.usedSkillsThisTurn.delete(skillId);
+                usedMP = false;
+                break;
+            }
+            logCombat(`Salvage: created ${deposits} gold deposit${deposits > 1 ? 's' : ''}!`, 'log-gold');
+            player.mp = 0;
+            break;
+        }
+        case 'skill_seek': {
+            const chance = player.level * 0.05;
+            if (Rando.bool(chance)) {
+                logCombat('Insight! A new skill reveals itself!', 'log-info');
+                // Trigger skill choice dialog
+                player.pendingSkillChoice = true;
+                setTimeout(() => showSkillChoiceDialog(), 300);
+            } else {
+                gainXP(10);
+                logCombat('The patterns elude you... +10 XP', 'log-info');
+            }
+            break;
+        }
+        case 'spirit_walk': {
+            player.q = targetQ;
+            player.r = targetR;
+            refreshVision();
+            logCombat('Spirit Walk!', 'log-info');
+            checkHexEntry();
+            player.mp = 0;
+            break;
+        }
+        case 'ground_weeps': {
+            // Compute threat heatmap
+            threatOverlay = new Map();
+            for (const [key, hex] of world.hexes) {
+                if (hex.isEdge) continue;
+                let threat = 0;
+                for (const enemy of em.enemies) {
+                    const d = hexDistance(hex.q, hex.r, enemy.q, enemy.r);
+                    if (d <= 3) {
+                        const def = em.getDef(enemy.type);
+                        threat += def.attack * (4 - d) / 3; // closer = more weight
+                    }
+                }
+                if (threat > 0) threatOverlay.set(key, threat);
+            }
+            logCombat('The ground weeps... threats revealed.', 'log-info');
+            // Don't end turn yet — overlay persists until dismissed
+            player.usedSkillsThisTurn.delete(skillId);
+            usedMP = false;
+            break;
+        }
+        case 'sanctuary': {
+            const pHex = world.getHex(player.q, player.r);
+            const existingPoi = world.poiAt(player.q, player.r);
+            if (existingPoi) {
+                logCombat('Cannot sanctify — already a point of interest!', 'log-info');
+                player.usedSkillsThisTurn.delete(skillId);
+                player.aether += skill.cost; // refund
+                usedMP = false;
+                break;
+            }
+            // Create temporary camp POI
+            const tempCamp = { q: player.q, r: player.r, type: POI.CAMP, id: world.pois.length, temporary: true };
+            world.pois.push(tempCamp);
+            pHex.poi = POI.CAMP;
+            logCombat('Sanctuary! A temporary camp appears.', 'log-heal');
+            break;
+        }
+        case 'recall': {
+            const havens = world.havens();
+            if (havens.length === 0) {
+                logCombat('No havens exist!', 'log-info');
+                player.usedSkillsThisTurn.delete(skillId);
+                player.aether += skill.cost;
+                usedMP = false;
+                break;
+            }
+            let nearest = havens[0], nearestDist = Infinity;
+            for (const h of havens) {
+                const d = hexDistance(player.q, player.r, h.q, h.r);
+                if (d < nearestDist) { nearestDist = d; nearest = h; }
+            }
+            player.q = nearest.q;
+            player.r = nearest.r;
+            refreshVision();
+            logCombat(`Recall! Teleported to haven.`, 'log-info');
+            player.mp = 0;
+            break;
+        }
     }
     if (usedMP && !skill.freeAction) player.mp = 0;
     targeting = null;
@@ -484,12 +948,32 @@ function getSkillTargets(skillId) {
             }
             break;
         }
+        case SKILL_TARGET.MELEE_EXECUTE: {
+            const adj = hexNeighbors(player.q, player.r);
+            for (const n of adj) {
+                const enemy = em.enemies.find(e => e.q === n.q && e.r === n.r);
+                if (enemy && enemy.hp <= enemy.maxHp / 2) targets.add(hexKey(n.q, n.r));
+            }
+            break;
+        }
         case SKILL_TARGET.RANGED: {
             const range = skill.range || 4;
             const inRange = hexesInRange(player.q, player.r, range);
             for (const h of inRange) {
                 if (h.q === player.q && h.r === player.r) continue;
                 if (em.enemies.some(e => e.q === h.q && e.r === h.r) && world.hasLOS(player, h)) {
+                    targets.add(hexKey(h.q, h.r));
+                }
+            }
+            break;
+        }
+        case SKILL_TARGET.RANGED_AOE: {
+            const range = skill.range || 4;
+            const inRange = hexesInRange(player.q, player.r, range);
+            for (const h of inRange) {
+                if (h.q === player.q && h.r === player.r) continue;
+                const hex = world.getHex(h.q, h.r);
+                if (hex && world.visible.has(hexKey(h.q, h.r)) && world.hasLOS(player, h)) {
                     targets.add(hexKey(h.q, h.r));
                 }
             }
@@ -505,6 +989,19 @@ function getSkillTargets(skillId) {
                 if (!hex || !world.isPassable(hex)) continue;
                 if (em.enemies.some(e => e.q === h.q && e.r === h.r)) continue;
                 if (world.visible.has(key)) targets.add(key);
+            }
+            break;
+        }
+        case SKILL_TARGET.TELEPORT_REVEALED: {
+            const range = skill.range || 6;
+            const inRange = hexesInRange(player.q, player.r, range);
+            for (const h of inRange) {
+                const key = hexKey(h.q, h.r);
+                if (h.q === player.q && h.r === player.r) continue;
+                const hex = world.getHex(h.q, h.r);
+                if (!hex || !world.isPassable(hex)) continue;
+                if (em.enemies.some(e => e.q === h.q && e.r === h.r)) continue;
+                if (world.revealed.has(key)) targets.add(key);
             }
             break;
         }
@@ -570,6 +1067,7 @@ function movePlayer(q, r) {
     player.q = q;
     player.r = r;
     player.mp -= cost;
+    player.movedThisTurn = true;
     refreshVision();
     checkHexEntry();
     deselectPlayer();
@@ -602,6 +1100,7 @@ function moveAndAttack(enemyQ, enemyR) {
         player.q = bestHex.q;
         player.r = bestHex.r;
         player.mp -= bestCost;
+        player.movedThisTurn = true;
         refreshVision();
     }
 
@@ -652,6 +1151,8 @@ function checkHexEntry() {
     } else if (poi.type === POI.MAW) {
         if (world.breachesClosed < 2) logCombat('The Maw resists you. Seal at least 2 breaches first.', 'log-info');
         else if (poi.guardianDefeated && !poi.closed) endGame(true);
+    } else if (poi.type === POI.HUT) {
+        showHutDialog(poi);
     }
 }
 
@@ -665,9 +1166,10 @@ function manualEndTurn() {
     if (gameOver || phase !== 'player') return;
     if (player.mp > 0) {
         const poi = world.poiAt(player.q, player.r);
-        if (poi && (poi.type === POI.HAVEN || poi.type === POI.CAMP)) {
+        if (poi && (poi.type === POI.HAVEN || poi.type === POI.CAMP || poi.type === POI.HUT)) {
             if (poi.type === POI.HAVEN) showHavenDialog(poi);
-            else showCampDialog(poi);
+            else if (poi.type === POI.CAMP) showCampDialog(poi);
+            else showHutDialog(poi);
             return;
         }
     }
@@ -731,31 +1233,31 @@ function moveEnemyStep(enemy, def, dist, aggro, prefersRanged, occupied) {
 function enemyAttacks(enemy, def, prefersRanged, newDist) {
     if (def.behavior === 'guard' || def.behavior === 'boss') {
         if (newDist === 1) {
-            dealDamageToPlayer(def.attack, def.name, false);
+            dealDamageToPlayer(def.attack, def.name, false, { attacker: enemy });
             return true;
         }
         if (def.rangedAttack && def.range && newDist <= def.range && world.hasLOS(enemy, player)) {
-            dealDamageToPlayer(def.rangedAttack, `${def.name} (ranged)`, false);
+            dealDamageToPlayer(def.rangedAttack, `${def.name} (ranged)`, false, { attacker: enemy, isRanged: true });
             return true;
         }
         return false;
     }
     if (def.behavior === 'kite') {
         if (Rando.bool(0.5) && def.range && newDist <= def.range && newDist > 1 && world.hasLOS(enemy, player)) {
-            dealDamageToPlayer(def.attack, `${def.name} (ranged)`, false);
+            dealDamageToPlayer(def.attack, `${def.name} (ranged)`, false, { attacker: enemy, isRanged: true });
             return true;
         }
         return false;
     }
     if (prefersRanged) {
         if (def.rangedAttack && def.range && newDist <= def.range && world.hasLOS(enemy, player)) {
-            dealDamageToPlayer(def.rangedAttack, `${def.name} (ranged)`, false);
+            dealDamageToPlayer(def.rangedAttack, `${def.name} (ranged)`, false, { attacker: enemy, isRanged: true });
             return true;
         }
         return false;
     }
     if (newDist === 1) {
-        dealDamageToPlayer(def.attack, def.name, false);
+        dealDamageToPlayer(def.attack, def.name, false, { attacker: enemy });
         return true;
     }
     return false;
@@ -803,7 +1305,7 @@ async function runWildlifeTurn(enemy, def, aggro, occupied) {
         em.moveWildlifeToward(enemy, player.q, player.r, occupied, player.q, player.r, world);
         if (enemyIsVisible(enemy, prevKey)) { await animDelay(80); render(); }
         if (hexDistance(enemy.q, enemy.r, player.q, player.r) === 1) {
-            dealDamageToPlayer(def.attack, def.name, false);
+            dealDamageToPlayer(def.attack, def.name, false, { attacker: enemy });
             await animDelay(150); render();
         }
     } else if (Rando.bool(0.3)) {
@@ -861,7 +1363,23 @@ async function runEnemyPhase() {
     if (art && art.special === 'regen') {
         player.hp = Math.min(player.maxHP(), player.hp + art.regenAmount);
     }
+    // Aether regen (armor special)
+    const arm = player.armor();
+    if (arm && arm.special === 'aether_regen') {
+        player.aether = Math.min(player.maxAether(), player.aether + 1);
+    }
     if (player.warpShieldTurns > 0) player.warpShieldTurns--;
+
+    // Burn tick: enemies with burn take damage
+    for (const enemy of [...em.enemies]) {
+        if (enemy.burnDamage && enemy.burnDamage > 0) {
+            const bDef = em.getDef(enemy.type);
+            enemy.hp -= enemy.burnDamage;
+            logCombat(`Burn: ${enemy.burnDamage} dmg to ${bDef.name}`, 'log-dmg');
+            enemy.burnDamage = 0;
+            if (enemy.hp <= 0) killEnemy(enemy);
+        }
+    }
 
     const occupied = new Set([hexKey(player.q, player.r)]);
     for (const e of em.enemies) occupied.add(hexKey(e.q, e.r));
@@ -922,6 +1440,7 @@ async function runEnemyPhase() {
         logCombat('Engaged! Half MP.', 'log-info');
     }
     player.usedSkillsThisTurn.clear();
+    player.movedThisTurn = false;
     phase = 'player';
     render();
 }
@@ -941,6 +1460,7 @@ function initGame() {
     reachable = null;
     attackable = null;
     targeting = null;
+    threatOverlay = null;
 
     world = new GameWorld();
     world.generate();
@@ -1069,11 +1589,44 @@ function render() {
         }
     }
 
+    // Threat heatmap overlay (Ground Weeps)
+    if (threatOverlay) {
+        let maxThreat = 0;
+        for (const t of threatOverlay.values()) if (t > maxThreat) maxThreat = t;
+        if (maxThreat > 0) {
+            for (const [key, threat] of threatOverlay) {
+                const { q, r } = parseHexKey(key);
+                const { x, y } = hexToScreen(q, r);
+                const intensity = threat / maxThreat;
+                // Blue (safe) → Yellow → Red (deadly)
+                let red, green, blue;
+                if (intensity < 0.5) {
+                    const t = intensity * 2;
+                    red = Math.round(255 * t); green = Math.round(255 * t); blue = Math.round(180 * (1 - t));
+                } else {
+                    const t = (intensity - 0.5) * 2;
+                    red = 255; green = Math.round(255 * (1 - t)); blue = 0;
+                }
+                drawHexPath(ctx, x, y, HEX_SIZE);
+                ctx.fillStyle = `rgba(${red}, ${green}, ${blue}, 0.45)`;
+                ctx.fill();
+            }
+        }
+        // Draw "Press Space to dismiss" label
+        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+        ctx.fillRect(canvas.width / 2 - 120, 50, 240, 30);
+        ctx.fillStyle = '#fff';
+        ctx.font = '13px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('Threat Map — Space/click to dismiss', canvas.width / 2, 70);
+        ctx.textAlign = 'left';
+    }
+
     // Targeting highlights
     if (targeting) {
         const skill = SKILLS[targeting.skill];
-        const color = skill && skill.target === SKILL_TARGET.TELEPORT
-            ? 'rgba(100, 200, 255, 0.3)' : 'rgba(100, 100, 255, 0.35)';
+        const isSpatial = skill && (skill.target === SKILL_TARGET.TELEPORT || skill.target === SKILL_TARGET.TELEPORT_REVEALED || skill.target === SKILL_TARGET.RANGED_AOE);
+        const color = isSpatial ? 'rgba(100, 200, 255, 0.3)' : 'rgba(100, 100, 255, 0.35)';
         for (const key of targeting.validHexes) {
             const { q, r } = parseHexKey(key);
             const { x, y } = hexToScreen(q, r);
@@ -1179,6 +1732,17 @@ function updateHUD() {
 }
 
 function updateSkillBar() {
+    // Ranged slot
+    const rangedSlot = document.getElementById('ranged-slot');
+    const wep = player.weapon();
+    const hasRanged = wep && wep.type === 'ranged';
+    const rangedCost = hasRanged && wep.magical && wep.special !== 'free_ranged' ? 1 : 0;
+    const canRanged = hasRanged && player.aether >= rangedCost && phase === 'player' && !gameOver;
+    rangedSlot.classList.toggle('disabled', !canRanged);
+    rangedSlot.classList.toggle('active', targeting && targeting.skill === '__ranged__');
+    rangedSlot.style.display = hasRanged ? '' : 'none';
+
+    // Skill slots 1-4
     for (let i = 0; i < 4; i++) {
         const slot = document.querySelector(`.skill-slot[data-slot="${i}"]`);
         const nameEl = slot.querySelector('.skill-name');
@@ -1253,19 +1817,58 @@ function updateCharPanel() {
 function updateSkillsPanel() {
     const list = document.getElementById('skills-list');
     let html = '';
+    // Show equipped slots
+    html += '<div style="color:#888;margin-bottom:4px;font-size:11px">EQUIPPED (click to unequip)</div>';
     for (let i = 0; i < 4; i++) {
         const skillId = player.skills[i];
         if (skillId) {
             const skill = SKILLS[skillId];
-            html += `<div class="skill-entry">
-                <div><span class="s-name">${skill.name}</span> <span class="s-cost">(${skill.cost} AE)</span></div>
+            html += `<div class="skill-entry" style="cursor:pointer;border-left:2px solid #7c4dff;padding-left:6px" data-unequip="${i}">
+                <div><span class="s-name">${skill.name}</span> <span class="s-cost">(${skill.cost} AE)</span> <span style="color:#555">[${i + 1}]</span></div>
                 <div class="s-desc">${skill.desc}</div>
             </div>`;
         } else {
             html += `<div class="skill-entry"><span style="color:#555">Slot ${i + 1}: Empty</span></div>`;
         }
     }
+    // Show learned but not equipped
+    const equipped = new Set(player.skills.filter(Boolean));
+    const unequipped = [...player.learnedSkills].filter(id => !equipped.has(id));
+    if (unequipped.length > 0) {
+        html += '<div style="color:#888;margin-top:8px;margin-bottom:4px;font-size:11px">LEARNED (click to equip)</div>';
+        for (const skillId of unequipped) {
+            const skill = SKILLS[skillId];
+            html += `<div class="skill-entry" style="cursor:pointer;opacity:0.7" data-equip="${skillId}">
+                <div><span class="s-name">${skill.name}</span> <span class="s-cost">(${skill.cost} AE)</span></div>
+                <div class="s-desc">${skill.desc}</div>
+            </div>`;
+        }
+    }
     list.innerHTML = html;
+
+    // Wire up equip/unequip
+    list.querySelectorAll('[data-unequip]').forEach(el => {
+        el.addEventListener('click', () => {
+            const slot = parseInt(el.dataset.unequip);
+            player.skills[slot] = null;
+            updateSkillsPanel();
+            updateSkillBar();
+        });
+    });
+    list.querySelectorAll('[data-equip]').forEach(el => {
+        el.addEventListener('click', () => {
+            const skillId = el.dataset.equip;
+            const emptySlot = player.skills.indexOf(null);
+            if (emptySlot >= 0) {
+                player.skills[emptySlot] = skillId;
+            } else {
+                // Replace last slot
+                player.skills[3] = skillId;
+            }
+            updateSkillsPanel();
+            updateSkillBar();
+        });
+    });
 }
 
 function updateInvPanel() {
@@ -1341,7 +1944,19 @@ function itemStatLine(item) {
             vision_bonus: `+${item.visionBonus} vision`, mp_penalty: `-${item.mpPenalty} MP`,
             wraith_immune: 'Wraith immune', aether_bonus: `+${item.aetherBonus} AE`,
             regen: `+${item.regenAmount} HP/turn`, displacement_immune: 'No displacement',
-            reveal_maw: 'Reveals Maw'
+            reveal_maw: 'Reveals Maw',
+            // New weapon specials
+            lifesteal: `+${item.lifestealAmount} HP/hit`, armor_pierce: `Pierce ${item.pierceAmount} def`,
+            riposte: 'Half counter-atk', momentum: `+${item.momentumBonus} if moved`,
+            aether_siphon: '+1 AE/hit', defense_shred: '-1 def/hit', recoil: `${item.recoilDamage} self-dmg`,
+            chain: `Chain ${item.chainDamage}`, knockback: 'Knockback 1',
+            splash: `Splash ${item.splashDamage}`, piercing: 'Pierce-through',
+            double_shot: 'Double shot', burn: `Burn ${item.burnDamage}/turn`,
+            sniper: `+${item.sniperBonus} at max range`,
+            // New armor specials
+            thorns: `${item.thornsDamage} reflect`, dodge_bonus: `+${item.dodgeBonus}% dodge`,
+            heal_on_kill: `+${item.healOnKill} HP/kill`, aether_regen: '+1 AE/turn',
+            ranged_immune: 'Ranged immune', last_stand: `+${item.lastStandBonus} def <50% HP`
         };
         parts.push(specials[item.special] || item.special);
     }
@@ -1410,7 +2025,8 @@ function showHavenDialog(poi) {
 }
 
 function showCampDialog(poi) {
-    showDialog(POI_SYMBOLS[POI.CAMP] + ' Camp', '<p>A brief respite from the wilds.</p>', [
+    const isTemp = poi.temporary;
+    showDialog(POI_SYMBOLS[POI.CAMP] + (isTemp ? ' Sanctuary' : ' Camp'), '<p>A brief respite from the wilds.</p>', [
         {
             label: 'Rest', cls: 'primary', action: () => {
                 const healAmt = Math.floor(player.maxHP() * 0.5);
@@ -1419,11 +2035,51 @@ function showCampDialog(poi) {
                 player.aether = Math.min(player.maxAether(), player.aether + aeAmt);
                 player.mp = 0;
                 logCombat(`Rested: +${healAmt} HP, +${aeAmt} AE`, 'log-heal');
+                // Remove temporary sanctuary after use
+                if (isTemp) {
+                    world.pois = world.pois.filter(p => p !== poi);
+                    const hex = world.getHex(poi.q, poi.r);
+                    if (hex) hex.poi = null;
+                    logCombat('The sanctuary fades.', 'log-info');
+                }
                 checkEndTurn();
             }
         },
         { label: 'Leave' }
     ]);
+}
+
+function showHutDialog(poi) {
+    // 5% chance the Wise Man's skill refreshes to something the player hasn't learned
+    if (Rando.bool(0.05)) {
+        const unlearnedPool = Object.values(SKILLS).filter(s => s.id !== 'restore' && !player.learnedSkills.has(s.id));
+        if (unlearnedPool.length > 0) {
+            poi.skill = Rando.choice(unlearnedPool).id;
+        }
+    }
+
+    const skill = SKILLS[poi.skill];
+    const skillName = skill ? skill.name : 'unknown art';
+
+    if (player.learnedSkills.has(poi.skill)) {
+        showDialog(POI_SYMBOLS[POI.HUT] + " Wise Man's Hut",
+            `<p>An old sage peers at you.</p><p style="color:#a1887f">"I have nothing to teach you."</p>`,
+            [{ label: 'Leave' }]);
+    } else {
+        showDialog(POI_SYMBOLS[POI.HUT] + " Wise Man's Hut",
+            `<p>The sage's eyes light up.</p><p style="color:#b388ff">"I can teach you <b>${skillName}</b>."</p><p class="s-desc">${skill.desc}</p>`,
+            [{
+                label: 'Learn', cls: 'primary', action: () => {
+                    player.learnedSkills.add(poi.skill);
+                    const emptySlot = player.skills.indexOf(null);
+                    if (emptySlot >= 0) player.skills[emptySlot] = poi.skill;
+                    logCombat(`The Wise Man teaches ${skillName}!`, 'log-info');
+                    updateSkillBar();
+                    updateSkillsPanel();
+                }
+            },
+            { label: 'Decline' }]);
+    }
 }
 
 function showShopDialog(poi) {
@@ -1564,13 +2220,14 @@ function showSkillChoiceDialog() {
     player.pendingSkillChoice = false;
     const available = Object.values(SKILLS).filter(s =>
         s.minLevel <= player.level &&
-        !player.skills.includes(s.id)
+        !player.learnedSkills.has(s.id)
     );
     if (available.length === 0) return;
-    available.sort((a, b) => a.minLevel - b.minLevel || a.cost - b.cost);
+    Rando.shuffle(available);
+    const offered = available.slice(0, 3);
 
-    let body = '<p>Choose a new skill:</p><div style="max-height:260px;overflow-y:auto">';
-    for (const skill of available) {
+    let body = '<p>Choose a skill to learn:</p><div style="max-height:260px;overflow-y:auto">';
+    for (const skill of offered) {
         body += `<div class="skill-choice" data-skill="${skill.id}">
             <div><span class="sc-name">${skill.name}</span> <span class="sc-cost">(${skill.cost} AE)</span></div>
             <div class="sc-desc">${skill.desc}</div>
@@ -1584,11 +2241,10 @@ function showSkillChoiceDialog() {
     document.getElementById('dialog-body').querySelectorAll('.skill-choice').forEach(el => {
         el.addEventListener('click', () => {
             const skillId = el.dataset.skill;
-            // Find first empty slot
+            player.learnedSkills.add(skillId);
+            // Auto-equip into first empty slot if available
             const emptySlot = player.skills.indexOf(null);
-            if (emptySlot >= 0) {
-                player.skills[emptySlot] = skillId;
-            }
+            if (emptySlot >= 0) player.skills[emptySlot] = skillId;
             document.getElementById('dialog-overlay').classList.add('hidden');
             phase = 'player';
             logCombat(`Learned ${SKILLS[skillId].name}!`, 'log-info');
@@ -1648,6 +2304,13 @@ canvas.addEventListener('mousedown', e => {
     }
 
     if (e.button === 0 && !gameOver && phase === 'player') {
+        // Dismiss threat overlay on click
+        if (threatOverlay) {
+            threatOverlay = null;
+            render();
+            return;
+        }
+
         const hex = screenToHex(e.clientX, e.clientY);
         const key = hexKey(hex.q, hex.r);
 
@@ -1728,13 +2391,24 @@ document.querySelectorAll('.panel-close').forEach(btn => {
 });
 
 // Skill bar clicks
-document.querySelectorAll('.skill-slot').forEach(slot => {
+document.querySelectorAll('.skill-slot[data-slot]').forEach(slot => {
     slot.addEventListener('click', () => activateSkillSlot(parseInt(slot.dataset.slot)));
+});
+document.getElementById('ranged-slot').addEventListener('click', () => {
+    if (phase === 'player') activateRangedWeapon();
 });
 
 window.addEventListener('keydown', e => {
     if (phase === 'dialog') return;
     if (gameOver) return;
+
+    // Dismiss threat overlay
+    if (threatOverlay && (e.key === ' ' || e.key === 'Escape')) {
+        e.preventDefault();
+        threatOverlay = null;
+        render();
+        return;
+    }
 
     if (e.key === ' ' || e.key === 'e' || e.key === 'E') {
         e.preventDefault();

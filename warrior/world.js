@@ -1,6 +1,6 @@
 // world.js — GameWorld: hex grid, POIs, fog of war
 
-import { TERRAIN, MAP_COLS, MAP_ROWS, MOVEMENT_COST, POI, WEAPONS, ARMORS, ARTIFACTS, ALL_EQUIPMENT, MAGICAL_ITEMS, NON_MAGICAL_ITEMS } from './config.js';
+import { TERRAIN, MAP_COLS, MAP_ROWS, MOVEMENT_COST, POI, WEAPONS, ARMORS, ARTIFACTS, ALL_EQUIPMENT, MAGICAL_ITEMS, NON_MAGICAL_ITEMS, SKILLS } from './config.js';
 import { hexKey, hexNeighbors, hexDistance, hexesInRange, bfsHexes } from './hex.js';
 import { Rando } from './rando.js';
 
@@ -200,6 +200,11 @@ export class GameWorld {
                 if (type === POI.RUIN) { poi.looted = false; poi.loot = self._generateRuinLoot(); poi.ruinEnemies = Rando.int(1, 3); }
                 if (type === POI.BREACH) { poi.closed = false; poi.guardianId = null; }
                 if (type === POI.MAW) { poi.closed = false; poi.guardianId = null; }
+                if (type === POI.HUT) {
+                    // Assign a random skill (excluding restore which everyone starts with)
+                    const skillPool = Object.values(SKILLS).filter(s => s.id !== 'restore');
+                    poi.skill = Rando.choice(skillPool).id;
+                }
                 self.pois.push(poi);
                 placed++;
             }
@@ -211,6 +216,7 @@ export class GameWorld {
         place(POI.RUIN, Rando.int(3, 5), false);
         place(POI.BREACH, Rando.int(3, 4), false);
         place(POI.MAW, 1, true);
+        place(POI.HUT, Rando.int(4, 6), false);
     }
 
     _generateShopItems() {

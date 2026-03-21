@@ -141,6 +141,7 @@ Enemies with a `rangedAttack` field (Void Stalker, Breach Guardian, Unraveler) f
 | Ruin | 3-5 | ⛫ | Lootable once: 1-3 non-magical items + 1 magical item + 5-20 gold. Spawns 1-3 enemies (50/50 Void Stalker or Flux Archer). |
 | Breach | 3-4 | ֍ | Open breaches spawn enemies (15%/turn). Sealable after guardian defeated. |
 | Maw | 1 | ✸ | Final objective. Placed preferentially rightward. Requires 2 sealed breaches + Unraveler defeated. |
+| Hut | 4-6 | ⌂ | Wise Man's Hut. Each has a fixed skill. 5% chance per visit to offer teaching. |
 
 ### Haven Shop
 - Stocks 3-5 items, 50/50 mix of magical and non-magical (magical excludes Maw Compass)
@@ -150,16 +151,30 @@ Enemies with a `rangedAttack` field (Void Stalker, Breach Guardian, Unraveler) f
 
 Items are either **magical** (unique, special properties, purple in UI) or **non-magical** (mundane, stackable in loot, no special abilities). Magical items are re-rolled on discovery to guarantee something the player doesn't already own (equipped or in inventory). If the player owns all magical items, none drops.
 
-### Magical Weapons (7)
+### Magical Weapons (21)
 | Name | Type | Dmg | Range | Special | Price | Tier |
 |------|------|-----|-------|---------|-------|------|
 | Rusty Blade | Melee | 1 | — | — | Free | 0 |
+| Duskfang | Melee | 4 | — | +2 HP on hit (lifesteal) | 35 | 1 |
+| Breaker Mace | Melee | 3 | — | Ignore 2 enemy defense | 30 | 1 |
 | Void Cleaver | Melee | 7 | — | +2 vs chaos-spawned | 40 | 1 |
+| Warden's Blade | Melee | 6 | — | Counter-attacks halved | 60 | 2 |
+| Emberstrike | Melee | 8 | — | +4 dmg if moved this turn | 75 | 2 |
+| Soulreaver | Melee | 7 | — | +1 Aether on hit | 70 | 2 |
 | Starforged Sword | Melee | 10 | — | — | 100 | 2 |
+| Nullblade | Melee | 9 | — | -1 enemy def per hit (permanent, min 0) | 110 | 3 |
+| Worldsplitter | Melee | 14 | — | 3 self-damage per attack | 130 | 3 |
 | Dimensional Edge | Melee | 12 | — | Cleave (hits adjacent enemies too) | 150 | 3 |
+| Spark Caster | Ranged | 3 | 2 | Chain: 3 flat dmg to one adjacent enemy | 30 | 1 |
 | Flux Bow | Ranged | 5 | 2 | — | 35 | 1 |
+| Gale Bow | Ranged | 4 | 3 | Knockback: push target 1 hex away | 40 | 1 |
+| Rift Cannon | Ranged | 6 | 2 | Splash: 2 dmg to enemies adjacent to target | 55 | 2 |
 | Aether Lance | Ranged | 6 | 3 | Free ranged (no Aether cost) | 60 | 2 |
+| Voidpiercer | Ranged | 5 | 4 | Pierce-through: bolt continues to next enemy in line | 65 | 2 |
+| Stasis Repeater | Ranged | 4 | 3 | Double shot: fires twice | 70 | 2 |
+| Nova Launcher | Ranged | 7 | 3 | Burn: target takes 3 dmg next turn (ignores def) | 100 | 3 |
 | Phase Rifle | Ranged | 8 | 5 | Ignores defense | 120 | 3 |
+| Astral Longbow | Ranged | 9 | 5 | +4 dmg at max range | 140 | 3 |
 
 ### Non-Magical Melee Weapons (6)
 | Name | Dmg | Price | Tier |
@@ -171,10 +186,11 @@ Items are either **magical** (unique, special properties, purple in UI) or **non
 | Blade Spear | 4 | 45 | 3 |
 | Greatsword | 5 | 70 | 4 |
 
-### Non-Magical Bows (5)
+### Non-Magical Bows (6)
 | Name | Dmg | Range | Price | Tier |
 |------|-----|-------|-------|------|
-| Short Bow | 1 | 2 | 5 | 0 |
+| Stick Bow | 1 | 2 | Free | 0 |
+| Short Bow | 1 | 2 | 5 | 1 |
 | Hunting Bow | 2 | 2 | 12 | 1 |
 | Crossbow | 3 | 3 | 25 | 2 |
 | War Bow | 4 | 3 | 45 | 3 |
@@ -188,14 +204,20 @@ Items are either **magical** (unique, special properties, purple in UI) or **non
 | Scale Armor | 4 | 50 | 3 |
 | Plate Armor | 5 | 75 | 4 |
 
-### Magical Armors (5)
+### Magical Armors (11)
 | Name | Def | Special | Price | Tier |
 |------|-----|---------|-------|------|
 | Worn Leather | 1 | — | Free | 0 |
+| Thornmail | 2 | Melee attackers take 2 reflect dmg | 35 | 1 |
+| Flickerweave | 2 | +10% dodge chance | 40 | 1 |
 | Warded Mail | 4 | +10 HP | 50 | 1 |
 | Chaosweave Cloak | 3 | +2 vision | 45 | 1 |
+| Bloodward Cuirass | 4 | +5 HP on kill | 65 | 2 |
+| Wraithskin | 3 | Negate all ranged damage | 75 | 2 |
+| Stormplate | 3 | +1 Aether/turn | 80 | 2 |
 | Starplate | 6 | -1 MP | 120 | 2 |
 | Voidhide | 5 | Wraith immune | 100 | 3 |
+| Aegis of the Breach | 6 | +2 def below 50% HP | 130 | 3 |
 
 ### Magical Artifacts (5)
 | Name | Special | Price | Tier |
@@ -212,22 +234,49 @@ Items are either **magical** (unique, special properties, purple in UI) or **non
 - **Haven shops**: 3-5 items, 50/50 magical/non-magical mix
 - **Sell price**: 40% of buy price
 
-## Skills (10)
+## Skills (30)
 
-Restore is always equipped in slot 1. Other skills unlocked at levels 2, 4, 6, 8, 10. At each unlock, player picks 1 of 2 randomly offered skills they don't already have. 4 skill slots total.
+Skills are **learned** (in player's pool), **available** (meets level requirement, not yet learned), or **unlearned** (level too low). Restore is learned at start. At levels 2, 4, 6, 8, 10, the player picks 1 of 3 random available skills to learn. Learned skills can be freely equipped/unequipped into 4 active slots via the Skills panel. Wise Man huts scattered across the map can also teach skills (5% chance per visit).
+
+### Combat Skills
+
+| Skill | Cost | Target | Scales | Level | Effect |
+|-------|------|--------|--------|-------|--------|
+| Restore | 0 | AoE Self (1+Lv/3) | — | 0 | Restore shattered terrain. Gain 1 AE. Ends turn. 3 XP per hex. |
+| Void Strike | 1 AE | Melee | Might+Warding | 1 | weapon + Might + Warding damage. No counter-attack. |
+| Phase Step | 2 AE | Teleport (3) | — | 2 | Teleport to visible hex within 3. Free action. |
+| Cosmic Bolt | 2 AE | Ranged (4) | Warding | 2 | 8 + Warding ranged damage. |
+| Shockwave | 2 AE | AoE Self (2) | Might | 2 | 4 + Might damage to enemies within 2. Pushes each 1 hex away. |
+| Siphon Strike | 2 AE | Melee | Might | 2 | weapon + Might damage. Heal HP equal to damage dealt. No counter. |
+| Piercing Shot | 2 AE | Ranged (4) | Reflex | 2 | 6 + Reflex damage. Ignores defense. |
+| Warp Shield | 2 AE | Self | — | 4 | Absorb next hit. Lasts 3 turns. |
+| Breach Pulse | 3 AE | AoE Self (2) | Warding | 4 | 5 + Warding damage to all enemies within 2. |
+| Chain Lightning | 3 AE | Ranged (3) | Warding | 4 | 6 + Warding to target. Chains to 2 nearby enemies for 4 flat dmg. |
+| Immolate | 1 AE | Melee | Might | 4 | weapon + Might damage. Target burns for 4 next turn. No counter. |
+| Mending Light | 2 AE | Self | Vigor | 6 | Heal 10 + Vigor*3 HP. |
+| Gravity Well | 3 AE | AoE Self (3) | — | 6 | Pull enemies within 3 one hex closer. |
+| Sundering Blow | 2 AE | Melee | Might | 6 | weapon + Might damage. Permanently shred 3 enemy defense. No counter. |
+| Meteor | 4 AE | Ranged AoE (4) | Warding | 6 | Target hex: 8 + Warding to all enemies within 1 of target. |
+| Dimensional Rend | 4 AE | Melee | weapon | 8 | weapon damage * 3. Must be adjacent. |
+| Execute | 3 AE | Melee | Might+weapon | 8 | weapon*2 + Might*2 damage. Only targets enemies below 50% HP. |
+| Ricochet | 3 AE | Ranged (4) | Reflex | 8 | 5 + Reflex damage. Bounces to 2 more enemies within 2 hexes. |
+| Starfall | 5 AE | AoE Self (3) | Warding | 10 | 15 + Warding*2 damage to all enemies within 3. |
+| Void Salvo | 4 AE | Ranged (3) | Reflex | 10 | Fire 3 shots: each deals 5 + Reflex damage. |
+
+### Non-Combat Skills
 
 | Skill | Cost | Target | Level | Effect |
 |-------|------|--------|-------|--------|
-| Restore | 0 | AoE Self (1+Lv/3) | 0 | Restore shattered terrain. Gain 1 AE. Ends turn. 3 XP per hex. |
-| Void Strike | 1 AE | Melee | 1 | weapon + Might + Warding damage. No counter-attack. |
-| Phase Step | 2 AE | Teleport (3) | 2 | Teleport to visible hex within 3. Free action. |
-| Cosmic Bolt | 2 AE | Ranged (4) | 2 | 8 + Warding ranged damage. |
-| Warp Shield | 2 AE | Self | 4 | Absorb next hit. Lasts 3 turns. |
-| Breach Pulse | 3 AE | AoE Self (2) | 4 | 5 + Warding damage to all enemies within 2. |
-| Mending Light | 2 AE | Self | 6 | Heal 10 + Vigor*3 HP. |
-| Gravity Well | 3 AE | AoE Self (3) | 6 | Pull enemies within 3 one hex closer. |
-| Dimensional Rend | 4 AE | Melee | 8 | weapon damage * 3. Must be adjacent. |
-| Starfall | 5 AE | AoE Self (3) | 10 | 15 + Warding*2 damage to all enemies within 3. |
+| Aether Tap | 0 | AoE Self (2) | 2 | Draw AE from healthy land. +1 AE per 3 non-shattered, non-distressed hexes within 2. Ends turn. |
+| Farsight | 2 AE | Self | 2 | Reveal all hexes within 12 (permanent terrain + temporary visibility). Free action. |
+| Prospect | 1 AE | Self | 4 | Reveal gold hexes within 8. If on plains, 20% chance to discover a gold deposit. |
+| Commune | 2 AE | Self | 4 | Permanently reveal all POI locations on the map. |
+| Salvage | 0 | AoE Self (1) | 4 | Create gold deposits on adjacent shattered hexes (converts to shattered gold). Ends turn. |
+| Skill Seek | 3 AE | Self | 6 | 5% per level chance to learn a new skill. On fail: +10 XP. |
+| Spirit Walk | 3 AE | Teleport Revealed (6) | 6 | Teleport to any revealed passable hex within 6. Ends turn. |
+| Ground Weeps | 4 AE | Self | 8 | Full-map enemy threat heatmap overlay. Blue=safe, red=deadly. Dismiss with Space/click. |
+| Sanctuary | 3 AE | Self | 8 | Current hex becomes a temporary camp (one rest: 50% HP + 50% AE). Must be non-POI terrain. |
+| Recall | 5 AE | Self | 10 | Teleport to nearest haven. Ends turn. |
 
 ## Turn Structure
 

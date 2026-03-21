@@ -136,7 +136,8 @@ export const POI = {
     CAMP: 'camp',
     RUIN: 'ruin',
     BREACH: 'breach',
-    MAW: 'maw'
+    MAW: 'maw',
+    HUT: 'hut'
 };
 
 export const POI_DEFENSE_BONUS = {
@@ -149,7 +150,8 @@ export const POI_SYMBOLS = {
     [POI.CAMP]: '\u26FA',    // ⛺ tent
     [POI.RUIN]: '\u26EB',    // ⛫ castle ruins
     [POI.BREACH]: '\u058D',  // ֍ swirl
-    [POI.MAW]: '\u2738'      // ✸ pulsing star
+    [POI.MAW]: '\u2738',     // ✸ pulsing star
+    [POI.HUT]: '\u2302'      // ⌂ house
 };
 
 export const POI_COLORS = {
@@ -157,7 +159,8 @@ export const POI_COLORS = {
     [POI.CAMP]: '#ffb74d',
     [POI.RUIN]: '#b0bec5',
     [POI.BREACH]: '#e040fb',
-    [POI.MAW]: '#ff1744'
+    [POI.MAW]: '#ff1744',
+    [POI.HUT]: '#a1887f'
 };
 
 // ---- Enemy types ----
@@ -211,9 +214,23 @@ export const WEAPONS = [
     { id: 'void_cleaver', name: 'Void Cleaver', type: 'melee', damage: 7, range: 0, special: 'chaos_bonus', price: 40, tier: 1, magical: true },
     { id: 'starforged_sword', name: 'Starforged Sword', type: 'melee', damage: 10, range: 0, special: null, price: 100, tier: 2, magical: true },
     { id: 'dimensional_edge', name: 'Dimensional Edge', type: 'melee', damage: 12, range: 0, special: 'cleave', price: 150, tier: 3, magical: true },
+    { id: 'duskfang', name: 'Duskfang', type: 'melee', damage: 4, range: 0, special: 'lifesteal', lifestealAmount: 2, price: 35, tier: 1, magical: true },
+    { id: 'breaker_mace', name: 'Breaker Mace', type: 'melee', damage: 3, range: 0, special: 'armor_pierce', pierceAmount: 2, price: 30, tier: 1, magical: true },
+    { id: 'wardens_blade', name: "Warden's Blade", type: 'melee', damage: 6, range: 0, special: 'riposte', price: 60, tier: 2, magical: true },
+    { id: 'emberstrike', name: 'Emberstrike', type: 'melee', damage: 8, range: 0, special: 'momentum', momentumBonus: 4, price: 75, tier: 2, magical: true },
+    { id: 'soulreaver', name: 'Soulreaver', type: 'melee', damage: 7, range: 0, special: 'aether_siphon', price: 70, tier: 2, magical: true },
+    { id: 'nullblade', name: 'Nullblade', type: 'melee', damage: 9, range: 0, special: 'defense_shred', price: 110, tier: 3, magical: true },
+    { id: 'worldsplitter', name: 'Worldsplitter', type: 'melee', damage: 14, range: 0, special: 'recoil', recoilDamage: 3, price: 130, tier: 3, magical: true },
     { id: 'flux_bow', name: 'Flux Bow', type: 'ranged', damage: 5, range: 2, special: null, price: 35, tier: 1, magical: true },
     { id: 'phase_rifle', name: 'Phase Rifle', type: 'ranged', damage: 8, range: 5, special: 'ignore_defense', price: 120, tier: 3, magical: true },
     { id: 'aether_lance', name: 'Aether Lance', type: 'ranged', damage: 6, range: 3, special: 'free_ranged', price: 60, tier: 2, magical: true },
+    { id: 'spark_caster', name: 'Spark Caster', type: 'ranged', damage: 3, range: 2, special: 'chain', chainDamage: 3, price: 30, tier: 1, magical: true },
+    { id: 'gale_bow', name: 'Gale Bow', type: 'ranged', damage: 4, range: 3, special: 'knockback', price: 40, tier: 1, magical: true },
+    { id: 'rift_cannon', name: 'Rift Cannon', type: 'ranged', damage: 6, range: 2, special: 'splash', splashDamage: 2, price: 55, tier: 2, magical: true },
+    { id: 'voidpiercer', name: 'Voidpiercer', type: 'ranged', damage: 5, range: 4, special: 'piercing', price: 65, tier: 2, magical: true },
+    { id: 'stasis_repeater', name: 'Stasis Repeater', type: 'ranged', damage: 4, range: 3, special: 'double_shot', price: 70, tier: 2, magical: true },
+    { id: 'nova_launcher', name: 'Nova Launcher', type: 'ranged', damage: 7, range: 3, special: 'burn', burnDamage: 3, price: 100, tier: 3, magical: true },
+    { id: 'astral_longbow', name: 'Astral Longbow', type: 'ranged', damage: 9, range: 5, special: 'sniper', sniperBonus: 4, price: 140, tier: 3, magical: true },
     // Non-magical melee
     { id: 'iron_sword', name: 'Iron Sword', type: 'melee', damage: 2, range: 0, special: null, price: 12, tier: 1, magical: false },
     { id: 'spear', name: 'Spear', type: 'melee', damage: 2, range: 0, special: null, price: 12, tier: 1, magical: false },
@@ -236,6 +253,12 @@ export const ARMORS = [
     { id: 'chaosweave_cloak', name: 'Chaosweave Cloak', defense: 3, special: 'vision_bonus', visionBonus: 2, price: 45, tier: 1, magical: true },
     { id: 'starplate', name: 'Starplate', defense: 6, special: 'mp_penalty', mpPenalty: 1, price: 120, tier: 2, magical: true },
     { id: 'voidhide', name: 'Voidhide', defense: 5, special: 'wraith_immune', price: 100, tier: 3, magical: true },
+    { id: 'thornmail', name: 'Thornmail', defense: 2, special: 'thorns', thornsDamage: 2, price: 35, tier: 1, magical: true },
+    { id: 'flickerweave', name: 'Flickerweave', defense: 2, special: 'dodge_bonus', dodgeBonus: 10, price: 40, tier: 1, magical: true },
+    { id: 'bloodward_cuirass', name: 'Bloodward Cuirass', defense: 4, special: 'heal_on_kill', healOnKill: 5, price: 65, tier: 2, magical: true },
+    { id: 'stormplate', name: 'Stormplate', defense: 3, special: 'aether_regen', price: 80, tier: 2, magical: true },
+    { id: 'wraithskin', name: 'Wraithskin', defense: 3, special: 'ranged_immune', price: 75, tier: 2, magical: true },
+    { id: 'aegis_of_the_breach', name: 'Aegis of the Breach', defense: 6, special: 'last_stand', lastStandBonus: 2, price: 130, tier: 3, magical: true },
     // Non-magical armor
     { id: 'leather_armor', name: 'Leather Armor', defense: 2, special: null, price: 15, tier: 1, magical: false },
     { id: 'chain_mail', name: 'Chain Mail', defense: 3, special: null, price: 30, tier: 2, magical: false },
@@ -265,9 +288,12 @@ export const NON_MAGICAL_ITEMS = [...WEAPONS.filter(w => !w.magical), ...ARMORS.
 export const SKILL_TARGET = {
     SELF: 'self',
     MELEE: 'melee',       // must be adjacent
-    RANGED: 'ranged',     // pick hex within range
+    MELEE_EXECUTE: 'melee_execute', // adjacent + enemy below 50% HP
+    RANGED: 'ranged',     // pick enemy within range
+    RANGED_AOE: 'ranged_aoe', // pick any visible hex within range (damages area)
     AOE_SELF: 'aoe_self', // centered on self
-    TELEPORT: 'teleport'  // pick any visible hex in range
+    TELEPORT: 'teleport',  // pick any visible hex in range
+    TELEPORT_REVEALED: 'teleport_revealed' // pick any revealed hex in range
 };
 
 export const SKILLS = {
@@ -310,6 +336,89 @@ export const SKILLS = {
     starfall: {
         id: 'starfall', name: 'Starfall', cost: 5, target: SKILL_TARGET.AOE_SELF,
         range: 3, baseDamage: 15, desc: 'AoE: 15 + Warding*2 to enemies within 3.', minLevel: 10
+    },
+    shockwave: {
+        id: 'shockwave', name: 'Shockwave', cost: 2, target: SKILL_TARGET.AOE_SELF,
+        range: 2, baseDamage: 4, desc: 'AoE: 4 + Might to enemies within 2. Pushes each 1 hex away.', minLevel: 2
+    },
+    siphon_strike: {
+        id: 'siphon_strike', name: 'Siphon Strike', cost: 2, target: SKILL_TARGET.MELEE,
+        desc: 'Melee: weapon + Might. Heal HP equal to damage dealt. No counter.', minLevel: 2
+    },
+    piercing_shot: {
+        id: 'piercing_shot', name: 'Piercing Shot', cost: 2, target: SKILL_TARGET.RANGED,
+        range: 4, baseDamage: 6, desc: 'Ranged: 6 + Reflex. Ignores defense.', minLevel: 2
+    },
+    chain_lightning: {
+        id: 'chain_lightning', name: 'Chain Lightning', cost: 3, target: SKILL_TARGET.RANGED,
+        range: 3, baseDamage: 6, chainDamage: 4, chainCount: 2, chainRange: 2,
+        desc: 'Ranged: 6 + Warding. Chains to 2 nearby enemies for 4 flat dmg.', minLevel: 4
+    },
+    immolate: {
+        id: 'immolate', name: 'Immolate', cost: 1, target: SKILL_TARGET.MELEE,
+        burnDamage: 4, desc: 'Melee: weapon + Might. Target burns for 4 next turn. No counter.', minLevel: 4
+    },
+    sundering_blow: {
+        id: 'sundering_blow', name: 'Sundering Blow', cost: 2, target: SKILL_TARGET.MELEE,
+        shredAmount: 3, desc: 'Melee: weapon + Might. Permanently shred 3 enemy def. No counter.', minLevel: 6
+    },
+    meteor: {
+        id: 'meteor', name: 'Meteor', cost: 4, target: SKILL_TARGET.RANGED_AOE,
+        range: 4, aoeRange: 1, baseDamage: 8, desc: 'Target hex: 8 + Warding to all enemies within 1.', minLevel: 6
+    },
+    execute: {
+        id: 'execute', name: 'Execute', cost: 3, target: SKILL_TARGET.MELEE_EXECUTE,
+        desc: 'Melee: weapon*2 + Might*2. Only targets enemies below 50% HP.', minLevel: 8
+    },
+    ricochet: {
+        id: 'ricochet', name: 'Ricochet', cost: 3, target: SKILL_TARGET.RANGED,
+        range: 4, baseDamage: 5, bounceCount: 2, bounceRange: 2,
+        desc: 'Ranged: 5 + Reflex. Bounces to 2 more enemies within 2.', minLevel: 8
+    },
+    void_salvo: {
+        id: 'void_salvo', name: 'Void Salvo', cost: 4, target: SKILL_TARGET.RANGED,
+        range: 3, baseDamage: 5, shotCount: 3, desc: 'Fire 3 shots: each deals 5 + Reflex.', minLevel: 10
+    },
+    // ---- Non-combat skills ----
+    aether_tap: {
+        id: 'aether_tap', name: 'Aether Tap', cost: 0, target: SKILL_TARGET.AOE_SELF,
+        range: 2, desc: 'Draw Aether from healthy land. +1 AE per 3 clean hexes within 2. Ends turn.', minLevel: 2
+    },
+    farsight: {
+        id: 'farsight', name: 'Farsight', cost: 2, target: SKILL_TARGET.SELF,
+        range: 12, desc: 'Reveal all hexes within 12. Free action.', minLevel: 2, freeAction: true
+    },
+    prospect: {
+        id: 'prospect', name: 'Prospect', cost: 1, target: SKILL_TARGET.SELF,
+        revealRange: 8, desc: 'Reveal gold hexes within 8. 20% chance to discover a gold deposit.', minLevel: 4
+    },
+    commune: {
+        id: 'commune', name: 'Commune', cost: 2, target: SKILL_TARGET.SELF,
+        desc: 'Reveal all POI locations on the map. Ends turn.', minLevel: 4
+    },
+    salvage: {
+        id: 'salvage', name: 'Salvage', cost: 0, target: SKILL_TARGET.AOE_SELF,
+        range: 1, desc: 'Create gold deposits on adjacent shattered hexes. Ends turn.', minLevel: 4
+    },
+    skill_seek: {
+        id: 'skill_seek', name: 'Skill Seek', cost: 3, target: SKILL_TARGET.SELF,
+        desc: 'Meditate: 5% per level chance to learn a new skill. Fail: +10 XP.', minLevel: 6
+    },
+    spirit_walk: {
+        id: 'spirit_walk', name: 'Spirit Walk', cost: 3, target: SKILL_TARGET.TELEPORT_REVEALED,
+        range: 6, desc: 'Teleport to any revealed hex within 6. Ends turn.', minLevel: 6
+    },
+    ground_weeps: {
+        id: 'ground_weeps', name: 'Ground Weeps', cost: 4, target: SKILL_TARGET.SELF,
+        desc: 'Show enemy threat heatmap over entire map. Press Space/click to dismiss.', minLevel: 8
+    },
+    sanctuary: {
+        id: 'sanctuary', name: 'Sanctuary', cost: 3, target: SKILL_TARGET.SELF,
+        desc: 'Current hex becomes a temporary camp (one rest). Must be non-POI terrain.', minLevel: 8
+    },
+    recall: {
+        id: 'recall', name: 'Recall', cost: 5, target: SKILL_TARGET.SELF,
+        desc: 'Teleport to nearest haven. Ends turn.', minLevel: 10
     }
 };
 
