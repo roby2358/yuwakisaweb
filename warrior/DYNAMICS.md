@@ -2,15 +2,15 @@
 
 ## Theme
 
-The desperate ascent of a lone warrior through a world tearing itself apart from within. Not power fantasy — *survival escalation*. The land itself is sick — chaos bleeds from wounds in the earth, twisting creatures and corrupting terrain. You start weak and claw your way to relevance one fight at a time. The feeling: every level earned, every breach sealed, every piece of gear found feels like defiance against entropy.
+The desperate ascent of a lone warrior through a world tearing itself apart from within. Not power fantasy — *survival escalation*. The land itself is sick — chaos bleeds from wounds in the earth, twisting creatures and corrupting terrain. Chaos-spawned enemies literally shatter the ground they walk on, turning fertile plains into broken wastelands. You start weak and claw your way to relevance one fight at a time. The feeling: every level earned, every breach sealed, every hex restored feels like defiance against entropy.
 
 ## Key Drivers
 
 ### 1. Accumulation and Windfall
-The core RPG loop. XP, loot, stats, skills — every encounter makes you measurably stronger. The polynomial XP curve (`50 * level^1.8`, rounded to nearest 10) makes early levels feel fast (quick wins, dopamine) and later levels require deliberate engagement with dangerous content (breaches, ruins). Windfalls come from: breach guardian drops (tier 3 gear), level-up full heals (instant relief), ruin loot (random tier 1-2 gear + 5-20 gold), and finding a Dimensional Edge when you've been swinging a Rusty Blade for 20 turns.
+The core RPG loop. XP, loot, stats, skills — every encounter makes you measurably stronger. The polynomial XP curve (`50 * level^1.8`, rounded to nearest 10) makes early levels feel fast (quick wins, dopamine) and later levels require deliberate engagement with dangerous content (breaches, ruins). Windfalls come from: breach guardian drops (tier 3 gear), level-up full heals (instant relief), ruin loot (random tier 1-3 gear + 5-20 gold), and finding a Dimensional Edge when you've been swinging a Rusty Blade for 20 turns. Killing chaos-spawned enemies returns +1 Aether, creating a sustain loop that rewards aggression.
 
 ### 2. Scarcity of Agency
-4 MP per turn. 4 skill slots. Limited Aether. You can't fight everything, explore everything, or be everywhere. Every turn is a triage decision: push toward the next breach or retreat to heal? Spend Aether on Void Strike for guaranteed damage or save it for Mending Light? Move deeper into fog or consolidate revealed territory? The constraint makes each action feel weighty. Engagement halves your MP, compounding the scarcity when you're in the thick of it.
+4 MP per turn. 4 skill slots. Limited Aether. You can't fight everything, explore everything, or be everywhere. Every turn is a triage decision: push toward the next breach or retreat to heal? Spend Aether on Void Strike for guaranteed damage or save it for Mending Light? Restore shattered terrain or conserve Aether for combat? Move deeper into fog or consolidate revealed territory? The constraint makes each action feel weighty. Engagement halves your MP, compounding the scarcity when you're in the thick of it.
 
 ### 3. Guardianship
 One character. One life. No party, no reserves. Every HP point matters because death is game over. Equipment becomes precious — not because of stats alone, but because *you* found it, *you* chose it, *you* survived with it. The player should mourn losing their Chaosweave Cloak to a shop upgrade.
@@ -18,7 +18,7 @@ One character. One life. No party, no reserves. Every HP point matters because d
 ## Secondary Drivers
 
 ### Escalating Commitment
-Breaches bleed chaos into the world continuously, spawning twisted creatures (15% per turn per open breach — 60% Void Stalkers, 40% Phase Wraiths). The longer you wait, the worse it gets. Sealing breaches is the only way to reduce pressure, but each is guarded by a Breach Guardian. Standing still makes things worse — the game demands forward momentum.
+Breaches bleed chaos into the world continuously, spawning twisted creatures (15% per turn per open breach — 60% Void Stalkers, 40% Phase Wraiths). The longer you wait, the worse it gets. Meanwhile, chaos-spawned enemies shatter terrain as they move (2% per turn), increasing movement costs and degrading the map. Sealing breaches is the only way to reduce pressure, but each is guarded by a Breach Guardian. Standing still makes things worse — the game demands forward momentum.
 
 ### Readable Consequences
 Yellow hexes show where you can go. Red hexes show what you can attack. Blue hexes show targeting range. Counter stats (attack bottom-left, defense bottom-right) tell you exactly what you're facing. Enemy detection ranges, HP bars, and type labels are all visible. The counter label turns dark during player phase and gold-tinted during enemy phase — a glanceable indicator of whose turn it is.
@@ -49,6 +49,13 @@ The polynomial XP curve and breach escalation create a natural tension point aro
 | Quarry   | 2          | None | Carved from hills during generation |
 | Water    | Impassable | — | 25% of map, all edges |
 | Mountain | Impassable | Blocks line of sight | Highest elevation band |
+| Shattered Plains | 2 | None | Created by chaos corruption |
+| Shattered Forest | 3 | +1 defense | Shattered but still provides cover |
+| Shattered Hills | 3 | +1 ranged range | Shattered but still elevated |
+| Shattered Gold | 2 | None | Lootable: 20 gold (double normal) |
+| Shattered Quarry | 3 | None | Created by chaos corruption |
+
+Chaos-spawned enemies have a 2% chance per turn to shatter the terrain they occupy, converting normal terrain to its shattered variant (+1 movement cost). The Restore skill reverses this. Shattered terrain is visually distinct (dark red tones) and serves as a visible footprint of chaos spreading across the map.
 
 ## Player
 
@@ -60,7 +67,8 @@ The polynomial XP curve and breach escalation create a natural tension point aro
 - Vision = 6 hexes (expandable with equipment)
 - 3 stat points per level-up (allocated freely)
 - 4 active skill slots, 3 equipment slots (weapon, armor, artifact)
-- Starts with Rusty Blade (4 melee damage), Worn Leather (2 defense), Void Strike skill
+- Starts with Rusty Blade (1 melee damage), Worn Leather (1 defense), Restore skill
+- Regenerates 1 HP per turn naturally (at start of enemy phase)
 - Dodge chance = Reflex% (capped at 30%)
 - Melee damage = weapon damage + Might (+ 2 vs chaos-spawned with Void Cleaver)
 - Ranged damage = weapon damage + Reflex
@@ -91,11 +99,11 @@ Absorbs the next hit entirely. Duration 3 turns. Consumed on first hit absorbed.
 | Breach Crawler | 30 | 8 | — | 4 | 1 | 3 | Chase | Tanky, melee only. |
 | Flux Archer | 12 | 6 | — (range 4) | 1 | 1 | 5 | Kite | Pure ranged: uses attack stat at range, maintains 2-3 hex distance. |
 | Phase Wraith | 20 | 7 | — | 2 | 1 | 4 | Teleport | 30% chance to teleport within 3 hexes of player. |
-| Breach Guardian | 50 | 10 | 8 (range 3) | 3 | 1 | 3 | Guard | Stays within 2 hexes of home breach. Dual melee+ranged. Drops tier 3 loot on death. |
-| The Unraveler | 100 | 12 | 6 (range 4) | 4 | 1 | 6 | Boss | Spawns a Void Stalker every 3 turns. Dual melee+ranged. |
+| Breach Guardian | 50 | 10 | 8 (range 3) | 5 | 1 | 3 | Guard | Stays within 2 hexes of home breach. Dual melee+ranged. Drops tier 3 loot on death. |
+| The Unraveler | 100 | 12 | 6 (range 4) | 6 | 1 | 6 | Boss | Spawns a Void Stalker every 3 turns. Dual melee+ranged. |
 
 ### Dual Attack System
-Enemies with a `rangedAttack` field (Void Stalker, Breach Guardian, Unraveler) fire ranged *in addition to* melee when in melee range. Enemies without `rangedAttack` (Flux Archer) fire their `attack` stat at range but only when not in melee range.
+Enemies with a `rangedAttack` field (Void Stalker, Breach Guardian, Unraveler) fire ranged *in addition to* melee when in melee range. Enemies without `rangedAttack` (Flux Archer) fire their `attack` stat at range but only when not in melee range. Ranged-capable chasers (Void Stalker) have a 50% chance per turn to prefer ranged fire and skip closing in. Flux Archers only fire 50% of the time when in range.
 
 ### Enemy Behaviors
 - **Chase**: A* pathfinding toward player when within detection range, else 50% chance to wander randomly.
@@ -103,13 +111,18 @@ Enemies with a `rangedAttack` field (Void Stalker, Breach Guardian, Unraveler) f
 - **Guard**: Stays within guardRadius (2) of home POI. Chases if player enters detection range but won't leave the guard zone.
 - **Teleport**: 30% chance per turn to teleport to a random passable hex within teleportRange (3) of the player.
 - **Boss**: Chases when in detection range (6). Spawns Void Stalker adjacent every 3 turns.
+- **Wildlife**: Procedurally generated neutral creatures. Chase player when within aggro range (varies per creature), otherwise 30% chance to wander. Avoid shattered terrain when wandering.
+
+### Wildlife
+12 procedurally generated creature types per game, with random fantasy names (e.g., "Ashtigeron", "Velpantherine"), unique colors from a random color scheme, and stats scaling from 3-12 attack. Wildlife is distinct from chaos-spawned enemies: they don't shatter terrain, don't grant Aether on kill, and avoid shattered hexes. 20 wildlife spawn at game start (outside player vision, on non-shattered terrain), with a 2% per turn chance to spawn more.
 
 ### Initial Spawning
 - Void Stalkers: 2d4
 - Flux Archers: 1d3
 - Each breach gets 1 Breach Guardian + 1-2 Breach Crawlers
 - The Maw gets 1 Unraveler
-- Total enemy cap: 20
+- Wildlife: 20 random creatures (outside initial vision)
+- Total enemy cap: 60
 
 ## Points of Interest
 
@@ -117,7 +130,7 @@ Enemies with a `rangedAttack` field (Void Stalker, Breach Guardian, Unraveler) f
 |-----|-------|--------|--------|
 | Haven | 2-3 | 🏰 | Full rest (HP + Aether). Shop with 3-5 random tier 1+ items. |
 | Camp | 4-6 | ⛺ | Partial rest: 50% HP + 50% Aether recovery. |
-| Ruin | 3-5 | ⛫ | Lootable once: random tier 1-2 item + 5-20 gold. Spawns 1-3 enemies (50/50 Void Stalker or Flux Archer). |
+| Ruin | 3-5 | ⛫ | Lootable once: random tier 1-3 item + 5-20 gold. Spawns 1-3 enemies (50/50 Void Stalker or Flux Archer). |
 | Breach | 3-4 | ֍ | Open breaches spawn enemies (15%/turn). Sealable after guardian defeated. |
 | Maw | 1 | ✸ | Final objective. Placed preferentially rightward. Requires 2 sealed breaches + Unraveler defeated. |
 
@@ -130,7 +143,7 @@ Enemies with a `rangedAttack` field (Void Stalker, Breach Guardian, Unraveler) f
 ### Weapons (7)
 | Name | Type | Dmg | Range | Special | Price | Tier |
 |------|------|-----|-------|---------|-------|------|
-| Rusty Blade | Melee | 4 | — | — | Free | 0 |
+| Rusty Blade | Melee | 1 | — | — | Free | 0 |
 | Void Cleaver | Melee | 7 | — | +2 vs chaos-spawned | 40 | 1 |
 | Starforged Sword | Melee | 10 | — | — | 100 | 2 |
 | Dimensional Edge | Melee | 12 | — | Cleave (hits adjacent enemies too) | 150 | 3 |
@@ -141,7 +154,7 @@ Enemies with a `rangedAttack` field (Void Stalker, Breach Guardian, Unraveler) f
 ### Armors (5)
 | Name | Def | Special | Price | Tier |
 |------|-----|---------|-------|------|
-| Worn Leather | 2 | — | Free | 0 |
+| Worn Leather | 1 | — | Free | 0 |
 | Warded Mail | 4 | +10 HP | 50 | 1 |
 | Chaosweave Cloak | 3 | +2 vision | 45 | 1 |
 | Starplate | 6 | -1 MP | 120 | 2 |
@@ -156,12 +169,13 @@ Enemies with a `rangedAttack` field (Void Stalker, Breach Guardian, Unraveler) f
 | Phase Anchor | Displacement immune | 35 | 1 |
 | Maw Compass | Reveals Maw on map | 30 | 1 |
 
-## Skills (9)
+## Skills (10)
 
-Unlocked at levels 2, 4, 6, 8, 10. At each unlock, player picks 1 of 2 randomly offered skills they don't already have. 4 skill slots total.
+Restore is always equipped in slot 1. Other skills unlocked at levels 2, 4, 6, 8, 10. At each unlock, player picks 1 of 2 randomly offered skills they don't already have. 4 skill slots total.
 
 | Skill | Cost | Target | Level | Effect |
 |-------|------|--------|-------|--------|
+| Restore | 0 + 2/hex | AoE Self (1+Lv/3) | 0 | Restore shattered terrain. 2 AE per hex. Grants 3 XP per hex. |
 | Void Strike | 1 AE | Melee | 1 | weapon + Might + Warding damage. No counter-attack. |
 | Phase Step | 2 AE | Teleport (3) | 2 | Teleport to visible hex within 3. Free action. |
 | Cosmic Bolt | 2 AE | Ranged (4) | 2 | 8 + Warding ranged damage. |
@@ -175,8 +189,8 @@ Unlocked at levels 2, 4, 6, 8, 10. At each unlock, player picks 1 of 2 randomly 
 ## Turn Structure
 
 1. **Player phase** — player clicks to select, then spends MP to move, can attack (melee by moving onto enemy, ranged by pressing R) and use skills (1-4 keys). Turn ends automatically at 0 MP, or manually via Space/E/End Turn button.
-2. **Enemy phase** — animated sequentially (80ms per move, 150ms per attack). Each enemy: teleport check (Phase Wraith) → movement steps (per speed) → melee attack if adjacent → ranged attack if in range with LOS → boss spawning (Unraveler). Vitality Stone regen and Warp Shield countdown happen at start of enemy phase.
-3. **Spawn phase** — open breaches roll 15% each for new enemy spawn. Turn counter increments. MP reset to full (or half if engaged).
+2. **Enemy phase** — natural HP regen (+1 HP) and Vitality Stone regen happen first, then Warp Shield countdown. Enemies animated sequentially (80ms per move, 150ms per attack). Each enemy: teleport check (Phase Wraith) → movement steps (per speed) → melee attack if adjacent → ranged attack if in range with LOS → boss spawning (Unraveler) → terrain shatter check (2% for chaos-spawned).
+3. **Spawn phase** — open breaches roll 15% each for new enemy spawn. 2% chance for wildlife spawn (outside player vision, non-shattered hex). Turn counter increments. MP reset to full (or half if engaged).
 
 ## Engagement Mechanic
 
@@ -202,22 +216,22 @@ LOS is checked by walking the line between two hexes and testing for mountains. 
 ## Strategies
 
 ### Early Game (Levels 1-3)
-Explore cautiously from starting haven. Loot gold hexes for currency. Fight Void Stalkers for XP — they're fast (speed 2) but fragile (15 HP). Avoid ruins until level 2+ since they spawn enemies on entry. Buy a Flux Bow at the haven if possible to gain ranged capability early — even at 5 damage, being able to attack without counter-attacks changes the game.
+Explore cautiously from starting haven. The Rusty Blade (1 damage) means early fights are slow — hunt wildlife for XP and gold while avoiding chaos-spawned enemies until you upgrade. Loot gold hexes for currency. Buy a weapon at the haven ASAP; even a Flux Bow (5 damage) transforms your combat ability. Avoid ruins until level 2+ since they spawn enemies on entry. Use Restore sparingly — it costs Aether you may need for combat skills later.
 
 ### Mid Game (Levels 4-6)
 Assault the first breach. Use terrain tactically: forest for +1 defense when you expect to be attacked, hills for +1 ranged range. Clear ruins for equipment upgrades and gold. Close the first breach to reduce spawn pressure. The skill choice at level 4 is critical — Warp Shield for defensive play (absorbs one hit entirely), Breach Pulse for aggressive AoE clear.
 
 ### Late Game (Levels 7-10)
-Close the second breach. Gear up for the Maw. Starfall (level 10) trivializes mob fights with 15 + 2*Warding AoE, but you may not have the XP patience to reach it. The Unraveler fight demands both damage output and sustain — pure Might builds lack healing, pure Warding builds lack kill speed. The Unraveler's dual attack (12 melee + 6 ranged at range 4) and Void Stalker spawning every 3 turns means you need to close quickly or get overwhelmed.
+Close the second breach. Gear up for the Maw. Starfall (level 10) trivializes mob fights with 15 + 2*Warding AoE, but you may not have the XP patience to reach it. The Unraveler fight demands both damage output and sustain — pure Might builds lack healing, pure Warding builds lack kill speed. The Unraveler's dual attack (12 melee + 6 ranged at range 4), 6 defense, and Void Stalker spawning every 3 turns means you need to close quickly or get overwhelmed.
 
 ### Key Decisions
-- **Melee vs Ranged build**: Melee (Might + melee weapon) does more single-target damage and benefits from Void Strike/Dimensional Rend. Ranged (Reflex + ranged weapon) avoids counter-attacks and kites safely but has lower burst. Phase Rifle ignoring defense makes it excellent against high-defense targets (Breach Guardian at 3 def, Unraveler at 4 def).
-- **When to engage breaches**: Each sealed breach reduces spawn pressure but the guardian fight (50 HP, 10 atk, 8 ranged atk) is dangerous. Under-geared attempts often end in death from the combination of melee and ranged attacks.
+- **Melee vs Ranged build**: Melee (Might + melee weapon) does more single-target damage and benefits from Void Strike/Dimensional Rend. Ranged (Reflex + ranged weapon) avoids counter-attacks and kites safely but has lower burst. Phase Rifle ignoring defense makes it excellent against high-defense targets (Breach Guardian at 5 def, Unraveler at 6 def).
+- **When to engage breaches**: Each sealed breach reduces spawn pressure but the guardian fight (50 HP, 10 atk, 8 ranged atk, 5 def) is dangerous. Under-geared attempts often end in death from the combination of melee and ranged attacks.
 - **Starplate trade-off**: 6 defense is excellent but -1 MP (3 instead of 4) severely limits mobility. Best paired with Phase Step for repositioning.
 
 ### Anti-Strategies
-- **Turtling near haven**: Breach spawns fill the map. 20-enemy cap prevents infinite scaling, but 20 scattered enemies with no breaches closed makes reaching the Maw a nightmare.
-- **Ignoring breaches**: Even with the 20-enemy cap, the continuous spawning creates a target-rich environment that drains HP and Aether without strategic progress.
+- **Turtling near haven**: Breach spawns fill the map and shatter terrain. 60-enemy cap prevents infinite scaling, but the shattered wasteland left behind makes movement increasingly costly.
+- **Ignoring breaches**: Even with the 60-enemy cap, the continuous spawning creates a target-rich environment that drains HP and Aether without strategic progress. Meanwhile shattered terrain accumulates, degrading map mobility.
 - **Pure glass cannon**: High Might, no Vigor. Works until a Phase Wraith teleports adjacent and you eat a 7-damage attack with only 50 HP. The Unraveler's 12+6 dual attack will two-shot you.
 - **Grinding Void Stalkers forever**: Polynomial XP curve makes this increasingly futile past level 5. Breaches and ruins give better returns for the risk.
 - **Ignoring engagement**: Ending turns adjacent to enemies halves your MP next turn. Getting pinned between two enemies can cascade into a death spiral of reduced mobility.
