@@ -137,7 +137,7 @@ export class GameWorld {
                 const isEdge = row === 0 || row === MAP_ROWS - 1 || col === 0 || col === MAP_COLS - 1;
                 map.set(hexKey(q, r), {
                     q, r, col, row, elevation, isEdge,
-                    terrain: null, poi: null, goldLooted: false, shatteredCount: 0
+                    terrain: null, poi: null, goldDeposit: 0, shatteredCount: 0
                 });
             }
         }
@@ -165,7 +165,7 @@ export class GameWorld {
         const forestCount = Math.round(n * 0.10);
         const goldCount = Math.max(3, Math.round(n * 0.01));
         for (let i = 0; i < forestCount && idx < plains.length; i++, idx++) plains[idx].terrain = TERRAIN.FOREST;
-        for (let i = 0; i < goldCount && idx < plains.length; i++, idx++) plains[idx].terrain = TERRAIN.GOLD;
+        for (let i = 0; i < goldCount && idx < plains.length; i++, idx++) { plains[idx].terrain = TERRAIN.GOLD; plains[idx].goldDeposit = 10; }
         const hills = inner.filter(h => h.terrain === TERRAIN.HILLS);
         Rando.shuffle(hills);
         const quarryCount = Math.max(2, Math.round(n * 0.02));

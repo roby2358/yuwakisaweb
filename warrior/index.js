@@ -71,7 +71,7 @@ function screenToHex(sx, sy) { return pixelToHex(sx - panX, sy - panY); }
 
 function playerTerrain() { return world.getHex(player.q, player.r)?.terrain; }
 function playerPoiDefense() { const poi = world.poiAt(player.q, player.r); return poi ? (POI_DEFENSE_BONUS[poi.type] || 0) : 0; }
-function playerDefense() { return playerDefense() + playerPoiDefense(); }
+function playerDefense() { return player.defense(playerTerrain()) + playerPoiDefense(); }
 
 // ---- Drawing helpers ----
 function roundRect(ctx, x, y, w, h, r) {
@@ -792,21 +792,27 @@ function executeSkill(skillId, targetQ, targetR) {
             break;
         }
         case 'prospect': {
-            // Reveal gold hexes within range
+            // Reveal hexes with gold deposits within 8
             let revealed = 0;
             for (const h of hexesInRange(player.q, player.r, skill.revealRange)) {
                 const hex = world.getHex(h.q, h.r);
-                if (hex && (hex.terrain === TERRAIN.GOLD || hex.terrain === TERRAIN.SHATTERED_GOLD || hex.terrain === TERRAIN.DISTRESSED_GOLD)) {
+                if (hex && hex.goldDeposit > 0) {
                     const key = hexKey(h.q, h.r);
                     if (!world.revealed.has(key)) revealed++;
                     world.revealed.add(key);
                 }
             }
-            // 20% chance to create a gold deposit on current hex (plains only)
-            const pHex = world.getHex(player.q, player.r);
-            if (pHex && pHex.terrain === TERRAIN.PLAINS && !pHex.goldLooted && Rando.bool(0.2)) {
-                pHex.terrain = TERRAIN.GOLD;
-                logCombat('Struck gold beneath your feet!', 'log-gold');
+            // 20% chance to create a gold deposit on a random passable hex within 4
+            if (Rando.bool(0.2)) {
+                const candidates = hexesInRange(player.q, player.r, 4)
+                    .map(h => world.getHex(h.q, h.r))
+                    .filter(h => h && world.isPassable(h) && h.goldDeposit === 0);
+                if (candidates.length > 0) {
+                    const target = Rando.choice(candidates);
+                    target.goldDeposit = 10;
+                    world.revealed.add(hexKey(target.q, target.r));
+                    logCombat('Struck gold nearby!', 'log-gold');
+                }
             }
             if (revealed > 0) logCombat(`Prospect: revealed ${revealed} gold deposit${revealed > 1 ? 's' : ''}`, 'log-gold');
             else logCombat('Prospect: sensed the earth.', 'log-info');
@@ -829,10 +835,9 @@ function executeSkill(skillId, targetQ, targetR) {
                 if (h.q === player.q && h.r === player.r) continue; // adjacent only
                 const hex = world.getHex(h.q, h.r);
                 if (!hex) continue;
-                // Only shattered non-gold hexes become gold deposits
-                if (UNSHATTERED_VERSION[hex.terrain] !== undefined && hex.terrain !== TERRAIN.SHATTERED_GOLD) {
-                    hex.terrain = TERRAIN.SHATTERED_GOLD;
-                    hex.goldLooted = false;
+                // Shattered hexes get a gold deposit (terrain stays shattered)
+                if (UNSHATTERED_VERSION[hex.terrain] !== undefined && hex.goldDeposit === 0) {
+                    hex.goldDeposit = 5;
                     deposits++;
                 }
             }
@@ -1129,10 +1134,11 @@ function checkHexEntry() {
     if (!hex) return;
 
     // Gold pickup
-    if ((hex.terrain === TERRAIN.GOLD || hex.terrain === TERRAIN.SHATTERED_GOLD || hex.terrain === TERRAIN.DISTRESSED_GOLD) && !hex.goldLooted) {
-        hex.goldLooted = true;
-        const goldAmt = hex.terrain === TERRAIN.SHATTERED_GOLD ? 20 : 10;
+    if (hex.goldDeposit > 0) {
+        const multiplier = hex.terrain === TERRAIN.SHATTERED_GOLD ? 2 : 1;
+        const goldAmt = hex.goldDeposit * multiplier;
         player.gold += goldAmt;
+        hex.goldDeposit = 0;
         logCombat(`+${goldAmt}g (gold deposit)`, 'log-gold');
     }
 
@@ -1541,11 +1547,11 @@ function render() {
         }
 
         // Gold indicator
-        if ((hex.terrain === TERRAIN.GOLD || hex.terrain === TERRAIN.SHATTERED_GOLD || hex.terrain === TERRAIN.DISTRESSED_GOLD) && !hex.goldLooted) {
+        if (hex.goldDeposit > 0) {
             ctx.fillStyle = '#ffd700';
             ctx.font = 'bold ' + Math.floor(HEX_SIZE * 1.2) + 'px monospace';
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText('$', x, y);
+            ctx.fillText('\u{1FA99}', x, y);
         }
 
         // POI symbols
