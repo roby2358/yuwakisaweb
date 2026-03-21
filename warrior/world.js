@@ -1,6 +1,6 @@
 // world.js — GameWorld: hex grid, POIs, fog of war
 
-import { TERRAIN, MAP_COLS, MAP_ROWS, MOVEMENT_COST, POI, WEAPONS, ARMORS, ARTIFACTS, ALL_EQUIPMENT } from './config.js';
+import { TERRAIN, MAP_COLS, MAP_ROWS, MOVEMENT_COST, POI, WEAPONS, ARMORS, ARTIFACTS, ALL_EQUIPMENT, MAGICAL_ITEMS, NON_MAGICAL_ITEMS } from './config.js';
 import { hexKey, hexNeighbors, hexDistance, hexesInRange, bfsHexes } from './hex.js';
 import { Rando } from './rando.js';
 
@@ -214,14 +214,33 @@ export class GameWorld {
     }
 
     _generateShopItems() {
-        const pool = [...WEAPONS.filter(w => w.tier > 0), ...ARMORS.filter(a => a.tier > 0), ...ARTIFACTS.filter(a => a.id !== 'maw_compass')];
-        Rando.shuffle(pool);
-        return pool.slice(0, Rando.int(3, 5));
+        const magicalPool = [...MAGICAL_ITEMS.filter(i => i.tier > 0 && i.id !== 'maw_compass')];
+        const nonMagicalPool = [...NON_MAGICAL_ITEMS];
+        Rando.shuffle(magicalPool);
+        Rando.shuffle(nonMagicalPool);
+        const magicalCount = Rando.int(2, 3);
+        const nonMagicalCount = Rando.int(2, 3);
+        const items = [
+            ...magicalPool.slice(0, magicalCount),
+            ...nonMagicalPool.slice(0, nonMagicalCount)
+        ];
+        Rando.shuffle(items);
+        return items;
     }
 
     _generateRuinLoot() {
-        const pool = [...WEAPONS.filter(w => w.tier >= 1 && w.tier <= 2), ...ARMORS.filter(a => a.tier >= 1), ...ARTIFACTS.filter(a => a.tier >= 1 && a.id !== 'maw_compass')];
-        return Rando.choice(pool);
+        // 1-3 non-magical items + 1 magical (magical resolved at discovery via re-roll)
+        const nonMagicalCount = Rando.int(1, 3);
+        const nonMagical = [];
+        const pool = [...NON_MAGICAL_ITEMS];
+        Rando.shuffle(pool);
+        for (let i = 0; i < nonMagicalCount && pool.length > 0; i++) {
+            nonMagical.push(pool.pop());
+        }
+        // Pick a magical candidate — re-roll happens at discovery time in index.js
+        const magicalPool = [...MAGICAL_ITEMS.filter(i => i.tier >= 1 && i.id !== 'maw_compass')];
+        const magical = magicalPool.length > 0 ? Rando.choice(magicalPool) : null;
+        return { nonMagical, magical };
     }
 
     _validate() {

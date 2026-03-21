@@ -169,29 +169,47 @@ export const ENEMY_DEFS = {
 export const EQUIP_SLOT = { WEAPON: 'weapon', ARMOR: 'armor', ARTIFACT: 'artifact' };
 
 export const WEAPONS = [
-    { id: 'rusty_blade', name: 'Rusty Blade', type: 'melee', damage: 1, range: 0, special: null, price: 0, tier: 0 },
-    { id: 'void_cleaver', name: 'Void Cleaver', type: 'melee', damage: 7, range: 0, special: 'chaos_bonus', price: 40, tier: 1 },
-    { id: 'starforged_sword', name: 'Starforged Sword', type: 'melee', damage: 10, range: 0, special: null, price: 100, tier: 2 },
-    { id: 'dimensional_edge', name: 'Dimensional Edge', type: 'melee', damage: 12, range: 0, special: 'cleave', price: 150, tier: 3 },
-    { id: 'flux_bow', name: 'Flux Bow', type: 'ranged', damage: 5, range: 2, special: null, price: 35, tier: 1 },
-    { id: 'phase_rifle', name: 'Phase Rifle', type: 'ranged', damage: 8, range: 5, special: 'ignore_defense', price: 120, tier: 3 },
-    { id: 'aether_lance', name: 'Aether Lance', type: 'ranged', damage: 6, range: 3, special: 'free_ranged', price: 60, tier: 2 }
+    { id: 'rusty_blade', name: 'Rusty Blade', type: 'melee', damage: 1, range: 0, special: null, price: 0, tier: 0, magical: true },
+    { id: 'void_cleaver', name: 'Void Cleaver', type: 'melee', damage: 7, range: 0, special: 'chaos_bonus', price: 40, tier: 1, magical: true },
+    { id: 'starforged_sword', name: 'Starforged Sword', type: 'melee', damage: 10, range: 0, special: null, price: 100, tier: 2, magical: true },
+    { id: 'dimensional_edge', name: 'Dimensional Edge', type: 'melee', damage: 12, range: 0, special: 'cleave', price: 150, tier: 3, magical: true },
+    { id: 'flux_bow', name: 'Flux Bow', type: 'ranged', damage: 5, range: 2, special: null, price: 35, tier: 1, magical: true },
+    { id: 'phase_rifle', name: 'Phase Rifle', type: 'ranged', damage: 8, range: 5, special: 'ignore_defense', price: 120, tier: 3, magical: true },
+    { id: 'aether_lance', name: 'Aether Lance', type: 'ranged', damage: 6, range: 3, special: 'free_ranged', price: 60, tier: 2, magical: true },
+    // Non-magical melee
+    { id: 'iron_sword', name: 'Iron Sword', type: 'melee', damage: 2, range: 0, special: null, price: 12, tier: 1, magical: false },
+    { id: 'spear', name: 'Spear', type: 'melee', damage: 2, range: 0, special: null, price: 12, tier: 1, magical: false },
+    { id: 'battle_axe', name: 'Battle Axe', type: 'melee', damage: 3, range: 0, special: null, price: 25, tier: 2, magical: false },
+    { id: 'warhammer', name: 'Warhammer', type: 'melee', damage: 4, range: 0, special: null, price: 45, tier: 3, magical: false },
+    { id: 'blade_spear', name: 'Blade Spear', type: 'melee', damage: 4, range: 0, special: null, price: 45, tier: 3, magical: false },
+    { id: 'greatsword', name: 'Greatsword', type: 'melee', damage: 5, range: 0, special: null, price: 70, tier: 4, magical: false },
+    // Non-magical bows
+    { id: 'short_bow', name: 'Short Bow', type: 'ranged', damage: 1, range: 2, special: null, price: 5, tier: 0, magical: false },
+    { id: 'hunting_bow', name: 'Hunting Bow', type: 'ranged', damage: 2, range: 2, special: null, price: 12, tier: 1, magical: false },
+    { id: 'crossbow', name: 'Crossbow', type: 'ranged', damage: 3, range: 3, special: null, price: 25, tier: 2, magical: false },
+    { id: 'war_bow', name: 'War Bow', type: 'ranged', damage: 4, range: 3, special: null, price: 45, tier: 3, magical: false },
+    { id: 'great_bow', name: 'Great Bow', type: 'ranged', damage: 5, range: 4, special: null, price: 70, tier: 4, magical: false }
 ];
 
 export const ARMORS = [
-    { id: 'worn_leather', name: 'Worn Leather', defense: 1, special: null, price: 0, tier: 0 },
-    { id: 'warded_mail', name: 'Warded Mail', defense: 4, special: 'hp_bonus', hpBonus: 10, price: 50, tier: 1 },
-    { id: 'chaosweave_cloak', name: 'Chaosweave Cloak', defense: 3, special: 'vision_bonus', visionBonus: 2, price: 45, tier: 1 },
-    { id: 'starplate', name: 'Starplate', defense: 6, special: 'mp_penalty', mpPenalty: 1, price: 120, tier: 2 },
-    { id: 'voidhide', name: 'Voidhide', defense: 5, special: 'wraith_immune', price: 100, tier: 3 }
+    { id: 'worn_leather', name: 'Worn Leather', defense: 1, special: null, price: 0, tier: 0, magical: true },
+    { id: 'warded_mail', name: 'Warded Mail', defense: 4, special: 'hp_bonus', hpBonus: 10, price: 50, tier: 1, magical: true },
+    { id: 'chaosweave_cloak', name: 'Chaosweave Cloak', defense: 3, special: 'vision_bonus', visionBonus: 2, price: 45, tier: 1, magical: true },
+    { id: 'starplate', name: 'Starplate', defense: 6, special: 'mp_penalty', mpPenalty: 1, price: 120, tier: 2, magical: true },
+    { id: 'voidhide', name: 'Voidhide', defense: 5, special: 'wraith_immune', price: 100, tier: 3, magical: true },
+    // Non-magical armor
+    { id: 'leather_armor', name: 'Leather Armor', defense: 2, special: null, price: 15, tier: 1, magical: false },
+    { id: 'chain_mail', name: 'Chain Mail', defense: 3, special: null, price: 30, tier: 2, magical: false },
+    { id: 'scale_armor', name: 'Scale Armor', defense: 4, special: null, price: 50, tier: 3, magical: false },
+    { id: 'plate_armor', name: 'Plate Armor', defense: 5, special: null, price: 75, tier: 4, magical: false }
 ];
 
 export const ARTIFACTS = [
-    { id: 'seers_lens', name: "Seer's Lens", special: 'vision_bonus', visionBonus: 2, price: 40, tier: 1 },
-    { id: 'aether_crystal', name: 'Aether Crystal', special: 'aether_bonus', aetherBonus: 4, price: 50, tier: 1 },
-    { id: 'vitality_stone', name: 'Vitality Stone', special: 'regen', regenAmount: 3, price: 80, tier: 3 },
-    { id: 'phase_anchor', name: 'Phase Anchor', special: 'displacement_immune', price: 35, tier: 1 },
-    { id: 'maw_compass', name: 'Maw Compass', special: 'reveal_maw', price: 30, tier: 1 }
+    { id: 'seers_lens', name: "Seer's Lens", special: 'vision_bonus', visionBonus: 2, price: 40, tier: 1, magical: true },
+    { id: 'aether_crystal', name: 'Aether Crystal', special: 'aether_bonus', aetherBonus: 4, price: 50, tier: 1, magical: true },
+    { id: 'vitality_stone', name: 'Vitality Stone', special: 'regen', regenAmount: 3, price: 80, tier: 3, magical: true },
+    { id: 'phase_anchor', name: 'Phase Anchor', special: 'displacement_immune', price: 35, tier: 1, magical: true },
+    { id: 'maw_compass', name: 'Maw Compass', special: 'reveal_maw', price: 30, tier: 1, magical: true }
 ];
 
 // All equipment in one lookup
@@ -199,6 +217,10 @@ export const ALL_EQUIPMENT = {};
 for (const w of WEAPONS) ALL_EQUIPMENT[w.id] = { ...w, slot: EQUIP_SLOT.WEAPON };
 for (const a of ARMORS) ALL_EQUIPMENT[a.id] = { ...a, slot: EQUIP_SLOT.ARMOR };
 for (const a of ARTIFACTS) ALL_EQUIPMENT[a.id] = { ...a, slot: EQUIP_SLOT.ARTIFACT };
+
+// Filtered pools
+export const MAGICAL_ITEMS = [...WEAPONS.filter(w => w.magical), ...ARMORS.filter(a => a.magical), ...ARTIFACTS];
+export const NON_MAGICAL_ITEMS = [...WEAPONS.filter(w => !w.magical), ...ARMORS.filter(a => !a.magical)];
 
 // ---- Skills ----
 export const SKILL_TARGET = {

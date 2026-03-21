@@ -111,7 +111,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
     font: 14px/1.6 monospace; color: #ddd; text-align: center;
 }
 #dialog-title { font-size: 18px; font-weight: bold; margin-bottom: 12px; color: #fff; }
-#dialog-body { margin-bottom: 16px; text-align: left; }
+#dialog-body { margin-bottom: 16px; text-align: left; max-height: 60vh; overflow-y: auto; }
 #dialog-buttons { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 #dialog-buttons button {
     background: #333; color: #ddd; border: 1px solid #555;

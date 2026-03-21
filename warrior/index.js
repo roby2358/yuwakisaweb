@@ -6,7 +6,7 @@ import {
     xpForLevel,
     POI, POI_SYMBOLS, POI_COLORS,
     ENEMY_TYPE,
-    EQUIP_SLOT, WEAPONS, ARMORS, ARTIFACTS, ALL_EQUIPMENT,
+    EQUIP_SLOT, WEAPONS, ARMORS, ARTIFACTS, ALL_EQUIPMENT, MAGICAL_ITEMS, NON_MAGICAL_ITEMS,
     SKILL_TARGET, SKILLS, SKILL_UNLOCK_LEVELS,
     SHATTERED_VERSION, UNSHATTERED_VERSION
 } from './config.js';
@@ -196,18 +196,19 @@ function killEnemy(enemy) {
     }
     gainXP(def.xp);
 
-    // Breach guardian drop
-    if (enemy.type === ENEMY_TYPE.BREACH_GUARDIAN) {
-        const drops = [
-            WEAPONS.find(w => w.id === 'dimensional_edge'),
-            WEAPONS.find(w => w.id === 'phase_rifle'),
-            ARMORS.find(a => a.id === 'voidhide'),
-            ARTIFACTS.find(a => a.id === 'vitality_stone')
-        ].filter(d => d && !player.inventory.includes(d.id) && player.equipment[d.slot || guessSlot(d)] !== d.id);
-        if (drops.length > 0) {
-            const drop = Rando.choice(drops);
-            player.inventory.push(drop.id);
-            logCombat(`Found: ${drop.name}!`, 'log-gold');
+    // Crawler and Guardian drops: 0-3 non-magical + 10% magical
+    if (enemy.type === ENEMY_TYPE.BREACH_CRAWLER || enemy.type === ENEMY_TYPE.BREACH_GUARDIAN) {
+        const nmDrops = rollNonMagicalDrops(0, 3);
+        for (const item of nmDrops) {
+            player.inventory.push(item.id);
+            logCombat(`Found: ${item.name}`, 'log-gold');
+        }
+        if (Rando.bool(0.1)) {
+            const magicalDrop = rollMagicalDrop(MAGICAL_ITEMS.filter(i => i.tier >= 1 && i.id !== 'maw_compass'));
+            if (magicalDrop) {
+                player.inventory.push(magicalDrop.id);
+                logCombat(`Found: ${magicalDrop.name}!`, 'log-gold');
+            }
         }
     }
 
@@ -224,6 +225,26 @@ function guessSlot(item) {
     if (item.damage !== undefined) return EQUIP_SLOT.WEAPON;
     if (item.defense !== undefined) return EQUIP_SLOT.ARMOR;
     return EQUIP_SLOT.ARTIFACT;
+}
+
+function playerHasItem(id) {
+    return player.inventory.includes(id) ||
+        player.equipment.weapon === id ||
+        player.equipment.armor === id ||
+        player.equipment.artifact === id;
+}
+
+function rollMagicalDrop(pool) {
+    const available = pool.filter(i => !playerHasItem(i.id));
+    if (available.length === 0) return null;
+    return Rando.choice(available);
+}
+
+function rollNonMagicalDrops(min, max) {
+    const count = Rando.int(min, max);
+    const pool = [...NON_MAGICAL_ITEMS];
+    Rando.shuffle(pool);
+    return pool.slice(0, count);
 }
 
 function meleeAttack(enemy) {
@@ -262,8 +283,8 @@ function rangedAttack(targetQ, targetR) {
     } else {
         dealDamageToEnemy(enemy, dmg, 'Ranged');
     }
-    // Ranged attack costs 1 aether (unless free)
-    if (!wep || wep.special !== 'free_ranged') {
+    // Ranged attack costs 1 aether (unless free or non-magical)
+    if (wep && wep.magical && wep.special !== 'free_ranged') {
         player.aether = Math.max(0, player.aether - 1);
     }
     player.mp = 0; // ends movement
@@ -892,16 +913,18 @@ function initGame() {
     em.generateCreatureTypes();
     em.spawnInitial(world, player.q, player.r);
     em.spawnInitialCreatures(world, player.q, player.r, world.visible);
-    centerOn(player);
-
     // Close panels and overlays
     closeAllPanels();
     document.getElementById('dialog-overlay').classList.add('hidden');
     document.getElementById('endgame-overlay').classList.add('hidden');
     phase = 'player';
 
-    resize();
+    // Set canvas size before centering so centerOn has correct dimensions
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    centerOn(player);
     updateSkillBar();
+    render();
 }
 
 
@@ -1208,8 +1231,9 @@ function updateInvPanel() {
         const id = player.equipment[slot];
         if (!id) continue;
         const item = ALL_EQUIPMENT[id];
+        const nameColor = item.magical ? '#ffc107' : '#ccc';
         html += `<div class="inv-item equipped">
-            <div><span style="color:#ffc107">${item.name}</span> <span style="color:#888">(${slot}, equipped)</span><br>
+            <div><span style="color:${nameColor}">${item.name}</span> <span style="color:#888">(${slot}, equipped)</span><br>
             <span style="color:#aaa;font-size:11px">${itemStatLine(item)}</span></div>
             <button data-action="unequip" data-id="${id}" data-slot="${slot}">Unequip</button>
         </div>`;
@@ -1220,8 +1244,9 @@ function updateInvPanel() {
         const item = ALL_EQUIPMENT[id];
         if (!item) continue;
         const slot = item.slot;
+        const nameColor = item.magical ? '#e040fb' : '#ccc';
         html += `<div class="inv-item">
-            <div><span>${item.name}</span> <span style="color:#888">(${slot})</span><br>
+            <div><span style="color:${nameColor}">${item.name}</span> <span style="color:#888">(${slot})</span><br>
             <span style="color:#aaa;font-size:11px">${itemStatLine(item)}</span></div>
             <button data-action="equip" data-id="${id}" data-slot="${slot}">Equip</button>
         </div>`;
@@ -1361,9 +1386,11 @@ function showShopDialog(poi) {
         const equip = ALL_EQUIPMENT[item.id];
         if (!equip) continue;
         if (owned.has(item.id)) continue;
+        const nameColor = equip.magical ? '#e040fb' : '#ccc';
+        const shopPrice = equip.magical ? item.price * 2 : item.price;
         bodyHtml += `<div class="shop-item">
-            <div><span>${item.name}</span><br><span style="color:#aaa;font-size:11px">${itemStatLine(equip)}</span></div>
-            <button data-id="${item.id}" data-price="${item.price}" ${player.gold < item.price ? 'disabled' : ''}>Buy ${item.price}g</button>
+            <div><span style="color:${nameColor}">${item.name}</span><br><span style="color:#aaa;font-size:11px">${itemStatLine(equip)}</span></div>
+            <button data-id="${item.id}" data-price="${shopPrice}" ${player.gold < shopPrice ? 'disabled' : ''}>Buy ${shopPrice}g</button>
         </div>`;
     }
 
@@ -1373,7 +1400,7 @@ function showShopDialog(poi) {
         for (const id of player.inventory) {
             const item = ALL_EQUIPMENT[id];
             if (!item) continue;
-            const sellPrice = Math.floor(item.price * 0.4);
+            const sellPrice = Math.max(1, Math.floor(item.price * 0.4));
             bodyHtml += `<div class="shop-item">
                 <div>${item.name}</div>
                 <button data-sell="${id}" data-price="${sellPrice}">Sell ${sellPrice}g</button>
@@ -1416,8 +1443,19 @@ function showRuinDialog(poi) {
 
     let body = `<p>You explore the ruins...</p><p style="color:#ffc107">Found ${goldFound} gold!</p>`;
     if (poi.loot) {
-        player.inventory.push(poi.loot.id);
-        body += `<p style="color:#ffc107">Found: ${poi.loot.name}!</p>`;
+        // Non-magical items
+        for (const item of poi.loot.nonMagical) {
+            player.inventory.push(item.id);
+            body += `<p style="color:#ffc107">Found: ${item.name}</p>`;
+        }
+        // Magical item — re-roll to something the player doesn't have
+        if (poi.loot.magical) {
+            const magicalDrop = rollMagicalDrop(MAGICAL_ITEMS.filter(i => i.tier >= 1 && i.id !== 'maw_compass'));
+            if (magicalDrop) {
+                player.inventory.push(magicalDrop.id);
+                body += `<p style="color:#e040fb">Found: ${magicalDrop.name}!</p>`;
+            }
+        }
     }
 
     // Spawn ruin enemies nearby
@@ -1676,7 +1714,7 @@ window.addEventListener('keydown', e => {
 function activateRangedWeapon() {
     const wep = player.weapon();
     if (!wep || wep.type !== 'ranged') { logCombat('No ranged weapon!', 'log-info'); return; }
-    const cost = wep.special === 'free_ranged' ? 0 : 1;
+    const cost = (!wep.magical || wep.special === 'free_ranged') ? 0 : 1;
     if (player.aether < cost) { logCombat('Not enough Aether!', 'log-info'); return; }
     const range = player.weaponRange(playerTerrain());
     const validHexes = new Set();

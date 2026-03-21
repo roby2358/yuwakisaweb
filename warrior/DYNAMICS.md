@@ -7,7 +7,7 @@ The desperate ascent of a lone warrior through a world tearing itself apart from
 ## Key Drivers
 
 ### 1. Accumulation and Windfall
-The core RPG loop. XP, loot, stats, skills — every encounter makes you measurably stronger. The polynomial XP curve (`50 * level^1.8`, rounded to nearest 10) makes early levels feel fast (quick wins, dopamine) and later levels require deliberate engagement with dangerous content (breaches, ruins). Windfalls come from: breach guardian drops (tier 3 gear), level-up full heals (instant relief), ruin loot (random tier 1-3 gear + 5-20 gold), and finding a Dimensional Edge when you've been swinging a Rusty Blade for 20 turns. Killing chaos-spawned enemies returns +1 Aether, creating a sustain loop that rewards aggression.
+The core RPG loop. XP, loot, stats, skills — every encounter makes you measurably stronger. The polynomial XP curve (`50 * level^1.8`, rounded to nearest 10) makes early levels feel fast (quick wins, dopamine) and later levels require deliberate engagement with dangerous content (breaches, ruins). Windfalls come from: breach guardian drops (non-magical bows + 10% chance of magical gear), level-up full heals (instant relief), ruin loot (1-3 mundane items + 1 magical + gold), and finding a Dimensional Edge when you've been swinging a Rusty Blade for 20 turns. Killing chaos-spawned enemies returns +1 Aether, creating a sustain loop that rewards aggression.
 
 ### 2. Scarcity of Agency
 4 MP per turn. 4 skill slots. Limited Aether. You can't fight everything, explore everything, or be everywhere. Every turn is a triage decision: push toward the next breach or retreat to heal? Spend Aether on Void Strike for guaranteed damage or save it for Mending Light? Restore shattered terrain or conserve Aether for combat? Move deeper into fog or consolidate revealed territory? The constraint makes each action feel weighty. Engagement halves your MP, compounding the scarcity when you're in the thick of it.
@@ -130,17 +130,19 @@ Enemies with a `rangedAttack` field (Void Stalker, Breach Guardian, Unraveler) f
 |-----|-------|--------|--------|
 | Haven | 2-3 | 🏰 | Full rest (HP + Aether). Shop with 3-5 random tier 1+ items. |
 | Camp | 4-6 | ⛺ | Partial rest: 50% HP + 50% Aether recovery. |
-| Ruin | 3-5 | ⛫ | Lootable once: random tier 1-3 item + 5-20 gold. Spawns 1-3 enemies (50/50 Void Stalker or Flux Archer). |
+| Ruin | 3-5 | ⛫ | Lootable once: 1-3 non-magical items + 1 magical item + 5-20 gold. Spawns 1-3 enemies (50/50 Void Stalker or Flux Archer). |
 | Breach | 3-4 | ֍ | Open breaches spawn enemies (15%/turn). Sealable after guardian defeated. |
 | Maw | 1 | ✸ | Final objective. Placed preferentially rightward. Requires 2 sealed breaches + Unraveler defeated. |
 
 ### Haven Shop
-- Stocks 3-5 random items from tier 1+ weapons, armors, and artifacts (excludes Maw Compass from shop pool)
+- Stocks 3-5 items, 50/50 mix of magical and non-magical (magical excludes Maw Compass)
 - Sell items at 40% of buy price
 
 ## Equipment
 
-### Weapons (7)
+Items are either **magical** (unique, special properties, purple in UI) or **non-magical** (mundane, stackable in loot, no special abilities). Magical items are re-rolled on discovery to guarantee something the player doesn't already own (equipped or in inventory). If the player owns all magical items, none drops.
+
+### Magical Weapons (7)
 | Name | Type | Dmg | Range | Special | Price | Tier |
 |------|------|-----|-------|---------|-------|------|
 | Rusty Blade | Melee | 1 | — | — | Free | 0 |
@@ -151,7 +153,34 @@ Enemies with a `rangedAttack` field (Void Stalker, Breach Guardian, Unraveler) f
 | Aether Lance | Ranged | 6 | 3 | Free ranged (no Aether cost) | 60 | 2 |
 | Phase Rifle | Ranged | 8 | 5 | Ignores defense | 120 | 3 |
 
-### Armors (5)
+### Non-Magical Melee Weapons (6)
+| Name | Dmg | Price | Tier |
+|------|-----|-------|------|
+| Iron Sword | 2 | 12 | 1 |
+| Spear | 2 | 12 | 1 |
+| Battle Axe | 3 | 25 | 2 |
+| Warhammer | 4 | 45 | 3 |
+| Blade Spear | 4 | 45 | 3 |
+| Greatsword | 5 | 70 | 4 |
+
+### Non-Magical Bows (5)
+| Name | Dmg | Range | Price | Tier |
+|------|-----|-------|-------|------|
+| Short Bow | 1 | 2 | 5 | 0 |
+| Hunting Bow | 2 | 2 | 12 | 1 |
+| Crossbow | 3 | 3 | 25 | 2 |
+| War Bow | 4 | 3 | 45 | 3 |
+| Great Bow | 5 | 4 | 70 | 4 |
+
+### Non-Magical Armors (4)
+| Name | Def | Price | Tier |
+|------|-----|-------|------|
+| Leather Armor | 2 | 15 | 1 |
+| Chain Mail | 3 | 30 | 2 |
+| Scale Armor | 4 | 50 | 3 |
+| Plate Armor | 5 | 75 | 4 |
+
+### Magical Armors (5)
 | Name | Def | Special | Price | Tier |
 |------|-----|---------|-------|------|
 | Worn Leather | 1 | — | Free | 0 |
@@ -160,7 +189,7 @@ Enemies with a `rangedAttack` field (Void Stalker, Breach Guardian, Unraveler) f
 | Starplate | 6 | -1 MP | 120 | 2 |
 | Voidhide | 5 | Wraith immune | 100 | 3 |
 
-### Artifacts (5)
+### Magical Artifacts (5)
 | Name | Special | Price | Tier |
 |------|---------|-------|------|
 | Seer's Lens | +2 vision | 40 | 1 |
@@ -168,6 +197,12 @@ Enemies with a `rangedAttack` field (Void Stalker, Breach Guardian, Unraveler) f
 | Vitality Stone | +3 HP/turn regen | 80 | 3 |
 | Phase Anchor | Displacement immune | 35 | 1 |
 | Maw Compass | Reveals Maw on map | 30 | 1 |
+
+### Loot Sources
+- **Ruins**: 1-3 non-magical items + 1 magical item (re-rolled to something new)
+- **Breach Crawlers / Guardians**: 0-3 non-magical items + 10% chance of 1 magical item (re-rolled)
+- **Haven shops**: 3-5 items, 50/50 magical/non-magical mix
+- **Sell price**: 40% of buy price
 
 ## Skills (10)
 
