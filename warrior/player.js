@@ -18,7 +18,7 @@ export class Player {
         this.gold = 0;
         this.equipment = { weapon: 'rusty_blade', armor: 'worn_leather', artifact: null };
         this.skills = ['restore', null, null, null];
-        this.inventory = [];
+        this.inventory = ['stick_bow'];
         this.statPoints = 0;
         this.pendingSkillChoice = false;
         this.mp = PLAYER_MP;
