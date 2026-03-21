@@ -4,7 +4,7 @@ import {
     HEX_SIZE, TERRAIN, TERRAIN_NAMES, MOVEMENT_COST,
     MAX_ENEMIES, STAT_POINTS_PER_LEVEL,
     xpForLevel,
-    POI, POI_SYMBOLS, POI_COLORS,
+    POI, POI_SYMBOLS, POI_COLORS, POI_DEFENSE_BONUS,
     ENEMY_TYPE,
     EQUIP_SLOT, WEAPONS, ARMORS, ARTIFACTS, ALL_EQUIPMENT, MAGICAL_ITEMS, NON_MAGICAL_ITEMS,
     SKILL_TARGET, SKILLS, SKILL_UNLOCK_LEVELS,
@@ -69,6 +69,8 @@ function hexToScreen(q, r) { const p = hexToPixel(q, r); return { x: p.x + panX,
 function screenToHex(sx, sy) { return pixelToHex(sx - panX, sy - panY); }
 
 function playerTerrain() { return world.getHex(player.q, player.r)?.terrain; }
+function playerPoiDefense() { const poi = world.poiAt(player.q, player.r); return poi ? (POI_DEFENSE_BONUS[poi.type] || 0) : 0; }
+function playerDefense() { return playerDefense() + playerPoiDefense(); }
 
 // ---- Drawing helpers ----
 function roundRect(ctx, x, y, w, h, r) {
@@ -174,7 +176,7 @@ function dealDamageToPlayer(damage, source, isSkillDamage) {
         return;
     }
     const rolled = Rando.bellCurve(damage);
-    let def = player.defense(playerTerrain());
+    let def = playerDefense();
     if (isSkillDamage) {
         def += Math.round(player.stats.warding / 100 * rolled);
     }
@@ -1098,7 +1100,7 @@ function render() {
         const playerLabelColor = phase === 'player' ? '#000' : '#b8941a';
         const wep = player.weapon();
         const pAtk = (wep ? wep.damage : 0) + (wep && wep.type === 'ranged' ? player.stats.reflex : player.stats.might);
-        const pDef = player.defense(playerTerrain());
+        const pDef = playerDefense();
         drawCounter(x, y, PLAYER_COLOR, 'C', player.hp / player.maxHP(), playerLabelColor, { atk: pAtk, def: pDef, mov: player.mp });
         if (selected) {
             const s = COUNTER_SIZE + 4;
@@ -1216,7 +1218,7 @@ function updateCharPanel() {
     const wep = player.weapon();
     derived.innerHTML = `<div class="derived-section">
         <div>Attack: ${wep ? wep.damage : 0} + ${wep?.type === 'ranged' ? player.stats.reflex : player.stats.might}</div>
-        <div>Defense: ${player.defense(playerTerrain())}</div>
+        <div>Defense: ${playerDefense()}</div>
         <div>Dodge: ${player.dodge()}%</div>
         <div>Vision: ${player.vision()}</div>
         <div>MP: ${player.maxMP()}</div>

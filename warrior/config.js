@@ -139,6 +139,11 @@ export const POI = {
     MAW: 'maw'
 };
 
+export const POI_DEFENSE_BONUS = {
+    [POI.HAVEN]: 3,
+    [POI.CAMP]: 2
+};
+
 export const POI_SYMBOLS = {
     [POI.HAVEN]: '\u{1F3F0}', // 🏰 castle
     [POI.CAMP]: '\u26FA',    // ⛺ tent
