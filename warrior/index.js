@@ -8,7 +8,7 @@ import {
     ENEMY_TYPE,
     EQUIP_SLOT, WEAPONS, ARMORS, ARTIFACTS, ALL_EQUIPMENT, MAGICAL_ITEMS, NON_MAGICAL_ITEMS,
     SKILL_TARGET, SKILLS, SKILL_UNLOCK_LEVELS,
-    SHATTERED_VERSION, UNSHATTERED_VERSION
+    SHATTERED_VERSION, UNSHATTERED_VERSION, DISTRESSED_VERSION, UNDISTRESSED_VERSION
 } from './config.js';
 import { hexToPixel, pixelToHex, hexKey, parseHexKey, hexNeighbors, hexDistance, hexesInRange, bfsHexes, drawHexPath } from './hex.js';
 import { Rando } from './rando.js';
@@ -31,6 +31,11 @@ const TERRAIN_COLORS = {
     [TERRAIN.SHATTERED_FOREST]: '#3a1212',
     [TERRAIN.SHATTERED_GOLD]: '#8b2222',
     [TERRAIN.SHATTERED_QUARRY]: '#5a2525',
+    [TERRAIN.DISTRESSED_PLAINS]: '#8a9a6a',
+    [TERRAIN.DISTRESSED_HILLS]: '#9a8a5a',
+    [TERRAIN.DISTRESSED_FOREST]: '#4a5a3a',
+    [TERRAIN.DISTRESSED_GOLD]: '#a89a5a',
+    [TERRAIN.DISTRESSED_QUARRY]: '#7a7a6a',
 };
 const PLAYER_COLOR = '#daa520';
 
@@ -344,17 +349,48 @@ function executeSkill(skillId, targetQ, targetR) {
                 usedMP = false;
                 break;
             }
-            const totalCost = shatteredHexes.length * 2;
-            if (player.aether < totalCost) {
-                logCombat(`Need ${totalCost} AE for ${shatteredHexes.length} hexes!`, 'log-info');
-                player.usedSkillsThisTurn.delete(skillId);
-                usedMP = false;
-                break;
+            // Restore shattered hexes to normal
+            for (const hex of shatteredHexes) {
+                hex.terrain = UNSHATTERED_VERSION[hex.terrain];
             }
-            player.aether -= totalCost;
-            for (const hex of shatteredHexes) hex.terrain = UNSHATTERED_VERSION[hex.terrain];
+            // Decrement shatteredCount within 3 of each restored hex
+            for (const hex of shatteredHexes) {
+                for (const coord of hexesInRange(hex.q, hex.r, 3)) {
+                    const h = world.getHex(coord.q, coord.r);
+                    if (h) h.shatteredCount = Math.max(0, h.shatteredCount - 1);
+                }
+            }
+            // Revert distressed hexes that dropped to 0; distress restored hexes still near shatters
+            const checked = new Set();
+            for (const hex of shatteredHexes) {
+                for (const coord of hexesInRange(hex.q, hex.r, 3)) {
+                    const key = hexKey(coord.q, coord.r);
+                    if (checked.has(key)) continue;
+                    checked.add(key);
+                    const h = world.getHex(coord.q, coord.r);
+                    if (!h) continue;
+                    if (h.shatteredCount === 0 && UNDISTRESSED_VERSION[h.terrain] !== undefined) {
+                        h.terrain = UNDISTRESSED_VERSION[h.terrain];
+                    }
+                }
+                // The restored hex itself: if still near other shatters, distress it
+                if (hex.shatteredCount > 0 && DISTRESSED_VERSION[hex.terrain] !== undefined) {
+                    hex.terrain = DISTRESSED_VERSION[hex.terrain];
+                }
+            }
+            // Gain 1 AE
+            player.aether = Math.min(player.maxAether(), player.aether + 1);
+            // 16% chance per hex to find gold
+            let goldFound = 0;
+            for (let i = 0; i < shatteredHexes.length; i++) {
+                if (Rando.bool(0.16)) goldFound++;
+            }
+            if (goldFound > 0) player.gold += goldFound;
+            player.mp = 0; // ends turn
             gainXP(shatteredHexes.length * 3);
-            logCombat(`Restored ${shatteredHexes.length} hexes!`, 'log-heal');
+            let msg = `Restored ${shatteredHexes.length} hex${shatteredHexes.length > 1 ? 'es' : ''}! +1 AE`;
+            if (goldFound > 0) msg += `, +${goldFound}g`;
+            logCombat(msg, 'log-heal');
             break;
         }
         case 'void_strike': {
@@ -592,7 +628,7 @@ function checkHexEntry() {
     if (!hex) return;
 
     // Gold pickup
-    if ((hex.terrain === TERRAIN.GOLD || hex.terrain === TERRAIN.SHATTERED_GOLD) && !hex.goldLooted) {
+    if ((hex.terrain === TERRAIN.GOLD || hex.terrain === TERRAIN.SHATTERED_GOLD || hex.terrain === TERRAIN.DISTRESSED_GOLD) && !hex.goldLooted) {
         hex.goldLooted = true;
         const goldAmt = hex.terrain === TERRAIN.SHATTERED_GOLD ? 20 : 10;
         player.gold += goldAmt;
@@ -744,8 +780,17 @@ function tryBossSpawn(enemy, def, occupied) {
 function tryTerrainShatter(enemy, def) {
     if (!def.chaosSpawned || !Rando.bool(0.02)) return;
     const eHex = world.getHex(enemy.q, enemy.r);
-    if (eHex && SHATTERED_VERSION[eHex.terrain] !== undefined) {
-        eHex.terrain = SHATTERED_VERSION[eHex.terrain];
+    if (!eHex || SHATTERED_VERSION[eHex.terrain] === undefined) return;
+    // Shatter the hex
+    eHex.terrain = SHATTERED_VERSION[eHex.terrain];
+    // Spread distress within radius 3
+    for (const coord of hexesInRange(eHex.q, eHex.r, 3)) {
+        const h = world.getHex(coord.q, coord.r);
+        if (!h) continue;
+        h.shatteredCount++;
+        if (DISTRESSED_VERSION[h.terrain] !== undefined) {
+            h.terrain = DISTRESSED_VERSION[h.terrain];
+        }
     }
 }
 
@@ -974,7 +1019,7 @@ function render() {
         }
 
         // Gold indicator
-        if ((hex.terrain === TERRAIN.GOLD || hex.terrain === TERRAIN.SHATTERED_GOLD) && !hex.goldLooted) {
+        if ((hex.terrain === TERRAIN.GOLD || hex.terrain === TERRAIN.SHATTERED_GOLD || hex.terrain === TERRAIN.DISTRESSED_GOLD) && !hex.goldLooted) {
             ctx.fillStyle = '#ffd700';
             ctx.font = 'bold ' + Math.floor(HEX_SIZE * 1.2) + 'px monospace';
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';

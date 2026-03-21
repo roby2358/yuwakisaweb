@@ -137,7 +137,7 @@ export class GameWorld {
                 const isEdge = row === 0 || row === MAP_ROWS - 1 || col === 0 || col === MAP_COLS - 1;
                 map.set(hexKey(q, r), {
                     q, r, col, row, elevation, isEdge,
-                    terrain: null, poi: null, goldLooted: false
+                    terrain: null, poi: null, goldLooted: false, shatteredCount: 0
                 });
             }
         }

@@ -54,8 +54,16 @@ The polynomial XP curve and breach escalation create a natural tension point aro
 | Shattered Hills | 3 | +1 ranged range | Shattered but still elevated |
 | Shattered Gold | 2 | None | Lootable: 20 gold (double normal) |
 | Shattered Quarry | 3 | None | Created by chaos corruption |
+| Distressed Plains | 1 | None | Near shattered terrain, same mechanics as normal |
+| Distressed Forest | 2 | +1 defense | Near shattered terrain, same mechanics as normal |
+| Distressed Hills | 2 | +1 ranged range | Near shattered terrain, same mechanics as normal |
+| Distressed Gold | 1 | None | Near shattered terrain, still lootable for 10 gold |
+| Distressed Quarry | 2 | None | Near shattered terrain, same mechanics as normal |
 
-Chaos-spawned enemies have a 2% chance per turn to shatter the terrain they occupy, converting normal terrain to its shattered variant (+1 movement cost). The Restore skill reverses this. Shattered terrain is visually distinct (dark red tones) and serves as a visible footprint of chaos spreading across the map.
+### Terrain Corruption Spread
+Chaos-spawned enemies have a 2% chance per turn to shatter the terrain they occupy, converting it to the shattered variant (+1 movement cost). When terrain shatters, all hexes within 3 become **distressed** — visually degraded (muted greenish/brownish grays) but mechanically identical to normal terrain. Each hex tracks a `shatteredCount` — how many shattered hexes are within range 3.
+
+Shattered terrain is visually distinct (dark red tones) and distressed terrain shows the corruption's reach. The Restore skill reverses shattering: it restores shattered hexes, decrements nearby shatteredCounts, and any distressed hex that drops to 0 reverts to normal. Restored hexes that are still near other shattered hexes become distressed instead of fully normal.
 
 ## Player
 
@@ -210,7 +218,7 @@ Restore is always equipped in slot 1. Other skills unlocked at levels 2, 4, 6, 8
 
 | Skill | Cost | Target | Level | Effect |
 |-------|------|--------|-------|--------|
-| Restore | 0 + 2/hex | AoE Self (1+Lv/3) | 0 | Restore shattered terrain. 2 AE per hex. Grants 3 XP per hex. |
+| Restore | 0 | AoE Self (1+Lv/3) | 0 | Restore shattered terrain. Gain 1 AE. Ends turn. 3 XP per hex. |
 | Void Strike | 1 AE | Melee | 1 | weapon + Might + Warding damage. No counter-attack. |
 | Phase Step | 2 AE | Teleport (3) | 2 | Teleport to visible hex within 3. Free action. |
 | Cosmic Bolt | 2 AE | Ranged (4) | 2 | 8 + Warding ranged damage. |
