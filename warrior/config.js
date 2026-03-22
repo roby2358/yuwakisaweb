@@ -160,7 +160,7 @@ export const POI_COLORS = {
     [POI.RUIN]: '#b0bec5',
     [POI.BREACH]: '#e040fb',
     [POI.MAW]: '#ff1744',
-    [POI.HUT]: '#a1887f'
+    [POI.HUT]: '#d4a574'
 };
 
 // ---- Enemy types ----
@@ -254,7 +254,7 @@ export const ARMORS = [
     { id: 'starplate', name: 'Starplate', defense: 6, special: 'mp_penalty', mpPenalty: 1, price: 120, tier: 2, magical: true },
     { id: 'voidhide', name: 'Voidhide', defense: 5, special: 'wraith_immune', price: 100, tier: 3, magical: true },
     { id: 'thornmail', name: 'Thornmail', defense: 2, special: 'thorns', thornsDamage: 2, price: 35, tier: 1, magical: true },
-    { id: 'flickerweave', name: 'Flickerweave', defense: 2, special: 'dodge_bonus', dodgeBonus: 10, price: 40, tier: 1, magical: true },
+    { id: 'flickerweave', name: 'Flickerweave', defense: 2, special: 'dodge_bonus', dodgeBonus: 30, price: 40, tier: 1, magical: true },
     { id: 'bloodward_cuirass', name: 'Bloodward Cuirass', defense: 4, special: 'heal_on_kill', healOnKill: 5, price: 65, tier: 2, magical: true },
     { id: 'stormplate', name: 'Stormplate', defense: 3, special: 'aether_regen', price: 80, tier: 2, magical: true },
     { id: 'wraithskin', name: 'Wraithskin', defense: 3, special: 'ranged_immune', price: 75, tier: 2, magical: true },
@@ -296,129 +296,136 @@ export const SKILL_TARGET = {
     TELEPORT_REVEALED: 'teleport_revealed' // pick any revealed hex in range
 };
 
+export const SKILL_USAGE = {
+    PRISTINE: 'pristine',       // no enemies within 2, non-shattered hex
+    NON_COMBAT: 'non_combat',   // no enemies within 2
+    ANYTIME: 'anytime'          // no restrictions
+};
+
 export const SKILLS = {
+    // ---- Combat skills (anytime) ----
     restore: {
-        id: 'restore', name: 'Restore', cost: 0, target: SKILL_TARGET.AOE_SELF,
+        id: 'restore', name: 'Restore', cost: 0, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.NON_COMBAT,
         desc: 'Restore shattered terrain. Gain 1 AE. Ends turn. Range: 1 + Lv/3.', minLevel: 0
     },
     void_strike: {
-        id: 'void_strike', name: 'Void Strike', cost: 1, target: SKILL_TARGET.MELEE,
+        id: 'void_strike', name: 'Void Strike', cost: 1, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
         desc: 'Melee attack: weapon + Might + Warding. No counter-attack.', minLevel: 1
     },
     phase_step: {
-        id: 'phase_step', name: 'Phase Step', cost: 2, target: SKILL_TARGET.TELEPORT,
+        id: 'phase_step', name: 'Phase Step', cost: 2, target: SKILL_TARGET.TELEPORT, usage: SKILL_USAGE.ANYTIME,
         range: 3, desc: 'Teleport to visible hex within 3. Free action.', minLevel: 2, freeAction: true
     },
     cosmic_bolt: {
-        id: 'cosmic_bolt', name: 'Cosmic Bolt', cost: 2, target: SKILL_TARGET.RANGED,
+        id: 'cosmic_bolt', name: 'Cosmic Bolt', cost: 2, target: SKILL_TARGET.RANGED, usage: SKILL_USAGE.ANYTIME,
         range: 4, baseDamage: 8, desc: 'Ranged: 8 + Warding damage.', minLevel: 2
     },
-    warp_shield: {
-        id: 'warp_shield', name: 'Warp Shield', cost: 2, target: SKILL_TARGET.SELF,
-        duration: 3, desc: 'Absorb next hit. Lasts 3 turns.', minLevel: 4
-    },
-    breach_pulse: {
-        id: 'breach_pulse', name: 'Breach Pulse', cost: 3, target: SKILL_TARGET.AOE_SELF,
-        range: 2, baseDamage: 5, desc: 'AoE: 5 + Warding to enemies within 2.', minLevel: 4
-    },
-    mending_light: {
-        id: 'mending_light', name: 'Mending Light', cost: 2, target: SKILL_TARGET.SELF,
-        baseHeal: 10, desc: 'Heal 10 + Vigor*3 HP.', minLevel: 6
-    },
-    gravity_well: {
-        id: 'gravity_well', name: 'Gravity Well', cost: 3, target: SKILL_TARGET.AOE_SELF,
-        range: 3, desc: 'Pull enemies within 3 one hex closer.', minLevel: 6
-    },
-    dimensional_rend: {
-        id: 'dimensional_rend', name: 'Dimensional Rend', cost: 4, target: SKILL_TARGET.MELEE,
-        desc: 'Melee: weapon damage * 3. Must be adjacent.', minLevel: 8
-    },
-    starfall: {
-        id: 'starfall', name: 'Starfall', cost: 5, target: SKILL_TARGET.AOE_SELF,
-        range: 3, baseDamage: 15, desc: 'AoE: 15 + Warding*2 to enemies within 3.', minLevel: 10
-    },
     shockwave: {
-        id: 'shockwave', name: 'Shockwave', cost: 2, target: SKILL_TARGET.AOE_SELF,
+        id: 'shockwave', name: 'Shockwave', cost: 2, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
         range: 2, baseDamage: 4, desc: 'AoE: 4 + Might to enemies within 2. Pushes each 1 hex away.', minLevel: 2
     },
     siphon_strike: {
-        id: 'siphon_strike', name: 'Siphon Strike', cost: 2, target: SKILL_TARGET.MELEE,
+        id: 'siphon_strike', name: 'Siphon Strike', cost: 2, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
         desc: 'Melee: weapon + Might. Heal HP equal to damage dealt. No counter.', minLevel: 2
     },
     piercing_shot: {
-        id: 'piercing_shot', name: 'Piercing Shot', cost: 2, target: SKILL_TARGET.RANGED,
+        id: 'piercing_shot', name: 'Piercing Shot', cost: 2, target: SKILL_TARGET.RANGED, usage: SKILL_USAGE.ANYTIME,
         range: 4, baseDamage: 6, desc: 'Ranged: 6 + Reflex. Ignores defense.', minLevel: 2
     },
+    warp_shield: {
+        id: 'warp_shield', name: 'Warp Shield', cost: 2, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
+        duration: 3, desc: 'Absorb next hit. Lasts 3 turns.', minLevel: 4
+    },
+    breach_pulse: {
+        id: 'breach_pulse', name: 'Breach Pulse', cost: 3, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
+        range: 2, baseDamage: 5, desc: 'AoE: 5 + Warding to enemies within 2.', minLevel: 4
+    },
     chain_lightning: {
-        id: 'chain_lightning', name: 'Chain Lightning', cost: 3, target: SKILL_TARGET.RANGED,
+        id: 'chain_lightning', name: 'Chain Lightning', cost: 3, target: SKILL_TARGET.RANGED, usage: SKILL_USAGE.ANYTIME,
         range: 3, baseDamage: 6, chainDamage: 4, chainCount: 2, chainRange: 2,
         desc: 'Ranged: 6 + Warding. Chains to 2 nearby enemies for 4 flat dmg.', minLevel: 4
     },
     immolate: {
-        id: 'immolate', name: 'Immolate', cost: 1, target: SKILL_TARGET.MELEE,
+        id: 'immolate', name: 'Immolate', cost: 1, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
         burnDamage: 4, desc: 'Melee: weapon + Might. Target burns for 4 next turn. No counter.', minLevel: 4
     },
+    mending_light: {
+        id: 'mending_light', name: 'Mending Light', cost: 2, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
+        baseHeal: 10, desc: 'Heal 10 + Vigor*3 HP.', minLevel: 6
+    },
+    gravity_well: {
+        id: 'gravity_well', name: 'Gravity Well', cost: 3, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
+        range: 3, desc: 'Pull enemies within 3 one hex closer.', minLevel: 6
+    },
     sundering_blow: {
-        id: 'sundering_blow', name: 'Sundering Blow', cost: 2, target: SKILL_TARGET.MELEE,
+        id: 'sundering_blow', name: 'Sundering Blow', cost: 2, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
         shredAmount: 3, desc: 'Melee: weapon + Might. Permanently shred 3 enemy def. No counter.', minLevel: 6
     },
     meteor: {
-        id: 'meteor', name: 'Meteor', cost: 4, target: SKILL_TARGET.RANGED_AOE,
+        id: 'meteor', name: 'Meteor', cost: 4, target: SKILL_TARGET.RANGED_AOE, usage: SKILL_USAGE.ANYTIME,
         range: 4, aoeRange: 1, baseDamage: 8, desc: 'Target hex: 8 + Warding to all enemies within 1.', minLevel: 6
     },
+    dimensional_rend: {
+        id: 'dimensional_rend', name: 'Dimensional Rend', cost: 4, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
+        desc: 'Melee: weapon damage * 3. Must be adjacent.', minLevel: 8
+    },
     execute: {
-        id: 'execute', name: 'Execute', cost: 3, target: SKILL_TARGET.MELEE_EXECUTE,
+        id: 'execute', name: 'Execute', cost: 3, target: SKILL_TARGET.MELEE_EXECUTE, usage: SKILL_USAGE.ANYTIME,
         desc: 'Melee: weapon*2 + Might*2. Only targets enemies below 50% HP.', minLevel: 8
     },
     ricochet: {
-        id: 'ricochet', name: 'Ricochet', cost: 3, target: SKILL_TARGET.RANGED,
+        id: 'ricochet', name: 'Ricochet', cost: 3, target: SKILL_TARGET.RANGED, usage: SKILL_USAGE.ANYTIME,
         range: 4, baseDamage: 5, bounceCount: 2, bounceRange: 2,
         desc: 'Ranged: 5 + Reflex. Bounces to 2 more enemies within 2.', minLevel: 8
     },
+    starfall: {
+        id: 'starfall', name: 'Starfall', cost: 5, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
+        range: 3, baseDamage: 15, desc: 'AoE: 15 + Warding*2 to enemies within 3.', minLevel: 10
+    },
     void_salvo: {
-        id: 'void_salvo', name: 'Void Salvo', cost: 4, target: SKILL_TARGET.RANGED,
+        id: 'void_salvo', name: 'Void Salvo', cost: 4, target: SKILL_TARGET.RANGED, usage: SKILL_USAGE.ANYTIME,
         range: 3, baseDamage: 5, shotCount: 3, desc: 'Fire 3 shots: each deals 5 + Reflex.', minLevel: 10
+    },
+    recall: {
+        id: 'recall', name: 'Recall', cost: 5, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
+        desc: 'Teleport to nearest haven. Ends turn.', minLevel: 10
     },
     // ---- Non-combat skills ----
     aether_tap: {
-        id: 'aether_tap', name: 'Aether Tap', cost: 0, target: SKILL_TARGET.AOE_SELF,
-        range: 2, desc: 'Draw Aether from healthy land. +1 AE per 3 clean hexes within 2. Ends turn.', minLevel: 2
+        id: 'aether_tap', name: 'Aether Tap', cost: 0, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.PRISTINE,
+        range: 2, desc: 'Draw Aether from healthy land. +1 AE per 6 clean hexes within 2. Ends turn.', minLevel: 2
     },
     farsight: {
-        id: 'farsight', name: 'Farsight', cost: 2, target: SKILL_TARGET.SELF,
+        id: 'farsight', name: 'Farsight', cost: 2, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.NON_COMBAT,
         range: 12, desc: 'Reveal all hexes within 12. Free action.', minLevel: 2, freeAction: true
     },
     prospect: {
-        id: 'prospect', name: 'Prospect', cost: 1, target: SKILL_TARGET.SELF,
+        id: 'prospect', name: 'Prospect', cost: 1, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
         revealRange: 8, desc: 'Reveal gold hexes within 8. 20% chance to discover a gold deposit.', minLevel: 4
     },
     commune: {
-        id: 'commune', name: 'Commune', cost: 2, target: SKILL_TARGET.SELF,
+        id: 'commune', name: 'Commune', cost: 2, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
         desc: 'Reveal all POI locations on the map. Ends turn.', minLevel: 4
     },
     salvage: {
-        id: 'salvage', name: 'Salvage', cost: 0, target: SKILL_TARGET.AOE_SELF,
+        id: 'salvage', name: 'Salvage', cost: 0, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.PRISTINE,
         range: 1, desc: 'Create gold deposits on adjacent shattered hexes. Ends turn.', minLevel: 4
     },
     skill_seek: {
-        id: 'skill_seek', name: 'Skill Seek', cost: 3, target: SKILL_TARGET.SELF,
-        desc: 'Meditate: 5% per level chance to learn a new skill. Fail: +10 XP.', minLevel: 6
+        id: 'skill_seek', name: 'Skill Seek', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
+        desc: 'Meditate: 5% per level chance to learn a new skill.', minLevel: 6
     },
     spirit_walk: {
-        id: 'spirit_walk', name: 'Spirit Walk', cost: 3, target: SKILL_TARGET.TELEPORT_REVEALED,
+        id: 'spirit_walk', name: 'Spirit Walk', cost: 3, target: SKILL_TARGET.TELEPORT_REVEALED, usage: SKILL_USAGE.NON_COMBAT,
         range: 6, desc: 'Teleport to any revealed hex within 6. Ends turn.', minLevel: 6
     },
     ground_weeps: {
-        id: 'ground_weeps', name: 'Ground Weeps', cost: 4, target: SKILL_TARGET.SELF,
+        id: 'ground_weeps', name: 'Ground Weeps', cost: 4, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.NON_COMBAT,
         desc: 'Show enemy threat heatmap over entire map. Press Space/click to dismiss.', minLevel: 8
     },
     sanctuary: {
-        id: 'sanctuary', name: 'Sanctuary', cost: 3, target: SKILL_TARGET.SELF,
+        id: 'sanctuary', name: 'Sanctuary', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
         desc: 'Current hex becomes a temporary camp (one rest). Must be non-POI terrain.', minLevel: 8
-    },
-    recall: {
-        id: 'recall', name: 'Recall', cost: 5, target: SKILL_TARGET.SELF,
-        desc: 'Teleport to nearest haven. Ends turn.', minLevel: 10
     }
 };
 

@@ -7,7 +7,7 @@ import {
     POI, POI_SYMBOLS, POI_COLORS, POI_DEFENSE_BONUS,
     ENEMY_TYPE,
     EQUIP_SLOT, WEAPONS, ARMORS, ARTIFACTS, ALL_EQUIPMENT, MAGICAL_ITEMS, NON_MAGICAL_ITEMS,
-    SKILL_TARGET, SKILLS, SKILL_UNLOCK_LEVELS,
+    SKILL_TARGET, SKILL_USAGE, SKILLS, SKILL_UNLOCK_LEVELS,
     SHATTERED_VERSION, UNSHATTERED_VERSION, DISTRESSED_VERSION, UNDISTRESSED_VERSION
 } from './config.js';
 import { hexToPixel, pixelToHex, hexKey, parseHexKey, hexNeighbors, hexDistance, hexesInRange, bfsHexes, drawHexPath } from './hex.js';
@@ -515,6 +515,19 @@ function chainBounce(skillName, dmg, startQ, startR, bounceCount, bounceRange, h
     }
 }
 
+function checkSkillUsage(skill) {
+    const usage = skill.usage || SKILL_USAGE.ANYTIME;
+    if (usage === SKILL_USAGE.ANYTIME) return null;
+    // Non-combat and pristine both require no enemies within 2
+    const nearbyEnemy = em.enemies.some(e => hexDistance(player.q, player.r, e.q, e.r) <= 2);
+    if (nearbyEnemy) return 'Too close to enemies!';
+    if (usage === SKILL_USAGE.PRISTINE) {
+        const hex = world.getHex(player.q, player.r);
+        if (hex && UNSHATTERED_VERSION[hex.terrain] !== undefined) return 'Cannot use on shattered terrain!';
+    }
+    return null;
+}
+
 function executeSkill(skillId, targetQ, targetR) {
     const skill = SKILLS[skillId];
     if (!skill) return;
@@ -766,7 +779,7 @@ function executeSkill(skillId, targetQ, targetR) {
                 if (UNDISTRESSED_VERSION[hex.terrain] !== undefined) continue;
                 cleanCount++;
             }
-            const aeGain = Math.floor(cleanCount / 3);
+            const aeGain = Math.floor(cleanCount / 6);
             if (aeGain <= 0) {
                 logCombat('No healthy land nearby!', 'log-info');
                 player.usedSkillsThisTurn.delete(skillId);
@@ -859,8 +872,7 @@ function executeSkill(skillId, targetQ, targetR) {
                 player.pendingSkillChoice = true;
                 setTimeout(() => showSkillChoiceDialog(), 300);
             } else {
-                gainXP(10);
-                logCombat('The patterns elude you... +10 XP', 'log-info');
+                logCombat('The patterns elude you...', 'log-info');
             }
             break;
         }
@@ -1756,7 +1768,7 @@ function updateSkillBar() {
         if (skillId) {
             const skill = SKILLS[skillId];
             nameEl.textContent = skill.name;
-            const canUse = player.aether >= skill.cost && !player.usedSkillsThisTurn.has(skillId) && phase === 'player' && !gameOver;
+            const canUse = player.aether >= skill.cost && !player.usedSkillsThisTurn.has(skillId) && phase === 'player' && !gameOver && !checkSkillUsage(skill);
             slot.classList.toggle('disabled', !canUse);
             slot.classList.toggle('used', player.usedSkillsThisTurn.has(skillId));
             slot.classList.toggle('active', targeting && targeting.skill === skillId);
@@ -2464,6 +2476,8 @@ function activateSkillSlot(slotIdx) {
     const skill = SKILLS[skillId];
     if (player.aether < skill.cost) { logCombat('Not enough Aether!', 'log-info'); return; }
     if (player.usedSkillsThisTurn.has(skillId)) { logCombat('Already used this turn!', 'log-info'); return; }
+    const usageBlock = checkSkillUsage(skill);
+    if (usageBlock) { logCombat(usageBlock, 'log-info'); return; }
 
     if (skill.target === SKILL_TARGET.SELF || skill.target === SKILL_TARGET.AOE_SELF) {
         executeSkill(skillId, player.q, player.r);
