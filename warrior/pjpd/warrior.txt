@@ -1,0 +1,44 @@
+Priority:   70
+Status: ToDo
+ID: gameplay-ejux
+Restore is the only way to seal breaches — 40% chance on small, 20% on main. On failure, show dialog "Restore did not close the breach." Stepping on a breach shows message "Use Restore to close the breach."
+---
+Priority:   70
+Status: ToDo
+ID: combat-apyt
+Scale monster strength by proximity to chaos rifts — closer to a rift means tougher enemies
+---
+Priority:   70
+Status: ToDo
+ID: gameplay-gheu
+Allow the main breach to spawn guardian enemies to defend itself
+---
+Priority:   70
+Status: ToDo
+ID: combat-ua9i
+Buff chaos monsters when fighting on corrupted or distressed terrain
+---
+Priority:   60
+Status: ToDo
+ID: ui-j8jh
+Auto-refresh the Inventory and Skills panels whenever their underlying data changes
+---
+Priority:   50
+Status: ToDo
+ID: combat-8ftn
+Increase stat scaling for top-tier monsters so late-game enemies hit harder and feel more threatening
+---
+Priority:   50
+Status: ToDo
+ID: combat-yt4c
+Extend cannon firing range beyond current limits for more tactical reach
+---
+Priority:   50
+Status: ToDo
+ID: loot-8a8r
+Generate randomized mid-tier magic items with strength 2-5
+---
+Priority:   50
+Status: ToDo
+ID: loot-5wzg
+Add 10 new mid-tier artifacts to the loot pool — currently weapons and armor dominate drops
