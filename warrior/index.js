@@ -254,7 +254,7 @@ function killEnemy(enemy) {
     for (const poi of world.pois) {
         if ((poi.type === POI.BREACH || poi.type === POI.MAW) && poi.guardianId === enemy.id) {
             poi.guardianDefeated = true;
-            logCombat(`The guardian falls! Step on the breach to seal it.`, 'log-info');
+            logCombat(`The guardian falls! Use Restore near the breach to seal it.`, 'log-info');
         }
     }
 }
@@ -545,7 +545,13 @@ function executeSkill(skillId, targetQ, targetR) {
             const shatteredHexes = hexesInRange(player.q, player.r, range)
                 .map(h => world.getHex(h.q, h.r))
                 .filter(h => h && UNSHATTERED_VERSION[h.terrain] !== undefined);
-            if (shatteredHexes.length === 0) {
+            // Check for breaches in range
+            const breachInRange = world.pois.find(p =>
+                (p.type === POI.BREACH || p.type === POI.MAW) &&
+                p.guardianDefeated && !p.closed &&
+                hexDistance(player.q, player.r, p.q, p.r) <= range
+            );
+            if (shatteredHexes.length === 0 && !breachInRange) {
                 logCombat('No shattered terrain in range!', 'log-info');
                 player.usedSkillsThisTurn.delete(skillId);
                 usedMP = false;
@@ -589,10 +595,22 @@ function executeSkill(skillId, targetQ, targetR) {
             }
             if (goldFound > 0) player.gold += goldFound;
             player.mp = 0; // ends turn
-            gainXP(shatteredHexes.length * 3);
-            let msg = `Restored ${shatteredHexes.length} hex${shatteredHexes.length > 1 ? 'es' : ''}! +1 AE`;
-            if (goldFound > 0) msg += `, +${goldFound}g`;
-            logCombat(msg, 'log-heal');
+            if (shatteredHexes.length > 0) {
+                gainXP(shatteredHexes.length * 3);
+                let msg = `Restored ${shatteredHexes.length} hex${shatteredHexes.length > 1 ? 'es' : ''}! +1 AE`;
+                if (goldFound > 0) msg += `, +${goldFound}g`;
+                logCombat(msg, 'log-heal');
+            }
+            // Attempt to seal a breach in range
+            if (breachInRange) {
+                const chance = breachInRange.type === POI.MAW ? 0.20 : 0.40;
+                if (Rando.bool(chance)) {
+                    closeBreach(breachInRange);
+                    if (breachInRange.type === POI.MAW) endGame(true);
+                } else {
+                    showDialog('Restore', 'Restore did not close the breach.', [{ label: 'OK', cls: 'btn-primary' }]);
+                }
+            }
             break;
         }
         case 'void_strike': {
@@ -1164,11 +1182,12 @@ function checkHexEntry() {
         showCampDialog(poi);
     } else if (poi.type === POI.RUIN && !poi.looted) {
         showRuinDialog(poi);
-    } else if (poi.type === POI.BREACH && poi.guardianDefeated && !poi.closed) {
-        closeBreach(poi);
+    } else if (poi.type === POI.BREACH && !poi.closed) {
+        logCombat('Use Restore to close the breach.', 'log-info');
     } else if (poi.type === POI.MAW) {
         if (world.breachesClosed < 2) logCombat('The Maw resists you. Seal at least 2 breaches first.', 'log-info');
-        else if (poi.guardianDefeated && !poi.closed) endGame(true);
+        else if (poi.guardianDefeated && !poi.closed) logCombat('Use Restore to close the breach.', 'log-info');
+        else if (poi.closed) endGame(true);
     } else if (poi.type === POI.HUT) {
         showHutDialog(poi);
     }

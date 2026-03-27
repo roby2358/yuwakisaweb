@@ -3,7 +3,13 @@
     "allow": [
       "Bash(ls:*)",
       "Bash(grep:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "mcp__pjpd__pjpd_list_projects",
+      "mcp__pjpd__pjpd_new_project",
+      "mcp__pjpd__pjpd_add_task",
+      "mcp__pjpd__pjpd_update_task",
+      "mcp__pjpd__pjpd_list_tasks",
+      "Skill(update-config)"
     ]
   }
 }
