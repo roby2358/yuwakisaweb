@@ -28,6 +28,11 @@ Status: ToDo
 ID: gameplay-7w67
 5% chance each time you step on explored ruins that they reset to spawned state — a new monster appears and you can loot again. Lets players farm ruins for extra loot if they want the risk.
 ---
+Priority:   60
+Status: ToDo
+ID: combat-w3dh
+Ranged weapons contribute only 1/4 damage (rounded up) in melee — at close range a phase rifle is just an expensive club. Full damage at range only.
+---
 Priority:   50
 Status: ToDo
 ID: combat-8ftn
