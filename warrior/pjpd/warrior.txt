@@ -1,10 +1,5 @@
 Priority:   70
 Status: ToDo
-ID: gameplay-ejux
-Restore is the only way to seal breaches — 40% chance on small, 20% on main. On failure, show dialog "Restore did not close the breach." Stepping on a breach shows message "Use Restore to close the breach."
----
-Priority:   70
-Status: ToDo
 ID: combat-apyt
 Scale monster strength by proximity to chaos rifts — closer to a rift means tougher enemies
 ---
@@ -22,6 +17,16 @@ Priority:   60
 Status: ToDo
 ID: ui-j8jh
 Auto-refresh the Inventory and Skills panels whenever their underlying data changes
+---
+Priority:   60
+Status: ToDo
+ID: gameplay-2qms
+Ruins have 3 states: new (unexplored), spawned (monster appeared), explored (looted). Stepping on new ruins spawns a monster. Can't explore/loot ruins while any enemy is within 2 hexes — the proximity check happens after the spawn.
+---
+Priority:   60
+Status: ToDo
+ID: gameplay-7w67
+5% chance each time you step on explored ruins that they reset to spawned state — a new monster appears and you can loot again. Lets players farm ruins for extra loot if they want the risk.
 ---
 Priority:   50
 Status: ToDo
@@ -42,3 +47,8 @@ Priority:   50
 Status: ToDo
 ID: loot-5wzg
 Add 10 new mid-tier artifacts to the loot pool — currently weapons and armor dominate drops
+---
+Priority:    0
+Status: Done
+ID: gameplay-ejux
+Restore is the only way to seal breaches — 40% chance on small, 20% on main. On failure, show dialog "Restore did not close the breach." Stepping on a breach shows message "Use Restore to close the breach."

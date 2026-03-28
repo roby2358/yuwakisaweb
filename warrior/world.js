@@ -197,7 +197,7 @@ export class GameWorld {
                 hex.poi = type;
                 const poi = { q: hex.q, r: hex.r, type, id: self.pois.length };
                 if (type === POI.HAVEN) poi.shopItems = self._generateShopItems();
-                if (type === POI.RUIN) { poi.looted = false; poi.loot = self._generateRuinLoot(); poi.ruinEnemies = Rando.int(1, 3); }
+                if (type === POI.RUIN) { poi.ruinState = 'new'; }
                 if (type === POI.BREACH) { poi.closed = false; poi.guardianId = null; }
                 if (type === POI.MAW) { poi.closed = false; poi.guardianId = null; }
                 if (type === POI.HUT) {
@@ -234,20 +234,6 @@ export class GameWorld {
         return items;
     }
 
-    _generateRuinLoot() {
-        // 1-3 non-magical items + 1 magical (magical resolved at discovery via re-roll)
-        const nonMagicalCount = Rando.int(1, 3);
-        const nonMagical = [];
-        const pool = [...NON_MAGICAL_ITEMS];
-        Rando.shuffle(pool);
-        for (let i = 0; i < nonMagicalCount && pool.length > 0; i++) {
-            nonMagical.push(pool.pop());
-        }
-        // Pick a magical candidate — re-roll happens at discovery time in index.js
-        const magicalPool = [...MAGICAL_ITEMS.filter(i => i.tier >= 1 && i.id !== 'maw_compass')];
-        const magical = magicalPool.length > 0 ? Rando.choice(magicalPool) : null;
-        return { nonMagical, magical };
-    }
 
     _validate() {
         const havens = this.pois.filter(p => p.type === POI.HAVEN);

@@ -151,17 +151,41 @@ function refreshVision() {
 // COMBAT
 // ================================================================
 
-function enemyDefense(enemy) {
-    const def = em.getDef(enemy.type);
+function buildOccupiedSet() {
+    const occupied = new Set(em.enemies.map(e => hexKey(e.q, e.r)));
+    occupied.add(hexKey(player.q, player.r));
+    return occupied;
+}
+
+function enemyOnCorruptedTerrain(enemy, def) {
+    if (!def.chaosSpawned) return false;
+    const hex = world.getHex(enemy.q, enemy.r);
+    return hex && (UNSHATTERED_VERSION[hex.terrain] !== undefined || UNDISTRESSED_VERSION[hex.terrain] !== undefined);
+}
+
+function enemyDefense(enemy, def) {
     let d = def.defense;
     if (enemy.defReduction) d = Math.max(0, d - enemy.defReduction);
+    if (enemyOnCorruptedTerrain(enemy, def)) d += 2;
     return d;
+}
+
+function enemyMeleeAttack(enemy, def) {
+    let atk = def.attack;
+    if (enemyOnCorruptedTerrain(enemy, def)) atk += 3;
+    return atk;
+}
+
+function enemyRangedAttack(enemy, def) {
+    let atk = def.rangedAttack || def.attack;
+    if (enemyOnCorruptedTerrain(enemy, def)) atk += 3;
+    return atk;
 }
 
 function dealDamageToEnemy(enemy, damage, source, opts = {}) {
     const def = em.getDef(enemy.type);
     const rolled = Rando.bellCurve(damage);
-    let eDef = enemyDefense(enemy);
+    let eDef = enemyDefense(enemy, def);
     if (opts.pierceAmount) eDef = Math.max(0, eDef - opts.pierceAmount);
     const actualDmg = Math.max(1, rolled - eDef);
     enemy.hp -= actualDmg;
@@ -330,7 +354,7 @@ function meleeAttack(enemy) {
     if (!killed) {
         // Counter-attack (riposte halves counter damage)
         const def = em.getDef(enemy.type);
-        let counterDmg = def.attack;
+        let counterDmg = enemyMeleeAttack(enemy, def);
         if (wep && wep.special === 'riposte') counterDmg = Math.floor(counterDmg / 2);
         dealDamageToPlayer(counterDmg, `${def.name} counters`, false, { attacker: enemy });
     }
@@ -385,7 +409,7 @@ function rangedAttack(targetQ, targetR) {
         for (const n of adj) {
             const chainTarget = em.enemies.find(e => e.q === n.q && e.r === n.r && e !== enemy);
             if (chainTarget) {
-                const chainDmg = Math.max(1, wep.chainDamage - enemyDefense(chainTarget));
+                const chainDmg = Math.max(1, wep.chainDamage - enemyDefense(chainTarget, em.getDef(chainTarget.type)));
                 chainTarget.hp -= chainDmg;
                 logCombat(`Chain: ${chainDmg} dmg to ${em.getDef(chainTarget.type).name}`, 'log-dmg');
                 if (chainTarget.hp <= 0) killEnemy(chainTarget);
@@ -400,7 +424,7 @@ function rangedAttack(targetQ, targetR) {
         for (const n of adj) {
             const splashTarget = em.enemies.find(e => e.q === n.q && e.r === n.r && e !== enemy);
             if (splashTarget) {
-                const sDmg = Math.max(1, wep.splashDamage - enemyDefense(splashTarget));
+                const sDmg = Math.max(1, wep.splashDamage - enemyDefense(splashTarget, em.getDef(splashTarget.type)));
                 splashTarget.hp -= sDmg;
                 logCombat(`Splash: ${sDmg} dmg to ${em.getDef(splashTarget.type).name}`, 'log-dmg');
                 if (splashTarget.hp <= 0) killEnemy(splashTarget);
@@ -505,10 +529,11 @@ function chainBounce(skillName, dmg, startQ, startR, bounceCount, bounceRange, h
         if (useBellCurve) {
             dealDamageToEnemy(closest, dmg, `${skillName} bounce`);
         } else {
-            const eDef = enemyDefense(closest);
+            const closestDef = em.getDef(closest.type);
+            const eDef = enemyDefense(closest, closestDef);
             const actualDmg = Math.max(1, dmg - eDef);
             closest.hp -= actualDmg;
-            logCombat(`${skillName} chain: ${actualDmg} dmg to ${em.getDef(closest.type).name}`, 'log-dmg');
+            logCombat(`${skillName} chain: ${actualDmg} dmg to ${closestDef.name}`, 'log-dmg');
             if (closest.hp <= 0) killEnemy(closest);
         }
         curQ = closest.q; curR = closest.r;
@@ -701,7 +726,7 @@ function executeSkill(skillId, targetQ, targetR) {
             const wep = player.weapon();
             const dmg = (wep ? wep.damage : 1) + player.stats.might;
             const rolled = Rando.bellCurve(dmg);
-            const eDef = enemyDefense(enemy);
+            const eDef = enemyDefense(enemy, em.getDef(enemy.type));
             const actualDmg = Math.max(1, rolled - eDef);
             enemy.hp -= actualDmg;
             logCombat(`Siphon Strike: ${actualDmg} dmg to ${em.getDef(enemy.type).name}`, 'log-dmg');
@@ -1180,8 +1205,8 @@ function checkHexEntry() {
         showHavenDialog(poi);
     } else if (poi.type === POI.CAMP) {
         showCampDialog(poi);
-    } else if (poi.type === POI.RUIN && !poi.looted) {
-        showRuinDialog(poi);
+    } else if (poi.type === POI.RUIN) {
+        tryRuinInteraction(poi);
     } else if (poi.type === POI.BREACH && !poi.closed) {
         logCombat('Use Restore to close the breach.', 'log-info');
     } else if (poi.type === POI.MAW) {
@@ -1199,22 +1224,30 @@ function closeBreach(poi) {
     render();
 }
 
+const REST_POI_DIALOGS = {
+    [POI.HAVEN]: showHavenDialog,
+    [POI.CAMP]:  showCampDialog,
+    [POI.HUT]:   showHutDialog,
+};
+
 function manualEndTurn() {
     if (gameOver || phase !== 'player') return;
     if (player.mp > 0) {
         const poi = world.poiAt(player.q, player.r);
-        if (poi && (poi.type === POI.HAVEN || poi.type === POI.CAMP || poi.type === POI.HUT)) {
-            if (poi.type === POI.HAVEN) showHavenDialog(poi);
-            else if (poi.type === POI.CAMP) showCampDialog(poi);
-            else showHutDialog(poi);
-            return;
-        }
+        const restDialog = poi && REST_POI_DIALOGS[poi.type];
+        if (restDialog) { restDialog(poi); return; }
     }
     endTurn();
 }
 
 function endTurn() {
     if (gameOver) return;
+    // Check for ruin interaction before enemy phase
+    const poi = world.poiAt(player.q, player.r);
+    if (poi && poi.type === POI.RUIN) {
+        tryRuinInteraction(poi);
+        if (phase === 'dialog') return; // loot dialog showing; enemy phase deferred to dialog close
+    }
     deselectPlayer();
     phase = 'enemy';
     runEnemyPhase();
@@ -1267,35 +1300,35 @@ function moveEnemyStep(enemy, def, dist, aggro, prefersRanged, occupied) {
     return false;
 }
 
+function enemyCanRangedAttack(enemy, def, newDist) {
+    return def.rangedAttack && def.range && newDist <= def.range && world.hasLOS(enemy, player);
+}
+
+function doEnemyMelee(enemy, def) {
+    dealDamageToPlayer(enemyMeleeAttack(enemy, def), def.name, false, { attacker: enemy });
+}
+
+function doEnemyRanged(enemy, def) {
+    dealDamageToPlayer(enemyRangedAttack(enemy, def), `${def.name} (ranged)`, false, { attacker: enemy, isRanged: true });
+}
+
 function enemyAttacks(enemy, def, prefersRanged, newDist) {
-    if (def.behavior === 'guard' || def.behavior === 'boss') {
-        if (newDist === 1) {
-            dealDamageToPlayer(def.attack, def.name, false, { attacker: enemy });
-            return true;
-        }
-        if (def.rangedAttack && def.range && newDist <= def.range && world.hasLOS(enemy, player)) {
-            dealDamageToPlayer(def.rangedAttack, `${def.name} (ranged)`, false, { attacker: enemy, isRanged: true });
-            return true;
-        }
-        return false;
-    }
     if (def.behavior === 'kite') {
-        if (Rando.bool(0.5) && def.range && newDist <= def.range && newDist > 1 && world.hasLOS(enemy, player)) {
-            dealDamageToPlayer(def.attack, `${def.name} (ranged)`, false, { attacker: enemy, isRanged: true });
-            return true;
-        }
-        return false;
-    }
-    if (prefersRanged) {
-        if (def.rangedAttack && def.range && newDist <= def.range && world.hasLOS(enemy, player)) {
-            dealDamageToPlayer(def.rangedAttack, `${def.name} (ranged)`, false, { attacker: enemy, isRanged: true });
+        if (Rando.bool(0.5) && newDist > 1 && enemyCanRangedAttack(enemy, def, newDist)) {
+            doEnemyRanged(enemy, def);
             return true;
         }
         return false;
     }
     if (newDist === 1) {
-        dealDamageToPlayer(def.attack, def.name, false, { attacker: enemy });
+        doEnemyMelee(enemy, def);
         return true;
+    }
+    if (enemyCanRangedAttack(enemy, def, newDist)) {
+        if (def.behavior === 'guard' || def.behavior === 'boss' || prefersRanged) {
+            doEnemyRanged(enemy, def);
+            return true;
+        }
     }
     return false;
 }
@@ -1351,6 +1384,11 @@ async function runWildlifeTurn(enemy, def, aggro, occupied) {
 }
 
 async function runChaosTurn(enemy, def, occupied) {
+    // Chaos monsters heal on corrupted terrain
+    if (enemyOnCorruptedTerrain(enemy, def) && enemy.hp < enemy.maxHp) {
+        enemy.hp = Math.min(enemy.maxHp, enemy.hp + 1);
+    }
+
     const dist = hexDistance(enemy.q, enemy.r, player.q, player.r);
     const aggro = def.aggroRange || def.detectRange || 0;
     const prevKey = hexKey(enemy.q, enemy.r);
@@ -1418,8 +1456,7 @@ async function runEnemyPhase() {
         }
     }
 
-    const occupied = new Set([hexKey(player.q, player.r)]);
-    for (const e of em.enemies) occupied.add(hexKey(e.q, e.r));
+    const occupied = buildOccupiedSet();
 
     for (const enemy of [...em.enemies]) {
         if (gameOver) break;
@@ -1595,7 +1632,7 @@ function render() {
                     const symbol = POI_SYMBOLS[poi.type] || '?';
                     let color = POI_COLORS[poi.type] || '#fff';
                     if (poi.type === POI.BREACH && poi.closed) color = '#555';
-                    if (poi.type === POI.RUIN && poi.looted) color = '#555';
+                    if (poi.type === POI.RUIN && poi.ruinState === 'explored') color = '#555';
                     ctx.fillStyle = color;
                     ctx.font = 'bold ' + Math.floor(HEX_SIZE * 1.2) + 'px monospace';
                     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -1681,7 +1718,8 @@ function render() {
         if (!def) { console.warn('Missing def for enemy type:', enemy.type); continue; }
         const { x, y } = hexToScreen(enemy.q, enemy.r);
         const color = enemyColor(enemy.type);
-        drawCounter(x, y, color, def.label, enemy.hp / enemy.maxHp, null, { atk: def.attack, def: def.defense, mov: def.speed || 1 });
+        const corrupted = enemyOnCorruptedTerrain(enemy, def);
+        drawCounter(x, y, color, def.label, enemy.hp / enemy.maxHp, null, { atk: corrupted ? def.attack + 3 : def.attack, def: corrupted ? def.defense + 2 : def.defense, mov: def.speed || 1 });
     }
 
     // Player
@@ -2176,44 +2214,77 @@ function showShopDialog(poi) {
     });
 }
 
-function showRuinDialog(poi) {
-    poi.looted = true;
+function ruinEnemiesNearby(poi) {
+    return em.enemies.some(e => hexDistance(e.q, e.r, poi.q, poi.r) <= 2);
+}
+
+function spawnRuinCreatures(poi) {
+    const creatureTypes = Object.keys(em.creatureDefs);
+    if (creatureTypes.length === 0) return 0;
+    const occupied = buildOccupiedSet();
+    const spots = hexesInRange(poi.q, poi.r, 2).filter(h => {
+        const hex = world.getHex(h.q, h.r);
+        return hex && world.isPassable(hex) && !occupied.has(hexKey(h.q, h.r))
+            && !(h.q === poi.q && h.r === poi.r);
+    });
+    Rando.shuffle(spots);
+    const count = Math.min(Rando.int(1, 6), spots.length);
+    for (let i = 0; i < count; i++) {
+        em.spawn(Rando.choice(creatureTypes), spots[i].q, spots[i].r);
+    }
+    return count;
+}
+
+function activateRuinSpawn(poi, message) {
+    const spawned = spawnRuinCreatures(poi);
+    poi.ruinState = 'spawned';
+    if (spawned > 0) logCombat(message, 'log-info');
+    render();
+}
+
+function tryRuinInteraction(poi) {
+    if (ruinEnemiesNearby(poi)) {
+        logCombat('Clear the area before exploring the ruins.', 'log-info');
+        return;
+    }
+    if (poi.ruinState === 'new') {
+        activateRuinSpawn(poi, 'Something stirs in the ruins...');
+    } else if (poi.ruinState === 'spawned') {
+        showRuinLootDialog(poi);
+    } else if (poi.ruinState === 'explored' && Rando.bool(0.05)) {
+        activateRuinSpawn(poi, 'New creatures have moved into the ruins!');
+    }
+}
+
+function showRuinLootDialog(poi) {
+    poi.ruinState = 'explored';
     const goldFound = Rando.int(5, 20);
     player.gold += goldFound;
 
     let body = `<p>You explore the ruins...</p><p style="color:#ffc107">Found ${goldFound} gold!</p>`;
-    if (poi.loot) {
-        // Non-magical items
-        for (const item of poi.loot.nonMagical) {
-            player.inventory.push(item.id);
-            body += `<p style="color:#ffc107">Found: ${item.name}</p>`;
-        }
-        // Magical item — re-roll to something the player doesn't have
-        if (poi.loot.magical) {
-            const magicalDrop = rollMagicalDrop(MAGICAL_ITEMS.filter(i => i.tier >= 1 && i.id !== 'maw_compass'));
-            if (magicalDrop) {
-                player.inventory.push(magicalDrop.id);
-                body += `<p style="color:#e040fb">Found: ${magicalDrop.name}!</p>`;
-            }
-        }
+
+    // Non-magical items (1-3, skip items already owned)
+    const available = NON_MAGICAL_ITEMS.filter(i => !playerHasItem(i.id));
+    Rando.shuffle(available);
+    const nonMagicalCount = Math.min(Rando.int(1, 3), available.length);
+    for (let i = 0; i < nonMagicalCount; i++) {
+        player.inventory.push(available[i].id);
+        body += `<p style="color:#ffc107">Found: ${available[i].name}</p>`;
     }
 
-    // Spawn ruin enemies nearby
-    const occupied = new Set(em.enemies.map(e => hexKey(e.q, e.r)));
-    occupied.add(hexKey(player.q, player.r));
-    const adj = hexNeighbors(poi.q, poi.r).filter(n => {
-        const h = world.getHex(n.q, n.r);
-        return h && world.isPassable(h) && !occupied.has(hexKey(n.q, n.r));
-    });
-    Rando.shuffle(adj);
-    const spawnCount = Math.min(poi.ruinEnemies || 1, adj.length);
-    for (let i = 0; i < spawnCount; i++) {
-        const type = Rando.bool(0.5) ? ENEMY_TYPE.VOID_STALKER : ENEMY_TYPE.FLUX_ARCHER;
-        em.spawn(type, adj[i].q, adj[i].r);
+    // Magical item — pick a random unowned one
+    const magicalAvailable = MAGICAL_ITEMS.filter(i => i.tier >= 1 && i.id !== 'maw_compass' && !playerHasItem(i.id));
+    if (magicalAvailable.length > 0) {
+        const magicalDrop = Rando.choice(magicalAvailable);
+        player.inventory.push(magicalDrop.id);
+        body += `<p style="color:#e040fb">Found: ${magicalDrop.name}!</p>`;
     }
-    if (spawnCount > 0) body += `<p style="color:#ef5350">Enemies emerge from the shadows!</p>`;
 
-    showDialog(POI_SYMBOLS[POI.RUIN] + ' Ruins', body, [{ label: 'Continue' }]);
+    showDialog(POI_SYMBOLS[POI.RUIN] + ' Ruins', body, [{ label: 'Continue', action: () => {
+        deselectPlayer();
+        phase = 'enemy';
+        runEnemyPhase();
+    }}]);
 }
 
 function showLevelUpDialog() {
