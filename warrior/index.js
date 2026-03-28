@@ -1393,8 +1393,9 @@ async function runChaosTurn(enemy, def, occupied) {
     const aggro = def.aggroRange || def.detectRange || 0;
     const prevKey = hexKey(enemy.q, enemy.r);
 
-    // Phase Wraith teleport
-    if (def.behavior === 'teleport' && Math.random() < (def.teleportChance || 0.3)) {
+    // Phase Wraith teleport (blocked by wraith_immune armor)
+    const armForWraith = player.armor();
+    if (def.behavior === 'teleport' && !(armForWraith && armForWraith.special === 'wraith_immune') && Math.random() < (def.teleportChance || 0.3)) {
         const valid = hexesInRange(player.q, player.r, def.teleportRange).filter(t => {
             const k = hexKey(t.q, t.r);
             const h = world.getHex(t.q, t.r);

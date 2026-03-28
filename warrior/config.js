@@ -251,7 +251,7 @@ export const ARMORS = [
     { id: 'worn_leather', name: 'Worn Leather', defense: 1, special: null, price: 0, tier: 0, magical: true },
     { id: 'warded_mail', name: 'Warded Mail', defense: 4, special: 'hp_bonus', hpBonus: 10, price: 50, tier: 1, magical: true },
     { id: 'chaosweave_cloak', name: 'Chaosweave Cloak', defense: 3, special: 'vision_bonus', visionBonus: 2, price: 45, tier: 1, magical: true },
-    { id: 'starplate', name: 'Starplate', defense: 6, special: 'mp_penalty', mpPenalty: 1, price: 120, tier: 2, magical: true },
+    { id: 'starplate', name: 'Starplate', defense: 8, special: 'mp_penalty', mpPenalty: 1, price: 120, tier: 2, magical: true },
     { id: 'voidhide', name: 'Voidhide', defense: 5, special: 'wraith_immune', price: 100, tier: 3, magical: true },
     { id: 'thornmail', name: 'Thornmail', defense: 2, special: 'thorns', thornsDamage: 2, price: 35, tier: 1, magical: true },
     { id: 'flickerweave', name: 'Flickerweave', defense: 2, special: 'dodge_bonus', dodgeBonus: 30, price: 40, tier: 1, magical: true },
