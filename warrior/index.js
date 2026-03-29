@@ -2488,10 +2488,11 @@ function spawnRuinCreatures(poi) {
     const spots = hexesInRange(poi.q, poi.r, 2).filter(h => {
         const hex = world.getHex(h.q, h.r);
         return hex && world.isPassable(hex) && !occupied.has(hexKey(h.q, h.r))
-            && !(h.q === poi.q && h.r === poi.r);
+            && !(h.q === player.q && h.r === player.r);
     });
+    if (spots.length === 0) return 0;
     Rando.shuffle(spots);
-    const count = Math.min(Rando.int(1, 6), spots.length);
+    const count = Math.min(Rando.int(1, 3), spots.length);
     for (let i = 0; i < count; i++) {
         em.spawn(Rando.choice(creatureTypes), spots[i].q, spots[i].r);
     }
@@ -2500,8 +2501,10 @@ function spawnRuinCreatures(poi) {
 
 function activateRuinSpawn(poi, message) {
     const spawned = spawnRuinCreatures(poi);
-    poi.ruinState = 'spawned';
-    if (spawned > 0) logCombat(message, 'log-info');
+    if (spawned > 0) {
+        poi.ruinState = 'spawned';
+        logCombat(message, 'log-info');
+    }
     render();
 }
 
