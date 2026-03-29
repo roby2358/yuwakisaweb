@@ -129,14 +129,16 @@ function Markov(tokens, maxN) {
      * Generates groups by making random token selections until count tokens are generated
      * Each token in a selected ngram counts toward the total (e.g., "a|b|c" = 3 tokens)
      * Groups are naturally created when End tokens are encountered
+     * @param {number} count - Number of tokens to generate
+     * @param {string[]} [seed] - Optional seed prefix (including Start marker) for the first group
      */
-    this.generateTokens = (count) => {
+    this.generateTokens = (count, seed) => {
         if (count <= 0) {
             return [];
         }
         
         const groups = [];
-        let currentGroup = [MarkovConstants.Start];
+        let currentGroup = seed || [MarkovConstants.Start];
         let tokensGenerated = 0;
         
         while (tokensGenerated < count) {

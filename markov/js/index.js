@@ -39,7 +39,7 @@ $(document).ready(function() {
         }
     }
     
-    function handleTabClick(event) {
+    const handleTabClick = (event) => {
         const $tab = $(event.currentTarget);
         const targetTab = $tab.data('tab');
 
@@ -64,16 +64,16 @@ $(document).ready(function() {
         if (targetTab === 'about') {
             $('#about-panel').addClass('active');
         }
-    }
-    
-    function handleNoNewlines() {
+    };
+
+    const handleNoNewlines = () => {
         const sourceText = $('#source-text').val();
         const processedText = sourceText.replace(/\s+/g, ' ').trim();
         $('#source-text').val(processedText);
         showMessage('Whitespace collapsed.', 'success');
-    }
+    };
 
-    function handleTweets() {
+    const handleTweets = () => {
         const sourceText = $('#source-text').val();
         if (!sourceText.trim()) {
             showMessage('Please enter source text first.', 'error');
@@ -88,15 +88,13 @@ $(document).ready(function() {
 
         $('#source-text').val(cleanedText);
         showMessage('Tweet metadata removed.', 'success');
-    }
+    };
 
     $('.tab').on('click', handleTabClick);
-
     $('#no-newlines-btn').on('click', handleNoNewlines);
-
     $('#tweets-btn').on('click', handleTweets);
-    
-    function buildMarkov(tokens) {
+
+    const buildMarkov = (tokens) => {
         if (tokens.length === 0) {
             showMessage('No tokens found. Please enter some text.', 'error');
             return;
@@ -105,23 +103,21 @@ $(document).ready(function() {
         markov.build();
         console.log('Markov chain built with ' + tokens.length + ' tokens');
         showMessage('Markov chain calculated successfully!', 'success');
-    }
+    };
 
-    // Calculate button handler
-    $('#calculate-btn').on('click', function() {
+    const handleCalculate = () => {
         const sourceText = $('#source-text').val();
         if (!sourceText.trim()) {
             showMessage('Please enter source text first.', 'error');
             return;
         }
 
-        // Get tokenization mode
         const tokenizationMode = $('input[name="tokenization"]:checked').val();
         const tokenizer = getTokenizer(tokenizationMode);
 
         if (tokenizationMode === 'phonetic') {
             showMessage('Converting to phonemes...', 'info', 0);
-            tokenizer.tokenize(sourceText, function(err, tokens) {
+            tokenizer.tokenize(sourceText, (err, tokens) => {
                 if (err) {
                     showMessage('Phonetic error: ' + err, 'error');
                     return;
@@ -132,29 +128,44 @@ $(document).ready(function() {
             const tokens = tokenizer.tokenize(sourceText);
             buildMarkov(tokens);
         }
-    });
-    
-    // Generate button handler
-    $('#generate-btn').on('click', function() {
+    };
+
+    const clearGenerated = () => $('#generated-text').val('');
+
+    const handleGenerate = () => {
         if (!markov) {
             showMessage('Please calculate the Markov chain first.', 'error');
             return;
         }
-        
+
         const outputLength = parseInt($('#output-length').val()) || 500;
         const tokenizationMode = $('input[name="tokenization"]:checked').val();
         const tokenizer = getTokenizer(tokenizationMode);
-        
-        const generatedTokens = markov.generateTokens(outputLength);
+
+        const existingText = $('#generated-text').val().trim();
+        let seed = null;
+
+        if (existingText && tokenizationMode !== 'phonetic') {
+            const seedGroups = tokenizer.tokenize(existingText);
+            if (seedGroups.length > 0) {
+                const lastGroup = seedGroups[seedGroups.length - 1];
+                seed = lastGroup.filter(t => t !== MarkovConstants.End);
+            }
+        }
+
+        const generatedTokens = markov.generateTokens(outputLength, seed);
         const generatedText = tokenizer.format(generatedTokens);
-        
-        $('#generated-text').val(generatedText);
+
+        if (existingText) {
+            $('#generated-text').val(existingText + ' ' + generatedText);
+        } else {
+            $('#generated-text').val(generatedText);
+        }
 
         showMessage('Generation complete.', 'success');
-    });
-    
-    // Translate button handler (IPA → approximate English)
-    $('#translate-btn').on('click', function() {
+    };
+
+    const handleTranslate = () => {
         const text = $('#generated-text').val();
         if (!text.trim()) {
             showMessage('No text to translate. Generate some text first.', 'error');
@@ -163,27 +174,31 @@ $(document).ready(function() {
         const english = Espeak.ipaToText(text);
         $('#generated-text').val(english);
         showMessage('Translated IPA to approximate English.', 'success');
-    });
+    };
 
-    // Speak button handler
-    $('#speak-btn').on('click', function() {
+    const handleSpeak = () => {
         const text = $('#generated-text').val();
         if (!text.trim()) {
             showMessage('No text to speak. Generate some text first.', 'error');
             return;
         }
         showMessage('Speaking...', 'info', 0);
-        espeakInstance.speak(text, function(err) {
+        espeakInstance.speak(text, (err) => {
             if (err) {
                 showMessage('Speak error: ' + err, 'error');
                 return;
             }
             showMessage('Done speaking.', 'success');
         });
-    });
+    };
+
+    $('#calculate-btn').on('click', handleCalculate);
+    $('#clear-btn').on('click', clearGenerated);
+    $('#generate-btn').on('click', handleGenerate);
+    $('#translate-btn').on('click', handleTranslate);
+    $('#speak-btn').on('click', handleSpeak);
 
     // Autoscroll for textareas
-    $('textarea').on('input', function() {
-        this.scrollTop = this.scrollHeight;
-    });
+    const autoscroll = (event) => { event.target.scrollTop = event.target.scrollHeight; };
+    $('textarea').on('input', autoscroll);
 });
