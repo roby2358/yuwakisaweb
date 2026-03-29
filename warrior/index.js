@@ -2227,13 +2227,13 @@ function updateInvPanel() {
             if (action === 'equip') {
                 // Move current equipped item to inventory
                 const current = player.equipment[slot];
-                if (current) player.inventory.push(current);
+                if (current) player.inventory.unshift(current);
                 player.equipment[slot] = id;
                 player.inventory = player.inventory.filter(i => i !== id);
             } else if (action === 'unequip') {
                 // Can't unequip weapon to nothing
                 player.equipment[slot] = null;
-                player.inventory.push(id);
+                player.inventory.unshift(id);
             }
             player.hp = Math.min(player.hp, player.maxHP());
             player.aether = Math.min(player.aether, player.maxAether());
