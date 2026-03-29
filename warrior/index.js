@@ -48,6 +48,7 @@ let reachable = null;       // Map<string, cost>
 let attackable = null;      // Set<string> — enemy hexes within melee reach
 let turn = 1;
 let phase = 'player';       // 'player' | 'enemy' | 'animating' | 'dialog'
+function changePhase(p) { phase = p; }
 let gameOver = false;
 let gameWon = false;
 let enemiesDefeated = 0;
@@ -1766,7 +1767,7 @@ async function startPlayerTurn() {
 async function gameLoop() {
     const gen = ++gameGeneration;
     while (!gameOver && gameGeneration === gen) {
-        phase = 'player';
+        changePhase('player');
         const acted = await startPlayerTurn();
 
         if (!acted && !gameOver && gameGeneration === gen) {
@@ -1775,7 +1776,7 @@ async function gameLoop() {
 
         if (gameOver || gameGeneration !== gen) break;
 
-        phase = 'enemy';
+        changePhase('enemy');
         await runEnemyPhase();
     }
 }
@@ -1824,7 +1825,7 @@ function initGame() {
     closeAllPanels();
     document.getElementById('dialog-overlay').classList.add('hidden');
     document.getElementById('endgame-overlay').classList.add('hidden');
-    phase = 'player';
+    changePhase('player');
 
     // Set canvas size before centering so centerOn has correct dimensions
     canvas.width = window.innerWidth;
@@ -2358,7 +2359,7 @@ function togglePanel(id) {
 // ================================================================
 
 function showDialog(title, bodyHtml, buttons) {
-    phase = 'dialog';
+    changePhase('dialog');
     const overlay = document.getElementById('dialog-overlay');
     document.getElementById('dialog-title').textContent = title;
     document.getElementById('dialog-body').innerHTML = bodyHtml;
@@ -2370,7 +2371,7 @@ function showDialog(title, bodyHtml, buttons) {
         if (cls) btn.className = cls;
         btn.addEventListener('click', () => {
             overlay.classList.add('hidden');
-            phase = 'player';
+            changePhase('player');
             if (action) action();
             render();
             updateHUD();
@@ -2653,7 +2654,7 @@ function showSkillChoiceDialog() {
             const emptySlot = player.skills.indexOf(null);
             if (emptySlot >= 0) player.skills[emptySlot] = skillId;
             document.getElementById('dialog-overlay').classList.add('hidden');
-            phase = 'player';
+            changePhase('player');
             logCombat(`Learned ${SKILLS[skillId].name}!`, 'log-info');
             updateSkillBar();
             render();
@@ -2670,7 +2671,7 @@ function endGame(won) {
     gameOver = true;
     gameWon = won;
     resolveEndTurn();
-    phase = 'dialog';
+    changePhase('dialog');
     const overlay = document.getElementById('endgame-overlay');
     document.getElementById('endgame-title').textContent = won ? 'VICTORY!' : 'DEFEAT';
     document.getElementById('endgame-title').style.color = won ? '#ffc107' : '#f44336';
