@@ -133,7 +133,7 @@ export function xpForLevel(level) {
 // ---- POI types ----
 export const POI = {
     HAVEN: 'haven',
-    CAMP: 'camp',
+    VILLAGE: 'village',
     RUIN: 'ruin',
     BREACH: 'breach',
     MAW: 'maw',
@@ -142,12 +142,12 @@ export const POI = {
 
 export const POI_DEFENSE_BONUS = {
     [POI.HAVEN]: 3,
-    [POI.CAMP]: 2
+    [POI.VILLAGE]: 2
 };
 
 export const POI_SYMBOLS = {
     [POI.HAVEN]: '\u{1F3F0}', // 🏰 castle
-    [POI.CAMP]: '\u26FA',    // ⛺ tent
+    [POI.VILLAGE]: '\u26FA',    // ⛺ tent
     [POI.RUIN]: '\u26EB',    // ⛫ castle ruins
     [POI.BREACH]: '\u058D',  // ֍ swirl
     [POI.MAW]: '\u2738',     // ✸ pulsing star
@@ -156,7 +156,7 @@ export const POI_SYMBOLS = {
 
 export const POI_COLORS = {
     [POI.HAVEN]: '#4fc3f7',
-    [POI.CAMP]: '#ffb74d',
+    [POI.VILLAGE]: '#ffb74d',
     [POI.RUIN]: '#b0bec5',
     [POI.BREACH]: '#e040fb',
     [POI.MAW]: '#ff1744',

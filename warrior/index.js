@@ -51,6 +51,9 @@ let phase = 'player';       // 'player' | 'enemy' | 'animating' | 'dialog'
 let gameOver = false;
 let gameWon = false;
 let enemiesDefeated = 0;
+let endTurnResolve = null;  // promise resolver for game loop
+let dialogResolve = null;   // promise resolver for dialog await
+let gameGeneration = 0;     // incremented on new game to stop old loops
 let targeting = null;       // { skill, validHexes: Set } or null
 let hoveredHex = null;
 let threatOverlay = null;   // Map<string, number> or null — threat heatmap for Ground Weeps
@@ -1035,10 +1038,10 @@ function executeSkill(skillId, targetQ, targetR) {
                 usedMP = false;
                 break;
             }
-            // Create temporary camp POI
-            const tempCamp = { q: player.q, r: player.r, type: POI.CAMP, id: world.pois.length, temporary: true };
-            world.pois.push(tempCamp);
-            pHex.poi = POI.CAMP;
+            // Create temporary village POI
+            const tempVillage = { q: player.q, r: player.r, type: POI.VILLAGE, id: world.pois.length, temporary: true };
+            world.pois.push(tempVillage);
+            pHex.poi = POI.VILLAGE;
             logCombat('Sanctuary! A temporary village appears.', 'log-heal');
             break;
         }
@@ -1073,7 +1076,7 @@ function executeSkill(skillId, targetQ, targetR) {
         }
         case 'havens_light': {
             const poi = world.poiAt(player.q, player.r);
-            if (!poi || (poi.type !== POI.HAVEN && poi.type !== POI.CAMP)) {
+            if (!poi || (poi.type !== POI.HAVEN && poi.type !== POI.VILLAGE)) {
                 logCombat('Must be at a haven or village!', 'log-info');
                 player.aether += skill.cost;
                 player.usedSkillsThisTurn.delete(skillId);
@@ -1104,7 +1107,7 @@ function getSkillTargets(skillId) {
     // Haven's Light: only targetable at haven or village
     if (skillId === 'havens_light') {
         const poi = world.poiAt(player.q, player.r);
-        if (!poi || (poi.type !== POI.HAVEN && poi.type !== POI.CAMP)) return new Set();
+        if (!poi || (poi.type !== POI.HAVEN && poi.type !== POI.VILLAGE)) return new Set();
     }
     const targets = new Set();
 
@@ -1244,6 +1247,10 @@ function checkEndTurn() {
     if (!gameOver && player.mp <= 0 && phase === 'player') endTurn();
 }
 
+function resolveEndTurn() {
+    if (endTurnResolve) { const r = endTurnResolve; endTurnResolve = null; r(); }
+}
+
 function movePlayer(q, r) {
     const key = hexKey(q, r);
     const cost = reachable.get(key);
@@ -1369,8 +1376,8 @@ function checkHexEntry() {
 
     if (poi.type === POI.HAVEN) {
         showHavenDialog(poi);
-    } else if (poi.type === POI.CAMP) {
-        showCampDialog(poi);
+    } else if (poi.type === POI.VILLAGE) {
+        showVillageDialog(poi);
     } else if (poi.type === POI.RUIN) {
         tryRuinInteraction(poi);
     } else if (poi.type === POI.BREACH && !poi.closed) {
@@ -1390,33 +1397,15 @@ function closeBreach(poi) {
     render();
 }
 
-const REST_POI_DIALOGS = {
-    [POI.HAVEN]: showHavenDialog,
-    [POI.CAMP]:  showCampDialog,
-    [POI.HUT]:   showHutDialog,
-};
-
 function manualEndTurn() {
     if (gameOver || phase !== 'player') return;
-    if (player.mp > 0) {
-        const poi = world.poiAt(player.q, player.r);
-        const restDialog = poi && REST_POI_DIALOGS[poi.type];
-        if (restDialog) { restDialog(poi); return; }
-    }
     endTurn();
 }
 
 function endTurn() {
     if (gameOver) return;
-    // Check for ruin interaction before enemy phase
-    const poi = world.poiAt(player.q, player.r);
-    if (poi && poi.type === POI.RUIN) {
-        tryRuinInteraction(poi);
-        if (phase === 'dialog') return; // loot dialog showing; enemy phase deferred to dialog close
-    }
     deselectPlayer();
-    phase = 'enemy';
-    runEnemyPhase();
+    resolveEndTurn();
 }
 
 // Returns true if either of the enemy's before/after positions is currently visible.
@@ -1747,8 +1736,48 @@ async function runEnemyPhase() {
     player.usedSkillsThisTurn.clear();
     player.movedThisTurn = false;
     player.hexesMovedThisTurn = 0;
-    phase = 'player';
+}
+
+async function startPlayerTurn() {
+    const poi = turn > 1 && world.poiAt(player.q, player.r);
+    if (poi) {
+        if (poi.type === POI.HAVEN || poi.type === POI.VILLAGE || poi.type === POI.HUT) {
+            const p = new Promise(r => { dialogResolve = r; });
+            if (poi.type === POI.HAVEN) showHavenDialog(poi);
+            else if (poi.type === POI.VILLAGE) showVillageDialog(poi);
+            else showHutDialog(poi);
+            await p;
+            return player.mp <= 0;
+        }
+        if (poi.type === POI.RUIN) {
+            const p = new Promise(r => { dialogResolve = r; });
+            tryRuinInteraction(poi);
+            if (phase === 'dialog') {
+                await p;
+                return player.mp <= 0;
+            }
+            dialogResolve = null;
+        }
+    }
     render();
+    return false;
+}
+
+async function gameLoop() {
+    const gen = ++gameGeneration;
+    while (!gameOver && gameGeneration === gen) {
+        phase = 'player';
+        const acted = await startPlayerTurn();
+
+        if (!acted && !gameOver && gameGeneration === gen) {
+            await new Promise(r => { endTurnResolve = r; });
+        }
+
+        if (gameOver || gameGeneration !== gen) break;
+
+        phase = 'enemy';
+        await runEnemyPhase();
+    }
 }
 
 function animDelay(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -1758,6 +1787,11 @@ function animDelay(ms) { return new Promise(r => setTimeout(r, ms)); }
 // ================================================================
 
 function initGame() {
+    // Stop any existing game loop
+    gameOver = true;
+    resolveEndTurn();
+    if (dialogResolve) { const r = dialogResolve; dialogResolve = null; r(); }
+
     gameOver = false;
     gameWon = false;
     turn = 1;
@@ -1797,7 +1831,7 @@ function initGame() {
     canvas.height = window.innerHeight;
     centerOn(player);
     updateSkillBar();
-    render();
+    gameLoop();
 }
 
 
@@ -2340,6 +2374,8 @@ function showDialog(title, bodyHtml, buttons) {
             if (action) action();
             render();
             updateHUD();
+            if (dialogResolve) { const r = dialogResolve; dialogResolve = null; r(); }
+            else checkEndTurn();
         });
         btnContainer.appendChild(btn);
     }
@@ -2354,7 +2390,6 @@ function showHavenDialog(poi) {
                 player.aether = player.maxAether();
                 player.mp = 0;
                 logCombat('Fully rested.', 'log-heal');
-                checkEndTurn();
             }
         },
         { label: 'Shop', action: () => showShopDialog(poi) },
@@ -2362,9 +2397,9 @@ function showHavenDialog(poi) {
     ]);
 }
 
-function showCampDialog(poi) {
+function showVillageDialog(poi) {
     const isTemp = poi.temporary;
-    showDialog(POI_SYMBOLS[POI.CAMP] + (isTemp ? ' Sanctuary' : ' Village'), '<p>A brief respite from the wilds.</p>', [
+    showDialog(POI_SYMBOLS[POI.VILLAGE] + (isTemp ? ' Sanctuary' : ' Village'), '<p>A brief respite from the wilds.</p>', [
         {
             label: 'Rest', cls: 'primary', action: () => {
                 const healAmt = Math.floor(player.maxHP() * 0.5);
@@ -2380,7 +2415,6 @@ function showCampDialog(poi) {
                     if (hex) hex.poi = null;
                     logCombat('The sanctuary fades.', 'log-info');
                 }
-                checkEndTurn();
             }
         },
         { label: 'Leave' }
@@ -2411,6 +2445,7 @@ function showHutDialog(poi) {
                     player.learnedSkills.add(poi.skill);
                     const emptySlot = player.skills.indexOf(null);
                     if (emptySlot >= 0) player.skills[emptySlot] = poi.skill;
+                    player.mp = 0;
                     logCombat(`The Wise Man teaches ${skillName}!`, 'log-info');
                     updateSkillBar();
                     updateSkillsPanel();
@@ -2547,9 +2582,7 @@ function showRuinLootDialog(poi) {
     }
 
     showDialog(POI_SYMBOLS[POI.RUIN] + ' Ruins', body, [{ label: 'Continue', action: () => {
-        deselectPlayer();
-        phase = 'enemy';
-        runEnemyPhase();
+        player.mp = 0;
     }}]);
 }
 
@@ -2636,6 +2669,7 @@ function showSkillChoiceDialog() {
 function endGame(won) {
     gameOver = true;
     gameWon = won;
+    resolveEndTurn();
     phase = 'dialog';
     const overlay = document.getElementById('endgame-overlay');
     document.getElementById('endgame-title').textContent = won ? 'VICTORY!' : 'DEFEAT';
