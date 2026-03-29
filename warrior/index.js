@@ -53,7 +53,6 @@ let gameOver = false;
 let gameWon = false;
 let enemiesDefeated = 0;
 let endTurnResolve = null;  // promise resolver for game loop
-let dialogResolve = null;   // promise resolver for dialog await
 let gameGeneration = 0;     // incremented on new game to stop old loops
 let targeting = null;       // { skill, validHexes: Set } or null
 let hoveredHex = null;
@@ -1414,8 +1413,15 @@ function closeBreach(poi) {
     render();
 }
 
-function manualEndTurn() {
+function interactOrEndTurn() {
     if (gameOver || phase !== 'player') return;
+    const poi = world.poiAt(player.q, player.r);
+    if (poi) {
+        if (poi.type === POI.HAVEN) { showHavenDialog(poi); return; }
+        if (poi.type === POI.VILLAGE) { showVillageDialog(poi); return; }
+        if (poi.type === POI.HUT) { showHutDialog(poi); return; }
+        if (poi.type === POI.RUIN) { tryRuinInteraction(poi); return; }
+    }
     endTurn();
 }
 
@@ -1755,40 +1761,17 @@ async function runEnemyPhase() {
     player.hexesMovedThisTurn = 0;
 }
 
-async function startPlayerTurn() {
-    const poi = turn > 1 && world.poiAt(player.q, player.r);
-    if (poi) {
-        if (poi.type === POI.HAVEN || poi.type === POI.VILLAGE || poi.type === POI.HUT) {
-            const p = new Promise(r => { dialogResolve = r; });
-            if (poi.type === POI.HAVEN) showHavenDialog(poi);
-            else if (poi.type === POI.VILLAGE) showVillageDialog(poi);
-            else showHutDialog(poi);
-            await p;
-            return player.mp <= 0;
-        }
-        if (poi.type === POI.RUIN) {
-            const p = new Promise(r => { dialogResolve = r; });
-            tryRuinInteraction(poi);
-            if (phase === 'dialog') {
-                await p;
-                return player.mp <= 0;
-            }
-            dialogResolve = null;
-        }
-    }
+function startPlayerTurn() {
     render();
-    return false;
 }
 
 async function gameLoop() {
     const gen = ++gameGeneration;
     while (!gameOver && gameGeneration === gen) {
         changePhase('player');
-        const acted = await startPlayerTurn();
+        startPlayerTurn();
 
-        if (!acted && !gameOver && gameGeneration === gen) {
-            await new Promise(r => { endTurnResolve = r; });
-        }
+        await new Promise(r => { endTurnResolve = r; });
 
         if (gameOver || gameGeneration !== gen) break;
 
@@ -1807,7 +1790,6 @@ function initGame() {
     // Stop any existing game loop
     gameOver = true;
     resolveEndTurn();
-    if (dialogResolve) { const r = dialogResolve; dialogResolve = null; r(); }
 
     gameOver = false;
     gameWon = false;
@@ -2391,8 +2373,7 @@ function showDialog(title, bodyHtml, buttons) {
             if (action) action();
             render();
             updateHUD();
-            if (dialogResolve) { const r = dialogResolve; dialogResolve = null; r(); }
-            else checkEndTurn();
+            checkEndTurn();
         });
         btnContainer.appendChild(btn);
     }
@@ -2546,7 +2527,7 @@ function spawnRuinCreatures(poi) {
     Rando.shuffle(spots);
     const count = Math.min(Rando.int(1, 3), spots.length);
     for (let i = 0; i < count; i++) {
-        em.spawn(Rando.choice(creatureTypes), spots[i].q, spots[i].r);
+        em.spawn(Rando.choice(creatureTypes), spots[i].q, spots[i].r, undefined, undefined, { ignoreCap: true });
     }
     return count;
 }
@@ -2795,7 +2776,7 @@ canvas.addEventListener('contextmenu', e => {
 });
 
 document.getElementById('end-turn').addEventListener('click', () => {
-    if (phase === 'player' && !gameOver) manualEndTurn();
+    if (phase === 'player' && !gameOver) interactOrEndTurn();
 });
 
 document.getElementById('new-game').addEventListener('click', () => {
@@ -2837,7 +2818,7 @@ window.addEventListener('keydown', e => {
 
     if (e.key === ' ' || e.key === 'e' || e.key === 'E') {
         e.preventDefault();
-        if (phase === 'player') manualEndTurn();
+        if (phase === 'player') interactOrEndTurn();
     } else if (e.key === 'Escape') {
         if (targeting) { targeting = null; render(); updateSkillBar(); }
         else { deselectPlayer(); closeAllPanels(); render(); }

@@ -14,8 +14,8 @@ export class EnemyManager {
         return ENEMY_DEFS[type] || this.creatureDefs[type];
     }
 
-    spawn(type, q, r, homeQ, homeR) {
-        if (this.enemies.length >= MAX_ENEMIES) return null;
+    spawn(type, q, r, homeQ, homeR, { ignoreCap = false } = {}) {
+        if (!ignoreCap && this.enemies.length >= MAX_ENEMIES) return null;
         const def = this.getDef(type);
         if (!def) return null;
         const enemy = {

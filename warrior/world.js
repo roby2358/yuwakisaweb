@@ -213,7 +213,7 @@ export class GameWorld {
 
         place(POI.HAVEN, Rando.int(4, 6), false);
         place(POI.VILLAGE, Rando.int(8, 12), false);
-        place(POI.RUIN, Rando.int(6, 10), false);
+        place(POI.RUIN, Rando.int(12, 20), false);
         place(POI.BREACH, Rando.int(6, 8), false);
         place(POI.MAW, 1, true);
         place(POI.HUT, Rando.int(8, 12), false);
