@@ -68,9 +68,9 @@ $(document).ready(function() {
     
     function handleNoNewlines() {
         const sourceText = $('#source-text').val();
-        const processedText = sourceText.replace(/\n+/g, ' ');
+        const processedText = sourceText.replace(/\s+/g, ' ').trim();
         $('#source-text').val(processedText);
-        showMessage('Newlines replaced with spaces.', 'success');
+        showMessage('Whitespace collapsed.', 'success');
     }
 
     function handleTweets() {
