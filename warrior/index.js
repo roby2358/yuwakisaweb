@@ -2147,7 +2147,7 @@ function updateSkillsPanel() {
     }
     // Show learned but not equipped
     const equipped = new Set(player.skills.filter(Boolean));
-    const unequipped = [...player.learnedSkills].filter(id => !equipped.has(id));
+    const unequipped = [...player.learnedSkills].filter(id => !equipped.has(id)).sort((a, b) => SKILLS[a].name.localeCompare(SKILLS[b].name));
     if (unequipped.length > 0) {
         html += '<div style="color:#888;margin-top:8px;margin-bottom:4px;font-size:11px">LEARNED (click to equip)</div>';
         for (const skillId of unequipped) {
