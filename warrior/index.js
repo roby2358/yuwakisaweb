@@ -257,6 +257,19 @@ function killEnemy(enemy) {
         logCombat(`+${healAmt} HP (heal on kill)`, 'log-heal');
     }
     gainXP(def.xp);
+    // Soul Harvest Sigil: bonus XP on kill
+    const artForXP = player.artifact();
+    if (artForXP && artForXP.special === 'soul_harvest') {
+        gainXP(artForXP.soulHarvestXP);
+        logCombat(`Soul Harvest: +${artForXP.soulHarvestXP} XP`, 'log-xp');
+    }
+    // Opportunist Gloves: chance for bonus gold on kill
+    const artForGold = player.artifact();
+    if (artForGold && artForGold.special === 'opportunist' && Rando.bool(0.25)) {
+        const bonusGold = Rando.int(3, 8);
+        player.gold += bonusGold;
+        logCombat(`Opportunist: +${bonusGold}g`, 'log-gold');
+    }
 
     // Crawler and Guardian drops: 0-3 non-magical + 10% magical
     if (enemy.type === ENEMY_TYPE.BREACH_CRAWLER || enemy.type === ENEMY_TYPE.BREACH_GUARDIAN) {
@@ -310,7 +323,20 @@ function rollNonMagicalDrops(min, max) {
 }
 
 function meleeAttack(enemy) {
-    const dmg = player.meleeDamage(em.getDef(enemy.type));
+    let dmg = player.meleeDamage(em.getDef(enemy.type));
+    // Breach Jewel: bonus damage near breaches
+    const artForBreach = player.artifact();
+    if (artForBreach && artForBreach.special === 'breach_jewel') {
+        const nearBreach = world.pois.some(p => (p.type === POI.BREACH || p.type === POI.MAW) && hexDistance(player.q, player.r, p.q, p.r) <= 3);
+        if (nearBreach) { dmg += artForBreach.breachBonus; logCombat(`Breach Jewel: +${artForBreach.breachBonus} might!`, 'log-info'); }
+    }
+    // Aether Signet: bonus damage when aether is full
+    const artForAether = player.artifact();
+    if (artForAether && artForAether.special === 'aether_signet' && player.aether >= player.maxAether()) {
+        dmg += artForAether.aetherSignetDamage;
+        player.aether -= artForAether.aetherSignetCost;
+        logCombat(`Aether Signet: +${artForAether.aetherSignetDamage} dmg!`, 'log-info');
+    }
     const wep = player.weapon();
     const opts = {};
     if (wep && wep.special === 'armor_pierce') opts.pierceAmount = wep.pierceAmount;
@@ -383,6 +409,19 @@ function rangedAttack(targetQ, targetR) {
     const wep = player.weapon();
     const dist = hexDistance(player.q, player.r, targetQ, targetR);
     let dmg = player.rangedDamage(dist);
+    // Breach Jewel: bonus damage near breaches
+    const artForBreachR = player.artifact();
+    if (artForBreachR && artForBreachR.special === 'breach_jewel') {
+        const nearBreach = world.pois.some(p => (p.type === POI.BREACH || p.type === POI.MAW) && hexDistance(player.q, player.r, p.q, p.r) <= 3);
+        if (nearBreach) { dmg += artForBreachR.breachBonus; logCombat(`Breach Jewel: +${artForBreachR.breachBonus} might!`, 'log-info'); }
+    }
+    // Aether Signet: bonus damage when aether is full
+    const artForAetherR = player.artifact();
+    if (artForAetherR && artForAetherR.special === 'aether_signet' && player.aether >= player.maxAether()) {
+        dmg += artForAetherR.aetherSignetDamage;
+        player.aether -= artForAetherR.aetherSignetCost;
+        logCombat(`Aether Signet: +${artForAetherR.aetherSignetDamage} dmg!`, 'log-info');
+    }
 
     // Fire primary shot
     if (wep && wep.special === 'ignore_defense') {
@@ -987,6 +1026,36 @@ function executeSkill(skillId, targetQ, targetR) {
             player.mp = 0;
             break;
         }
+        case 'loot': {
+            const enemy = em.enemyAt(targetQ, targetR);
+            if (!enemy) break;
+            const goldStolen = Rando.int(1, 5);
+            player.gold += goldStolen;
+            logCombat(`Looted ${goldStolen}g!`, 'log-gold');
+            break;
+        }
+        case 'havens_light': {
+            const poi = world.poiAt(player.q, player.r);
+            if (!poi || (poi.type !== POI.HAVEN && poi.type !== POI.CAMP)) {
+                logCombat('Must be at a haven or camp!', 'log-info');
+                player.aether += skill.cost;
+                player.usedSkillsThisTurn.delete(skillId);
+                usedMP = false;
+                break;
+            }
+            const dmg = skill.baseDamage;
+            const adj = hexNeighbors(player.q, player.r);
+            let hitCount = 0;
+            for (const n of adj) {
+                const enemy = em.enemyAt(n.q, n.r);
+                if (enemy) {
+                    dealDamageToEnemy(enemy, dmg, "Haven's Light");
+                    hitCount++;
+                }
+            }
+            logCombat(`Haven's Light: hit ${hitCount} enemies!`, 'log-info');
+            break;
+        }
     }
     if (usedMP && !skill.freeAction) player.mp = 0;
     targeting = null;
@@ -995,6 +1064,11 @@ function executeSkill(skillId, targetQ, targetR) {
 function getSkillTargets(skillId) {
     const skill = SKILLS[skillId];
     if (!skill) return new Set();
+    // Haven's Light: only targetable at haven or camp
+    if (skillId === 'havens_light') {
+        const poi = world.poiAt(player.q, player.r);
+        if (!poi || (poi.type !== POI.HAVEN && poi.type !== POI.CAMP)) return new Set();
+    }
     const targets = new Set();
 
     switch (skill.target) {
@@ -1092,9 +1166,12 @@ function deselectPlayer() {
 function computeReachable() {
     if (player.mp <= 0) { reachable = new Map(); attackable = new Set(); return; }
     const enemyKeys = new Set(em.enemies.map(e => hexKey(e.q, e.r)));
+    const artForMove = player.artifact();
+    const hasStrider = artForMove && artForMove.special === 'strider';
     reachable = bfsHexes(player, world.hexes, hex => {
         if (enemyKeys.has(hexKey(hex.q, hex.r))) return Infinity;
-        return MOVEMENT_COST[hex.terrain] ?? Infinity;
+        const baseCost = MOVEMENT_COST[hex.terrain] ?? Infinity;
+        return (hasStrider && baseCost > 1 && baseCost !== Infinity) ? 1 : baseCost;
     }, player.mp);
     reachable.delete(hexKey(player.q, player.r));
 
@@ -1113,6 +1190,17 @@ function computeReachable() {
             if (enemyKeys.has(nk)) attackable.add(nk);
         }
     }
+    // Blink Ring: can attack enemies within blink range
+    const artForBlink = player.artifact();
+    if (artForBlink && artForBlink.special === 'blink_ring') {
+        const blinkRange = artForBlink.blinkRange || 4;
+        for (const enemy of em.enemies) {
+            const dist = hexDistance(player.q, player.r, enemy.q, enemy.r);
+            if (dist <= blinkRange && dist > 1) {
+                attackable.add(hexKey(enemy.q, enemy.r));
+            }
+        }
+    }
 }
 
 function checkEndTurn() {
@@ -1128,6 +1216,7 @@ function movePlayer(q, r) {
     player.r = r;
     player.mp -= cost;
     player.movedThisTurn = true;
+    player.hexesMovedThisTurn += cost;
     refreshVision();
     checkHexEntry();
     deselectPlayer();
@@ -1136,6 +1225,43 @@ function movePlayer(q, r) {
 function moveAndAttack(enemyQ, enemyR) {
     const enemy = em.enemies.find(e => e.q === enemyQ && e.r === enemyR);
     if (!enemy) return;
+
+    // Blink Ring: teleport to random adjacent hex if within blink range
+    const artBlink = player.artifact();
+    if (artBlink && artBlink.special === 'blink_ring') {
+        const dist = hexDistance(player.q, player.r, enemyQ, enemyR);
+        if (dist > 1 && dist <= (artBlink.blinkRange || 4)) {
+            const adjHexesBlink = hexNeighbors(enemyQ, enemyR).filter(n => {
+                const h = world.getHex(n.q, n.r);
+                if (!h || !world.isPassable(h)) return false;
+                if (em.enemies.some(e => e.q === n.q && e.r === n.r)) return false;
+                return true;
+            });
+            if (adjHexesBlink.length > 0) {
+                const dest = Rando.choice(adjHexesBlink);
+                player.q = dest.q;
+                player.r = dest.r;
+                player.movedThisTurn = true;
+                refreshVision();
+                logCombat(`Blink Ring: teleported!`, 'log-info');
+                const origMight = player.stats.might;
+                player.stats.might += artBlink.blinkBonus;
+                const killed = meleeAttack(enemy);
+                player.stats.might = origMight;
+                if (killed) {
+                    const hex = world.getHex(enemyQ, enemyR);
+                    if (hex && world.isPassable(hex)) {
+                        player.q = enemyQ; player.r = enemyR;
+                        refreshVision();
+                        checkHexEntry();
+                    }
+                }
+                player.mp = 0;
+                deselectPlayer();
+                return;
+            }
+        }
+    }
 
     // Find best adjacent hex to attack from
     const adjHexes = hexNeighbors(enemyQ, enemyR);
@@ -1161,6 +1287,7 @@ function moveAndAttack(enemyQ, enemyR) {
         player.r = bestHex.r;
         player.mp -= bestCost;
         player.movedThisTurn = true;
+        player.hexesMovedThisTurn += bestCost;
         refreshVision();
     }
 
@@ -1170,7 +1297,9 @@ function moveAndAttack(enemyQ, enemyR) {
         // Move onto the killed enemy's hex
         const hex = world.getHex(enemyQ, enemyR);
         if (hex && world.isPassable(hex)) {
-            const moveCost = MOVEMENT_COST[hex.terrain] ?? 1;
+            const artMove = player.artifact();
+            let moveCost = MOVEMENT_COST[hex.terrain] ?? 1;
+            if (artMove && artMove.special === 'strider' && moveCost > 1 && moveCost !== Infinity) moveCost = 1;
             if (player.mp >= moveCost) {
                 player.q = enemyQ;
                 player.r = enemyR;
@@ -1306,6 +1435,18 @@ function enemyCanRangedAttack(enemy, def, newDist) {
 
 function doEnemyMelee(enemy, def) {
     dealDamageToPlayer(enemyMeleeAttack(enemy, def), def.name, false, { attacker: enemy });
+    // Counter Bracers: player counter-attacks after being hit in melee
+    const artForCounter = player.artifact();
+    if (artForCounter && artForCounter.special === 'counter_mastery' && enemy.hp > 0) {
+        const pWep = player.weapon();
+        const counterDmg = (pWep ? pWep.damage : 1) + player.stats.might;
+        const rolled = Rando.bellCurve(counterDmg);
+        const eDef = def.defense || 0;
+        const actualDmg = Math.max(1, rolled - eDef);
+        enemy.hp -= actualDmg;
+        logCombat(`Counter Mastery: ${actualDmg} dmg!`, 'log-dmg');
+        if (enemy.hp <= 0) { killEnemy(enemy); }
+    }
 }
 
 function doEnemyRanged(enemy, def) {
@@ -1390,7 +1531,9 @@ async function runChaosTurn(enemy, def, occupied) {
     }
 
     const dist = hexDistance(enemy.q, enemy.r, player.q, player.r);
-    const aggro = def.aggroRange || def.detectRange || 0;
+    let aggro = def.aggroRange || def.detectRange || 0;
+    const artForThreat = player.artifact();
+    if (artForThreat && artForThreat.special === 'threat_shroud') aggro = Math.max(1, aggro - 2);
     const prevKey = hexKey(enemy.q, enemy.r);
 
     // Phase Wraith teleport (blocked by wraith_immune armor)
@@ -1444,6 +1587,23 @@ async function runEnemyPhase() {
     if (arm && arm.special === 'aether_regen') {
         player.aether = Math.min(player.maxAether(), player.aether + 1);
     }
+    // Chaos Circlet: +1 AE on corrupted/distressed terrain
+    const artForChaos = player.artifact();
+    if (artForChaos && artForChaos.special === 'chaos_circlet') {
+        const pTerrain = playerTerrain();
+        if (pTerrain >= 7 && pTerrain <= 16) {
+            player.aether = Math.min(player.maxAether(), player.aether + 1);
+            logCombat('Chaos Circlet: +1 AE', 'log-info');
+        }
+    }
+    // Aether Right / Aether Amulet: passive AE regen
+    const artForAeRegen = player.artifact();
+    if (artForAeRegen && artForAeRegen.special === 'aether_regen_small') {
+        player.aether = Math.min(player.maxAether(), player.aether + 1);
+    }
+    if (artForAeRegen && artForAeRegen.special === 'aether_regen_large') {
+        player.aether = Math.min(player.maxAether(), player.aether + 3);
+    }
     if (player.warpShieldTurns > 0) player.warpShieldTurns--;
 
     // Burn tick: enemies with burn take damage
@@ -1463,7 +1623,9 @@ async function runEnemyPhase() {
         if (gameOver) break;
         const def = em.getDef(enemy.type);
         if (!def) continue;
-        const aggro = def.aggroRange || def.detectRange || 0;
+        let aggro = def.aggroRange || def.detectRange || 0;
+        const artForThreat2 = player.artifact();
+        if (artForThreat2 && artForThreat2.special === 'threat_shroud') aggro = Math.max(1, aggro - 2);
         enemy.turnsSinceSpawn++;
 
         if (def.behavior === 'wildlife') {
@@ -1510,12 +1672,14 @@ async function runEnemyPhase() {
     // Start new turn
     turn++;
     player.mp = player.maxMP();
-    if (player.isEngaged(em.enemies)) {
+    const artForEngage = player.artifact();
+    if (player.isEngaged(em.enemies) && !(artForEngage && artForEngage.special === 'disengage')) {
         player.mp = Math.max(1, Math.floor(player.mp / 2));
         logCombat('Engaged! Half MP.', 'log-info');
     }
     player.usedSkillsThisTurn.clear();
     player.movedThisTurn = false;
+    player.hexesMovedThisTurn = 0;
     phase = 'player';
     render();
 }
@@ -2032,7 +2196,24 @@ function itemStatLine(item) {
             // New armor specials
             thorns: `${item.thornsDamage} reflect`, dodge_bonus: `+${item.dodgeBonus}% dodge`,
             heal_on_kill: `+${item.healOnKill} HP/kill`, aether_regen: '+1 AE/turn',
-            ranged_immune: 'Ranged immune', last_stand: `+${item.lastStandBonus} def <50% HP`
+            ranged_immune: 'Ranged immune', last_stand: `+${item.lastStandBonus} def <50% HP`,
+            // Artifact specials
+            strider: 'Rough terrain 1 MP',
+            disengage: 'No engagement MP penalty',
+            momentum_defense: '+1 def per hex moved',
+            threat_shroud: '-2 enemy detect range',
+            ranger_defense: `+${item.rangerBonus} def on forest/mountain`,
+            chaos_defense: `+${item.chaosDefenseBonus} def on shattered/distressed`,
+            wall_crown: `+${item.wallCrownBonus} melee if stationary`,
+            breach_jewel: `+${item.breachBonus} might near breach`,
+            soul_harvest: `+${item.soulHarvestXP} XP/kill`,
+            opportunist: '25% gold on kill',
+            aether_signet: `+${item.aetherSignetDamage} dmg when AE full (costs ${item.aetherSignetCost} AE)`,
+            chaos_circlet: '+1 AE/turn on corrupted',
+            aether_regen_small: '+1 AE/turn',
+            aether_regen_large: '+3 AE/turn',
+            blink_ring: `Blink ${item.blinkRange} hex melee +${item.blinkBonus}`,
+            counter_mastery: 'Counter-attack on enemy melee'
         };
         parts.push(specials[item.special] || item.special);
     }

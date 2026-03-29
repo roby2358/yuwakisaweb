@@ -2,7 +2,8 @@ import {
     STARTING_STATS, STAT_POINTS_PER_LEVEL, MAX_DODGE,
     maxHP, maxAether, PLAYER_MP, BASE_VISION,
     EQUIP_SLOT, ALL_EQUIPMENT,
-    TERRAIN_DEFENSE_BONUS, TERRAIN_RANGE_BONUS
+    TERRAIN_DEFENSE_BONUS, TERRAIN_RANGE_BONUS,
+    TERRAIN
 } from './config.js';
 import { hexDistance } from './hex.js';
 
@@ -26,6 +27,7 @@ export class Player {
         this.warpShieldTurns = 0;
         this.usedSkillsThisTurn = new Set();
         this.movedThisTurn = false;
+        this.hexesMovedThisTurn = 0;
     }
 
     weapon() {
@@ -48,6 +50,20 @@ export class Player {
         def += TERRAIN_DEFENSE_BONUS[terrainType] || 0;
         if (arm && arm.special === 'last_stand' && this.hp <= this.maxHP() / 2) {
             def += arm.lastStandBonus;
+        }
+        const art = this.artifact();
+        if (art && art.special === 'momentum_defense') {
+            def += this.hexesMovedThisTurn;
+        }
+        if (art && art.special === 'ranger_defense') {
+            if ([TERRAIN.FOREST, TERRAIN.MOUNTAIN, TERRAIN.SHATTERED_FOREST, TERRAIN.DISTRESSED_FOREST].includes(terrainType)) {
+                def += art.rangerBonus;
+            }
+        }
+        if (art && art.special === 'chaos_defense') {
+            if (terrainType >= 7 && terrainType <= 16) {
+                def += art.chaosDefenseBonus;
+            }
         }
         return def;
     }
@@ -87,6 +103,8 @@ export class Player {
         let dmg = (wep ? wep.damage : 1) + this.stats.might;
         if (wep && wep.special === 'chaos_bonus' && enemyDef.chaosSpawned) dmg += 2;
         if (wep && wep.special === 'momentum' && this.movedThisTurn) dmg += wep.momentumBonus;
+        const art = this.artifact();
+        if (art && art.special === 'wall_crown' && !this.movedThisTurn) dmg += art.wallCrownBonus;
         return dmg;
     }
 

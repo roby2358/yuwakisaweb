@@ -271,7 +271,25 @@ export const ARTIFACTS = [
     { id: 'aether_crystal', name: 'Aether Crystal', special: 'aether_bonus', aetherBonus: 4, price: 50, tier: 1, magical: true },
     { id: 'vitality_stone', name: 'Vitality Stone', special: 'regen', regenAmount: 3, price: 80, tier: 3, magical: true },
     { id: 'phase_anchor', name: 'Phase Anchor', special: 'displacement_immune', price: 35, tier: 1, magical: true },
-    { id: 'maw_compass', name: 'Maw Compass', special: 'reveal_maw', price: 30, tier: 1, magical: true }
+    { id: 'maw_compass', name: 'Maw Compass', special: 'reveal_maw', price: 30, tier: 1, magical: true },
+    // Movement & defense artifacts
+    { id: 'strider_boots', name: 'Strider Boots', special: 'strider', price: 55, tier: 2, magical: true },
+    { id: 'smoke_cloak', name: 'Smoke Cloak', special: 'disengage', price: 65, tier: 2, magical: true },
+    { id: 'momentum_bracers', name: 'Momentum Bracers', special: 'momentum_defense', price: 60, tier: 2, magical: true },
+    { id: 'threat_shroud', name: 'Threat Shroud', special: 'threat_shroud', price: 40, tier: 1, magical: true },
+    { id: 'ranger_cloak', name: 'Ranger Cloak', special: 'ranger_defense', rangerBonus: 3, price: 40, tier: 1, magical: true },
+    { id: 'chaos_ward', name: 'Chaos Ward', special: 'chaos_defense', chaosDefenseBonus: 3, price: 50, tier: 2, magical: true },
+    // Combat & resource artifacts
+    { id: 'wall_crown', name: 'Wall Crown', special: 'wall_crown', wallCrownBonus: 4, price: 65, tier: 2, magical: true },
+    { id: 'breach_jewel', name: 'Breach Jewel', special: 'breach_jewel', breachBonus: 5, price: 55, tier: 2, magical: true },
+    { id: 'soul_harvest_sigil', name: 'Soul Harvest Sigil', special: 'soul_harvest', soulHarvestXP: 2, price: 70, tier: 2, magical: true },
+    { id: 'opportunist_gloves', name: 'Opportunist Gloves', special: 'opportunist', price: 35, tier: 1, magical: true },
+    { id: 'aether_signet', name: 'Aether Signet', special: 'aether_signet', aetherSignetDamage: 3, aetherSignetCost: 3, price: 80, tier: 3, magical: true },
+    { id: 'chaos_circlet', name: 'Chaos Circlet', special: 'chaos_circlet', price: 55, tier: 2, magical: true },
+    { id: 'aether_right', name: 'Aether Right', special: 'aether_regen_small', price: 45, tier: 1, magical: true },
+    { id: 'aether_amulet', name: 'Aether Amulet', special: 'aether_regen_large', price: 85, tier: 3, magical: true },
+    { id: 'blink_ring', name: 'Blink Ring', special: 'blink_ring', blinkRange: 4, blinkBonus: 2, price: 95, tier: 3, magical: true },
+    { id: 'counter_bracers', name: 'Counter Bracers', special: 'counter_mastery', price: 70, tier: 2, magical: true }
 ];
 
 // All equipment in one lookup
@@ -426,6 +444,15 @@ export const SKILLS = {
     sanctuary: {
         id: 'sanctuary', name: 'Sanctuary', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
         desc: 'Current hex becomes a temporary camp (one rest). Must be non-POI terrain.', minLevel: 8
+    },
+    // ---- Special combat skills ----
+    loot: {
+        id: 'loot', name: 'Loot', cost: 0, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
+        desc: 'Take 1-5 gold from adjacent enemy instead of dealing damage.', minLevel: 2
+    },
+    havens_light: {
+        id: 'havens_light', name: "Haven's Light", cost: 3, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
+        range: 1, baseDamage: 20, desc: "AoE: strength 20 attack to all adjacent. Only usable at haven or camp.", minLevel: 6
     }
 };
 
