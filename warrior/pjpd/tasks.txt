@@ -1,3 +1,10 @@
+Priority:   90
+Status: ToDo
+ID: savegame-qv59
+Created: 2026-03-29T20:10:23Z
+Updated: 2026-03-29T20:10:23Z
+Save/load game state to localStorage. On launch, show an intro panel with New Game and Continue options. Continue restores the saved state.
+----
 Priority:   80
 Status: ToDo
 ID: gameplay-dxz3
