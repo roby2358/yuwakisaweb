@@ -1046,6 +1046,21 @@ function executeSkill(skillId, targetQ, targetR) {
             logCombat('Sanctuary! A temporary village appears.', 'log-heal');
             break;
         }
+        case 'bountiful_harvest': {
+            let crops = 0;
+            for (const h of hexesInRange(player.q, player.r, skill.range)) {
+                const hex = world.getHex(h.q, h.r);
+                if (!hex || !world.isPassable(hex) || hex.goldDeposit > 0) continue;
+                if (UNSHATTERED_VERSION[hex.terrain] !== undefined) continue;
+                if (UNDISTRESSED_VERSION[hex.terrain] !== undefined) continue;
+                hex.goldDeposit = Rando.int(1, 3);
+                hex.crop = Rando.choice(['\u{1F33D}', '\u{1F345}', '\u{1F346}', '\u{1F955}', '\u{1F952}', '\u{1F33F}', '\u{1FAD1}']);
+                crops++;
+            }
+            if (crops > 0) logCombat(`Bountiful Harvest: ${crops} crop${crops > 1 ? 's' : ''} sprouted!`, 'log-gold');
+            else logCombat('No suitable ground for crops.', 'log-info');
+            break;
+        }
         case 'recall': {
             const havens = world.havens();
             if (havens.length === 0) {
@@ -1368,7 +1383,8 @@ function checkHexEntry() {
         const goldAmt = hex.goldDeposit * multiplier;
         player.gold += goldAmt;
         hex.goldDeposit = 0;
-        logCombat(`+${goldAmt}g (gold deposit)`, 'log-gold');
+        logCombat(`+${goldAmt}g (${hex.crop ? 'harvest' : 'gold deposit'})`, 'log-gold');
+        hex.crop = false;
     }
 
     // POI interaction
@@ -1881,12 +1897,12 @@ function render() {
             ctx.fill();
         }
 
-        // Gold indicator
+        // Gold / crop indicator
         if (hex.goldDeposit > 0) {
-            ctx.fillStyle = '#ffd700';
+            ctx.fillStyle = hex.crop ? '#66bb6a' : '#ffd700';
             ctx.font = 'bold ' + Math.floor(HEX_SIZE * 1.2) + 'px monospace';
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText('\u{1FA99}', x, y);
+            ctx.fillText(hex.crop || '\u{1FA99}', x, y);
         }
 
         // POI symbols
