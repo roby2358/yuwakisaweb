@@ -56,7 +56,7 @@ export class Player {
             def += this.hexesMovedThisTurn;
         }
         if (art && art.special === 'ranger_defense') {
-            if ([TERRAIN.FOREST, TERRAIN.MOUNTAIN, TERRAIN.SHATTERED_FOREST, TERRAIN.DISTRESSED_FOREST].includes(terrainType)) {
+            if ([TERRAIN.FOREST, TERRAIN.HILLS, TERRAIN.SHATTERED_FOREST, TERRAIN.DISTRESSED_FOREST, TERRAIN.SHATTERED_HILLS, TERRAIN.DISTRESSED_HILLS].includes(terrainType)) {
                 def += art.rangerBonus;
             }
         }

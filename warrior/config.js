@@ -190,8 +190,8 @@ export const ENEMY_DEFS = {
         range: 4, chaosSpawned: false
     },
     [ENEMY_TYPE.PHASE_WRAITH]: {
-        name: 'Phase Wraith', label: 'W', hp: 20, attack: 7, defense: 2,
-        speed: 1, detectRange: 4, xp: 25, gold: 3, behavior: 'teleport',
+        name: 'Phase Wraith', label: 'W', hp: 10, attack: 5, defense: 1,
+        speed: 2, detectRange: 4, xp: 25, gold: 3, behavior: 'teleport',
         teleportRange: 3, teleportChance: 0.3, chaosSpawned: true
     },
     [ENEMY_TYPE.BREACH_GUARDIAN]: {
