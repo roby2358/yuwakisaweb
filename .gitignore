@@ -1,15 +1,6 @@
 .idea/
 
 *.iml
-/agents_parliament/pjpd/bak/
-/realm/.claude/
-/.claude/
-/shifted/.claude/
-/avail/orig/
-/mglad/.claude/
-/hexandcounter/.claude/
-/voidseal/.claude/
-/waowisha/.claude/
-/hexandcounter/.claude/
-/warrior/pjpd/bak/
-/warrior/.claude/
+**/.claude/
+**/pjpd/bak/
+**/avail/orig/
