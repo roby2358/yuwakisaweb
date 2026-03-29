@@ -1054,7 +1054,7 @@ function executeSkill(skillId, targetQ, targetR) {
                 if (UNSHATTERED_VERSION[hex.terrain] !== undefined) continue;
                 if (UNDISTRESSED_VERSION[hex.terrain] !== undefined) continue;
                 hex.goldDeposit = Rando.int(1, 3);
-                hex.crop = Rando.choice(['\u{1F33D}', '\u{1F345}', '\u{1F346}', '\u{1F955}', '\u{1F952}', '\u{1F33F}', '\u{1FAD1}']);
+                hex.crop = Rando.choice(['\u{1F33D}', '\u{1F345}', '\u{1F346}', '\u{1F955}', '\u{1F952}', '\u{1F33F}', '\u{1FAD1}', '\u{1F33E}']);
                 crops++;
             }
             if (crops > 0) logCombat(`Bountiful Harvest: ${crops} crop${crops > 1 ? 's' : ''} sprouted!`, 'log-gold');

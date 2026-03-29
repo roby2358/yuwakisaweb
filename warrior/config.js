@@ -147,7 +147,7 @@ export const POI_DEFENSE_BONUS = {
 
 export const POI_SYMBOLS = {
     [POI.HAVEN]: '\u{1F3F0}', // 🏰 castle
-    [POI.VILLAGE]: '\u26FA',    // ⛺ tent
+    [POI.VILLAGE]: '\u{1F3E1}', // 🏡 house with garden
     [POI.RUIN]: '\u26EB',    // ⛫ castle ruins
     [POI.BREACH]: '\u058D',  // ֍ swirl
     [POI.MAW]: '\u2738',     // ✸ pulsing star
