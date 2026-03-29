@@ -1673,6 +1673,26 @@ async function runEnemyPhase() {
 
     if (gameOver) return;
 
+    // Guardian respawn: breaches/maw spawn guardians if none nearby
+    for (const poi of world.pois) {
+        if ((poi.type === POI.BREACH || poi.type === POI.MAW) && !poi.closed) {
+            // Unraveler never respawns
+            if (poi.type === POI.MAW) continue;
+            // Check for existing guardian within 3 hexes
+            const hasGuardian = em.enemies.some(e =>
+                e.type === ENEMY_TYPE.BREACH_GUARDIAN && hexDistance(poi.q, poi.r, e.q, e.r) <= 3
+            );
+            if (!hasGuardian && Math.random() < 0.3 && em.enemies.length < MAX_ENEMIES && !occupied.has(hexKey(poi.q, poi.r))) {
+                const g = em.spawn(ENEMY_TYPE.BREACH_GUARDIAN, poi.q, poi.r, poi.q, poi.r);
+                if (g) {
+                    poi.guardianId = g.id;
+                    poi.guardianDefeated = false;
+                    occupied.add(hexKey(poi.q, poi.r));
+                }
+            }
+        }
+    }
+
     // Spawn phase
     for (const poi of world.pois) {
         if (poi.type === POI.BREACH && !poi.closed && Math.random() < 0.15) {
