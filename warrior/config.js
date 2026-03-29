@@ -187,7 +187,7 @@ export const ENEMY_DEFS = {
     [ENEMY_TYPE.FLUX_ARCHER]: {
         name: 'Flux Archer', label: 'A', hp: 12, attack: 6, defense: 1,
         speed: 1, detectRange: 5, xp: 20, gold: 3, behavior: 'kite',
-        range: 4, chaosSpawned: false
+        range: 4, chaosSpawned: true
     },
     [ENEMY_TYPE.PHASE_WRAITH]: {
         name: 'Phase Wraith', label: 'W', hp: 10, attack: 5, defense: 1,

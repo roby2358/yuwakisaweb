@@ -1522,10 +1522,11 @@ function tryBossSpawn(enemy, def, occupied) {
     });
     if (adj.length === 0) return;
     const spot = Rando.choice(adj);
-    const spawned = em.spawn(ENEMY_TYPE.VOID_STALKER, spot.q, spot.r);
+    const spawnType = Rando.choice([ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.PHASE_WRAITH, ENEMY_TYPE.FLUX_ARCHER]);
+    const spawned = em.spawn(spawnType, spot.q, spot.r);
     if (spawned) {
         occupied.add(hexKey(spot.q, spot.r));
-        logCombat('The Unraveler spawns a Void Stalker!', 'log-info');
+        logCombat(`The Unraveler spawns a ${em.getDef(spawnType).name}!`, 'log-info');
     }
 }
 
@@ -1713,7 +1714,7 @@ async function runEnemyPhase() {
             });
             if (adj.length > 0 && em.enemies.length < MAX_ENEMIES) {
                 const spot = Rando.choice(adj);
-                const type = Rando.bool(0.6) ? ENEMY_TYPE.VOID_STALKER : ENEMY_TYPE.PHASE_WRAITH;
+                const type = Rando.choice([ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.PHASE_WRAITH, ENEMY_TYPE.FLUX_ARCHER]);
                 em.spawn(type, spot.q, spot.r, poi.q, poi.r);
                 occupied.add(hexKey(spot.q, spot.r));
             }
