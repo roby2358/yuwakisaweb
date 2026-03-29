@@ -109,7 +109,8 @@ export class Player {
 
     meleeDamage(enemyDef) {
         const wep = this.weapon();
-        let dmg = (wep ? wep.damage : 1) + this.stats.might;
+        const wepDmg = wep ? (wep.type === 'ranged' ? Math.ceil(wep.damage / 4) : wep.damage) : 1;
+        let dmg = wepDmg + this.stats.might;
         if (wep && wep.special === 'chaos_bonus' && enemyDef.chaosSpawned) dmg += 2;
         if (wep && wep.special === 'momentum' && this.movedThisTurn) dmg += wep.momentumBonus;
         const art = this.artifact();

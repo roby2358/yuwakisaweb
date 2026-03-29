@@ -30,11 +30,6 @@ ID: gameplay-7w67
 ----
 Priority:   60
 Status: ToDo
-ID: combat-w3dh
-Ranged weapons contribute only 1/4 damage (rounded up) in melee — at close range a phase rifle is just an expensive club. Full damage at range only.
-----
-Priority:   60
-Status: ToDo
 ID: combat-hfkt
 Created: 2026-03-28T23:51:40Z
 Updated: 2026-03-28T23:51:40Z
@@ -66,6 +61,13 @@ Priority:   50
 Status: ToDo
 ID: loot-5wzg
 Add 10 new mid-tier artifacts to the loot pool — currently weapons and armor dominate drops
+----
+Priority:   60
+Status: Done
+ID: combat-w3dh
+Created: 2026-03-29T02:29:29Z
+Updated: 2026-03-29T02:29:29Z
+Ranged weapons contribute only 1/4 damage (rounded up) in melee — at close range a phase rifle is just an expensive club. Full damage at range only.
 ----
 Priority:    0
 Status: Done
