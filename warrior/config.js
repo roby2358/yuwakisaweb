@@ -272,6 +272,7 @@ export const ARMORS = [
     { id: 'bloodward_cuirass', name: 'Bloodward Cuirass', defense: 4, special: 'heal_on_kill', healOnKill: 5, price: 65, tier: 2, magical: true },
     { id: 'stormplate', name: 'Stormplate', defense: 3, special: 'aether_regen', price: 80, tier: 2, magical: true },
     { id: 'wraithskin', name: 'Wraithskin', defense: 3, special: 'ranged_immune', price: 75, tier: 2, magical: true },
+    { id: 'burning_mail', name: 'Burning Mail', defense: 4, special: 'burning_aura', burnAuraDamage: 3, price: 75, tier: 2, magical: true },
     { id: 'aegis_of_the_breach', name: 'Aegis of the Breach', defense: 6, special: 'last_stand', lastStandBonus: 2, price: 130, tier: 3, magical: true },
     // Mid-tier magical armor
     { id: 'scout_cloak', name: "Scout's Cloak", defense: 1, special: 'vision_bonus', visionBonus: 1, price: 15, tier: 1, magical: true },

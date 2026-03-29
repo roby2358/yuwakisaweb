@@ -231,6 +231,16 @@ function dealDamageToPlayer(damage, source, isSkillDamage, opts = {}) {
         logCombat(`Thorns: ${thornDmg} dmg to ${em.getDef(opts.attacker.type).name}`, 'log-dmg');
         if (opts.attacker.hp <= 0) killEnemy(opts.attacker);
     }
+    // Burning Mail: burn all adjacent enemies on melee hit
+    if (opts.attacker && !opts.isRanged && arm && arm.special === 'burning_aura') {
+        for (const n of hexNeighbors(player.q, player.r)) {
+            const adj = em.enemies.find(e => e.q === n.q && e.r === n.r);
+            if (adj) {
+                adj.burnDamage = (adj.burnDamage || 0) + arm.burnAuraDamage;
+                logCombat(`Burning Mail: ${em.getDef(adj.type).name} is burning!`, 'log-dmg');
+            }
+        }
+    }
     if (player.hp <= 0) {
         player.hp = 0;
         endGame(false);
@@ -2275,7 +2285,8 @@ function itemStatLine(item) {
             armor_aether_bonus: `+${item.aetherBonus} max AE`,
             regen_combo: `+${item.regenAmount} HP +1 AE/turn`,
             mp_bonus: `+${item.mpBonus} MP`,
-            chaos_attune: `+${item.chaosAttuneMight} might +${item.chaosAttuneDef} def on corrupted`
+            chaos_attune: `+${item.chaosAttuneMight} might +${item.chaosAttuneDef} def on corrupted`,
+            burning_aura: `Burn adjacent ${item.burnAuraDamage}/turn on melee hit`
         };
         parts.push(specials[item.special] || item.special);
     }
