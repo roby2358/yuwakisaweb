@@ -473,7 +473,7 @@ export const SKILLS = {
     },
     sanctuary: {
         id: 'sanctuary', name: 'Sanctuary', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
-        desc: 'Current hex becomes a temporary camp (one rest). Must be non-POI terrain.', minLevel: 8
+        desc: 'Current hex becomes a temporary village (one rest). Must be non-POI terrain.', minLevel: 8
     },
     // ---- Special combat skills ----
     loot: {
@@ -482,7 +482,7 @@ export const SKILLS = {
     },
     havens_light: {
         id: 'havens_light', name: "Haven's Light", cost: 3, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
-        range: 1, baseDamage: 20, desc: "AoE: strength 20 attack to all adjacent. Only usable at haven or camp.", minLevel: 6
+        range: 1, baseDamage: 20, desc: "AoE: strength 20 attack to all adjacent. Only usable at haven or village.", minLevel: 6
     }
 };
 

@@ -1039,7 +1039,7 @@ function executeSkill(skillId, targetQ, targetR) {
             const tempCamp = { q: player.q, r: player.r, type: POI.CAMP, id: world.pois.length, temporary: true };
             world.pois.push(tempCamp);
             pHex.poi = POI.CAMP;
-            logCombat('Sanctuary! A temporary camp appears.', 'log-heal');
+            logCombat('Sanctuary! A temporary village appears.', 'log-heal');
             break;
         }
         case 'recall': {
@@ -1074,7 +1074,7 @@ function executeSkill(skillId, targetQ, targetR) {
         case 'havens_light': {
             const poi = world.poiAt(player.q, player.r);
             if (!poi || (poi.type !== POI.HAVEN && poi.type !== POI.CAMP)) {
-                logCombat('Must be at a haven or camp!', 'log-info');
+                logCombat('Must be at a haven or village!', 'log-info');
                 player.aether += skill.cost;
                 player.usedSkillsThisTurn.delete(skillId);
                 usedMP = false;
@@ -1101,7 +1101,7 @@ function executeSkill(skillId, targetQ, targetR) {
 function getSkillTargets(skillId) {
     const skill = SKILLS[skillId];
     if (!skill) return new Set();
-    // Haven's Light: only targetable at haven or camp
+    // Haven's Light: only targetable at haven or village
     if (skillId === 'havens_light') {
         const poi = world.poiAt(player.q, player.r);
         if (!poi || (poi.type !== POI.HAVEN && poi.type !== POI.CAMP)) return new Set();
@@ -2363,7 +2363,7 @@ function showHavenDialog(poi) {
 
 function showCampDialog(poi) {
     const isTemp = poi.temporary;
-    showDialog(POI_SYMBOLS[POI.CAMP] + (isTemp ? ' Sanctuary' : ' Camp'), '<p>A brief respite from the wilds.</p>', [
+    showDialog(POI_SYMBOLS[POI.CAMP] + (isTemp ? ' Sanctuary' : ' Village'), '<p>A brief respite from the wilds.</p>', [
         {
             label: 'Rest', cls: 'primary', action: () => {
                 const healAmt = Math.floor(player.maxHP() * 0.5);
