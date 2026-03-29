@@ -176,7 +176,7 @@ export class GameWorld {
         this.pois = [];
         const candidates = this.passableHexes();
         const used = new Set();
-        const MIN_DIST = 6;
+        const MIN_DIST = 10;
         const self = this;
 
         function place(type, count, preferRight) {
@@ -211,12 +211,12 @@ export class GameWorld {
             return placed;
         }
 
-        place(POI.HAVEN, Rando.int(2, 3), false);
-        place(POI.CAMP, Rando.int(4, 6), false);
-        place(POI.RUIN, Rando.int(3, 5), false);
-        place(POI.BREACH, Rando.int(3, 4), false);
+        place(POI.HAVEN, Rando.int(4, 6), false);
+        place(POI.CAMP, Rando.int(8, 12), false);
+        place(POI.RUIN, Rando.int(6, 10), false);
+        place(POI.BREACH, Rando.int(6, 8), false);
         place(POI.MAW, 1, true);
-        place(POI.HUT, Rando.int(4, 6), false);
+        place(POI.HUT, Rando.int(8, 12), false);
     }
 
     _generateShopItems() {

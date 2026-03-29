@@ -110,8 +110,8 @@ export const TERRAIN_RANGE_BONUS = {
 };
 
 export const PLAYER_MP = 4;
-export const MAP_COLS = 60;
-export const MAP_ROWS = 40;
+export const MAP_COLS = 100;
+export const MAP_ROWS = 100;
 export const BASE_VISION = 6;
 export const MAX_ENEMIES = 60;
 

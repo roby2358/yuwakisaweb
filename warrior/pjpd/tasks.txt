@@ -1,12 +1,5 @@
 Priority:   80
 Status: ToDo
-ID: gameplay-m5nb
-Created: 2026-03-29T08:00:30Z
-Updated: 2026-03-29T08:00:30Z
-Expand map from 60x40 to 100x100 — no performance concerns, just change MAP_COLS and MAP_ROWS in config.js
-----
-Priority:   80
-Status: ToDo
 ID: gameplay-bd9n
 Created: 2026-03-29T08:20:39Z
 Updated: 2026-03-29T08:20:39Z
@@ -49,6 +42,13 @@ ID: ui-9rcz
 Created: 2026-03-29T07:44:19Z
 Updated: 2026-03-29T07:44:19Z
 Rename camp POIs to villages — update config constants, labels, icons, and all references throughout the codebase
+----
+Priority:   80
+Status: Done
+ID: gameplay-m5nb
+Created: 2026-03-29T08:00:30Z
+Updated: 2026-03-29T08:47:53Z
+Expand map from 60x40 to 100x100 — no performance concerns, just change MAP_COLS and MAP_ROWS in config.js
 ----
 Priority:   80
 Status: Done
