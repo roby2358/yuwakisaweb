@@ -1976,6 +1976,7 @@ function render() {
     }
 
     updateHUD();
+    refreshOpenPanels();
 }
 
 function enemyColor(type) {
@@ -1995,6 +1996,12 @@ function enemyColor(type) {
 // ================================================================
 // HUD & PANELS
 // ================================================================
+
+function refreshOpenPanels() {
+    if (!document.getElementById('char-panel').classList.contains('hidden')) updateCharPanel();
+    if (!document.getElementById('skills-panel').classList.contains('hidden')) updateSkillsPanel();
+    if (!document.getElementById('inv-panel').classList.contains('hidden')) updateInvPanel();
+}
 
 function updateHUD() {
     document.getElementById('turn-info').textContent = 'Turn ' + turn;
