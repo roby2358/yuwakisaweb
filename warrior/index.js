@@ -199,9 +199,10 @@ function dealDamageToEnemy(enemy, damage, source, opts = {}) {
 
 function dealDamageToPlayer(damage, source, isSkillDamage, opts = {}) {
     const arm = player.armor();
-    // Ranged immune check
-    if (opts.isRanged && arm && arm.special === 'ranged_immune') {
-        logCombat('Wraithskin negates ranged attack!', 'log-info');
+    // Ranged immune check (armor or artifact)
+    const artForRanged = player.artifact();
+    if (opts.isRanged && ((arm && arm.special === 'ranged_immune') || (artForRanged && artForRanged.special === 'ranged_immune'))) {
+        logCombat('Ranged attack negated!', 'log-info');
         return null;
     }
     // Warp Shield check
@@ -337,6 +338,12 @@ function meleeAttack(enemy) {
         player.aether -= artForAether.aetherSignetCost;
         logCombat(`Aether Signet: +${artForAether.aetherSignetDamage} dmg!`, 'log-info');
     }
+    // Chaos Sigil: bonus might on shattered/distressed terrain
+    const artForChaosM = player.artifact();
+    if (artForChaosM && artForChaosM.special === 'chaos_attune') {
+        const pt = playerTerrain();
+        if (pt >= 7 && pt <= 16) dmg += artForChaosM.chaosAttuneMight;
+    }
     const wep = player.weapon();
     const opts = {};
     if (wep && wep.special === 'armor_pierce') opts.pierceAmount = wep.pierceAmount;
@@ -366,6 +373,17 @@ function meleeAttack(enemy) {
         player.hp -= wep.recoilDamage;
         logCombat(`Recoil: ${wep.recoilDamage} dmg to you`, 'log-dmg');
         if (player.hp <= 0) { player.hp = 0; endGame(false); }
+    }
+
+    // Double strike: hit same enemy again
+    if (!killed && wep && wep.special === 'double_strike') {
+        dealDamageToEnemy(enemy, dmg, 'Double Strike', opts);
+    }
+
+    // Burn: mark target for damage next turn (melee)
+    if (wep && wep.special === 'burn' && enemy.hp > 0) {
+        enemy.burnDamage = (enemy.burnDamage || 0) + wep.burnDamage;
+        logCombat(`${em.getDef(enemy.type).name} is burning!`, 'log-dmg');
     }
 
     // Cleave: hit adjacent enemies too
@@ -423,17 +441,26 @@ function rangedAttack(targetQ, targetR) {
         logCombat(`Aether Signet: +${artForAetherR.aetherSignetDamage} dmg!`, 'log-info');
     }
 
+    // Chaos Sigil: bonus might on shattered/distressed terrain
+    const artForChaosMR = player.artifact();
+    if (artForChaosMR && artForChaosMR.special === 'chaos_attune') {
+        const pt = playerTerrain();
+        if (pt >= 7 && pt <= 16) dmg += artForChaosMR.chaosAttuneMight;
+    }
+
     // Fire primary shot
+    const rangedOpts = {};
+    if (wep && wep.special === 'armor_pierce') rangedOpts.pierceAmount = wep.pierceAmount;
     if (wep && wep.special === 'ignore_defense') {
         const actualDmg = Math.max(1, dmg);
         enemy.hp -= actualDmg;
         logCombat(`Ranged: ${actualDmg} dmg to ${em.getDef(enemy.type).name}`, 'log-dmg');
         if (enemy.hp <= 0) killEnemy(enemy);
     } else if (wep && wep.special === 'double_shot') {
-        dealDamageToEnemy(enemy, dmg, 'Shot 1');
-        if (enemy.hp > 0) dealDamageToEnemy(enemy, dmg, 'Shot 2');
+        dealDamageToEnemy(enemy, dmg, 'Shot 1', rangedOpts);
+        if (enemy.hp > 0) dealDamageToEnemy(enemy, dmg, 'Shot 2', rangedOpts);
     } else {
-        dealDamageToEnemy(enemy, dmg, 'Ranged');
+        dealDamageToEnemy(enemy, dmg, 'Ranged', rangedOpts);
     }
 
     // Burn: mark target for damage next turn
@@ -1604,6 +1631,15 @@ async function runEnemyPhase() {
     if (artForAeRegen && artForAeRegen.special === 'aether_regen_large') {
         player.aether = Math.min(player.maxAether(), player.aether + 3);
     }
+    // Armor regen: HP regen from armor
+    if (arm && arm.special === 'armor_regen') {
+        player.hp = Math.min(player.maxHP(), player.hp + arm.regenAmount);
+    }
+    // Regen combo: HP + AE regen from armor
+    if (arm && arm.special === 'regen_combo') {
+        player.hp = Math.min(player.maxHP(), player.hp + arm.regenAmount);
+        player.aether = Math.min(player.maxAether(), player.aether + 1);
+    }
     if (player.warpShieldTurns > 0) player.warpShieldTurns--;
 
     // Burn tick: enemies with burn take damage
@@ -2213,7 +2249,13 @@ function itemStatLine(item) {
             aether_regen_small: '+1 AE/turn',
             aether_regen_large: '+3 AE/turn',
             blink_ring: `Blink ${item.blinkRange} hex melee +${item.blinkBonus}`,
-            counter_mastery: 'Counter-attack on enemy melee'
+            counter_mastery: 'Counter-attack on enemy melee',
+            double_strike: 'Double strike',
+            armor_regen: `+${item.regenAmount} HP/turn`,
+            armor_aether_bonus: `+${item.aetherBonus} max AE`,
+            regen_combo: `+${item.regenAmount} HP +1 AE/turn`,
+            mp_bonus: `+${item.mpBonus} MP`,
+            chaos_attune: `+${item.chaosAttuneMight} might +${item.chaosAttuneDef} def on corrupted`
         };
         parts.push(specials[item.special] || item.special);
     }

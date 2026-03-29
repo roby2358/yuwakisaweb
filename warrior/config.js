@@ -231,6 +231,20 @@ export const WEAPONS = [
     { id: 'stasis_repeater', name: 'Stasis Repeater', type: 'ranged', damage: 4, range: 3, special: 'double_shot', price: 70, tier: 2, magical: true },
     { id: 'nova_launcher', name: 'Nova Launcher', type: 'ranged', damage: 7, range: 3, special: 'burn', burnDamage: 3, price: 100, tier: 3, magical: true },
     { id: 'astral_longbow', name: 'Astral Longbow', type: 'ranged', damage: 9, range: 5, special: 'sniper', sniperBonus: 4, price: 140, tier: 3, magical: true },
+    // Mid-tier magical melee
+    { id: 'flicker_blade', name: 'Flicker Blade', type: 'melee', damage: 2, range: 0, special: 'double_strike', price: 20, tier: 1, magical: true },
+    { id: 'aether_spike', name: 'Aether Spike', type: 'melee', damage: 3, range: 0, special: 'aether_siphon', price: 25, tier: 1, magical: true },
+    { id: 'blood_thorn', name: 'Blood Thorn', type: 'melee', damage: 3, range: 0, special: 'lifesteal', lifestealAmount: 1, price: 25, tier: 1, magical: true },
+    { id: 'rending_pick', name: 'Rending Pick', type: 'melee', damage: 4, range: 0, special: 'armor_pierce', pierceAmount: 2, price: 30, tier: 1, magical: true },
+    { id: 'broad_cleaver', name: 'Broad Cleaver', type: 'melee', damage: 4, range: 0, special: 'cleave', price: 30, tier: 1, magical: true },
+    { id: 'ember_blade', name: 'Ember Blade', type: 'melee', damage: 5, range: 0, special: 'burn', burnDamage: 2, price: 40, tier: 1, magical: true },
+    // Mid-tier magical ranged
+    { id: 'arc_caster', name: 'Arc Caster', type: 'ranged', damage: 2, range: 3, special: 'chain', chainDamage: 3, price: 20, tier: 1, magical: true },
+    { id: 'pulse_bow', name: 'Pulse Bow', type: 'ranged', damage: 3, range: 3, special: 'double_shot', price: 25, tier: 1, magical: true },
+    { id: 'ley_bow', name: 'Ley Bow', type: 'ranged', damage: 3, range: 3, special: 'free_ranged', price: 25, tier: 1, magical: true },
+    { id: 'blast_rod', name: 'Blast Rod', type: 'ranged', damage: 4, range: 3, special: 'splash', splashDamage: 2, price: 35, tier: 1, magical: true },
+    { id: 'hawk_bow', name: 'Hawk Bow', type: 'ranged', damage: 4, range: 5, special: 'sniper', sniperBonus: 2, price: 40, tier: 2, magical: true },
+    { id: 'piercing_bolt', name: 'Piercing Bolt', type: 'ranged', damage: 5, range: 3, special: 'armor_pierce', pierceAmount: 2, price: 45, tier: 2, magical: true },
     // Non-magical melee
     { id: 'iron_sword', name: 'Iron Sword', type: 'melee', damage: 2, range: 0, special: null, price: 12, tier: 1, magical: false },
     { id: 'spear', name: 'Spear', type: 'melee', damage: 2, range: 0, special: null, price: 12, tier: 1, magical: false },
@@ -259,6 +273,13 @@ export const ARMORS = [
     { id: 'stormplate', name: 'Stormplate', defense: 3, special: 'aether_regen', price: 80, tier: 2, magical: true },
     { id: 'wraithskin', name: 'Wraithskin', defense: 3, special: 'ranged_immune', price: 75, tier: 2, magical: true },
     { id: 'aegis_of_the_breach', name: 'Aegis of the Breach', defense: 6, special: 'last_stand', lastStandBonus: 2, price: 130, tier: 3, magical: true },
+    // Mid-tier magical armor
+    { id: 'scout_cloak', name: "Scout's Cloak", defense: 1, special: 'vision_bonus', visionBonus: 1, price: 15, tier: 1, magical: true },
+    { id: 'runecloth_robe', name: 'Runecloth Robe', defense: 2, special: 'aether_regen', price: 30, tier: 1, magical: true },
+    { id: 'padded_mail', name: 'Padded Mail', defense: 2, special: 'hp_bonus', hpBonus: 5, price: 25, tier: 1, magical: true },
+    { id: 'lifeweave_tunic', name: 'Lifeweave Tunic', defense: 3, special: 'armor_regen', regenAmount: 1, price: 40, tier: 1, magical: true },
+    { id: 'aether_vest', name: 'Aether Vest', defense: 3, special: 'armor_aether_bonus', aetherBonus: 5, price: 45, tier: 2, magical: true },
+    { id: 'wardens_plate', name: "Warden's Plate", defense: 5, special: 'regen_combo', regenAmount: 1, price: 70, tier: 2, magical: true },
     // Non-magical armor
     { id: 'leather_armor', name: 'Leather Armor', defense: 2, special: null, price: 15, tier: 1, magical: false },
     { id: 'chain_mail', name: 'Chain Mail', defense: 3, special: null, price: 30, tier: 2, magical: false },
@@ -289,7 +310,15 @@ export const ARTIFACTS = [
     { id: 'aether_right', name: 'Aether Right', special: 'aether_regen_small', price: 45, tier: 1, magical: true },
     { id: 'aether_amulet', name: 'Aether Amulet', special: 'aether_regen_large', price: 85, tier: 3, magical: true },
     { id: 'blink_ring', name: 'Blink Ring', special: 'blink_ring', blinkRange: 4, blinkBonus: 2, price: 95, tier: 3, magical: true },
-    { id: 'counter_bracers', name: 'Counter Bracers', special: 'counter_mastery', price: 70, tier: 2, magical: true }
+    { id: 'counter_bracers', name: 'Counter Bracers', special: 'counter_mastery', price: 70, tier: 2, magical: true },
+    // Mid-tier artifacts
+    { id: 'lesser_vitality_stone', name: 'Lesser Vitality Stone', special: 'regen', regenAmount: 2, price: 50, tier: 2, magical: true },
+    { id: 'ranger_hood', name: 'Ranger Hood', special: 'ranger_defense', rangerBonus: 1, price: 25, tier: 1, magical: true },
+    { id: 'chaos_sigil', name: 'Chaos Sigil', special: 'chaos_attune', chaosAttuneMight: 1, chaosAttuneDef: 1, price: 35, tier: 1, magical: true },
+    { id: 'sentinels_crown', name: "Sentinel's Crown", special: 'wall_crown', wallCrownBonus: 2, price: 40, tier: 1, magical: true },
+    { id: 'wayfarer_boots', name: 'Wayfarer Boots', special: 'mp_bonus', mpBonus: 1, price: 30, tier: 1, magical: true },
+    { id: 'windrunner_boots', name: 'Windrunner Boots', special: 'mp_bonus', mpBonus: 3, price: 80, tier: 3, magical: true },
+    { id: 'arrow_ward', name: 'Arrow Ward', special: 'ranged_immune', price: 45, tier: 2, magical: true }
 ];
 
 // All equipment in one lookup

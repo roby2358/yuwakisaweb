@@ -65,6 +65,11 @@ export class Player {
                 def += art.chaosDefenseBonus;
             }
         }
+        if (art && art.special === 'chaos_attune') {
+            if (terrainType >= 7 && terrainType <= 16) {
+                def += art.chaosAttuneDef;
+            }
+        }
         return def;
     }
 
@@ -79,6 +84,8 @@ export class Player {
         let ae = maxAether(this.stats.warding);
         const art = this.artifact();
         if (art && art.special === 'aether_bonus') ae += art.aetherBonus;
+        const arm = this.armor();
+        if (arm && arm.special === 'armor_aether_bonus') ae += arm.aetherBonus;
         return ae;
     }
 
@@ -95,6 +102,8 @@ export class Player {
         let m = PLAYER_MP;
         const arm = this.armor();
         if (arm && arm.special === 'mp_penalty') m -= arm.mpPenalty;
+        const art = this.artifact();
+        if (art && art.special === 'mp_bonus') m += art.mpBonus;
         return Math.max(1, m);
     }
 
