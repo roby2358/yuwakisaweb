@@ -13,22 +13,10 @@ Status: ToDo
 ID: ui-j8jh
 Auto-refresh the Inventory and Skills panels whenever their underlying data changes
 ----
-Priority:   60
-Status: ToDo
-ID: combat-hfkt
-Created: 2026-03-28T23:51:40Z
-Updated: 2026-03-28T23:51:40Z
-All magical ranged weapons should have at least range 3 — Flux Bow, Spark Caster, and Rift Cannon are currently range 2
-----
 Priority:   50
 Status: ToDo
 ID: combat-8ftn
 Increase stat scaling for top-tier monsters so late-game enemies hit harder and feel more threatening
-----
-Priority:   50
-Status: ToDo
-ID: combat-yt4c
-Extend cannon firing range beyond current limits for more tactical reach
 ----
 Priority:   50
 Status: ToDo
@@ -46,6 +34,13 @@ ID: gameplay-gheu
 Created: 2026-03-29T02:33:20Z
 Updated: 2026-03-29T02:33:20Z
 Allow the main breach to spawn guardian enemies to defend itself
+----
+Priority:   60
+Status: Done
+ID: combat-hfkt
+Created: 2026-03-28T23:51:40Z
+Updated: 2026-03-29T02:39:12Z
+All magical ranged weapons should have at least range 3 — Flux Bow, Spark Caster, and Rift Cannon are currently range 2
 ----
 Priority:   60
 Status: Done
@@ -74,6 +69,13 @@ ID: combat-w3dh
 Created: 2026-03-29T02:29:29Z
 Updated: 2026-03-29T02:29:29Z
 Ranged weapons contribute only 1/4 damage (rounded up) in melee — at close range a phase rifle is just an expensive club. Full damage at range only.
+----
+Priority:   50
+Status: Done
+ID: combat-yt4c
+Created: 2026-03-29T02:39:12Z
+Updated: 2026-03-29T02:39:12Z
+Extend cannon firing range beyond current limits for more tactical reach
 ----
 Priority:    0
 Status: Done
