@@ -1,7 +1,49 @@
+Priority:   80
+Status: ToDo
+ID: gameplay-dxz3
+Created: 2026-03-29T09:19:48Z
+Updated: 2026-03-29T09:19:48Z
+Bug: no monsters spawning at ruins at all — regression from the activateRuinSpawn fix that gates state change on spawned > 0
+----
 Priority:   70
 Status: ToDo
 ID: combat-apyt
 Scale monster strength by proximity to chaos rifts — closer to a rift means tougher enemies
+----
+Priority:   70
+Status: ToDo
+ID: combat-z4se
+Created: 2026-03-29T09:04:06Z
+Updated: 2026-03-29T09:04:06Z
+Phase Wraiths can't detect the player while standing in forest hexes — gives early-game stealth option to avoid wraith swarms
+----
+Priority:   70
+Status: ToDo
+ID: ui-jwif
+Created: 2026-03-29T09:14:05Z
+Updated: 2026-03-29T09:14:05Z
+Selling a duplicate item removes both copies from inventory instead of just one — likely filtering by ID removes all matches
+----
+Priority:   70
+Status: ToDo
+ID: ui-5dgv
+Created: 2026-03-29T09:21:57Z
+Updated: 2026-03-29T09:21:57Z
+Show a message like "The ruins are quiet..." when starting turn on explored/empty ruins — currently no feedback
+----
+Priority:   70
+Status: ToDo
+ID: gameplay-5998
+Created: 2026-03-29T09:34:18Z
+Updated: 2026-03-29T09:34:18Z
+Bug: ending turn on a Wise Man's hut doesn't reset MP — player gets stuck on rough terrain with 0 MP if they end turn there
+----
+Priority:   70
+Status: ToDo
+ID: combat-jqxt
+Created: 2026-03-29T10:01:38Z
+Updated: 2026-03-29T10:01:38Z
+Bug: chaos units can't shatter distressed terrain — tryTerrainShatter only checks SHATTERED_VERSION which doesn't include distressed variants
 ----
 Priority:   50
 Status: ToDo
