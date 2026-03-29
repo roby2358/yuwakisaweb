@@ -154,7 +154,16 @@ $(document).ready(function() {
         }
 
         const generatedTokens = markov.generateTokens(outputLength, seed);
-        const generatedText = tokenizer.format(generatedTokens);
+
+        // Strip seed tokens from the first group so they aren't duplicated in output
+        if (seed && generatedTokens.length > 0) {
+            const first = generatedTokens[0];
+            // First group starts with the seed; remove those tokens (keep Start marker + tokens after seed)
+            // seed is e.g. ["<", "The", "only"], first group is ["<", "The", "only", "Self", ..., ">"]
+            generatedTokens[0] = [MarkovConstants.Start, ...first.slice(seed.length, -1), MarkovConstants.End];
+        }
+
+        const generatedText = tokenizer.format(generatedTokens).trimStart();
 
         if (existingText) {
             $('#generated-text').val(existingText + ' ' + generatedText);
