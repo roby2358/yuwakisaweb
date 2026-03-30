@@ -145,4 +145,27 @@ export class Player {
     isEngaged(enemies) {
         return enemies.some(e => hexDistance(this.q, this.r, e.q, e.r) === 1);
     }
+
+    toJSON() {
+        return {
+            q: this.q, r: this.r,
+            stats: this.stats, hp: this.hp, aether: this.aether,
+            xp: this.xp, level: this.level, gold: this.gold,
+            equipment: this.equipment,
+            learnedSkills: [...this.learnedSkills],
+            skills: this.skills, inventory: this.inventory,
+            statPoints: this.statPoints, pendingSkillChoice: this.pendingSkillChoice,
+            mp: this.mp, warpShieldTurns: this.warpShieldTurns
+        };
+    }
+
+    static fromJSON(data) {
+        const p = new Player(data.q, data.r);
+        Object.assign(p, data);
+        p.learnedSkills = new Set(data.learnedSkills);
+        p.usedSkillsThisTurn = new Set();
+        p.movedThisTurn = false;
+        p.hexesMovedThisTurn = 0;
+        return p;
+    }
 }

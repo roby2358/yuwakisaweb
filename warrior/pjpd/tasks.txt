@@ -5,31 +5,19 @@ Created: 2026-03-29T20:10:23Z
 Updated: 2026-03-29T20:10:23Z
 Save/load game state to localStorage. On launch, show an intro panel with New Game and Continue options. Continue restores the saved state.
 ----
-Priority:   80
+Priority:   85
 Status: ToDo
-ID: gameplay-dxz3
-Created: 2026-03-29T09:19:48Z
-Updated: 2026-03-29T09:19:48Z
-Bug: no monsters spawning at ruins at all — regression from the activateRuinSpawn fix that gates state change on spawned > 0
+ID: combat-jqxt
+Created: 2026-03-29T10:01:38Z
+Updated: 2026-03-29T21:48:58Z
+Bug: chaos units can't shatter distressed terrain — tryTerrainShatter only checks SHATTERED_VERSION which doesn't include distressed variants
 ----
-Priority:   70
-Status: ToDo
-ID: combat-apyt
-Scale monster strength by proximity to chaos rifts — closer to a rift means tougher enemies
-----
-Priority:   70
-Status: ToDo
-ID: combat-z4se
-Created: 2026-03-29T09:04:06Z
-Updated: 2026-03-29T09:04:06Z
-Phase Wraiths can't detect the player while standing in forest hexes — gives early-game stealth option to avoid wraith swarms
-----
-Priority:   70
+Priority:   75
 Status: ToDo
 ID: ui-jwif
 Created: 2026-03-29T09:14:05Z
-Updated: 2026-03-29T09:14:05Z
-Selling a duplicate item removes both copies from inventory instead of just one — likely filtering by ID removes all matches
+Updated: 2026-03-29T21:48:59Z
+Bug: selling a duplicate item removes both copies from inventory — filter by ID removes all matches
 ----
 Priority:   70
 Status: ToDo
@@ -38,26 +26,12 @@ Created: 2026-03-29T09:21:57Z
 Updated: 2026-03-29T09:21:57Z
 Show a message like "The ruins are quiet..." when starting turn on explored/empty ruins — currently no feedback
 ----
-Priority:   70
+Priority:   50
 Status: ToDo
 ID: gameplay-5998
 Created: 2026-03-29T09:34:18Z
-Updated: 2026-03-29T09:34:18Z
-Bug: ending turn on a Wise Man's hut doesn't reset MP — player gets stuck on rough terrain with 0 MP if they end turn there
-----
-Priority:   70
-Status: ToDo
-ID: combat-jqxt
-Created: 2026-03-29T10:01:38Z
-Updated: 2026-03-29T10:01:38Z
-Bug: chaos units can't shatter distressed terrain — tryTerrainShatter only checks SHATTERED_VERSION which doesn't include distressed variants
-----
-Priority:   60
-Status: ToDo
-ID: pop-hzrw
-Created: 2026-03-29T18:58:55Z
-Updated: 2026-03-29T18:58:55Z
-Each turn, maintain a target population of wildlife (by total strength) and crops (by count). If below target, randomly spawn one wildlife or one crop on a valid hex to keep the world feeling alive.
+Updated: 2026-03-29T21:52:52Z
+Bug: stuck on POI hex when can't afford to move. interactOrEndTurn always re-shows the POI dialog, so space/E never reaches endTurn(). Fix option: closing the dialog sets mp=0 and ends the turn (player starts next turn with full MP).
 ----
 Priority:   50
 Status: ToDo
@@ -77,6 +51,34 @@ ID: worldmap-futx
 Created: 2026-03-29T19:51:10Z
 Updated: 2026-03-29T19:51:10Z
 Add a world map view showing the full hex grid with fog of war, POI locations, and player position. Toggle via key or button.
+----
+Priority:   50
+Status: ToDo
+ID: swarm-9wej
+Created: 2026-03-29T22:42:26Z
+Updated: 2026-03-29T22:42:26Z
+Add a swarming dynamic for chaos creatures — details TBD.
+----
+Priority:   45
+Status: ToDo
+ID: combat-apyt
+Created: 2026-03-29T21:49:03Z
+Updated: 2026-03-29T21:49:03Z
+Scale monster strength by proximity to chaos rifts — closer to a rift means tougher enemies
+----
+Priority:   45
+Status: ToDo
+ID: stealth-dwyd
+Created: 2026-03-29T21:49:56Z
+Updated: 2026-03-29T21:49:56Z
+Forest hexes should reduce enemy detection range — gives early-game stealth option to avoid wraith swarms
+----
+Priority:   40
+Status: ToDo
+ID: pop-hzrw
+Created: 2026-03-29T18:58:55Z
+Updated: 2026-03-29T21:49:04Z
+Each turn, maintain a target population of wildlife (by total strength) and crops (by count). If below target, randomly spawn one wildlife or one crop on a valid hex to keep the world feeling alive.
 ----
 Priority:   40
 Status: ToDo
@@ -190,12 +192,26 @@ Created: 2026-03-29T02:39:12Z
 Updated: 2026-03-29T02:39:12Z
 Extend cannon firing range beyond current limits for more tactical reach
 ----
+Priority:   45
+Status: Done
+ID: combat-z4se
+Created: 2026-03-29T09:04:06Z
+Updated: 2026-03-29T21:49:52Z
+Forest hexes should reduce enemy detection range — gives early-game stealth option to avoid wraith swarms
+----
 Priority:   40
 Status: Done
 ID: ui-9rcz
 Created: 2026-03-29T07:44:19Z
 Updated: 2026-03-29T08:51:10Z
 Rename camp POIs to villages — update config constants, labels, icons, and all references throughout the codebase
+----
+Priority:    0
+Status: Done
+ID: gameplay-dxz3
+Created: 2026-03-29T09:19:48Z
+Updated: 2026-03-29T21:49:12Z
+Bug: no monsters spawning at ruins — FIXED by making ruin spawn ignore enemy cap
 ----
 Priority:    0
 Status: Done

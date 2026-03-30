@@ -225,6 +225,22 @@ export class EnemyManager {
         this.moveEnemyToNearest(enemy, valid, occupied);
     }
 
+    toJSON() {
+        return {
+            enemies: this.enemies,
+            creatureDefs: this.creatureDefs,
+            nextId: this.nextId
+        };
+    }
+
+    static fromJSON(data) {
+        const em = new EnemyManager();
+        em.enemies = data.enemies;
+        em.creatureDefs = data.creatureDefs;
+        em.nextId = data.nextId;
+        return em;
+    }
+
     getNextStepToward(enemy, tq, tr, occupied, world) {
         const isPassable = (q, r) => {
             if (!world.isPassable(world.getHex(q, r))) return false;

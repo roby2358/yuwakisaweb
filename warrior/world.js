@@ -241,4 +241,23 @@ export class GameWorld {
         if (havens.length === 0 || !maw) return false;
         return this.hasPath(havens[0], maw);
     }
+
+    toJSON() {
+        return {
+            hexes: [...this.hexes.entries()],
+            pois: this.pois,
+            revealed: [...this.revealed],
+            breachesClosed: this.breachesClosed
+        };
+    }
+
+    static fromJSON(data) {
+        const w = new GameWorld();
+        w.hexes = new Map(data.hexes);
+        w.pois = data.pois;
+        w.revealed = new Set(data.revealed);
+        w.visible = new Set();
+        w.breachesClosed = data.breachesClosed;
+        return w;
+    }
 }

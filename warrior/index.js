@@ -1775,12 +1775,76 @@ async function gameLoop() {
 
         if (gameOver || gameGeneration !== gen) break;
 
+        saveGame();
         changePhase('enemy');
         await runEnemyPhase();
     }
+    if (gameOver) deleteSave();
 }
 
 function animDelay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ================================================================
+// SAVE / LOAD
+// ================================================================
+
+const SAVE_KEY = 'warrior_save';
+
+function saveGame() {
+    const data = {
+        turn, enemiesDefeated,
+        player: player.toJSON(),
+        world: world.toJSON(),
+        enemies: em.toJSON()
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+}
+
+function hasSave() {
+    return localStorage.getItem(SAVE_KEY) !== null;
+}
+
+function deleteSave() {
+    localStorage.removeItem(SAVE_KEY);
+}
+
+function loadGame() {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+
+    // Stop any existing game loop
+    gameOver = true;
+    resolveEndTurn();
+
+    gameOver = false;
+    gameWon = false;
+    turn = data.turn;
+    enemiesDefeated = data.enemiesDefeated;
+    selected = false;
+    reachable = null;
+    attackable = null;
+    targeting = null;
+    threatOverlay = null;
+
+    world = GameWorld.fromJSON(data.world);
+    player = Player.fromJSON(data.player);
+    em = EnemyManager.fromJSON(data.enemies);
+
+    refreshVision();
+    closeAllPanels();
+    document.getElementById('dialog-overlay').classList.add('hidden');
+    document.getElementById('endgame-overlay').classList.add('hidden');
+    document.getElementById('intro-overlay').classList.add('hidden');
+    changePhase('player');
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    centerOn(player);
+    updateSkillBar();
+    gameLoop();
+    return true;
+}
 
 // ================================================================
 // GAME INIT
@@ -1823,6 +1887,8 @@ function initGame() {
     closeAllPanels();
     document.getElementById('dialog-overlay').classList.add('hidden');
     document.getElementById('endgame-overlay').classList.add('hidden');
+    document.getElementById('intro-overlay').classList.add('hidden');
+    deleteSave();
     changePhase('player');
 
     // Set canvas size before centering so centerOn has correct dimensions
@@ -2885,4 +2951,19 @@ function activateSkillSlot(slotIdx) {
 }
 
 // ---- Start ----
-initGame();
+function showIntro() {
+    const overlay = document.getElementById('intro-overlay');
+    const continueBtn = document.getElementById('intro-continue');
+    continueBtn.disabled = !hasSave();
+    overlay.classList.remove('hidden');
+}
+
+document.getElementById('intro-new').addEventListener('click', () => {
+    document.getElementById('intro-overlay').classList.add('hidden');
+    initGame();
+});
+document.getElementById('intro-continue').addEventListener('click', () => {
+    if (hasSave()) loadGame();
+});
+
+showIntro();
