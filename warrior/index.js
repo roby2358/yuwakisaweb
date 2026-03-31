@@ -2484,7 +2484,7 @@ function itemStatLine(item) {
             disengage: 'No engagement MP penalty',
             momentum_defense: '+1 def per hex moved',
             threat_shroud: '-2 enemy detect range',
-            ranger_defense: `+${item.rangerBonus} def on forest/mountain`,
+            ranger_defense: `+${item.rangerBonus} def on forest/hills`,
             chaos_defense: `+${item.chaosDefenseBonus} def on shattered/distressed`,
             wall_crown: `+${item.wallCrownBonus} melee if stationary`,
             breach_jewel: `+${item.breachBonus} might near breach`,

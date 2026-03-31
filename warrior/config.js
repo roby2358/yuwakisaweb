@@ -160,7 +160,7 @@ export const POI_COLORS = {
     [POI.RUIN]: '#b0bec5',
     [POI.BREACH]: '#e040fb',
     [POI.MAW]: '#ff1744',
-    [POI.HUT]: '#d4a574'
+    [POI.HUT]: '#b0bec5'
 };
 
 // ---- Enemy types ----

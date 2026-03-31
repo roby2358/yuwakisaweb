@@ -5,13 +5,6 @@ Created: 2026-03-29T09:21:57Z
 Updated: 2026-03-29T09:21:57Z
 Show a message like "The ruins are quiet..." when starting turn on explored/empty ruins — currently no feedback
 ----
-Priority:   70
-Status: ToDo
-ID: equip-fix-gcn6
-Created: 2026-03-31T05:42:34Z
-Updated: 2026-03-31T05:46:51Z
-Ranger Cloak and Ranger Hood terrain bonus should apply on forest/hill hexes, not forest/mountain. Mountains are impassable so the mountain bonus is useless.
-----
 Priority:   50
 Status: ToDo
 ID: gameplay-5998
@@ -128,6 +121,13 @@ ID: ui-jwif
 Created: 2026-03-29T09:14:05Z
 Updated: 2026-03-31T05:27:49Z
 Bug: selling a duplicate item removes both copies from inventory — filter by ID removes all matches
+----
+Priority:   70
+Status: Done
+ID: equip-fix-gcn6
+Created: 2026-03-31T05:42:34Z
+Updated: 2026-03-31T06:07:43Z
+Ranger Cloak and Ranger Hood terrain bonus should apply on forest/hill hexes, not forest/mountain. Mountains are impassable so the mountain bonus is useless.
 ----
 Priority:   70
 Status: Done
