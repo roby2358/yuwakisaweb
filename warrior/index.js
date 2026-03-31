@@ -2328,7 +2328,8 @@ function updateInvPanel() {
                 const current = player.equipment[slot];
                 if (current) player.inventory.unshift(current);
                 player.equipment[slot] = id;
-                player.inventory = player.inventory.filter(i => i !== id);
+                const rmIdx = player.inventory.indexOf(id);
+            if (rmIdx !== -1) player.inventory.splice(rmIdx, 1);
             } else if (action === 'unequip') {
                 // Can't unequip weapon to nothing
                 player.equipment[slot] = null;
@@ -2568,7 +2569,8 @@ function showShopDialog(poi) {
         btn.addEventListener('click', () => {
             const id = btn.dataset.sell;
             const price = parseInt(btn.dataset.price);
-            player.inventory = player.inventory.filter(i => i !== id);
+            const rmIdx = player.inventory.indexOf(id);
+            if (rmIdx !== -1) player.inventory.splice(rmIdx, 1);
             player.gold += price;
             logCombat(`Sold ${ALL_EQUIPMENT[id].name} for ${price}g`, 'log-gold');
             showShopDialog(poi);
