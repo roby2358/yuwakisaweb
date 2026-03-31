@@ -2722,12 +2722,29 @@ function tryRuinInteraction(poi) {
         logCombat('Clear the area before exploring the ruins.', 'log-info');
         return;
     }
+
+    const ruinTitle = POI_SYMBOLS[POI.RUIN] + ' Ruins';
+
     if (poi.ruinState === 'new') {
-        activateRuinSpawn(poi, 'Something stirs in the ruins...');
+        showDialog(ruinTitle, '<p>Ancient ruins loom before you.</p>', [
+            { label: 'Search', cls: 'primary', action: () => {
+                activateRuinSpawn(poi, 'Something stirs in the ruins...');
+            }},
+            { label: 'Leave', action: () => {} }
+        ]);
     } else if (poi.ruinState === 'spawned') {
         showRuinLootDialog(poi);
-    } else if (poi.ruinState === 'explored' && Rando.bool(0.05)) {
-        activateRuinSpawn(poi, 'New creatures have moved into the ruins!');
+    } else {
+        showDialog(ruinTitle, '<p>The ruins are quiet\u2026</p>', [
+            { label: 'Search', cls: 'primary', action: () => {
+                if (Rando.bool(0.05)) {
+                    activateRuinSpawn(poi, 'New creatures have moved into the ruins!');
+                } else {
+                    logCombat('Nothing of interest here.', 'log-info');
+                }
+            }},
+            { label: 'Leave', action: () => {} }
+        ]);
     }
 }
 
