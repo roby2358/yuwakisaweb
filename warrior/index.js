@@ -59,6 +59,7 @@ let hoveredHex = null;
 let threatOverlay = null;   // Map<string, number> or null — threat heatmap for Ground Weeps
 let showingWorldMap = false;
 let combatAlerted = false;  // set when player attacks; nearby enemies ignore forest stealth
+let poiInteracted = false;  // set after POI dialog shown; prevents re-show until next turn
 
 // ---- View state ----
 let panX = 0, panY = 0;
@@ -1440,25 +1441,7 @@ function checkHexEntry() {
         hex.crop = false;
     }
 
-    // POI interaction
-    const poi = world.poiAt(player.q, player.r);
-    if (!poi) return;
-
-    if (poi.type === POI.HAVEN) {
-        showHavenDialog(poi);
-    } else if (poi.type === POI.VILLAGE) {
-        showVillageDialog(poi);
-    } else if (poi.type === POI.RUIN) {
-        tryRuinInteraction(poi);
-    } else if (poi.type === POI.BREACH && !poi.closed) {
-        logCombat('Use Restore to close the breach.', 'log-info');
-    } else if (poi.type === POI.MAW) {
-        if (world.breachesClosed < 2) logCombat('The Maw resists you. Seal at least 2 breaches first.', 'log-info');
-        else if (poi.guardianDefeated && !poi.closed) logCombat('Use Restore to close the breach.', 'log-info');
-        else if (poi.closed) endGame(true);
-    } else if (poi.type === POI.HUT) {
-        showHutDialog(poi);
-    }
+    tryPoiInteract();
 }
 
 function closeBreach(poi) {
@@ -1467,15 +1450,21 @@ function closeBreach(poi) {
     render();
 }
 
+function tryPoiInteract() {
+    if (poiInteracted) return false;
+    const poi = world.poiAt(player.q, player.r);
+    if (!poi) return false;
+    poiInteracted = true;
+    if (poi.type === POI.HAVEN) { showHavenDialog(poi); return true; }
+    if (poi.type === POI.VILLAGE) { showVillageDialog(poi); return true; }
+    if (poi.type === POI.HUT) { showHutDialog(poi); return true; }
+    if (poi.type === POI.RUIN) { tryRuinInteraction(poi); return true; }
+    return false;
+}
+
 function interactOrEndTurn() {
     if (gameOver || phase !== 'player') return;
-    const poi = world.poiAt(player.q, player.r);
-    if (poi) {
-        if (poi.type === POI.HAVEN) { showHavenDialog(poi); return; }
-        if (poi.type === POI.VILLAGE) { showVillageDialog(poi); return; }
-        if (poi.type === POI.HUT) { showHutDialog(poi); return; }
-        if (poi.type === POI.RUIN) { tryRuinInteraction(poi); return; }
-    }
+    if (tryPoiInteract()) return;
     endTurn();
 }
 
@@ -1854,6 +1843,7 @@ async function runEnemyPhase() {
 
 function startPlayerTurn() {
     combatAlerted = false;
+    poiInteracted = false;
     render();
 }
 
