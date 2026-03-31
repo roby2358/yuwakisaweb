@@ -19,13 +19,6 @@ Crops occasionally spawn on hexes near villages and havens. Walking over one har
 ----
 Priority:   50
 Status: ToDo
-ID: village-evt-3n7k
-Created: 2026-03-31T01:31:15Z
-Updated: 2026-03-31T01:31:15Z
-Village interaction event: when player lands on a village hex, chance to spawn a veggie crop (gold deposit with vegetable icon) on a nearby hex, representing the village sharing its harvest with the player.
-----
-Priority:   50
-Status: ToDo
 ID: gold-sink-e4ya
 Created: 2026-03-31T01:38:16Z
 Updated: 2026-03-31T01:38:16Z
@@ -170,6 +163,13 @@ ID: combat-w3dh
 Created: 2026-03-29T02:29:29Z
 Updated: 2026-03-29T02:29:29Z
 Ranged weapons contribute only 1/4 damage (rounded up) in melee — at close range a phase rifle is just an expensive club. Full damage at range only.
+----
+Priority:   50
+Status: Done
+ID: village-evt-3n7k
+Created: 2026-03-31T01:31:15Z
+Updated: 2026-03-31T06:56:56Z
+Village interaction event: when player lands on a village hex, chance to spawn a veggie crop (gold deposit with vegetable icon) on a nearby hex, representing the village sharing its harvest with the player.
 ----
 Priority:   50
 Status: Done

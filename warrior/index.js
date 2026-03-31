@@ -1107,7 +1107,7 @@ function executeSkill(skillId, targetQ, targetR) {
                 if (UNSHATTERED_VERSION[hex.terrain] !== undefined) continue;
                 if (UNDISTRESSED_VERSION[hex.terrain] !== undefined) continue;
                 hex.goldDeposit = Rando.int(1, 3);
-                hex.crop = Rando.choice(['\u{1F33D}', '\u{1F345}', '\u{1F346}', '\u{1F955}', '\u{1F952}', '\u{1F33F}', '\u{1FAD1}', '\u{1F33E}']);
+                hex.crop = Rando.choice(CROP_ICONS);
                 crops++;
             }
             if (crops > 0) logCombat(`Bountiful Harvest: ${crops} crop${crops > 1 ? 's' : ''} sprouted!`, 'log-gold');
@@ -2651,7 +2651,23 @@ function showHavenDialog(poi) {
     ]);
 }
 
+const CROP_ICONS = ['\u{1F33D}', '\u{1F345}', '\u{1F346}', '\u{1F955}', '\u{1F952}', '\u{1F33F}', '\u{1FAD1}', '\u{1F33E}'];
+
+function trySpawnVillageCrop(poi) {
+    if (!Rando.bool(0.25)) return;
+    const candidates = hexNeighbors(poi.q, poi.r).filter(n => {
+        const h = world.getHex(n.q, n.r);
+        return h && world.isPassable(h) && h.goldDeposit <= 0;
+    });
+    if (candidates.length === 0) return;
+    const spot = Rando.choice(candidates);
+    const hex = world.getHex(spot.q, spot.r);
+    hex.goldDeposit = Rando.int(1, 3);
+    hex.crop = Rando.choice(CROP_ICONS);
+}
+
 function showVillageDialog(poi) {
+    trySpawnVillageCrop(poi);
     const isTemp = poi.temporary;
     showDialog(POI_SYMBOLS[POI.VILLAGE] + (isTemp ? ' Sanctuary' : ' Village'), '<p>A brief respite from the wilds.</p>', [
         {
