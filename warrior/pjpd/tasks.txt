@@ -19,13 +19,6 @@ Crops occasionally spawn on hexes near villages and havens. Walking over one har
 ----
 Priority:   50
 Status: ToDo
-ID: poi-reward-5dat
-Created: 2026-03-31T01:30:05Z
-Updated: 2026-03-31T01:30:05Z
-Reward player when a village or haven hex is cleared of distressed terrain. When the player restores distressed hexes around a POI (village/haven), grant a gold or XP bonus as a thank-you from the settlement.
-----
-Priority:   50
-Status: ToDo
 ID: village-evt-3n7k
 Created: 2026-03-31T01:31:15Z
 Updated: 2026-03-31T01:31:15Z
@@ -184,6 +177,13 @@ ID: combat-w3dh
 Created: 2026-03-29T02:29:29Z
 Updated: 2026-03-29T02:29:29Z
 Ranged weapons contribute only 1/4 damage (rounded up) in melee — at close range a phase rifle is just an expensive club. Full damage at range only.
+----
+Priority:   50
+Status: Done
+ID: poi-reward-5dat
+Created: 2026-03-31T01:30:05Z
+Updated: 2026-03-31T06:33:43Z
+Reward player when a village or haven hex is cleared of distressed terrain. When the player restores distressed hexes around a POI (village/haven), grant a gold or XP bonus as a thank-you from the settlement.
 ----
 Priority:   50
 Status: Done
