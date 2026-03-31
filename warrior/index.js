@@ -58,6 +58,7 @@ let targeting = null;       // { skill, validHexes: Set } or null
 let hoveredHex = null;
 let threatOverlay = null;   // Map<string, number> or null — threat heatmap for Ground Weeps
 let showingWorldMap = false;
+let combatAlerted = false;  // set when player attacks; nearby enemies ignore forest stealth
 
 // ---- View state ----
 let panX = 0, panY = 0;
@@ -74,6 +75,7 @@ function hexToScreen(q, r) { const p = hexToPixel(q, r); return { x: p.x + panX,
 function screenToHex(sx, sy) { return pixelToHex(sx - panX, sy - panY); }
 
 function playerTerrain() { return world.getHex(player.q, player.r)?.terrain; }
+function playerInForest() { const t = playerTerrain(); return t === TERRAIN.FOREST || t === TERRAIN.DISTRESSED_FOREST; }
 function playerPoiDefense() { const poi = world.poiAt(player.q, player.r); return poi ? (POI_DEFENSE_BONUS[poi.type] || 0) : 0; }
 function playerDefense() { return player.defense(playerTerrain()) + playerPoiDefense(); }
 
@@ -338,6 +340,7 @@ function rollNonMagicalDrops(min, max) {
 }
 
 function meleeAttack(enemy) {
+    combatAlerted = true;
     let dmg = player.meleeDamage(em.getDef(enemy.type));
     // Breach Jewel: bonus damage near breaches
     const artForBreach = player.artifact();
@@ -436,6 +439,7 @@ function knockbackHex(fromQ, fromR, targetQ, targetR) {
 }
 
 function rangedAttack(targetQ, targetR) {
+    combatAlerted = true;
     const enemy = em.enemies.find(e => e.q === targetQ && e.r === targetR);
     if (!enemy) return;
     const wep = player.weapon();
@@ -641,6 +645,7 @@ function executeSkill(skillId, targetQ, targetR) {
 
     player.aether -= skill.cost;
     player.usedSkillsThisTurn.add(skillId);
+    combatAlerted = true;
 
     let usedMP = true; // most skills consume MP; free actions set this false
 
@@ -1617,6 +1622,7 @@ function tryTerrainShatter(enemy, def) {
 
 async function runWildlifeTurn(enemy, def, aggro, occupied) {
     const dist = hexDistance(enemy.q, enemy.r, player.q, player.r);
+    if (playerInForest() && !(combatAlerted && dist <= 5)) aggro = Math.max(1, aggro - 2);
     const prevKey = hexKey(enemy.q, enemy.r);
     if (dist <= aggro) {
         em.moveWildlifeToward(enemy, player.q, player.r, occupied, player.q, player.r, world);
@@ -1665,10 +1671,16 @@ async function runChaosTurn(enemy, def, occupied) {
     const art = player.artifact();
     const arm = player.armor();
     if (art && art.special === 'threat_shroud') aggro = Math.max(1, aggro - 2);
+    // Forest stealth: reduce detection, wraiths lose track entirely
+    const inForest = playerInForest();
+    if (inForest && !(combatAlerted && dist <= 5)) {
+        if (def.behavior === 'teleport') aggro = 0;
+        else aggro = Math.max(1, aggro - 2);
+    }
     const prevKey = hexKey(enemy.q, enemy.r);
 
     // Phase Wraith teleport (blocked by wraith_immune armor)
-    if (def.behavior === 'teleport' && !(arm && arm.special === 'wraith_immune') && Math.random() < (def.teleportChance || 0.3)) {
+    if (def.behavior === 'teleport' && aggro > 0 && !(arm && arm.special === 'wraith_immune') && Math.random() < (def.teleportChance || 0.3)) {
         const valid = hexesInRange(player.q, player.r, def.teleportRange).filter(t => {
             const k = hexKey(t.q, t.r);
             const h = world.getHex(t.q, t.r);
@@ -1841,6 +1853,7 @@ async function runEnemyPhase() {
 }
 
 function startPlayerTurn() {
+    combatAlerted = false;
     render();
 }
 
