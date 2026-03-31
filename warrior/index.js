@@ -60,6 +60,8 @@ let threatOverlay = null;   // Map<string, number> or null — threat heatmap fo
 let showingWorldMap = false;
 let combatAlerted = false;  // set when player attacks; nearby enemies ignore forest stealth
 let poiInteracted = false;  // set after POI dialog shown; prevents re-show until next turn
+let mawDistances = null;    // Map<hexKey, cost> — BFS distances from the Maw
+let mawMaxDist = 1;         // max BFS distance to Maw (for scaling)
 
 // ---- View state ----
 let panX = 0, panY = 0;
@@ -170,21 +172,54 @@ function enemyOnCorruptedTerrain(enemy, def) {
     return hex && (UNSHATTERED_VERSION[hex.terrain] !== undefined || UNDISTRESSED_VERSION[hex.terrain] !== undefined);
 }
 
+function computeMawDistances() {
+    const maw = world.pois.find(p => p.type === POI.MAW);
+    if (!maw) { mawDistances = new Map(); mawMaxDist = 1; return; }
+    const mawHex = world.getHex(maw.q, maw.r);
+    mawDistances = bfsHexes(mawHex, world.hexes, hex => {
+        const c = MOVEMENT_COST[hex.terrain];
+        return c === undefined ? Infinity : c;
+    }, Infinity);
+    mawMaxDist = 1;
+    for (const cost of mawDistances.values()) {
+        if (cost > mawMaxDist) mawMaxDist = cost;
+    }
+}
+
+function mawProximityBonus(q, r) {
+    if (!mawDistances) return { attack: 0, defense: 0, hp: 0 };
+    const dist = mawDistances.get(hexKey(q, r));
+    if (dist === undefined) return { attack: 0, defense: 0, hp: 0 };
+    const threshold = mawMaxDist * 0.5;
+    if (dist > threshold) return { attack: 0, defense: 0, hp: 0 };
+    const t = 1 - dist / threshold; // 1 at Maw, 0 at threshold
+    return {
+        attack: Math.round(10 * t),
+        defense: Math.round(5 * t),
+        hp: Math.round(10 * t)
+    };
+}
+
+function enemyEffectiveMaxHp(enemy) {
+    const bonus = mawProximityBonus(enemy.q, enemy.r);
+    return enemy.maxHp + bonus.hp;
+}
+
 function enemyDefense(enemy, def) {
-    let d = def.defense;
+    let d = def.defense + mawProximityBonus(enemy.q, enemy.r).defense;
     if (enemy.defReduction) d = Math.max(0, d - enemy.defReduction);
     if (enemyOnCorruptedTerrain(enemy, def)) d += 2;
     return d;
 }
 
 function enemyMeleeAttack(enemy, def) {
-    let atk = def.attack;
+    let atk = def.attack + mawProximityBonus(enemy.q, enemy.r).attack;
     if (enemyOnCorruptedTerrain(enemy, def)) atk += 3;
     return atk;
 }
 
 function enemyRangedAttack(enemy, def) {
-    let atk = def.rangedAttack || def.attack;
+    let atk = (def.rangedAttack || def.attack) + mawProximityBonus(enemy.q, enemy.r).attack;
     if (enemyOnCorruptedTerrain(enemy, def)) atk += 3;
     return atk;
 }
@@ -1072,7 +1107,7 @@ function executeSkill(skillId, targetQ, targetR) {
                     const d = hexDistance(hex.q, hex.r, enemy.q, enemy.r);
                     if (d <= 3) {
                         const def = em.getDef(enemy.type);
-                        threat += def.attack * (4 - d) / 3; // closer = more weight
+                        threat += enemyMeleeAttack(enemy, def) * (4 - d) / 3;
                     }
                 }
                 if (threat > 0) threatOverlay.set(key, threat);
@@ -1196,7 +1231,7 @@ function getSkillTargets(skillId) {
             const adj = hexNeighbors(player.q, player.r);
             for (const n of adj) {
                 const enemy = em.enemies.find(e => e.q === n.q && e.r === n.r);
-                if (enemy && enemy.hp <= enemy.maxHp / 2) targets.add(hexKey(n.q, n.r));
+                if (enemy && enemy.hp <= enemyEffectiveMaxHp(enemy) / 2) targets.add(hexKey(n.q, n.r));
             }
             break;
         }
@@ -1533,7 +1568,7 @@ function doEnemyMelee(enemy, def) {
         const pWep = player.weapon();
         const counterDmg = (pWep ? pWep.damage : 1) + player.stats.might;
         const rolled = Rando.bellCurve(counterDmg);
-        const eDef = def.defense || 0;
+        const eDef = enemyDefense(enemy, def);
         const actualDmg = Math.max(1, rolled - eDef);
         enemy.hp -= actualDmg;
         logCombat(`Counter Mastery: ${actualDmg} dmg!`, 'log-dmg');
@@ -1617,7 +1652,7 @@ async function runWildlifeTurn(enemy, def, aggro, occupied) {
         em.moveWildlifeToward(enemy, player.q, player.r, occupied, player.q, player.r, world);
         if (enemyIsVisible(enemy, prevKey)) { await animDelay(80); render(); }
         if (hexDistance(enemy.q, enemy.r, player.q, player.r) === 1) {
-            dealDamageToPlayer(def.attack, def.name, false, { attacker: enemy });
+            dealDamageToPlayer(enemyMeleeAttack(enemy, def), def.name, false, { attacker: enemy });
             await animDelay(150); render();
         }
     } else if (Rando.bool(0.3)) {
@@ -1651,8 +1686,9 @@ function trySwarmMarch(enemy, def, occupied) {
 
 async function runChaosTurn(enemy, def, occupied) {
     // Chaos monsters heal on corrupted terrain
-    if (enemyOnCorruptedTerrain(enemy, def) && enemy.hp < enemy.maxHp) {
-        enemy.hp = Math.min(enemy.maxHp, enemy.hp + 1);
+    const effMax = enemyEffectiveMaxHp(enemy);
+    if (enemyOnCorruptedTerrain(enemy, def) && enemy.hp < effMax) {
+        enemy.hp = Math.min(effMax, enemy.hp + 1);
     }
 
     const dist = hexDistance(enemy.q, enemy.r, player.q, player.r);
@@ -1913,6 +1949,7 @@ function loadGame() {
     player = Player.fromJSON(data.player);
     em = EnemyManager.fromJSON(data.enemies);
 
+    computeMawDistances();
     refreshVision();
     closeAllPanels();
     document.getElementById('dialog-overlay').classList.add('hidden');
@@ -1961,6 +1998,7 @@ function initGame() {
 
     player = new Player(startHaven.q, startHaven.r);
     refreshVision();
+    computeMawDistances();
     em = new EnemyManager();
     em.generateCreatureTypes();
     em.spawnInitial(world, player.q, player.r);
@@ -2127,8 +2165,8 @@ function render() {
         if (!def) { console.warn('Missing def for enemy type:', enemy.type); continue; }
         const { x, y } = hexToScreen(enemy.q, enemy.r);
         const color = enemyColor(enemy.type);
-        const corrupted = enemyOnCorruptedTerrain(enemy, def);
-        drawCounter(x, y, color, def.label, enemy.hp / enemy.maxHp, null, { atk: corrupted ? def.attack + 3 : def.attack, def: corrupted ? def.defense + 2 : def.defense, mov: def.speed || 1 });
+        const effMaxHp = enemyEffectiveMaxHp(enemy);
+        drawCounter(x, y, color, def.label, enemy.hp / effMaxHp, null, { atk: enemyMeleeAttack(enemy, def), def: enemyDefense(enemy, def), mov: def.speed || 1 });
     }
 
     // Player
@@ -2312,7 +2350,7 @@ function updateHUD() {
             const enemy = em.enemies.find(e => e.q === hoveredHex.q && e.r === hoveredHex.r && world.visible.has(hexKey(e.q, e.r)));
             if (enemy) {
                 const def = em.getDef(enemy.type);
-                document.getElementById('ctx-entity').textContent = `${def.name} (HP ${enemy.hp}/${enemy.maxHp})`;
+                document.getElementById('ctx-entity').textContent = `${def.name} (HP ${enemy.hp}/${enemyEffectiveMaxHp(enemy)})`;
             } else {
                 document.getElementById('ctx-entity').textContent = '';
             }
