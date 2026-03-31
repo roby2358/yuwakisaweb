@@ -26,14 +26,14 @@ const TERRAIN_COLORS = {
     [TERRAIN.FOREST]: '#2d6e2d',
     [TERRAIN.GOLD]: '#d4a017',
     [TERRAIN.QUARRY]: '#9e8c6c',
-    [TERRAIN.SHATTERED_PLAINS]: '#6b2222',
-    [TERRAIN.SHATTERED_HILLS]: '#7a2828',
-    [TERRAIN.SHATTERED_FOREST]: '#3a1212',
-    [TERRAIN.SHATTERED_GOLD]: '#8b2222',
-    [TERRAIN.SHATTERED_QUARRY]: '#5a2525',
+    [TERRAIN.SHATTERED_PLAINS]: '#5a3020',
+    [TERRAIN.SHATTERED_HILLS]: '#6e3e1e',
+    [TERRAIN.SHATTERED_FOREST]: '#321a12',
+    [TERRAIN.SHATTERED_GOLD]: '#7a4018',
+    [TERRAIN.SHATTERED_QUARRY]: '#4e2c24',
     [TERRAIN.DISTRESSED_PLAINS]: '#8a9a6a',
     [TERRAIN.DISTRESSED_HILLS]: '#9a8a5a',
-    [TERRAIN.DISTRESSED_FOREST]: '#4a5a3a',
+    [TERRAIN.DISTRESSED_FOREST]: '#5a7a3a',
     [TERRAIN.DISTRESSED_GOLD]: '#a89a5a',
     [TERRAIN.DISTRESSED_QUARRY]: '#7a7a6a',
 };
@@ -1545,13 +1545,19 @@ function tryBossSpawn(enemy, def, occupied) {
 function tryTerrainShatter(enemy, def) {
     if (!def.chaosSpawned || !Rando.bool(0.02)) return;
     const eHex = world.getHex(enemy.q, enemy.r);
+    let baseTerrain = eHex ? UNDISTRESSED_VERSION[eHex.terrain] : undefined;
+    if (baseTerrain !== undefined) eHex.terrain = baseTerrain;
     if (!eHex || SHATTERED_VERSION[eHex.terrain] === undefined) return;
+    const poi = world.poiAt(enemy.q, enemy.r);
+    if (poi && (poi.type === POI.HAVEN || poi.type === POI.VILLAGE)) return;
     // Shatter the hex
     eHex.terrain = SHATTERED_VERSION[eHex.terrain];
     // Spread distress within radius 3
     for (const coord of hexesInRange(eHex.q, eHex.r, 3)) {
         const h = world.getHex(coord.q, coord.r);
         if (!h) continue;
+        const hPoi = world.poiAt(coord.q, coord.r);
+        if (hPoi && (hPoi.type === POI.HAVEN || hPoi.type === POI.VILLAGE)) continue;
         h.shatteredCount++;
         if (DISTRESSED_VERSION[h.terrain] !== undefined) {
             h.terrain = DISTRESSED_VERSION[h.terrain];

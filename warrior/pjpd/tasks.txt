@@ -1,16 +1,16 @@
-Priority:   85
-Status: ToDo
-ID: combat-jqxt
-Created: 2026-03-29T10:01:38Z
-Updated: 2026-03-29T21:48:58Z
-Bug: chaos units can't shatter distressed terrain — tryTerrainShatter only checks SHATTERED_VERSION which doesn't include distressed variants
-----
 Priority:   70
 Status: ToDo
 ID: ui-5dgv
 Created: 2026-03-29T09:21:57Z
 Updated: 2026-03-29T09:21:57Z
 Show a message like "The ruins are quiet..." when starting turn on explored/empty ruins — currently no feedback
+----
+Priority:   70
+Status: ToDo
+ID: equip-fix-gcn6
+Created: 2026-03-31T05:42:34Z
+Updated: 2026-03-31T05:46:51Z
+Ranger Cloak and Ranger Hood terrain bonus should apply on forest/hill hexes, not forest/mountain. Mountains are impassable so the mountain bonus is useless.
 ----
 Priority:   50
 Status: ToDo
@@ -100,6 +100,13 @@ ID: savegame-qv59
 Created: 2026-03-29T20:10:23Z
 Updated: 2026-03-31T05:26:37Z
 Save/load game state to localStorage. On launch, show an intro panel with New Game and Continue options. Continue restores the saved state.
+----
+Priority:   85
+Status: Done
+ID: combat-jqxt
+Created: 2026-03-29T10:01:38Z
+Updated: 2026-03-31T05:29:56Z
+Bug: chaos units can't shatter distressed terrain — tryTerrainShatter only checks SHATTERED_VERSION which doesn't include distressed variants
 ----
 Priority:   80
 Status: Done
