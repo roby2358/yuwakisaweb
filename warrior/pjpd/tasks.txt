@@ -33,13 +33,6 @@ Crops occasionally spawn on hexes near villages and havens. Walking over one har
 ----
 Priority:   50
 Status: ToDo
-ID: worldmap-futx
-Created: 2026-03-29T19:51:10Z
-Updated: 2026-03-29T19:51:10Z
-Add a world map view showing the full hex grid with fog of war, POI locations, and player position. Toggle via key or button.
-----
-Priority:   50
-Status: ToDo
 ID: swarm-9wej
 Created: 2026-03-29T22:42:26Z
 Updated: 2026-03-31T01:36:15Z
@@ -198,6 +191,13 @@ ID: combat-w3dh
 Created: 2026-03-29T02:29:29Z
 Updated: 2026-03-29T02:29:29Z
 Ranged weapons contribute only 1/4 damage (rounded up) in melee — at close range a phase rifle is just an expensive club. Full damage at range only.
+----
+Priority:   50
+Status: Done
+ID: worldmap-futx
+Created: 2026-03-29T19:51:10Z
+Updated: 2026-03-31T05:54:29Z
+Add a world map view showing the full hex grid with fog of war, POI locations, and player position. Toggle via key or button.
 ----
 Priority:   50
 Status: Done

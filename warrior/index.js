@@ -1,7 +1,7 @@
 // index.js — Warrior: Tactical Hex RPG
 
 import {
-    HEX_SIZE, TERRAIN, TERRAIN_NAMES, MOVEMENT_COST,
+    HEX_SIZE, MAP_COLS, MAP_ROWS, TERRAIN, TERRAIN_NAMES, MOVEMENT_COST,
     MAX_ENEMIES, STAT_POINTS_PER_LEVEL,
     xpForLevel,
     POI, POI_SYMBOLS, POI_COLORS, POI_DEFENSE_BONUS,
@@ -57,6 +57,7 @@ let gameGeneration = 0;     // incremented on new game to stop old loops
 let targeting = null;       // { skill, validHexes: Set } or null
 let hoveredHex = null;
 let threatOverlay = null;   // Map<string, number> or null — threat heatmap for Ground Weeps
+let showingWorldMap = false;
 
 // ---- View state ----
 let panX = 0, panY = 0;
@@ -2085,6 +2086,107 @@ function render() {
     refreshOpenPanels();
 }
 
+function renderWorldMap() {
+    const pad = 40;
+    const padBottom = 80;
+    const cw = canvas.width, ch = canvas.height;
+    // Compute hex size to fit the full map on screen
+    // hexToPixel: x = size * (sqrt3 * q + sqrt3/2 * r), y = size * (3/2 * r)
+    // For a rect grid: col 0..MAP_COLS-1, row 0..MAP_ROWS-1
+    // Max pixel extent at size=1: x ~ sqrt3 * MAP_COLS, y ~ 1.5 * MAP_ROWS
+    const mapPixelW = Math.sqrt(3) * MAP_COLS;
+    const mapPixelH = 1.5 * MAP_ROWS;
+    const scale = Math.min((cw - pad * 2) / mapPixelW, (ch - pad - padBottom) / mapPixelH);
+    const miniSize = scale; // hex size in minimap pixels
+    const sqrt3 = Math.sqrt(3);
+
+    // Find pixel bounds to center
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const [, hex] of world.hexes) {
+        const mx = miniSize * (sqrt3 * hex.q + sqrt3 / 2 * hex.r);
+        const my = miniSize * (1.5 * hex.r);
+        minX = Math.min(minX, mx); maxX = Math.max(maxX, mx);
+        minY = Math.min(minY, my); maxY = Math.max(maxY, my);
+    }
+    const offX = (cw - (maxX - minX)) / 2 - minX;
+    const offY = (ch - padBottom + pad - (maxY - minY)) / 2 - minY;
+
+    // Background
+    ctx.fillStyle = 'rgba(0,0,0,0.92)';
+    ctx.fillRect(0, 0, cw, ch);
+
+    // Draw hexes
+    for (const [key, hex] of world.hexes) {
+        const mx = miniSize * (sqrt3 * hex.q + sqrt3 / 2 * hex.r) + offX;
+        const my = miniSize * (1.5 * hex.r) + offY;
+
+        const isRevealed = world.revealed.has(key);
+        if (!isRevealed) {
+            drawHexPath(ctx, mx, my, miniSize);
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fill();
+            continue;
+        }
+
+        drawHexPath(ctx, mx, my, miniSize);
+        ctx.fillStyle = TERRAIN_COLORS[hex.terrain] || '#555';
+        ctx.fill();
+
+        if (!world.visible.has(key)) {
+            drawHexPath(ctx, mx, my, miniSize);
+            ctx.fillStyle = 'rgba(0,0,0,0.35)';
+            ctx.fill();
+        }
+    }
+
+    // Draw POIs on revealed hexes
+    const poiFontSize = Math.max(6, Math.floor(miniSize * 1.4));
+    ctx.font = 'bold ' + poiFontSize + 'px monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (const poi of world.pois) {
+        const key = hexKey(poi.q, poi.r);
+        if (!world.revealed.has(key)) continue;
+        const mx = miniSize * (sqrt3 * poi.q + sqrt3 / 2 * poi.r) + offX;
+        const my = miniSize * (1.5 * poi.r) + offY;
+        const symbol = POI_SYMBOLS[poi.type] || '?';
+        let color = POI_COLORS[poi.type] || '#fff';
+        if (poi.type === POI.BREACH && poi.closed) color = '#555';
+        if (poi.type === POI.RUIN && poi.ruinState === 'explored') color = '#555';
+        ctx.fillStyle = color;
+        ctx.fillText(symbol, mx, my);
+    }
+
+    // Draw player
+    const px = miniSize * (sqrt3 * player.q + sqrt3 / 2 * player.r) + offX;
+    const py = miniSize * (1.5 * player.r) + offY;
+    const pr = Math.max(3, miniSize * 0.8);
+    ctx.fillStyle = PLAYER_COLOR;
+    ctx.beginPath();
+    ctx.arc(px, py, pr, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Label
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(cw / 2 - 100, ch - 36, 200, 28);
+    ctx.fillStyle = '#aaa';
+    ctx.font = '13px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('World Map — M/Esc to close', cw / 2, ch - 18);
+    ctx.textAlign = 'left';
+}
+
+function toggleWorldMap() {
+    showingWorldMap = !showingWorldMap;
+    if (showingWorldMap) {
+        renderWorldMap();
+    } else {
+        render();
+    }
+}
+
 function enemyColor(type) {
     const def = em.getDef(type);
     if (def && def.color) return def.color;
@@ -2783,6 +2885,12 @@ canvas.addEventListener('mousedown', e => {
         return;
     }
 
+    if (e.button === 0 && showingWorldMap) {
+        showingWorldMap = false;
+        render();
+        return;
+    }
+
     if (e.button === 0 && !gameOver && phase === 'player') {
         // Dismiss threat overlay on click
         if (threatOverlay) {
@@ -2862,6 +2970,7 @@ document.getElementById('endgame-newgame').addEventListener('click', initGame);
 document.getElementById('btn-char').addEventListener('click', () => togglePanel('char-panel'));
 document.getElementById('btn-skills').addEventListener('click', () => togglePanel('skills-panel'));
 document.getElementById('btn-inv').addEventListener('click', () => togglePanel('inv-panel'));
+document.getElementById('btn-map').addEventListener('click', toggleWorldMap);
 
 // Close buttons on panels
 document.querySelectorAll('.panel-close').forEach(btn => {
@@ -2882,11 +2991,25 @@ window.addEventListener('keydown', e => {
     if (phase === 'dialog') return;
     if (gameOver) return;
 
+    // Dismiss world map
+    if (showingWorldMap && (e.key === 'm' || e.key === 'M' || e.key === 'Escape')) {
+        e.preventDefault();
+        showingWorldMap = false;
+        render();
+        return;
+    }
+    if (showingWorldMap) return;
+
     // Dismiss threat overlay
     if (threatOverlay && (e.key === ' ' || e.key === 'Escape')) {
         e.preventDefault();
         threatOverlay = null;
         render();
+        return;
+    }
+
+    if (e.key === 'm' || e.key === 'M') {
+        toggleWorldMap();
         return;
     }
 
