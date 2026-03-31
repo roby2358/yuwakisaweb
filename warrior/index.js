@@ -1546,9 +1546,10 @@ function tryBossSpawn(enemy, def, occupied) {
 function tryTerrainShatter(enemy, def) {
     if (!def.chaosSpawned || !Rando.bool(0.02)) return;
     const eHex = world.getHex(enemy.q, enemy.r);
-    let baseTerrain = eHex ? UNDISTRESSED_VERSION[eHex.terrain] : undefined;
-    if (baseTerrain !== undefined) eHex.terrain = baseTerrain;
-    if (!eHex || SHATTERED_VERSION[eHex.terrain] === undefined) return;
+    if (!eHex) return;
+    const undistressed = UNDISTRESSED_VERSION[eHex.terrain];
+    if (undistressed !== undefined) eHex.terrain = undistressed;
+    if (SHATTERED_VERSION[eHex.terrain] === undefined) return;
     const poi = world.poiAt(enemy.q, enemy.r);
     if (poi && (poi.type === POI.HAVEN || poi.type === POI.VILLAGE)) return;
     // Shatter the hex
@@ -1581,6 +1582,30 @@ async function runWildlifeTurn(enemy, def, aggro, occupied) {
     }
 }
 
+function trySwarmMarch(enemy, def, occupied) {
+    if (def.behavior === 'boss' || def.behavior === 'guard') return false;
+    const nearSettlement = world.pois.some(p =>
+        (p.type === POI.HAVEN || p.type === POI.VILLAGE) &&
+        hexDistance(enemy.q, enemy.r, p.q, p.r) <= 5
+    );
+    if (nearSettlement) return false;
+    const nearbyAllies = em.enemies.filter(e =>
+        e !== enemy &&
+        hexDistance(e.q, e.r, enemy.q, enemy.r) <= 2 &&
+        em.getDef(e.type)?.chaosSpawned
+    ).length;
+    if (nearbyAllies < 5) return false;
+    let closestPoi = null, closestDist = Infinity;
+    for (const p of world.pois) {
+        if (p.type !== POI.HAVEN && p.type !== POI.VILLAGE) continue;
+        const d = hexDistance(enemy.q, enemy.r, p.q, p.r);
+        if (d < closestDist) { closestDist = d; closestPoi = p; }
+    }
+    if (!closestPoi) return false;
+    em.moveEnemyToward(enemy, closestPoi.q, closestPoi.r, occupied, world);
+    return true;
+}
+
 async function runChaosTurn(enemy, def, occupied) {
     // Chaos monsters heal on corrupted terrain
     if (enemyOnCorruptedTerrain(enemy, def) && enemy.hp < enemy.maxHp) {
@@ -1589,13 +1614,13 @@ async function runChaosTurn(enemy, def, occupied) {
 
     const dist = hexDistance(enemy.q, enemy.r, player.q, player.r);
     let aggro = def.aggroRange || def.detectRange || 0;
-    const artForThreat = player.artifact();
-    if (artForThreat && artForThreat.special === 'threat_shroud') aggro = Math.max(1, aggro - 2);
+    const art = player.artifact();
+    const arm = player.armor();
+    if (art && art.special === 'threat_shroud') aggro = Math.max(1, aggro - 2);
     const prevKey = hexKey(enemy.q, enemy.r);
 
     // Phase Wraith teleport (blocked by wraith_immune armor)
-    const armForWraith = player.armor();
-    if (def.behavior === 'teleport' && !(armForWraith && armForWraith.special === 'wraith_immune') && Math.random() < (def.teleportChance || 0.3)) {
+    if (def.behavior === 'teleport' && !(arm && arm.special === 'wraith_immune') && Math.random() < (def.teleportChance || 0.3)) {
         const valid = hexesInRange(player.q, player.r, def.teleportRange).filter(t => {
             const k = hexKey(t.q, t.r);
             const h = world.getHex(t.q, t.r);
@@ -1614,12 +1639,14 @@ async function runChaosTurn(enemy, def, occupied) {
         }
     }
 
+    const swarming = trySwarmMarch(enemy, def, occupied);
+
     // Ranged-capable chasers (Void Stalker): 50% prefer ranged, skip closing in
     const prefersRanged = def.rangedAttack && def.behavior === 'chase' && Rando.bool(0.5);
 
-    let moved = false;
+    let moved = swarming;
     const speed = def.speed || 1;
-    for (let step = 0; step < speed; step++) {
+    for (let step = 0; step < speed && !swarming; step++) {
         if (moveEnemyStep(enemy, def, dist, aggro, prefersRanged, occupied)) moved = true;
     }
     if (moved && enemyIsVisible(enemy, prevKey)) { await animDelay(80); render(); }
@@ -1636,17 +1663,16 @@ async function runEnemyPhase() {
     // Natural HP recovery
     player.hp = Math.min(player.maxHP(), player.hp + 1);
     const art = player.artifact();
+    const arm = player.armor();
     if (art && art.special === 'regen') {
         player.hp = Math.min(player.maxHP(), player.hp + art.regenAmount);
     }
     // Aether regen (armor special)
-    const arm = player.armor();
     if (arm && arm.special === 'aether_regen') {
         player.aether = Math.min(player.maxAether(), player.aether + 1);
     }
     // Chaos Circlet: +1 AE on corrupted/distressed terrain
-    const artForChaos = player.artifact();
-    if (artForChaos && artForChaos.special === 'chaos_circlet') {
+    if (art && art.special === 'chaos_circlet') {
         const pTerrain = playerTerrain();
         if (pTerrain >= 7 && pTerrain <= 16) {
             player.aether = Math.min(player.maxAether(), player.aether + 1);
@@ -1654,11 +1680,10 @@ async function runEnemyPhase() {
         }
     }
     // Aether Right / Aether Amulet: passive AE regen
-    const artForAeRegen = player.artifact();
-    if (artForAeRegen && artForAeRegen.special === 'aether_regen_small') {
+    if (art && art.special === 'aether_regen_small') {
         player.aether = Math.min(player.maxAether(), player.aether + 1);
     }
-    if (artForAeRegen && artForAeRegen.special === 'aether_regen_large') {
+    if (art && art.special === 'aether_regen_large') {
         player.aether = Math.min(player.maxAether(), player.aether + 3);
     }
     // Armor regen: HP regen from armor
@@ -1690,8 +1715,7 @@ async function runEnemyPhase() {
         const def = em.getDef(enemy.type);
         if (!def) continue;
         let aggro = def.aggroRange || def.detectRange || 0;
-        const artForThreat2 = player.artifact();
-        if (artForThreat2 && artForThreat2.special === 'threat_shroud') aggro = Math.max(1, aggro - 2);
+        if (art && art.special === 'threat_shroud') aggro = Math.max(1, aggro - 2);
         enemy.turnsSinceSpawn++;
 
         if (def.behavior === 'wildlife') {
@@ -1964,18 +1988,14 @@ function render() {
         if (hex.poi) {
             const poi = world.poiAt(hex.q, hex.r);
             if (poi) {
-                // Once revealed, POIs always show on the map
-                const showPoi = isVisible || isRevealed;
-                if (showPoi) {
-                    const symbol = POI_SYMBOLS[poi.type] || '?';
-                    let color = POI_COLORS[poi.type] || '#fff';
-                    if (poi.type === POI.BREACH && poi.closed) color = '#555';
-                    if (poi.type === POI.RUIN && poi.ruinState === 'explored') color = '#555';
-                    ctx.fillStyle = color;
-                    ctx.font = 'bold ' + Math.floor(HEX_SIZE * 1.2) + 'px monospace';
-                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                    ctx.fillText(symbol, x, y);
-                }
+                const symbol = POI_SYMBOLS[poi.type] || '?';
+                let color = POI_COLORS[poi.type] || '#fff';
+                if (poi.type === POI.BREACH && poi.closed) color = '#555';
+                if (poi.type === POI.RUIN && poi.ruinState === 'explored') color = '#555';
+                ctx.fillStyle = color;
+                ctx.font = 'bold ' + Math.floor(HEX_SIZE * 1.2) + 'px monospace';
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(symbol, x, y);
             }
         }
     }
@@ -2101,15 +2121,19 @@ function renderWorldMap() {
     const sqrt3 = Math.sqrt(3);
 
     // Find pixel bounds to center
+    const miniRaw = (q, r) => ({
+        x: miniSize * (sqrt3 * q + sqrt3 / 2 * r),
+        y: miniSize * (1.5 * r)
+    });
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     for (const [, hex] of world.hexes) {
-        const mx = miniSize * (sqrt3 * hex.q + sqrt3 / 2 * hex.r);
-        const my = miniSize * (1.5 * hex.r);
-        minX = Math.min(minX, mx); maxX = Math.max(maxX, mx);
-        minY = Math.min(minY, my); maxY = Math.max(maxY, my);
+        const { x, y } = miniRaw(hex.q, hex.r);
+        minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y); maxY = Math.max(maxY, y);
     }
     const offX = (cw - (maxX - minX)) / 2 - minX;
     const offY = (ch - padBottom + pad - (maxY - minY)) / 2 - minY;
+    const mini = (q, r) => ({ x: miniRaw(q, r).x + offX, y: miniRaw(q, r).y + offY });
 
     // Background
     ctx.fillStyle = 'rgba(0,0,0,0.92)';
@@ -2117,8 +2141,7 @@ function renderWorldMap() {
 
     // Draw hexes
     for (const [key, hex] of world.hexes) {
-        const mx = miniSize * (sqrt3 * hex.q + sqrt3 / 2 * hex.r) + offX;
-        const my = miniSize * (1.5 * hex.r) + offY;
+        const { x: mx, y: my } = mini(hex.q, hex.r);
 
         const isRevealed = world.revealed.has(key);
         if (!isRevealed) {
@@ -2144,10 +2167,8 @@ function renderWorldMap() {
     ctx.font = 'bold ' + poiFontSize + 'px monospace';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     for (const poi of world.pois) {
-        const key = hexKey(poi.q, poi.r);
-        if (!world.revealed.has(key)) continue;
-        const mx = miniSize * (sqrt3 * poi.q + sqrt3 / 2 * poi.r) + offX;
-        const my = miniSize * (1.5 * poi.r) + offY;
+        if (!world.revealed.has(hexKey(poi.q, poi.r))) continue;
+        const { x: mx, y: my } = mini(poi.q, poi.r);
         const symbol = POI_SYMBOLS[poi.type] || '?';
         let color = POI_COLORS[poi.type] || '#fff';
         if (poi.type === POI.BREACH && poi.closed) color = '#555';
@@ -2157,8 +2178,7 @@ function renderWorldMap() {
     }
 
     // Draw player
-    const px = miniSize * (sqrt3 * player.q + sqrt3 / 2 * player.r) + offX;
-    const py = miniSize * (1.5 * player.r) + offY;
+    const { x: px, y: py } = mini(player.q, player.r);
     const pr = Math.max(3, miniSize * 0.8);
     ctx.fillStyle = PLAYER_COLOR;
     ctx.beginPath();
@@ -2730,7 +2750,7 @@ function tryRuinInteraction(poi) {
             { label: 'Search', cls: 'primary', action: () => {
                 activateRuinSpawn(poi, 'Something stirs in the ruins...');
             }},
-            { label: 'Leave', action: () => {} }
+            { label: 'Leave' }
         ]);
     } else if (poi.ruinState === 'spawned') {
         showRuinLootDialog(poi);
@@ -2743,7 +2763,7 @@ function tryRuinInteraction(poi) {
                     logCombat('Nothing of interest here.', 'log-info');
                 }
             }},
-            { label: 'Leave', action: () => {} }
+            { label: 'Leave' }
         ]);
     }
 }
