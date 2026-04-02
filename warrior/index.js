@@ -6,7 +6,7 @@ import {
     xpForLevel,
     POI, POI_SYMBOLS, POI_COLORS, POI_DEFENSE_BONUS,
     ENEMY_TYPE,
-    EQUIP_SLOT, WEAPONS, ARMORS, ARTIFACTS, ALL_EQUIPMENT, MAGICAL_ITEMS, NON_MAGICAL_ITEMS,
+    EQUIP_SLOT, WEAPONS, ARMORS, ARTIFACTS, ALL_EQUIPMENT, NON_MAGICAL_ITEMS, rollMagicItem,
     SKILL_TARGET, SKILL_USAGE, SKILLS, SKILL_UNLOCK_LEVELS,
     SHATTERED_VERSION, UNSHATTERED_VERSION, DISTRESSED_VERSION, UNDISTRESSED_VERSION
 } from './config.js';
@@ -332,11 +332,9 @@ function killEnemy(enemy) {
             logCombat(`Found: ${item.name}`, 'log-gold');
         }
         if (Rando.bool(0.1)) {
-            const magicalDrop = rollMagicalDrop(MAGICAL_ITEMS.filter(i => i.tier >= 1 && i.id !== 'maw_compass'));
-            if (magicalDrop) {
-                player.inventory.push(magicalDrop.id);
-                logCombat(`Found: ${magicalDrop.name}!`, 'log-gold');
-            }
+            const magicalDrop = rollMagicItem();
+            player.inventory.push(magicalDrop.id);
+            logCombat(`Found: ${magicalDrop.name}!`, 'log-gold');
         }
     }
 
@@ -360,12 +358,6 @@ function playerHasItem(id) {
         player.equipment.weapon === id ||
         player.equipment.armor === id ||
         player.equipment.artifact === id;
-}
-
-function rollMagicalDrop(pool) {
-    const available = pool.filter(i => !playerHasItem(i.id));
-    if (available.length === 0) return null;
-    return Rando.choice(available);
 }
 
 function rollNonMagicalDrops(min, max) {
@@ -2754,7 +2746,7 @@ function showHutDialog(poi) {
 }
 
 function showShopDialog(poi) {
-    let bodyHtml = `<div style="margin-bottom:8px;color:#ffc107">Your gold: ${player.gold}</div>`;
+    let bodyHtml = `<div style="margin-bottom:8px;color:#ffc107" data-gold-display>Your gold: ${player.gold}</div>`;
     const owned = new Set([...Object.values(player.equipment).filter(Boolean), ...player.inventory]);
     for (const item of poi.shopItems) {
         const equip = ALL_EQUIPMENT[item.id];
@@ -2770,14 +2762,24 @@ function showShopDialog(poi) {
 
     // Sell section
     if (player.inventory.length > 0) {
+        const nonMagicInInventory = player.inventory.filter(id => { const it = ALL_EQUIPMENT[id]; return it && !it.magical; });
+        const nonMagicTotal = nonMagicInInventory.reduce((sum, id) => sum + Math.max(1, Math.floor(ALL_EQUIPMENT[id].price * 0.4)), 0);
         bodyHtml += '<div style="margin-top:12px;border-top:1px solid #333;padding-top:8px"><strong>Sell:</strong></div>';
-        for (const id of player.inventory) {
+        if (nonMagicInInventory.length > 0) {
+            bodyHtml += `<div class="shop-item">
+                <div style="color:#aaa">All non-magic items</div>
+                <button data-sell-all-nm data-price="${nonMagicTotal}">Sell all ${nonMagicTotal}g</button>
+            </div>`;
+        }
+        for (let i = 0; i < player.inventory.length; i++) {
+            const id = player.inventory[i];
             const item = ALL_EQUIPMENT[id];
             if (!item) continue;
             const sellPrice = Math.max(1, Math.floor(item.price * 0.4));
+            const sellColor = item.magical ? '#b388ff' : '#ccc';
             bodyHtml += `<div class="shop-item">
-                <div>${item.name}</div>
-                <button data-sell="${id}" data-price="${sellPrice}">Sell ${sellPrice}g</button>
+                <div style="color:${sellColor}">${item.name}</div>
+                <button data-sell="${id}" data-sell-idx="${i}" data-price="${sellPrice}">Sell ${sellPrice}g</button>
             </div>`;
         }
     }
@@ -2798,15 +2800,56 @@ function showShopDialog(poi) {
             }
         });
     });
+    const sellAllBtn = body.querySelector('button[data-sell-all-nm]');
+    if (sellAllBtn) {
+        sellAllBtn.addEventListener('click', () => {
+            const total = parseInt(sellAllBtn.dataset.price);
+            const sold = [];
+            for (let i = player.inventory.length - 1; i >= 0; i--) {
+                const it = ALL_EQUIPMENT[player.inventory[i]];
+                if (it && !it.magical) {
+                    sold.push(it.name);
+                    player.inventory.splice(i, 1);
+                }
+            }
+            player.gold += total;
+            logCombat(`Sold ${sold.length} items for ${total}g`, 'log-gold');
+            // Remove non-magic sell rows and the sell-all button itself
+            body.querySelectorAll('button[data-sell]').forEach(b => {
+                const it = ALL_EQUIPMENT[b.dataset.sell];
+                if (it && !it.magical) b.closest('.shop-item').remove();
+            });
+            sellAllBtn.closest('.shop-item').remove();
+            // Reindex remaining sell buttons
+            body.querySelectorAll('button[data-sell-idx]').forEach((b, i) => { b.dataset.sellIdx = i; });
+            const goldDisplay = body.querySelector('[data-gold-display]');
+            if (goldDisplay) goldDisplay.textContent = `Your gold: ${player.gold}`;
+            body.querySelectorAll('button[data-id]').forEach(b => {
+                b.disabled = player.gold < parseInt(b.dataset.price);
+            });
+        });
+    }
     body.querySelectorAll('button[data-sell]').forEach(btn => {
         btn.addEventListener('click', () => {
             const id = btn.dataset.sell;
             const price = parseInt(btn.dataset.price);
-            const rmIdx = player.inventory.indexOf(id);
-            if (rmIdx !== -1) player.inventory.splice(rmIdx, 1);
+            const rmIdx = parseInt(btn.dataset.sellIdx);
+            player.inventory.splice(rmIdx, 1);
             player.gold += price;
             logCombat(`Sold ${ALL_EQUIPMENT[id].name} for ${price}g`, 'log-gold');
-            showShopDialog(poi);
+            // Remove just this row and update gold display
+            btn.closest('.shop-item').remove();
+            const goldDisplay = body.querySelector('[data-gold-display]');
+            if (goldDisplay) goldDisplay.textContent = `Your gold: ${player.gold}`;
+            // Shift down indices of remaining sell buttons after the removed one
+            body.querySelectorAll('button[data-sell-idx]').forEach(b => {
+                const idx = parseInt(b.dataset.sellIdx);
+                if (idx > rmIdx) b.dataset.sellIdx = idx - 1;
+            });
+            // Re-enable buy buttons player can now afford
+            body.querySelectorAll('button[data-id]').forEach(b => {
+                b.disabled = player.gold < parseInt(b.dataset.price);
+            });
         });
     });
 }
@@ -2889,13 +2932,10 @@ function showRuinLootDialog(poi) {
         body += `<p style="color:#ffc107">Found: ${available[i].name}</p>`;
     }
 
-    // Magical item — pick a random unowned one
-    const magicalAvailable = MAGICAL_ITEMS.filter(i => i.tier >= 1 && i.id !== 'maw_compass' && !playerHasItem(i.id));
-    if (magicalAvailable.length > 0) {
-        const magicalDrop = Rando.choice(magicalAvailable);
-        player.inventory.push(magicalDrop.id);
-        body += `<p style="color:#e040fb">Found: ${magicalDrop.name}!</p>`;
-    }
+    // Magical item — roll a fresh one
+    const magicalDrop = rollMagicItem();
+    player.inventory.push(magicalDrop.id);
+    body += `<p style="color:#e040fb">Found: ${magicalDrop.name}!</p>`;
 
     showDialog(POI_SYMBOLS[POI.RUIN] + ' Ruins', body, [{ label: 'Continue', action: () => {
         player.mp = 0;

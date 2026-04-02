@@ -1,6 +1,6 @@
 // world.js — GameWorld: hex grid, POIs, fog of war
 
-import { TERRAIN, MAP_COLS, MAP_ROWS, MOVEMENT_COST, POI, WEAPONS, ARMORS, ARTIFACTS, ALL_EQUIPMENT, MAGICAL_ITEMS, NON_MAGICAL_ITEMS, SKILLS } from './config.js';
+import { TERRAIN, MAP_COLS, MAP_ROWS, MOVEMENT_COST, POI, WEAPONS, ARMORS, ARTIFACTS, ALL_EQUIPMENT, NON_MAGICAL_ITEMS, SKILLS, rollMagicItem } from './config.js';
 import { hexKey, hexNeighbors, hexDistance, hexesInRange, bfsHexes } from './hex.js';
 import { Rando } from './rando.js';
 
@@ -220,14 +220,14 @@ export class GameWorld {
     }
 
     _generateShopItems() {
-        const magicalPool = [...MAGICAL_ITEMS.filter(i => i.tier > 0 && i.id !== 'maw_compass')];
-        const nonMagicalPool = [...NON_MAGICAL_ITEMS];
-        Rando.shuffle(magicalPool);
-        Rando.shuffle(nonMagicalPool);
         const magicalCount = Rando.int(2, 3);
         const nonMagicalCount = Rando.int(2, 3);
+        const magicalItems = [];
+        for (let i = 0; i < magicalCount; i++) magicalItems.push(rollMagicItem());
+        const nonMagicalPool = [...NON_MAGICAL_ITEMS];
+        Rando.shuffle(nonMagicalPool);
         const items = [
-            ...magicalPool.slice(0, magicalCount),
+            ...magicalItems,
             ...nonMagicalPool.slice(0, nonMagicalCount)
         ];
         Rando.shuffle(items);

@@ -1,4 +1,5 @@
 // config.js — Game constants and data definitions
+import { Rando } from './rando.js';
 
 export const HEX_SIZE = 24;
 
@@ -209,50 +210,14 @@ export const ENEMY_DEFS = {
 // ---- Equipment ----
 export const EQUIP_SLOT = { WEAPON: 'weapon', ARMOR: 'armor', ARTIFACT: 'artifact' };
 
+// Non-magical weapons
 export const WEAPONS = [
-    { id: 'rusty_blade', name: 'Rusty Blade', type: 'melee', damage: 1, range: 0, special: null, price: 0, tier: 0, magical: true },
-    { id: 'void_cleaver', name: 'Void Cleaver', type: 'melee', damage: 7, range: 0, special: 'chaos_bonus', price: 40, tier: 1, magical: true },
-    { id: 'starforged_sword', name: 'Starforged Sword', type: 'melee', damage: 10, range: 0, special: null, price: 100, tier: 2, magical: true },
-    { id: 'dimensional_edge', name: 'Dimensional Edge', type: 'melee', damage: 12, range: 0, special: 'cleave', price: 150, tier: 3, magical: true },
-    { id: 'duskfang', name: 'Duskfang', type: 'melee', damage: 4, range: 0, special: 'lifesteal', lifestealAmount: 2, price: 35, tier: 1, magical: true },
-    { id: 'breaker_mace', name: 'Breaker Mace', type: 'melee', damage: 3, range: 0, special: 'armor_pierce', pierceAmount: 2, price: 30, tier: 1, magical: true },
-    { id: 'wardens_blade', name: "Warden's Blade", type: 'melee', damage: 6, range: 0, special: 'riposte', price: 60, tier: 2, magical: true },
-    { id: 'emberstrike', name: 'Emberstrike', type: 'melee', damage: 8, range: 0, special: 'momentum', momentumBonus: 4, price: 75, tier: 2, magical: true },
-    { id: 'soulreaver', name: 'Soulreaver', type: 'melee', damage: 7, range: 0, special: 'aether_siphon', price: 70, tier: 2, magical: true },
-    { id: 'nullblade', name: 'Nullblade', type: 'melee', damage: 9, range: 0, special: 'defense_shred', price: 110, tier: 3, magical: true },
-    { id: 'worldsplitter', name: 'Worldsplitter', type: 'melee', damage: 14, range: 0, special: 'recoil', recoilDamage: 3, price: 130, tier: 3, magical: true },
-    { id: 'flux_bow', name: 'Flux Bow', type: 'ranged', damage: 5, range: 3, special: 'armor_pierce', pierceAmount: 2, price: 35, tier: 1, magical: true },
-    { id: 'phase_rifle', name: 'Phase Rifle', type: 'ranged', damage: 8, range: 5, special: 'ignore_defense', price: 120, tier: 3, magical: true },
-    { id: 'aether_lance', name: 'Aether Lance', type: 'ranged', damage: 6, range: 3, special: 'free_ranged', price: 60, tier: 2, magical: true },
-    { id: 'spark_caster', name: 'Spark Caster', type: 'ranged', damage: 3, range: 3, special: 'chain', chainDamage: 3, price: 30, tier: 1, magical: true },
-    { id: 'gale_bow', name: 'Gale Bow', type: 'ranged', damage: 4, range: 3, special: 'knockback', price: 40, tier: 1, magical: true },
-    { id: 'rift_cannon', name: 'Rift Cannon', type: 'ranged', damage: 6, range: 5, special: 'splash', splashDamage: 2, price: 55, tier: 2, magical: true },
-    { id: 'voidpiercer', name: 'Voidpiercer', type: 'ranged', damage: 5, range: 4, special: 'piercing', price: 65, tier: 2, magical: true },
-    { id: 'stasis_repeater', name: 'Stasis Repeater', type: 'ranged', damage: 4, range: 3, special: 'double_shot', price: 70, tier: 2, magical: true },
-    { id: 'nova_launcher', name: 'Nova Launcher', type: 'ranged', damage: 7, range: 3, special: 'burn', burnDamage: 3, price: 100, tier: 3, magical: true },
-    { id: 'astral_longbow', name: 'Astral Longbow', type: 'ranged', damage: 9, range: 5, special: 'sniper', sniperBonus: 4, price: 140, tier: 3, magical: true },
-    // Mid-tier magical melee
-    { id: 'flicker_blade', name: 'Flicker Blade', type: 'melee', damage: 2, range: 0, special: 'double_strike', price: 20, tier: 1, magical: true },
-    { id: 'aether_spike', name: 'Aether Spike', type: 'melee', damage: 3, range: 0, special: 'aether_siphon', price: 25, tier: 1, magical: true },
-    { id: 'blood_thorn', name: 'Blood Thorn', type: 'melee', damage: 3, range: 0, special: 'lifesteal', lifestealAmount: 1, price: 25, tier: 1, magical: true },
-    { id: 'rending_pick', name: 'Rending Pick', type: 'melee', damage: 4, range: 0, special: 'armor_pierce', pierceAmount: 2, price: 30, tier: 1, magical: true },
-    { id: 'broad_cleaver', name: 'Broad Cleaver', type: 'melee', damage: 4, range: 0, special: 'cleave', price: 30, tier: 1, magical: true },
-    { id: 'ember_blade', name: 'Ember Blade', type: 'melee', damage: 5, range: 0, special: 'burn', burnDamage: 2, price: 40, tier: 1, magical: true },
-    // Mid-tier magical ranged
-    { id: 'arc_caster', name: 'Arc Caster', type: 'ranged', damage: 2, range: 3, special: 'chain', chainDamage: 3, price: 20, tier: 1, magical: true },
-    { id: 'pulse_bow', name: 'Pulse Bow', type: 'ranged', damage: 3, range: 3, special: 'double_shot', price: 25, tier: 1, magical: true },
-    { id: 'ley_bow', name: 'Ley Bow', type: 'ranged', damage: 3, range: 3, special: 'free_ranged', price: 25, tier: 1, magical: true },
-    { id: 'blast_rod', name: 'Blast Rod', type: 'ranged', damage: 4, range: 3, special: 'splash', splashDamage: 2, price: 35, tier: 1, magical: true },
-    { id: 'hawk_bow', name: 'Hawk Bow', type: 'ranged', damage: 4, range: 5, special: 'sniper', sniperBonus: 2, price: 40, tier: 2, magical: true },
-    { id: 'piercing_bolt', name: 'Piercing Bolt', type: 'ranged', damage: 5, range: 3, special: 'armor_pierce', pierceAmount: 2, price: 45, tier: 2, magical: true },
-    // Non-magical melee
     { id: 'iron_sword', name: 'Iron Sword', type: 'melee', damage: 2, range: 0, special: null, price: 12, tier: 1, magical: false },
     { id: 'spear', name: 'Spear', type: 'melee', damage: 2, range: 0, special: null, price: 12, tier: 1, magical: false },
     { id: 'battle_axe', name: 'Battle Axe', type: 'melee', damage: 3, range: 0, special: null, price: 25, tier: 2, magical: false },
     { id: 'warhammer', name: 'Warhammer', type: 'melee', damage: 4, range: 0, special: null, price: 45, tier: 3, magical: false },
     { id: 'blade_spear', name: 'Blade Spear', type: 'melee', damage: 4, range: 0, special: null, price: 45, tier: 3, magical: false },
     { id: 'greatsword', name: 'Greatsword', type: 'melee', damage: 5, range: 0, special: null, price: 70, tier: 4, magical: false },
-    // Non-magical bows
     { id: 'stick_bow', name: 'Stick Bow', type: 'ranged', damage: 1, range: 2, special: null, price: 0, tier: 0, magical: false },
     { id: 'short_bow', name: 'Short Bow', type: 'ranged', damage: 1, range: 2, special: null, price: 5, tier: 1, magical: false },
     { id: 'hunting_bow', name: 'Hunting Bow', type: 'ranged', damage: 2, range: 2, special: null, price: 12, tier: 1, magical: false },
@@ -261,76 +226,283 @@ export const WEAPONS = [
     { id: 'great_bow', name: 'Great Bow', type: 'ranged', damage: 5, range: 4, special: null, price: 70, tier: 4, magical: false }
 ];
 
+// Non-magical armor
 export const ARMORS = [
-    { id: 'worn_leather', name: 'Worn Leather', defense: 1, special: null, price: 0, tier: 0, magical: true },
-    { id: 'warded_mail', name: 'Warded Mail', defense: 4, special: 'hp_bonus', hpBonus: 10, price: 50, tier: 1, magical: true },
-    { id: 'chaosweave_cloak', name: 'Chaosweave Cloak', defense: 3, special: 'vision_bonus', visionBonus: 2, price: 45, tier: 1, magical: true },
-    { id: 'starplate', name: 'Starplate', defense: 8, special: 'mp_penalty', mpPenalty: 1, price: 120, tier: 2, magical: true },
-    { id: 'voidhide', name: 'Voidhide', defense: 5, special: 'wraith_immune', price: 100, tier: 3, magical: true },
-    { id: 'thornmail', name: 'Thornmail', defense: 2, special: 'thorns', thornsDamage: 2, price: 35, tier: 1, magical: true },
-    { id: 'flickerweave', name: 'Flickerweave', defense: 2, special: 'dodge_bonus', dodgeBonus: 30, price: 40, tier: 1, magical: true },
-    { id: 'bloodward_cuirass', name: 'Bloodward Cuirass', defense: 4, special: 'heal_on_kill', healOnKill: 5, price: 65, tier: 2, magical: true },
-    { id: 'stormplate', name: 'Stormplate', defense: 3, special: 'aether_regen', price: 80, tier: 2, magical: true },
-    { id: 'wraithskin', name: 'Wraithskin', defense: 3, special: 'ranged_immune', price: 75, tier: 2, magical: true },
-    { id: 'burning_mail', name: 'Burning Mail', defense: 4, special: 'burning_aura', burnAuraDamage: 3, price: 75, tier: 2, magical: true },
-    { id: 'aegis_of_the_breach', name: 'Aegis of the Breach', defense: 6, special: 'last_stand', lastStandBonus: 2, price: 130, tier: 3, magical: true },
-    // Mid-tier magical armor
-    { id: 'scout_cloak', name: "Scout's Cloak", defense: 1, special: 'vision_bonus', visionBonus: 1, price: 15, tier: 1, magical: true },
-    { id: 'runecloth_robe', name: 'Runecloth Robe', defense: 2, special: 'aether_regen', price: 30, tier: 1, magical: true },
-    { id: 'padded_mail', name: 'Padded Mail', defense: 2, special: 'hp_bonus', hpBonus: 5, price: 25, tier: 1, magical: true },
-    { id: 'lifeweave_tunic', name: 'Lifeweave Tunic', defense: 3, special: 'armor_regen', regenAmount: 1, price: 40, tier: 1, magical: true },
-    { id: 'aether_vest', name: 'Aether Vest', defense: 3, special: 'armor_aether_bonus', aetherBonus: 5, price: 45, tier: 2, magical: true },
-    { id: 'wardens_plate', name: "Warden's Plate", defense: 5, special: 'regen_combo', regenAmount: 1, price: 70, tier: 2, magical: true },
-    // Non-magical armor
     { id: 'leather_armor', name: 'Leather Armor', defense: 2, special: null, price: 15, tier: 1, magical: false },
     { id: 'chain_mail', name: 'Chain Mail', defense: 3, special: null, price: 30, tier: 2, magical: false },
     { id: 'scale_armor', name: 'Scale Armor', defense: 4, special: null, price: 50, tier: 3, magical: false },
     { id: 'plate_armor', name: 'Plate Armor', defense: 5, special: null, price: 75, tier: 4, magical: false }
 ];
 
-export const ARTIFACTS = [
-    { id: 'seers_lens', name: "Seer's Lens", special: 'vision_bonus', visionBonus: 2, price: 40, tier: 1, magical: true },
-    { id: 'aether_crystal', name: 'Aether Crystal', special: 'aether_bonus', aetherBonus: 4, price: 50, tier: 1, magical: true },
-    { id: 'vitality_stone', name: 'Vitality Stone', special: 'regen', regenAmount: 3, price: 80, tier: 3, magical: true },
-    { id: 'phase_anchor', name: 'Phase Anchor', special: 'displacement_immune', price: 35, tier: 1, magical: true },
-    { id: 'maw_compass', name: 'Maw Compass', special: 'reveal_maw', price: 30, tier: 1, magical: true },
-    // Movement & defense artifacts
-    { id: 'strider_boots', name: 'Strider Boots', special: 'strider', price: 55, tier: 2, magical: true },
-    { id: 'smoke_cloak', name: 'Smoke Cloak', special: 'disengage', price: 65, tier: 2, magical: true },
-    { id: 'momentum_bracers', name: 'Momentum Bracers', special: 'momentum_defense', price: 60, tier: 2, magical: true },
-    { id: 'threat_shroud', name: 'Threat Shroud', special: 'threat_shroud', price: 40, tier: 1, magical: true },
-    { id: 'ranger_cloak', name: 'Ranger Cloak', special: 'ranger_defense', rangerBonus: 3, price: 40, tier: 1, magical: true },
-    { id: 'chaos_ward', name: 'Chaos Ward', special: 'chaos_defense', chaosDefenseBonus: 3, price: 50, tier: 2, magical: true },
-    // Combat & resource artifacts
-    { id: 'wall_crown', name: 'Wall Crown', special: 'wall_crown', wallCrownBonus: 4, price: 65, tier: 2, magical: true },
-    { id: 'breach_jewel', name: 'Breach Jewel', special: 'breach_jewel', breachBonus: 5, price: 55, tier: 2, magical: true },
-    { id: 'soul_harvest_sigil', name: 'Soul Harvest Sigil', special: 'soul_harvest', soulHarvestXP: 2, price: 70, tier: 2, magical: true },
-    { id: 'opportunist_gloves', name: 'Opportunist Gloves', special: 'opportunist', price: 35, tier: 1, magical: true },
-    { id: 'aether_signet', name: 'Aether Signet', special: 'aether_signet', aetherSignetDamage: 3, aetherSignetCost: 3, price: 80, tier: 3, magical: true },
-    { id: 'chaos_circlet', name: 'Chaos Circlet', special: 'chaos_circlet', price: 55, tier: 2, magical: true },
-    { id: 'aether_right', name: 'Aether Right', special: 'aether_regen_small', price: 45, tier: 1, magical: true },
-    { id: 'aether_amulet', name: 'Aether Amulet', special: 'aether_regen_large', price: 85, tier: 3, magical: true },
-    { id: 'blink_ring', name: 'Blink Ring', special: 'blink_ring', blinkRange: 4, blinkBonus: 2, price: 95, tier: 3, magical: true },
-    { id: 'counter_bracers', name: 'Counter Bracers', special: 'counter_mastery', price: 70, tier: 2, magical: true },
-    // Mid-tier artifacts
-    { id: 'lesser_vitality_stone', name: 'Lesser Vitality Stone', special: 'regen', regenAmount: 2, price: 50, tier: 2, magical: true },
-    { id: 'ranger_hood', name: 'Ranger Hood', special: 'ranger_defense', rangerBonus: 1, price: 25, tier: 1, magical: true },
-    { id: 'chaos_sigil', name: 'Chaos Sigil', special: 'chaos_attune', chaosAttuneMight: 1, chaosAttuneDef: 1, price: 35, tier: 1, magical: true },
-    { id: 'sentinels_crown', name: "Sentinel's Crown", special: 'wall_crown', wallCrownBonus: 2, price: 40, tier: 1, magical: true },
-    { id: 'wayfarer_boots', name: 'Wayfarer Boots', special: 'mp_bonus', mpBonus: 1, price: 30, tier: 1, magical: true },
-    { id: 'windrunner_boots', name: 'Windrunner Boots', special: 'mp_bonus', mpBonus: 3, price: 80, tier: 3, magical: true },
-    { id: 'arrow_ward', name: 'Arrow Ward', special: 'ranged_immune', price: 45, tier: 2, magical: true }
-];
+// No static artifacts — all artifacts are magical and randomly generated
+export const ARTIFACTS = [];
 
-// All equipment in one lookup
+// All equipment in one lookup (generated items get registered here too)
 export const ALL_EQUIPMENT = {};
 for (const w of WEAPONS) ALL_EQUIPMENT[w.id] = { ...w, slot: EQUIP_SLOT.WEAPON };
 for (const a of ARMORS) ALL_EQUIPMENT[a.id] = { ...a, slot: EQUIP_SLOT.ARMOR };
-for (const a of ARTIFACTS) ALL_EQUIPMENT[a.id] = { ...a, slot: EQUIP_SLOT.ARTIFACT };
 
-// Filtered pools
-export const MAGICAL_ITEMS = [...WEAPONS.filter(w => w.magical), ...ARMORS.filter(a => a.magical), ...ARTIFACTS];
-export const NON_MAGICAL_ITEMS = [...WEAPONS.filter(w => !w.magical), ...ARMORS.filter(a => !a.magical)];
+export const NON_MAGICAL_ITEMS = [...WEAPONS, ...ARMORS];
+
+// ---- Random Magical Item Generation ----
+
+const MODES = [
+    'Aether', 'Arc', 'Astral', 'Blast', 'Blink', 'Blood', 'Chaos', 'Dusk',
+    'Ember', 'Flux', 'Gale', 'Hawk', 'Ley', 'Nova', 'Null', 'Phase', 'Pulse',
+    'Rift', 'Rune', 'Smoke', 'Soul', 'Star', 'Stasis', 'Storm', 'Thorn',
+    'Umbra', 'Void', 'Wrath', 'Wyrm'
+];
+const VERBING_GENERAL = [
+    'Blazing', 'Burning', 'Flickering', 'Searing', 'Shrieking', 'Withering'
+];
+const VERBERS = [
+    'breaker', 'caster', 'fang', 'piercer', 'reaver', 'runner', 'seeker',
+    'splitter', 'strike', 'render', 'singer', 'ward', 'weave', 'wrath', 'bane'
+];
+const VERBS = [
+    'blessed', 'bound', 'forged', 'kissed', 'sworn', 'tempered',
+    'touched', 'ward', 'wrought', 'woven', 'scarred', 'claimed'
+];
+const ARCHETYPES_GENERAL = [
+    'Navigator', 'Operator', 'Pilot', 'Replicant', 'Starpilot',
+    'Technomancer', 'Wanderer', 'Witch', 'Wraith', 'Xenarch'
+];
+const MELEE_ITEMS = [
+    'Axe', 'Blade', 'Cleaver', 'Edge', 'Mace', 'Pick', 'Spear', 'Spike',
+    'Sword', 'Thorn', 'Glaive', 'Hatchet', 'Flail', 'Scythe', 'Fist',
+    'Ripper', 'Shard', 'Vane'
+];
+const RANGED_ITEMS = [
+    'Bolt', 'Bow', 'Cannon', 'Caster', 'Lance', 'Launcher', 'Longbow',
+    'Repeater', 'Rifle', 'Rod', 'Sling', 'Arbalest', 'Javelin', 'Handcannon',
+    'Wand', 'Accelerator', 'Emitter', 'Coilgun'
+];
+const ARMOR_ITEMS = [
+    'Aegis', 'Cloak', 'Cuirass', 'Hide', 'Mail', 'Plate', 'Robe', 'Shield',
+    'Tunic', 'Vest', 'Weave', 'Mantle', 'Carapace', 'Hauberk', 'Wrap', 'Cowl'
+];
+const ARTIFACT_ITEMS = [
+    'Amulet', 'Anchor', 'Boots', 'Bracers', 'Circlet', 'Compass', 'Crown',
+    'Crystal', 'Gloves', 'Hood', 'Jewel', 'Lens', 'Ring', 'Shroud', 'Sigil',
+    'Signet', 'Stone', 'Talisman', 'Torc', 'Veil', 'Ward', 'Wraps', 'Lantern',
+    'Transponder', 'Injector', 'Capacitor'
+];
+
+// Effect pools — each entry has verbings/archetypes for themed naming, rest is spread onto item
+// v = effect-specific verbings, a = effect-specific archetypes
+const MELEE_EFFECTS = [
+    { special: 'armor_pierce', pierceAmount: 2, v: ['Rending', 'Sundering', 'Piercing'], a: ['Slayer', 'Warden', 'Operator'] },
+    { special: 'armor_pierce', pierceAmount: 4, v: ['Rending', 'Sundering', 'Piercing'], a: ['Slayer', 'Warden', 'Operator'] },
+    { special: 'aether_siphon', siphonAmount: 1, v: ['Thirsting', 'Weeping', 'Withering'], a: ['Witch', 'Technomancer', 'Seer'] },
+    { special: 'aether_siphon', siphonAmount: 2, v: ['Thirsting', 'Weeping', 'Withering'], a: ['Witch', 'Technomancer', 'Seer'] },
+    { special: 'burn', burnDamage: 2, v: ['Blazing', 'Searing', 'Burning'], a: ['Zealot', 'Witch', 'Xenarch'] },
+    { special: 'burn', burnDamage: 3, v: ['Blazing', 'Searing', 'Burning'], a: ['Zealot', 'Witch', 'Xenarch'] },
+    { special: 'burn', burnDamage: 5, v: ['Blazing', 'Searing', 'Burning'], a: ['Zealot', 'Witch', 'Xenarch'] },
+    { special: 'chain', chainCount: 2, v: ['Shrieking', 'Flickering', 'Blazing'], a: ['Technomancer', 'Operator', 'Starpilot'] },
+    { special: 'chain', chainCount: 3, v: ['Shrieking', 'Flickering', 'Blazing'], a: ['Technomancer', 'Operator', 'Starpilot'] },
+    { special: 'chain', chainCount: 5, v: ['Shrieking', 'Flickering', 'Blazing'], a: ['Technomancer', 'Operator', 'Starpilot'] },
+    { special: 'chaos_bonus', chaosBonus: 2, v: ['Warding', 'Sundering', 'Searing'], a: ['Sentinel', 'Warden', 'Zealot'] },
+    { special: 'chaos_bonus', chaosBonus: 4, v: ['Warding', 'Sundering', 'Searing'], a: ['Sentinel', 'Warden', 'Zealot'] },
+    { special: 'chaos_bonus', chaosBonus: 6, v: ['Warding', 'Sundering', 'Searing'], a: ['Sentinel', 'Warden', 'Zealot'] },
+    { special: 'counter_mastery', v: ['Warding', 'Piercing', 'Rending'], a: ['Warden', 'Sentinel', 'Slayer'] },
+    { special: 'defense_shred', shredAmount: 1, v: ['Sundering', 'Rending', 'Withering'], a: ['Surgeon', 'Operator', 'Slayer'] },
+    { special: 'defense_shred', shredAmount: 2, v: ['Sundering', 'Rending', 'Withering'], a: ['Surgeon', 'Operator', 'Slayer'] },
+    { special: 'double_strike', v: ['Flickering', 'Blazing', 'Rending'], a: ['Replicant', 'Slayer', 'Pilot'] },
+    { special: 'triple_strike', v: ['Flickering', 'Shrieking', 'Blazing'], a: ['Replicant', 'Slayer', 'Zealot'] },
+    { special: 'ignore_defense', v: ['Piercing', 'Sundering', 'Rending'], a: ['Xenarch', 'Surgeon', 'Technomancer'] },
+    { special: 'knockback', v: ['Sundering', 'Shrieking', 'Blazing'], a: ['Warden', 'Sentinel', 'Slayer'] },
+    { special: 'lifesteal', lifestealAmount: 1, v: ['Thirsting', 'Weeping', 'Withering'], a: ['Wraith', 'Witch', 'Surgeon'] },
+    { special: 'lifesteal', lifestealAmount: 2, v: ['Thirsting', 'Weeping', 'Withering'], a: ['Wraith', 'Witch', 'Surgeon'] },
+    { special: 'lifesteal', lifestealAmount: 3, v: ['Thirsting', 'Weeping', 'Withering'], a: ['Wraith', 'Witch', 'Surgeon'] },
+    { special: 'momentum', momentumBonus: 2, v: ['Blazing', 'Searing', 'Rending'], a: ['Wanderer', 'Wayfarer', 'Pilot'] },
+    { special: 'momentum', momentumBonus: 3, v: ['Blazing', 'Searing', 'Rending'], a: ['Wanderer', 'Wayfarer', 'Pilot'] },
+    { special: 'momentum', momentumBonus: 4, v: ['Blazing', 'Searing', 'Rending'], a: ['Wanderer', 'Wayfarer', 'Pilot'] },
+    { special: 'recoil', recoilBonus: 3, recoilDamage: 1, v: ['Shrieking', 'Blazing', 'Searing'], a: ['Zealot', 'Slayer', 'Xenarch'] },
+    { special: 'recoil', recoilBonus: 5, recoilDamage: 3, v: ['Shrieking', 'Blazing', 'Searing'], a: ['Zealot', 'Slayer', 'Xenarch'] },
+    { special: 'recoil', recoilBonus: 8, recoilDamage: 5, v: ['Shrieking', 'Blazing', 'Searing'], a: ['Zealot', 'Slayer', 'Xenarch'] },
+    { special: 'reverberate', chainCount: 3, chainBonus: 2, v: ['Shrieking', 'Sundering', 'Blazing'], a: ['Technomancer', 'Xenarch', 'Operator'] },
+    { special: 'riposte', riposteDamage: 1, v: ['Warding', 'Piercing', 'Flickering'], a: ['Warden', 'Sentinel', 'Slayer'] },
+    { special: 'riposte', riposteDamage: 2, v: ['Warding', 'Piercing', 'Flickering'], a: ['Warden', 'Sentinel', 'Slayer'] },
+    { special: 'riposte', riposteDamage: 3, v: ['Warding', 'Piercing', 'Flickering'], a: ['Warden', 'Sentinel', 'Slayer'] },
+];
+
+const RANGED_EFFECTS = [
+    { special: 'armor_pierce', pierceAmount: 2, v: ['Piercing', 'Rending', 'Sundering'], a: ['Slayer', 'Ranger', 'Operator'] },
+    { special: 'armor_pierce', pierceAmount: 4, v: ['Piercing', 'Rending', 'Sundering'], a: ['Slayer', 'Ranger', 'Operator'] },
+    { special: 'aether_siphon', siphonAmount: 1, v: ['Thirsting', 'Weeping', 'Withering'], a: ['Witch', 'Seer', 'Technomancer'] },
+    { special: 'aether_siphon', siphonAmount: 2, v: ['Thirsting', 'Weeping', 'Withering'], a: ['Witch', 'Seer', 'Technomancer'] },
+    { special: 'burn', burnDamage: 2, v: ['Blazing', 'Searing', 'Burning'], a: ['Zealot', 'Witch', 'Xenarch'] },
+    { special: 'burn', burnDamage: 3, v: ['Blazing', 'Searing', 'Burning'], a: ['Zealot', 'Witch', 'Xenarch'] },
+    { special: 'burn', burnDamage: 5, v: ['Blazing', 'Searing', 'Burning'], a: ['Zealot', 'Witch', 'Xenarch'] },
+    { special: 'chain', chainCount: 2, v: ['Shrieking', 'Flickering', 'Blazing'], a: ['Technomancer', 'Operator', 'Starpilot'] },
+    { special: 'chain', chainCount: 3, v: ['Shrieking', 'Flickering', 'Blazing'], a: ['Technomancer', 'Operator', 'Starpilot'] },
+    { special: 'chain', chainCount: 5, v: ['Shrieking', 'Flickering', 'Blazing'], a: ['Technomancer', 'Operator', 'Starpilot'] },
+    { special: 'chaos_bonus', chaosBonus: 2, v: ['Warding', 'Sundering', 'Searing'], a: ['Sentinel', 'Warden', 'Zealot'] },
+    { special: 'chaos_bonus', chaosBonus: 4, v: ['Warding', 'Sundering', 'Searing'], a: ['Sentinel', 'Warden', 'Zealot'] },
+    { special: 'chaos_bonus', chaosBonus: 6, v: ['Warding', 'Sundering', 'Searing'], a: ['Sentinel', 'Warden', 'Zealot'] },
+    { special: 'defense_shred', shredAmount: 1, v: ['Sundering', 'Rending', 'Withering'], a: ['Surgeon', 'Operator', 'Slayer'] },
+    { special: 'defense_shred', shredAmount: 2, v: ['Sundering', 'Rending', 'Withering'], a: ['Surgeon', 'Operator', 'Slayer'] },
+    { special: 'double_shot', v: ['Flickering', 'Blazing', 'Shrieking'], a: ['Replicant', 'Ranger', 'Starpilot'] },
+    { special: 'triple_shot', v: ['Flickering', 'Shrieking', 'Blazing'], a: ['Replicant', 'Starpilot', 'Zealot'] },
+    { special: 'free_ranged', v: ['Flickering', 'Warding', 'Weeping'], a: ['Navigator', 'Seer', 'Wanderer'] },
+    { special: 'ignore_defense', v: ['Piercing', 'Sundering', 'Rending'], a: ['Xenarch', 'Surgeon', 'Technomancer'] },
+    { special: 'knockback', v: ['Sundering', 'Shrieking', 'Blazing'], a: ['Warden', 'Sentinel', 'Slayer'] },
+    { special: 'lifesteal', lifestealAmount: 1, v: ['Thirsting', 'Weeping', 'Withering'], a: ['Wraith', 'Witch', 'Surgeon'] },
+    { special: 'lifesteal', lifestealAmount: 2, v: ['Thirsting', 'Weeping', 'Withering'], a: ['Wraith', 'Witch', 'Surgeon'] },
+    { special: 'lifesteal', lifestealAmount: 3, v: ['Thirsting', 'Weeping', 'Withering'], a: ['Wraith', 'Witch', 'Surgeon'] },
+    { special: 'piercing', v: ['Piercing', 'Rending', 'Sundering'], a: ['Ranger', 'Scout', 'Slayer'] },
+    { special: 'recoil', recoilBonus: 5, recoilDamage: 1, v: ['Shrieking', 'Blazing', 'Searing'], a: ['Zealot', 'Slayer', 'Xenarch'] },
+    { special: 'recoil', recoilBonus: 8, recoilDamage: 3, v: ['Shrieking', 'Blazing', 'Searing'], a: ['Zealot', 'Slayer', 'Xenarch'] },
+    { special: 'recoil', recoilBonus: 13, recoilDamage: 5, v: ['Shrieking', 'Blazing', 'Searing'], a: ['Zealot', 'Slayer', 'Xenarch'] },
+    { special: 'sniper', sniperBonus: 2, v: ['Piercing', 'Warding', 'Searing'], a: ['Ranger', 'Scout', 'Starpilot'] },
+    { special: 'sniper', sniperBonus: 4, v: ['Piercing', 'Warding', 'Searing'], a: ['Ranger', 'Scout', 'Starpilot'] },
+    { special: 'sniper', sniperBonus: 8, v: ['Piercing', 'Warding', 'Searing'], a: ['Ranger', 'Scout', 'Starpilot'] },
+    { special: 'splash', splashDamage: 2, v: ['Blazing', 'Shrieking', 'Searing'], a: ['Operator', 'Technomancer', 'Xenarch'] },
+];
+
+const ARMOR_EFFECTS = [
+    { special: 'burning_aura', burnAuraDamage: 2, v: ['Blazing', 'Searing', 'Burning'], a: ['Zealot', 'Witch', 'Xenarch'] },
+    { special: 'burning_aura', burnAuraDamage: 5, v: ['Blazing', 'Searing', 'Burning'], a: ['Zealot', 'Witch', 'Xenarch'] },
+    { special: 'dodge_bonus', dodgeBonus: 10, v: ['Flickering', 'Weeping', 'Warding'], a: ['Scout', 'Wanderer', 'Wraith'] },
+    { special: 'dodge_bonus', dodgeBonus: 20, v: ['Flickering', 'Weeping', 'Warding'], a: ['Scout', 'Wanderer', 'Wraith'] },
+    { special: 'dodge_bonus', dodgeBonus: 30, v: ['Flickering', 'Weeping', 'Warding'], a: ['Scout', 'Wanderer', 'Wraith'] },
+    { special: 'heal_on_kill', healOnKill: 5, v: ['Thirsting', 'Rending', 'Withering'], a: ['Slayer', 'Wraith', 'Surgeon'] },
+    { special: 'heal_on_kill', healOnKill: 8, v: ['Thirsting', 'Rending', 'Withering'], a: ['Slayer', 'Wraith', 'Surgeon'] },
+    { special: 'high_def_mp_penalty', defBonus: 5, mpPenalty: 1, v: ['Warding', 'Sundering', 'Blazing'], a: ['Sentinel', 'Warden', 'Xenarch'] },
+    { special: 'last_stand', lastStandBonus: 4, v: ['Warding', 'Blazing', 'Shrieking'], a: ['Sentinel', 'Zealot', 'Warden'] },
+    { special: 'last_stand', lastStandBonus: 6, v: ['Warding', 'Blazing', 'Shrieking'], a: ['Sentinel', 'Zealot', 'Warden'] },
+    { special: 'momentum_defense', momentumDefense: 1, v: ['Flickering', 'Blazing', 'Warding'], a: ['Wanderer', 'Wayfarer', 'Pilot'] },
+    { special: 'momentum_defense', momentumDefense: 2, v: ['Flickering', 'Blazing', 'Warding'], a: ['Wanderer', 'Wayfarer', 'Pilot'] },
+    { special: 'momentum_defense', momentumDefense: 3, v: ['Flickering', 'Blazing', 'Warding'], a: ['Wanderer', 'Wayfarer', 'Pilot'] },
+    { special: 'ranged_defense', rangedDefenseBonus: 2, v: ['Warding', 'Flickering', 'Blazing'], a: ['Sentinel', 'Warden', 'Technomancer'] },
+    { special: 'ranged_defense', rangedDefenseBonus: 4, v: ['Warding', 'Flickering', 'Blazing'], a: ['Sentinel', 'Warden', 'Technomancer'] },
+    { special: 'ranged_immune', v: ['Warding', 'Flickering', 'Blazing'], a: ['Sentinel', 'Warden', 'Technomancer'] },
+    { special: 'thorns', thornsPercent: 50, v: ['Piercing', 'Rending', 'Shrieking'], a: ['Sentinel', 'Warden', 'Xenarch'] },
+    { special: 'thorns', thornsPercent: 100, v: ['Piercing', 'Rending', 'Shrieking'], a: ['Sentinel', 'Warden', 'Xenarch'] },
+    { special: 'wall_of_steel', wallBonus: 2, v: ['Warding', 'Sundering', 'Blazing'], a: ['Sentinel', 'Warden', 'Slayer'] },
+    { special: 'wall_of_steel', wallBonus: 4, v: ['Warding', 'Sundering', 'Blazing'], a: ['Sentinel', 'Warden', 'Slayer'] },
+    { special: 'wall_of_steel', wallBonus: 6, v: ['Warding', 'Sundering', 'Blazing'], a: ['Sentinel', 'Warden', 'Slayer'] },
+];
+
+const PASSIVE_EFFECTS = [
+    { special: 'aether_bonus', aetherBonus: 10, v: ['Warding', 'Flickering', 'Weeping'], a: ['Seer', 'Technomancer', 'Witch'] },
+    { special: 'aether_bonus', aetherBonus: 20, v: ['Warding', 'Flickering', 'Weeping'], a: ['Seer', 'Technomancer', 'Witch'] },
+    { special: 'aether_regen', aetherRegen: 1, v: ['Weeping', 'Flickering', 'Warding'], a: ['Seer', 'Witch', 'Navigator'] },
+    { special: 'aether_regen', aetherRegen: 2, v: ['Weeping', 'Flickering', 'Warding'], a: ['Seer', 'Witch', 'Navigator'] },
+    { special: 'aether_regen', aetherRegen: 3, v: ['Weeping', 'Flickering', 'Warding'], a: ['Seer', 'Witch', 'Navigator'] },
+    { special: 'aether_signet', aetherSignetDamage: 3, aetherSignetCost: 3, v: ['Blazing', 'Searing', 'Thirsting'], a: ['Technomancer', 'Xenarch', 'Zealot'] },
+    { special: 'aether_signet', aetherSignetDamage: 5, aetherSignetCost: 5, v: ['Blazing', 'Searing', 'Thirsting'], a: ['Technomancer', 'Xenarch', 'Zealot'] },
+    { special: 'blink_ring', blinkRange: 4, blinkBonus: 2, v: ['Flickering', 'Blazing', 'Weeping'], a: ['Navigator', 'Pilot', 'Wraith'] },
+    { special: 'breach_jewel', breachBonus: 4, v: ['Blazing', 'Warding', 'Searing'], a: ['Sentinel', 'Warden', 'Zealot'] },
+    { special: 'breach_jewel', breachBonus: 6, v: ['Blazing', 'Warding', 'Searing'], a: ['Sentinel', 'Warden', 'Zealot'] },
+    { special: 'chaos_attune', chaosAttuneMight: 2, chaosAttuneDef: 2, v: ['Withering', 'Weeping', 'Warding'], a: ['Witch', 'Xenarch', 'Wanderer'] },
+    { special: 'chaos_attune', chaosAttuneMight: 4, chaosAttuneDef: 3, v: ['Withering', 'Weeping', 'Warding'], a: ['Witch', 'Xenarch', 'Wanderer'] },
+    { special: 'chaos_circlet', v: ['Withering', 'Weeping', 'Flickering'], a: ['Witch', 'Xenarch', 'Wanderer'] },
+    { special: 'chaos_defense', chaosDefenseBonus: 2, v: ['Warding', 'Withering', 'Blazing'], a: ['Sentinel', 'Warden', 'Zealot'] },
+    { special: 'chaos_defense', chaosDefenseBonus: 4, v: ['Warding', 'Withering', 'Blazing'], a: ['Sentinel', 'Warden', 'Zealot'] },
+    { special: 'disengage', v: ['Flickering', 'Weeping', 'Warding'], a: ['Scout', 'Wanderer', 'Ranger'] },
+    { special: 'displacement_immune', v: ['Warding', 'Sundering', 'Blazing'], a: ['Sentinel', 'Warden', 'Navigator'] },
+    { special: 'heal', healPerTurn: 1, v: ['Weeping', 'Warding', 'Flickering'], a: ['Surgeon', 'Seer', 'Wanderer'] },
+    { special: 'heal', healPerTurn: 2, v: ['Weeping', 'Warding', 'Flickering'], a: ['Surgeon', 'Seer', 'Wanderer'] },
+    { special: 'heal', healPerTurn: 3, v: ['Weeping', 'Warding', 'Flickering'], a: ['Surgeon', 'Seer', 'Wanderer'] },
+    { special: 'hp_bonus', hpBonus: 10, v: ['Warding', 'Blazing', 'Sundering'], a: ['Warden', 'Sentinel', 'Zealot'] },
+    { special: 'hp_bonus', hpBonus: 20, v: ['Warding', 'Blazing', 'Sundering'], a: ['Warden', 'Sentinel', 'Zealot'] },
+    { special: 'mp_bonus', mpBonus: 2, v: ['Flickering', 'Blazing', 'Warding'], a: ['Wanderer', 'Wayfarer', 'Scout'] },
+    { special: 'mp_bonus', mpBonus: 4, v: ['Flickering', 'Blazing', 'Warding'], a: ['Wanderer', 'Wayfarer', 'Scout'] },
+    { special: 'opportunist', v: ['Flickering', 'Thirsting', 'Rending'], a: ['Scout', 'Ranger', 'Operator'] },
+    { special: 'ranger_defense', rangerBonus: 1, v: ['Warding', 'Flickering', 'Weeping'], a: ['Ranger', 'Scout', 'Wanderer'] },
+    { special: 'ranger_defense', rangerBonus: 2, v: ['Warding', 'Flickering', 'Weeping'], a: ['Ranger', 'Scout', 'Wanderer'] },
+    { special: 'ranger_defense', rangerBonus: 4, v: ['Warding', 'Flickering', 'Weeping'], a: ['Ranger', 'Scout', 'Wanderer'] },
+    { special: 'reveal_maw', v: ['Piercing', 'Flickering', 'Warding'], a: ['Seer', 'Navigator', 'Scout'] },
+    { special: 'revive', reviveHp: 1, reviveAether: 1, v: ['Weeping', 'Warding', 'Flickering'], a: ['Surgeon', 'Seer', 'Wanderer'] },
+    { special: 'revive', reviveHp: 2, reviveAether: 2, v: ['Weeping', 'Warding', 'Flickering'], a: ['Surgeon', 'Seer', 'Wanderer'] },
+    { special: 'soul_harvest', soulHarvestXP: 2, v: ['Thirsting', 'Withering', 'Weeping'], a: ['Wraith', 'Witch', 'Slayer'] },
+    { special: 'soul_harvest', soulHarvestXP: 4, v: ['Thirsting', 'Withering', 'Weeping'], a: ['Wraith', 'Witch', 'Slayer'] },
+    { special: 'strider', v: ['Flickering', 'Blazing', 'Warding'], a: ['Wanderer', 'Wayfarer', 'Ranger'] },
+    { special: 'threat_shroud', v: ['Weeping', 'Flickering', 'Withering'], a: ['Scout', 'Wraith', 'Wanderer'] },
+    { special: 'vision_bonus', visionBonus: 2, v: ['Piercing', 'Flickering', 'Warding'], a: ['Seer', 'Scout', 'Navigator'] },
+    { special: 'vision_bonus', visionBonus: 4, v: ['Piercing', 'Flickering', 'Warding'], a: ['Seer', 'Scout', 'Navigator'] },
+    { special: 'wraith_immune', v: ['Warding', 'Blazing', 'Searing'], a: ['Sentinel', 'Warden', 'Technomancer'] },
+];
+
+function _pickVerbing(effect) {
+    return Rando.bool(0.5) ? Rando.choice(VERBING_GENERAL) : Rando.choice(effect.v);
+}
+
+function _pickArchetype(effect) {
+    return Rando.bool(0.5) ? Rando.choice(ARCHETYPES_GENERAL) : Rando.choice(effect.a);
+}
+
+function _rollName(itemWords, effect) {
+    const pattern = Rando.int(0, 5);
+    const mode = Rando.choice(MODES);
+    const item = Rando.choice(itemWords);
+    switch (pattern) {
+        case 0: return `${mode} ${item}`;
+        case 1: return `${_pickVerbing(effect)} ${item}`;
+        case 2: return `${_pickArchetype(effect)}'s ${item}`;
+        case 3: return `${mode}${Rando.choice(VERBERS)}`;
+        case 4: return `${mode}${Rando.choice(VERBS)} ${item}`;
+        case 5: return Rando.bool(0.5)
+            ? `${item} of the ${mode}`
+            : `${item} of the ${_pickArchetype(effect)}`;
+    }
+}
+
+let _magicItemCounter = 0;
+
+function _spreadEffect(effect) {
+    const { v, a, ...props } = effect;
+    return props;
+}
+
+export function rollMagicItem(category) {
+    if (!category) category = Rando.choice(['melee', 'ranged', 'armor', 'artifact']);
+
+    const id = `magic_${++_magicItemCounter}`;
+    let item;
+
+    switch (category) {
+        case 'melee': {
+            const effect = Rando.choice(MELEE_EFFECTS);
+            const name = _rollName(MELEE_ITEMS, effect);
+            const damage = Rando.int(2, 6);
+            const price = damage * 12 + 10;
+            item = { id, name, type: 'melee', damage, range: 0, price, magical: true, ..._spreadEffect(effect) };
+            ALL_EQUIPMENT[id] = { ...item, slot: EQUIP_SLOT.WEAPON };
+            break;
+        }
+        case 'ranged': {
+            const effect = Rando.choice(RANGED_EFFECTS);
+            const name = _rollName(RANGED_ITEMS, effect);
+            const damage = Rando.int(2, 6);
+            const range = Rando.int(3, 5);
+            const price = (damage + range) * 8 + 10;
+            item = { id, name, type: 'ranged', damage, range, price, magical: true, ..._spreadEffect(effect) };
+            ALL_EQUIPMENT[id] = { ...item, slot: EQUIP_SLOT.WEAPON };
+            break;
+        }
+        case 'armor': {
+            const effect = Rando.choice([...ARMOR_EFFECTS, ...PASSIVE_EFFECTS]);
+            const name = _rollName(ARMOR_ITEMS, effect);
+            const defense = Rando.int(2, 6);
+            const price = defense * 15 + 10;
+            item = { id, name, defense, price, magical: true, ..._spreadEffect(effect) };
+            ALL_EQUIPMENT[id] = { ...item, slot: EQUIP_SLOT.ARMOR };
+            break;
+        }
+        case 'artifact': {
+            const effect = Rando.choice(PASSIVE_EFFECTS);
+            const name = _rollName(ARTIFACT_ITEMS, effect);
+            const price = 40 + Rando.int(0, 40);
+            item = { id, name, price, magical: true, ..._spreadEffect(effect) };
+            ALL_EQUIPMENT[id] = { ...item, slot: EQUIP_SLOT.ARTIFACT };
+            break;
+        }
+    }
+
+    return item;
+}
 
 // ---- Skills ----
 export const SKILL_TARGET = {
