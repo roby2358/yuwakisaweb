@@ -2503,6 +2503,7 @@ function updateInvPanel() {
         const id = player.equipment[slot];
         if (!id) continue;
         const item = ALL_EQUIPMENT[id];
+        if (!item) continue;
         const nameColor = item.magical ? '#ffc107' : '#ccc';
         html += `<div class="inv-item equipped">
             <div><span style="color:${nameColor}">${item.name}</span> <span style="color:#888">(${slot}, equipped)</span><br>
@@ -2562,48 +2563,74 @@ function itemStatLine(item) {
     if (item.defense !== undefined) parts.push(`Def ${item.defense}`);
     if (item.special) {
         const specials = {
-            chaos_bonus: '+2 vs chaos', cleave: 'Cleave', ignore_defense: 'Ignore def',
-            free_ranged: 'Free ranged', hp_bonus: `+${item.hpBonus} HP`,
-            vision_bonus: `+${item.visionBonus} vision`, mp_penalty: `-${item.mpPenalty} MP`,
-            wraith_immune: 'Wraith immune', aether_bonus: `+${item.aetherBonus} AE`,
-            regen: `+${item.regenAmount} HP/turn`, displacement_immune: 'No displacement',
-            reveal_maw: 'Reveals Maw',
-            // New weapon specials
-            lifesteal: `+${item.lifestealAmount} HP/hit`, armor_pierce: `Pierce ${item.pierceAmount} def`,
-            riposte: 'Half counter-atk', momentum: `+${item.momentumBonus} if moved`,
-            aether_siphon: '+1 AE/hit', defense_shred: '-1 def/hit', recoil: `${item.recoilDamage} self-dmg`,
-            chain: `Chain ${item.chainDamage}`, knockback: 'Knockback 1',
-            splash: `Splash ${item.splashDamage}`, piercing: 'Pierce-through',
-            double_shot: 'Double shot', burn: `Burn ${item.burnDamage}/turn`,
-            sniper: `+${item.sniperBonus} at max range`,
-            // New armor specials
-            thorns: `${item.thornsDamage} reflect`, dodge_bonus: `+${item.dodgeBonus}% dodge`,
-            heal_on_kill: `+${item.healOnKill} HP/kill`, aether_regen: '+1 AE/turn',
-            ranged_immune: 'Ranged immune', last_stand: `+${item.lastStandBonus} def <50% HP`,
-            // Artifact specials
-            strider: 'Rough terrain 1 MP',
-            disengage: 'No engagement MP penalty',
-            momentum_defense: '+1 def per hex moved',
-            threat_shroud: '-2 enemy detect range',
-            ranger_defense: `+${item.rangerBonus} def on forest/hills`,
-            chaos_defense: `+${item.chaosDefenseBonus} def on shattered/distressed`,
-            wall_crown: `+${item.wallCrownBonus} melee if stationary`,
-            breach_jewel: `+${item.breachBonus} might near breach`,
-            soul_harvest: `+${item.soulHarvestXP} XP/kill`,
-            opportunist: '25% gold on kill',
-            aether_signet: `+${item.aetherSignetDamage} dmg when AE full (costs ${item.aetherSignetCost} AE)`,
-            chaos_circlet: '+1 AE/turn on corrupted',
-            aether_regen_small: '+1 AE/turn',
-            aether_regen_large: '+3 AE/turn',
-            blink_ring: `Blink ${item.blinkRange} hex melee +${item.blinkBonus}`,
+            // Weapon effects
+            armor_pierce: `Pierce ${item.pierceAmount} def`,
+            aether_siphon: `+${item.siphonAmount || 1} AE/hit`,
+            burn: `Burn ${item.burnDamage}/turn`,
+            chain: `Chain ${item.chainCount || item.chainDamage}`,
+            chaos_bonus: `+${item.chaosBonus || 2} vs chaos`,
             counter_mastery: 'Counter-attack on enemy melee',
+            defense_shred: `-${item.shredAmount || 1} def/hit`,
             double_strike: 'Double strike',
+            triple_strike: 'Triple strike',
+            ignore_defense: 'Ignore def',
+            knockback: 'Knockback 1',
+            lifesteal: `+${item.lifestealAmount} HP/hit`,
+            momentum: `+${item.momentumBonus} if moved`,
+            recoil: `+${item.recoilBonus} dmg, ${item.recoilDamage} self-dmg`,
+            reverberate: `Chain ${item.chainCount} +${item.chainBonus}/jump`,
+            riposte: `+${item.riposteDamage || 1} counter-atk`,
+            // Ranged weapon effects
+            double_shot: 'Double shot',
+            triple_shot: 'Triple shot',
+            free_ranged: 'Free ranged',
+            piercing: 'Pierce-through',
+            sniper: `+${item.sniperBonus} at max range`,
+            splash: `Splash ${item.splashDamage}`,
+            // Armor effects
+            burning_aura: `Burn adjacent ${item.burnAuraDamage}/turn`,
+            dodge_bonus: `+${item.dodgeBonus}% dodge`,
+            heal_on_kill: `+${item.healOnKill} HP/kill`,
+            high_def_mp_penalty: `+${item.defBonus} def -${item.mpPenalty} MP`,
+            last_stand: `+${item.lastStandBonus} def <50% HP`,
+            momentum_defense: `+${item.momentumDefense || 1} def/hex moved`,
+            ranged_defense: `+${item.rangedDefenseBonus} def vs ranged`,
+            ranged_immune: 'Ranged immune',
+            thorns: `${item.thornsPercent || item.thornsDamage || '?'}% reflect`,
+            wall_of_steel: `+${item.wallBonus} melee if stationary`,
+            // Passive effects
+            aether_bonus: `+${item.aetherBonus} max AE`,
+            aether_regen: `+${item.aetherRegen || 1} AE/turn`,
+            aether_signet: `+${item.aetherSignetDamage} dmg when AE full (costs ${item.aetherSignetCost} AE)`,
+            blink_ring: `Blink ${item.blinkRange} hex melee +${item.blinkBonus}`,
+            breach_jewel: `+${item.breachBonus} might near breach`,
+            chaos_attune: `+${item.chaosAttuneMight} might +${item.chaosAttuneDef} def on corrupted`,
+            chaos_circlet: '+1 AE/turn on corrupted',
+            chaos_defense: `+${item.chaosDefenseBonus} def on shattered/distressed`,
+            disengage: 'No engagement MP penalty',
+            displacement_immune: 'No displacement',
+            heal: `+${item.healPerTurn} HP/turn`,
+            hp_bonus: `+${item.hpBonus} HP`,
+            mp_bonus: `+${item.mpBonus} MP`,
+            opportunist: '25% gold on kill',
+            ranger_defense: `+${item.rangerBonus} def on forest/hills`,
+            reveal_maw: 'Reveals Maw',
+            revive: `+${item.reviveHp} HP +${item.reviveAether} AE/turn`,
+            soul_harvest: `+${item.soulHarvestXP} XP/kill`,
+            strider: 'Rough terrain 1 MP',
+            threat_shroud: '-2 enemy detect range',
+            vision_bonus: `+${item.visionBonus} vision`,
+            wraith_immune: 'Wraith immune',
+            // Legacy specials (origitems compatibility)
+            mp_penalty: `-${item.mpPenalty} MP`,
+            regen: `+${item.regenAmount} HP/turn`,
             armor_regen: `+${item.regenAmount} HP/turn`,
             armor_aether_bonus: `+${item.aetherBonus} max AE`,
             regen_combo: `+${item.regenAmount} HP +1 AE/turn`,
-            mp_bonus: `+${item.mpBonus} MP`,
-            chaos_attune: `+${item.chaosAttuneMight} might +${item.chaosAttuneDef} def on corrupted`,
-            burning_aura: `Burn adjacent ${item.burnAuraDamage}/turn on melee hit`
+            wall_crown: `+${item.wallCrownBonus} melee if stationary`,
+            aether_regen_small: '+1 AE/turn',
+            aether_regen_large: '+3 AE/turn',
+            cleave: 'Cleave'
         };
         parts.push(specials[item.special] || item.special);
     }

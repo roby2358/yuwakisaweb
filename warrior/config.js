@@ -1,5 +1,6 @@
 // config.js — Game constants and data definitions
 import { Rando } from './rando.js';
+import { ORIG_WEAPONS, ORIG_ARMORS, ORIG_ARTIFACTS } from './origitems.js';
 
 export const HEX_SIZE = 24;
 
@@ -241,6 +242,11 @@ export const ARTIFACTS = [];
 export const ALL_EQUIPMENT = {};
 for (const w of WEAPONS) ALL_EQUIPMENT[w.id] = { ...w, slot: EQUIP_SLOT.WEAPON };
 for (const a of ARMORS) ALL_EQUIPMENT[a.id] = { ...a, slot: EQUIP_SLOT.ARMOR };
+
+// Register legacy magical items so saved games still work
+for (const w of ORIG_WEAPONS) if (w.magical) ALL_EQUIPMENT[w.id] = { ...w, slot: EQUIP_SLOT.WEAPON };
+for (const a of ORIG_ARMORS) if (a.magical) ALL_EQUIPMENT[a.id] = { ...a, slot: EQUIP_SLOT.ARMOR };
+for (const a of ORIG_ARTIFACTS) ALL_EQUIPMENT[a.id] = { ...a, slot: EQUIP_SLOT.ARTIFACT };
 
 export const NON_MAGICAL_ITEMS = [...WEAPONS, ...ARMORS];
 
