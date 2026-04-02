@@ -2496,7 +2496,7 @@ function updateInvPanel() {
         if (!item) continue;
         const nameColor = item.magical ? '#ffc107' : '#ccc';
         html += `<div class="inv-item equipped">
-            <div><span style="color:${nameColor}">${item.name}</span> <span style="color:#888">(${slot}, equipped)</span><br>
+            <div><span style="color:${nameColor}">${item.name}</span> <span style="color:#888">(${slot})</span><br>
             <span style="color:#aaa;font-size:11px">${itemStatLine(item)}</span></div>
             <button data-action="unequip" data-id="${id}" data-slot="${slot}">Unequip</button>
         </div>`;
