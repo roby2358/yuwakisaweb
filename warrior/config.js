@@ -635,7 +635,7 @@ export const SKILLS = {
     },
     salvage: {
         id: 'salvage', name: 'Salvage', cost: 0, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.PRISTINE,
-        range: 1, desc: 'Create gold deposits on adjacent shattered hexes. Ends turn.', minLevel: 4
+        range: 1, desc: 'Restore adjacent shattered hexes and reveals gold. Ends turn.', minLevel: 4
     },
     skill_seek: {
         id: 'skill_seek', name: 'Skill Seek', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,

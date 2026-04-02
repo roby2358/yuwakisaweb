@@ -1043,24 +1043,50 @@ function executeSkill(skillId, targetQ, targetR) {
             break;
         }
         case 'salvage': {
-            let deposits = 0;
-            for (const h of hexesInRange(player.q, player.r, skill.range)) {
-                if (h.q === player.q && h.r === player.r) continue; // adjacent only
-                const hex = world.getHex(h.q, h.r);
-                if (!hex) continue;
-                // Shattered hexes get a gold deposit (terrain stays shattered)
-                if (UNSHATTERED_VERSION[hex.terrain] !== undefined && hex.goldDeposit === 0) {
-                    hex.goldDeposit = 5;
-                    deposits++;
-                }
-            }
-            if (deposits === 0) {
+            const salvageRange = skill.range;
+            const salvageHexes = hexesInRange(player.q, player.r, salvageRange)
+                .map(h => world.getHex(h.q, h.r))
+                .filter(h => h && UNSHATTERED_VERSION[h.terrain] !== undefined);
+            if (salvageHexes.length === 0) {
                 logCombat('No shattered terrain nearby to salvage!', 'log-info');
                 player.usedSkillsThisTurn.delete(skillId);
                 usedMP = false;
                 break;
             }
-            logCombat(`Salvage: created ${deposits} gold deposit${deposits > 1 ? 's' : ''}!`, 'log-gold');
+            // Restore shattered hexes (same as restore skill)
+            for (const hex of salvageHexes) {
+                hex.terrain = UNSHATTERED_VERSION[hex.terrain];
+            }
+            for (const hex of salvageHexes) {
+                for (const coord of hexesInRange(hex.q, hex.r, 3)) {
+                    const h = world.getHex(coord.q, coord.r);
+                    if (h) h.shatteredCount = Math.max(0, h.shatteredCount - 1);
+                }
+            }
+            const checkedSalv = new Set();
+            for (const hex of salvageHexes) {
+                for (const coord of hexesInRange(hex.q, hex.r, 3)) {
+                    const key = hexKey(coord.q, coord.r);
+                    if (checkedSalv.has(key)) continue;
+                    checkedSalv.add(key);
+                    const h = world.getHex(coord.q, coord.r);
+                    if (!h) continue;
+                    if (h.shatteredCount === 0 && UNDISTRESSED_VERSION[h.terrain] !== undefined) {
+                        h.terrain = UNDISTRESSED_VERSION[h.terrain];
+                    }
+                }
+                if (hex.shatteredCount > 0 && DISTRESSED_VERSION[hex.terrain] !== undefined) {
+                    hex.terrain = DISTRESSED_VERSION[hex.terrain];
+                }
+            }
+            // Drop 1-10 gold deposit on each restored hex
+            let totalGold = 0;
+            for (const hex of salvageHexes) {
+                const gold = Rando.int(1, 10);
+                hex.goldDeposit = (hex.goldDeposit || 0) + gold;
+                totalGold += gold;
+            }
+            logCombat(`Salvage: restored ${salvageHexes.length} hex${salvageHexes.length > 1 ? 'es' : ''}, ${totalGold}g in deposits!`, 'log-gold');
             player.mp = 0;
             break;
         }
