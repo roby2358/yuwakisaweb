@@ -6,7 +6,7 @@ import {
     xpForLevel,
     POI, POI_SYMBOLS, POI_COLORS, POI_DEFENSE_BONUS,
     ENEMY_TYPE,
-    EQUIP_SLOT, WEAPONS, ARMORS, ARTIFACTS, ALL_EQUIPMENT, NON_MAGICAL_ITEMS, rollMagicItem,
+    EQUIP_SLOT, WEAPONS, ARMORS, ARTIFACTS, ALL_EQUIPMENT, NON_MAGICAL_ITEMS, rollMagicItem, syncMagicItemCounter,
     SKILL_TARGET, SKILL_USAGE, SKILLS, SKILL_UNLOCK_LEVELS,
     SHATTERED_VERSION, UNSHATTERED_VERSION, DISTRESSED_VERSION, UNDISTRESSED_VERSION
 } from './config.js';
@@ -1968,12 +1968,13 @@ function loadGame() {
     targeting = null;
     threatOverlay = null;
 
-    // Re-register generated magic items
+    // Re-register generated magic items and sync counter
     if (data.magicRegistry) {
         for (const [id, item] of Object.entries(data.magicRegistry)) {
             ALL_EQUIPMENT[id] = item;
         }
     }
+    syncMagicItemCounter();
 
     world = GameWorld.fromJSON(data.world);
     player = Player.fromJSON(data.player);

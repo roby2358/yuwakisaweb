@@ -455,7 +455,16 @@ function _rollName(itemWords, effect) {
     }
 }
 
-let _magicItemCounter = 0;
+export let _magicItemCounter = 0;
+
+export function syncMagicItemCounter() {
+    for (const id of Object.keys(ALL_EQUIPMENT)) {
+        if (id.startsWith('magic_')) {
+            const n = parseInt(id.slice(6));
+            if (n > _magicItemCounter) _magicItemCounter = n;
+        }
+    }
+}
 
 function _spreadEffect(effect) {
     const { v, a, ...props } = effect;
