@@ -44,66 +44,65 @@ export class Player {
         return ALL_EQUIPMENT[id];
     }
 
+    // Returns the first equipped item with this special across all slots, or null
+    equipped(special) {
+        for (const slot of ['weapon', 'armor', 'artifact']) {
+            const item = this[slot]();
+            if (item && item.special === special) return item;
+        }
+        return null;
+    }
+
     defense(terrainType) {
         const arm = this.armor();
         let def = arm ? arm.defense : 0;
         def += TERRAIN_DEFENSE_BONUS[terrainType] || 0;
-        if (arm && arm.special === 'last_stand' && this.hp <= this.maxHP() / 2) {
-            def += arm.lastStandBonus;
+        const lastStand = this.equipped('last_stand');
+        if (lastStand && this.hp <= this.maxHP() / 2) def += lastStand.lastStandBonus;
+        const momDef = this.equipped('momentum_defense');
+        if (momDef) def += this.hexesMovedThisTurn * (momDef.momentumDefense || 1);
+        const ranger = this.equipped('ranger_defense');
+        if (ranger && [TERRAIN.FOREST, TERRAIN.HILLS, TERRAIN.QUARRY, TERRAIN.SHATTERED_FOREST, TERRAIN.DISTRESSED_FOREST, TERRAIN.SHATTERED_HILLS, TERRAIN.DISTRESSED_HILLS, TERRAIN.SHATTERED_QUARRY, TERRAIN.DISTRESSED_QUARRY].includes(terrainType)) {
+            def += ranger.rangerBonus;
         }
-        const art = this.artifact();
-        if (art && art.special === 'momentum_defense') {
-            def += this.hexesMovedThisTurn;
-        }
-        if (art && art.special === 'ranger_defense') {
-            if ([TERRAIN.FOREST, TERRAIN.HILLS, TERRAIN.QUARRY, TERRAIN.SHATTERED_FOREST, TERRAIN.DISTRESSED_FOREST, TERRAIN.SHATTERED_HILLS, TERRAIN.DISTRESSED_HILLS, TERRAIN.SHATTERED_QUARRY, TERRAIN.DISTRESSED_QUARRY].includes(terrainType)) {
-                def += art.rangerBonus;
-            }
-        }
-        if (art && art.special === 'chaos_defense') {
-            if (terrainType >= 7 && terrainType <= 16) {
-                def += art.chaosDefenseBonus;
-            }
-        }
-        if (art && art.special === 'chaos_attune') {
-            if (terrainType >= 7 && terrainType <= 16) {
-                def += art.chaosAttuneDef;
-            }
-        }
+        const chaosDef = this.equipped('chaos_defense');
+        if (chaosDef && terrainType >= 7 && terrainType <= 16) def += chaosDef.chaosDefenseBonus;
+        const chaosAtt = this.equipped('chaos_attune');
+        if (chaosAtt && terrainType >= 7 && terrainType <= 16) def += chaosAtt.chaosAttuneDef;
         return def;
     }
 
     maxHP() {
         let hp = maxHP(this.stats.vigor);
-        const arm = this.armor();
-        if (arm && arm.special === 'hp_bonus') hp += arm.hpBonus;
+        const hpItem = this.equipped('hp_bonus');
+        if (hpItem) hp += hpItem.hpBonus;
         return hp;
     }
 
     maxAether() {
         let ae = maxAether(this.stats.warding);
-        const art = this.artifact();
-        if (art && art.special === 'aether_bonus') ae += art.aetherBonus;
-        const arm = this.armor();
-        if (arm && arm.special === 'armor_aether_bonus') ae += arm.aetherBonus;
+        const aeItem = this.equipped('aether_bonus');
+        if (aeItem) ae += aeItem.aetherBonus;
+        const aeArmor = this.equipped('armor_aether_bonus');
+        if (aeArmor) ae += aeArmor.aetherBonus;
         return ae;
     }
 
     vision() {
         let v = BASE_VISION;
-        const arm = this.armor();
-        if (arm && arm.special === 'vision_bonus') v += arm.visionBonus;
-        const art = this.artifact();
-        if (art && art.special === 'vision_bonus') v += art.visionBonus;
+        const visItem = this.equipped('vision_bonus');
+        if (visItem) v += visItem.visionBonus;
         return v;
     }
 
     maxMP() {
         let m = PLAYER_MP;
-        const arm = this.armor();
-        if (arm && arm.special === 'mp_penalty') m -= arm.mpPenalty;
-        const art = this.artifact();
-        if (art && art.special === 'mp_bonus') m += art.mpBonus;
+        const mpPen = this.equipped('mp_penalty');
+        if (mpPen) m -= mpPen.mpPenalty;
+        const highDef = this.equipped('high_def_mp_penalty');
+        if (highDef) m -= highDef.mpPenalty;
+        const mpItem = this.equipped('mp_bonus');
+        if (mpItem) m += mpItem.mpBonus;
         return Math.max(1, m);
     }
 
@@ -111,10 +110,10 @@ export class Player {
         const wep = this.weapon();
         const wepDmg = wep ? (wep.type === 'ranged' ? Math.ceil(wep.damage / 4) : wep.damage) : 1;
         let dmg = wepDmg + this.stats.might;
-        if (wep && wep.special === 'chaos_bonus' && enemyDef.chaosSpawned) dmg += 2;
+        if (wep && wep.special === 'chaos_bonus' && enemyDef.chaosSpawned) dmg += (wep.chaosBonus || 2);
         if (wep && wep.special === 'momentum' && this.movedThisTurn) dmg += wep.momentumBonus;
-        const art = this.artifact();
-        if (art && art.special === 'wall_crown' && !this.movedThisTurn) dmg += art.wallCrownBonus;
+        const wallItem = this.equipped('wall_of_steel') || this.equipped('wall_crown');
+        if (wallItem && !this.movedThisTurn) dmg += (wallItem.wallBonus || wallItem.wallCrownBonus);
         return dmg;
     }
 
@@ -129,8 +128,8 @@ export class Player {
 
     dodge() {
         let d = Math.min(this.stats.reflex, MAX_DODGE);
-        const arm = this.armor();
-        if (arm && arm.special === 'dodge_bonus') d += arm.dodgeBonus;
+        const dodgeItem = this.equipped('dodge_bonus');
+        if (dodgeItem) d += dodgeItem.dodgeBonus;
         return d;
     }
 
