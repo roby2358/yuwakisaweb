@@ -6,7 +6,9 @@ import {
     xpForLevel,
     POI, POI_SYMBOLS, POI_COLORS, POI_DEFENSE_BONUS,
     ENEMY_TYPE,
-    EQUIP_SLOT, WEAPONS, ARMORS, ARTIFACTS, ALL_EQUIPMENT, NON_MAGICAL_ITEMS, rollMagicItem, syncMagicItemCounter,
+    EQUIP_SLOT, WEAPONS, ARMORS, ARTIFACTS, ALL_EQUIPMENT, NON_MAGICAL_ITEMS,
+    rollMagicItem, _magicItemCounter, setMagicItemCounter,
+    isChaosTerrain, SELL_PRICE_RATIO,
     SKILL_TARGET, SKILL_USAGE, SKILLS, SKILL_UNLOCK_LEVELS,
     SHATTERED_VERSION, UNSHATTERED_VERSION, DISTRESSED_VERSION, UNDISTRESSED_VERSION
 } from './config.js';
@@ -228,65 +230,56 @@ function dealDamageToEnemy(enemy, damage, source, opts = {}) {
     const rolled = Rando.bellCurve(damage);
     let eDef = enemyDefense(enemy, def);
     if (opts.pierceAmount) eDef = Math.max(0, eDef - opts.pierceAmount);
-    const actualDmg = Math.max(1, rolled - eDef);
-    enemy.hp -= actualDmg;
-    logCombat(`${source}: ${actualDmg} dmg to ${def.name}`, 'log-dmg');
-    if (enemy.hp <= 0) {
-        killEnemy(enemy);
-        return true;
-    }
-    return false;
+    const dealt = Math.max(1, rolled - eDef);
+    enemy.hp -= dealt;
+    logCombat(`${source}: ${dealt} dmg to ${def.name}`, 'log-dmg');
+    const killed = enemy.hp <= 0;
+    if (killed) killEnemy(enemy);
+    return { dealt, killed };
 }
 
 function dealDamageToPlayer(damage, source, isSkillDamage, opts = {}) {
-    // Ranged immune check
     if (opts.isRanged && player.equipped('ranged_immune')) {
         logCombat('Ranged attack negated!', 'log-info');
-        return null;
+        return { dealt: 0, avoided: true };
     }
-    // Warp Shield check
     if (player.warpShieldTurns > 0) {
         player.warpShieldTurns = 0;
         logCombat('Warp Shield absorbed the hit!', 'log-info');
-        return null;
+        return { dealt: 0, avoided: true };
     }
-    // Dodge check
     if (Math.random() * 100 < player.dodge()) {
         logCombat('Dodged!', 'log-info');
-        return null;
+        return { dealt: 0, avoided: true };
     }
     const rolled = Rando.bellCurve(damage);
     let def = playerDefense();
-    if (isSkillDamage) {
-        def += Math.round(player.stats.warding / 100 * rolled);
-    }
-    const actualDmg = Math.max(1, rolled - def);
-    player.hp -= actualDmg;
-    logCombat(`${source}: ${actualDmg} dmg to you`, 'log-dmg');
-    // Thorns: reflect damage to melee attacker
-    const thornsItem = player.equipped('thorns');
-    if (opts.attacker && !opts.isRanged && thornsItem) {
-        const thornDmg = thornsItem.thornsDamage || Math.round(actualDmg * (thornsItem.thornsPercent || 50) / 100);
-        opts.attacker.hp -= thornDmg;
-        logCombat(`Thorns: ${thornDmg} dmg to ${em.getDef(opts.attacker.type).name}`, 'log-dmg');
-        if (opts.attacker.hp <= 0) killEnemy(opts.attacker);
-    }
-    // Burning aura: burn all adjacent enemies on melee hit
-    const burnAura = player.equipped('burning_aura');
-    if (opts.attacker && !opts.isRanged && burnAura) {
-        for (const n of hexNeighbors(player.q, player.r)) {
-            const adj = em.enemies.find(e => e.q === n.q && e.r === n.r);
-            if (adj) {
-                adj.burnDamage = (adj.burnDamage || 0) + burnAura.burnAuraDamage;
-                logCombat(`Burning aura: ${em.getDef(adj.type).name} is burning!`, 'log-dmg');
+    if (isSkillDamage) def += Math.round(player.stats.warding / 100 * rolled);
+    const dealt = Math.max(1, rolled - def);
+    player.hp -= dealt;
+    logCombat(`${source}: ${dealt} dmg to you`, 'log-dmg');
+
+    if (opts.attacker && !opts.isRanged) {
+        const thornsItem = player.equipped('thorns');
+        if (thornsItem) {
+            const thornDmg = thornsItem.thornsDamage || Math.round(dealt * (thornsItem.thornsPercent || 50) / 100);
+            opts.attacker.hp -= thornDmg;
+            logCombat(`Thorns: ${thornDmg} dmg to ${em.getDef(opts.attacker.type).name}`, 'log-dmg');
+            if (opts.attacker.hp <= 0) killEnemy(opts.attacker);
+        }
+        const burnAura = player.equipped('burning_aura');
+        if (burnAura) {
+            for (const n of hexNeighbors(player.q, player.r)) {
+                const adj = em.enemies.find(e => e.q === n.q && e.r === n.r);
+                if (adj) {
+                    adj.burnDamage = (adj.burnDamage || 0) + burnAura.burnAuraDamage;
+                    logCombat(`Burning aura: ${em.getDef(adj.type).name} is burning!`, 'log-dmg');
+                }
             }
         }
     }
-    if (player.hp <= 0) {
-        player.hp = 0;
-        endGame(false);
-    }
-    return actualDmg;
+    if (player.hp <= 0) { player.hp = 0; endGame(false); }
+    return { dealt, avoided: false };
 }
 
 function killEnemy(enemy) {
@@ -344,6 +337,8 @@ function killEnemy(enemy) {
     }
 }
 
+function sellPrice(item) { return Math.max(1, Math.floor(item.price * SELL_PRICE_RATIO)); }
+
 function guessSlot(item) {
     if (item.damage !== undefined) return EQUIP_SLOT.WEAPON;
     if (item.defense !== undefined) return EQUIP_SLOT.ARMOR;
@@ -364,34 +359,32 @@ function rollNonMagicalDrops(min, max) {
     return pool.slice(0, count);
 }
 
+function applyEquipmentBonusDamage(baseDmg) {
+    let dmg = baseDmg;
+    const breach = player.equipped('breach_jewel');
+    if (breach) {
+        const near = world.pois.some(p => (p.type === POI.BREACH || p.type === POI.MAW) && hexDistance(player.q, player.r, p.q, p.r) <= 3);
+        if (near) { dmg += breach.breachBonus; logCombat(`Breach Jewel: +${breach.breachBonus} might!`, 'log-info'); }
+    }
+    const signet = player.equipped('aether_signet');
+    if (signet && player.aether >= player.maxAether()) {
+        dmg += signet.aetherSignetDamage;
+        player.aether -= signet.aetherSignetCost;
+        logCombat(`Aether Signet: +${signet.aetherSignetDamage} dmg!`, 'log-info');
+    }
+    const attune = player.equipped('chaos_attune');
+    if (attune && isChaosTerrain(playerTerrain())) dmg += attune.chaosAttuneMight;
+    return dmg;
+}
+
 function meleeAttack(enemy) {
     combatAlerted = true;
-    let dmg = player.meleeDamage(em.getDef(enemy.type));
-    // Breach Jewel: bonus damage near breaches
-    const breachItem = player.equipped('breach_jewel');
-    if (breachItem) {
-        const nearBreach = world.pois.some(p => (p.type === POI.BREACH || p.type === POI.MAW) && hexDistance(player.q, player.r, p.q, p.r) <= 3);
-        if (nearBreach) { dmg += breachItem.breachBonus; logCombat(`Breach Jewel: +${breachItem.breachBonus} might!`, 'log-info'); }
-    }
-    // Aether Signet: bonus damage when aether is full
-    const signetItem = player.equipped('aether_signet');
-    if (signetItem && player.aether >= player.maxAether()) {
-        dmg += signetItem.aetherSignetDamage;
-        player.aether -= signetItem.aetherSignetCost;
-        logCombat(`Aether Signet: +${signetItem.aetherSignetDamage} dmg!`, 'log-info');
-    }
-    // Chaos attune: bonus might on shattered/distressed terrain
-    const chaosAttuneM = player.equipped('chaos_attune');
-    if (chaosAttuneM) {
-        const pt = playerTerrain();
-        if (pt >= 7 && pt <= 16) dmg += chaosAttuneM.chaosAttuneMight;
-    }
+    let dmg = applyEquipmentBonusDamage(player.meleeDamage(em.getDef(enemy.type).chaosSpawned));
     const wep = player.weapon();
     const opts = {};
     if (wep && wep.special === 'armor_pierce') opts.pierceAmount = wep.pierceAmount;
-    const killed = dealDamageToEnemy(enemy, dmg, 'Melee', opts);
+    const { killed } = dealDamageToEnemy(enemy, dmg, 'Melee', opts);
 
-    // Defense shred: permanently reduce enemy defense
     if (!killed && wep && wep.special === 'defense_shred') {
         enemy.defReduction = (enemy.defReduction || 0) + 1;
         logCombat(`Nullblade shreds 1 defense!`, 'log-info');
@@ -438,13 +431,12 @@ function meleeAttack(enemy) {
     }
 
     if (!killed) {
-        // Counter-attack (riposte halves counter damage)
         const def = em.getDef(enemy.type);
         let counterDmg = enemyMeleeAttack(enemy, def);
         if (wep && wep.special === 'riposte') counterDmg = Math.floor(counterDmg / 2);
         dealDamageToPlayer(counterDmg, `${def.name} counters`, false, { attacker: enemy });
     }
-    return killed;
+    return { killed };
 }
 
 function knockbackHex(fromQ, fromR, targetQ, targetR) {
@@ -469,26 +461,8 @@ function rangedAttack(targetQ, targetR) {
     if (!enemy) return;
     const wep = player.weapon();
     const dist = hexDistance(player.q, player.r, targetQ, targetR);
-    let dmg = player.rangedDamage(dist);
-    // Breach Jewel: bonus damage near breaches
-    const breachItemR = player.equipped('breach_jewel');
-    if (breachItemR) {
-        const nearBreach = world.pois.some(p => (p.type === POI.BREACH || p.type === POI.MAW) && hexDistance(player.q, player.r, p.q, p.r) <= 3);
-        if (nearBreach) { dmg += breachItemR.breachBonus; logCombat(`Breach Jewel: +${breachItemR.breachBonus} might!`, 'log-info'); }
-    }
-    // Aether Signet: bonus damage when aether is full
-    const signetItemR = player.equipped('aether_signet');
-    if (signetItemR && player.aether >= player.maxAether()) {
-        dmg += signetItemR.aetherSignetDamage;
-        player.aether -= signetItemR.aetherSignetCost;
-        logCombat(`Aether Signet: +${signetItemR.aetherSignetDamage} dmg!`, 'log-info');
-    }
-    // Chaos attune: bonus might on shattered/distressed terrain
-    const chaosAttuneMR = player.equipped('chaos_attune');
-    if (chaosAttuneMR) {
-        const pt = playerTerrain();
-        if (pt >= 7 && pt <= 16) dmg += chaosAttuneMR.chaosAttuneMight;
-    }
+    const eDef = em.getDef(enemy.type);
+    let dmg = applyEquipmentBonusDamage(player.rangedDamage(dist, eDef.chaosSpawned));
 
     // Fire primary shot
     const rangedOpts = {};
@@ -511,19 +485,10 @@ function rangedAttack(targetQ, targetR) {
         logCombat(`${em.getDef(enemy.type).name} is burning!`, 'log-dmg');
     }
 
-    // Chain: flat damage to one adjacent enemy
+    // Chain: damage bounces to nearby enemies
     if (wep && wep.special === 'chain') {
-        const adj = hexNeighbors(targetQ, targetR);
-        for (const n of adj) {
-            const chainTarget = em.enemies.find(e => e.q === n.q && e.r === n.r && e !== enemy);
-            if (chainTarget) {
-                const chainDmg = Math.max(1, wep.chainDamage - enemyDefense(chainTarget, em.getDef(chainTarget.type)));
-                chainTarget.hp -= chainDmg;
-                logCombat(`Chain: ${chainDmg} dmg to ${em.getDef(chainTarget.type).name}`, 'log-dmg');
-                if (chainTarget.hp <= 0) killEnemy(chainTarget);
-                break;
-            }
-        }
+        const chainDmgBase = wep.chainDamage || Math.ceil(dmg / 2);
+        chainBounce('Chain', chainDmgBase, targetQ, targetR, wep.chainCount || 1, 2, new Set([enemy]), false);
     }
 
     // Splash: flat damage to all adjacent enemies
@@ -1408,7 +1373,7 @@ function moveAndAttack(enemyQ, enemyR) {
                 logCombat(`Blink Ring: teleported!`, 'log-info');
                 const origMight = player.stats.might;
                 player.stats.might += blinkItemAtk.blinkBonus;
-                const killed = meleeAttack(enemy);
+                const { killed } = meleeAttack(enemy);
                 player.stats.might = origMight;
                 if (killed) {
                     const hex = world.getHex(enemyQ, enemyR);
@@ -1454,9 +1419,8 @@ function moveAndAttack(enemyQ, enemyR) {
     }
 
     // Attack
-    const killed = meleeAttack(enemy);
+    const { killed } = meleeAttack(enemy);
     if (killed) {
-        // Move onto the killed enemy's hex
         const hex = world.getHex(enemyQ, enemyR);
         if (hex && world.isPassable(hex)) {
             let moveCost = MOVEMENT_COST[hex.terrain] ?? 1;
@@ -1784,7 +1748,7 @@ async function runEnemyPhase() {
     const chaosCirclet = player.equipped('chaos_circlet');
     if (chaosCirclet) {
         const pTerrain = playerTerrain();
-        if (pTerrain >= 7 && pTerrain <= 16) {
+        if (isChaosTerrain(pTerrain)) {
             player.aether = Math.min(player.maxAether(), player.aether + 1);
             logCombat('Chaos Circlet: +1 AE', 'log-info');
         }
@@ -1936,7 +1900,8 @@ function saveGame() {
         player: player.toJSON(),
         world: world.toJSON(),
         enemies: em.toJSON(),
-        magicRegistry
+        magicRegistry,
+        magicItemCounter: _magicItemCounter
     };
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
 }
@@ -1974,7 +1939,7 @@ function loadGame() {
             ALL_EQUIPMENT[id] = item;
         }
     }
-    syncMagicItemCounter();
+    if (data.magicItemCounter) setMagicItemCounter(data.magicItemCounter);
 
     world = GameWorld.fromJSON(data.world);
     player = Player.fromJSON(data.player);
@@ -2829,7 +2794,7 @@ function showShopDialog(poi) {
     // Sell section
     if (player.inventory.length > 0) {
         const nonMagicInInventory = player.inventory.filter(id => { const it = ALL_EQUIPMENT[id]; return it && !it.magical; });
-        const nonMagicTotal = nonMagicInInventory.reduce((sum, id) => sum + Math.max(1, Math.floor(ALL_EQUIPMENT[id].price * 0.4)), 0);
+        const nonMagicTotal = nonMagicInInventory.reduce((sum, id) => sum + sellPrice(ALL_EQUIPMENT[id]), 0);
         bodyHtml += '<div style="margin-top:12px;border-top:1px solid #333;padding-top:8px"><strong>Sell:</strong></div>';
         if (nonMagicInInventory.length > 0) {
             bodyHtml += `<div class="shop-item">
@@ -2841,7 +2806,7 @@ function showShopDialog(poi) {
             const id = player.inventory[i];
             const item = ALL_EQUIPMENT[id];
             if (!item) continue;
-            const sellPrice = Math.max(1, Math.floor(item.price * 0.4));
+            const sellPrice = sellPrice(item);
             const sellColor = item.magical ? '#b388ff' : '#ccc';
             bodyHtml += `<div class="shop-item">
                 <div style="color:${sellColor}">${item.name}</div>

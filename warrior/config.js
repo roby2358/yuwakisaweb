@@ -24,6 +24,17 @@ export const TERRAIN = {
     DISTRESSED_QUARRY: 16
 };
 
+export function isChaosTerrain(t) { return t >= TERRAIN.SHATTERED_PLAINS && t <= TERRAIN.DISTRESSED_QUARRY; }
+
+export const RANGER_TERRAIN = [
+    TERRAIN.FOREST, TERRAIN.HILLS, TERRAIN.QUARRY,
+    TERRAIN.SHATTERED_FOREST, TERRAIN.DISTRESSED_FOREST,
+    TERRAIN.SHATTERED_HILLS, TERRAIN.DISTRESSED_HILLS,
+    TERRAIN.SHATTERED_QUARRY, TERRAIN.DISTRESSED_QUARRY
+];
+
+export const SELL_PRICE_RATIO = 0.4;
+
 export const TERRAIN_NAMES = {
     [TERRAIN.WATER]: 'Water',
     [TERRAIN.PLAINS]: 'Plains',
@@ -294,182 +305,229 @@ const ARTIFACT_ITEMS = [
     'Transponder', 'Injector', 'Capacitor'
 ];
 
-// Effect pools — each entry has verbings/archetypes for themed naming, rest is spread onto item
-// v = effect-specific verbings, a = effect-specific archetypes
+// Effect-specific naming: verbings and archetypes per special type
+const EFFECT_NAMING = {
+    armor_pierce:      { v: ['Rending', 'Sundering', 'Piercing'],   a: ['Slayer', 'Warden', 'Operator'] },
+    aether_siphon:     { v: ['Thirsting', 'Weeping', 'Withering'],  a: ['Witch', 'Technomancer', 'Seer'] },
+    burn:              { v: ['Blazing', 'Searing', 'Burning'],      a: ['Zealot', 'Witch', 'Xenarch'] },
+    chain:             { v: ['Shrieking', 'Flickering', 'Blazing'],  a: ['Technomancer', 'Operator', 'Starpilot'] },
+    chaos_bonus:       { v: ['Warding', 'Sundering', 'Searing'],    a: ['Sentinel', 'Warden', 'Zealot'] },
+    counter_mastery:   { v: ['Warding', 'Piercing', 'Rending'],     a: ['Warden', 'Sentinel', 'Slayer'] },
+    defense_shred:     { v: ['Sundering', 'Rending', 'Withering'],  a: ['Surgeon', 'Operator', 'Slayer'] },
+    double_strike:     { v: ['Flickering', 'Blazing', 'Rending'],   a: ['Replicant', 'Slayer', 'Pilot'] },
+    triple_strike:     { v: ['Flickering', 'Shrieking', 'Blazing'], a: ['Replicant', 'Slayer', 'Zealot'] },
+    ignore_defense:    { v: ['Piercing', 'Sundering', 'Rending'],   a: ['Xenarch', 'Surgeon', 'Technomancer'] },
+    knockback:         { v: ['Sundering', 'Shrieking', 'Blazing'],  a: ['Warden', 'Sentinel', 'Slayer'] },
+    lifesteal:         { v: ['Thirsting', 'Weeping', 'Withering'],  a: ['Wraith', 'Witch', 'Surgeon'] },
+    momentum:          { v: ['Blazing', 'Searing', 'Rending'],      a: ['Wanderer', 'Wayfarer', 'Pilot'] },
+    recoil:            { v: ['Shrieking', 'Blazing', 'Searing'],    a: ['Zealot', 'Slayer', 'Xenarch'] },
+    reverberate:       { v: ['Shrieking', 'Sundering', 'Blazing'],  a: ['Technomancer', 'Xenarch', 'Operator'] },
+    riposte:           { v: ['Warding', 'Piercing', 'Flickering'],  a: ['Warden', 'Sentinel', 'Slayer'] },
+    double_shot:       { v: ['Flickering', 'Blazing', 'Shrieking'], a: ['Replicant', 'Ranger', 'Starpilot'] },
+    triple_shot:       { v: ['Flickering', 'Shrieking', 'Blazing'], a: ['Replicant', 'Starpilot', 'Zealot'] },
+    free_ranged:       { v: ['Flickering', 'Warding', 'Weeping'],   a: ['Navigator', 'Seer', 'Wanderer'] },
+    piercing:          { v: ['Piercing', 'Rending', 'Sundering'],   a: ['Ranger', 'Scout', 'Slayer'] },
+    sniper:            { v: ['Piercing', 'Warding', 'Searing'],     a: ['Ranger', 'Scout', 'Starpilot'] },
+    splash:            { v: ['Blazing', 'Shrieking', 'Searing'],    a: ['Operator', 'Technomancer', 'Xenarch'] },
+    burning_aura:      { v: ['Blazing', 'Searing', 'Burning'],      a: ['Zealot', 'Witch', 'Xenarch'] },
+    dodge_bonus:       { v: ['Flickering', 'Weeping', 'Warding'],   a: ['Scout', 'Wanderer', 'Wraith'] },
+    heal_on_kill:      { v: ['Thirsting', 'Rending', 'Withering'],  a: ['Slayer', 'Wraith', 'Surgeon'] },
+    high_def_mp_penalty: { v: ['Warding', 'Sundering', 'Blazing'],  a: ['Sentinel', 'Warden', 'Xenarch'] },
+    last_stand:        { v: ['Warding', 'Blazing', 'Shrieking'],    a: ['Sentinel', 'Zealot', 'Warden'] },
+    momentum_defense:  { v: ['Flickering', 'Blazing', 'Warding'],   a: ['Wanderer', 'Wayfarer', 'Pilot'] },
+    ranged_defense:    { v: ['Warding', 'Flickering', 'Blazing'],   a: ['Sentinel', 'Warden', 'Technomancer'] },
+    ranged_immune:     { v: ['Warding', 'Flickering', 'Blazing'],   a: ['Sentinel', 'Warden', 'Technomancer'] },
+    thorns:            { v: ['Piercing', 'Rending', 'Shrieking'],   a: ['Sentinel', 'Warden', 'Xenarch'] },
+    wall_of_steel:     { v: ['Warding', 'Sundering', 'Blazing'],    a: ['Sentinel', 'Warden', 'Slayer'] },
+    aether_bonus:      { v: ['Warding', 'Flickering', 'Weeping'],   a: ['Seer', 'Technomancer', 'Witch'] },
+    aether_regen:      { v: ['Weeping', 'Flickering', 'Warding'],   a: ['Seer', 'Witch', 'Navigator'] },
+    aether_signet:     { v: ['Blazing', 'Searing', 'Thirsting'],    a: ['Technomancer', 'Xenarch', 'Zealot'] },
+    blink_ring:        { v: ['Flickering', 'Blazing', 'Weeping'],   a: ['Navigator', 'Pilot', 'Wraith'] },
+    breach_jewel:      { v: ['Blazing', 'Warding', 'Searing'],      a: ['Sentinel', 'Warden', 'Zealot'] },
+    chaos_attune:      { v: ['Withering', 'Weeping', 'Warding'],    a: ['Witch', 'Xenarch', 'Wanderer'] },
+    chaos_circlet:     { v: ['Withering', 'Weeping', 'Flickering'], a: ['Witch', 'Xenarch', 'Wanderer'] },
+    chaos_defense:     { v: ['Warding', 'Withering', 'Blazing'],    a: ['Sentinel', 'Warden', 'Zealot'] },
+    disengage:         { v: ['Flickering', 'Weeping', 'Warding'],   a: ['Scout', 'Wanderer', 'Ranger'] },
+    displacement_immune: { v: ['Warding', 'Sundering', 'Blazing'],  a: ['Sentinel', 'Warden', 'Navigator'] },
+    heal:              { v: ['Weeping', 'Warding', 'Flickering'],   a: ['Surgeon', 'Seer', 'Wanderer'] },
+    hp_bonus:          { v: ['Warding', 'Blazing', 'Sundering'],    a: ['Warden', 'Sentinel', 'Zealot'] },
+    mp_bonus:          { v: ['Flickering', 'Blazing', 'Warding'],   a: ['Wanderer', 'Wayfarer', 'Scout'] },
+    opportunist:       { v: ['Flickering', 'Thirsting', 'Rending'], a: ['Scout', 'Ranger', 'Operator'] },
+    ranger_defense:    { v: ['Warding', 'Flickering', 'Weeping'],   a: ['Ranger', 'Scout', 'Wanderer'] },
+    reveal_maw:        { v: ['Piercing', 'Flickering', 'Warding'],  a: ['Seer', 'Navigator', 'Scout'] },
+    revive:            { v: ['Weeping', 'Warding', 'Flickering'],   a: ['Surgeon', 'Seer', 'Wanderer'] },
+    soul_harvest:      { v: ['Thirsting', 'Withering', 'Weeping'],  a: ['Wraith', 'Witch', 'Slayer'] },
+    strider:           { v: ['Flickering', 'Blazing', 'Warding'],   a: ['Wanderer', 'Wayfarer', 'Ranger'] },
+    threat_shroud:     { v: ['Weeping', 'Flickering', 'Withering'], a: ['Scout', 'Wraith', 'Wanderer'] },
+    vision_bonus:      { v: ['Piercing', 'Flickering', 'Warding'],  a: ['Seer', 'Scout', 'Navigator'] },
+    wraith_immune:     { v: ['Warding', 'Blazing', 'Searing'],      a: ['Sentinel', 'Warden', 'Technomancer'] },
+};
+
+// Effect pools — pure stat data, naming handled by EFFECT_NAMING
 const MELEE_EFFECTS = [
-    { special: 'armor_pierce', pierceAmount: 2, v: ['Rending', 'Sundering', 'Piercing'], a: ['Slayer', 'Warden', 'Operator'] },
-    { special: 'armor_pierce', pierceAmount: 4, v: ['Rending', 'Sundering', 'Piercing'], a: ['Slayer', 'Warden', 'Operator'] },
-    { special: 'aether_siphon', siphonAmount: 1, v: ['Thirsting', 'Weeping', 'Withering'], a: ['Witch', 'Technomancer', 'Seer'] },
-    { special: 'aether_siphon', siphonAmount: 2, v: ['Thirsting', 'Weeping', 'Withering'], a: ['Witch', 'Technomancer', 'Seer'] },
-    { special: 'burn', burnDamage: 2, v: ['Blazing', 'Searing', 'Burning'], a: ['Zealot', 'Witch', 'Xenarch'] },
-    { special: 'burn', burnDamage: 3, v: ['Blazing', 'Searing', 'Burning'], a: ['Zealot', 'Witch', 'Xenarch'] },
-    { special: 'burn', burnDamage: 5, v: ['Blazing', 'Searing', 'Burning'], a: ['Zealot', 'Witch', 'Xenarch'] },
-    { special: 'chain', chainCount: 2, v: ['Shrieking', 'Flickering', 'Blazing'], a: ['Technomancer', 'Operator', 'Starpilot'] },
-    { special: 'chain', chainCount: 3, v: ['Shrieking', 'Flickering', 'Blazing'], a: ['Technomancer', 'Operator', 'Starpilot'] },
-    { special: 'chain', chainCount: 5, v: ['Shrieking', 'Flickering', 'Blazing'], a: ['Technomancer', 'Operator', 'Starpilot'] },
-    { special: 'chaos_bonus', chaosBonus: 2, v: ['Warding', 'Sundering', 'Searing'], a: ['Sentinel', 'Warden', 'Zealot'] },
-    { special: 'chaos_bonus', chaosBonus: 4, v: ['Warding', 'Sundering', 'Searing'], a: ['Sentinel', 'Warden', 'Zealot'] },
-    { special: 'chaos_bonus', chaosBonus: 6, v: ['Warding', 'Sundering', 'Searing'], a: ['Sentinel', 'Warden', 'Zealot'] },
-    { special: 'counter_mastery', v: ['Warding', 'Piercing', 'Rending'], a: ['Warden', 'Sentinel', 'Slayer'] },
-    { special: 'defense_shred', shredAmount: 1, v: ['Sundering', 'Rending', 'Withering'], a: ['Surgeon', 'Operator', 'Slayer'] },
-    { special: 'defense_shred', shredAmount: 2, v: ['Sundering', 'Rending', 'Withering'], a: ['Surgeon', 'Operator', 'Slayer'] },
-    { special: 'double_strike', v: ['Flickering', 'Blazing', 'Rending'], a: ['Replicant', 'Slayer', 'Pilot'] },
-    { special: 'triple_strike', v: ['Flickering', 'Shrieking', 'Blazing'], a: ['Replicant', 'Slayer', 'Zealot'] },
-    { special: 'ignore_defense', v: ['Piercing', 'Sundering', 'Rending'], a: ['Xenarch', 'Surgeon', 'Technomancer'] },
-    { special: 'knockback', v: ['Sundering', 'Shrieking', 'Blazing'], a: ['Warden', 'Sentinel', 'Slayer'] },
-    { special: 'lifesteal', lifestealAmount: 1, v: ['Thirsting', 'Weeping', 'Withering'], a: ['Wraith', 'Witch', 'Surgeon'] },
-    { special: 'lifesteal', lifestealAmount: 2, v: ['Thirsting', 'Weeping', 'Withering'], a: ['Wraith', 'Witch', 'Surgeon'] },
-    { special: 'lifesteal', lifestealAmount: 3, v: ['Thirsting', 'Weeping', 'Withering'], a: ['Wraith', 'Witch', 'Surgeon'] },
-    { special: 'momentum', momentumBonus: 2, v: ['Blazing', 'Searing', 'Rending'], a: ['Wanderer', 'Wayfarer', 'Pilot'] },
-    { special: 'momentum', momentumBonus: 3, v: ['Blazing', 'Searing', 'Rending'], a: ['Wanderer', 'Wayfarer', 'Pilot'] },
-    { special: 'momentum', momentumBonus: 4, v: ['Blazing', 'Searing', 'Rending'], a: ['Wanderer', 'Wayfarer', 'Pilot'] },
-    { special: 'recoil', recoilBonus: 3, recoilDamage: 1, v: ['Shrieking', 'Blazing', 'Searing'], a: ['Zealot', 'Slayer', 'Xenarch'] },
-    { special: 'recoil', recoilBonus: 5, recoilDamage: 3, v: ['Shrieking', 'Blazing', 'Searing'], a: ['Zealot', 'Slayer', 'Xenarch'] },
-    { special: 'recoil', recoilBonus: 8, recoilDamage: 5, v: ['Shrieking', 'Blazing', 'Searing'], a: ['Zealot', 'Slayer', 'Xenarch'] },
-    { special: 'reverberate', chainCount: 3, chainBonus: 2, v: ['Shrieking', 'Sundering', 'Blazing'], a: ['Technomancer', 'Xenarch', 'Operator'] },
-    { special: 'riposte', riposteDamage: 1, v: ['Warding', 'Piercing', 'Flickering'], a: ['Warden', 'Sentinel', 'Slayer'] },
-    { special: 'riposte', riposteDamage: 2, v: ['Warding', 'Piercing', 'Flickering'], a: ['Warden', 'Sentinel', 'Slayer'] },
-    { special: 'riposte', riposteDamage: 3, v: ['Warding', 'Piercing', 'Flickering'], a: ['Warden', 'Sentinel', 'Slayer'] },
+    { special: 'armor_pierce', pierceAmount: 2 },
+    { special: 'armor_pierce', pierceAmount: 4 },
+    { special: 'aether_siphon', siphonAmount: 1 },
+    { special: 'aether_siphon', siphonAmount: 2 },
+    { special: 'burn', burnDamage: 2 },
+    { special: 'burn', burnDamage: 3 },
+    { special: 'burn', burnDamage: 5 },
+    { special: 'chain', chainCount: 2 },
+    { special: 'chain', chainCount: 3 },
+    { special: 'chain', chainCount: 5 },
+    { special: 'chaos_bonus', chaosBonus: 2 },
+    { special: 'chaos_bonus', chaosBonus: 4 },
+    { special: 'chaos_bonus', chaosBonus: 6 },
+    { special: 'counter_mastery' },
+    { special: 'defense_shred', shredAmount: 1 },
+    { special: 'defense_shred', shredAmount: 2 },
+    { special: 'double_strike' },
+    { special: 'triple_strike' },
+    { special: 'ignore_defense' },
+    { special: 'knockback' },
+    { special: 'lifesteal', lifestealAmount: 1 },
+    { special: 'lifesteal', lifestealAmount: 2 },
+    { special: 'lifesteal', lifestealAmount: 3 },
+    { special: 'momentum', momentumBonus: 2 },
+    { special: 'momentum', momentumBonus: 3 },
+    { special: 'momentum', momentumBonus: 4 },
+    { special: 'recoil', recoilBonus: 3, recoilDamage: 1 },
+    { special: 'recoil', recoilBonus: 5, recoilDamage: 3 },
+    { special: 'recoil', recoilBonus: 8, recoilDamage: 5 },
+    { special: 'reverberate', chainCount: 3, chainBonus: 2 },
+    { special: 'riposte', riposteDamage: 1 },
+    { special: 'riposte', riposteDamage: 2 },
+    { special: 'riposte', riposteDamage: 3 },
 ];
 
 const RANGED_EFFECTS = [
-    { special: 'armor_pierce', pierceAmount: 2, v: ['Piercing', 'Rending', 'Sundering'], a: ['Slayer', 'Ranger', 'Operator'] },
-    { special: 'armor_pierce', pierceAmount: 4, v: ['Piercing', 'Rending', 'Sundering'], a: ['Slayer', 'Ranger', 'Operator'] },
-    { special: 'aether_siphon', siphonAmount: 1, v: ['Thirsting', 'Weeping', 'Withering'], a: ['Witch', 'Seer', 'Technomancer'] },
-    { special: 'aether_siphon', siphonAmount: 2, v: ['Thirsting', 'Weeping', 'Withering'], a: ['Witch', 'Seer', 'Technomancer'] },
-    { special: 'burn', burnDamage: 2, v: ['Blazing', 'Searing', 'Burning'], a: ['Zealot', 'Witch', 'Xenarch'] },
-    { special: 'burn', burnDamage: 3, v: ['Blazing', 'Searing', 'Burning'], a: ['Zealot', 'Witch', 'Xenarch'] },
-    { special: 'burn', burnDamage: 5, v: ['Blazing', 'Searing', 'Burning'], a: ['Zealot', 'Witch', 'Xenarch'] },
-    { special: 'chain', chainCount: 2, v: ['Shrieking', 'Flickering', 'Blazing'], a: ['Technomancer', 'Operator', 'Starpilot'] },
-    { special: 'chain', chainCount: 3, v: ['Shrieking', 'Flickering', 'Blazing'], a: ['Technomancer', 'Operator', 'Starpilot'] },
-    { special: 'chain', chainCount: 5, v: ['Shrieking', 'Flickering', 'Blazing'], a: ['Technomancer', 'Operator', 'Starpilot'] },
-    { special: 'chaos_bonus', chaosBonus: 2, v: ['Warding', 'Sundering', 'Searing'], a: ['Sentinel', 'Warden', 'Zealot'] },
-    { special: 'chaos_bonus', chaosBonus: 4, v: ['Warding', 'Sundering', 'Searing'], a: ['Sentinel', 'Warden', 'Zealot'] },
-    { special: 'chaos_bonus', chaosBonus: 6, v: ['Warding', 'Sundering', 'Searing'], a: ['Sentinel', 'Warden', 'Zealot'] },
-    { special: 'defense_shred', shredAmount: 1, v: ['Sundering', 'Rending', 'Withering'], a: ['Surgeon', 'Operator', 'Slayer'] },
-    { special: 'defense_shred', shredAmount: 2, v: ['Sundering', 'Rending', 'Withering'], a: ['Surgeon', 'Operator', 'Slayer'] },
-    { special: 'double_shot', v: ['Flickering', 'Blazing', 'Shrieking'], a: ['Replicant', 'Ranger', 'Starpilot'] },
-    { special: 'triple_shot', v: ['Flickering', 'Shrieking', 'Blazing'], a: ['Replicant', 'Starpilot', 'Zealot'] },
-    { special: 'free_ranged', v: ['Flickering', 'Warding', 'Weeping'], a: ['Navigator', 'Seer', 'Wanderer'] },
-    { special: 'ignore_defense', v: ['Piercing', 'Sundering', 'Rending'], a: ['Xenarch', 'Surgeon', 'Technomancer'] },
-    { special: 'knockback', v: ['Sundering', 'Shrieking', 'Blazing'], a: ['Warden', 'Sentinel', 'Slayer'] },
-    { special: 'lifesteal', lifestealAmount: 1, v: ['Thirsting', 'Weeping', 'Withering'], a: ['Wraith', 'Witch', 'Surgeon'] },
-    { special: 'lifesteal', lifestealAmount: 2, v: ['Thirsting', 'Weeping', 'Withering'], a: ['Wraith', 'Witch', 'Surgeon'] },
-    { special: 'lifesteal', lifestealAmount: 3, v: ['Thirsting', 'Weeping', 'Withering'], a: ['Wraith', 'Witch', 'Surgeon'] },
-    { special: 'piercing', v: ['Piercing', 'Rending', 'Sundering'], a: ['Ranger', 'Scout', 'Slayer'] },
-    { special: 'recoil', recoilBonus: 5, recoilDamage: 1, v: ['Shrieking', 'Blazing', 'Searing'], a: ['Zealot', 'Slayer', 'Xenarch'] },
-    { special: 'recoil', recoilBonus: 8, recoilDamage: 3, v: ['Shrieking', 'Blazing', 'Searing'], a: ['Zealot', 'Slayer', 'Xenarch'] },
-    { special: 'recoil', recoilBonus: 13, recoilDamage: 5, v: ['Shrieking', 'Blazing', 'Searing'], a: ['Zealot', 'Slayer', 'Xenarch'] },
-    { special: 'sniper', sniperBonus: 2, v: ['Piercing', 'Warding', 'Searing'], a: ['Ranger', 'Scout', 'Starpilot'] },
-    { special: 'sniper', sniperBonus: 4, v: ['Piercing', 'Warding', 'Searing'], a: ['Ranger', 'Scout', 'Starpilot'] },
-    { special: 'sniper', sniperBonus: 8, v: ['Piercing', 'Warding', 'Searing'], a: ['Ranger', 'Scout', 'Starpilot'] },
-    { special: 'splash', splashDamage: 2, v: ['Blazing', 'Shrieking', 'Searing'], a: ['Operator', 'Technomancer', 'Xenarch'] },
+    { special: 'armor_pierce', pierceAmount: 2 },
+    { special: 'armor_pierce', pierceAmount: 4 },
+    { special: 'aether_siphon', siphonAmount: 1 },
+    { special: 'aether_siphon', siphonAmount: 2 },
+    { special: 'burn', burnDamage: 2 },
+    { special: 'burn', burnDamage: 3 },
+    { special: 'burn', burnDamage: 5 },
+    { special: 'chain', chainCount: 2 },
+    { special: 'chain', chainCount: 3 },
+    { special: 'chain', chainCount: 5 },
+    { special: 'chaos_bonus', chaosBonus: 2 },
+    { special: 'chaos_bonus', chaosBonus: 4 },
+    { special: 'chaos_bonus', chaosBonus: 6 },
+    { special: 'defense_shred', shredAmount: 1 },
+    { special: 'defense_shred', shredAmount: 2 },
+    { special: 'double_shot' },
+    { special: 'triple_shot' },
+    { special: 'free_ranged' },
+    { special: 'ignore_defense' },
+    { special: 'knockback' },
+    { special: 'lifesteal', lifestealAmount: 1 },
+    { special: 'lifesteal', lifestealAmount: 2 },
+    { special: 'lifesteal', lifestealAmount: 3 },
+    { special: 'piercing' },
+    { special: 'recoil', recoilBonus: 5, recoilDamage: 1 },
+    { special: 'recoil', recoilBonus: 8, recoilDamage: 3 },
+    { special: 'recoil', recoilBonus: 13, recoilDamage: 5 },
+    { special: 'sniper', sniperBonus: 2 },
+    { special: 'sniper', sniperBonus: 4 },
+    { special: 'sniper', sniperBonus: 8 },
+    { special: 'splash', splashDamage: 2 },
 ];
 
 const ARMOR_EFFECTS = [
-    { special: 'burning_aura', burnAuraDamage: 2, v: ['Blazing', 'Searing', 'Burning'], a: ['Zealot', 'Witch', 'Xenarch'] },
-    { special: 'burning_aura', burnAuraDamage: 5, v: ['Blazing', 'Searing', 'Burning'], a: ['Zealot', 'Witch', 'Xenarch'] },
-    { special: 'dodge_bonus', dodgeBonus: 10, v: ['Flickering', 'Weeping', 'Warding'], a: ['Scout', 'Wanderer', 'Wraith'] },
-    { special: 'dodge_bonus', dodgeBonus: 20, v: ['Flickering', 'Weeping', 'Warding'], a: ['Scout', 'Wanderer', 'Wraith'] },
-    { special: 'dodge_bonus', dodgeBonus: 30, v: ['Flickering', 'Weeping', 'Warding'], a: ['Scout', 'Wanderer', 'Wraith'] },
-    { special: 'heal_on_kill', healOnKill: 5, v: ['Thirsting', 'Rending', 'Withering'], a: ['Slayer', 'Wraith', 'Surgeon'] },
-    { special: 'heal_on_kill', healOnKill: 8, v: ['Thirsting', 'Rending', 'Withering'], a: ['Slayer', 'Wraith', 'Surgeon'] },
-    { special: 'high_def_mp_penalty', defBonus: 5, mpPenalty: 1, v: ['Warding', 'Sundering', 'Blazing'], a: ['Sentinel', 'Warden', 'Xenarch'] },
-    { special: 'last_stand', lastStandBonus: 4, v: ['Warding', 'Blazing', 'Shrieking'], a: ['Sentinel', 'Zealot', 'Warden'] },
-    { special: 'last_stand', lastStandBonus: 6, v: ['Warding', 'Blazing', 'Shrieking'], a: ['Sentinel', 'Zealot', 'Warden'] },
-    { special: 'momentum_defense', momentumDefense: 1, v: ['Flickering', 'Blazing', 'Warding'], a: ['Wanderer', 'Wayfarer', 'Pilot'] },
-    { special: 'momentum_defense', momentumDefense: 2, v: ['Flickering', 'Blazing', 'Warding'], a: ['Wanderer', 'Wayfarer', 'Pilot'] },
-    { special: 'momentum_defense', momentumDefense: 3, v: ['Flickering', 'Blazing', 'Warding'], a: ['Wanderer', 'Wayfarer', 'Pilot'] },
-    { special: 'ranged_defense', rangedDefenseBonus: 2, v: ['Warding', 'Flickering', 'Blazing'], a: ['Sentinel', 'Warden', 'Technomancer'] },
-    { special: 'ranged_defense', rangedDefenseBonus: 4, v: ['Warding', 'Flickering', 'Blazing'], a: ['Sentinel', 'Warden', 'Technomancer'] },
-    { special: 'ranged_immune', v: ['Warding', 'Flickering', 'Blazing'], a: ['Sentinel', 'Warden', 'Technomancer'] },
-    { special: 'thorns', thornsPercent: 50, v: ['Piercing', 'Rending', 'Shrieking'], a: ['Sentinel', 'Warden', 'Xenarch'] },
-    { special: 'thorns', thornsPercent: 100, v: ['Piercing', 'Rending', 'Shrieking'], a: ['Sentinel', 'Warden', 'Xenarch'] },
-    { special: 'wall_of_steel', wallBonus: 2, v: ['Warding', 'Sundering', 'Blazing'], a: ['Sentinel', 'Warden', 'Slayer'] },
-    { special: 'wall_of_steel', wallBonus: 4, v: ['Warding', 'Sundering', 'Blazing'], a: ['Sentinel', 'Warden', 'Slayer'] },
-    { special: 'wall_of_steel', wallBonus: 6, v: ['Warding', 'Sundering', 'Blazing'], a: ['Sentinel', 'Warden', 'Slayer'] },
+    { special: 'burning_aura', burnAuraDamage: 2 },
+    { special: 'burning_aura', burnAuraDamage: 5 },
+    { special: 'dodge_bonus', dodgeBonus: 10 },
+    { special: 'dodge_bonus', dodgeBonus: 20 },
+    { special: 'dodge_bonus', dodgeBonus: 30 },
+    { special: 'heal_on_kill', healOnKill: 5 },
+    { special: 'heal_on_kill', healOnKill: 8 },
+    { special: 'high_def_mp_penalty', defBonus: 5, mpPenalty: 1 },
+    { special: 'last_stand', lastStandBonus: 4 },
+    { special: 'last_stand', lastStandBonus: 6 },
+    { special: 'momentum_defense', momentumDefense: 1 },
+    { special: 'momentum_defense', momentumDefense: 2 },
+    { special: 'momentum_defense', momentumDefense: 3 },
+    { special: 'ranged_defense', rangedDefenseBonus: 2 },
+    { special: 'ranged_defense', rangedDefenseBonus: 4 },
+    { special: 'ranged_immune' },
+    { special: 'thorns', thornsPercent: 50 },
+    { special: 'thorns', thornsPercent: 100 },
+    { special: 'wall_of_steel', wallBonus: 2 },
+    { special: 'wall_of_steel', wallBonus: 4 },
+    { special: 'wall_of_steel', wallBonus: 6 },
 ];
 
 const PASSIVE_EFFECTS = [
-    { special: 'aether_bonus', aetherBonus: 10, v: ['Warding', 'Flickering', 'Weeping'], a: ['Seer', 'Technomancer', 'Witch'] },
-    { special: 'aether_bonus', aetherBonus: 20, v: ['Warding', 'Flickering', 'Weeping'], a: ['Seer', 'Technomancer', 'Witch'] },
-    { special: 'aether_regen', aetherRegen: 1, v: ['Weeping', 'Flickering', 'Warding'], a: ['Seer', 'Witch', 'Navigator'] },
-    { special: 'aether_regen', aetherRegen: 2, v: ['Weeping', 'Flickering', 'Warding'], a: ['Seer', 'Witch', 'Navigator'] },
-    { special: 'aether_regen', aetherRegen: 3, v: ['Weeping', 'Flickering', 'Warding'], a: ['Seer', 'Witch', 'Navigator'] },
-    { special: 'aether_signet', aetherSignetDamage: 3, aetherSignetCost: 3, v: ['Blazing', 'Searing', 'Thirsting'], a: ['Technomancer', 'Xenarch', 'Zealot'] },
-    { special: 'aether_signet', aetherSignetDamage: 5, aetherSignetCost: 5, v: ['Blazing', 'Searing', 'Thirsting'], a: ['Technomancer', 'Xenarch', 'Zealot'] },
-    { special: 'blink_ring', blinkRange: 4, blinkBonus: 2, v: ['Flickering', 'Blazing', 'Weeping'], a: ['Navigator', 'Pilot', 'Wraith'] },
-    { special: 'breach_jewel', breachBonus: 4, v: ['Blazing', 'Warding', 'Searing'], a: ['Sentinel', 'Warden', 'Zealot'] },
-    { special: 'breach_jewel', breachBonus: 6, v: ['Blazing', 'Warding', 'Searing'], a: ['Sentinel', 'Warden', 'Zealot'] },
-    { special: 'chaos_attune', chaosAttuneMight: 2, chaosAttuneDef: 2, v: ['Withering', 'Weeping', 'Warding'], a: ['Witch', 'Xenarch', 'Wanderer'] },
-    { special: 'chaos_attune', chaosAttuneMight: 4, chaosAttuneDef: 3, v: ['Withering', 'Weeping', 'Warding'], a: ['Witch', 'Xenarch', 'Wanderer'] },
-    { special: 'chaos_circlet', v: ['Withering', 'Weeping', 'Flickering'], a: ['Witch', 'Xenarch', 'Wanderer'] },
-    { special: 'chaos_defense', chaosDefenseBonus: 2, v: ['Warding', 'Withering', 'Blazing'], a: ['Sentinel', 'Warden', 'Zealot'] },
-    { special: 'chaos_defense', chaosDefenseBonus: 4, v: ['Warding', 'Withering', 'Blazing'], a: ['Sentinel', 'Warden', 'Zealot'] },
-    { special: 'disengage', v: ['Flickering', 'Weeping', 'Warding'], a: ['Scout', 'Wanderer', 'Ranger'] },
-    { special: 'displacement_immune', v: ['Warding', 'Sundering', 'Blazing'], a: ['Sentinel', 'Warden', 'Navigator'] },
-    { special: 'heal', healPerTurn: 1, v: ['Weeping', 'Warding', 'Flickering'], a: ['Surgeon', 'Seer', 'Wanderer'] },
-    { special: 'heal', healPerTurn: 2, v: ['Weeping', 'Warding', 'Flickering'], a: ['Surgeon', 'Seer', 'Wanderer'] },
-    { special: 'heal', healPerTurn: 3, v: ['Weeping', 'Warding', 'Flickering'], a: ['Surgeon', 'Seer', 'Wanderer'] },
-    { special: 'hp_bonus', hpBonus: 10, v: ['Warding', 'Blazing', 'Sundering'], a: ['Warden', 'Sentinel', 'Zealot'] },
-    { special: 'hp_bonus', hpBonus: 20, v: ['Warding', 'Blazing', 'Sundering'], a: ['Warden', 'Sentinel', 'Zealot'] },
-    { special: 'mp_bonus', mpBonus: 2, v: ['Flickering', 'Blazing', 'Warding'], a: ['Wanderer', 'Wayfarer', 'Scout'] },
-    { special: 'mp_bonus', mpBonus: 4, v: ['Flickering', 'Blazing', 'Warding'], a: ['Wanderer', 'Wayfarer', 'Scout'] },
-    { special: 'opportunist', v: ['Flickering', 'Thirsting', 'Rending'], a: ['Scout', 'Ranger', 'Operator'] },
-    { special: 'ranger_defense', rangerBonus: 1, v: ['Warding', 'Flickering', 'Weeping'], a: ['Ranger', 'Scout', 'Wanderer'] },
-    { special: 'ranger_defense', rangerBonus: 2, v: ['Warding', 'Flickering', 'Weeping'], a: ['Ranger', 'Scout', 'Wanderer'] },
-    { special: 'ranger_defense', rangerBonus: 4, v: ['Warding', 'Flickering', 'Weeping'], a: ['Ranger', 'Scout', 'Wanderer'] },
-    { special: 'reveal_maw', v: ['Piercing', 'Flickering', 'Warding'], a: ['Seer', 'Navigator', 'Scout'] },
-    { special: 'revive', reviveHp: 1, reviveAether: 1, v: ['Weeping', 'Warding', 'Flickering'], a: ['Surgeon', 'Seer', 'Wanderer'] },
-    { special: 'revive', reviveHp: 2, reviveAether: 2, v: ['Weeping', 'Warding', 'Flickering'], a: ['Surgeon', 'Seer', 'Wanderer'] },
-    { special: 'soul_harvest', soulHarvestXP: 2, v: ['Thirsting', 'Withering', 'Weeping'], a: ['Wraith', 'Witch', 'Slayer'] },
-    { special: 'soul_harvest', soulHarvestXP: 4, v: ['Thirsting', 'Withering', 'Weeping'], a: ['Wraith', 'Witch', 'Slayer'] },
-    { special: 'strider', v: ['Flickering', 'Blazing', 'Warding'], a: ['Wanderer', 'Wayfarer', 'Ranger'] },
-    { special: 'threat_shroud', v: ['Weeping', 'Flickering', 'Withering'], a: ['Scout', 'Wraith', 'Wanderer'] },
-    { special: 'vision_bonus', visionBonus: 2, v: ['Piercing', 'Flickering', 'Warding'], a: ['Seer', 'Scout', 'Navigator'] },
-    { special: 'vision_bonus', visionBonus: 4, v: ['Piercing', 'Flickering', 'Warding'], a: ['Seer', 'Scout', 'Navigator'] },
-    { special: 'wraith_immune', v: ['Warding', 'Blazing', 'Searing'], a: ['Sentinel', 'Warden', 'Technomancer'] },
+    { special: 'aether_bonus', aetherBonus: 10 },
+    { special: 'aether_bonus', aetherBonus: 20 },
+    { special: 'aether_regen', aetherRegen: 1 },
+    { special: 'aether_regen', aetherRegen: 2 },
+    { special: 'aether_regen', aetherRegen: 3 },
+    { special: 'aether_signet', aetherSignetDamage: 3, aetherSignetCost: 3 },
+    { special: 'aether_signet', aetherSignetDamage: 5, aetherSignetCost: 5 },
+    { special: 'blink_ring', blinkRange: 4, blinkBonus: 2 },
+    { special: 'breach_jewel', breachBonus: 4 },
+    { special: 'breach_jewel', breachBonus: 6 },
+    { special: 'chaos_attune', chaosAttuneMight: 2, chaosAttuneDef: 2 },
+    { special: 'chaos_attune', chaosAttuneMight: 4, chaosAttuneDef: 3 },
+    { special: 'chaos_circlet' },
+    { special: 'chaos_defense', chaosDefenseBonus: 2 },
+    { special: 'chaos_defense', chaosDefenseBonus: 4 },
+    { special: 'disengage' },
+    { special: 'displacement_immune' },
+    { special: 'heal', healPerTurn: 1 },
+    { special: 'heal', healPerTurn: 2 },
+    { special: 'heal', healPerTurn: 3 },
+    { special: 'hp_bonus', hpBonus: 10 },
+    { special: 'hp_bonus', hpBonus: 20 },
+    { special: 'mp_bonus', mpBonus: 2 },
+    { special: 'mp_bonus', mpBonus: 4 },
+    { special: 'opportunist' },
+    { special: 'ranger_defense', rangerBonus: 1 },
+    { special: 'ranger_defense', rangerBonus: 2 },
+    { special: 'ranger_defense', rangerBonus: 4 },
+    { special: 'reveal_maw' },
+    { special: 'revive', reviveHp: 1, reviveAether: 1 },
+    { special: 'revive', reviveHp: 2, reviveAether: 2 },
+    { special: 'soul_harvest', soulHarvestXP: 2 },
+    { special: 'soul_harvest', soulHarvestXP: 4 },
+    { special: 'strider' },
+    { special: 'threat_shroud' },
+    { special: 'vision_bonus', visionBonus: 2 },
+    { special: 'vision_bonus', visionBonus: 4 },
+    { special: 'wraith_immune' },
 ];
 
-function _pickVerbing(effect) {
-    return Rando.bool(0.5) ? Rando.choice(VERBING_GENERAL) : Rando.choice(effect.v);
+const ARMOR_OR_PASSIVE = [...ARMOR_EFFECTS, ...PASSIVE_EFFECTS];
+
+function _pickVerbing(naming) {
+    return Rando.bool(0.5) ? Rando.choice(VERBING_GENERAL) : Rando.choice(naming.v);
 }
 
-function _pickArchetype(effect) {
-    return Rando.bool(0.5) ? Rando.choice(ARCHETYPES_GENERAL) : Rando.choice(effect.a);
+function _pickArchetype(naming) {
+    return Rando.bool(0.5) ? Rando.choice(ARCHETYPES_GENERAL) : Rando.choice(naming.a);
 }
 
-function _rollName(itemWords, effect) {
+function _rollName(itemWords, naming) {
     const pattern = Rando.int(0, 5);
     const mode = Rando.choice(MODES);
     const item = Rando.choice(itemWords);
     switch (pattern) {
         case 0: return `${mode} ${item}`;
-        case 1: return `${_pickVerbing(effect)} ${item}`;
-        case 2: return `${_pickArchetype(effect)}'s ${item}`;
+        case 1: return `${_pickVerbing(naming)} ${item}`;
+        case 2: return `${_pickArchetype(naming)}'s ${item}`;
         case 3: return `${mode}${Rando.choice(VERBERS)}`;
         case 4: return `${mode}${Rando.choice(VERBS)} ${item}`;
         case 5: return Rando.bool(0.5)
             ? `${item} of the ${mode}`
-            : `${item} of the ${_pickArchetype(effect)}`;
+            : `${item} of the ${_pickArchetype(naming)}`;
     }
 }
 
 export let _magicItemCounter = 0;
 
-export function syncMagicItemCounter() {
-    for (const id of Object.keys(ALL_EQUIPMENT)) {
-        if (id.startsWith('magic_')) {
-            const n = parseInt(id.slice(6));
-            if (n > _magicItemCounter) _magicItemCounter = n;
-        }
-    }
-}
-
-function _spreadEffect(effect) {
-    const { v, a, ...props } = effect;
-    return props;
-}
+export function setMagicItemCounter(n) { _magicItemCounter = n; }
 
 export function rollMagicItem(category) {
     if (!category) category = Rando.choice(['melee', 'ranged', 'armor', 'artifact']);
@@ -480,42 +538,39 @@ export function rollMagicItem(category) {
     switch (category) {
         case 'melee': {
             const effect = Rando.choice(MELEE_EFFECTS);
-            const name = _rollName(MELEE_ITEMS, effect);
+            const name = _rollName(MELEE_ITEMS, EFFECT_NAMING[effect.special]);
             const damage = Rando.int(2, 6);
             const price = damage * 12 + 10;
-            item = { id, name, type: 'melee', slot: EQUIP_SLOT.WEAPON, damage, range: 0, price, magical: true, ..._spreadEffect(effect) };
-            ALL_EQUIPMENT[id] = item;
+            item = { id, name, type: 'melee', slot: EQUIP_SLOT.WEAPON, damage, range: 0, price, magical: true, ...effect };
             break;
         }
         case 'ranged': {
             const effect = Rando.choice(RANGED_EFFECTS);
-            const name = _rollName(RANGED_ITEMS, effect);
+            const name = _rollName(RANGED_ITEMS, EFFECT_NAMING[effect.special]);
             const damage = Rando.int(2, 6);
             const range = Rando.int(3, 5);
             const price = (damage + range) * 8 + 10;
-            item = { id, name, type: 'ranged', slot: EQUIP_SLOT.WEAPON, damage, range, price, magical: true, ..._spreadEffect(effect) };
-            ALL_EQUIPMENT[id] = item;
+            item = { id, name, type: 'ranged', slot: EQUIP_SLOT.WEAPON, damage, range, price, magical: true, ...effect };
             break;
         }
         case 'armor': {
-            const effect = Rando.choice([...ARMOR_EFFECTS, ...PASSIVE_EFFECTS]);
-            const name = _rollName(ARMOR_ITEMS, effect);
+            const effect = Rando.choice(ARMOR_OR_PASSIVE);
+            const name = _rollName(ARMOR_ITEMS, EFFECT_NAMING[effect.special]);
             const defense = Rando.int(2, 6);
             const price = defense * 15 + 10;
-            item = { id, name, slot: EQUIP_SLOT.ARMOR, defense, price, magical: true, ..._spreadEffect(effect) };
-            ALL_EQUIPMENT[id] = item;
+            item = { id, name, slot: EQUIP_SLOT.ARMOR, defense, price, magical: true, ...effect };
             break;
         }
         case 'artifact': {
             const effect = Rando.choice(PASSIVE_EFFECTS);
-            const name = _rollName(ARTIFACT_ITEMS, effect);
+            const name = _rollName(ARTIFACT_ITEMS, EFFECT_NAMING[effect.special]);
             const price = 40 + Rando.int(0, 40);
-            item = { id, name, slot: EQUIP_SLOT.ARTIFACT, price, magical: true, ..._spreadEffect(effect) };
-            ALL_EQUIPMENT[id] = item;
+            item = { id, name, slot: EQUIP_SLOT.ARTIFACT, price, magical: true, ...effect };
             break;
         }
     }
 
+    ALL_EQUIPMENT[id] = item;
     return item;
 }
 

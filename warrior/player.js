@@ -3,7 +3,7 @@ import {
     maxHP, maxAether, PLAYER_MP, BASE_VISION,
     EQUIP_SLOT, ALL_EQUIPMENT,
     TERRAIN_DEFENSE_BONUS, TERRAIN_RANGE_BONUS,
-    TERRAIN
+    RANGER_TERRAIN, isChaosTerrain
 } from './config.js';
 import { hexDistance } from './hex.js';
 
@@ -44,7 +44,6 @@ export class Player {
         return ALL_EQUIPMENT[id];
     }
 
-    // Returns the first equipped item with this special across all slots, or null
     equipped(special) {
         for (const slot of ['weapon', 'armor', 'artifact']) {
             const item = this[slot]();
@@ -62,13 +61,11 @@ export class Player {
         const momDef = this.equipped('momentum_defense');
         if (momDef) def += this.hexesMovedThisTurn * (momDef.momentumDefense || 1);
         const ranger = this.equipped('ranger_defense');
-        if (ranger && [TERRAIN.FOREST, TERRAIN.HILLS, TERRAIN.QUARRY, TERRAIN.SHATTERED_FOREST, TERRAIN.DISTRESSED_FOREST, TERRAIN.SHATTERED_HILLS, TERRAIN.DISTRESSED_HILLS, TERRAIN.SHATTERED_QUARRY, TERRAIN.DISTRESSED_QUARRY].includes(terrainType)) {
-            def += ranger.rangerBonus;
-        }
+        if (ranger && RANGER_TERRAIN.includes(terrainType)) def += ranger.rangerBonus;
         const chaosDef = this.equipped('chaos_defense');
-        if (chaosDef && terrainType >= 7 && terrainType <= 16) def += chaosDef.chaosDefenseBonus;
+        if (chaosDef && isChaosTerrain(terrainType)) def += chaosDef.chaosDefenseBonus;
         const chaosAtt = this.equipped('chaos_attune');
-        if (chaosAtt && terrainType >= 7 && terrainType <= 16) def += chaosAtt.chaosAttuneDef;
+        if (chaosAtt && isChaosTerrain(terrainType)) def += chaosAtt.chaosAttuneDef;
         return def;
     }
 
@@ -106,20 +103,23 @@ export class Player {
         return Math.max(1, m);
     }
 
-    meleeDamage(enemyDef) {
+    _chaosBonus(wep, isChaosEnemy) {
+        return (wep && wep.special === 'chaos_bonus' && isChaosEnemy) ? (wep.chaosBonus || 2) : 0;
+    }
+
+    meleeDamage(isChaosEnemy) {
         const wep = this.weapon();
         const wepDmg = wep ? (wep.type === 'ranged' ? Math.ceil(wep.damage / 4) : wep.damage) : 1;
-        let dmg = wepDmg + this.stats.might;
-        if (wep && wep.special === 'chaos_bonus' && enemyDef.chaosSpawned) dmg += (wep.chaosBonus || 2);
+        let dmg = wepDmg + this.stats.might + this._chaosBonus(wep, isChaosEnemy);
         if (wep && wep.special === 'momentum' && this.movedThisTurn) dmg += wep.momentumBonus;
         const wallItem = this.equipped('wall_of_steel') || this.equipped('wall_crown');
         if (wallItem && !this.movedThisTurn) dmg += (wallItem.wallBonus || wallItem.wallCrownBonus);
         return dmg;
     }
 
-    rangedDamage(dist) {
+    rangedDamage(dist, isChaosEnemy) {
         const wep = this.weapon();
-        let dmg = (wep ? wep.damage : 1) + this.stats.reflex;
+        let dmg = (wep ? wep.damage : 1) + this.stats.reflex + this._chaosBonus(wep, isChaosEnemy);
         if (wep && wep.special === 'sniper' && dist !== undefined && dist >= wep.range) {
             dmg += wep.sniperBonus;
         }
