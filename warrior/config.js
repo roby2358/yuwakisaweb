@@ -251,13 +251,17 @@ export const ARTIFACTS = [];
 
 // All equipment in one lookup (generated items get registered here too)
 export const ALL_EQUIPMENT = {};
-for (const w of WEAPONS) ALL_EQUIPMENT[w.id] = { ...w, slot: EQUIP_SLOT.WEAPON };
-for (const a of ARMORS) ALL_EQUIPMENT[a.id] = { ...a, slot: EQUIP_SLOT.ARMOR };
 
-// Register legacy magical items so saved games still work
-for (const w of ORIG_WEAPONS) if (w.magical) ALL_EQUIPMENT[w.id] = { ...w, slot: EQUIP_SLOT.WEAPON };
-for (const a of ORIG_ARMORS) if (a.magical) ALL_EQUIPMENT[a.id] = { ...a, slot: EQUIP_SLOT.ARMOR };
-for (const a of ORIG_ARTIFACTS) ALL_EQUIPMENT[a.id] = { ...a, slot: EQUIP_SLOT.ARTIFACT };
+export function resetEquipment() {
+    for (const key of Object.keys(ALL_EQUIPMENT)) delete ALL_EQUIPMENT[key];
+    for (const w of WEAPONS) ALL_EQUIPMENT[w.id] = { ...w, slot: EQUIP_SLOT.WEAPON };
+    for (const a of ARMORS) ALL_EQUIPMENT[a.id] = { ...a, slot: EQUIP_SLOT.ARMOR };
+    // Legacy magical items so old saved games still work
+    for (const w of ORIG_WEAPONS) if (w.magical) ALL_EQUIPMENT[w.id] = { ...w, slot: EQUIP_SLOT.WEAPON };
+    for (const a of ORIG_ARMORS) if (a.magical) ALL_EQUIPMENT[a.id] = { ...a, slot: EQUIP_SLOT.ARMOR };
+    for (const a of ORIG_ARTIFACTS) ALL_EQUIPMENT[a.id] = { ...a, slot: EQUIP_SLOT.ARTIFACT };
+}
+resetEquipment();
 
 export const NON_MAGICAL_ITEMS = [...WEAPONS, ...ARMORS];
 
@@ -525,14 +529,10 @@ function _rollName(itemWords, naming) {
     }
 }
 
-export let _magicItemCounter = 0;
-
-export function setMagicItemCounter(n) { _magicItemCounter = n; }
-
 export function rollMagicItem(category) {
     if (!category) category = Rando.choice(['melee', 'ranged', 'armor', 'artifact']);
 
-    const id = `magic_${++_magicItemCounter}`;
+    const id = `magic_${Object.keys(ALL_EQUIPMENT).length}`;
     let item;
 
     switch (category) {

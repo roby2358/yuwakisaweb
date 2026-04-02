@@ -1,23 +1,30 @@
+Priority:   70
+Status: ToDo
+ID: inv-review-cyeg
+Created: 2026-04-02T20:11:47Z
+Updated: 2026-04-02T20:11:47Z
+Audit the inventory system and magic item generation pipeline. Clean up how items are created, stored, equipped, and displayed. Look for edge cases, inconsistencies, or unclear flows — especially around magic item properties, stacking, and equipment slot management.
+----
+Priority:   70
+Status: ToDo
+ID: swarm-iupc
+Created: 2026-04-02T21:02:15Z
+Updated: 2026-04-02T21:02:15Z
+Swarm behavior appears broken — enemies are clumping together near the Maw instead of spreading out. Recent swarm-within-3-hexes commit may not be producing the intended dispersal effect, resulting in stacked units rather than distributed positioning.
+----
+Priority:   60
+Status: ToDo
+ID: pop-hzrw
+Created: 2026-03-29T18:58:55Z
+Updated: 2026-04-02T20:12:26Z
+Each turn, maintain a target population of wildlife (by total strength) and crops (by count). If below target, randomly spawn one wildlife or one crop on a valid hex to keep the world feeling alive.
+----
 Priority:   50
 Status: ToDo
 ID: gold-sink-e4ya
 Created: 2026-03-31T01:38:16Z
 Updated: 2026-03-31T01:38:16Z
 Add a gold sink or reward for accumulating 1000 gold. Could be a powerful item, a special upgrade, unlocking an ability, or a world event. Give the player something meaningful to spend or celebrate when hitting 1000g.
-----
-Priority:   40
-Status: ToDo
-ID: pop-hzrw
-Created: 2026-03-29T18:58:55Z
-Updated: 2026-03-29T21:49:04Z
-Each turn, maintain a target population of wildlife (by total strength) and crops (by count). If below target, randomly spawn one wildlife or one crop on a valid hex to keep the world feeling alive.
-----
-Priority:   40
-Status: ToDo
-ID: loot-8a8r
-Created: 2026-03-29T02:44:30Z
-Updated: 2026-03-29T02:44:30Z
-Generate randomized mid-tier magic items with random strengths and effects instead of a fixed table
 ----
 Priority:   90
 Status: Done
@@ -228,6 +235,13 @@ ID: combat-z4se
 Created: 2026-03-29T09:04:06Z
 Updated: 2026-03-29T21:49:52Z
 Forest hexes should reduce enemy detection range — gives early-game stealth option to avoid wraith swarms
+----
+Priority:   40
+Status: Done
+ID: loot-8a8r
+Created: 2026-03-29T02:44:30Z
+Updated: 2026-04-02T20:12:02Z
+Generate randomized mid-tier magic items with random strengths and effects instead of a fixed table
 ----
 Priority:   40
 Status: Done

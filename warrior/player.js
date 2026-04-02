@@ -54,7 +54,7 @@ export class Player {
 
     defense(terrainType) {
         const arm = this.armor();
-        let def = arm ? arm.defense : 0;
+        let def = arm ? (arm.defense || 0) : 0;
         def += TERRAIN_DEFENSE_BONUS[terrainType] || 0;
         const lastStand = this.equipped('last_stand');
         if (lastStand && this.hp <= this.maxHP() / 2) def += lastStand.lastStandBonus;
@@ -165,6 +165,8 @@ export class Player {
         p.usedSkillsThisTurn = new Set();
         p.movedThisTurn = false;
         p.hexesMovedThisTurn = 0;
+        if (p.hp == null) p.hp = p.maxHP();
+        if (p.aether == null) p.aether = p.maxAether();
         return p;
     }
 }

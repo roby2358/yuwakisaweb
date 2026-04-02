@@ -7,7 +7,7 @@ import {
     POI, POI_SYMBOLS, POI_COLORS, POI_DEFENSE_BONUS,
     ENEMY_TYPE,
     EQUIP_SLOT, WEAPONS, ARMORS, ARTIFACTS, ALL_EQUIPMENT, NON_MAGICAL_ITEMS,
-    rollMagicItem, _magicItemCounter, setMagicItemCounter,
+    rollMagicItem, resetEquipment,
     isChaosTerrain, SELL_PRICE_RATIO,
     SKILL_TARGET, SKILL_USAGE, SKILLS, SKILL_UNLOCK_LEVELS,
     SHATTERED_VERSION, UNSHATTERED_VERSION, DISTRESSED_VERSION, UNDISTRESSED_VERSION
@@ -1881,27 +1881,12 @@ function animDelay(ms) { return new Promise(r => setTimeout(r, ms)); }
 const SAVE_KEY = 'warrior_save';
 
 function saveGame() {
-    // Collect all generated magic items the player owns
-    const magicRegistry = {};
-    const allIds = [...Object.values(player.equipment).filter(Boolean), ...player.inventory];
-    for (const id of allIds) {
-        if (id.startsWith('magic_') && ALL_EQUIPMENT[id]) magicRegistry[id] = ALL_EQUIPMENT[id];
-    }
-    // Also save shop items that are generated
-    for (const poi of world.pois) {
-        if (poi.shopItems) {
-            for (const item of poi.shopItems) {
-                if (item.id && item.id.startsWith('magic_')) magicRegistry[item.id] = ALL_EQUIPMENT[item.id] || item;
-            }
-        }
-    }
     const data = {
         turn, enemiesDefeated,
         player: player.toJSON(),
         world: world.toJSON(),
         enemies: em.toJSON(),
-        magicRegistry,
-        magicItemCounter: _magicItemCounter
+        equipment: ALL_EQUIPMENT
     };
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
 }
@@ -1933,13 +1918,13 @@ function loadGame() {
     targeting = null;
     threatOverlay = null;
 
-    // Re-register generated magic items and sync counter
-    if (data.magicRegistry) {
-        for (const [id, item] of Object.entries(data.magicRegistry)) {
+    // Restore equipment registry
+    resetEquipment();
+    if (data.equipment) {
+        for (const [id, item] of Object.entries(data.equipment)) {
             ALL_EQUIPMENT[id] = item;
         }
     }
-    if (data.magicItemCounter) setMagicItemCounter(data.magicItemCounter);
 
     world = GameWorld.fromJSON(data.world);
     player = Player.fromJSON(data.player);
@@ -1980,6 +1965,7 @@ function initGame() {
     targeting = null;
     threatOverlay = null;
 
+    resetEquipment();
     world = new GameWorld();
     world.generate();
 
