@@ -1644,7 +1644,7 @@ function trySwarmMarch(enemy, def, occupied) {
     if (nearSettlement) return false;
     const nearbyAllies = em.enemies.filter(e =>
         e !== enemy &&
-        hexDistance(e.q, e.r, enemy.q, enemy.r) <= 2 &&
+        hexDistance(e.q, e.r, enemy.q, enemy.r) <= 3 &&
         em.getDef(e.type)?.chaosSpawned
     ).length;
     if (nearbyAllies < 5) return false;
@@ -2806,11 +2806,11 @@ function showShopDialog(poi) {
             const id = player.inventory[i];
             const item = ALL_EQUIPMENT[id];
             if (!item) continue;
-            const sellPrice = sellPrice(item);
+            const sp = sellPrice(item);
             const sellColor = item.magical ? '#b388ff' : '#ccc';
             bodyHtml += `<div class="shop-item">
                 <div style="color:${sellColor}">${item.name}</div>
-                <button data-sell="${id}" data-sell-idx="${i}" data-price="${sellPrice}">Sell ${sellPrice}g</button>
+                <button data-sell="${id}" data-sell-idx="${i}" data-price="${sp}">Sell ${sp}g</button>
             </div>`;
         }
     }
