@@ -474,8 +474,8 @@ export function rollMagicItem(category) {
             const name = _rollName(MELEE_ITEMS, effect);
             const damage = Rando.int(2, 6);
             const price = damage * 12 + 10;
-            item = { id, name, type: 'melee', damage, range: 0, price, magical: true, ..._spreadEffect(effect) };
-            ALL_EQUIPMENT[id] = { ...item, slot: EQUIP_SLOT.WEAPON };
+            item = { id, name, type: 'melee', slot: EQUIP_SLOT.WEAPON, damage, range: 0, price, magical: true, ..._spreadEffect(effect) };
+            ALL_EQUIPMENT[id] = item;
             break;
         }
         case 'ranged': {
@@ -484,8 +484,8 @@ export function rollMagicItem(category) {
             const damage = Rando.int(2, 6);
             const range = Rando.int(3, 5);
             const price = (damage + range) * 8 + 10;
-            item = { id, name, type: 'ranged', damage, range, price, magical: true, ..._spreadEffect(effect) };
-            ALL_EQUIPMENT[id] = { ...item, slot: EQUIP_SLOT.WEAPON };
+            item = { id, name, type: 'ranged', slot: EQUIP_SLOT.WEAPON, damage, range, price, magical: true, ..._spreadEffect(effect) };
+            ALL_EQUIPMENT[id] = item;
             break;
         }
         case 'armor': {
@@ -493,16 +493,16 @@ export function rollMagicItem(category) {
             const name = _rollName(ARMOR_ITEMS, effect);
             const defense = Rando.int(2, 6);
             const price = defense * 15 + 10;
-            item = { id, name, defense, price, magical: true, ..._spreadEffect(effect) };
-            ALL_EQUIPMENT[id] = { ...item, slot: EQUIP_SLOT.ARMOR };
+            item = { id, name, slot: EQUIP_SLOT.ARMOR, defense, price, magical: true, ..._spreadEffect(effect) };
+            ALL_EQUIPMENT[id] = item;
             break;
         }
         case 'artifact': {
             const effect = Rando.choice(PASSIVE_EFFECTS);
             const name = _rollName(ARTIFACT_ITEMS, effect);
             const price = 40 + Rando.int(0, 40);
-            item = { id, name, price, magical: true, ..._spreadEffect(effect) };
-            ALL_EQUIPMENT[id] = { ...item, slot: EQUIP_SLOT.ARTIFACT };
+            item = { id, name, slot: EQUIP_SLOT.ARTIFACT, price, magical: true, ..._spreadEffect(effect) };
+            ALL_EQUIPMENT[id] = item;
             break;
         }
     }
@@ -543,7 +543,7 @@ export const SKILLS = {
         range: 3, desc: 'Teleport to visible hex within 3. Free action.', minLevel: 2, freeAction: true
     },
     cosmic_bolt: {
-        id: 'cosmic_bolt', name: 'Cosmic Bolt', cost: 2, target: SKILL_TARGET.RANGED, usage: SKILL_USAGE.ANYTIME,
+        id: 'cosmic_bolt', name: 'Cosmic Bolt', cost: 3, target: SKILL_TARGET.RANGED, usage: SKILL_USAGE.ANYTIME,
         range: 4, baseDamage: 8, desc: 'Ranged: 8 + Warding damage.', minLevel: 2
     },
     shockwave: {

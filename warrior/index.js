@@ -1891,11 +1891,26 @@ function animDelay(ms) { return new Promise(r => setTimeout(r, ms)); }
 const SAVE_KEY = 'warrior_save';
 
 function saveGame() {
+    // Collect all generated magic items the player owns
+    const magicRegistry = {};
+    const allIds = [...Object.values(player.equipment).filter(Boolean), ...player.inventory];
+    for (const id of allIds) {
+        if (id.startsWith('magic_') && ALL_EQUIPMENT[id]) magicRegistry[id] = ALL_EQUIPMENT[id];
+    }
+    // Also save shop items that are generated
+    for (const poi of world.pois) {
+        if (poi.shopItems) {
+            for (const item of poi.shopItems) {
+                if (item.id && item.id.startsWith('magic_')) magicRegistry[item.id] = ALL_EQUIPMENT[item.id] || item;
+            }
+        }
+    }
     const data = {
         turn, enemiesDefeated,
         player: player.toJSON(),
         world: world.toJSON(),
-        enemies: em.toJSON()
+        enemies: em.toJSON(),
+        magicRegistry
     };
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
 }
@@ -1926,6 +1941,13 @@ function loadGame() {
     attackable = null;
     targeting = null;
     threatOverlay = null;
+
+    // Re-register generated magic items
+    if (data.magicRegistry) {
+        for (const [id, item] of Object.entries(data.magicRegistry)) {
+            ALL_EQUIPMENT[id] = item;
+        }
+    }
 
     world = GameWorld.fromJSON(data.world);
     player = Player.fromJSON(data.player);
@@ -2494,7 +2516,7 @@ function updateInvPanel() {
         if (!id) continue;
         const item = ALL_EQUIPMENT[id];
         if (!item) continue;
-        const nameColor = item.magical ? '#ffc107' : '#ccc';
+        const nameColor = '#ffc107';
         html += `<div class="inv-item equipped">
             <div><span style="color:${nameColor}">${item.name}</span> <span style="color:#888">(${slot})</span><br>
             <span style="color:#aaa;font-size:11px">${itemStatLine(item)}</span></div>
@@ -2507,7 +2529,7 @@ function updateInvPanel() {
         const item = ALL_EQUIPMENT[id];
         if (!item) continue;
         const slot = item.slot;
-        const nameColor = item.magical ? '#e040fb' : '#ccc';
+        const nameColor = (item.magical || id.startsWith('magic_')) ? '#e040fb' : '#ccc';
         html += `<div class="inv-item">
             <div><span style="color:${nameColor}">${item.name}</span> <span style="color:#888">(${slot})</span><br>
             <span style="color:#aaa;font-size:11px">${itemStatLine(item)}</span></div>
