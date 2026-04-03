@@ -1822,20 +1822,8 @@ async function runEnemyPhase() {
         }
     }
 
-    // Wildlife spawn (2% chance per turn)
-    if (Rando.bool(0.02)) {
-        const types = Object.keys(em.creatureDefs);
-        if (types.length > 0) {
-            const pool = world.passableHexes().filter(h => {
-                const k = hexKey(h.q, h.r);
-                return !occupied.has(k) && !world.visible.has(k) && UNSHATTERED_VERSION[h.terrain] === undefined;
-            });
-            if (pool.length > 0) {
-                const spot = Rando.choice(pool);
-                em.spawn(Rando.choice(types), spot.q, spot.r);
-            }
-        }
-    }
+    // Wildlife population maintenance
+    em.spawnWildlife(world, player.q, player.r);
 
     // Start new turn
     turn++;
@@ -2902,9 +2890,16 @@ function spawnRuinCreatures(poi) {
     });
     if (spots.length === 0) return 0;
     Rando.shuffle(spots);
-    const count = Math.min(Rando.int(1, 3), spots.length);
-    for (let i = 0; i < count; i++) {
-        em.spawn(Rando.choice(creatureTypes), spots[i].q, spots[i].r, undefined, undefined, { ignoreCap: true });
+    const targetMight = player.level * player.level * 5;
+    let mightSum = 0, count = 0;
+    for (let i = 0; i < spots.length && mightSum < targetMight; i++) {
+        const type = Rando.choice(creatureTypes);
+        const e = em.spawn(type, spots[i].q, spots[i].r, undefined, undefined, { ignoreCap: true });
+        if (e) {
+            const def = em.getDef(type);
+            mightSum += def.attack;
+            count++;
+        }
     }
     return count;
 }

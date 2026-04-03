@@ -139,6 +139,15 @@ export class EnemyManager {
         }
     }
 
+    wildlifeMight() {
+        let total = 0;
+        for (const e of this.enemies) {
+            const def = this.getDef(e.type);
+            if (def && !def.chaosSpawned) total += def.attack;
+        }
+        return total;
+    }
+
     spawnInitialCreatures(world, playerQ, playerR, visibleSet) {
         const creatureTypes = Object.keys(this.creatureDefs);
         if (creatureTypes.length === 0) return;
@@ -147,18 +156,37 @@ export class EnemyManager {
             const key = hexKey(h.q, h.r);
             if (visibleSet.has(key)) return false;
             if (this.enemyAt(h.q, h.r)) return false;
+            if (world.poiAt(h.q, h.r)) return false;
             const hex = world.getHex(h.q, h.r);
             if (hex && UNSHATTERED_VERSION[hex.terrain] !== undefined) return false;
-            return true;
+            return hexDistance(h.q, h.r, playerQ, playerR) > 6;
         });
 
-        for (let i = 0; i < 20 && candidates.length > 0; i++) {
+        while (this.wildlifeMight() < 2000 && candidates.length > 0) {
             const idx = Rando.int(0, candidates.length - 1);
             const hex = candidates[idx];
             candidates.splice(idx, 1);
             const type = Rando.choice(creatureTypes);
-            this.spawn(type, hex.q, hex.r);
+            this.spawn(type, hex.q, hex.r, undefined, undefined, { ignoreCap: true });
         }
+    }
+
+    spawnWildlife(world, playerQ, playerR) {
+        if (this.wildlifeMight() >= 1000) return;
+        if (!Rando.bool(0.20)) return;
+        const creatureTypes = Object.keys(this.creatureDefs);
+        if (creatureTypes.length === 0) return;
+        const pool = world.passableHexes().filter(h => {
+            if (this.enemyAt(h.q, h.r)) return false;
+            if (world.poiAt(h.q, h.r)) return false;
+            if (hexDistance(h.q, h.r, playerQ, playerR) <= 6) return false;
+            const hex = world.getHex(h.q, h.r);
+            if (hex && UNSHATTERED_VERSION[hex.terrain] !== undefined) return false;
+            return true;
+        });
+        if (pool.length === 0) return;
+        const spot = Rando.choice(pool);
+        this.spawn(Rando.choice(creatureTypes), spot.q, spot.r);
     }
 
     // --- Movement methods ---
