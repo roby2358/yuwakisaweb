@@ -116,8 +116,8 @@ Press 1-4 to activate. Each skill usable once per turn. Costs Aether. Some requi
 | Breach Crawler | 30 | 8 | — | 4 | 1 | 3 | Chase | Tanky, melee only. |
 | Flux Archer | 12 | 6 | — (range 4) | 1 | 1 | 5 | Kite | Pure ranged: uses attack stat at range, maintains 2-3 hex distance. |
 | Phase Wraith | 20 | 7 | — | 2 | 1 | 4 | Teleport | 30% chance to teleport within 3 hexes of player. |
-| Breach Guardian | 50 | 10 | 8 (range 3) | 5 | 1 | 3 | Guard | Stays within 2 hexes of home breach. Dual melee+ranged. Drops tier 3 loot on death. |
-| The Unraveler | 100 | 12 | 6 (range 4) | 6 | 1 | 6 | Boss | Spawns a Void Stalker every 3 turns. Dual melee+ranged. |
+| Breach Guardian | 50 | 10 | 8 (range 5) | 5 | 1 | 6 | Guard | Stays within 2 hexes of home breach. Dual melee+ranged. Drops tier 3 loot on death. |
+| The Unraveler | 100 | 12 | 6 (range 6) | 6 | 1 | 6 | Boss | Spawns a Void Stalker every 3 turns. Dual melee+ranged. |
 
 ### Dual Attack System
 Enemies with a `rangedAttack` field (Void Stalker, Breach Guardian, Unraveler) fire ranged *in addition to* melee when in melee range. Enemies without `rangedAttack` (Flux Archer) fire their `attack` stat at range but only when not in melee range. Ranged-capable chasers (Void Stalker) have a 50% chance per turn to prefer ranged fire and skip closing in. Flux Archers only fire 50% of the time when in range.
@@ -339,7 +339,7 @@ Close the second breach. Gear up for the Maw. Starfall (level 10) trivializes mo
 
 ### Key Decisions
 - **Melee vs Ranged build**: Melee (Might + melee weapon) does more single-target damage and benefits from Void Strike/Dimensional Rend/Execute. Ranged (Reflex + ranged weapon) avoids counter-attacks and kites safely but has lower burst. Reflex double-scales: ranged damage AND dodge chance. Piercing Shot and Void Salvo give Reflex builds skill scaling. Weapons with ignore_defense are excellent against high-defense targets (Breach Guardian at 5 def, Unraveler at 6 def).
-- **When to engage breaches**: Each sealed breach reduces spawn pressure but the guardian fight (50 HP, 10 atk, 8 ranged atk, 5 def) is dangerous. Under-geared attempts often end in death from the combination of melee and ranged attacks. Sundering Blow (-3 def) makes guardians far more approachable.
+- **When to engage breaches**: Each sealed breach reduces spawn pressure but the guardian fight (50 HP, 10 atk, 8 ranged atk at range 5, 5 def) is dangerous. Their long ranged reach and aggro range of 6 means you can't safely plunk away from a distance. Sundering Blow (-3 def) makes guardians far more approachable.
 - **Skill slot management**: 33 skills, 4 slots. The Skills panel lets you swap freely, but mid-combat you're locked to your equipped 4. Do you bring 4 combat skills for the breach assault, or keep Restore equipped for the aftermath? Pristine skills incentivize returning to safe territory between fights.
 - **High defense trade-off**: Armor with high_def_mp_penalty offers +5 defense but -1 MP (3 instead of 4), severely limiting mobility. Best paired with Phase Step for repositioning.
 - **Terrain stewardship**: Clean terrain fuels Aether Tap and enables Pristine skills. Letting corruption spread degrades your resource base. But Salvage extracts gold from shattered terrain, creating a tension between restoration and exploitation.

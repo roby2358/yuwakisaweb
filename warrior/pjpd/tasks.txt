@@ -26,6 +26,13 @@ Created: 2026-03-31T01:38:16Z
 Updated: 2026-03-31T01:38:16Z
 Add a gold sink or reward for accumulating 1000 gold. Could be a powerful item, a special upgrade, unlocking an ability, or a world event. Give the player something meaningful to spend or celebrate when hitting 1000g.
 ----
+Priority:   50
+Status: ToDo
+ID: victory-h28d
+Created: 2026-04-03T07:20:40Z
+Updated: 2026-04-03T07:20:40Z
+Track and display a final victory score. Count accomplishments throughout the game: hexes restored, villages/havens rescued (cleared of nearby enemies?), breaches sealed, guardians defeated, ruins explored, enemies defeated, wildlife hunted, gold collected, skills learned, etc. Show a detailed breakdown on the victory screen alongside existing stats (turns played, level, enemies defeated, breaches sealed).
+----
 Priority:   90
 Status: Done
 ID: savegame-qv59
