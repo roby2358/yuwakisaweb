@@ -2446,12 +2446,20 @@ function updateSkillsPanel() {
     // Show learned but not equipped
     const equipped = new Set(player.skills.filter(Boolean));
     const unequipped = [...player.learnedSkills].filter(id => !equipped.has(id)).sort((a, b) => SKILLS[a].name.localeCompare(SKILLS[b].name));
+    const nearbyEnemy = phase === 'player' && !gameOver && em.enemies.some(e => hexDistance(player.q, player.r, e.q, e.r) <= 2);
+    const canInvokeFromPanel = phase === 'player' && !gameOver && !nearbyEnemy;
     if (unequipped.length > 0) {
         html += '<div style="color:#888;margin-top:8px;margin-bottom:4px;font-size:11px">LEARNED (click to equip)</div>';
         for (const skillId of unequipped) {
             const skill = SKILLS[skillId];
+            const isUsable = canInvokeFromPanel
+                && skill.usage !== SKILL_USAGE.ANYTIME
+                && player.aether >= skill.cost
+                && !player.usedSkillsThisTurn.has(skillId)
+                && !checkSkillUsage(skill);
+            const nameStyle = isUsable ? 'cursor:pointer;color:#7c4dff;border:1px solid #7c4dff;border-radius:3px;padding:1px 6px;background:rgba(124,77,255,0.15)' : '';
             html += `<div class="skill-entry" style="cursor:pointer;opacity:0.7" data-equip="${skillId}">
-                <div><span class="s-name">${skill.name}</span> <span class="s-cost">(${skill.cost} AE)</span></div>
+                <div><span class="s-name" ${isUsable ? `data-use="${skillId}" style="${nameStyle}"` : ''}>${skill.name}</span> <span class="s-cost">(${skill.cost} AE)</span></div>
                 <div class="s-desc">${skill.desc}</div>
             </div>`;
         }
@@ -2468,7 +2476,8 @@ function updateSkillsPanel() {
         });
     });
     list.querySelectorAll('[data-equip]').forEach(el => {
-        el.addEventListener('click', () => {
+        el.addEventListener('click', (e) => {
+            if (e.target.closest('[data-use]')) return; // don't equip when clicking Use
             const skillId = el.dataset.equip;
             const emptySlot = player.skills.indexOf(null);
             if (emptySlot >= 0) {
@@ -2479,6 +2488,13 @@ function updateSkillsPanel() {
             }
             updateSkillsPanel();
             updateSkillBar();
+        });
+    });
+    // Wire up direct invoke from panel
+    list.querySelectorAll('[data-use]').forEach(el => {
+        el.addEventListener('click', (e) => {
+            e.stopPropagation();
+            activateSkill(el.dataset.use);
         });
     });
 }
@@ -3115,6 +3131,7 @@ canvas.addEventListener('mousedown', e => {
             }
             render();
             updateSkillBar();
+            updateSkillsPanel();
             checkEndTurn();
             return;
         }
@@ -3253,11 +3270,10 @@ function activateRangedWeapon() {
     updateSkillBar();
 }
 
-function activateSkillSlot(slotIdx) {
+function activateSkill(skillId) {
     if (phase !== 'player' || gameOver) return;
-    const skillId = player.skills[slotIdx];
-    if (!skillId) return;
     const skill = SKILLS[skillId];
+    if (!skill) return;
     if (player.aether < skill.cost) { logCombat('Not enough Aether!', 'log-info'); return; }
     if (player.usedSkillsThisTurn.has(skillId)) { logCombat('Already used this turn!', 'log-info'); return; }
     const usageBlock = checkSkillUsage(skill);
@@ -3267,6 +3283,7 @@ function activateSkillSlot(slotIdx) {
         executeSkill(skillId, player.q, player.r);
         render();
         updateSkillBar();
+        updateSkillsPanel();
         checkEndTurn();
         return;
     }
@@ -3278,6 +3295,12 @@ function activateSkillSlot(slotIdx) {
     deselectPlayer();
     render();
     updateSkillBar();
+}
+
+function activateSkillSlot(slotIdx) {
+    const skillId = player.skills[slotIdx];
+    if (!skillId) return;
+    activateSkill(skillId);
 }
 
 // ---- Start ----
