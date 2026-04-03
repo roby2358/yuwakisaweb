@@ -1,4 +1,4 @@
-import { ENEMY_TYPE, ENEMY_DEFS, MAX_ENEMIES, MOVEMENT_COST, UNSHATTERED_VERSION, POI } from './config.js';
+import { ENEMY_TYPE, ENEMY_DEFS, MOVEMENT_COST, UNSHATTERED_VERSION, POI } from './config.js';
 import { hexKey, hexNeighbors, hexDistance, hexesInRange, findPath } from './hex.js';
 import { Rando } from './rando.js';
 import { ColorTheory } from './colortheory.js';
@@ -14,8 +14,7 @@ export class EnemyManager {
         return ENEMY_DEFS[type] || this.creatureDefs[type];
     }
 
-    spawn(type, q, r, homeQ, homeR, { ignoreCap = false } = {}) {
-        if (!ignoreCap && this.enemies.length >= MAX_ENEMIES) return null;
+    spawn(type, q, r, homeQ, homeR) {
         const def = this.getDef(type);
         if (!def) return null;
         const enemy = {
@@ -162,12 +161,12 @@ export class EnemyManager {
             return hexDistance(h.q, h.r, playerQ, playerR) > 6;
         });
 
-        while (this.wildlifeMight() < 2000 && candidates.length > 0) {
+        while (this.wildlifeMight() < 3000 && candidates.length > 0) {
             const idx = Rando.int(0, candidates.length - 1);
             const hex = candidates[idx];
             candidates.splice(idx, 1);
             const type = Rando.choice(creatureTypes);
-            this.spawn(type, hex.q, hex.r, undefined, undefined, { ignoreCap: true });
+            this.spawn(type, hex.q, hex.r);
         }
     }
 

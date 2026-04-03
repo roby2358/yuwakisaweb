@@ -126,7 +126,7 @@ export const PLAYER_MP = 4;
 export const MAP_COLS = 100;
 export const MAP_ROWS = 100;
 export const BASE_VISION = 6;
-export const MAX_ENEMIES = 60;
+
 
 // ---- Player defaults ----
 export const STARTING_STATS = { might: 3, reflex: 3, warding: 2, vigor: 3 };
@@ -204,7 +204,7 @@ export const ENEMY_DEFS = {
     },
     [ENEMY_TYPE.PHASE_WRAITH]: {
         name: 'Phase Wraith', label: 'W', hp: 10, attack: 5, defense: 1,
-        speed: 2, detectRange: 4, xp: 25, gold: 3, behavior: 'teleport',
+        speed: 2, detectRange: 4, aggroRange: 30, xp: 25, gold: 3, behavior: 'teleport',
         teleportRange: 3, teleportChance: 0.3, chaosSpawned: true
     },
     [ENEMY_TYPE.BREACH_GUARDIAN]: {

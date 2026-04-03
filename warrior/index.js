@@ -2,7 +2,7 @@
 
 import {
     HEX_SIZE, MAP_COLS, MAP_ROWS, TERRAIN, TERRAIN_NAMES, MOVEMENT_COST,
-    MAX_ENEMIES, STAT_POINTS_PER_LEVEL,
+    STAT_POINTS_PER_LEVEL,
     xpForLevel,
     POI, POI_SYMBOLS, POI_COLORS, POI_DEFENSE_BONUS,
     ENEMY_TYPE,
@@ -1587,7 +1587,11 @@ function tryBossSpawn(enemy, def, occupied) {
     });
     if (adj.length === 0) return;
     const spot = Rando.choice(adj);
-    const spawnType = Rando.choice([ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.PHASE_WRAITH, ENEMY_TYPE.FLUX_ARCHER]);
+    const wraithCount = em.enemies.filter(e => e.type === ENEMY_TYPE.PHASE_WRAITH).length;
+    const bossPool = wraithCount >= 10
+        ? [ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.FLUX_ARCHER]
+        : [ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.PHASE_WRAITH, ENEMY_TYPE.FLUX_ARCHER];
+    const spawnType = Rando.choice(bossPool);
     const spawned = em.spawn(spawnType, spot.q, spot.r);
     if (spawned) {
         occupied.add(hexKey(spot.q, spot.r));
@@ -1678,7 +1682,7 @@ async function runChaosTurn(enemy, def, occupied) {
     const prevKey = hexKey(enemy.q, enemy.r);
 
     // Phase Wraith teleport (blocked by wraith_immune)
-    if (def.behavior === 'teleport' && aggro > 0 && !player.equipped('wraith_immune') && Math.random() < (def.teleportChance || 0.3)) {
+    if (def.behavior === 'teleport' && dist <= aggro && !player.equipped('wraith_immune') && Math.random() < (def.teleportChance || 0.3)) {
         const valid = hexesInRange(player.q, player.r, def.teleportRange).filter(t => {
             const k = hexKey(t.q, t.r);
             const h = world.getHex(t.q, t.r);
@@ -1794,7 +1798,7 @@ async function runEnemyPhase() {
             const hasGuardian = em.enemies.some(e =>
                 e.type === ENEMY_TYPE.BREACH_GUARDIAN && hexDistance(poi.q, poi.r, e.q, e.r) <= 3
             );
-            if (!hasGuardian && Math.random() < 0.3 && em.enemies.length < MAX_ENEMIES && !occupied.has(hexKey(poi.q, poi.r))) {
+            if (!hasGuardian && Math.random() < 0.3 && !occupied.has(hexKey(poi.q, poi.r))) {
                 const g = em.spawn(ENEMY_TYPE.BREACH_GUARDIAN, poi.q, poi.r, poi.q, poi.r);
                 if (g) {
                     poi.guardianId = g.id;
@@ -1806,6 +1810,10 @@ async function runEnemyPhase() {
     }
 
     // Spawn phase
+    const wraiths = em.enemies.filter(e => e.type === ENEMY_TYPE.PHASE_WRAITH).length;
+    const chaosPool = wraiths >= 10
+        ? [ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.FLUX_ARCHER]
+        : [ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.PHASE_WRAITH, ENEMY_TYPE.FLUX_ARCHER];
     for (const poi of world.pois) {
         if (poi.type === POI.BREACH && !poi.closed && Math.random() < 0.15) {
             const adj = hexNeighbors(poi.q, poi.r).filter(n => {
@@ -1813,9 +1821,9 @@ async function runEnemyPhase() {
                 const h = world.getHex(n.q, n.r);
                 return h && world.isPassable(h) && !occupied.has(k);
             });
-            if (adj.length > 0 && em.enemies.length < MAX_ENEMIES) {
+            if (adj.length > 0) {
                 const spot = Rando.choice(adj);
-                const type = Rando.choice([ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.PHASE_WRAITH, ENEMY_TYPE.FLUX_ARCHER]);
+                const type = Rando.choice(chaosPool);
                 em.spawn(type, spot.q, spot.r, poi.q, poi.r);
                 occupied.add(hexKey(spot.q, spot.r));
             }
@@ -2894,7 +2902,7 @@ function spawnRuinCreatures(poi) {
     let mightSum = 0, count = 0;
     for (let i = 0; i < spots.length && mightSum < targetMight; i++) {
         const type = Rando.choice(creatureTypes);
-        const e = em.spawn(type, spots[i].q, spots[i].r, undefined, undefined, { ignoreCap: true });
+        const e = em.spawn(type, spots[i].q, spots[i].r);
         if (e) {
             const def = em.getDef(type);
             mightSum += def.attack;
