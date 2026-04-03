@@ -7,35 +7,35 @@ The desperate ascent of a lone warrior through a world tearing itself apart from
 ## Key Drivers
 
 ### 1. Accumulation and Windfall
-The core RPG loop. XP, loot, stats, skills — every encounter makes you measurably stronger. The polynomial XP curve (`50 * level^1.8`, rounded to nearest 10) makes early levels feel fast (quick wins, dopamine) and later levels require deliberate engagement with dangerous content (breaches, ruins). Windfalls come from: breach guardian drops (non-magical bows + 10% chance of magical gear), level-up full heals (instant relief), ruin loot (1-3 mundane items + 1 magical + gold), and finding a Dimensional Edge when you've been swinging a Rusty Blade for 20 turns. Killing chaos-spawned enemies returns +1 Aether, creating a sustain loop that rewards aggression. With 53 equipment items and 30 skills, each run produces a meaningfully different character build.
+The core RPG loop. XP, loot, stats, skills — every encounter makes you measurably stronger. The polynomial XP curve (`50 * level^1.8`, rounded to nearest 10) makes early levels feel fast (quick wins, dopamine) and later levels require deliberate engagement with dangerous content (breaches, ruins). Windfalls come from: breach guardian drops (non-magical bows + 10% chance of magical gear), level-up full heals (instant relief), ruin loot (1-3 mundane items + 1 magical + gold), and finding a powerful weapon when you've been swinging a Rusty Blade for 20 turns. Killing chaos-spawned enemies returns +1 Aether, creating a sustain loop that rewards aggression. With procedurally generated magical equipment and 33 skills, each run produces a meaningfully different character build.
 
 ### 2. Scarcity of Agency
-4 MP per turn. 4 skill slots from a pool of up to 30 learned skills. Limited Aether. You can't fight everything, explore everything, or be everywhere. Every turn is a triage decision: push toward the next breach or retreat to heal? Spend Aether on Void Strike for guaranteed damage or save it for Mending Light? Restore shattered terrain or conserve Aether for combat? Move deeper into fog or consolidate revealed territory? The constraint makes each action feel weighty. Engagement halves your MP, compounding the scarcity when you're in the thick of it. Skill usage restrictions add another layer: non-combat and pristine skills require safety, forcing you to choose *when* to use them.
+4 MP per turn. 4 skill slots from a pool of up to 33 learned skills. Limited Aether. You can't fight everything, explore everything, or be everywhere. Every turn is a triage decision: push toward the next breach or retreat to heal? Spend Aether on Void Strike for guaranteed damage or save it for Mending Light? Restore shattered terrain or conserve Aether for combat? Move deeper into fog or consolidate revealed territory? The constraint makes each action feel weighty. Engagement halves your MP, compounding the scarcity when you're in the thick of it. Skill usage restrictions add another layer: non-combat and pristine skills require safety, forcing you to choose *when* to use them.
 
 ### 3. Guardianship
-One character. One life. No party, no reserves. Every HP point matters because death is game over. Equipment becomes precious — not because of stats alone, but because *you* found it, *you* chose it, *you* survived with it. The player should mourn losing their Chaosweave Cloak to a shop upgrade. Terrain health matters too — the land you've restored is territory you've defended.
+One character. One life. No party, no reserves. Every HP point matters because death is game over. Equipment becomes precious — not because of stats alone, but because *you* found it, *you* chose it, *you* survived with it. The player should mourn losing a favored piece of gear to a shop upgrade. Terrain health matters too — the land you've restored is territory you've defended.
 
 ## Secondary Drivers
 
 ### Escalating Commitment
-Breaches bleed chaos into the world continuously, spawning twisted creatures (15% per turn per open breach — 60% Void Stalkers, 40% Phase Wraiths). The longer you wait, the worse it gets. Meanwhile, chaos-spawned enemies shatter terrain as they move (2% per turn), increasing movement costs and degrading the map. Sealing breaches is the only way to reduce pressure, but each is guarded by a Breach Guardian. Standing still makes things worse — the game demands forward momentum.
+Breaches bleed chaos into the world continuously, spawning twisted creatures (15% per turn per open breach — 50% Void Stalkers, 25% Phase Wraiths, 25% Flux Archers). The longer you wait, the worse it gets. Meanwhile, chaos-spawned enemies shatter terrain as they move (2% per turn), increasing movement costs and degrading the map. Sealing breaches is the only way to reduce pressure, but each is guarded by a Breach Guardian. Standing still makes things worse — the game demands forward momentum.
 
 ### Readable Consequences
 Yellow hexes show where you can go. Red hexes show what you can attack. Blue hexes show targeting range. Counter stats (attack bottom-left, defense bottom-right) tell you exactly what you're facing. Enemy detection ranges, HP bars, and type labels are all visible. The counter label turns dark during player phase and gold-tinted during enemy phase — a glanceable indicator of whose turn it is. The R button on the skill bar makes ranged attacks discoverable. Skill usage categories (pristine/non-combat/anytime) are reflected in the skill bar — grayed out when conditions aren't met. Ground Weeps provides a full-map threat heatmap for strategic planning.
 
 ### Variable Reinforcement
-Map generation (diamond-square heightmap), enemy placement, loot tables, skill unlock choices — every game is different. With 30 skills and only 3 offered per level-up (pick 1), the player builds a different character each run. Wise Man huts add another source of skill discovery (5% chance the hut's skill refreshes per visit). The 53-item equipment pool across 5 tiers means upgrade paths vary dramatically. Prospect's 20% gold discovery chance and Skill Seek's level-scaled gamble add controlled variance to non-combat play.
+Map generation (diamond-square heightmap), enemy placement, loot tables, skill unlock choices — every game is different. With 33 skills and only 3 offered per level-up (pick 1), the player builds a different character each run. Wise Man huts (8-12 per map) add another source of skill discovery (5% chance the hut's skill refreshes per visit). The procedurally generated equipment means upgrade paths vary dramatically. Prospect's 20% gold discovery chance and Skill Seek's level-scaled gamble add controlled variance to non-combat play.
 
 ### Near-Miss Architecture
 The polynomial XP curve and breach escalation create a natural tension point around levels 5-7. You're strong enough to challenge breaches but not strong enough to be comfortable. The Maw requires 2 closed breaches, which means at least 2 guardian fights. If you're under-leveled when you attempt the Maw, you'll *almost* win — close enough to see how, which drives the "one more game" loop.
 
 ## Map
 
-- Rectangular hex grid (60 columns x 40 rows), pointy-top hexes, axial coordinates (q, r)
+- Rectangular hex grid (100 columns x 100 rows), pointy-top hexes, axial coordinates (q, r)
 - Generated via diamond-square heightmap (129x129, roughness 0.55), then terrain assigned by elevation percentile
 - Terrain distribution: ~25% water, ~50% plains, ~10% forest, ~10% hills, ~1% gold, ~2% quarry, ~5% mountains
 - Edge hexes are always water
-- Points of interest placed with minimum distance constraint (6 hexes apart)
+- Points of interest placed with minimum distance constraint (10 hexes apart)
 - Map validated on generation: path must exist from a haven to the Maw
 
 ## Terrain
@@ -80,7 +80,7 @@ Shattered terrain is visually distinct (dark red tones) and distressed terrain s
 - 4 active skill slots, 3 equipment slots (weapon, armor, artifact)
 - Starts with Rusty Blade (1 melee damage), Worn Leather (1 defense), Stick Bow (1 ranged damage, range 2) in inventory, Restore skill learned
 - Regenerates 1 HP per turn naturally (at start of enemy phase)
-- Dodge chance = Reflex% (capped at 30%, extendable by Flickerweave +30%)
+- Dodge chance = Reflex% (capped at 30%, extendable by dodge_bonus armor)
 - Melee damage = weapon damage + Might (+ special bonuses: chaos_bonus, momentum, etc.)
 - Ranged damage = weapon damage + Reflex (+ sniper bonus at max range)
 - Bell curve damage rolls: 3 rolls of 1..strength*2, averaged. Mean ≈ strength, with natural variance.
@@ -88,24 +88,24 @@ Shattered terrain is visually distinct (dark red tones) and distressed terrain s
 ## Combat
 
 ### Melee
-Move onto an enemy hex. Damage roll vs enemy defense, minimum 1 damage. If killed, player occupies the hex (costs terrain movement). If not killed, enemy counter-attacks (halved by Warden's Blade riposte). Weapon specials trigger on hit: lifesteal heals, armor_pierce ignores defense, defense_shred reduces enemy defense permanently, aether_siphon gains AE, recoil damages the player, cleave hits adjacent enemies.
+Move onto an enemy hex. Damage roll vs enemy defense, minimum 1 damage. If killed, player occupies the hex (costs terrain movement). If not killed, enemy counter-attacks (halved by riposte weapons). Weapon specials trigger on hit: lifesteal heals, armor_pierce ignores defense, defense_shred reduces enemy defense permanently, aether_siphon gains AE, recoil damages the player, chain hits adjacent enemies.
 
 ### Ranged
-Press R or click the R button on the skill bar to enter targeting mode. Requires a ranged weapon. Costs 1 Aether for magical weapons (free with Aether Lance or non-magical bows). Hills grant +1 range. Ends turn on use. Weapon specials: chain hits an adjacent enemy, knockback pushes target, splash damages adjacent enemies, piercing continues through to the next enemy, double_shot fires twice, burn applies damage next turn (ignores defense), sniper adds damage at max range.
+Press R or click the R button on the skill bar to enter targeting mode. Requires a ranged weapon. Costs 1 Aether for magical weapons (free with free_ranged weapons or non-magical bows). Hills grant +1 range. Ends turn on use. Weapon specials: chain hits adjacent enemies, knockback pushes target, splash damages adjacent enemies, piercing continues through to the next enemy, double_shot/triple_shot fires multiple times, burn applies damage next turn (ignores defense), sniper adds damage at max range.
 
 ### Skills
 Press 1-4 to activate. Each skill usable once per turn. Costs Aether. Some require targeting (melee, ranged, teleport targets), others execute immediately (self, AoE centered on self). Non-free skills end turn on use. Skills have usage categories that restrict when they can be activated.
 
 ### Damage Formula
-`rollDamage(strength)` → `Rando.bellCurve(strength)`: rolls 3 times from 1..strength*2, divides by 3, rounds. Produces a bell curve centered on strength. Applied to both player and enemy damage. Defense subtracts from rolled damage (minimum 1). Enemy defense can be permanently reduced by Nullblade and Sundering Blow.
+`rollDamage(strength)` → `Rando.bellCurve(strength)`: rolls 3 times from 1..strength*2, divides by 3, rounds. Produces a bell curve centered on strength. Applied to both player and enemy damage. Defense subtracts from rolled damage (minimum 1). Enemy defense can be permanently reduced by defense_shred weapons and Sundering Blow.
 
 ### Defensive Mechanics
 - **Warp Shield**: Absorbs the next hit entirely. Duration 3 turns. Consumed on first hit.
-- **Dodge**: Reflex% chance (cap 30%, +30% from Flickerweave). Checked before damage.
-- **Ranged Immune**: Wraithskin negates all incoming ranged damage.
-- **Thorns**: Thornmail reflects 2 flat damage to melee attackers.
-- **Last Stand**: Aegis of the Breach grants +2 defense below 50% HP.
-- **POI Defense**: +3 defense on havens, +2 on camps (including Sanctuary).
+- **Dodge**: Reflex% chance (cap 30%, extendable by dodge_bonus armor up to +30%). Checked before damage.
+- **Ranged Immune**: ranged_immune armor negates all incoming ranged damage.
+- **Thorns**: thorns armor reflects 50-100% of damage to melee attackers.
+- **Last Stand**: last_stand armor grants +4/+6 defense below 50% HP.
+- **POI Defense**: +3 defense on havens, +2 on villages (including Sanctuary).
 - **Terrain Defense**: +1 defense in forest (including shattered/distressed variants).
 
 ## Enemies
@@ -132,8 +132,8 @@ Enemies with a `rangedAttack` field (Void Stalker, Breach Guardian, Unraveler) f
 
 ### Enemy State
 Enemies can accumulate state from player attacks:
-- `defReduction`: permanent defense reduction from Nullblade hits and Sundering Blow (min 0 effective defense)
-- `burnDamage`: damage dealt at start of next enemy phase (from Nova Launcher burn, Immolate skill), ignores defense
+- `defReduction`: permanent defense reduction from defense_shred weapon hits and Sundering Blow (min 0 effective defense)
+- `burnDamage`: damage dealt at start of next enemy phase (from burn weapon effects, Immolate skill), ignores defense
 
 ### Wildlife
 12 procedurally generated creature types per game, with random fantasy names (e.g., "Ashtigeron", "Velpantherine"), unique colors from a random color scheme, and stats scaling from 3-12 attack. Wildlife is distinct from chaos-spawned enemies: they don't shatter terrain, don't grant Aether on kill, and avoid shattered hexes. 20 wildlife spawn at game start (outside player vision, on non-shattered terrain), with a 2% per turn chance to spawn more.
@@ -150,48 +150,23 @@ Enemies can accumulate state from player attacks:
 
 | POI | Count | Symbol | Defense | Effect |
 |-----|-------|--------|---------|--------|
-| Haven | 2-3 | 🏰 | +3 | Full rest (HP + Aether). Shop with 3-5 random tier 1+ items. |
-| Camp | 4-6 | ⛺ | +2 | Partial rest: 50% HP + 50% Aether recovery. |
-| Ruin | 3-5 | ⛫ | — | Lootable once: 1-3 non-magical items + 1 magical item + 5-20 gold. Spawns 1-3 enemies (50/50 Void Stalker or Flux Archer). |
-| Breach | 3-4 | ֍ | — | Open breaches spawn enemies (15%/turn). Sealable after guardian defeated. |
+| Haven | 4-6 | 🏰 | +3 | Full rest (HP + Aether). Shop with 2-3 magical + 2-3 non-magical items. |
+| Village | 8-12 | 🏡 | +2 | Partial rest: 50% HP + 50% Aether recovery. |
+| Ruin | 12-20 | ⛫ | — | Lootable once: 1-3 non-magical items + 1 magical item + 5-20 gold. Spawns 1-3 enemies (50/50 Void Stalker or Flux Archer). |
+| Breach | 6-8 | ֍ | — | Open breaches spawn enemies (15%/turn). Sealable after guardian defeated. |
 | Maw | 1 | ✸ | — | Final objective. Placed preferentially rightward. Requires 2 sealed breaches + Unraveler defeated. |
-| Hut | 4-6 | ⌂ | — | Wise Man's Hut. Each has a fixed skill. Always offers teaching on visit. 5% chance per visit the skill refreshes to a new unlearned one. |
+| Hut | 8-12 | ⌂ | — | Wise Man's Hut. Each has a fixed skill. Always offers teaching on visit. 5% chance per visit the skill refreshes to a new unlearned one. |
 
 ### Haven Shop
-- Stocks 3-5 items, 50/50 mix of magical and non-magical (magical excludes Maw Compass)
+- Stocks 2-3 magical + 2-3 non-magical items (4-6 total)
 - Sell items at 40% of buy price
 
-### Sanctuary (Temporary Camp)
-Created by the Sanctuary skill. Functions as a camp POI (+2 defense, one rest for 50% HP + 50% AE). Disappears after use. Cannot be placed on existing POI hexes.
+### Sanctuary (Temporary Village)
+Created by the Sanctuary skill. Functions as a village POI (+2 defense, one rest for 50% HP + 50% AE). Disappears after use. Cannot be placed on existing POI hexes.
 
 ## Equipment
 
-Items are either **magical** (unique, special properties, purple in UI) or **non-magical** (mundane, stackable in loot, no special abilities). Magical items are re-rolled on discovery to guarantee something the player doesn't already own (equipped or in inventory). If the player owns all magical items, none drops.
-
-### Magical Weapons (21)
-| Name | Type | Dmg | Range | Special | Price | Tier |
-|------|------|-----|-------|---------|-------|------|
-| Rusty Blade | Melee | 1 | — | — | Free | 0 |
-| Duskfang | Melee | 4 | — | +2 HP on hit (lifesteal) | 35 | 1 |
-| Breaker Mace | Melee | 3 | — | Ignore 2 enemy defense | 30 | 1 |
-| Void Cleaver | Melee | 7 | — | +2 vs chaos-spawned | 40 | 1 |
-| Warden's Blade | Melee | 6 | — | Counter-attacks halved | 60 | 2 |
-| Emberstrike | Melee | 8 | — | +4 dmg if moved this turn | 75 | 2 |
-| Soulreaver | Melee | 7 | — | +1 Aether on hit | 70 | 2 |
-| Starforged Sword | Melee | 10 | — | — | 100 | 2 |
-| Nullblade | Melee | 9 | — | -1 enemy def per hit (permanent, min 0) | 110 | 3 |
-| Worldsplitter | Melee | 14 | — | 3 self-damage per attack | 130 | 3 |
-| Dimensional Edge | Melee | 12 | — | Cleave (hits adjacent enemies too) | 150 | 3 |
-| Spark Caster | Ranged | 3 | 2 | Chain: 3 flat dmg to one adjacent enemy | 30 | 1 |
-| Flux Bow | Ranged | 5 | 2 | — | 35 | 1 |
-| Gale Bow | Ranged | 4 | 3 | Knockback: push target 1 hex away | 40 | 1 |
-| Rift Cannon | Ranged | 6 | 2 | Splash: 2 dmg to enemies adjacent to target | 55 | 2 |
-| Aether Lance | Ranged | 6 | 3 | Free ranged (no Aether cost) | 60 | 2 |
-| Voidpiercer | Ranged | 5 | 4 | Pierce-through: bolt continues to next enemy in line | 65 | 2 |
-| Stasis Repeater | Ranged | 4 | 3 | Double shot: fires twice | 70 | 2 |
-| Nova Launcher | Ranged | 7 | 3 | Burn: target takes 3 dmg next turn (ignores def) | 100 | 3 |
-| Phase Rifle | Ranged | 8 | 5 | Ignores defense | 120 | 3 |
-| Astral Longbow | Ranged | 9 | 5 | +4 dmg at max range | 140 | 3 |
+Items are either **magical** (unique, procedurally generated, special properties, purple in UI) or **non-magical** (mundane, fixed stats, no special abilities). All equipment is stored in a single runtime registry (`ALL_EQUIPMENT`), which includes both static non-magical items and dynamically generated magical items. The registry is saved/loaded with the game state.
 
 ### Non-Magical Melee Weapons (6)
 | Name | Dmg | Price | Tier |
@@ -221,56 +196,61 @@ Items are either **magical** (unique, special properties, purple in UI) or **non
 | Scale Armor | 4 | 50 | 3 |
 | Plate Armor | 5 | 75 | 4 |
 
-### Magical Armors (11)
-| Name | Def | Special | Price | Tier |
-|------|-----|---------|-------|------|
-| Worn Leather | 1 | — | Free | 0 |
-| Thornmail | 2 | Melee attackers take 2 reflect dmg | 35 | 1 |
-| Flickerweave | 2 | +30% dodge chance | 40 | 1 |
-| Warded Mail | 4 | +10 HP | 50 | 1 |
-| Chaosweave Cloak | 3 | +2 vision | 45 | 1 |
-| Bloodward Cuirass | 4 | +5 HP on kill | 65 | 2 |
-| Wraithskin | 3 | Negate all ranged damage | 75 | 2 |
-| Stormplate | 3 | +1 Aether/turn | 80 | 2 |
-| Starplate | 6 | -1 MP | 120 | 2 |
-| Voidhide | 5 | Wraith immune | 100 | 3 |
-| Aegis of the Breach | 6 | +2 def below 50% HP | 130 | 3 |
+### Starting Equipment
+- Rusty Blade: melee, 1 damage (non-magical, free)
+- Worn Leather: armor, 1 defense (non-magical, free)
+- Stick Bow: ranged, 1 damage, range 2 (in inventory)
 
-### Magical Artifacts (5)
-| Name | Special | Price | Tier |
-|------|---------|-------|------|
-| Seer's Lens | +2 vision | 40 | 1 |
-| Aether Crystal | +4 Aether | 50 | 1 |
-| Vitality Stone | +3 HP/turn regen | 80 | 3 |
-| Phase Anchor | Displacement immune | 35 | 1 |
-| Maw Compass | Reveals Maw on map | 30 | 1 |
+### Procedurally Generated Magical Items
+
+Magical items are generated at runtime via `rollMagicItem()`. Each item gets a unique ID (`magic_<N>`), a procedurally generated name, random stats, and a random special effect. Names are built from thematic word pools (modes like "Void", "Storm", "Phase" combined with item words and effect-specific verbs/archetypes).
+
+**Melee weapons**: damage 2-6, price = damage * 12 + 10
+**Ranged weapons**: damage 2-6, range 3-5, price = (damage + range) * 8 + 10
+**Armor**: defense 2-6, price = defense * 15 + 10
+**Artifacts**: price 40-80, no base stat (effect only)
+
+#### Melee Weapon Effects (34 variants)
+armor_pierce (2/4), aether_siphon (1/2), burn (2/3/5), chain (2/3/5), chaos_bonus (2/4/6), counter_mastery, defense_shred (1/2), double_strike, triple_strike, ignore_defense, knockback, lifesteal (1/2/3), momentum (2/3/4), recoil (3/5/8 bonus, 1/3/5 self-dmg), reverberate, riposte (1/2/3)
+
+#### Ranged Weapon Effects (30 variants)
+armor_pierce (2/4), aether_siphon (1/2), burn (2/3/5), chain (2/3/5), chaos_bonus (2/4/6), defense_shred (1/2), double_shot, triple_shot, free_ranged, ignore_defense, knockback, lifesteal (1/2/3), piercing, recoil (5/8/13 bonus, 1/3/5 self-dmg), sniper (2/4/8), splash (2)
+
+#### Armor Effects (21 variants)
+burning_aura (2/5), dodge_bonus (10/20/30%), heal_on_kill (5/8), high_def_mp_penalty (+5 def, -1 MP), last_stand (4/6), momentum_defense (1/2/3), ranged_defense (2/4), ranged_immune, thorns (50/100%), wall_of_steel (2/4/6)
+
+#### Artifact Effects (38 variants)
+aether_bonus (10/20), aether_regen (1/2/3), aether_signet (3/5), blink_ring (range 4, +2 bonus), breach_jewel (4/6), chaos_attune (2/4 might, 2/3 def), chaos_circlet, chaos_defense (2/4), disengage, displacement_immune, heal (1/2/3 per turn), hp_bonus (10/20), mp_bonus (2/4), opportunist, ranger_defense (1/2/4), reveal_maw, revive (1/2 hp+ae), soul_harvest (2/4 XP), strider, threat_shroud, vision_bonus (2/4), wraith_immune
+
+Armor can also roll any artifact effect (from the combined armor + artifact pool), giving armors access to passive effects like aether_regen or hp_bonus in addition to defensive specials.
 
 ### Loot Sources
-- **Ruins**: 1-3 non-magical items + 1 magical item (re-rolled to something new)
-- **Breach Crawlers / Guardians**: 0-3 non-magical items + 10% chance of 1 magical item (re-rolled)
-- **Haven shops**: 3-5 items, 50/50 magical/non-magical mix
+- **Ruins**: 1-3 non-magical items + 1 magical item + 5-20 gold
+- **Breach Crawlers / Guardians**: 0-3 non-magical items + 10% chance of 1 magical item
+- **Haven shops**: 2-3 magical + 2-3 non-magical items
 - **Sell price**: 40% of buy price
 
-## Skills (30)
+## Skills (33)
 
-Skills have three states: **learned** (in player's pool), **available** (meets level requirement, not yet learned), or **unlearned** (level too low). Restore is learned at start. At levels 2, 4, 6, 8, 10, the player picks 1 of 3 random available skills to learn. Learned skills can be freely equipped/unequipped into 4 active slots via the Skills panel. Wise Man huts scattered across the map can also teach skills.
+Skills have three states: **learned** (in player's pool), **available** (meets level requirement, not yet learned), or **unlearned** (level too low). Restore is learned at start. At levels 2, 4, 6, 8, 10, the player picks 1 of 3 random available skills to learn. Learned skills can be freely equipped/unequipped into 4 active slots via the Skills panel. Wise Man huts (8-12 per map) scattered across the map can also teach skills.
 
 ### Skill Usage Categories
 Each skill has a usage restriction that determines when it can be activated:
-- **Pristine**: No enemies within 2 hexes AND player not on shattered terrain. Rewards maintaining safe, clean territory. (Aether Tap, Prospect, Commune, Salvage, Skill Seek, Sanctuary)
+- **Pristine**: No enemies within 2 hexes AND player not on shattered terrain. Rewards maintaining safe, clean territory. (Aether Tap, Bountiful Harvest, Prospect, Commune, Salvage, Skill Seek, Sanctuary)
 - **Non-combat**: No enemies within 2 hexes. Distressed terrain is OK. (Restore, Farsight, Spirit Walk, Ground Weeps)
-- **Anytime**: No restrictions. All combat skills plus Recall and Phase Step.
+- **Anytime**: No restrictions. All combat skills plus Recall, Phase Step, and Loot.
 
 The skill bar visually grays out skills whose usage conditions aren't met, providing immediate feedback on what's available.
 
-### Combat Skills (21)
+### Combat Skills (24)
 
 | Skill | Cost | Target | Scales | Usage | Level | Effect |
 |-------|------|--------|--------|-------|-------|--------|
 | Restore | 0 | AoE Self (1+Lv/3) | — | Non-combat | 0 | Restore shattered terrain. Gain 1 AE. Ends turn. 3 XP per hex. |
 | Void Strike | 1 AE | Melee | Might+Warding | Anytime | 1 | weapon + Might + Warding damage. No counter-attack. |
+| Loot | 0 | Melee | — | Anytime | 2 | Take 1-5 gold from adjacent enemy instead of dealing damage. |
 | Phase Step | 2 AE | Teleport (3) | — | Anytime | 2 | Teleport to visible hex within 3. Free action. |
-| Cosmic Bolt | 2 AE | Ranged (4) | Warding | Anytime | 2 | 8 + Warding ranged damage. |
+| Cosmic Bolt | 3 AE | Ranged (4) | Warding | Anytime | 2 | 8 + Warding ranged damage. |
 | Shockwave | 2 AE | AoE Self (2) | Might | Anytime | 2 | 4 + Might damage to enemies within 2. Pushes each 1 hex away. |
 | Siphon Strike | 2 AE | Melee | Might | Anytime | 2 | weapon + Might damage. Heal HP equal to damage dealt. No counter. |
 | Piercing Shot | 2 AE | Ranged (4) | Reflex | Anytime | 2 | 6 + Reflex damage. Ignores defense. |
@@ -278,6 +258,7 @@ The skill bar visually grays out skills whose usage conditions aren't met, provi
 | Breach Pulse | 3 AE | AoE Self (2) | Warding | Anytime | 4 | 5 + Warding damage to all enemies within 2. |
 | Chain Lightning | 3 AE | Ranged (3) | Warding | Anytime | 4 | 6 + Warding to target. Chains to 2 nearby enemies for 4 flat dmg. |
 | Immolate | 1 AE | Melee | Might | Anytime | 4 | weapon + Might damage. Target burns for 4 next turn. No counter. |
+| Haven's Light | 3 AE | AoE Self (1) | — | Anytime | 6 | Strength 20 attack to all adjacent enemies. Only usable at haven or village. |
 | Mending Light | 2 AE | Self | Vigor | Anytime | 6 | Heal 10 + Vigor*3 HP. |
 | Gravity Well | 3 AE | AoE Self (3) | — | Anytime | 6 | Pull enemies within 3 one hex closer. |
 | Sundering Blow | 2 AE | Melee | Might | Anytime | 6 | weapon + Might damage. Permanently shred 3 enemy defense. No counter. |
@@ -295,18 +276,19 @@ The skill bar visually grays out skills whose usage conditions aren't met, provi
 |-------|------|--------|-------|-------|--------|
 | Aether Tap | 0 | AoE Self (2) | Pristine | 2 | Draw AE from healthy land. +1 AE per 6 non-shattered, non-distressed hexes within 2. Ends turn. |
 | Farsight | 2 AE | Self | Non-combat | 2 | Reveal all hexes within 12 (permanent terrain + temporary visibility). Free action. |
+| Bountiful Harvest | 4 AE | Self | Pristine | 4 | Sprout crops (1-3g each) on all healthy hexes within 2. Ends turn. |
 | Prospect | 1 AE | Self | Pristine | 4 | Reveal gold deposits within 8. 20% chance to create a gold deposit on a nearby hex within 4. |
 | Commune | 2 AE | Self | Pristine | 4 | Permanently reveal all POI locations on the map. |
-| Salvage | 0 | AoE Self (1) | Pristine | 4 | Create gold deposits (value 5) on adjacent shattered hexes. Terrain stays shattered. Ends turn. |
+| Salvage | 0 | AoE Self (1) | Pristine | 4 | Restore adjacent shattered hexes and reveals gold. Ends turn. |
 | Skill Seek | 3 AE | Self | Pristine | 6 | 5% per level chance to learn a new skill. |
 | Spirit Walk | 3 AE | Teleport Revealed (6) | Non-combat | 6 | Teleport to any revealed passable hex within 6. Ends turn. |
 | Ground Weeps | 4 AE | Self | Non-combat | 8 | Full-map enemy threat heatmap overlay. Blue=safe, red=deadly. Dismiss with Space/click. |
-| Sanctuary | 3 AE | Self | Pristine | 8 | Current hex becomes a temporary camp (one rest: 50% HP + 50% AE, then disappears). Must be non-POI terrain. |
+| Sanctuary | 3 AE | Self | Pristine | 8 | Current hex becomes a temporary village (one rest: 50% HP + 50% AE, then disappears). Must be non-POI terrain. |
 
 ## Turn Structure
 
 1. **Player phase** — player clicks to select, then spends MP to move, can attack (melee by moving onto enemy, ranged by pressing R) and use skills (1-4 keys). Turn ends automatically at 0 MP, or manually via Space/E/End Turn button.
-2. **Enemy phase** — burn damage ticks first, then natural HP regen (+1 HP), Vitality Stone regen, Stormplate Aether regen (+1 AE), then Warp Shield countdown. Enemies animated sequentially (80ms per move, 150ms per attack). Each enemy: teleport check (Phase Wraith) → movement steps (per speed) → melee attack if adjacent (triggers thorns if Thornmail equipped) → ranged attack if in range with LOS (negated by Wraithskin) → boss spawning (Unraveler) → terrain shatter check (2% for chaos-spawned).
+2. **Enemy phase** — burn damage ticks first, then natural HP regen (+1 HP), heal artifact regen, aether_regen artifact regen, then Warp Shield countdown. Enemies animated sequentially (80ms per move, 150ms per attack). Each enemy: teleport check (Phase Wraith) → movement steps (per speed) → melee attack if adjacent (triggers thorns if thorns armor equipped) → ranged attack if in range with LOS (negated by ranged_immune armor) → boss spawning (Unraveler) → terrain shatter check (2% for chaos-spawned).
 3. **Spawn phase** — open breaches roll 15% each for new enemy spawn. 2% chance for wildlife spawn (outside player vision, non-shattered hex). Turn counter increments. MP reset to full (or half if engaged). movedThisTurn flag cleared.
 
 ## Engagement Mechanic
@@ -319,10 +301,10 @@ LOS is checked by walking the line between two hexes and testing for mountains. 
 
 ## Fog of War
 
-- Vision radius: base 6 hexes, expandable by equipment (Chaosweave Cloak +2, Seer's Lens +2, stackable)
+- Vision radius: base 6 hexes, expandable by equipment with vision_bonus (stackable across armor + artifact slots)
 - Revealed hexes show terrain and POIs permanently (dimmed when not currently visible)
 - Enemies only visible in current vision range
-- Maw Compass artifact reveals the Maw POI on the map permanently
+- reveal_maw artifact reveals the Maw POI on the map permanently
 - Farsight skill reveals hexes within 12 (free action)
 - Commune skill reveals all POI locations
 - Prospect skill reveals gold deposit hexes within 8
@@ -336,29 +318,30 @@ LOS is checked by walking the line between two hexes and testing for mountains. 
 ## Strategies
 
 ### Early Game (Levels 1-3)
-Explore cautiously from starting haven. The Rusty Blade (1 damage) and Stick Bow (1 damage, range 2) mean early fights are slow — hunt wildlife for XP and gold while avoiding chaos-spawned enemies until you upgrade. Loot gold hexes for currency. Buy a weapon at the haven ASAP; even a Duskfang (4 damage + lifesteal) or Flux Bow (5 damage) transforms your combat ability. Avoid ruins until level 2+ since they spawn enemies on entry. Visit Wise Man huts whenever safe — a free skill early is a windfall. The level 2 skill choice is critical with 7 options: Phase Step for mobility, Cosmic Bolt/Piercing Shot for ranged damage, Siphon Strike for sustain, Shockwave for defensive AoE, Aether Tap for resource management, or Farsight for scouting.
+Explore cautiously from starting haven. The Rusty Blade (1 damage) and Stick Bow (1 damage, range 2) mean early fights are slow — hunt wildlife for XP and gold while avoiding chaos-spawned enemies until you upgrade. Loot gold hexes for currency. Buy a weapon at the haven ASAP; even a modest magical weapon with lifesteal or a non-magical upgrade transforms your combat ability. Avoid ruins until level 2+ since they spawn enemies on entry. Visit Wise Man huts whenever safe — a free skill early is a windfall. The level 2 skill choice is critical with many options: Phase Step for mobility, Cosmic Bolt/Piercing Shot for ranged damage, Siphon Strike for sustain, Shockwave for defensive AoE, Loot for economy, Aether Tap for resource management, or Farsight for scouting.
 
 ### Mid Game (Levels 4-6)
-Assault the first breach. Use terrain tactically: forest for +1 defense when you expect to be attacked, hills for +1 ranged range. Clear ruins for equipment upgrades and gold. Close the first breach to reduce spawn pressure. Weapon specials start mattering: Breaker Mace pierces Guardian armor, Emberstrike rewards aggressive charging, Nullblade shreds defense over sustained fights. Non-combat skills like Prospect and Salvage fund equipment purchases. Use Commune to reveal all POIs and plan your route to the next breach.
+Assault the first breach. Use terrain tactically: forest for +1 defense when you expect to be attacked, hills for +1 ranged range. Clear ruins for equipment upgrades and gold. Close the first breach to reduce spawn pressure. Weapon specials start mattering: armor_pierce weapons cut through Guardian defense, momentum weapons reward aggressive charging, defense_shred weapons weaken enemies over sustained fights. Non-combat skills like Prospect, Salvage, and Bountiful Harvest fund equipment purchases. Use Commune to reveal all POIs and plan your route to the next breach.
 
 ### Late Game (Levels 7-10)
-Close the second breach. Gear up for the Maw. Starfall (level 10) trivializes mob fights with 15 + 2*Warding AoE, but you may not have the XP patience to reach it. Void Salvo (level 10) gives ranged builds a devastating finisher. The Unraveler fight demands both damage output and sustain — pure Might builds lack healing, pure Warding builds lack kill speed. The Unraveler's dual attack (12 melee + 6 ranged at range 4), 6 defense, and Void Stalker spawning every 3 turns means you need to close quickly or get overwhelmed. Recall (5 AE) provides an emergency escape if things go wrong. Ground Weeps helps plan your approach by revealing enemy concentration.
+Close the second breach. Gear up for the Maw. Starfall (level 10) trivializes mob fights with 15 + 2*Warding AoE, but you may not have the XP patience to reach it. Void Salvo (level 10) gives ranged builds a devastating finisher. The Unraveler fight demands both damage output and sustain — pure Might builds lack healing, pure Warding builds lack kill speed. The Unraveler's dual attack (12 melee + 6 ranged at range 4), 6 defense, and Void Stalker spawning every 3 turns means you need to close quickly or get overwhelmed. Recall (5 AE) provides an emergency escape if things go wrong. Ground Weeps helps plan your approach by revealing enemy concentration. Haven's Light (level 6) can devastate enemies that follow you back to a haven or village.
 
 ### Build Archetypes
-- **Sustain Melee**: Duskfang/Soulreaver + Bloodward Cuirass + Siphon Strike — heal through everything, never retreat
-- **Skill Caster**: Soulreaver + Stormplate + Aether Crystal — infinite Aether, skill every turn
-- **Glass Cannon**: Worldsplitter + Flickerweave — huge burst, pray for dodges
-- **Tank Breacher**: Breaker Mace + Aegis of the Breach + Sundering Blow — grind through Guardian fights
-- **Sniper**: Astral Longbow + Chaosweave Cloak + Piercing Shot — shoot from 6+ hexes, never get touched
-- **Kite Control**: Gale Bow + Thornmail + Shockwave — push enemies away, punish the ones that reach you
-- **Boss Killer**: Nullblade + Wraithskin + Execute — shred the Unraveler's defense, negate its ranged, finish with Execute
+- **Sustain Melee**: lifesteal/aether_siphon weapon + heal_on_kill armor + Siphon Strike — heal through everything, never retreat
+- **Skill Caster**: aether_siphon weapon + aether_regen armor + aether_bonus artifact — infinite Aether, skill every turn
+- **Glass Cannon**: recoil weapon + dodge_bonus armor — huge burst, pray for dodges
+- **Tank Breacher**: armor_pierce weapon + last_stand armor + Sundering Blow — grind through Guardian fights
+- **Sniper**: sniper ranged weapon + vision_bonus artifact + Piercing Shot — shoot from 6+ hexes, never get touched
+- **Kite Control**: knockback ranged weapon + thorns armor + Shockwave — push enemies away, punish the ones that reach you
+- **Boss Killer**: defense_shred weapon + ranged_immune armor + Execute — shred the Unraveler's defense, negate its ranged, finish with Execute
 - **Explorer**: Farsight + Commune + Spirit Walk + Prospect — maximum map knowledge and economy
+- **Harvester**: Loot + Bountiful Harvest + Salvage + Prospect — maximize gold income for shop upgrades
 
 ### Key Decisions
-- **Melee vs Ranged build**: Melee (Might + melee weapon) does more single-target damage and benefits from Void Strike/Dimensional Rend/Execute. Ranged (Reflex + ranged weapon) avoids counter-attacks and kites safely but has lower burst. Piercing Shot and Void Salvo give Reflex builds skill scaling. Phase Rifle ignoring defense makes it excellent against high-defense targets (Breach Guardian at 5 def, Unraveler at 6 def).
+- **Melee vs Ranged build**: Melee (Might + melee weapon) does more single-target damage and benefits from Void Strike/Dimensional Rend/Execute. Ranged (Reflex + ranged weapon) avoids counter-attacks and kites safely but has lower burst. Reflex double-scales: ranged damage AND dodge chance. Piercing Shot and Void Salvo give Reflex builds skill scaling. Weapons with ignore_defense are excellent against high-defense targets (Breach Guardian at 5 def, Unraveler at 6 def).
 - **When to engage breaches**: Each sealed breach reduces spawn pressure but the guardian fight (50 HP, 10 atk, 8 ranged atk, 5 def) is dangerous. Under-geared attempts often end in death from the combination of melee and ranged attacks. Sundering Blow (-3 def) makes guardians far more approachable.
-- **Skill slot management**: 30 skills, 4 slots. The Skills panel lets you swap freely, but mid-combat you're locked to your equipped 4. Do you bring 4 combat skills for the breach assault, or keep Restore equipped for the aftermath? Pristine skills incentivize returning to safe territory between fights.
-- **Starplate trade-off**: 6 defense is excellent but -1 MP (3 instead of 4) severely limits mobility. Best paired with Phase Step for repositioning.
+- **Skill slot management**: 33 skills, 4 slots. The Skills panel lets you swap freely, but mid-combat you're locked to your equipped 4. Do you bring 4 combat skills for the breach assault, or keep Restore equipped for the aftermath? Pristine skills incentivize returning to safe territory between fights.
+- **High defense trade-off**: Armor with high_def_mp_penalty offers +5 defense but -1 MP (3 instead of 4), severely limiting mobility. Best paired with Phase Step for repositioning.
 - **Terrain stewardship**: Clean terrain fuels Aether Tap and enables Pristine skills. Letting corruption spread degrades your resource base. But Salvage extracts gold from shattered terrain, creating a tension between restoration and exploitation.
 
 ### Anti-Strategies

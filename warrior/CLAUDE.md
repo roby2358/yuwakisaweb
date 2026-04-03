@@ -29,10 +29,10 @@ index.js (main game: state, rendering, input, combat, UI)
 
 ### Game State (index.js module-level variables)
 
-- `hexes`: `Map<"q,r", hex>` — the world grid (60x40 rectangular hex grid)
+- `hexes`: `Map<"q,r", hex>` — the world grid (100x100 rectangular hex grid)
 - `player`: object with `{q, r, stats, hp, aether, xp, level, gold, equipment, skills, inventory, statPoints}`
 - `enemies`: array of `{id, type, q, r, hp, maxHp, homeQ, homeR, turnsSinceSpawn}`
-- `pois`: array of points of interest (havens, camps, ruins, breaches, the Maw)
+- `pois`: array of points of interest (havens, villages, ruins, breaches, huts, the Maw)
 - `phase`: `'player' | 'enemy' | 'dialog'` — controls what input is accepted
 - `visible` / `revealed`: Sets of hexKeys for fog of war
 - `targeting`: `{skill, validHexes}` or null — for skill/ranged target selection
@@ -59,7 +59,7 @@ Axial coordinates `(q, r)` with pointy-top hexes. Hex objects stored in `Map<str
 
 - Canvas renders the hex map, tokens, fog, highlights
 - HTML overlay panels (Character/Skills/Inventory) slide in from right
-- Dialog overlay for havens, camps, ruins, level-up, skill choice, shop
+- Dialog overlay for havens, villages, ruins, level-up, skill choice, shop
 - Combat log: auto-fading entries in bottom-left
 - Skill bar: bottom-center, shows 4 equipped skills
 - HUD: top bar with HP/Aether/MP/XP bars, gold, panel toggle buttons

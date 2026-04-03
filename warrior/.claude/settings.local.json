@@ -9,7 +9,8 @@
       "mcp__pjpd__pjpd_add_task",
       "mcp__pjpd__pjpd_update_task",
       "mcp__pjpd__pjpd_list_tasks",
-      "Skill(update-config)"
+      "Skill(update-config)",
+      "Bash(python3:*)"
     ]
   }
 }
