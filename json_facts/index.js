@@ -9,12 +9,10 @@
 const EXAMPLES = {
   family: {
     json: `{
-  "parent": [
-    ["tom", "bob"],
-    ["tom", "liz"],
-    ["bob", "ann"],
-    ["bob", "pat"]
-  ],
+  "parent": {
+    "tom": ["bob", "liz"],
+    "bob": ["ann", "pat"]
+  },
   "male": ["tom", "bob"],
   "female": ["liz", "ann", "pat"]
 }`,
@@ -64,30 +62,37 @@ const EXAMPLES = {
 
   graph: {
     json: `{
-  "edge": [
-    ["a", "b"],
-    ["b", "c"],
-    ["c", "d"],
-    ["a", "d"],
-    ["b", "d"]
+  "road": {
+    "silverton": ["bramblewood", "moonhaven"],
+    "bramblewood": ["foxhollow"],
+    "foxhollow": ["moonhaven", "dunmere"],
+    "moonhaven": ["dunmere"]
+  },
+  "toll": [
+    ["silverton", "bramblewood", 5],
+    ["bramblewood", "foxhollow", 3],
+    ["foxhollow", "moonhaven", 2],
+    ["foxhollow", "dunmere", 7],
+    ["moonhaven", "dunmere", 4],
+    ["silverton", "moonhaven", 6]
   ]
 }`,
-    rules: `# connected
-* X, Y
-  * edge X, Y
-* X, Y
-  * edge Y, X
-
-# path
+    rules: `# path
 * X, Y, [X, Y]
-  * connected X, Y
+  * road X, Y
 * X, Z, [X | Rest]
-  * connected X, Y
+  * road X, Y
   * path Y, Z, Rest
 
+# leg-cost
+* From, To, Cost
+  * road From, To
+  * toll From, To, Cost
+
 # ?
-* connected a, Who
-* path a, d, Route`
+* road silverton, Where
+* path silverton, dunmere, Route
+* leg-cost From, To, Cost`
   },
 
   inventory: {
