@@ -6,11 +6,9 @@
  * Generator-based solver for backtracking.
  */
 
-// ── Nodes ──────────────────────────────────────────────────────
+// ── Nodes & helpers ────────────────────────────────────────────
 
 const node = (value, children) => ({ value, children: children || [] });
-
-// ── Term helpers ───────────────────────────────────────────────
 
 const isVar = (n) =>
   n && typeof n.value === 'object' && n.value !== null && 'var' in n.value;
@@ -23,13 +21,10 @@ const getIndentLevel = (line) => {
   return Math.floor(match[1].replace(/\t/g, '  ').length / 2);
 };
 
-let anonCount = 0;
-
-const parseTerm = (text) => {
+const parseTerm = (text, anonCounter) => {
   text = text.trim();
   if (!text) return null;
 
-  // Backtick literal
   const litMatch = text.match(/^`([^`]*)`$/);
   if (litMatch) {
     const val = litMatch[1];
@@ -37,20 +32,17 @@ const parseTerm = (text) => {
     return node(val);
   }
 
-  // Anonymous variable
-  if (text === '_') return node({ var: `_anon${anonCount++}` });
+  if (text === '_') return node({ var: `_anon${anonCounter.count++}` });
 
-  // Named variable (uppercase or _prefix)
   if ((text[0] >= 'A' && text[0] <= 'Z') ||
       (text[0] === '_' && text.length > 1)) {
     return node({ var: text });
   }
 
-  // Bare lowercase atom
   return node(text);
 };
 
-const parseArgList = (text) => {
+const parseArgList = (text, anonCounter) => {
   const args = [];
   let current = '';
   let inBacktick = false;
@@ -62,30 +54,29 @@ const parseArgList = (text) => {
       current += ch;
     } else if (ch === ',' && !inBacktick) {
       const trimmed = current.trim();
-      if (trimmed) args.push(parseTerm(trimmed));
+      if (trimmed) args.push(parseTerm(trimmed, anonCounter));
       current = '';
     } else {
       current += ch;
     }
   }
   const trimmed = current.trim();
-  if (trimmed) args.push(parseTerm(trimmed));
+  if (trimmed) args.push(parseTerm(trimmed, anonCounter));
 
   return args.filter(a => a !== null);
 };
 
-const parseGoal = (text) => {
+const parseGoal = (text, anonCounter) => {
   text = text.trim();
-  // First word is predicate name, rest are comma-separated args
   const spaceIdx = text.indexOf(' ');
-  if (spaceIdx === -1) return node(text); // zero-arity goal
+  if (spaceIdx === -1) return node(text);
   const predName = text.slice(0, spaceIdx);
-  const args = parseArgList(text.slice(spaceIdx + 1));
+  const args = parseArgList(text.slice(spaceIdx + 1), anonCounter);
   return node(predName, args);
 };
 
 const parseMarkdown = (input) => {
-  anonCount = 0;
+  const anonCounter = { count: 0 };
   const lines = input.split('\n');
   const entries = [];
   let current = null;
@@ -95,7 +86,6 @@ const parseMarkdown = (input) => {
     const trimmed = line.trim();
     if (!trimmed) continue;
 
-    // Heading → predicate or query section
     if (trimmed.startsWith('#')) {
       const name = trimmed.replace(/^#+\s*/, '').trim();
       current = { name, clauses: [] };
@@ -105,32 +95,21 @@ const parseMarkdown = (input) => {
     }
 
     if (!current) continue;
-    if (!(trimmed.startsWith('*') || trimmed.startsWith('-'))) continue;
+    if (!trimmed.startsWith('*') && !trimmed.startsWith('-')) continue;
 
     const indent = getIndentLevel(line);
     const content = trimmed.replace(/^[-*]\s*/, '');
+    const isQuery = current.name === '?';
 
     if (indent === 0) {
-      // Top-level bullet
-      if (current.name === '?') {
-        // Query goal
-        const goal = parseGoal(content);
-        currentClause = { goals: [goal] };
-        current.clauses.push(currentClause);
-      } else {
-        // Clause head arguments
-        const headArgs = content ? parseArgList(content) : [];
-        currentClause = { headArgs, body: [] };
-        current.clauses.push(currentClause);
-      }
+      currentClause = isQuery
+        ? { goals: [parseGoal(content, anonCounter)] }
+        : { headArgs: content ? parseArgList(content, anonCounter) : [], body: [] };
+      current.clauses.push(currentClause);
     } else if (currentClause) {
-      // Sub-bullet → body goal or additional query goal
-      const goal = parseGoal(content);
-      if (current.name === '?') {
-        currentClause.goals.push(goal);
-      } else {
-        currentClause.body.push(goal);
-      }
+      const goal = parseGoal(content, anonCounter);
+      if (isQuery) currentClause.goals.push(goal);
+      else currentClause.body.push(goal);
     }
   }
 
@@ -157,14 +136,10 @@ const unify = (t1, t2, subst) => {
   t1 = deref(t1, subst);
   t2 = deref(t2, subst);
 
-  // Same variable
   if (isVar(t1) && isVar(t2) && t1.value.var === t2.value.var) return subst;
-
-  // Bind variable
   if (isVar(t1)) return new Map(subst).set(t1.value.var, t2);
   if (isVar(t2)) return new Map(subst).set(t2.value.var, t1);
 
-  // Both non-variables: must match functor and arity
   if (t1.value !== t2.value) return null;
   if (t1.children.length !== t2.children.length) return null;
 
@@ -176,27 +151,35 @@ const unify = (t1, t2, subst) => {
   return s;
 };
 
+const unifyArgs = (args1, args2, subst) => {
+  if (args1.length !== args2.length) return null;
+  let s = subst;
+  for (let i = 0; i < args1.length; i++) {
+    s = unify(args1[i], args2[i], s);
+    if (s === null) return null;
+  }
+  return s;
+};
+
 // ── Variable freshening ────────────────────────────────────────
 
-let freshCount = 0;
+const freshenTerm = (term, mapping, id) => {
+  if (isVar(term)) {
+    const name = term.value.var;
+    if (!mapping.has(name)) mapping.set(name, `${name}__${id}`);
+    return node({ var: mapping.get(name) });
+  }
+  if (term.children.length === 0) return term;
+  return node(term.value, term.children.map(c => freshenTerm(c, mapping, id)));
+};
 
-const freshenClause = (clause) => {
-  const id = freshCount++;
+const freshenClause = (clause, freshCounter) => {
+  const id = freshCounter.count++;
   const mapping = new Map();
-
-  const freshen = (term) => {
-    if (isVar(term)) {
-      const name = term.value.var;
-      if (!mapping.has(name)) mapping.set(name, `${name}__${id}`);
-      return node({ var: mapping.get(name) });
-    }
-    if (term.children.length === 0) return term;
-    return node(term.value, term.children.map(freshen));
-  };
-
+  const f = (term) => freshenTerm(term, mapping, id);
   return {
-    headArgs: clause.headArgs.map(freshen),
-    body: clause.body.map(g => node(g.value, g.children.map(freshen)))
+    headArgs: clause.headArgs.map(f),
+    body: clause.body.map(g => node(g.value, g.children.map(f)))
   };
 };
 
@@ -209,29 +192,26 @@ const formatTerm = (term) => {
     return idx >= 0 ? name.slice(0, idx) : name;
   }
   if (typeof term.value === 'number') return String(term.value);
-  if (typeof term.value === 'string' && term.children.length === 0) return term.value;
-  if (term.children.length > 0) {
-    return `${term.value}(${term.children.map(formatTerm).join(', ')})`;
-  }
-  return String(term.value);
+  if (term.children.length === 0) return String(term.value);
+  return `${term.value}(${term.children.map(formatTerm).join(', ')})`;
 };
 
-// ── Runner ─────────────────────────────────────────────────────
+const formatGoals = (goals) =>
+  goals.map(g =>
+    g.children.length === 0
+      ? g.value
+      : `${g.value}(${g.children.map(formatTerm).join(', ')})`
+  ).join(', ');
 
-const runMarkdownIsAPrologue = (code, logFn) => {
-  anonCount = 0;
-  freshCount = 0;
+// ── Database ───────────────────────────────────────────────────
 
-  // ── Parse ──────────────────────────────────────────────────
-  const entries = parseMarkdown(code);
-
-  // ── Build database ─────────────────────────────────────────
+const buildDatabase = (entries) => {
   const db = new Map();
-  const queryEntries = [];
+  const queries = [];
 
   for (const entry of entries) {
     if (entry.name === '?') {
-      queryEntries.push(...entry.clauses);
+      queries.push(...entry.clauses);
       continue;
     }
     for (const clause of entry.clauses) {
@@ -241,175 +221,160 @@ const runMarkdownIsAPrologue = (code, logFn) => {
     }
   }
 
-  // ── Step counter ───────────────────────────────────────────
-  const step = { count: 0, limit: 10000 };
+  return { db, queries };
+};
 
-  // ── Builtins ───────────────────────────────────────────────
+// ── Builtins (plain functions: args, subst → subst | null) ────
+
+const makeBuiltins = (logFn) => {
   const builtins = new Map();
 
-  builtins.set('true/0', function*(args, subst, rest) {
-    yield* solve(rest, subst);
+  builtins.set('true/0', (args, subst) => subst);
+
+  builtins.set('fail/0', (args, subst) => null);
+
+  builtins.set('=/2', (args, subst) => unify(args[0], args[1], subst));
+
+  builtins.set('\\=/2', (args, subst) =>
+    unify(args[0], args[1], subst) === null ? subst : null);
+
+  builtins.set('write/1', (args, subst) => {
+    logFn(formatTerm(deepDeref(args[0], subst)));
+    return subst;
   });
 
-  builtins.set('fail/0', function*() {
-    // yields nothing — goal fails
-  });
-
-  builtins.set('=/2', function*(args, subst, rest) {
-    const s = unify(args[0], args[1], subst);
-    if (s !== null) yield* solve(rest, s);
-  });
-
-  builtins.set('\\=/2', function*(args, subst, rest) {
-    const s = unify(args[0], args[1], subst);
-    if (s === null) yield* solve(rest, subst);
-  });
-
-  builtins.set('write/1', function*(args, subst, rest) {
-    const term = deepDeref(args[0], subst);
-    logFn(formatTerm(term));
-    yield* solve(rest, subst);
-  });
-
-  builtins.set('nl/0', function*(args, subst, rest) {
+  builtins.set('nl/0', (args, subst) => {
     logFn('');
-    yield* solve(rest, subst);
+    return subst;
   });
 
-  builtins.set('atom/1', function*(args, subst, rest) {
+  builtins.set('atom/1', (args, subst) => {
     const term = deref(args[0], subst);
-    if (typeof term.value === 'string' && term.children.length === 0) {
-      yield* solve(rest, subst);
-    }
+    return (typeof term.value === 'string' && term.children.length === 0)
+      ? subst : null;
   });
 
-  builtins.set('number/1', function*(args, subst, rest) {
+  builtins.set('number/1', (args, subst) => {
     const term = deref(args[0], subst);
-    if (typeof term.value === 'number') {
-      yield* solve(rest, subst);
-    }
+    return typeof term.value === 'number' ? subst : null;
   });
 
-  builtins.set('var/1', function*(args, subst, rest) {
-    const term = deref(args[0], subst);
-    if (isVar(term)) yield* solve(rest, subst);
+  builtins.set('var/1', (args, subst) => {
+    return isVar(deref(args[0], subst)) ? subst : null;
   });
 
-  builtins.set('nonvar/1', function*(args, subst, rest) {
-    const term = deref(args[0], subst);
-    if (!isVar(term)) yield* solve(rest, subst);
+  builtins.set('nonvar/1', (args, subst) => {
+    return !isVar(deref(args[0], subst)) ? subst : null;
   });
 
-  // ── Solver ─────────────────────────────────────────────────
+  return builtins;
+};
+
+// ── Solver ─────────────────────────────────────────────────────
+
+const makeSolver = (db, builtins, stepLimit) => {
+  const freshCounter = { count: 0 };
+  const stepCounter = { count: 0 };
 
   function* solve(goals, subst) {
-    step.count++;
-    if (step.count > step.limit) {
-      throw new Error(`Step limit exceeded (${step.limit} resolution steps)`);
+    stepCounter.count++;
+    if (stepCounter.count > stepLimit) {
+      throw new Error(`Step limit exceeded (${stepLimit} resolution steps)`);
     }
 
-    if (goals.length === 0) {
-      yield subst;
-      return;
-    }
+    if (goals.length === 0) { yield subst; return; }
 
     const [goal, ...rest] = goals;
-    const predName = goal.value;
-    const arity = goal.children.length;
+    const key = `${goal.value}/${goal.children.length}`;
 
-    // Check builtins first
-    const builtin = builtins.get(`${predName}/${arity}`);
+    // Builtin — plain function, no recursion into solve
+    const builtin = builtins.get(key);
     if (builtin) {
-      yield* builtin(goal.children, subst, rest);
+      const result = builtin(goal.children, subst);
+      if (result !== null) yield* solve(rest, result);
       return;
     }
 
     // User-defined clauses
-    const clauses = db.get(`${predName}/${arity}`);
-    if (!clauses) {
-      throw new Error(`Undefined predicate: ${predName}/${arity}`);
-    }
+    const clauses = db.get(key);
+    if (!clauses) throw new Error(`Undefined predicate: ${key}`);
 
     for (const clause of clauses) {
-      const fresh = freshenClause(clause);
-
-      // Unify goal args with clause head args
-      let s = subst;
-      let failed = false;
-      for (let i = 0; i < arity; i++) {
-        s = unify(goal.children[i], fresh.headArgs[i], s);
-        if (s === null) { failed = true; break; }
-      }
-      if (failed) continue;
-
-      // Resolve body goals then remaining goals
+      const fresh = freshenClause(clause, freshCounter);
+      const s = unifyArgs(goal.children, fresh.headArgs, subst);
+      if (s === null) continue;
       yield* solve([...fresh.body, ...rest], s);
     }
   }
 
-  // ── Execute queries ────────────────────────────────────────
+  // Returns generator, resets step counter per call
+  return (goals) => {
+    stepCounter.count = 0;
+    return solve(goals, new Map());
+  };
+};
 
-  if (queryEntries.length === 0) {
+// ── Query execution ────────────────────────────────────────────
+
+const collectQueryVars = (goals) => {
+  const vars = [];
+  const seen = new Set();
+  const walk = (term) => {
+    if (isVar(term) && !term.value.var.startsWith('_') && !seen.has(term.value.var)) {
+      seen.add(term.value.var);
+      vars.push(term.value.var);
+    }
+    term.children.forEach(walk);
+  };
+  goals.forEach(g => g.children.forEach(walk));
+  return vars;
+};
+
+const formatSolution = (queryVars, subst) => {
+  if (queryVars.length === 0) return '  true';
+  const bindings = [];
+  for (const v of queryVars) {
+    const val = deepDeref(node({ var: v }), subst);
+    if (!isVar(val) || val.value.var !== v) {
+      bindings.push(`${v} = ${formatTerm(val)}`);
+    }
+  }
+  return bindings.length > 0 ? `  ${bindings.join(', ')}` : '  true';
+};
+
+const executeQuery = (query, solve, logFn) => {
+  const queryVars = collectQueryVars(query.goals);
+  logFn(`?- ${formatGoals(query.goals)}`);
+
+  try {
+    let count = 0;
+    for (const subst of solve(query.goals)) {
+      count++;
+      logFn(formatSolution(queryVars, subst));
+    }
+    logFn(count === 0 ? '  false' : `  ${count} solution${count !== 1 ? 's' : ''}.`);
+  } catch (e) {
+    const msg = e instanceof RangeError
+      ? 'Search too deep — possible infinite recursion (stack overflow)'
+      : e.message;
+    logFn(`  Error: ${msg}`);
+  }
+
+  logFn('');
+};
+
+// ── Runner ─────────────────────────────────────────────────────
+
+const runMarkdownIsAPrologue = (code, logFn) => {
+  const entries = parseMarkdown(code);
+  const { db, queries } = buildDatabase(entries);
+  const builtins = makeBuiltins(logFn);
+  const solve = makeSolver(db, builtins, 10000);
+
+  if (queries.length === 0) {
     logFn('No queries found. Add a # ? section with goals.');
     return;
   }
 
-  for (const query of queryEntries) {
-    step.count = 0;
-
-    // Collect query variable names (skip anonymous)
-    const queryVars = [];
-    const seen = new Set();
-    const collectVars = (term) => {
-      if (isVar(term)) {
-        const name = term.value.var;
-        if (!name.startsWith('_') && !seen.has(name)) {
-          seen.add(name);
-          queryVars.push(name);
-        }
-      }
-      term.children.forEach(collectVars);
-    };
-    query.goals.forEach(g => {
-      g.children.forEach(collectVars);
-    });
-
-    // Format query for display
-    const queryStr = query.goals.map(g => {
-      if (g.children.length === 0) return g.value;
-      return `${g.value}(${g.children.map(formatTerm).join(', ')})`;
-    }).join(', ');
-    logFn(`?- ${queryStr}`);
-
-    try {
-      let count = 0;
-      for (const subst of solve(query.goals, new Map())) {
-        count++;
-        if (queryVars.length === 0) {
-          logFn('  true');
-        } else {
-          const bindings = [];
-          for (const v of queryVars) {
-            const val = deepDeref(node({ var: v }), subst);
-            if (!isVar(val) || val.value.var !== v) {
-              bindings.push(`${v} = ${formatTerm(val)}`);
-            }
-          }
-          logFn(bindings.length > 0 ? `  ${bindings.join(', ')}` : '  true');
-        }
-      }
-
-      if (count === 0) {
-        logFn('  false');
-      }
-      logFn(`  ${count} solution${count !== 1 ? 's' : ''}.`);
-    } catch (e) {
-      const msg = e instanceof RangeError
-        ? 'Search too deep — possible infinite recursion (stack overflow)'
-        : e.message;
-      logFn(`  Error: ${msg}`);
-    }
-
-    logFn('');
-  }
+  queries.forEach(q => executeQuery(q, solve, logFn));
 };
