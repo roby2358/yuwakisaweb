@@ -120,13 +120,28 @@ const initApp = () => {
   const codeEditor = document.getElementById('codeEditor');
   const consoleOutput = document.getElementById('consoleOutput');
   const runBtn = document.getElementById('runBtn');
-  const resetBtn = document.getElementById('resetBtn');
   const clearBtn = document.getElementById('clearBtn');
+  const exampleSelect = document.getElementById('exampleSelect');
+  const traceToggle = document.getElementById('traceToggle');
+  const tracePanel = document.getElementById('tracePanel');
+  const traceHeader = document.getElementById('traceHeader');
+  const traceOutput = document.getElementById('traceOutput');
 
   codeEditor.value = EXAMPLES[DEFAULT_EXAMPLE];
 
+  // ── Console ────────────────────────────────────────────────
+
   const clearConsole = () => {
     consoleOutput.innerHTML = '<span class="console-placeholder">Ready to execute...</span>';
+  };
+
+  const classifyMessage = (message) => {
+    if (message === '') return 'log-line log-line-empty';
+    if (message.startsWith('?-')) return 'log-line log-line-query';
+    if (message.startsWith('  Error:')) return 'log-line log-line-error';
+    if (message.match(/^\s+\d+ solution/)) return 'log-line log-line-summary';
+    if (message.startsWith('  ')) return 'log-line log-line-result';
+    return 'log-line';
   };
 
   const appendLog = (message) => {
@@ -134,57 +149,83 @@ const initApp = () => {
       consoleOutput.innerHTML = '';
     }
     const line = document.createElement('div');
-
-    if (message === '') {
-      line.className = 'log-line log-line-empty';
-    } else if (message.startsWith('?-')) {
-      line.className = 'log-line log-line-query';
-      line.textContent = message;
-    } else if (message.startsWith('  Error:')) {
-      line.className = 'log-line log-line-error';
-      line.textContent = message;
-    } else if (message.match(/^\s+\d+ solution/)) {
-      line.className = 'log-line log-line-summary';
-      line.textContent = message;
-    } else if (message.startsWith('  ')) {
-      line.className = 'log-line log-line-result';
-      line.textContent = message;
-    } else {
-      line.className = 'log-line';
-      line.textContent = message;
-    }
-
+    line.className = classifyMessage(message);
+    line.textContent = message;
     consoleOutput.appendChild(line);
     consoleOutput.scrollTop = consoleOutput.scrollHeight;
   };
 
+  // ── Trace ──────────────────────────────────────────────────
+
+  const renderTrace = (traceLines) => {
+    if (traceLines.length === 0) {
+      traceOutput.textContent = '(no trace events)';
+      return;
+    }
+    traceOutput.textContent = traceLines
+      .map(({ depth, text }) => '  '.repeat(depth) + text)
+      .join('\n');
+  };
+
+  const toggleTraceCollapse = () => {
+    tracePanel.classList.toggle('collapsed');
+  };
+
+  // ── Run ────────────────────────────────────────────────────
+
   const handleRun = () => {
     clearConsole();
-    runMarkdownIsAPrologue(codeEditor.value, appendLog);
-  };
 
-  const handleReset = () => {
-    codeEditor.value = EXAMPLES[DEFAULT_EXAMPLE];
-    clearConsole();
-  };
+    const tracing = traceToggle.checked;
+    const traceLines = [];
+    const traceFn = tracing
+      ? (depth, text) => traceLines.push({ depth, text })
+      : null;
 
-  const handleExampleClick = (name) => {
-    if (EXAMPLES[name]) {
-      codeEditor.value = EXAMPLES[name];
-      clearConsole();
+    runMarkdownIsAPrologue(codeEditor.value, appendLog, traceFn);
+
+    if (tracing) {
+      tracePanel.classList.add('visible');
+      tracePanel.classList.remove('collapsed');
+      renderTrace(traceLines);
+    } else {
+      tracePanel.classList.remove('visible');
     }
   };
 
+  // ── Examples ───────────────────────────────────────────────
+
+  const loadExample = (name) => {
+    if (!EXAMPLES[name]) return;
+    codeEditor.value = EXAMPLES[name];
+    clearConsole();
+    tracePanel.classList.remove('visible');
+  };
+
+  const handleExampleChange = () => {
+    loadExample(exampleSelect.value);
+    exampleSelect.value = '';
+  };
+
+  // ── Event binding ───────────────────────────────────────��──
+
   runBtn.addEventListener('click', handleRun);
-  resetBtn.addEventListener('click', handleReset);
   clearBtn.addEventListener('click', clearConsole);
+  exampleSelect.addEventListener('change', handleExampleChange);
+  traceHeader.addEventListener('click', toggleTraceCollapse);
 
   document.querySelectorAll('.example-link').forEach(link => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
-      const name = link.getAttribute('data-example');
-      if (name) handleExampleClick(name);
+      loadExample(link.getAttribute('data-example'));
     });
+  });
+
+  codeEditor.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      handleRun();
+    }
   });
 };
 

@@ -397,11 +397,18 @@ const makeBuiltins = (logFn) => {
 // Cut sets a flag; the clause loop checks it after each clause.
 // Not tries a sub-goal and succeeds when it fails.
 
-const makeSolver = (db, builtins, stepLimit) => {
+const makeSolver = (db, builtins, stepLimit, traceFn) => {
   const freshCounter = { count: 0 };
   const stepCounter = { count: 0 };
 
-  function* solve(goals, subst, cutFlag) {
+  const traceGoal = traceFn
+    ? (goal, subst, depth) => {
+        const derefed = node(goal.value, goal.children.map(c => deepDeref(c, subst)));
+        traceFn(depth, formatGoal(derefed));
+      }
+    : () => {};
+
+  function* solve(goals, subst, cutFlag, depth) {
     stepCounter.count++;
     if (stepCounter.count > stepLimit) {
       throw new Error(`Step limit exceeded (${stepLimit} resolution steps)`);
@@ -414,14 +421,15 @@ const makeSolver = (db, builtins, stepLimit) => {
     // ── Cut: succeed, then signal parent clause loop to stop
     if (goal.value === 'cut' && goal.children.length === 0) {
       cutFlag.cut = true;
-      yield* solve(rest, subst, cutFlag);
+      yield* solve(rest, subst, cutFlag, depth);
       return;
     }
 
     // ── Not (negation as failure)
     if (goal.value === 'not' && goal.children.length === 1) {
-      const hasSolution = !solve([goal.children[0]], subst, { cut: false }).next().done;
-      if (!hasSolution) yield* solve(rest, subst, cutFlag);
+      traceGoal(goal, subst, depth);
+      const hasSolution = !solve([goal.children[0]], subst, { cut: false }, depth + 1).next().done;
+      if (!hasSolution) yield* solve(rest, subst, cutFlag, depth);
       return;
     }
 
@@ -430,8 +438,9 @@ const makeSolver = (db, builtins, stepLimit) => {
     // ── Builtin — leaf call, no recursion
     const builtin = builtins.get(key);
     if (builtin) {
+      traceGoal(goal, subst, depth);
       const result = builtin(goal.children, subst);
-      if (result !== null) yield* solve(rest, result, cutFlag);
+      if (result !== null) yield* solve(rest, result, cutFlag, depth);
       return;
     }
 
@@ -439,16 +448,17 @@ const makeSolver = (db, builtins, stepLimit) => {
     const clauses = db.get(key);
     if (!clauses) throw new Error(`Undefined predicate: ${key}`);
 
+    traceGoal(goal, subst, depth);
+
     const bodyCutFlag = { cut: false };
     for (const clause of clauses) {
       const fresh = freshenClause(clause, freshCounter);
       const s = unifyArgs(goal.children, fresh.headArgs, subst);
       if (s === null) continue;
 
-      // Resolve body separately, then continuation
       bodyCutFlag.cut = false;
-      for (const bodySubst of solve(fresh.body, s, bodyCutFlag)) {
-        yield* solve(rest, bodySubst, cutFlag);
+      for (const bodySubst of solve(fresh.body, s, bodyCutFlag, depth + 1)) {
+        yield* solve(rest, bodySubst, cutFlag, depth);
       }
       if (bodyCutFlag.cut) break;
     }
@@ -456,7 +466,7 @@ const makeSolver = (db, builtins, stepLimit) => {
 
   return (goals) => {
     stepCounter.count = 0;
-    return solve(goals, new Map(), { cut: false });
+    return solve(goals, new Map(), { cut: false }, 0);
   };
 };
 
@@ -531,11 +541,11 @@ const STDLIB = `
 
 // ── Runner ─────────────────────────────────────────────────────
 
-const runMarkdownIsAPrologue = (code, logFn) => {
+const runMarkdownIsAPrologue = (code, logFn, traceFn) => {
   const entries = parseMarkdown(STDLIB + '\n' + code);
   const { db, queries } = buildDatabase(entries);
   const builtins = makeBuiltins(logFn);
-  const solve = makeSolver(db, builtins, 10000);
+  const solve = makeSolver(db, builtins, 10000, traceFn);
 
   if (queries.length === 0) {
     logFn('No queries found. Add a # ? section with goals.');
