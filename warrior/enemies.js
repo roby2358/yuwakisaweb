@@ -147,6 +147,15 @@ export class EnemyManager {
         return total;
     }
 
+    chaosMight() {
+        let total = 0;
+        for (const e of this.enemies) {
+            const def = this.getDef(e.type);
+            if (def && def.chaosSpawned) total += def.attack;
+        }
+        return total;
+    }
+
     spawnInitialCreatures(world, playerQ, playerR, visibleSet) {
         const creatureTypes = Object.keys(this.creatureDefs);
         if (creatureTypes.length === 0) return;
@@ -161,7 +170,7 @@ export class EnemyManager {
             return hexDistance(h.q, h.r, playerQ, playerR) > 6;
         });
 
-        while (this.wildlifeMight() < 3000 && candidates.length > 0) {
+        while (this.wildlifeMight() < 1000 && candidates.length > 0) {
             const idx = Rando.int(0, candidates.length - 1);
             const hex = candidates[idx];
             candidates.splice(idx, 1);

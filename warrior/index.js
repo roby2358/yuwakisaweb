@@ -1809,23 +1809,25 @@ async function runEnemyPhase() {
         }
     }
 
-    // Spawn phase
-    const wraiths = em.enemies.filter(e => e.type === ENEMY_TYPE.PHASE_WRAITH).length;
-    const chaosPool = wraiths >= 10
-        ? [ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.FLUX_ARCHER]
-        : [ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.PHASE_WRAITH, ENEMY_TYPE.FLUX_ARCHER];
-    for (const poi of world.pois) {
-        if (poi.type === POI.BREACH && !poi.closed && Math.random() < 0.15) {
-            const adj = hexNeighbors(poi.q, poi.r).filter(n => {
-                const k = hexKey(n.q, n.r);
-                const h = world.getHex(n.q, n.r);
-                return h && world.isPassable(h) && !occupied.has(k);
-            });
-            if (adj.length > 0) {
-                const spot = Rando.choice(adj);
-                const type = Rando.choice(chaosPool);
-                em.spawn(type, spot.q, spot.r, poi.q, poi.r);
-                occupied.add(hexKey(spot.q, spot.r));
+    // Spawn phase — cap total chaos might at 500
+    if (em.chaosMight() < 500) {
+        const wraiths = em.enemies.filter(e => e.type === ENEMY_TYPE.PHASE_WRAITH).length;
+        const chaosPool = wraiths >= 10
+            ? [ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.FLUX_ARCHER]
+            : [ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.PHASE_WRAITH, ENEMY_TYPE.FLUX_ARCHER];
+        for (const poi of world.pois) {
+            if (poi.type === POI.BREACH && !poi.closed && Math.random() < 0.15) {
+                const adj = hexNeighbors(poi.q, poi.r).filter(n => {
+                    const k = hexKey(n.q, n.r);
+                    const h = world.getHex(n.q, n.r);
+                    return h && world.isPassable(h) && !occupied.has(k);
+                });
+                if (adj.length > 0) {
+                    const spot = Rando.choice(adj);
+                    const type = Rando.choice(chaosPool);
+                    em.spawn(type, spot.q, spot.r, poi.q, poi.r);
+                    occupied.add(hexKey(spot.q, spot.r));
+                }
             }
         }
     }
@@ -2898,7 +2900,7 @@ function spawnRuinCreatures(poi) {
     });
     if (spots.length === 0) return 0;
     Rando.shuffle(spots);
-    const targetMight = player.level * player.level * 5;
+    const targetMight = player.level * player.level * 2;
     let mightSum = 0, count = 0;
     for (let i = 0; i < spots.length && mightSum < targetMight; i++) {
         const type = Rando.choice(creatureTypes);
