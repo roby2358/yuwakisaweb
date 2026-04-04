@@ -1,4 +1,4 @@
-# MarkdownIsAPrologue
+# MarkdownIsAProlog
 
 A logic programming interpreter where Markdown is the source syntax.
 

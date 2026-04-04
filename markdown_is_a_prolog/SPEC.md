@@ -1,8 +1,8 @@
-# MarkdownIsAPrologue — Technical Specification
+# MarkdownIsAProlog — Technical Specification
 
 ## Purpose
 
-MarkdownIsAPrologue is a logic programming interpreter that uses Markdown as its source syntax. It is the Prolog counterpart to the companion project MarkdownIsALISP, which maps Markdown to LISP. Where MIAL proves that Markdown's tree structure encodes S-expressions, this project proves that Markdown's document structure encodes Horn clause logic programs.
+MarkdownIsAProlog is a logic programming interpreter that uses Markdown as its source syntax. It is the Prolog counterpart to the companion project MarkdownIsALISP, which maps Markdown to LISP. Where MIAL proves that Markdown's tree structure encodes S-expressions, this project proves that Markdown's document structure encodes Horn clause logic programs.
 
 The core insight: Markdown's structural hierarchy maps directly to Prolog's logical hierarchy. Headings introduce predicates (concepts). Bullets enumerate alternative clauses (disjunction). Sub-bullets list body goals (conjunction). The visual nesting IS the logical nesting.
 
@@ -25,7 +25,7 @@ Trace panel with search tree visualization, example programs dropdown, dark them
 
 ```
 +------------------------------------------------------------------+
-| MarkdownIsAPrologue                     [x] trace         [Run]  |
+| MarkdownIsAProlog                     [x] trace         [Run]  |
 +------------------------------------------------------------------+
 | family  lists  arithmetic  cut [more.v] |                        |
 | SOURCE CODE (MARKDOWN)          .MD     | QUERY RESULTS    [x]   |

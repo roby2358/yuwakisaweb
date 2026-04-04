@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-MarkdownIsAPrologue — a Prolog interpreter that uses Markdown as its source syntax. Companion to MarkdownIsALISP. Runs entirely in-browser with no build step, no dependencies, no frameworks.
+MarkdownIsAProlog — a Prolog interpreter that uses Markdown as its source syntax. Companion to MarkdownIsALISP. Runs entirely in-browser with no build step, no dependencies, no frameworks.
 
 ## Running
 
@@ -14,8 +14,8 @@ Open `index.html` in a browser. No build, no server required. Ctrl+Enter runs th
 
 Two files, mirroring MIAL's structure:
 
-- **`interpreter.js`** — the complete Prolog engine: parser, unifier, solver, builtins, stdlib. Exposes `runMarkdownIsAPrologue(code, logFn, traceFn)` as the single entry point. Loaded as a plain script (not ES module despite the spec saying so).
-- **`index.js`** — UI controller. Wires up the editor, example programs, console output, and trace panel. Calls `runMarkdownIsAPrologue` on run.
+- **`interpreter.js`** — the complete Prolog engine: parser, unifier, solver, builtins, stdlib. Exposes `runMarkdownIsAProlog(code, logFn, traceFn)` as the single entry point. Loaded as a plain script (not ES module despite the spec saying so).
+- **`index.js`** — UI controller. Wires up the editor, example programs, console output, and trace panel. Calls `runMarkdownIsAProlog` on run.
 
 ### Interpreter internals
 
@@ -32,7 +32,7 @@ Key sections in `interpreter.js` (top to bottom):
 8. **Builtins** — `makeBuiltins(logFn)` returns a Map of `key → (args, subst) → subst|null`. Builtins access `.value` directly on terms, no unwrapper functions.
 9. **Solver** — generator-based (`function*`) depth-first search. `makeSolver` returns a function that yields substitutions. Cut sets a flag checked by the clause loop. Not uses negation-as-failure.
 10. **Stdlib** — `append`, `member`, `length` defined as Markdown Prolog, prepended to user code.
-11. **Runner** — `runMarkdownIsAPrologue` parses stdlib+user code, builds DB, runs queries.
+11. **Runner** — `runMarkdownIsAProlog` parses stdlib+user code, builds DB, runs queries.
 
 ### Markdown-to-Prolog mapping
 

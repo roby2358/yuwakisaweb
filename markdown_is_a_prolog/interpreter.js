@@ -1,5 +1,5 @@
 /**
- * MarkdownIsAPrologue — Phase 1+2 Interpreter
+ * MarkdownIsAProlog — Phase 1+2 Interpreter
  *
  * Same { value, children } node shape as MIAL.
  * Immutable substitution maps — no trailing, no mutation.
@@ -541,7 +541,7 @@ const STDLIB = `
 
 // ── Runner ─────────────────────────────────────────────────────
 
-const runMarkdownIsAPrologue = (code, logFn, traceFn) => {
+const runMarkdownIsAProlog = (code, logFn, traceFn) => {
   const entries = parseMarkdown(STDLIB + '\n' + code);
   const { db, queries } = buildDatabase(entries);
   const builtins = makeBuiltins(logFn);

@@ -1,5 +1,5 @@
 /**
- * MarkdownIsAPrologue — UI Controller
+ * MarkdownIsAProlog — UI Controller
  */
 
 const EXAMPLES = {
@@ -182,7 +182,7 @@ const initApp = () => {
       ? (depth, text) => traceLines.push({ depth, text })
       : null;
 
-    runMarkdownIsAPrologue(codeEditor.value, appendLog, traceFn);
+    runMarkdownIsAProlog(codeEditor.value, appendLog, traceFn);
 
     if (tracing) {
       tracePanel.classList.add('visible');
