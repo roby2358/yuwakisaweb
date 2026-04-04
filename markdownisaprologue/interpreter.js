@@ -1,9 +1,10 @@
 /**
- * MarkdownIsAPrologue — Phase 1 Interpreter
+ * MarkdownIsAPrologue — Phase 1+2 Interpreter
  *
  * Same { value, children } node shape as MIAL.
  * Immutable substitution maps — no trailing, no mutation.
  * Generator-based solver for backtracking.
+ * Lists as cons cells: node('.', [head, tail]), node('[]') for empty.
  */
 
 // ── Nodes & helpers ────────────────────────────────────────────
@@ -13,6 +14,8 @@ const node = (value, children) => ({ value, children: children || [] });
 const isVar = (n) =>
   n && typeof n.value === 'object' && n.value !== null && 'var' in n.value;
 
+const NUM_RE = /^-?\d+(\.\d+)?$/;
+
 // ── Parser ─────────────────────────────────────────────────────
 
 const getIndentLevel = (line) => {
@@ -21,56 +24,110 @@ const getIndentLevel = (line) => {
   return Math.floor(match[1].replace(/\t/g, '  ').length / 2);
 };
 
+// Split text by a separator character, respecting backtick/bracket/paren nesting.
+// Shared by parseArgList (split on ',') and parseList (split on '|').
+const splitAtDepth0 = (text, separator) => {
+  const segments = [];
+  let current = '';
+  let inBacktick = false;
+  let depth = 0;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '`') { inBacktick = !inBacktick; current += ch; }
+    else if (!inBacktick && (ch === '[' || ch === '(')) { depth++; current += ch; }
+    else if (!inBacktick && (ch === ']' || ch === ')')) { depth--; current += ch; }
+    else if (ch === separator && !inBacktick && depth === 0) { segments.push(current); current = ''; }
+    else { current += ch; }
+  }
+  segments.push(current);
+  return segments;
+};
+
+const buildConsList = (elements, tail) => {
+  let list = tail;
+  for (let i = elements.length - 1; i >= 0; i--) list = node('.', [elements[i], list]);
+  return list;
+};
+
+const parseList = (text, anonCounter) => {
+  const inner = text.slice(1, -1).trim();
+  if (!inner) return node('[]');
+
+  const pipeParts = splitAtDepth0(inner, '|');
+  if (pipeParts.length >= 2) {
+    const heads = parseArgList(pipeParts[0], anonCounter);
+    const tail = parseTerm(pipeParts.slice(1).join('|').trim(), anonCounter);
+    return buildConsList(heads, tail);
+  }
+
+  return buildConsList(parseArgList(inner, anonCounter), node('[]'));
+};
+
 const parseTerm = (text, anonCounter) => {
   text = text.trim();
   if (!text) return null;
 
+  // Backtick literal
   const litMatch = text.match(/^`([^`]*)`$/);
   if (litMatch) {
     const val = litMatch[1];
-    if (/^-?\d+(\.\d+)?$/.test(val)) return node(Number(val));
+    if (NUM_RE.test(val)) return node(Number(val));
     return node(val);
   }
 
+  // Empty list
+  if (text === '[]') return node('[]');
+
+  // List [...]
+  if (text[0] === '[' && text[text.length - 1] === ']') {
+    return parseList(text, anonCounter);
+  }
+
+  // Anonymous variable
   if (text === '_') return node({ var: `_anon${anonCounter.count++}` });
 
+  // Named variable (uppercase or _prefix)
   if ((text[0] >= 'A' && text[0] <= 'Z') ||
       (text[0] === '_' && text.length > 1)) {
     return node({ var: text });
   }
 
+  // Compound term: functor(args)
+  const parenIdx = text.indexOf('(');
+  if (parenIdx > 0 && text[text.length - 1] === ')') {
+    const functor = text.slice(0, parenIdx);
+    const argsText = text.slice(parenIdx + 1, -1);
+    const args = parseArgList(argsText, anonCounter);
+    return node(functor, args);
+  }
+
+  // Bare number (no backticks needed inside compound terms)
+  if (NUM_RE.test(text)) return node(Number(text));
+
+  // Bare atom
   return node(text);
 };
 
-const parseArgList = (text, anonCounter) => {
-  const args = [];
-  let current = '';
-  let inBacktick = false;
-
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    if (ch === '`') {
-      inBacktick = !inBacktick;
-      current += ch;
-    } else if (ch === ',' && !inBacktick) {
-      const trimmed = current.trim();
-      if (trimmed) args.push(parseTerm(trimmed, anonCounter));
-      current = '';
-    } else {
-      current += ch;
-    }
-  }
-  const trimmed = current.trim();
-  if (trimmed) args.push(parseTerm(trimmed, anonCounter));
-
-  return args.filter(a => a !== null);
-};
+const parseArgList = (text, anonCounter) =>
+  splitAtDepth0(text, ',')
+    .map(s => s.trim())
+    .filter(s => s)
+    .map(s => parseTerm(s, anonCounter))
+    .filter(t => t !== null);
 
 const parseGoal = (text, anonCounter) => {
   text = text.trim();
   const spaceIdx = text.indexOf(' ');
   if (spaceIdx === -1) return node(text);
   const predName = text.slice(0, spaceIdx);
+
+  // `not` consumes the rest as a single sub-goal
+  if (predName === 'not') {
+    const subGoal = parseGoal(text.slice(spaceIdx + 1), anonCounter);
+    return node('not', [subGoal]);
+  }
+
   const args = parseArgList(text.slice(spaceIdx + 1), anonCounter);
   return node(predName, args);
 };
@@ -179,11 +236,24 @@ const freshenClause = (clause, freshCounter) => {
   const f = (term) => freshenTerm(term, mapping, id);
   return {
     headArgs: clause.headArgs.map(f),
-    body: clause.body.map(g => node(g.value, g.children.map(f)))
+    body: clause.body.map(f)
   };
 };
 
 // ── Term formatting ────────────────────────────────────────────
+
+const formatList = (term) => {
+  const elements = [];
+  let current = term;
+  while (current.value === '.' && current.children.length === 2) {
+    elements.push(formatTerm(current.children[0]));
+    current = current.children[1];
+  }
+  if (current.value === '[]' && current.children.length === 0) {
+    return `[${elements.join(', ')}]`;
+  }
+  return `[${elements.join(', ')} | ${formatTerm(current)}]`;
+};
 
 const formatTerm = (term) => {
   if (isVar(term)) {
@@ -192,18 +262,25 @@ const formatTerm = (term) => {
     return idx >= 0 ? name.slice(0, idx) : name;
   }
   if (typeof term.value === 'number') return String(term.value);
-  if (term.children.length === 0) return String(term.value);
-  return `${term.value}(${term.children.map(formatTerm).join(', ')})`;
+  if (term.value === '[]' && term.children.length === 0) return '[]';
+  if (term.value === '.' && term.children.length === 2) return formatList(term);
+  if (term.children.length > 0) {
+    return `${term.value}(${term.children.map(formatTerm).join(', ')})`;
+  }
+  return String(term.value);
 };
 
-const formatGoals = (goals) =>
-  goals.map(g =>
-    g.children.length === 0
-      ? g.value
-      : `${g.value}(${g.children.map(formatTerm).join(', ')})`
-  ).join(', ');
+const formatGoal = (g) => {
+  if (g.value === 'not' && g.children.length === 1) return `not ${formatGoal(g.children[0])}`;
+  if (g.children.length === 0) return g.value;
+  return `${g.value}(${g.children.map(formatTerm).join(', ')})`;
+};
+
+const formatGoals = (goals) => goals.map(formatGoal).join(', ');
 
 // ── Database ───────────────────────────────────────────────────
+
+const predKey = (name, arity) => `${name}/${arity}`;
 
 const buildDatabase = (entries) => {
   const db = new Map();
@@ -215,7 +292,7 @@ const buildDatabase = (entries) => {
       continue;
     }
     for (const clause of entry.clauses) {
-      const key = `${entry.name}/${clause.headArgs.length}`;
+      const key = predKey(entry.name, clause.headArgs.length);
       if (!db.has(key)) db.set(key, []);
       db.get(key).push(clause);
     }
@@ -224,17 +301,44 @@ const buildDatabase = (entries) => {
   return { db, queries };
 };
 
+// ── Arithmetic evaluator ───────────────────────────────────────
+
+const ARITH_OPS = {
+  '+':   (a, b) => a + b,
+  '-':   (a, b) => a - b,
+  '*':   (a, b) => a * b,
+  '//':  (a, b) => Math.trunc(a / b),
+  'mod': (a, b) => ((a % b) + b) % b,
+};
+
+const evalArith = (term, subst) => {
+  term = deref(term, subst);
+  if (typeof term.value === 'number') return term.value;
+  if (isVar(term)) throw new Error('Instantiation error: unbound variable in arithmetic');
+
+  // Unary minus
+  if (term.value === '-' && term.children.length === 1) {
+    return -evalArith(term.children[0], subst);
+  }
+
+  // Binary operator
+  const op = ARITH_OPS[term.value];
+  if (op && term.children.length === 2) {
+    return op(evalArith(term.children[0], subst), evalArith(term.children[1], subst));
+  }
+
+  throw new Error(`Unknown arithmetic: ${term.value}/${term.children.length}`);
+};
+
 // ── Builtins (plain functions: args, subst → subst | null) ────
 
 const makeBuiltins = (logFn) => {
   const builtins = new Map();
 
   builtins.set('true/0', (args, subst) => subst);
-
   builtins.set('fail/0', (args, subst) => null);
 
   builtins.set('=/2', (args, subst) => unify(args[0], args[1], subst));
-
   builtins.set('\\=/2', (args, subst) =>
     unify(args[0], args[1], subst) === null ? subst : null);
 
@@ -249,34 +353,55 @@ const makeBuiltins = (logFn) => {
   });
 
   builtins.set('atom/1', (args, subst) => {
-    const term = deref(args[0], subst);
-    return (typeof term.value === 'string' && term.children.length === 0)
-      ? subst : null;
+    const t = deref(args[0], subst);
+    return (typeof t.value === 'string' && t.children.length === 0) ? subst : null;
   });
 
   builtins.set('number/1', (args, subst) => {
-    const term = deref(args[0], subst);
-    return typeof term.value === 'number' ? subst : null;
+    const t = deref(args[0], subst);
+    return typeof t.value === 'number' ? subst : null;
   });
 
-  builtins.set('var/1', (args, subst) => {
-    return isVar(deref(args[0], subst)) ? subst : null;
+  builtins.set('var/1', (args, subst) =>
+    isVar(deref(args[0], subst)) ? subst : null);
+
+  builtins.set('nonvar/1', (args, subst) =>
+    !isVar(deref(args[0], subst)) ? subst : null);
+
+  // Arithmetic
+  builtins.set('is/2', (args, subst) => {
+    const result = evalArith(args[1], subst);
+    return unify(args[0], node(result), subst);
   });
 
-  builtins.set('nonvar/1', (args, subst) => {
-    return !isVar(deref(args[0], subst)) ? subst : null;
-  });
+  const arithCompare = (op) => (args, subst) => {
+    const a = evalArith(args[0], subst);
+    const b = evalArith(args[1], subst);
+    return op(a, b) ? subst : null;
+  };
+
+  builtins.set('</2',   arithCompare((a, b) => a < b));
+  builtins.set('>/2',   arithCompare((a, b) => a > b));
+  builtins.set('=</2',  arithCompare((a, b) => a <= b));
+  builtins.set('>=/2',  arithCompare((a, b) => a >= b));
+  builtins.set('=:=/2', arithCompare((a, b) => a === b));
+  builtins.set('=\\=/2', arithCompare((a, b) => a !== b));
 
   return builtins;
 };
 
 // ── Solver ─────────────────────────────────────────────────────
+//
+// Body goals and continuation are resolved separately so that
+// cut is scoped to the right predicate's clause loop.
+// Cut sets a flag; the clause loop checks it after each clause.
+// Not tries a sub-goal and succeeds when it fails.
 
 const makeSolver = (db, builtins, stepLimit) => {
   const freshCounter = { count: 0 };
   const stepCounter = { count: 0 };
 
-  function* solve(goals, subst) {
+  function* solve(goals, subst, cutFlag) {
     stepCounter.count++;
     if (stepCounter.count > stepLimit) {
       throw new Error(`Step limit exceeded (${stepLimit} resolution steps)`);
@@ -285,32 +410,53 @@ const makeSolver = (db, builtins, stepLimit) => {
     if (goals.length === 0) { yield subst; return; }
 
     const [goal, ...rest] = goals;
-    const key = `${goal.value}/${goal.children.length}`;
 
-    // Builtin — plain function, no recursion into solve
-    const builtin = builtins.get(key);
-    if (builtin) {
-      const result = builtin(goal.children, subst);
-      if (result !== null) yield* solve(rest, result);
+    // ── Cut: succeed, then signal parent clause loop to stop
+    if (goal.value === 'cut' && goal.children.length === 0) {
+      cutFlag.cut = true;
+      yield* solve(rest, subst, cutFlag);
       return;
     }
 
-    // User-defined clauses
+    // ── Not (negation as failure)
+    if (goal.value === 'not' && goal.children.length === 1) {
+      const hasSolution = !solve([goal.children[0]], subst, { cut: false }).next().done;
+      if (!hasSolution) yield* solve(rest, subst, cutFlag);
+      return;
+    }
+
+    const key = predKey(goal.value, goal.children.length);
+
+    // ── Builtin — leaf call, no recursion
+    const builtin = builtins.get(key);
+    if (builtin) {
+      const result = builtin(goal.children, subst);
+      if (result !== null) yield* solve(rest, result, cutFlag);
+      return;
+    }
+
+    // ── User-defined predicate
     const clauses = db.get(key);
     if (!clauses) throw new Error(`Undefined predicate: ${key}`);
 
+    const bodyCutFlag = { cut: false };
     for (const clause of clauses) {
       const fresh = freshenClause(clause, freshCounter);
       const s = unifyArgs(goal.children, fresh.headArgs, subst);
       if (s === null) continue;
-      yield* solve([...fresh.body, ...rest], s);
+
+      // Resolve body separately, then continuation
+      bodyCutFlag.cut = false;
+      for (const bodySubst of solve(fresh.body, s, bodyCutFlag)) {
+        yield* solve(rest, bodySubst, cutFlag);
+      }
+      if (bodyCutFlag.cut) break;
     }
   }
 
-  // Returns generator, resets step counter per call
   return (goals) => {
     stepCounter.count = 0;
-    return solve(goals, new Map());
+    return solve(goals, new Map(), { cut: false });
   };
 };
 
@@ -363,10 +509,30 @@ const executeQuery = (query, solve, logFn) => {
   logFn('');
 };
 
+// ── Standard library (Markdown Prolog loaded before user code) ─
+
+const STDLIB = `
+# append
+* [], L, L
+* [H | T], L, [H | R]
+  * append T, L, R
+
+# member
+* X, [X | _]
+* X, [_ | T]
+  * member X, T
+
+# length
+* [], \`0\`
+* [_ | T], N
+  * length T, N1
+  * is N, +( N1, \`1\`)
+`;
+
 // ── Runner ─────────────────────────────────────────────────────
 
 const runMarkdownIsAPrologue = (code, logFn) => {
-  const entries = parseMarkdown(code);
+  const entries = parseMarkdown(STDLIB + '\n' + code);
   const { db, queries } = buildDatabase(entries);
   const builtins = makeBuiltins(logFn);
   const solve = makeSolver(db, builtins, 10000);

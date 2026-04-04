@@ -19,68 +19,99 @@ const EXAMPLES = {
 # ?
 * ancestor tom, Who`,
 
-  mortal: `# human
-* socrates
-* plato
-* aristotle
-
-# mortal
-* X
-  * human X
+  lists: `# reverse
+* [], []
+* [H | T], R
+  * reverse T, RevT
+  * append RevT, [H], R
 
 # ?
-* mortal Who
-* mortal socrates`,
+* append [a, b], [c, d], R
+* member X, [x, y, z]
+* reverse [a, b, c], R
+* append X, Y, [a, b, c]`,
 
-  likes: `# likes
-* mary, food
-* mary, wine
-* mary, john
-* john, wine
-* john, mary
+  arithmetic: `# factorial
+* \`0\`, \`1\`
+* N, F
+  * > N, \`0\`
+  * is N1, -(N, \`1\`)
+  * factorial N1, F1
+  * is F, *(N, F1)
 
-# mutual
-* X, Y
-  * likes X, Y
-  * likes Y, X
-
-# ?
-* likes mary, What
-* mutual X, Y`,
-
-  path: `# edge
-* a, b
-* b, c
-* c, d
-* a, d
-
-# path
-* X, Y
-  * edge X, Y
-* X, Z
-  * edge X, Y
-  * path Y, Z
+# fibonacci
+* \`0\`, \`0\`
+* \`1\`, \`1\`
+* N, F
+  * > N, \`1\`
+  * is N1, -(N, \`1\`)
+  * is N2, -(N, \`2\`)
+  * fibonacci N1, F1
+  * fibonacci N2, F2
+  * is F, +(F1, F2)
 
 # ?
-* path a, d
-* path a, Where`,
+* factorial \`7\`, F
+* fibonacci \`10\`, F`,
 
-  write: `# greet
-* Name
-  * write Name
-  * nl
+  cut: `# max
+* X, Y, X
+  * >= X, Y
+  * cut
+* X, Y, Y
 
-# human
+# classify
+* N, positive
+  * > N, \`0\`
+  * cut
+* \`0\`, zero
+  * cut
+* _, negative
+
+# ?
+* max \`5\`, \`3\`, M
+* classify \`7\`, C
+* classify \`0\`, C
+* classify \`-3\`, C`,
+
+  negation: `# human
 * alice
 * bob
+* carol
 
-# greet-all
+# vegetarian
+* bob
+* carol
+
+# meat-eater
 * X
   * human X
-  * greet X
+  * not vegetarian X
+
+# safe-pair
+* X, Y
+  * human X
+  * human Y
+  * not = X, Y
 
 # ?
-* greet-all Who`
+* meat-eater Who
+* safe-pair X, Y`,
+
+  hanoi: `# hanoi
+* \`0\`, _, _, _
+* N, From, To, Via
+  * > N, \`0\`
+  * is N1, -(N, \`1\`)
+  * hanoi N1, From, Via, To
+  * write From
+  * write to
+  * write To
+  * nl
+  * hanoi N1, Via, To, From
+
+# ?
+* hanoi \`3\`, left, right, center`
 };
 
 const DEFAULT_EXAMPLE = 'family';
@@ -129,8 +160,7 @@ const initApp = () => {
 
   const handleRun = () => {
     clearConsole();
-    const code = codeEditor.value;
-    runMarkdownIsAPrologue(code, appendLog);
+    runMarkdownIsAPrologue(codeEditor.value, appendLog);
   };
 
   const handleReset = () => {
@@ -149,8 +179,7 @@ const initApp = () => {
   resetBtn.addEventListener('click', handleReset);
   clearBtn.addEventListener('click', clearConsole);
 
-  const exampleLinks = document.querySelectorAll('.example-link');
-  exampleLinks.forEach(link => {
+  document.querySelectorAll('.example-link').forEach(link => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
       const name = link.getAttribute('data-example');
