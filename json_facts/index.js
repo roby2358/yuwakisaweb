@@ -95,6 +95,62 @@ const EXAMPLES = {
 * leg-cost From, To, Cost`
   },
 
+  aws: {
+    json: `{
+  "s3-bucket": ["logs-prod", "site-assets", "backups", "dev-dumps"],
+  "s3-region": {
+    "logs-prod": "us-east-1",
+    "site-assets": "us-east-1",
+    "backups": "us-west-2",
+    "dev-dumps": "us-west-2"
+  },
+  "s3-public": ["site-assets", "dev-dumps"],
+  "s3-encrypted": ["logs-prod", "backups"],
+  "s3-versioned": ["logs-prod"],
+  "ec2-instance": ["web-1", "web-2", "dev-box"],
+  "ec2-region": {
+    "web-1": "us-east-1",
+    "web-2": "us-east-1",
+    "dev-box": "us-west-2"
+  },
+  "ec2-sg": {
+    "web-1": "sg-web",
+    "web-2": "sg-web",
+    "dev-box": "sg-dev"
+  },
+  "sg-ingress": {
+    "sg-web": ["0.0.0.0/0", "10.0.0.0/8"],
+    "sg-dev": ["10.0.0.0/8"]
+  }
+}`,
+    rules: `# public-unencrypted
+* Bucket
+  * s3-public Bucket
+  * not s3-encrypted Bucket
+
+# unversioned
+* Bucket
+  * s3-bucket Bucket
+  * not s3-versioned Bucket
+
+# open-to-internet
+* Instance, SG
+  * ec2-sg Instance, SG
+  * sg-ingress SG, 0.0.0.0/0
+
+# cross-region
+* Bucket, Instance
+  * s3-region Bucket, R1
+  * ec2-region Instance, R2
+  * \\= R1, R2
+
+# ?
+* public-unencrypted Bucket
+* unversioned Bucket
+* open-to-internet Instance, SG
+* cross-region Bucket, Instance`
+  },
+
   inventory: {
     json: `{
   "item": [

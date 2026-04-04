@@ -1,5 +1,5 @@
 /**
- * Prolog Interpreter — forked from MarkdownIsAPrologue
+ * Prolog Interpreter — forked from MarkdownIsAProlog
  *
  * Same { value, children } node shape.
  * Immutable substitution maps — no trailing, no mutation.
