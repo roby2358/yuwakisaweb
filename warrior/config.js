@@ -290,7 +290,7 @@ const ARCHETYPES_GENERAL = [
 ];
 const MELEE_ITEMS = [
     'Axe', 'Blade', 'Cleaver', 'Edge', 'Mace', 'Pick', 'Spear', 'Spike',
-    'Sword', 'Thorn', 'Glaive', 'Hatchet', 'Flail', 'Scythe', 'Fist',
+    'Sword', 'Thorn', 'Glaive', 'Slipblade', 'Flail', 'Scythe', 'Fist',
     'Ripper', 'Shard', 'Vane'
 ];
 const RANGED_ITEMS = [
