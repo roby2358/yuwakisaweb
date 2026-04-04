@@ -25,31 +25,32 @@ Trace panel with search tree visualization, example programs dropdown, dark them
 
 ```
 +------------------------------------------------------------------+
-| MarkdownIsAPrologue                          [Examples v] [Run]  |
+| MarkdownIsAPrologue                     [x] trace         [Run]  |
 +------------------------------------------------------------------+
-| Code Editor (textarea)     |  Query Results / Console            |
-|                            |                                     |
-| # parent                   |  ?- ancestor(`tom`, Who)            |
-| * `tom`, `bob`             |  Who = bob                          |
-| * `bob`, `ann`             |  Who = ann                          |
-|                            |                                     |
-| # ancestor                 |  2 solutions found.                 |
-| * X, Y                    |                                     |
-|   * parent X, Y            |                                     |
-| * X, Z                    |                                     |
-|   * parent X, Y            |                                     |
-|   * ancestor Y, Z          |                                     |
-|                            |                                     |
-| # ?                        |                                     |
-| * ancestor `tom`, Who      |                                     |
-|                            |                                     |
+| family  lists  arithmetic  cut [more.v] |                        |
+| SOURCE CODE (MARKDOWN)          .MD     | QUERY RESULTS    [x]   |
+|                                         |                        |
+| # parent                               |  ?- ancestor(tom, Who) |
+| * `tom`, `bob`                          |  Who = bob             |
+| * `bob`, `ann`                          |  Who = ann             |
+|                                         |                        |
+| # ancestor                              |  2 solutions.          |
+| * X, Y                                 |                        |
+|   * parent X, Y                         |                        |
+| * X, Z                                 |                        |
+|   * parent X, Y                         |                        |
+|   * ancestor Y, Z                       |                        |
+|                                         |                        |
+| # ?                                     |                        |
+| * ancestor `tom`, Who                   |                        |
+|                                         |                        |
 +------------------------------------------------------------------+
-| Trace / Search Tree (collapsible)                                |
-| > ancestor(tom, Who)                                             |
-|   > parent(tom, Who) → Who = bob ✓                               |
-|   > parent(tom, Y) → Y = bob                                    |
-|     > ancestor(bob, Z)                                           |
-|       > parent(bob, Z) → Z = ann ✓                               |
+| Trace (collapsible)                                        [v]   |
+|   ancestor(tom, Who)                                             |
+|     parent(tom, Who)                                             |
+|     parent(tom, Y)                                               |
+|       ancestor(bob, Z)                                           |
+|         parent(bob, Z)                                           |
 +------------------------------------------------------------------+
 ```
 
@@ -57,9 +58,9 @@ Trace panel with search tree visualization, example programs dropdown, dark them
 
 ### Markdown-to-Logic Mapping
 
-- The interpreter MUST treat `#` headings as predicate definitions, where the heading text is the predicate name
+- The interpreter MUST treat headings at any level (`#`, `##`, `###`, etc.) as predicate definitions, where the heading text is the predicate name
 - All clauses (facts and rules) for a predicate MUST be grouped under its heading
-- Each top-level bullet under a heading MUST represent one clause
+- Each top-level bullet (`*` or `-`) under a heading MUST represent one clause
 - The content of a top-level bullet MUST represent the clause head's arguments, separated by commas (the predicate name comes from the heading, not the bullet)
 - Sub-bullets of a clause MUST represent body goals (conditions), evaluated as a conjunction (all must succeed)
 - Each body goal's first word MUST be interpreted as the predicate name, with remaining comma-separated items as arguments (this is the opposite of clause heads, where the predicate name comes from the heading)
@@ -91,7 +92,7 @@ Trace panel with search tree visualization, example programs dropdown, dark them
 - Unification MUST bind logical variables to terms
 - Unification of two variables MUST link them so that binding one binds both
 - Unification MUST handle recursive term structures (atoms, numbers, variables, compound terms, lists)
-- The interpreter SHOULD implement the occurs check to prevent circular bindings
+- The interpreter MAY implement the occurs check to prevent circular bindings
 - Unification MUST fail (and trigger backtracking) when two non-variable terms have different functors or different arities, or when any argument pair fails to unify
 - When reading a variable's value (for comparison, output, or result reporting), the interpreter MUST dereference the full binding chain — following variable-to-variable links until reaching an unbound variable or a non-variable term
 
@@ -158,15 +159,16 @@ Trace panel with search tree visualization, example programs dropdown, dark them
 
 ### Trace and Debugging
 
-- The interpreter MUST support a trace mode that logs each goal attempted, whether it succeeded or failed, and any resulting bindings
-- The trace panel SHOULD display the search tree visually, showing choice points and backtracking paths
+- The interpreter MUST support a trace mode that logs each goal attempted, with the goal's arguments dereferenced against the current substitution
 - Trace output MUST use indentation to reflect search depth
 - The trace panel MUST be collapsible
+- Trace mode MUST be toggled via a checkbox in the header; when disabled, the trace panel MUST be hidden
 
 ### Example Programs
 
 - The interpreter MUST ship with example programs selectable from a dropdown
-- Examples MUST include at minimum: family relationships (ancestor/descendant), list operations (append, reverse, member), arithmetic (factorial, fibonacci), and a classic puzzle (e.g., map coloring or Tower of Hanoi)
+- Examples MUST include at minimum: family relationships (ancestor/descendant), list operations (append, reverse, member), arithmetic (factorial, fibonacci), cut/commit behavior, negation-as-failure, and a classic puzzle (e.g., Tower of Hanoi)
+- The most common examples (family, lists, arithmetic, cut) MUST be presented as direct navigation links; additional examples (negation, hanoi) MUST be available via a dropdown
 
 ## Non-Functional Requirements
 
@@ -178,7 +180,7 @@ Trace panel with search tree visualization, example programs dropdown, dark them
 
 ### Code Quality
 
-- The interpreter MUST be implemented as ES modules with no build step
+- The interpreter MUST be implemented as separate script files with no build step
 - The application MUST run in-browser with no server-side dependencies
 - The project MUST NOT use any third-party libraries or frameworks
 - The interpreter core MUST be separated from the UI layer (separate modules)
@@ -191,7 +193,7 @@ Trace panel with search tree visualization, example programs dropdown, dark them
 
 ## Dependencies
 
-None. Vanilla HTML, CSS, and ES modules. No build step.
+None. Vanilla HTML, CSS, and JavaScript. No build step.
 
 ## Implementation Notes
 
@@ -222,11 +224,11 @@ All terms share the same `{ value, children }` shape as MIAL — the node struct
 
 ### Substitution Model
 
-Variable bindings are stored in an external substitution map (variable name → term), not in mutable ref cells on the nodes. This keeps the node structure fully immutable, matching MIAL's approach. Dereferencing walks the map: look up a variable, if the result is another variable, look that up, repeat until reaching a non-variable term or an unbound variable. Unification produces a new (or extended) substitution rather than mutating existing bindings. Backtracking restores a previous substitution snapshot — no trailing or undo bookkeeping required. The occurs check is optional (off by default for performance, toggleable in the UI).
+Variable bindings are stored in an external substitution map (variable name → term), not in mutable ref cells on the nodes. This keeps the node structure fully immutable, matching MIAL's approach. Dereferencing walks the map: look up a variable, if the result is another variable, look that up, repeat until reaching a non-variable term or an unbound variable. Unification produces a new (or extended) substitution rather than mutating existing bindings. Backtracking restores a previous substitution snapshot — no trailing or undo bookkeeping required. The occurs check is not implemented — consistent with most Prolog systems that omit it for performance.
 
 ### Search Strategy
 
-Standard Prolog SLD resolution: depth-first, left-to-right. A choice point records which clauses remain to try and the substitution at the time of the choice. On failure, the solver restores the substitution from the most recent choice point and tries the next clause — no trailing or undo logic needed. Cut removes choice points from the stack.
+Standard Prolog SLD resolution: depth-first, left-to-right. The solver is generator-based — each clause attempt yields substitutions lazily, and backtracking is implicit via generator control flow. Because unification produces new substitution maps rather than mutating, restoring state on backtrack requires no trailing or undo logic. Cut sets a flag that breaks the clause iteration loop for the enclosing predicate call.
 
 ### Arithmetic Expression Handling
 
@@ -245,5 +247,6 @@ Lists use standard Prolog bracket notation inline with arguments. The parser rec
 - If a predicate is referenced in a goal but never defined, the interpreter MUST report an "undefined predicate" error with the predicate name and arity
 - If `is` encounters an unbound variable in an arithmetic expression, the interpreter MUST report an "instantiation error"
 - If the step limit is exceeded, the interpreter MUST report a "step limit exceeded" error and halt the current query
-- If the Markdown input contains malformed structure (e.g., bullets before any heading), the interpreter MUST report a parse error with the line number
+- If a JavaScript stack overflow occurs during resolution, the interpreter MUST catch it and report a "possible infinite recursion" error
+- If the Markdown input contains malformed structure (e.g., bullets before any heading), the interpreter MUST silently skip them
 - Errors MUST be displayed in the console panel with sufficient context to diagnose the issue
