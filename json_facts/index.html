@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Facts</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <svg class="icon-terminal" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="4 17 10 11 4 5"></polyline>
+                    <line x1="12" y1="19" x2="20" y2="19"></line>
+                </svg>
+                <h1 class="title">JSON Facts</h1>
+            </div>
+            <div class="header-actions">
+                <label class="trace-toggle">
+                    <input type="checkbox" id="traceToggle">
+                    <span>trace</span>
+                </label>
+                <button id="runBtn" class="btn btn-primary">
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                    Run
+                </button>
+            </div>
+        </header>
+
+        <!-- Example Navigation -->
+        <nav class="example-nav">
+            <a href="#" class="example-link" data-example="family">family</a>
+            <a href="#" class="example-link" data-example="employees">employees</a>
+            <a href="#" class="example-link" data-example="graph">graph</a>
+            <select id="exampleSelect" class="example-select">
+                <option value="">more...</option>
+                <option value="inventory">inventory</option>
+                <option value="social">social</option>
+            </select>
+        </nav>
+
+        <!-- Main Content: 3 panes -->
+        <div class="main-content">
+            <!-- JSON Facts Pane -->
+            <div class="pane pane-json">
+                <div class="pane-header">
+                    <span>Facts (JSON)</span>
+                    <span>.json</span>
+                </div>
+                <textarea id="jsonEditor" class="editor" spellcheck="false"></textarea>
+            </div>
+
+            <!-- Prolog Rules Pane -->
+            <div class="pane pane-rules">
+                <div class="pane-header">
+                    <span>Rules &amp; Queries (Markdown)</span>
+                    <span>.md</span>
+                </div>
+                <textarea id="rulesEditor" class="editor" spellcheck="false"></textarea>
+            </div>
+
+            <!-- Output Pane -->
+            <div class="pane pane-output">
+                <div class="pane-header">
+                    <span>Query Results</span>
+                    <button id="clearBtn" class="btn-icon" title="Clear console">
+                        <svg class="icon-small" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div id="consoleOutput" class="console-content">
+                    <span class="console-placeholder">Ready to execute...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trace Panel (collapsible) -->
+        <div class="trace-panel" id="tracePanel">
+            <div class="trace-header" id="traceHeader">
+                <span>Trace</span>
+                <span class="trace-arrow" id="traceArrow">&#9660;</span>
+            </div>
+            <div class="trace-content" id="traceContent">
+                <pre id="traceOutput"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script src="interpreter.js"></script>
+    <script src="json_parser.js"></script>
+    <script src="index.js"></script>
+</body>
+</html>
