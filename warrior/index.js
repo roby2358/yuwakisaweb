@@ -498,13 +498,13 @@ function rangedAttack(targetQ, targetR) {
         chainBounce('Chain', dmg, targetQ, targetR, wep.chainCount || 1, 2, new Set([enemy]), false);
     }
 
-    // Splash: flat damage to all adjacent enemies
+    // Splash: full attack damage to all adjacent enemies (ignores defense)
     if (wep && wep.special === 'splash') {
         const adj = hexNeighbors(targetQ, targetR);
         for (const n of adj) {
             const splashTarget = em.enemies.find(e => e.q === n.q && e.r === n.r && e !== enemy);
             if (splashTarget) {
-                const sDmg = Math.max(1, wep.splashDamage - enemyDefense(splashTarget, em.getDef(splashTarget.type)));
+                const sDmg = Math.max(1, dmg);
                 splashTarget.hp -= sDmg;
                 logCombat(`Splash: ${sDmg} dmg to ${em.getDef(splashTarget.type).name}`, 'log-dmg');
                 if (splashTarget.hp <= 0) killEnemy(splashTarget);
