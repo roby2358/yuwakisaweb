@@ -495,8 +495,7 @@ function rangedAttack(targetQ, targetR) {
 
     // Chain: damage bounces to nearby enemies
     if (wep && wep.special === 'chain') {
-        const chainDmgBase = wep.chainDamage || Math.ceil(dmg / 2);
-        chainBounce('Chain', chainDmgBase, targetQ, targetR, wep.chainCount || 1, 2, new Set([enemy]), false);
+        chainBounce('Chain', dmg, targetQ, targetR, wep.chainCount || 1, 2, new Set([enemy]), false);
     }
 
     // Splash: flat damage to all adjacent enemies
@@ -881,7 +880,7 @@ function executeSkill(skillId, targetQ, targetR) {
             const dmg = skill.baseDamage + player.stats.warding;
             dealDamageToEnemy(enemy, dmg, 'Chain Lightning');
             const hitSet = new Set([enemy]);
-            chainBounce('Chain Lightning', skill.chainDamage, targetQ, targetR, skill.chainCount, skill.chainRange, hitSet, false);
+            chainBounce('Chain Lightning', dmg, targetQ, targetR, skill.chainCount, skill.chainRange, hitSet, false);
             break;
         }
         case 'immolate': {

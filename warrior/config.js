@@ -632,8 +632,8 @@ export const SKILLS = {
     },
     chain_lightning: {
         id: 'chain_lightning', name: 'Chain Lightning', cost: 3, target: SKILL_TARGET.RANGED, usage: SKILL_USAGE.ANYTIME,
-        range: 3, baseDamage: 6, chainDamage: 4, chainCount: 2, chainRange: 2,
-        desc: 'Ranged: 6 + Warding. Chains to 2 nearby enemies for 4 flat dmg.', minLevel: 4
+        range: 3, baseDamage: 6, chainCount: 2, chainRange: 2,
+        desc: 'Ranged: 6 + Warding. Chains to 2 nearby enemies for full dmg.', minLevel: 4
     },
     immolate: {
         id: 'immolate', name: 'Immolate', cost: 1, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
