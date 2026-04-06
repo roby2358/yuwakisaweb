@@ -540,7 +540,7 @@ export function rollMagicItem(category) {
             const effect = Rando.choice(MELEE_EFFECTS);
             const name = _rollName(MELEE_ITEMS, EFFECT_NAMING[effect.special]);
             const damage = Rando.int(2, 6);
-            const price = damage * 12 + 10;
+            const price = damage * 25;
             item = { id, name, type: 'melee', slot: EQUIP_SLOT.WEAPON, damage, range: 0, price, magical: true, ...effect };
             break;
         }
@@ -549,7 +549,7 @@ export function rollMagicItem(category) {
             const name = _rollName(RANGED_ITEMS, EFFECT_NAMING[effect.special]);
             const damage = Rando.int(2, 6);
             const range = Rando.int(3, 5);
-            const price = (damage + range) * 8 + 10;
+            const price = (damage + range) * 20;
             item = { id, name, type: 'ranged', slot: EQUIP_SLOT.WEAPON, damage, range, price, magical: true, ...effect };
             break;
         }
@@ -557,14 +557,14 @@ export function rollMagicItem(category) {
             const effect = Rando.choice(ARMOR_OR_PASSIVE);
             const name = _rollName(ARMOR_ITEMS, EFFECT_NAMING[effect.special]);
             const defense = Rando.int(2, 6);
-            const price = defense * 15 + 10;
+            const price = defense * 30;
             item = { id, name, slot: EQUIP_SLOT.ARMOR, defense, price, magical: true, ...effect };
             break;
         }
         case 'artifact': {
             const effect = Rando.choice(PASSIVE_EFFECTS);
             const name = _rollName(ARTIFACT_ITEMS, EFFECT_NAMING[effect.special]);
-            const price = 40 + Rando.int(0, 40);
+            const price = Rando.int(0, 100) + Rando.int(0, 100);
             item = { id, name, slot: EQUIP_SLOT.ARTIFACT, price, magical: true, ...effect };
             break;
         }

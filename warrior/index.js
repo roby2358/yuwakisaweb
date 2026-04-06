@@ -386,8 +386,9 @@ function meleeAttack(enemy) {
     const { killed } = dealDamageToEnemy(enemy, dmg, 'Melee', opts);
 
     if (!killed && wep && wep.special === 'defense_shred') {
-        enemy.defReduction = (enemy.defReduction || 0) + 1;
-        logCombat(`Nullblade shreds 1 defense!`, 'log-info');
+        const shred = wep.shredAmount || 1;
+        enemy.defReduction = (enemy.defReduction || 0) + shred;
+        logCombat(`Nullblade shreds ${shred} defense!`, 'log-info');
     }
 
     // Lifesteal
@@ -399,8 +400,9 @@ function meleeAttack(enemy) {
 
     // Aether siphon
     if (wep && wep.special === 'aether_siphon') {
-        player.aether = Math.min(player.maxAether(), player.aether + 1);
-        logCombat('+1 AE (siphon)', 'log-info');
+        const siphon = wep.siphonAmount || 1;
+        player.aether = Math.min(player.maxAether(), player.aether + siphon);
+        logCombat(`+${siphon} AE (siphon)`, 'log-info');
     }
 
     // Recoil: self-damage
@@ -463,6 +465,12 @@ function rangedAttack(targetQ, targetR) {
     const dist = hexDistance(player.q, player.r, targetQ, targetR);
     const eDef = em.getDef(enemy.type);
     let dmg = applyEquipmentBonusDamage(player.rangedDamage(dist, eDef.chaosSpawned));
+
+    // Sniper: bonus damage at max range
+    if (wep && wep.special === 'sniper' && dist >= wep.range) {
+        dmg += wep.sniperBonus;
+        logCombat(`Sniper: +${wep.sniperBonus} at max range`, 'log-info');
+    }
 
     // Fire primary shot
     const rangedOpts = {};
