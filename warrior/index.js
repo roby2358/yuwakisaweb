@@ -421,6 +421,11 @@ function meleeAttack(enemy) {
         logCombat(`${em.getDef(enemy.type).name} is burning!`, 'log-dmg');
     }
 
+    // Chain: damage bounces to nearby enemies
+    if (wep && wep.special === 'chain' && enemy.hp > 0) {
+        chainBounce('Chain', dmg, enemy.q, enemy.r, wep.chainCount || 1, 2, new Set([enemy]), false);
+    }
+
     // Cleave: hit adjacent enemies too
     if (wep && wep.special === 'cleave') {
         const adj = hexNeighbors(enemy.q, enemy.r);
