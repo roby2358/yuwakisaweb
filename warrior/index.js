@@ -1170,15 +1170,13 @@ function executeSkill(skillId, targetQ, targetR) {
                 usedMP = false;
                 break;
             }
-            const dmg = skill.baseDamage;
-            const adj = hexNeighbors(player.q, player.r);
+            const dmg = skill.baseDamage + player.stats.warding;
             let hitCount = 0;
-            for (const n of adj) {
-                const enemy = em.enemyAt(n.q, n.r);
-                if (enemy) {
-                    dealDamageToEnemy(enemy, dmg, "Haven's Light");
-                    hitCount++;
-                }
+            for (const h of hexesInRange(player.q, player.r, skill.range)) {
+                const enemy = em.enemyAt(h.q, h.r);
+                if (!enemy) continue;
+                dealDamageToEnemy(enemy, dmg, "Haven's Light");
+                hitCount++;
             }
             logCombat(`Haven's Light: hit ${hitCount} enemies!`, 'log-info');
             break;

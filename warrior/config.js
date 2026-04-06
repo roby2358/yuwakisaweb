@@ -724,7 +724,7 @@ export const SKILLS = {
     },
     havens_light: {
         id: 'havens_light', name: "Haven's Light", cost: 3, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
-        range: 1, baseDamage: 20, desc: "AoE: strength 20 attack to all adjacent. Only usable at haven or village.", minLevel: 6
+        range: 3, baseDamage: 20, desc: "AoE: 20 + Warding dmg within 3. Only usable at haven or village.", minLevel: 6
     },
     // ---- Peaceful skills ----
     bountiful_harvest: {
