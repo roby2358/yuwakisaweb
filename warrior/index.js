@@ -1642,27 +1642,49 @@ async function runWildlifeTurn(enemy, def, aggro, occupied) {
     }
 }
 
+function pickSwarmTarget(enemy) {
+    const settlements = world.pois
+        .filter(p => p.type === POI.HAVEN || p.type === POI.VILLAGE)
+        .map(p => ({ poi: p, dist: hexDistance(enemy.q, enemy.r, p.q, p.r) }))
+        .sort((a, b) => a.dist - b.dist);
+    if (settlements.length === 0) return null;
+    const weights = [20, 10, 5, 5];
+    const weighted = settlements.slice(0, weights.length)
+        .map((s, i) => ({ item: s.poi, weight: weights[i] }));
+    return Rando.weighted(weighted);
+}
+
+function greedyMoveToward(enemy, tq, tr, occupied) {
+    const valid = em.validAdjacentMoves(enemy, occupied, false, player.q, player.r, world);
+    valid.sort((a, b) => hexDistance(a.q, a.r, tq, tr) - hexDistance(b.q, b.r, tq, tr));
+    em.moveEnemyToNearest(enemy, valid, occupied);
+}
+
 function trySwarmMarch(enemy, def, occupied) {
     if (def.behavior === 'boss' || def.behavior === 'guard') return false;
+    // Clear target if arrived
+    if (enemy.swarmTargetQ != null && hexDistance(enemy.q, enemy.r, enemy.swarmTargetQ, enemy.swarmTargetR) <= 3) {
+        enemy.swarmTargetQ = null;
+        enemy.swarmTargetR = null;
+    }
+    // Already marching toward a target
+    if (enemy.swarmTargetQ != null) {
+        greedyMoveToward(enemy, enemy.swarmTargetQ, enemy.swarmTargetR, occupied);
+        return true;
+    }
+    // Check swarm trigger: 5+ chaos allies within 3
     const nearbyAllies = em.enemies.filter(e =>
         e !== enemy &&
         hexDistance(e.q, e.r, enemy.q, enemy.r) <= 3 &&
         em.getDef(e.type)?.chaosSpawned
     ).length;
     if (nearbyAllies < 5) return false;
-    // Sort settlements by distance
-    const settlements = world.pois
-        .filter(p => p.type === POI.HAVEN || p.type === POI.VILLAGE)
-        .map(p => ({ poi: p, dist: hexDistance(enemy.q, enemy.r, p.q, p.r) }))
-        .sort((a, b) => a.dist - b.dist);
-    if (settlements.length === 0) return false;
-    // If nearest settlement is within 5, skip it and head to the next one
-    const idx = (settlements[0].dist <= 5 && settlements.length > 1) ? 1 : 0;
-    const target = settlements[idx].poi;
-    // Greedy step: pick closest valid neighbor to target (A* fails in dense clusters)
-    const valid = em.validAdjacentMoves(enemy, occupied, false, player.q, player.r, world);
-    valid.sort((a, b) => hexDistance(a.q, a.r, target.q, target.r) - hexDistance(b.q, b.r, target.q, target.r));
-    em.moveEnemyToNearest(enemy, valid, occupied);
+    // Pick a target settlement
+    const target = pickSwarmTarget(enemy);
+    if (!target) return false;
+    enemy.swarmTargetQ = target.q;
+    enemy.swarmTargetR = target.r;
+    greedyMoveToward(enemy, target.q, target.r, occupied);
     return true;
 }
 
