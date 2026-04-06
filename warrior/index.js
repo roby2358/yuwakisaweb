@@ -1659,7 +1659,16 @@ function trySwarmMarch(enemy, def, occupied) {
         if (d < closestDist) { closestDist = d; closestPoi = p; }
     }
     if (!closestPoi) return false;
-    em.moveEnemyToward(enemy, closestPoi.q, closestPoi.r, occupied, world);
+    // Greedy step: pick closest valid neighbor to target (A* fails in dense clusters)
+    const valid = em.validAdjacentMoves(enemy, occupied, false, player.q, player.r, world);
+    valid.sort((a, b) => hexDistance(a.q, a.r, closestPoi.q, closestPoi.r) - hexDistance(b.q, b.r, closestPoi.q, closestPoi.r));
+    if (valid.length > 0) {
+        const oldKey = hexKey(enemy.q, enemy.r);
+        occupied.delete(oldKey);
+        enemy.q = valid[0].q;
+        enemy.r = valid[0].r;
+        occupied.add(hexKey(enemy.q, enemy.r));
+    }
     return true;
 }
 
