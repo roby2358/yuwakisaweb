@@ -386,9 +386,8 @@ function meleeAttack(enemy) {
     const { killed } = dealDamageToEnemy(enemy, dmg, 'Melee', opts);
 
     if (!killed && wep && wep.special === 'defense_shred') {
-        const shred = wep.shredAmount || 1;
-        enemy.defReduction = (enemy.defReduction || 0) + shred;
-        logCombat(`Nullblade shreds ${shred} defense!`, 'log-info');
+        enemy.defReduction = (enemy.defReduction || 0) + wep.shredAmount;
+        logCombat(`Nullblade shreds ${wep.shredAmount} defense!`, 'log-info');
     }
 
     // Lifesteal
@@ -400,9 +399,8 @@ function meleeAttack(enemy) {
 
     // Aether siphon
     if (wep && wep.special === 'aether_siphon') {
-        const siphon = wep.siphonAmount || 1;
-        player.aether = Math.min(player.maxAether(), player.aether + siphon);
-        logCombat(`+${siphon} AE (siphon)`, 'log-info');
+        player.aether = Math.min(player.maxAether(), player.aether + wep.siphonAmount);
+        logCombat(`+${wep.siphonAmount} AE (siphon)`, 'log-info');
     }
 
     // Recoil: self-damage
@@ -500,15 +498,13 @@ function rangedAttack(targetQ, targetR) {
 
     // Splash: full attack damage to all adjacent enemies (ignores defense)
     if (wep && wep.special === 'splash') {
-        const adj = hexNeighbors(targetQ, targetR);
-        for (const n of adj) {
+        const sDmg = Math.max(1, dmg);
+        for (const n of hexNeighbors(targetQ, targetR)) {
             const splashTarget = em.enemies.find(e => e.q === n.q && e.r === n.r && e !== enemy);
-            if (splashTarget) {
-                const sDmg = Math.max(1, dmg);
-                splashTarget.hp -= sDmg;
-                logCombat(`Splash: ${sDmg} dmg to ${em.getDef(splashTarget.type).name}`, 'log-dmg');
-                if (splashTarget.hp <= 0) killEnemy(splashTarget);
-            }
+            if (!splashTarget) continue;
+            splashTarget.hp -= sDmg;
+            logCombat(`Splash: ${sDmg} dmg to ${em.getDef(splashTarget.type).name}`, 'log-dmg');
+            if (splashTarget.hp <= 0) killEnemy(splashTarget);
         }
     }
 
@@ -1661,22 +1657,12 @@ function trySwarmMarch(enemy, def, occupied) {
         .sort((a, b) => a.dist - b.dist);
     if (settlements.length === 0) return false;
     // If nearest settlement is within 5, skip it and head to the next one
-    let target;
-    if (settlements[0].dist <= 5 && settlements.length > 1) {
-        target = settlements[1].poi;
-    } else {
-        target = settlements[0].poi;
-    }
+    const idx = (settlements[0].dist <= 5 && settlements.length > 1) ? 1 : 0;
+    const target = settlements[idx].poi;
     // Greedy step: pick closest valid neighbor to target (A* fails in dense clusters)
     const valid = em.validAdjacentMoves(enemy, occupied, false, player.q, player.r, world);
     valid.sort((a, b) => hexDistance(a.q, a.r, target.q, target.r) - hexDistance(b.q, b.r, target.q, target.r));
-    if (valid.length > 0) {
-        const oldKey = hexKey(enemy.q, enemy.r);
-        occupied.delete(oldKey);
-        enemy.q = valid[0].q;
-        enemy.r = valid[0].r;
-        occupied.add(hexKey(enemy.q, enemy.r));
-    }
+    em.moveEnemyToNearest(enemy, valid, occupied);
     return true;
 }
 
