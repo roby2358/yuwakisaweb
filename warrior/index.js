@@ -1648,27 +1648,28 @@ async function runWildlifeTurn(enemy, def, aggro, occupied) {
 
 function trySwarmMarch(enemy, def, occupied) {
     if (def.behavior === 'boss' || def.behavior === 'guard') return false;
-    const nearSettlement = world.pois.some(p =>
-        (p.type === POI.HAVEN || p.type === POI.VILLAGE) &&
-        hexDistance(enemy.q, enemy.r, p.q, p.r) <= 5
-    );
-    if (nearSettlement) return false;
     const nearbyAllies = em.enemies.filter(e =>
         e !== enemy &&
         hexDistance(e.q, e.r, enemy.q, enemy.r) <= 3 &&
         em.getDef(e.type)?.chaosSpawned
     ).length;
     if (nearbyAllies < 5) return false;
-    let closestPoi = null, closestDist = Infinity;
-    for (const p of world.pois) {
-        if (p.type !== POI.HAVEN && p.type !== POI.VILLAGE) continue;
-        const d = hexDistance(enemy.q, enemy.r, p.q, p.r);
-        if (d < closestDist) { closestDist = d; closestPoi = p; }
+    // Sort settlements by distance
+    const settlements = world.pois
+        .filter(p => p.type === POI.HAVEN || p.type === POI.VILLAGE)
+        .map(p => ({ poi: p, dist: hexDistance(enemy.q, enemy.r, p.q, p.r) }))
+        .sort((a, b) => a.dist - b.dist);
+    if (settlements.length === 0) return false;
+    // If nearest settlement is within 5, skip it and head to the next one
+    let target;
+    if (settlements[0].dist <= 5 && settlements.length > 1) {
+        target = settlements[1].poi;
+    } else {
+        target = settlements[0].poi;
     }
-    if (!closestPoi) return false;
     // Greedy step: pick closest valid neighbor to target (A* fails in dense clusters)
     const valid = em.validAdjacentMoves(enemy, occupied, false, player.q, player.r, world);
-    valid.sort((a, b) => hexDistance(a.q, a.r, closestPoi.q, closestPoi.r) - hexDistance(b.q, b.r, closestPoi.q, closestPoi.r));
+    valid.sort((a, b) => hexDistance(a.q, a.r, target.q, target.r) - hexDistance(b.q, b.r, target.q, target.r));
     if (valid.length > 0) {
         const oldKey = hexKey(enemy.q, enemy.r);
         occupied.delete(oldKey);
