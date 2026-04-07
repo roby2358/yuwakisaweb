@@ -2,7 +2,7 @@
 
 import {
     HEX_SIZE, MAP_COLS, MAP_ROWS, TERRAIN, TERRAIN_NAMES, MOVEMENT_COST,
-    STAT_POINTS_PER_LEVEL,
+    STAT_POINTS_PER_LEVEL, STARTING_STATS,
     xpForLevel,
     POI, POI_SYMBOLS, POI_COLORS, POI_DEFENSE_BONUS,
     ENEMY_TYPE,
@@ -797,6 +797,21 @@ function executeSkill(skillId, targetQ, targetR) {
             const enemy = em.enemyAt(targetQ, targetR);
             if (!enemy) break;
             dealDamageToEnemy(enemy, skill.baseDamage + player.stats.warding, 'Cosmic Bolt');
+            break;
+        }
+        case 'respec': {
+            const stats = ['might', 'reflex', 'warding', 'vigor'];
+            let refund = 0;
+            for (const s of stats) {
+                refund += player.stats[s] - STARTING_STATS[s];
+                player.stats[s] = STARTING_STATS[s];
+            }
+            player.statPoints += refund;
+            player.hp = Math.min(player.hp, player.maxHP());
+            player.aether = Math.min(player.aether, player.maxAether());
+            player.mp = 0;
+            logCombat(`Reflect: ${refund} stat points refunded.`, 'log-info');
+            setTimeout(() => showLevelUpDialog(), 100);
             break;
         }
         case 'warp_shield': {

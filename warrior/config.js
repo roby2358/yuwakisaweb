@@ -729,6 +729,10 @@ export const SKILLS = {
         id: 'ground_weeps', name: 'Ground Weeps', cost: 4, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.NON_COMBAT,
         desc: 'Show enemy threat heatmap over entire map. Press Space/click to dismiss.', minLevel: 8
     },
+    respec: {
+        id: 'respec', name: 'Reflect', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
+        desc: 'Refund all spent stat points and reallocate them. Requires clean hex, no enemies. Ends turn.', minLevel: 4
+    },
     sanctuary: {
         id: 'sanctuary', name: 'Sanctuary', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
         desc: 'Current hex becomes a temporary village (one rest). Must be non-POI terrain.', minLevel: 8
