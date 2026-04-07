@@ -2805,6 +2805,11 @@ function showHutDialog(poi) {
 }
 
 function showShopDialog(poi) {
+    if (Rando.bool(0.03)) {
+        const newItem = rollMagicItem();
+        poi.shopItems.push(newItem);
+        logCombat(`A new ${newItem.name} has appeared in the shop!`, 'log-info');
+    }
     let bodyHtml = `<div style="margin-bottom:8px;color:#ffc107" data-gold-display>Your gold: ${player.gold}</div>`;
     const owned = new Set([...Object.values(player.equipment).filter(Boolean), ...player.inventory]);
     for (const item of poi.shopItems) {
