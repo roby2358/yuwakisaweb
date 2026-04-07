@@ -2058,14 +2058,15 @@ function initGame() {
     world = new GameWorld();
     world.generate();
 
-    // Find starting haven (leftmost)
-    const havens = world.havens();
-    havens.sort((a, b) => {
-        const ha = world.getHex(a.q, a.r);
-        const hb = world.getHex(b.q, b.r);
-        return (ha?.col || 0) - (hb?.col || 0);
+    // Find starting settlement (farthest haven or village from the Maw by movement cost)
+    const settlements = world.pois.filter(p => p.type === POI.HAVEN || p.type === POI.VILLAGE);
+    const mawDists = world.mawDistanceMap();
+    settlements.sort((a, b) => {
+        const da = mawDists?.get(hexKey(a.q, a.r)) ?? -Infinity;
+        const db = mawDists?.get(hexKey(b.q, b.r)) ?? -Infinity;
+        return db - da;
     });
-    const startHaven = havens[0] || world.pois[0];
+    const startHaven = settlements[0] || world.pois[0];
 
     player = new Player(startHaven.q, startHaven.r);
     refreshVision();

@@ -235,11 +235,34 @@ export class GameWorld {
     }
 
 
+    mawDistanceMap() {
+        const maw = this.pois.find(p => p.type === POI.MAW);
+        if (!maw) return null;
+        const start = this.getHex(maw.q, maw.r);
+        return bfsHexes(start, this.hexes, hex => {
+            const c = MOVEMENT_COST[hex.terrain];
+            return c === undefined ? Infinity : c;
+        }, Infinity);
+    }
+
     _validate() {
         const havens = this.pois.filter(p => p.type === POI.HAVEN);
         const maw = this.pois.find(p => p.type === POI.MAW);
         if (havens.length === 0 || !maw) return false;
-        return this.hasPath(havens[0], maw);
+        const dists = this.mawDistanceMap();
+        if (!dists) return false;
+        // All havens must have a path to the Maw
+        const havenDists = [];
+        for (const h of havens) {
+            const d = dists.get(hexKey(h.q, h.r));
+            if (d === undefined) return false;
+            havenDists.push(d);
+        }
+        // At least half the havens must be more than halfway from the Maw
+        // (relative to the farthest haven)
+        const maxHavenDist = Math.max(...havenDists);
+        const farCount = havenDists.filter(d => d > maxHavenDist / 2).length;
+        return farCount >= Math.ceil(havens.length / 2);
     }
 
     toJSON() {
