@@ -1717,7 +1717,7 @@ async function runChaosTurn(enemy, def, occupied) {
             if (!h || !world.isPassable(h) || occupied.has(k)) return false;
             if (t.q === player.q && t.r === player.r) return false;
             const poi = world.poiAt(t.q, t.r);
-            if (poi && poi.type === POI.HAVEN) return false;
+            if (poi && (poi.type === POI.HAVEN || poi.type === POI.VILLAGE)) return false;
             return true;
         });
         if (valid.length > 0) {

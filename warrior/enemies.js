@@ -206,7 +206,7 @@ export class EnemyManager {
             if (occupied.has(key)) return false;
             if (n.q === playerQ && n.r === playerR) return false;
             const poi = world.poiAt(n.q, n.r);
-            if (poi && poi.type === POI.HAVEN) return false;
+            if (poi && (poi.type === POI.HAVEN || poi.type === POI.VILLAGE)) return false;
             if (avoidShattered) {
                 const hex = world.getHex(n.q, n.r);
                 if (hex && UNSHATTERED_VERSION[hex.terrain] !== undefined) return false;
@@ -281,7 +281,7 @@ export class EnemyManager {
         const isPassable = (q, r) => {
             if (!world.isPassable(world.getHex(q, r))) return false;
             const poi = world.poiAt(q, r);
-            if (poi && poi.type === POI.HAVEN) return false;
+            if (poi && (poi.type === POI.HAVEN || poi.type === POI.VILLAGE)) return false;
             const key = hexKey(q, r);
             if (q === tq && r === tr) return true;
             return !occupied.has(key);
