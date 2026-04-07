@@ -727,6 +727,16 @@ export const SKILLS = {
         range: 3, baseDamage: 20, desc: "AoE: 20 + Warding dmg within 3. Only usable at haven or village.", minLevel: 6
     },
     // ---- Peaceful skills ----
+    aether_blast: {
+        id: 'aether_blast', name: 'Aether Blast', cost: 2, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
+        range: 2, baseDamage: 3, aetherPerHit: 3,
+        desc: 'AoE: 3 + Warding/2 dmg to enemies within 2. Gain +3 AE per enemy hit.', minLevel: 4
+    },
+    lifedrain_blast: {
+        id: 'lifedrain_blast', name: 'Lifedrain Blast', cost: 2, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
+        range: 2, baseDamage: 3, hpPerHit: 2,
+        desc: 'AoE: 3 + Vigor dmg to enemies within 2. Gain +2 HP per enemy hit.', minLevel: 4
+    },
     bountiful_harvest: {
         id: 'bountiful_harvest', name: 'Bountiful Harvest', cost: 4, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
         range: 2, desc: 'Sprout crops (1-3g each) on all healthy hexes within 2. Ends turn.', minLevel: 4

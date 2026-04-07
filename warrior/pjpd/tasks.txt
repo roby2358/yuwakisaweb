@@ -14,20 +14,6 @@ Ruins should be a terrain type, colored gray. Icon on the tile is white when une
 ----
 Priority:   50
 Status: ToDo
-ID: blast-aoe-hgkx
-Created: 2026-04-07T00:51:50Z
-Updated: 2026-04-07T00:52:30Z
-New skill that blasts all enemies in radius 2 for minimal damage. Player gains +3 Aether per enemy hit.
-----
-Priority:   50
-Status: ToDo
-ID: blast-hp-mx35
-Created: 2026-04-07T00:53:26Z
-Updated: 2026-04-07T00:53:26Z
-Companion to blast-aoe-hgkx. Blasts enemies in radius 2 for minimal damage; player gains +2 HP per enemy hit.
-----
-Priority:   50
-Status: ToDo
 ID: gold-sink-e4ya
 Created: 2026-03-31T01:38:16Z
 Updated: 2026-03-31T01:38:16Z
@@ -207,6 +193,20 @@ ID: combat-w3dh
 Created: 2026-03-29T02:29:29Z
 Updated: 2026-03-29T02:29:29Z
 Ranged weapons contribute only 1/4 damage (rounded up) in melee — at close range a phase rifle is just an expensive club. Full damage at range only.
+----
+Priority:   50
+Status: Done
+ID: blast-hp-mx35
+Created: 2026-04-07T00:53:26Z
+Updated: 2026-04-07T05:24:09Z
+Companion to blast-aoe-hgkx. Blasts enemies in radius 2 for minimal damage; player gains +2 HP per enemy hit.
+----
+Priority:   50
+Status: Done
+ID: blast-aoe-hgkx
+Created: 2026-04-07T00:51:50Z
+Updated: 2026-04-07T05:24:09Z
+New skill that blasts all enemies in radius 2 for minimal damage. Player gains +3 Aether per enemy hit.
 ----
 Priority:   50
 Status: Done

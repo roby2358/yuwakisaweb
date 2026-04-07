@@ -801,6 +801,32 @@ function executeSkill(skillId, targetQ, targetR) {
             applyAoeDamage('Breach Pulse', dmg, skill.range);
             break;
         }
+        case 'aether_blast': {
+            let hits = 0;
+            for (const h of hexesInRange(player.q, player.r, skill.range)) {
+                if (em.enemyAt(h.q, h.r)) hits++;
+            }
+            applyAoeDamage('Aether Blast', skill.baseDamage + Math.floor(player.stats.warding / 2), skill.range);
+            if (hits > 0) {
+                const gained = hits * skill.aetherPerHit;
+                player.aether = Math.min(player.maxAether(), player.aether + gained);
+                logCombat(`+${gained} AE (${hits} hit)`, 'log-info');
+            }
+            break;
+        }
+        case 'lifedrain_blast': {
+            let hits = 0;
+            for (const h of hexesInRange(player.q, player.r, skill.range)) {
+                if (em.enemyAt(h.q, h.r)) hits++;
+            }
+            applyAoeDamage('Lifedrain Blast', skill.baseDamage + player.stats.vigor, skill.range);
+            if (hits > 0) {
+                const healed = hits * skill.hpPerHit;
+                player.hp = Math.min(player.maxHP(), player.hp + healed);
+                logCombat(`+${healed} HP (${hits} hit)`, 'log-heal');
+            }
+            break;
+        }
         case 'mending_light': {
             const heal = skill.baseHeal + player.stats.vigor * 3;
             player.hp = Math.min(player.maxHP(), player.hp + heal);
