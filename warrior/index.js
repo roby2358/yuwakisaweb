@@ -433,6 +433,11 @@ function meleeAttack(enemy) {
         chainBounce('Chain', dmg, enemy.q, enemy.r, wep.chainCount || 1, 2, new Set([enemy]), false);
     }
 
+    // Reverberate: chain with +bonus per jump
+    if (wep && wep.special === 'reverberate' && enemy.hp > 0) {
+        chainBounce('Reverberate', dmg, enemy.q, enemy.r, wep.chainCount || 1, 2, new Set([enemy]), false, wep.chainBonus || 0);
+    }
+
     // Cleave: hit adjacent enemies too
     if (wep && wep.special === 'cleave') {
         const adj = hexNeighbors(enemy.q, enemy.r);
@@ -506,6 +511,11 @@ function rangedAttack(targetQ, targetR) {
     // Chain: damage bounces to nearby enemies
     if (wep && wep.special === 'chain') {
         chainBounce('Chain', dmg, targetQ, targetR, wep.chainCount || 1, 2, new Set([enemy]), false);
+    }
+
+    // Reverberate: chain with +bonus per jump
+    if (wep && wep.special === 'reverberate') {
+        chainBounce('Reverberate', dmg, targetQ, targetR, wep.chainCount || 1, 2, new Set([enemy]), false, wep.chainBonus || 0);
     }
 
     // Splash: full attack damage to all adjacent enemies (ignores defense)
@@ -603,9 +613,10 @@ function pushEnemyAway(enemy, fromQ, fromR) {
     }
 }
 
-function chainBounce(skillName, dmg, startQ, startR, bounceCount, bounceRange, hitSet, useBellCurve) {
+function chainBounce(skillName, dmg, startQ, startR, bounceCount, bounceRange, hitSet, useBellCurve, perJumpBonus = 0) {
     let curQ = startQ, curR = startR;
     for (let i = 0; i < bounceCount; i++) {
+        dmg += perJumpBonus;
         let closest = null, closestDist = Infinity;
         for (const enemy of em.enemies) {
             if (hitSet.has(enemy)) continue;
