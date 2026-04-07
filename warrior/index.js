@@ -17,6 +17,7 @@ import { Rando } from './rando.js';
 import { Player } from './player.js';
 import { GameWorld } from './world.js';
 import { EnemyManager } from './enemies.js';
+import { Victory } from './victory.js';
 
 // ---- Display constants ----
 const COUNTER_SIZE = 28;
@@ -54,7 +55,7 @@ let phase = 'player';       // 'player' | 'enemy' | 'animating' | 'dialog'
 function changePhase(p) { phase = p; }
 let gameOver = false;
 let gameWon = false;
-let enemiesDefeated = 0;
+let victory = new Victory();
 let endTurnResolve = null;  // promise resolver for game loop
 let gameGeneration = 0;     // incremented on new game to stop old loops
 let targeting = null;       // { skill, validHexes: Set } or null
@@ -233,6 +234,7 @@ function dealDamageToEnemy(enemy, damage, source, opts = {}) {
     if (opts.pierceAmount) eDef = Math.max(0, eDef - opts.pierceAmount);
     const dealt = Math.max(1, rolled - eDef);
     enemy.hp -= dealt;
+    victory.damageDealt += dealt;
     logCombat(`${source}: ${dealt} dmg to ${def.name}`, 'log-dmg');
     const killed = enemy.hp <= 0;
     if (killed) killEnemy(enemy);
@@ -257,6 +259,7 @@ function dealDamageToPlayer(damage, source, isSkillDamage, opts = {}) {
     if (isSkillDamage) def += Math.round(player.stats.warding / 100 * rolled);
     const dealt = Math.max(1, rolled - def);
     player.hp -= dealt;
+    victory.damageTaken += dealt;
     logCombat(`${source}: ${dealt} dmg to you`, 'log-dmg');
 
     if (opts.attacker && !opts.isRanged) {
@@ -282,12 +285,15 @@ function dealDamageToPlayer(damage, source, isSkillDamage, opts = {}) {
     return { dealt, avoided: false };
 }
 
-function killEnemy(enemy) {
+function killEnemy(enemy, opts = {}) {
     const def = em.getDef(enemy.type);
     em.remove(enemy);
-    enemiesDefeated++;
+    victory.enemiesDefeated++;
+    if (enemy.type === ENEMY_TYPE.BREACH_GUARDIAN) victory.guardiansDefeated++;
+    if (opts.byGarrison) victory.garrisonKills++;
     const goldGain = Rando.int(1, 5) + (def.gold || 0);
     player.gold += goldGain;
+    victory.goldCollected += goldGain;
     logCombat(`${def.name} defeated!`, 'log-info');
     logCombat(`+${goldGain}g`, 'log-gold');
     if (def.chaosSpawned) {
@@ -311,6 +317,7 @@ function killEnemy(enemy) {
     if (player.equipped('opportunist') && Rando.bool(0.25)) {
         const bonusGold = Rando.int(3, 8);
         player.gold += bonusGold;
+        victory.goldCollected += bonusGold;
         logCombat(`Opportunist: +${bonusGold}g`, 'log-gold');
     }
 
@@ -700,7 +707,8 @@ function executeSkill(skillId, targetQ, targetR) {
             for (let i = 0; i < shatteredHexes.length; i++) {
                 if (Rando.bool(0.16)) goldFound++;
             }
-            if (goldFound > 0) player.gold += goldFound;
+            if (goldFound > 0) { player.gold += goldFound; victory.goldCollected += goldFound; }
+            victory.hexesRestored += shatteredHexes.length;
             player.mp = 0; // ends turn
             if (shatteredHexes.length > 0) {
                 gainXP(shatteredHexes.length * 3);
@@ -750,7 +758,7 @@ function executeSkill(skillId, targetQ, targetR) {
                     ];
                     const msg = Rando.choice(isHaven ? havenMessages : villageMessages);
                     showDialog(`${symbol} ${name}`, `<p>${msg}</p><p style="color:#ffc107">Offering: ${reward} gold</p>`, [
-                        { label: 'Accept', cls: 'primary', action: () => { player.gold += reward; logCombat(`+${reward}g from ${name.toLowerCase()}`, 'log-gold'); }},
+                        { label: 'Accept', cls: 'primary', action: () => { player.gold += reward; victory.goldCollected += reward; victory.settlementsRestored++; logCombat(`+${reward}g from ${name.toLowerCase()}`, 'log-gold'); }},
                         { label: 'Decline' }
                     ]);
                     break;
@@ -1189,6 +1197,7 @@ function executeSkill(skillId, targetQ, targetR) {
             if (!enemy) break;
             const goldStolen = Rando.int(1, 5);
             player.gold += goldStolen;
+            victory.goldCollected += goldStolen;
             logCombat(`Looted ${goldStolen}g!`, 'log-gold');
             break;
         }
@@ -1378,6 +1387,7 @@ function movePlayer(q, r) {
     const cost = reachable.get(key);
     if (cost === undefined) return;
 
+    victory.distanceTraveled += hexDistance(player.q, player.r, q, r);
     player.q = q;
     player.r = r;
     player.mp -= cost;
@@ -1485,6 +1495,7 @@ function checkHexEntry() {
         const multiplier = hex.terrain === TERRAIN.SHATTERED_GOLD ? 2 : 1;
         const goldAmt = hex.goldDeposit * multiplier;
         player.gold += goldAmt;
+        victory.goldCollected += goldAmt;
         hex.goldDeposit = 0;
         logCombat(`+${goldAmt}g (${hex.crop ? 'harvest' : 'gold deposit'})`, 'log-gold');
         hex.crop = false;
@@ -1495,6 +1506,7 @@ function checkHexEntry() {
 
 function closeBreach(poi) {
     world.closeBreach(poi);
+    victory.breachesSealed++;
     logCombat(`Breach sealed! (${world.breachesClosed} total)`, 'log-info');
     render();
 }
@@ -1913,6 +1925,7 @@ async function runEnemyPhase() {
 function startPlayerTurn() {
     combatAlerted = false;
     poiInteracted = false;
+    if (player.hp > 0 && player.hp / player.maxHP() < 0.10) victory.nearDeathMoments++;
     render();
 }
 
@@ -1943,7 +1956,7 @@ const SAVE_KEY = 'warrior_save';
 
 function saveGame() {
     const data = {
-        turn, enemiesDefeated,
+        turn, victory: victory.toJSON(),
         player: player.toJSON(),
         world: world.toJSON(),
         enemies: em.toJSON(),
@@ -1972,7 +1985,7 @@ function loadGame() {
     gameOver = false;
     gameWon = false;
     turn = data.turn;
-    enemiesDefeated = data.enemiesDefeated;
+    victory = Victory.fromJSON(data.victory);
     selected = false;
     reachable = null;
     attackable = null;
@@ -2019,7 +2032,7 @@ function initGame() {
     gameOver = false;
     gameWon = false;
     turn = 1;
-    enemiesDefeated = 0;
+    victory = new Victory();
     selected = false;
     reachable = null;
     attackable = null;
@@ -3050,8 +3063,10 @@ function tryRuinInteraction(poi) {
 
 function showRuinLootDialog(poi) {
     poi.ruinState = 'explored';
+    victory.ruinsExplored++;
     const goldFound = Rando.int(5, 20);
     player.gold += goldFound;
+    victory.goldCollected += goldFound;
 
     let body = `<p>You explore the ruins...</p><p style="color:#ffc107">Found ${goldFound} gold!</p>`;
 
@@ -3162,11 +3177,14 @@ function endGame(won) {
     const overlay = document.getElementById('endgame-overlay');
     document.getElementById('endgame-title').textContent = won ? 'VICTORY!' : 'DEFEAT';
     document.getElementById('endgame-title').style.color = won ? '#ffc107' : '#f44336';
+    const rows = victory.breakdown().map(b =>
+        `<div style="display:flex;justify-content:space-between;gap:16px"><span>${b.label}: ${b.value}</span><span style="color:#888">${b.points >= 0 ? '+' : ''}${b.points}</span></div>`
+    ).join('');
     document.getElementById('endgame-body').innerHTML = `
         <div>Turns: ${turn}</div>
         <div>Level: ${player.level}</div>
-        <div>Enemies defeated: ${enemiesDefeated}</div>
-        <div>Breaches sealed: ${world.breachesClosed}</div>
+        <div style="margin:8px 0;border-top:1px solid #444;padding-top:8px">${rows}</div>
+        <div style="margin-top:8px;border-top:1px solid #444;padding-top:8px;font-size:18px;color:#ffc107">Final Score: ${victory.score()}</div>
     `;
     overlay.classList.remove('hidden');
 }
@@ -3398,6 +3416,7 @@ function tickGarrisons() {
             poi.type = POI.GARRISON;
             const hex = world.getHex(poi.q, poi.r);
             if (hex) hex.poi = POI.GARRISON;
+            victory.garrisonsCompleted++;
             if (world.visible.has(hexKey(poi.q, poi.r))) {
                 logCombat('A garrison stands ready!', 'log-info');
             }
@@ -3417,7 +3436,7 @@ function tickGarrisons() {
         const nearest = inRange.filter(e => hexDistance(poi.q, poi.r, e.q, e.r) === nearestDist);
         const target = Rando.choice(nearest);
         const def = em.getDef(target.type);
-        killEnemy(target);
+        killEnemy(target, { byGarrison: true });
         if (world.visible.has(hexKey(poi.q, poi.r)) || world.visible.has(hexKey(target.q, target.r))) {
             logCombat(`Garrison slays ${def.name}!`, 'log-dmg');
         }

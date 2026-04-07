@@ -14,13 +14,6 @@ Add a gold sink or reward for accumulating 1000 gold. Could be a powerful item, 
 ----
 Priority:   50
 Status: ToDo
-ID: victory-h28d
-Created: 2026-04-03T07:20:40Z
-Updated: 2026-04-03T07:20:40Z
-Track and display a final victory score. Count accomplishments throughout the game: hexes restored, villages/havens rescued (cleared of nearby enemies?), breaches sealed, guardians defeated, ruins explored, enemies defeated, wildlife hunted, gold collected, skills learned, etc. Show a detailed breakdown on the victory screen alongside existing stats (turns played, level, enemies defeated, breaches sealed).
-----
-Priority:   50
-Status: ToDo
 ID: skill-r53c
 Created: 2026-04-06T05:06:47Z
 Updated: 2026-04-06T05:06:47Z
@@ -179,6 +172,13 @@ ID: combat-w3dh
 Created: 2026-03-29T02:29:29Z
 Updated: 2026-03-29T02:29:29Z
 Ranged weapons contribute only 1/4 damage (rounded up) in melee — at close range a phase rifle is just an expensive club. Full damage at range only.
+----
+Priority:   50
+Status: Done
+ID: victory-h28d
+Created: 2026-04-03T07:20:40Z
+Updated: 2026-04-07T06:07:59Z
+Track and display a final victory score. Count accomplishments throughout the game: hexes restored, villages/havens rescued (cleared of nearby enemies?), breaches sealed, guardians defeated, ruins explored, enemies defeated, wildlife hunted, gold collected, skills learned, etc. Show a detailed breakdown on the victory screen alongside existing stats (turns played, level, enemies defeated, breaches sealed).
 ----
 Priority:   50
 Status: Done
