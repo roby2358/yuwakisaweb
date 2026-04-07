@@ -155,12 +155,19 @@ export const POI = {
     RUIN: 'ruin',
     BREACH: 'breach',
     MAW: 'maw',
-    HUT: 'hut'
+    HUT: 'hut',
+    GARRISON_BUILD: 'garrison_build',
+    GARRISON: 'garrison'
 };
 
 export const POI_DEFENSE_BONUS = {
     [POI.HAVEN]: 3,
-    [POI.VILLAGE]: 2
+    [POI.VILLAGE]: 2,
+    [POI.GARRISON]: 3
+};
+
+export const POI_RANGE_BONUS = {
+    [POI.GARRISON]: 2
 };
 
 export const POI_SYMBOLS = {
@@ -169,7 +176,9 @@ export const POI_SYMBOLS = {
     [POI.RUIN]: '\u26EB',    // ⛫ castle ruins
     [POI.BREACH]: '\u058D',  // ֍ swirl
     [POI.MAW]: '\u2738',     // ✸ pulsing star
-    [POI.HUT]: '\u2302'      // ⌂ house
+    [POI.HUT]: '\u2302',     // ⌂ house
+    [POI.GARRISON_BUILD]: '\u{1F6A7}', // 🚧 construction sign
+    [POI.GARRISON]: '\u265C'  // ♜ black rook
 };
 
 export const POI_COLORS = {
@@ -178,7 +187,9 @@ export const POI_COLORS = {
     [POI.RUIN]: '#b0bec5',
     [POI.BREACH]: '#e040fb',
     [POI.MAW]: '#ff1744',
-    [POI.HUT]: '#b0bec5'
+    [POI.HUT]: '#b0bec5',
+    [POI.GARRISON_BUILD]: '#ffb74d',
+    [POI.GARRISON]: '#fff'
 };
 
 // ---- Enemy types ----

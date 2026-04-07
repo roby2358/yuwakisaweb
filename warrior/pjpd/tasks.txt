@@ -26,13 +26,6 @@ Created: 2026-04-06T05:06:47Z
 Updated: 2026-04-06T05:06:47Z
 Add a skill (or ability/item) that resets the player's stat allocations and returns all spent stat points back to the pool, letting the player reallocate. Useful for respeccing when build isn't working out or when new equipment changes the optimal distribution.
 ----
-Priority:   50
-Status: ToDo
-ID: garrison-miah
-Created: 2026-04-06T05:38:52Z
-Updated: 2026-04-06T05:38:52Z
-Build garrisons across the landscape. Each turn, each completed garrison can kill one chaos enemy within 5 hexes (automated ranged defense). Placement rules: player must have a haven or village in their visible set to commission a garrison. Cost is high (300-500g). Commissioning creates an 'in progress' garrison POI with a 10% chance of completing each turn — once complete, it starts defending. Garrisons cannot be destroyed by chaos. Gives the player a long-term strategic gold sink and a way to reclaim territory.
-----
 Priority:   90
 Status: Done
 ID: savegame-qv59
@@ -186,6 +179,13 @@ ID: combat-w3dh
 Created: 2026-03-29T02:29:29Z
 Updated: 2026-03-29T02:29:29Z
 Ranged weapons contribute only 1/4 damage (rounded up) in melee — at close range a phase rifle is just an expensive club. Full damage at range only.
+----
+Priority:   50
+Status: Done
+ID: garrison-miah
+Created: 2026-04-06T05:38:52Z
+Updated: 2026-04-07T05:52:52Z
+Build garrisons across the landscape. Each turn, each completed garrison can kill one chaos enemy within 5 hexes (automated ranged defense). Placement rules: player must have a haven or village in their visible set to commission a garrison. Cost is high (300-500g). Commissioning creates an 'in progress' garrison POI with a 10% chance of completing each turn — once complete, it starts defending. Garrisons cannot be destroyed by chaos. Gives the player a long-term strategic gold sink and a way to reclaim territory.
 ----
 Priority:   50
 Status: Done

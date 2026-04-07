@@ -1895,6 +1895,9 @@ async function runEnemyPhase() {
     // Wildlife population maintenance
     em.spawnWildlife(world, player.q, player.r);
 
+    // Garrison construction + defense
+    tickGarrisons();
+
     // Start new turn
     turn++;
     player.mp = player.maxMP();
@@ -2412,6 +2415,15 @@ function updateSkillBar() {
     rangedSlot.classList.toggle('active', targeting && targeting.skill === '__ranged__');
     rangedSlot.style.display = hasRanged ? '' : 'none';
 
+    // Garrison slot
+    const garrisonSlot = document.getElementById('garrison-slot');
+    if (garrisonSlot) {
+        garrisonSlot.style.display = player.hasGarrisonCharter ? '' : 'none';
+        if (player.hasGarrisonCharter) {
+            garrisonSlot.classList.toggle('disabled', !canCommissionGarrison());
+        }
+    }
+
     // Skill slots 1-4
     for (let i = 0; i < 4; i++) {
         const slot = document.querySelector(`.skill-slot[data-slot="${i}"]`);
@@ -2843,6 +2855,12 @@ function showShopDialog(poi) {
         logCombat(`A new ${newItem.name} has appeared in the shop!`, 'log-info');
     }
     let bodyHtml = `<div style="margin-bottom:8px;color:#ffc107" data-gold-display>Your gold: ${player.gold}</div>`;
+    if (!player.hasGarrisonCharter) {
+        bodyHtml += `<div class="shop-item">
+            <div><span style="color:#ffd700">Garrison Charter</span><br><span style="color:#aaa;font-size:11px">Authorizes you to commission garrisons (G key) — 300g each</span></div>
+            <button data-charter data-price="300" ${player.gold < 300 ? 'disabled' : ''}>Buy 300g</button>
+        </div>`;
+    }
     const owned = new Set([...Object.values(player.equipment).filter(Boolean), ...player.inventory]);
     for (const item of poi.shopItems) {
         const equip = ALL_EQUIPMENT[item.id];
@@ -2884,6 +2902,17 @@ function showShopDialog(poi) {
 
     // Wire up buy/sell buttons
     const body = document.getElementById('dialog-body');
+    const charterBtn = body.querySelector('button[data-charter]');
+    if (charterBtn) {
+        charterBtn.addEventListener('click', () => {
+            if (player.gold >= 300) {
+                player.gold -= 300;
+                player.hasGarrisonCharter = true;
+                logCombat('Bought Garrison Charter', 'log-gold');
+                showShopDialog(poi);
+            }
+        });
+    }
     body.querySelectorAll('button[data-id]').forEach(btn => {
         btn.addEventListener('click', () => {
             const id = btn.dataset.id;
@@ -3272,6 +3301,9 @@ document.querySelectorAll('.skill-slot[data-slot]').forEach(slot => {
 document.getElementById('ranged-slot').addEventListener('click', () => {
     if (phase === 'player') activateRangedWeapon();
 });
+document.getElementById('garrison-slot').addEventListener('click', () => {
+    if (phase === 'player') tryCommissionGarrison();
+});
 
 window.addEventListener('keydown', e => {
     if (phase === 'dialog') return;
@@ -3318,15 +3350,87 @@ window.addEventListener('keydown', e => {
     } else if (e.key === 'r' || e.key === 'R') {
         if (phase !== 'player') return;
         activateRangedWeapon();
+    } else if (e.key === 'g' || e.key === 'G') {
+        if (phase !== 'player') return;
+        tryCommissionGarrison();
     }
 });
+
+const GARRISON_COST = 300;
+const GARRISON_BUILD_CHANCE = 0.10;
+const GARRISON_KILL_RANGE = 5;
+
+function canCommissionGarrison() {
+    if (!player.hasGarrisonCharter) return false;
+    if (player.gold < GARRISON_COST) return false;
+    if (world.poiAt(player.q, player.r)) return false;
+    const hex = world.getHex(player.q, player.r);
+    if (!hex || !world.isPassable(hex)) return false;
+    for (const poi of world.pois) {
+        if (poi.type !== POI.HAVEN && poi.type !== POI.VILLAGE) continue;
+        if (world.visible.has(hexKey(poi.q, poi.r))) return true;
+    }
+    return false;
+}
+
+function tryCommissionGarrison() {
+    if (!player.hasGarrisonCharter) { logCombat('Need a Garrison Charter (buy at a haven shop).', 'log-info'); return; }
+    if (player.gold < GARRISON_COST) { logCombat(`Need ${GARRISON_COST}g to commission a garrison.`, 'log-info'); return; }
+    if (world.poiAt(player.q, player.r)) { logCombat('Cannot build on an existing POI.', 'log-info'); return; }
+    const hasNearbySettlement = world.pois.some(p =>
+        (p.type === POI.HAVEN || p.type === POI.VILLAGE) && world.visible.has(hexKey(p.q, p.r))
+    );
+    if (!hasNearbySettlement) { logCombat('A haven or village must be in sight to commission a garrison.', 'log-info'); return; }
+    player.gold -= GARRISON_COST;
+    const hex = world.getHex(player.q, player.r);
+    const poi = { q: player.q, r: player.r, type: POI.GARRISON_BUILD, id: world.pois.length };
+    world.pois.push(poi);
+    if (hex) hex.poi = POI.GARRISON_BUILD;
+    logCombat('Garrison commissioned. Construction underway.', 'log-info');
+    render();
+}
+
+function tickGarrisons() {
+    // Build progress
+    for (const poi of world.pois) {
+        if (poi.type !== POI.GARRISON_BUILD) continue;
+        if (Rando.bool(GARRISON_BUILD_CHANCE)) {
+            poi.type = POI.GARRISON;
+            const hex = world.getHex(poi.q, poi.r);
+            if (hex) hex.poi = POI.GARRISON;
+            if (world.visible.has(hexKey(poi.q, poi.r))) {
+                logCombat('A garrison stands ready!', 'log-info');
+            }
+        }
+    }
+    // Defense fire
+    for (const poi of world.pois) {
+        if (poi.type !== POI.GARRISON) continue;
+        const inRange = em.enemies
+            .filter(e => {
+                const def = em.getDef(e.type);
+                return def && def.chaosSpawned && hexDistance(poi.q, poi.r, e.q, e.r) <= GARRISON_KILL_RANGE;
+            })
+            .sort((a, b) => hexDistance(poi.q, poi.r, a.q, a.r) - hexDistance(poi.q, poi.r, b.q, b.r));
+        if (inRange.length === 0) continue;
+        const nearestDist = hexDistance(poi.q, poi.r, inRange[0].q, inRange[0].r);
+        const nearest = inRange.filter(e => hexDistance(poi.q, poi.r, e.q, e.r) === nearestDist);
+        const target = Rando.choice(nearest);
+        const def = em.getDef(target.type);
+        killEnemy(target);
+        if (world.visible.has(hexKey(poi.q, poi.r)) || world.visible.has(hexKey(target.q, target.r))) {
+            logCombat(`Garrison slays ${def.name}!`, 'log-dmg');
+        }
+    }
+}
 
 function activateRangedWeapon() {
     const wep = player.weapon();
     if (!wep || wep.type !== 'ranged') { logCombat('No ranged weapon!', 'log-info'); return; }
     const cost = (!wep.magical || wep.special === 'free_ranged') ? 0 : 1;
     if (player.aether < cost) { logCombat('Not enough Aether!', 'log-info'); return; }
-    const range = player.weaponRange(playerTerrain());
+    const playerPoi = world.poiAt(player.q, player.r);
+    const range = player.weaponRange(playerTerrain(), playerPoi ? playerPoi.type : null);
     const validHexes = new Set();
     for (const h of hexesInRange(player.q, player.r, range)) {
         if (em.enemies.some(en => en.q === h.q && en.r === h.r && world.visible.has(hexKey(en.q, en.r))) && world.hasLOS(player, h)) {

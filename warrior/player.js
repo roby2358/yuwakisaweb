@@ -3,7 +3,7 @@ import {
     maxHP, maxAether, PLAYER_MP, BASE_VISION,
     EQUIP_SLOT, ALL_EQUIPMENT,
     TERRAIN_DEFENSE_BONUS, TERRAIN_RANGE_BONUS,
-    RANGER_TERRAIN, isChaosTerrain
+    RANGER_TERRAIN, isChaosTerrain, POI_RANGE_BONUS
 } from './config.js';
 import { hexDistance } from './hex.js';
 
@@ -28,6 +28,7 @@ export class Player {
         this.usedSkillsThisTurn = new Set();
         this.movedThisTurn = false;
         this.hexesMovedThisTurn = 0;
+        this.hasGarrisonCharter = false;
     }
 
     weapon() {
@@ -134,11 +135,12 @@ export class Player {
         return d;
     }
 
-    weaponRange(terrainType) {
+    weaponRange(terrainType, poiType) {
         const wep = this.weapon();
         if (!wep || wep.type !== 'ranged') return 0;
         let range = wep.range;
         range += TERRAIN_RANGE_BONUS[terrainType] || 0;
+        range += POI_RANGE_BONUS[poiType] || 0;
         return range;
     }
 
@@ -155,7 +157,8 @@ export class Player {
             learnedSkills: [...this.learnedSkills],
             skills: this.skills, inventory: this.inventory,
             statPoints: this.statPoints, pendingSkillChoice: this.pendingSkillChoice,
-            mp: this.mp, warpShieldTurns: this.warpShieldTurns
+            mp: this.mp, warpShieldTurns: this.warpShieldTurns,
+            hasGarrisonCharter: this.hasGarrisonCharter
         };
     }
 
