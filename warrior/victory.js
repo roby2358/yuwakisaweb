@@ -44,19 +44,19 @@ export class Victory {
 }
 
 Victory.WEIGHTS = {
-    enemiesDefeated: 5,
-    guardiansDefeated: 50,
-    garrisonsCompleted: 100,
-    garrisonKills: 5,
-    distanceTraveled: 1,
-    damageDealt: 0.5,
-    damageTaken: -0.25,
-    nearDeathMoments: 25,
-    hexesRestored: 10,
-    settlementsRestored: 50,
-    ruinsExplored: 20,
-    goldCollected: 1,
-    breachesSealed: 200,
+    enemiesDefeated: 0.13,
+    guardiansDefeated: 6,
+    garrisonsCompleted: 25,
+    garrisonKills: 1,
+    distanceTraveled: 0.03,
+    damageDealt: 0.004,
+    damageTaken: -0.013,
+    nearDeathMoments: 100,
+    hexesRestored: 0.075,
+    settlementsRestored: 3,
+    ruinsExplored: 6.5,
+    goldCollected: 0.017,
+    breachesSealed: 14,
 };
 
 Victory.LABELS = {
