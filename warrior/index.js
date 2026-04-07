@@ -1644,7 +1644,7 @@ function enemyAttacks(enemy, def, prefersRanged, newDist) {
 function tryBossSpawn(enemy, def, occupied) {
     if (def.behavior !== 'boss') return;
     if (enemy.turnsSinceSpawn === 0) return;
-    if (enemy.turnsSinceSpawn % (def.spawnInterval || 3) !== 0) return;
+    if (!Rando.bool(def.spawnChance ?? 0.16)) return;
     const adj = hexNeighbors(enemy.q, enemy.r).filter(n => {
         const k = hexKey(n.q, n.r);
         const h = world.getHex(n.q, n.r);
@@ -1903,7 +1903,7 @@ async function runEnemyPhase() {
             ? [ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.FLUX_ARCHER, ENEMY_TYPE.FLUX_ARCHER, ENEMY_TYPE.BREACH_CRAWLER]
             : [ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.FLUX_ARCHER, ENEMY_TYPE.FLUX_ARCHER, ENEMY_TYPE.BREACH_CRAWLER, ENEMY_TYPE.PHASE_WRAITH];
         for (const poi of world.pois) {
-            if (poi.type === POI.BREACH && !poi.closed && Math.random() < 0.15) {
+            if (poi.type === POI.BREACH && !poi.closed && Math.random() < 0.075) {
                 const adj = hexNeighbors(poi.q, poi.r).filter(n => {
                     const k = hexKey(n.q, n.r);
                     const h = world.getHex(n.q, n.r);

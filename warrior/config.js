@@ -231,7 +231,7 @@ export const ENEMY_DEFS = {
     [ENEMY_TYPE.UNRAVELER]: {
         name: 'The Unraveler', label: '\u{1F480}', hp: 100, attack: 12, rangedAttack: 6, defense: 6,
         speed: 1, detectRange: 6, xp: 200, gold: 0, behavior: 'boss',
-        range: 6, spawnInterval: 3, chaosSpawned: true
+        range: 6, spawnChance: 0.16, chaosSpawned: true
     }
 };
 
