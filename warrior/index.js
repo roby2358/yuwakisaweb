@@ -1319,14 +1319,21 @@ function deselectPlayer() {
     attackable = null;
 }
 
+function playerMoveCost(hex) {
+    const baseCost = MOVEMENT_COST[hex.terrain] ?? Infinity;
+    if (baseCost === Infinity) return Infinity;
+    const poi = world.poiAt(hex.q, hex.r);
+    if (poi && (poi.type === POI.HAVEN || poi.type === POI.VILLAGE)) return 1;
+    if (player.equipped('strider') && baseCost > 1) return 1;
+    return baseCost;
+}
+
 function computeReachable() {
     if (player.mp <= 0) { reachable = new Map(); attackable = new Set(); return; }
     const enemyKeys = new Set(em.enemies.map(e => hexKey(e.q, e.r)));
-    const hasStrider = !!player.equipped('strider');
     reachable = bfsHexes(player, world.hexes, hex => {
         if (enemyKeys.has(hexKey(hex.q, hex.r))) return Infinity;
-        const baseCost = MOVEMENT_COST[hex.terrain] ?? Infinity;
-        return (hasStrider && baseCost > 1 && baseCost !== Infinity) ? 1 : baseCost;
+        return playerMoveCost(hex);
     }, player.mp);
     reachable.delete(hexKey(player.q, player.r));
 
@@ -1455,8 +1462,7 @@ function moveAndAttack(enemyQ, enemyR) {
     if (killed) {
         const hex = world.getHex(enemyQ, enemyR);
         if (hex && world.isPassable(hex)) {
-            let moveCost = MOVEMENT_COST[hex.terrain] ?? 1;
-            if (player.equipped('strider') && moveCost > 1 && moveCost !== Infinity) moveCost = 1;
+            const moveCost = playerMoveCost(hex);
             if (player.mp >= moveCost) {
                 player.q = enemyQ;
                 player.r = enemyR;
