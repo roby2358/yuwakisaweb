@@ -7,13 +7,6 @@ Audit the inventory system and magic item generation pipeline. Clean up how item
 ----
 Priority:   50
 Status: ToDo
-ID: ruins-67tw
-Created: 2026-04-07T00:50:49Z
-Updated: 2026-04-07T00:50:49Z
-Ruins should be a terrain type, colored gray. Icon on the tile is white when unexplored, black when explored.
-----
-Priority:   50
-Status: ToDo
 ID: gold-sink-e4ya
 Created: 2026-03-31T01:38:16Z
 Updated: 2026-03-31T01:38:16Z
@@ -193,6 +186,13 @@ ID: combat-w3dh
 Created: 2026-03-29T02:29:29Z
 Updated: 2026-03-29T02:29:29Z
 Ranged weapons contribute only 1/4 damage (rounded up) in melee — at close range a phase rifle is just an expensive club. Full damage at range only.
+----
+Priority:   50
+Status: Done
+ID: ruins-67tw
+Created: 2026-04-07T00:50:49Z
+Updated: 2026-04-07T05:39:23Z
+Ruins should be a terrain type, colored gray. Icon on the tile is white when unexplored, black when explored.
 ----
 Priority:   50
 Status: Done

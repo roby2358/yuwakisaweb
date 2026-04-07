@@ -197,7 +197,7 @@ export class GameWorld {
                 hex.poi = type;
                 const poi = { q: hex.q, r: hex.r, type, id: self.pois.length };
                 if (type === POI.HAVEN) poi.shopItems = self._generateShopItems();
-                if (type === POI.RUIN) { poi.ruinState = 'new'; }
+                if (type === POI.RUIN) { poi.ruinState = 'new'; hex.terrain = TERRAIN.RUINS; }
                 if (type === POI.BREACH) { poi.closed = false; poi.guardianId = null; }
                 if (type === POI.MAW) { poi.closed = false; poi.guardianId = null; }
                 if (type === POI.HUT) {

@@ -38,6 +38,7 @@ const TERRAIN_COLORS = {
     [TERRAIN.DISTRESSED_FOREST]: '#5a7a3a',
     [TERRAIN.DISTRESSED_GOLD]: '#a89a5a',
     [TERRAIN.DISTRESSED_QUARRY]: '#7a7a6a',
+    [TERRAIN.RUINS]: '#c8c8c8',
 };
 const PLAYER_COLOR = '#daa520';
 
@@ -2113,7 +2114,7 @@ function render() {
                 const symbol = POI_SYMBOLS[poi.type] || '?';
                 let color = POI_COLORS[poi.type] || '#fff';
                 if (poi.type === POI.BREACH && poi.closed) color = '#555';
-                if (poi.type === POI.RUIN && poi.ruinState === 'explored') color = '#555';
+                if (poi.type === POI.RUIN) color = poi.ruinState === 'explored' ? '#000' : '#fff';
                 ctx.fillStyle = color;
                 ctx.font = 'bold ' + Math.floor(HEX_SIZE * 1.2) + 'px monospace';
                 ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -2294,7 +2295,7 @@ function renderWorldMap() {
         const symbol = POI_SYMBOLS[poi.type] || '?';
         let color = POI_COLORS[poi.type] || '#fff';
         if (poi.type === POI.BREACH && poi.closed) color = '#555';
-        if (poi.type === POI.RUIN && poi.ruinState === 'explored') color = '#555';
+        if (poi.type === POI.RUIN) color = poi.ruinState === 'explored' ? '#000' : '#fff';
         ctx.fillStyle = color;
         ctx.fillText(symbol, mx, my);
     }
