@@ -10,7 +10,9 @@
       "mcp__pjpd__pjpd_update_task",
       "mcp__pjpd__pjpd_list_tasks",
       "Skill(update-config)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(awk 'NR==1814{print; exit}' /mnt/c/work/yuwakisaweb/warrior/index.js)",
+      "Read(//^\\(async \\)?function /**)"
     ]
   }
 }

@@ -623,8 +623,8 @@ export const SKILLS = {
         range: 4, baseDamage: 6, desc: 'Ranged: 6 + Reflex. Ignores defense.', minLevel: 2
     },
     warp_shield: {
-        id: 'warp_shield', name: 'Warp Shield', cost: 2, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
-        duration: 3, desc: 'Absorb next hit. Lasts 3 turns.', minLevel: 4
+        id: 'warp_shield', name: 'Warp Shield', cost: 5, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
+        duration: 1, desc: 'Block all damage from enemies for one turn.', minLevel: 4
     },
     breach_pulse: {
         id: 'breach_pulse', name: 'Breach Pulse', cost: 3, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,

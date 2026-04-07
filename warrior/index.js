@@ -244,7 +244,6 @@ function dealDamageToPlayer(damage, source, isSkillDamage, opts = {}) {
         return { dealt: 0, avoided: true };
     }
     if (player.warpShieldTurns > 0) {
-        player.warpShieldTurns = 0;
         logCombat('Warp Shield absorbed the hit!', 'log-info');
         return { dealt: 0, avoided: true };
     }
@@ -1811,8 +1810,6 @@ async function runEnemyPhase() {
             logCombat('Chaos Circlet: +1 AE', 'log-info');
         }
     }
-    if (player.warpShieldTurns > 0) player.warpShieldTurns--;
-
     // Burn tick: enemies with burn take damage
     for (const enemy of [...em.enemies]) {
         if (enemy.burnDamage && enemy.burnDamage > 0) {
@@ -1842,6 +1839,8 @@ async function runEnemyPhase() {
     }
 
     if (gameOver) return;
+
+    if (player.warpShieldTurns > 0) player.warpShieldTurns--;
 
     // Guardian respawn: breaches/maw spawn guardians if none nearby
     for (const poi of world.pois) {
