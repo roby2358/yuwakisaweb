@@ -156,7 +156,15 @@ function drawCounter(cx, cy, color, label, hpPct, labelColor, stats) {
 // ================================================================
 
 function refreshVision() {
-    world.updateVision(player.q, player.r, player.vision(), !!player.equipped('reveal_maw'));
+    const hasCompass = !!player.equipped('reveal_maw');
+    const unraveler = em.enemies.find(e => e.type === ENEMY_TYPE.UNRAVELER);
+    // Compass points to the Unraveler while it lives, otherwise to the Maw
+    world.updateVision(player.q, player.r, player.vision(), hasCompass && !unraveler);
+    if (hasCompass && unraveler) {
+        const key = hexKey(unraveler.q, unraveler.r);
+        world.revealed.add(key);
+        world.visible.add(key);
+    }
 }
 
 // ================================================================
@@ -288,6 +296,25 @@ function dealDamageToPlayer(damage, source, isSkillDamage, opts = {}) {
 function killEnemy(enemy, opts = {}) {
     const def = em.getDef(enemy.type);
     em.remove(enemy);
+    // Unraveler hunt: first kill respawns it in place of a random chaos unit
+    if (enemy.type === ENEMY_TYPE.UNRAVELER) {
+        const chaosTargets = em.enemies.filter(e => em.getDef(e.type)?.chaosSpawned);
+        if (chaosTargets.length > 0) {
+            const target = Rando.choice(chaosTargets);
+            const tq = target.q, tr = target.r;
+            em.remove(target);
+            const respawned = em.spawn(ENEMY_TYPE.UNRAVELER, tq, tr, tq, tr);
+            if (respawned) {
+                respawned.noSpawn = true;
+                const maw = world.pois.find(p => p.type === POI.MAW);
+                if (maw) maw.guardianId = respawned.id;
+                logCombat('The Unraveler reforms within another chaos spawn!', 'log-dmg');
+            }
+            gainXP(def.xp);
+            return;
+        }
+        showDialog('The Unraveler Defeated', '<p>You have hunted The Unraveler to its last form. Now use Restore near the Maw to seal it forever.</p>', [{ label: 'OK', cls: 'btn-primary' }]);
+    }
     victory.enemiesDefeated++;
     if (enemy.type === ENEMY_TYPE.BREACH_GUARDIAN) victory.guardiansDefeated++;
     if (opts.byGarrison) victory.garrisonKills++;
@@ -1654,6 +1681,7 @@ function enemyAttacks(enemy, def, prefersRanged, newDist) {
 
 function tryBossSpawn(enemy, def, occupied) {
     if (def.behavior !== 'boss') return;
+    if (enemy.noSpawn) return;
     if (enemy.turnsSinceSpawn === 0) return;
     if (!Rando.bool(def.spawnChance ?? 0.16)) return;
     const adj = hexNeighbors(enemy.q, enemy.r).filter(n => {
