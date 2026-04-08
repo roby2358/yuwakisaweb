@@ -157,7 +157,7 @@ function drawCounter(cx, cy, color, label, hpPct, labelColor, stats) {
 
 function refreshVision() {
     const hasCompass = !!player.equipped('reveal_maw');
-    const unraveler = em.enemies.find(e => e.type === ENEMY_TYPE.UNRAVELER);
+    const unraveler = em && em.enemies.find(e => e.type === ENEMY_TYPE.UNRAVELER);
     // Compass points to the Unraveler while it lives, otherwise to the Maw
     world.updateVision(player.q, player.r, player.vision(), hasCompass && !unraveler);
     if (hasCompass && unraveler) {
@@ -2144,6 +2144,7 @@ function centerOn(hex) {
 function render() {
     ctx.fillStyle = '#111';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (!em || !world || !player) return;
 
     // Terrain
     for (const [key, hex] of world.hexes) {
