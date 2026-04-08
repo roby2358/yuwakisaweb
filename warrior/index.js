@@ -2249,7 +2249,8 @@ function render() {
         const { x, y } = hexToScreen(enemy.q, enemy.r);
         const color = enemyColor(enemy.type);
         const effMaxHp = enemyEffectiveMaxHp(enemy);
-        drawCounter(x, y, color, def.label, enemy.hp / effMaxHp, null, { atk: enemyMeleeAttack(enemy, def), def: enemyDefense(enemy, def), mov: def.speed || 1 });
+        const chaosLabelColor = (def.chaosSpawned && enemy.type !== ENEMY_TYPE.PHASE_WRAITH) ? '#d580ff' : null;
+        drawCounter(x, y, color, def.label, enemy.hp / effMaxHp, chaosLabelColor, { atk: enemyMeleeAttack(enemy, def), def: enemyDefense(enemy, def), mov: def.speed || 1 });
     }
 
     // Player
@@ -2383,12 +2384,12 @@ function enemyColor(type) {
     const def = em.getDef(type);
     if (def && def.color) return def.color;
     switch (type) {
-        case ENEMY_TYPE.VOID_STALKER: return '#cc3333';
-        case ENEMY_TYPE.BREACH_CRAWLER: return '#8B4513';
-        case ENEMY_TYPE.FLUX_ARCHER: return '#4a90d9';
+        case ENEMY_TYPE.VOID_STALKER: return '#2a2a2a';
+        case ENEMY_TYPE.BREACH_CRAWLER: return '#3a3a3a';
+        case ENEMY_TYPE.FLUX_ARCHER: return '#333333';
         case ENEMY_TYPE.PHASE_WRAITH: return '#9b59b6';
-        case ENEMY_TYPE.BREACH_GUARDIAN: return '#e040fb';
-        case ENEMY_TYPE.UNRAVELER: return '#ff1744';
+        case ENEMY_TYPE.BREACH_GUARDIAN: return '#242424';
+        case ENEMY_TYPE.UNRAVELER: return '#1a1a1a';
         default: return '#cc3333';
     }
 }
