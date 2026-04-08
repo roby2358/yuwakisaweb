@@ -2597,10 +2597,11 @@ function updateSkillsPanel() {
                 && player.aether >= skill.cost
                 && !player.usedSkillsThisTurn.has(skillId)
                 && !checkSkillUsage(skill);
-            const nameStyle = isUsable ? 'cursor:pointer;color:#7c4dff;border:1px solid #7c4dff;border-radius:3px;padding:1px 6px;background:rgba(124,77,255,0.15)' : '';
-            html += `<div class="skill-entry" style="cursor:pointer;opacity:0.7" data-equip="${skillId}">
-                <div><span class="s-name" ${isUsable ? `data-use="${skillId}" style="${nameStyle}"` : ''}>${skill.name}</span> <span class="s-cost">(${skill.cost} AE)</span></div>
-                <div class="s-desc">${skill.desc}</div>
+            const nameStyle = isUsable ? 'cursor:pointer;color:#b388ff;border:1px solid #7c4dff;border-radius:3px;padding:1px 6px;background:rgba(124,77,255,0.15)' : '';
+            const dim = 'opacity:0.7';
+            html += `<div class="skill-entry" style="cursor:pointer" data-equip="${skillId}">
+                <div><span class="s-name" ${isUsable ? `data-use="${skillId}" style="${nameStyle}"` : `style="${dim}"`}>${skill.name}</span> <span class="s-cost" style="${dim}">(${skill.cost} AE)</span></div>
+                <div class="s-desc" style="${dim}">${skill.desc}</div>
             </div>`;
         }
     }
