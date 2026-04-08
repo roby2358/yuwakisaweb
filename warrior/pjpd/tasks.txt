@@ -5,6 +5,13 @@ Created: 2026-04-02T20:11:47Z
 Updated: 2026-04-02T20:11:47Z
 Audit the inventory system and magic item generation pipeline. Clean up how items are created, stored, equipped, and displayed. Look for edge cases, inconsistencies, or unclear flows — especially around magic item properties, stacking, and equipment slot management.
 ----
+Priority:   70
+Status: ToDo
+ID: vit-def-5rar
+Created: 2026-04-08T14:36:27Z
+Updated: 2026-04-08T14:36:27Z
+bug: vitality 5 doesn't give +1 def
+----
 Priority:   50
 Status: ToDo
 ID: gold-sink-e4ya
