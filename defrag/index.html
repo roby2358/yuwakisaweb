@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DEFRAG</title>
+<link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <div class="frame">
+    <header>
+      <h1>DEFRAG<span class="sub">.exe</span></h1>
+      <div class="hud">
+        <div class="stat"><label>TURN</label><span id="turn">1</span></div>
+        <div class="stat"><label>SEEK</label><span id="seek">20</span>/20</div>
+        <div class="stat"><label>SCORE</label><span id="score">0</span></div>
+        <div class="stat"><label>ARCHIVED</label><span id="archived">0/4</span></div>
+        <div class="stat mft"><label>MFT</label><span id="mft">5</span>/5</div>
+      </div>
+    </header>
+
+    <main>
+      <canvas id="grid" width="640" height="320"></canvas>
+      <aside class="sidebar">
+        <h2>FILES</h2>
+        <ul id="file-list"></ul>
+      </aside>
+    </main>
+
+    <div class="controls">
+      <button id="end-turn">END TURN</button>
+      <button id="restart">NEW DISK</button>
+      <div class="message" id="message">Click a sector, then click another to swap. Cost = distance.</div>
+    </div>
+
+    <div class="legend">
+      <div><span class="box empty"></span>Free</div>
+      <div><span class="box system"></span>System</div>
+      <div><span class="box bad"></span>Corrupted</div>
+      <div><span class="box mft"></span>MFT</div>
+      <div><span class="box defragged"></span>Defragged</div>
+      <div><span class="box fresh"></span>Fresh</div>
+    </div>
+  </div>
+  <script type="module" src="index.js"></script>
+</body>
+</html>
