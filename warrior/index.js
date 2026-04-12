@@ -18,6 +18,7 @@ import { Player } from './player.js';
 import { GameWorld } from './world.js';
 import { EnemyManager } from './enemies.js';
 import { Victory } from './victory.js';
+import { Sound } from './sound.js';
 
 // ---- Display constants ----
 const COUNTER_SIZE = 28;
@@ -56,6 +57,7 @@ function changePhase(p) { phase = p; }
 let gameOver = false;
 let gameWon = false;
 let victory = new Victory();
+const sound = new Sound();
 let endTurnResolve = null;  // promise resolver for game loop
 let gameGeneration = 0;     // incremented on new game to stop old loops
 let targeting = null;       // { skill, validHexes: Set } or null
@@ -244,6 +246,7 @@ function dealDamageToEnemy(enemy, damage, source, opts = {}) {
     enemy.hp -= dealt;
     victory.damageDealt += dealt;
     logCombat(`${source}: ${dealt} dmg to ${def.name}`, 'log-dmg');
+    sound.hitEnemy();
     const killed = enemy.hp <= 0;
     if (killed) killEnemy(enemy);
     return { dealt, killed };
@@ -269,6 +272,7 @@ function dealDamageToPlayer(damage, source, isSkillDamage, opts = {}) {
     player.hp -= dealt;
     victory.damageTaken += dealt;
     logCombat(`${source}: ${dealt} dmg to you`, 'log-dmg');
+    sound.hitPlayer();
 
     if (opts.attacker && !opts.isRanged) {
         const thornsItem = player.equipped('thorns');
@@ -276,6 +280,7 @@ function dealDamageToPlayer(damage, source, isSkillDamage, opts = {}) {
             const thornDmg = thornsItem.thornsDamage || Math.round(dealt * (thornsItem.thornsPercent || 50) / 100);
             opts.attacker.hp -= thornDmg;
             logCombat(`Thorns: ${thornDmg} dmg to ${em.getDef(opts.attacker.type).name}`, 'log-dmg');
+            sound.hitEnemy();
             if (opts.attacker.hp <= 0) killEnemy(opts.attacker);
         }
         const burnAura = player.equipped('burning_aura');
@@ -311,12 +316,19 @@ function killEnemy(enemy, opts = {}) {
                 logCombat('The Unraveler reforms within another chaos spawn!', 'log-dmg');
             }
             gainXP(def.xp);
+            sound.killEnemy();
             return;
         }
         showDialog('The Unraveler Defeated', '<p>You have hunted The Unraveler to its last form. Now use Restore near the Maw to seal it forever.</p>', [{ label: 'OK', cls: 'btn-primary' }]);
+        sound.victory(2);
     }
     victory.enemiesDefeated++;
-    if (enemy.type === ENEMY_TYPE.BREACH_GUARDIAN) victory.guardiansDefeated++;
+    if (enemy.type === ENEMY_TYPE.BREACH_GUARDIAN) {
+        victory.guardiansDefeated++;
+        sound.victory();
+    } else if (enemy.type !== ENEMY_TYPE.UNRAVELER) {
+        sound.killEnemy();
+    }
     if (opts.byGarrison) victory.garrisonKills++;
     const goldGain = Rando.int(1, 5) + (def.gold || 0);
     player.gold += goldGain;
@@ -521,6 +533,7 @@ function rangedAttack(targetQ, targetR) {
         const actualDmg = Math.max(1, dmg);
         enemy.hp -= actualDmg;
         logCombat(`Ranged: ${actualDmg} dmg to ${em.getDef(enemy.type).name}`, 'log-dmg');
+        sound.hitEnemy();
         if (enemy.hp <= 0) killEnemy(enemy);
     } else if (wep && wep.special === 'double_shot') {
         dealDamageToEnemy(enemy, dmg, 'Shot 1', rangedOpts);
@@ -553,6 +566,7 @@ function rangedAttack(targetQ, targetR) {
             if (!splashTarget) continue;
             splashTarget.hp -= sDmg;
             logCombat(`Splash: ${sDmg} dmg to ${em.getDef(splashTarget.type).name}`, 'log-dmg');
+            sound.hitEnemy();
             if (splashTarget.hp <= 0) killEnemy(splashTarget);
         }
     }
@@ -660,6 +674,7 @@ function chainBounce(skillName, dmg, startQ, startR, bounceCount, bounceRange, h
             const actualDmg = Math.max(1, dmg - eDef);
             closest.hp -= actualDmg;
             logCombat(`${skillName} chain: ${actualDmg} dmg to ${closestDef.name}`, 'log-dmg');
+            sound.hitEnemy();
             if (closest.hp <= 0) killEnemy(closest);
         }
         curQ = closest.q; curR = closest.r;
@@ -947,6 +962,7 @@ function executeSkill(skillId, targetQ, targetR) {
             const actualDmg = Math.max(1, rolled - eDef);
             enemy.hp -= actualDmg;
             logCombat(`Siphon Strike: ${actualDmg} dmg to ${em.getDef(enemy.type).name}`, 'log-dmg');
+            sound.hitEnemy();
             player.hp = Math.min(player.maxHP(), player.hp + actualDmg);
             logCombat(`+${actualDmg} HP (siphon)`, 'log-heal');
             if (enemy.hp <= 0) killEnemy(enemy);
@@ -959,6 +975,7 @@ function executeSkill(skillId, targetQ, targetR) {
             const actualDmg = Math.max(1, dmg);
             enemy.hp -= actualDmg;
             logCombat(`Piercing Shot: ${actualDmg} dmg to ${em.getDef(enemy.type).name}`, 'log-dmg');
+            sound.hitEnemy();
             if (enemy.hp <= 0) killEnemy(enemy);
             break;
         }
@@ -1445,6 +1462,7 @@ function movePlayer(q, r) {
     player.r = r;
     player.mp -= cost;
     player.movedThisTurn = true;
+    sound.tick();
     player.hexesMovedThisTurn += cost;
     refreshVision();
     checkHexEntry();
@@ -1561,6 +1579,7 @@ function closeBreach(poi) {
     world.closeBreach(poi);
     victory.breachesSealed++;
     logCombat(`Breach sealed! (${world.breachesClosed} total)`, 'log-info');
+    sound.victory(poi.type === POI.MAW ? 2 : 1);
     render();
 }
 
@@ -1650,6 +1669,7 @@ function doEnemyMelee(enemy, def) {
         const actualDmg = Math.max(1, rolled - eDef);
         enemy.hp -= actualDmg;
         logCombat(`Counter Mastery: ${actualDmg} dmg!`, 'log-dmg');
+        sound.hitEnemy();
         if (enemy.hp <= 0) { killEnemy(enemy); }
     }
 }
@@ -3267,6 +3287,7 @@ function logCombat(msg, cls) {
 // ================================================================
 
 canvas.addEventListener('mousedown', e => {
+    sound.init();
     if (e.button === 2) {
         panning = true;
         panStartX = e.clientX; panStartY = e.clientY;
