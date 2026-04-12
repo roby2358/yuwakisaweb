@@ -653,7 +653,17 @@ function renderHud() {
 function renderFileList() {
   const ul = document.getElementById('file-list');
   ul.innerHTML = '';
-  for (const file of state.files) ul.appendChild(renderFileRow(file));
+  for (const file of sortedFiles()) ul.appendChild(renderFileRow(file));
+}
+
+// Open (active) files first, then archived/lost. Alphabetical within each group.
+function sortedFiles() {
+  const rank = (f) => (f.archived || f.lost ? 1 : 0);
+  return [...state.files].sort((a, b) => {
+    const dr = rank(a) - rank(b);
+    if (dr !== 0) return dr;
+    return a.name.localeCompare(b.name);
+  });
 }
 
 function renderFileRow(file) {
