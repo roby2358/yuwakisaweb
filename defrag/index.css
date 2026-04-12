@@ -122,6 +122,8 @@ main {
 .sidebar {
   flex: 1;
   min-width: 240px;
+  max-height: 320px;
+  overflow-y: auto;
   background: var(--panel);
   border: 1px solid var(--border);
   padding: 10px 14px;
@@ -262,3 +264,16 @@ button:hover {
 .box.bad       { background: var(--bad); }
 .box.mft       { background: var(--gold); }
 .box.defragged { background: transparent; border: 2px solid var(--text-bright); }
+
+/* ---------- Auto mode panel ---------- */
+
+#fill-btn, #auto-btn {
+  border-color: var(--text-dim);
+  color: var(--text-dim);
+}
+
+#fill-btn:hover, #auto-btn:hover {
+  background: var(--text-dim);
+  color: var(--bg);
+}
+

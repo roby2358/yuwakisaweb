@@ -2,6 +2,7 @@
 
 import { ColorTheory } from './colortheory.js';
 import { Osnemes } from './osnemes.js';
+import { Auto } from './auto.js';
 
 // ---------- Config ----------
 const COLS = 32;
@@ -67,6 +68,7 @@ const state = {
   mftPos: null,
   selected: null,
   headPos: null,
+  autoMode: false,
   gameOver: false,
   outcome: null, // 'win' | 'partial' | 'loss'
   message: '',
@@ -112,6 +114,7 @@ function init() {
   state.mft = MFT_HP_MAX;
   state.selected = null;
   state.headPos = null; // set after MFT placement
+  state.autoMode = false;
   state.gameOver = false;
   state.outcome = null;
   state.message = 'Click a sector, then click another to swap. Head seeks cost vertical tracks only.';
@@ -236,15 +239,24 @@ function recomputeDefragStatus() {
   }
 }
 
-// A file is defragged when its blocks occupy consecutive sector indices
-// (index = y * COLS + x), which means a horizontal run that naturally
-// wraps from the right edge of one row to the left edge of the next.
+// A file is defragged when its blocks form a continuous run in reading
+// order (index = y * COLS + x). Locked cells (system, MFT) in the middle
+// of the run are allowed — the head just skips over them.
 function isContinuousRun(file) {
   const blocks = file.blocks;
   if (blocks.length <= 1) return true;
   const indices = blocks.map((b) => b.y * COLS + b.x).sort((a, b) => a - b);
   for (let i = 1; i < indices.length; i++) {
-    if (indices[i] !== indices[i - 1] + 1) return false;
+    let expected = indices[i - 1] + 1;
+    // Skip over any locked cells between the two blocks.
+    while (expected < indices[i]) {
+      const x = expected % COLS;
+      const y = Math.floor(expected / COLS);
+      const kind = state.grid[y][x].kind;
+      if (kind !== SYSTEM && kind !== MFT) break;
+      expected++;
+    }
+    if (indices[i] !== expected) return false;
   }
   return true;
 }
@@ -369,7 +381,9 @@ function checkEndGame() {
 function runTick() {
   if (state.gameOver) return;
 
-  for (let i = 0; i < WRITES_PER_TURN; i++) writeBlock();
+  if (!state.autoMode) {
+    for (let i = 0; i < WRITES_PER_TURN; i++) writeBlock();
+  }
   rebuildFileBlocks();
   const lostEvents = spreadCorruption();
   decayFreshness();
@@ -790,6 +804,38 @@ document.getElementById('restart').addEventListener('click', () => {
   init();
   render();
 });
+
+// ---------- Game API (for auto mode) ----------
+// Must be defined before auto wiring so `game` is available.
+export const game = {
+  state,
+  COLS,
+  ROWS,
+  CELL,
+  PALETTE_SIZE,
+  EMPTY,
+  FILE,
+  SYSTEM,
+  BAD,
+  MFT,
+  init,
+  render,
+  syncFiles,
+  findEmpty,
+  placeFileBlocks,
+  pickFileName,
+  trySwap,
+  seekHead,
+  at,
+  isMovable,
+  activeFiles,
+  archiveFile,
+};
+
+// ---------- Auto mode ----------
+const auto = new Auto(game);
+document.getElementById('fill-btn').addEventListener('click', () => auto.fill());
+document.getElementById('auto-btn').addEventListener('click', () => auto.defrag());
 
 // ---------- Start ----------
 init();
