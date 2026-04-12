@@ -26,12 +26,24 @@ const FRESH_DECAY_CHANCE = 0.10;
 const NEW_FILE_SIZE_MIN = 4;
 const NEW_FILE_SIZE_MAX = 20;
 
-// Generate a fresh, harmonious palette for each run. randomScheme returns
-// 5 colors sorted by luminance ascending — we drop the darkest so the file
-// blocks always read clearly against the dark canvas.
-function generateFileColors() {
-  const palette = ColorTheory.randomScheme(Math.random);
-  return palette.slice(1).map(([r, g, b]) => ColorTheory.rgbToHex(r, g, b));
+const PALETTE_SIZE = 24;
+
+// 16 hues evenly spaced around the wheel, shuffled. Each game gets a random
+// rotation so the starting four don't always look the same. Files pull colors
+// in order; on the 17th file we wrap and reuse.
+function generatePalette() {
+  const colors = [];
+  const offset = Math.random();
+  for (let i = 0; i < PALETTE_SIZE; i++) {
+    const h = (offset + i / PALETTE_SIZE) % 1;
+    const [r, g, b] = ColorTheory.hslToRgb(h, 0.7, 0.55);
+    colors.push(ColorTheory.rgbToHex(r, g, b));
+  }
+  for (let i = colors.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [colors[i], colors[j]] = [colors[j], colors[i]];
+  }
+  return colors;
 }
 
 const EMPTY = 'empty';
@@ -46,6 +58,7 @@ const DIRS = [[0, -1], [0, 1], [-1, 0], [1, 0]];
 const state = {
   grid: [],
   files: [],
+  palette: [],
   swapTotal: 0,
   turn: 1,
   score: 0,
@@ -91,6 +104,7 @@ function init() {
     Array.from({ length: COLS }, () => ({ kind: EMPTY }))
   );
   state.files = [];
+  state.palette = generatePalette();
   state.swapTotal = 0;
   state.turn = 1;
   state.score = 0;
@@ -111,12 +125,11 @@ function init() {
 
   placeRandom(SYSTEM, SYSTEM_COUNT);
 
-  const fileColors = generateFileColors();
   for (let i = 0; i < FILE_COUNT; i++) {
     state.files.push({
       id: i,
       name: pickFileName(),
-      color: fileColors[i],
+      color: state.palette[i % PALETTE_SIZE],
       blocks: [],
       archived: false,
       defragged: false,
@@ -422,7 +435,7 @@ function spawnNewFile() {
   const file = {
     id,
     name: pickFileName(),
-    color: generateNewFileColor(),
+    color: state.palette[id % PALETTE_SIZE],
     blocks: [],
     archived: false,
     defragged: false,
@@ -436,17 +449,19 @@ function spawnNewFile() {
 
 function pickFileName() {
   const used = new Set(state.files.map((f) => f.name));
+  const usedLetters = new Set(activeFiles().map((f) => f.name[0]));
+  for (let i = 0; i < 50; i++) {
+    const name = Osnemes.generate(Math.random);
+    if (used.has(name)) continue;
+    if (usedLetters.has(name[0])) continue;
+    return name;
+  }
+  // Fallback: accept a duplicate first letter rather than fail.
   for (let i = 0; i < 50; i++) {
     const name = Osnemes.generate(Math.random);
     if (!used.has(name)) return name;
   }
   return `tmp_${state.files.length + 1}.dat`;
-}
-
-function generateNewFileColor() {
-  const h = Math.random();
-  const [r, g, b] = ColorTheory.hslToRgb(h, 0.7, 0.55);
-  return ColorTheory.rgbToHex(r, g, b);
 }
 
 // For a defragged (continuous) file, the only valid write positions that
@@ -553,6 +568,15 @@ function drawCell(x, y) {
 
   ctx.fillStyle = color;
   ctx.fillRect(px, py, CELL, CELL);
+
+  if (c.kind === FILE) {
+    const file = state.files[c.fileId];
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    ctx.font = 'bold 11px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(file.name[0], px + CELL / 2, py + CELL / 2 + 1);
+  }
 
   if (c.kind === FILE && state.files[c.fileId].lost) {
     ctx.fillStyle = 'rgba(6, 9, 15, 0.6)';
