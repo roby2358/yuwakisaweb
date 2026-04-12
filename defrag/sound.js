@@ -24,6 +24,7 @@ export class Sound {
     this.osc = null;
     this.gain = null;
     this.lastRow = 0;
+    this.muted = false;
     this.freqs = buildScale(rows);
   }
 
@@ -53,7 +54,7 @@ export class Sound {
   }
 
   play(row) {
-    if (!this.ctx) return;
+    if (!this.ctx || this.muted) return;
     const delta = Math.abs(row - this.lastRow);
     this.lastRow = row;
     const freq = this.freqs[delta] || this.freqs[this.freqs.length - 1];
@@ -65,7 +66,7 @@ export class Sound {
   }
 
   archive() {
-    if (!this.ctx) return;
+    if (!this.ctx || this.muted) return;
     const t = this.ctx.currentTime;
     const hi = this.freqs[0] * Math.pow(2, -2 / 12);
     const lo = this.freqs[0] * Math.pow(2, -4 / 12);

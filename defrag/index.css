@@ -265,6 +265,16 @@ button:hover {
 .box.mft       { background: var(--gold); }
 .box.defragged { background: transparent; border: 2px solid var(--text-bright); }
 
+.sound-toggle {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.sound-toggle input { cursor: pointer; }
+
 /* ---------- Auto mode panel ---------- */
 
 #fill-btn, #auto-btn {

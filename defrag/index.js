@@ -812,6 +812,11 @@ document.getElementById('restart').addEventListener('click', () => {
   render();
 });
 
+const soundToggle = document.getElementById('sound-toggle');
+soundToggle.addEventListener('change', () => {
+  sound.muted = !soundToggle.checked;
+});
+
 // ---------- Game API (for auto mode) ----------
 // Must be defined before auto wiring so `game` is available.
 export const game = {
