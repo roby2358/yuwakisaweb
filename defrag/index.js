@@ -14,7 +14,7 @@ const FILE_SIZE_MAX = 7;
 const SPAWN_FILE_SIZE_MIN = 3;
 const SPAWN_FILE_SIZE_MAX = 5;
 const SYSTEM_COUNT = 20;
-const SWAP_PER_TICK = 20;
+const SWAP_PER_TICK = 5;
 const WRITES_PER_TURN = 1;
 const MFT_HP_MAX = 5;
 const CORRUPT_BASE = 0.20;
@@ -53,6 +53,7 @@ const state = {
   mft: MFT_HP_MAX,
   mftPos: null,
   selected: null,
+  headPos: null,
   gameOver: false,
   outcome: null, // 'win' | 'partial' | 'loss'
   message: '',
@@ -61,7 +62,6 @@ const state = {
 // ---------- Utils ----------
 const rand = (n) => Math.floor(Math.random() * n);
 const pick = (arr) => arr[rand(arr.length)];
-const manhattan = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
 const inBounds = (x, y) => x >= 0 && y >= 0 && x < COLS && y < ROWS;
 const at = (x, y) => state.grid[y][x];
 
@@ -97,15 +97,17 @@ function init() {
   state.archived = 0;
   state.mft = MFT_HP_MAX;
   state.selected = null;
+  state.headPos = null; // set after MFT placement
   state.gameOver = false;
   state.outcome = null;
-  state.message = 'Click a sector, then click another to swap. Every 20 units of movement advances the disk.';
+  state.message = 'Click a sector, then click another to swap. Head seeks cost vertical tracks only.';
 
   // MFT at center
   const mx = Math.floor(COLS / 2);
   const my = Math.floor(ROWS / 2);
   state.grid[my][mx] = { kind: MFT };
   state.mftPos = { x: mx, y: my };
+  state.headPos = { x: mx, y: my };
 
   placeRandom(SYSTEM, SYSTEM_COUNT);
 
@@ -243,14 +245,21 @@ function trySwap(a, b) {
   const cb = at(b.x, b.y);
   if (!isMovable(ca) || !isMovable(cb)) return { ok: false, reason: 'locked' };
   if (ca.kind === EMPTY && cb.kind === EMPTY) return { ok: false, reason: 'no-op' };
-  const cost = manhattan(a, b);
   state.grid[a.y][a.x] = cb;
   state.grid[b.y][b.x] = ca;
   markFreshAround(a);
   markFreshAround(b);
   syncFiles();
-  advanceClock(cost);
-  return { ok: true, cost };
+  return { ok: true };
+}
+
+// Move the read/write head to (x, y). Cost = vertical distance only — moving
+// within a track (horizontally) is free, just like a real disk drive.
+function seekHead(x, y) {
+  const cost = Math.abs(y - state.headPos.y);
+  state.headPos = { x, y };
+  if (cost > 0) advanceClock(cost);
+  return cost;
 }
 
 function advanceClock(cost) {
@@ -512,6 +521,12 @@ function render() {
     if (file.defragged) drawDefragOutline(file);
   }
 
+  // Head position — silver border.
+  const hp = state.headPos;
+  ctx.strokeStyle = '#c0c0c0';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(hp.x * CELL + 1, hp.y * CELL + 1, CELL - 2, CELL - 2);
+
   if (state.selected) {
     const { x, y } = state.selected;
     ctx.strokeStyle = '#fff';
@@ -711,16 +726,20 @@ canvas.addEventListener('click', (e) => {
   const x = Math.floor(px / CELL);
   const y = Math.floor(py / CELL);
   if (!inBounds(x, y)) return;
-  const cell = at(x, y);
+
+  // Every click seeks the head — vertical distance costs tracks.
+  const seekCost = seekHead(x, y);
+  if (state.gameOver) { render(); return; }
 
   if (!state.selected) {
+    const cell = at(x, y);
     if (!isMovable(cell)) {
-      state.message = 'Locked sector — cannot move that.';
+      state.message = `Locked sector — cannot move that. Seek ${seekCost} tracks.`;
       render();
       return;
     }
     state.selected = { x, y };
-    state.message = `Source (${x},${y}) — click destination.`;
+    state.message = `Source (${x},${y}) — seek ${seekCost} tracks. Click destination.`;
     render();
     return;
   }
@@ -731,14 +750,14 @@ canvas.addEventListener('click', (e) => {
   state.selected = null;
 
   if (result.ok && !state.gameOver) {
-    state.message = `Swap cost ${result.cost}. Clock ${state.swapTotal % SWAP_PER_TICK}/${SWAP_PER_TICK}.`;
+    state.message = `Swapped — seek ${seekCost} tracks. Clock ${state.swapTotal % SWAP_PER_TICK}/${SWAP_PER_TICK}.`;
   } else if (!result.ok) {
     const reasons = {
       same: 'Deselected.',
       locked: 'Destination locked.',
       'no-op': 'Both sectors empty.',
     };
-    state.message = reasons[result.reason] || 'Swap failed.';
+    state.message = `${reasons[result.reason] || 'Swap failed.'} Seek ${seekCost} tracks.`;
   }
   render();
 });
