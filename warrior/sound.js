@@ -6,7 +6,8 @@
 import { Rando } from './rando.js';
 
 const PENTATONIC = [0, 2, 4, 7, 9];
-const BASE_FREQ = 32;
+const BASE_FREQ = 64;
+const FANFARE_FREQ = 220; // A3 — original pitch for victory flourishes
 const VOLUME = 0.08;
 const NOISE_VOLUME = 0.06;
 const NOTE_DUR = 0.10; // 100ms
@@ -24,20 +25,21 @@ function buildPulseCoeffs(n) {
     return { real, imag };
 }
 
-function buildScale(count) {
+function buildScale(base, count) {
     const freqs = [];
     for (let i = 0; i < count; i++) {
         const octave = Math.floor(i / PENTATONIC.length);
         const degree = i % PENTATONIC.length;
         const semitones = octave * 12 + PENTATONIC[degree];
-        freqs.push(BASE_FREQ * Math.pow(2, semitones / 12));
+        freqs.push(base * Math.pow(2, semitones / 12));
     }
     return freqs;
 }
 
-const SCALE = buildScale(8);
-const LOW = SCALE.slice(0, 4);   // enemy hits player
-const HIGH = SCALE.slice(4, 8);  // player hits enemy
+const SCALE = buildScale(BASE_FREQ, 8);
+const LOW = SCALE.slice(0, 4);    // enemy hits player
+const HIGH = SCALE.slice(4, 8);   // player hits enemy
+const FANFARE = buildScale(FANFARE_FREQ, 8).slice(4, 8); // victory flourish
 
 export class Sound {
     constructor() {
@@ -131,7 +133,7 @@ export class Sound {
     victory(scale = 1) {
         if (!this.ctx || this.muted) return;
         const notes = [];
-        for (let i = 0; i < 5; i++) notes.push(Rando.choice(HIGH));
+        for (let i = 0; i < 5; i++) notes.push(Rando.choice(FANFARE));
         let t = this.ctx.currentTime;
         const gap = (NOTE_DUR + 0.02) * scale;
         for (let i = 0; i < 5; i++) {

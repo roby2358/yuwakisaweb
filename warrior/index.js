@@ -160,12 +160,13 @@ function drawCounter(cx, cy, color, label, hpPct, labelColor, stats) {
 function refreshVision() {
     const hasCompass = !!player.equipped('reveal_maw');
     const unraveler = em && em.enemies.find(e => e.type === ENEMY_TYPE.UNRAVELER);
-    // Compass points to the Unraveler while it lives, otherwise to the Maw
+    // Compass reveals the Unraveler while it lives, otherwise the Maw
     world.updateVision(player.q, player.r, player.vision(), hasCompass && !unraveler);
     if (hasCompass && unraveler) {
-        const key = hexKey(unraveler.q, unraveler.r);
-        world.revealed.add(key);
-        world.visible.add(key);
+        for (const h of hexesInRange(unraveler.q, unraveler.r, 1)) {
+            const key = hexKey(h.q, h.r);
+            if (world.hexes.has(key)) { world.revealed.add(key); world.visible.add(key); }
+        }
     }
 }
 
@@ -2399,6 +2400,17 @@ function renderWorldMap() {
         ctx.fillText(symbol, mx, my);
     }
 
+    // Draw enemies on visible hexes
+    const enemySize = Math.max(2, miniSize * 0.5);
+    for (const enemy of em.enemies) {
+        if (!world.visible.has(hexKey(enemy.q, enemy.r))) continue;
+        const { x: ex, y: ey } = mini(enemy.q, enemy.r);
+        ctx.fillStyle = enemyColor(enemy.type);
+        ctx.beginPath();
+        ctx.arc(ex, ey, enemySize, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
     // Draw player
     const { x: px, y: py } = mini(player.q, player.r);
     const pr = Math.max(3, miniSize * 0.8);
@@ -2781,7 +2793,7 @@ function itemStatLine(item) {
             mp_bonus: `+${item.mpBonus} MP`,
             opportunist: '25% gold on kill',
             ranger_defense: `+${item.rangerBonus} def on forest/hills`,
-            reveal_maw: 'Reveals Maw',
+            reveal_maw: 'Reveals Unraveler',
             revive: `+${item.reviveHp} HP +${item.reviveAether} AE/turn`,
             soul_harvest: `+${item.soulHarvestXP} XP/kill`,
             strider: 'Rough terrain 1 MP',

@@ -12,12 +12,47 @@ Created: 2026-04-08T14:36:27Z
 Updated: 2026-04-08T14:36:27Z
 bug: vitality 5 doesn't give +1 def
 ----
+Priority:   60
+Status: ToDo
+ID: warrior-uwsu
+Created: 2026-04-12T20:27:49Z
+Updated: 2026-04-12T20:27:49Z
+Verify that triple_strike special works correctly for both melee and ranged weapons — check that all three hits land, damage is calculated properly, and kill detection happens after each hit.
+----
+Priority:   60
+Status: ToDo
+ID: warrior-e3by
+Created: 2026-04-12T20:33:06Z
+Updated: 2026-04-12T20:33:06Z
+The Maw should spawn guardian enemies using the same respawn logic as breaches, even after the Unraveler has been defeated. Currently guardians may not respawn at the Maw once the Unraveler is gone.
+----
 Priority:   50
 Status: ToDo
 ID: gold-sink-e4ya
 Created: 2026-03-31T01:38:16Z
 Updated: 2026-03-31T01:38:16Z
 Add a gold sink or reward for accumulating 1000 gold. Could be a powerful item, a special upgrade, unlocking an ability, or a world event. Give the player something meaningful to spend or celebrate when hitting 1000g.
+----
+Priority:   50
+Status: ToDo
+ID: warrior-g356
+Created: 2026-04-12T20:20:39Z
+Updated: 2026-04-12T20:20:39Z
+When the player tries to Restore the Maw but the Unraveler is still alive, show a dialog saying the Unraveler must be defeated first before the Maw can be sealed.
+----
+Priority:   50
+Status: ToDo
+ID: warrior-nzrr
+Created: 2026-04-12T20:26:23Z
+Updated: 2026-04-12T20:26:23Z
+When the Unraveler is defeated, show a dialog: if it reforms into another chaos spawn, say "The Unraveler has jumped to another host!"; if it's the final defeat (no chaos spawns left), say "The Unraveler is vanquished! Now close the Maw!"
+----
+Priority:   50
+Status: ToDo
+ID: warrior-wwg4
+Created: 2026-04-12T20:28:57Z
+Updated: 2026-04-12T20:28:57Z
+Add a use for XP after reaching max level 10. Possible idea: spend accumulated XP to heal/restore chaos-corrupted hexes, giving endgame players something meaningful to do with excess XP.
 ----
 Priority:   90
 Status: Done
