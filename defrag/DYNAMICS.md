@@ -42,7 +42,10 @@ Each turn, the MFT takes damage equal to the number of bad sectors orthogonally 
 
 ## Secondary Mechanics
 
-- **OS Writes** — Each end of turn, 2 write events happen. Each write has a 1/3 chance of dropping a new **system (locked) sector** at a random empty cell — simulating the OS flushing system data and permanently eating a square of terrain. Otherwise it's a file write: a random non-archived file gets a new block, adjacent to its cluster if defragged, random if fragmented. This is the pressure that punishes inaction, and over time the disk also gets measurably more locked — longer-running games develop "terrain" organically.
+- **OS Writes** — Each tick runs one write event, which rolls a 4-way split:
+  - **1/4**: a new **locked system sector** at a random empty cell. The OS is flushing system data and eats a square of terrain.
+  - **1/2**: a **new block appended to an existing active file**, extending the cluster's run if defragged or landing randomly if fragmented.
+  - **1/4**: a **new-file check**. Sample a random active file; the chance of actually spawning a new file is linear in that file's current size — 0% at size 4, 100% at size 20. If the roll succeeds, a new file is created: pick a distinct filesystem name, generate a distinct bright color (random hue, saturation 0.7, luminance 0.55), add it to the file list, seed it with a single starting block at a random empty cell, and continue. A new 1-block file is trivially "defragged" and could be archived immediately for a quick 100 points and a small cleanse — but each new file is also another objective that must eventually resolve (archive or lose) for the game to end, so spawning files extends the game and raises the final-score ceiling. The math creates a feedback loop: large files breed more files, so letting a file balloon past size 12 or so is a strategic tradeoff between the bigger archive payout and the new work it will generate. Longer-running games organically develop both terrain and fresh objectives.
 - **System Sectors** — Immobile gray blocks scattered at start. Terrain. They break line-of-defrag, block corruption from spreading into them, and force the player to route around them.
 - **Initial Bad Sector** — One bad sector spawns on an edge at start. This is the seed of corruption; it is also your revenge target — the thing that killed the file you lost.
 
@@ -66,7 +69,7 @@ Each turn, the MFT takes damage equal to the number of bad sectors orthogonally 
 - Files: 4, each 4–7 blocks at start (uniform random per file)
 - System obstacles: 20
 - Tick threshold: one tick every 20 units of accumulated movement (no per-turn budget; swaps are always allowed)
-- Writes per turn: 2
+- Writes per tick: 1 (each has a 1/3 chance of being a new system-lock instead of a file block)
 - Corruption spread: 20% base, +5% every 5 turns
 - Freshness decay: 10% per fresh sector per turn
 - MFT integrity: 5

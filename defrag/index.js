@@ -10,15 +10,28 @@ const CELL = 20;
 const FILE_COUNT = 4;
 const FILE_SIZE_MIN = 4;
 const FILE_SIZE_MAX = 7;
+const SPAWN_FILE_SIZE_MIN = 3;
+const SPAWN_FILE_SIZE_MAX = 5;
 const SYSTEM_COUNT = 20;
 const SWAP_PER_TICK = 20;
-const WRITES_PER_TURN = 2;
+const WRITES_PER_TURN = 1;
 const MFT_HP_MAX = 5;
 const CORRUPT_BASE = 0.20;
 const CORRUPT_GROWTH_PER_5 = 0.05;
 const FRESH_DECAY_CHANCE = 0.10;
 
-const FILE_NAMES = ['winlogon.exe', 'kernel32.dll', 'boot.cfg', 'user.dat'];
+const FILE_NAME_POOL = [
+  'winlogon.exe', 'kernel32.dll', 'boot.cfg', 'user.dat',
+  'ntoskrnl.exe', 'hal.dll', 'system.ini', 'config.sys',
+  'autoexec.bat', 'mshtml.dll', 'shell32.dll', 'win.ini',
+  'pagefile.sys', 'hiberfil.sys', 'comctl32.dll', 'gdi32.dll',
+  'advapi.dll', 'registry.dat', 'driver.sys', 'ole32.dll',
+];
+
+// New-file spawn chance scales linearly with a sampled file's size:
+// size <= NEW_FILE_SIZE_MIN → 0% chance, size >= NEW_FILE_SIZE_MAX → 100%.
+const NEW_FILE_SIZE_MIN = 4;
+const NEW_FILE_SIZE_MAX = 20;
 
 // Generate a fresh, harmonious palette for each run. randomScheme returns
 // 5 colors sorted by luminance ascending — we drop the darkest so the file
@@ -59,6 +72,26 @@ const manhattan = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
 const inBounds = (x, y) => x >= 0 && y >= 0 && x < COLS && y < ROWS;
 const at = (x, y) => state.grid[y][x];
 
+// In-bounds orthogonal neighbors of (x, y) as {x, y} points.
+function orthogonalNeighbors(x, y) {
+  const out = [];
+  for (const [dx, dy] of DIRS) {
+    const nx = x + dx;
+    const ny = y + dy;
+    if (inBounds(nx, ny)) out.push({ x: nx, y: ny });
+  }
+  return out;
+}
+
+// Files that haven't been archived or lost — the current pool of play targets.
+const activeFiles = () => state.files.filter((f) => !f.archived && !f.lost);
+
+// Whenever the grid changes, file.blocks and defragged status must re-sync.
+function syncFiles() {
+  rebuildFileBlocks();
+  recomputeDefragStatus();
+}
+
 // ---------- Init ----------
 function init() {
   state.grid = Array.from({ length: ROWS }, () =>
@@ -87,29 +120,15 @@ function init() {
   for (let i = 0; i < FILE_COUNT; i++) {
     state.files.push({
       id: i,
-      name: FILE_NAMES[i],
+      name: pickFileName(),
       color: fileColors[i],
       blocks: [],
       archived: false,
       defragged: false,
       lost: false,
     });
-    let prev = findEmpty();
-    if (!prev) break;
-    state.grid[prev.y][prev.x] = { kind: FILE, fileId: i };
     const size = FILE_SIZE_MIN + rand(FILE_SIZE_MAX - FILE_SIZE_MIN + 1);
-    for (let b = 1; b < size; b++) {
-      let next;
-      if (Math.random() < 0.50) {
-        next = nextEmptyInReadingOrder(prev);
-        if (!next) next = findEmpty();
-      } else {
-        next = findEmpty();
-      }
-      if (!next) break;
-      state.grid[next.y][next.x] = { kind: FILE, fileId: i };
-      prev = next;
-    }
+    placeFileBlocks(i, size);
   }
 
   // Initial bad sector on an edge (not on a locked cell)
@@ -128,8 +147,7 @@ function init() {
     state.grid[p.y][p.x] = { kind: BAD };
   }
 
-  rebuildFileBlocks();
-  recomputeDefragStatus();
+  syncFiles();
 }
 
 function placeRandom(kind, count) {
@@ -153,6 +171,29 @@ function findEmpty() {
     }
   }
   return empties.length ? pick(empties) : null;
+}
+
+// Place `size` blocks of the given fileId using the initial placement rule:
+// first block lands at a random empty cell, each subsequent block has a 50%
+// chance of taking the next empty cell in reading order (row-wrapping) and
+// a 50% chance of jumping to a random empty cell. Breaks early if the disk
+// runs out of empty space.
+function placeFileBlocks(fileId, size) {
+  let prev = findEmpty();
+  if (!prev) return;
+  state.grid[prev.y][prev.x] = { kind: FILE, fileId };
+  for (let b = 1; b < size; b++) {
+    let next;
+    if (Math.random() < 0.5) {
+      next = nextEmptyInReadingOrder(prev);
+      if (!next) next = findEmpty();
+    } else {
+      next = findEmpty();
+    }
+    if (!next) break;
+    state.grid[next.y][next.x] = { kind: FILE, fileId };
+    prev = next;
+  }
 }
 
 function nextEmptyInReadingOrder(start) {
@@ -214,8 +255,7 @@ function trySwap(a, b) {
   state.grid[b.y][b.x] = ca;
   markFreshAround(a);
   markFreshAround(b);
-  rebuildFileBlocks();
-  recomputeDefragStatus();
+  syncFiles();
   advanceClock(cost);
   return { ok: true, cost };
 }
@@ -231,13 +271,9 @@ function advanceClock(cost) {
 }
 
 function markFreshAround(p) {
-  const self = state.grid[p.y][p.x];
-  if (self.kind === EMPTY || self.kind === FILE) self.fresh = true;
-  for (const [dx, dy] of DIRS) {
-    const nx = p.x + dx;
-    const ny = p.y + dy;
-    if (!inBounds(nx, ny)) continue;
-    const c = state.grid[ny][nx];
+  const points = [p, ...orthogonalNeighbors(p.x, p.y)];
+  for (const pt of points) {
+    const c = state.grid[pt.y][pt.x];
     if (c.kind === EMPTY || c.kind === FILE) c.fresh = true;
   }
 }
@@ -257,18 +293,7 @@ function archiveFile(fileId) {
   if (file.archived || !file.defragged) return;
   const blockCount = file.blocks.length;
   state.score += blockCount * 100;
-  let cleansed = 0;
-  for (const b of file.blocks) {
-    for (const [dx, dy] of DIRS) {
-      const nx = b.x + dx;
-      const ny = b.y + dy;
-      if (!inBounds(nx, ny)) continue;
-      if (state.grid[ny][nx].kind === BAD) {
-        state.grid[ny][nx] = { kind: EMPTY };
-        cleansed++;
-      }
-    }
-  }
+  const cleansed = cleanseBadAround(file.blocks);
   for (const b of file.blocks) state.grid[b.y][b.x] = { kind: EMPTY };
   file.blocks = [];
   file.archived = true;
@@ -281,6 +306,21 @@ function archiveFile(fileId) {
   render();
 }
 
+// Remove every BAD sector orthogonally adjacent to any of the given blocks.
+// Returns the number of sectors cleansed.
+function cleanseBadAround(blocks) {
+  let count = 0;
+  for (const b of blocks) {
+    for (const n of orthogonalNeighbors(b.x, b.y)) {
+      if (state.grid[n.y][n.x].kind === BAD) {
+        state.grid[n.y][n.x] = { kind: EMPTY };
+        count++;
+      }
+    }
+  }
+  return count;
+}
+
 function checkEndGame() {
   if (state.gameOver) return;
   if (state.mft <= 0) {
@@ -289,14 +329,18 @@ function checkEndGame() {
     state.message = `MFT CORRUPTED — DISK LOST on turn ${state.turn}. Final: ${state.score} pts.`;
     return;
   }
-  const resolved = state.files.filter((f) => f.archived || f.lost);
-  if (resolved.length < state.files.length) return;
-  const archivedCount = state.files.filter((f) => f.archived).length;
-  const lostCount = state.files.filter((f) => f.lost).length;
+  let archivedCount = 0;
+  let lostCount = 0;
+  for (const f of state.files) {
+    if (f.archived) archivedCount++;
+    else if (f.lost) lostCount++;
+  }
+  const total = state.files.length;
+  if (archivedCount + lostCount < total) return;
   state.gameOver = true;
-  if (archivedCount === state.files.length) {
+  if (archivedCount === total) {
     state.outcome = 'win';
-    state.message = `PERFECT DEFRAG — all ${archivedCount} files archived in ${state.turn} turns. Final: ${state.score} pts.`;
+    state.message = `PERFECT DEFRAG — all ${total} files archived in ${state.turn} turns. Final: ${state.score} pts.`;
   } else if (archivedCount === 0) {
     state.outcome = 'loss';
     state.message = `DISK WIPED — every file lost. Final: ${state.score} pts.`;
@@ -314,9 +358,7 @@ function runTick() {
   rebuildFileBlocks();
   const lostEvents = spreadCorruption();
   decayFreshness();
-
-  rebuildFileBlocks();
-  recomputeDefragStatus();
+  syncFiles();
 
   const dmg = countAdjacentBadToMft();
   state.mft -= dmg;
@@ -335,13 +377,20 @@ function runTick() {
 }
 
 function writeBlock() {
-  if (Math.random() < 1 / 3) {
-    const pos = findEmpty();
-    if (!pos) return;
-    state.grid[pos.y][pos.x] = { kind: SYSTEM };
-    return;
-  }
-  const active = state.files.filter((f) => !f.archived && !f.lost);
+  const roll = Math.random();
+  if (roll < 0.25) writeSystemLock();          // 1/4: new locked system sector
+  else if (roll < 0.75) writeExistingFile();    // 1/2: extend an existing file
+  else maybeSpawnNewFile();                     // 1/4: roll for a new file
+}
+
+function writeSystemLock() {
+  const pos = findEmpty();
+  if (!pos) return;
+  state.grid[pos.y][pos.x] = { kind: SYSTEM };
+}
+
+function writeExistingFile() {
+  const active = activeFiles();
   if (!active.length) return;
   const file = pick(active);
   let pos = null;
@@ -352,6 +401,48 @@ function writeBlock() {
   if (!pos) pos = findEmpty();
   if (!pos) return;
   state.grid[pos.y][pos.x] = { kind: FILE, fileId: file.id };
+}
+
+// Chance of spawning a new file is linear in a randomly-sampled active file's
+// block count: NEW_FILE_SIZE_MIN → 0%, NEW_FILE_SIZE_MAX → 100%.
+function maybeSpawnNewFile() {
+  const active = activeFiles();
+  if (!active.length) return;
+  const sample = pick(active);
+  const span = NEW_FILE_SIZE_MAX - NEW_FILE_SIZE_MIN;
+  const p = Math.max(0, Math.min(1, (sample.blocks.length - NEW_FILE_SIZE_MIN) / span));
+  if (Math.random() < p) spawnNewFile();
+}
+
+function spawnNewFile() {
+  if (!findEmpty()) return;
+  const id = state.files.length;
+  const file = {
+    id,
+    name: pickFileName(),
+    color: generateNewFileColor(),
+    blocks: [],
+    archived: false,
+    defragged: false,
+    lost: false,
+  };
+  state.files.push(file);
+  const size = SPAWN_FILE_SIZE_MIN + rand(SPAWN_FILE_SIZE_MAX - SPAWN_FILE_SIZE_MIN + 1);
+  placeFileBlocks(id, size);
+  state.message = `New file spawned: ${file.name} (${size}b)`;
+}
+
+function pickFileName() {
+  const used = new Set(state.files.map((f) => f.name));
+  const available = FILE_NAME_POOL.filter((n) => !used.has(n));
+  if (available.length > 0) return pick(available);
+  return `tmp_${state.files.length + 1}.dat`;
+}
+
+function generateNewFileColor() {
+  const h = Math.random();
+  const [r, g, b] = ColorTheory.hslToRgb(h, 0.7, 0.55);
+  return ColorTheory.rgbToHex(r, g, b);
 }
 
 // For a defragged (continuous) file, the only valid write positions that
@@ -371,25 +462,6 @@ function runExtensions(file) {
   return out;
 }
 
-function adjacentEmptyOf(blocks) {
-  const out = [];
-  const seen = new Set();
-  for (const b of blocks) {
-    for (const [dx, dy] of DIRS) {
-      const nx = b.x + dx;
-      const ny = b.y + dy;
-      if (!inBounds(nx, ny)) continue;
-      const k = `${nx},${ny}`;
-      if (seen.has(k)) continue;
-      if (state.grid[ny][nx].kind === EMPTY) {
-        seen.add(k);
-        out.push({ x: nx, y: ny });
-      }
-    }
-  }
-  return out;
-}
-
 function spreadCorruption() {
   const chance = CORRUPT_BASE + Math.floor(state.turn / 5) * CORRUPT_GROWTH_PER_5;
   const bads = [];
@@ -401,14 +473,10 @@ function spreadCorruption() {
   const lostEvents = [];
   for (const b of bads) {
     if (Math.random() >= chance) continue;
-    const targets = [];
-    for (const [dx, dy] of DIRS) {
-      const nx = b.x + dx;
-      const ny = b.y + dy;
-      if (!inBounds(nx, ny)) continue;
-      const c = state.grid[ny][nx];
-      if ((c.kind === EMPTY || c.kind === FILE) && !c.fresh) targets.push({ x: nx, y: ny });
-    }
+    const targets = orthogonalNeighbors(b.x, b.y).filter((n) => {
+      const c = state.grid[n.y][n.x];
+      return (c.kind === EMPTY || c.kind === FILE) && !c.fresh;
+    });
     if (!targets.length) continue;
     const t = pick(targets);
     const victim = state.grid[t.y][t.x];
@@ -428,14 +496,7 @@ function spreadCorruption() {
 
 function countAdjacentBadToMft() {
   const { x, y } = state.mftPos;
-  let n = 0;
-  for (const [dx, dy] of DIRS) {
-    const nx = x + dx;
-    const ny = y + dy;
-    if (!inBounds(nx, ny)) continue;
-    if (state.grid[ny][nx].kind === BAD) n++;
-  }
-  return n;
+  return orthogonalNeighbors(x, y).filter((n) => state.grid[n.y][n.x].kind === BAD).length;
 }
 
 // ---------- Rendering ----------
@@ -584,7 +645,7 @@ function renderHud() {
   document.getElementById('turn').textContent = state.turn;
   document.getElementById('clock').textContent = state.swapTotal % SWAP_PER_TICK;
   document.getElementById('score').textContent = state.score;
-  document.getElementById('archived').textContent = `${state.archived}/${FILE_COUNT}`;
+  document.getElementById('archived').textContent = `${state.archived}/${state.files.length}`;
   document.getElementById('mft').textContent = state.mft;
   document.getElementById('message').textContent = state.message;
 }
@@ -592,49 +653,46 @@ function renderHud() {
 function renderFileList() {
   const ul = document.getElementById('file-list');
   ul.innerHTML = '';
-  for (const file of state.files) {
-    const li = document.createElement('li');
+  for (const file of state.files) ul.appendChild(renderFileRow(file));
+}
 
-    const sw = document.createElement('span');
-    sw.className = 'swatch';
-    sw.style.background = file.color;
-    sw.style.color = file.color;
-    li.appendChild(sw);
+function renderFileRow(file) {
+  const li = document.createElement('li');
 
-    const nm = document.createElement('span');
-    nm.className = 'fname';
-    nm.textContent = file.name;
-    li.appendChild(nm);
+  const sw = document.createElement('span');
+  sw.className = 'swatch';
+  sw.style.background = file.color;
+  sw.style.color = file.color;
+  li.appendChild(sw);
 
-    const st = document.createElement('span');
-    st.className = 'status';
-    if (file.archived) {
-      st.classList.add('archived');
-      st.textContent = 'ARCHIVED';
-      li.appendChild(st);
-    } else if (file.lost) {
-      st.classList.add('lost');
-      st.textContent = file.blocks.length > 0 ? `LOST ${file.blocks.length}b` : 'LOST';
-      li.appendChild(st);
-    } else if (file.blocks.length === 0) {
-      st.classList.add('lost');
-      st.textContent = 'LOST';
-      li.appendChild(st);
-    } else if (file.defragged) {
-      st.classList.add('defragged');
-      st.textContent = `${file.blocks.length}b OK`;
-      li.appendChild(st);
-      const btn = document.createElement('button');
-      btn.textContent = 'ARCHIVE';
-      btn.onclick = () => archiveFile(file.id);
-      li.appendChild(btn);
-    } else {
-      st.classList.add('fragmented');
-      st.textContent = `${file.blocks.length}b frag`;
-      li.appendChild(st);
-    }
-    ul.appendChild(li);
+  const nm = document.createElement('span');
+  nm.className = 'fname';
+  nm.textContent = file.name;
+  li.appendChild(nm);
+
+  const status = fileStatus(file);
+  const st = document.createElement('span');
+  st.className = `status ${status.cls}`;
+  st.textContent = status.text;
+  li.appendChild(st);
+
+  if (status.archivable) {
+    const btn = document.createElement('button');
+    btn.textContent = 'ARCHIVE';
+    btn.onclick = () => archiveFile(file.id);
+    li.appendChild(btn);
   }
+  return li;
+}
+
+function fileStatus(file) {
+  if (file.archived) return { cls: 'archived', text: 'ARCHIVED' };
+  if (file.lost) {
+    const text = file.blocks.length > 0 ? `LOST ${file.blocks.length}b` : 'LOST';
+    return { cls: 'lost', text };
+  }
+  if (file.defragged) return { cls: 'defragged', text: `${file.blocks.length}b OK`, archivable: true };
+  return { cls: 'fragmented', text: `${file.blocks.length}b frag` };
 }
 
 // ---------- Input ----------

@@ -1,13 +1,57 @@
+/* ========================================================================
+   DEFRAG — styles
+   Design tokens live in :root and are referenced via var() throughout.
+   Colors are named by role, not hue, so retheming is a one-line change.
+   ======================================================================== */
+
+:root {
+  /* Surfaces */
+  --bg:            #06090f;
+  --panel:         #0e1420;
+  --grid-bg:       #0a0f18;
+  --border:        #1f2a3a;
+  --border-subtle: #172033;
+
+  /* Text tones (bright → dim) */
+  --text-bright:   #e2e8f0;
+  --text:          #c6cad4;
+  --text-muted:    #94a3b8;
+  --text-dim:      #64748b;
+  --text-dimmer:   #475569;
+  --text-dimmest:  #334155;
+
+  /* Accent + state */
+  --accent:        #5eead4;  /* defragged, focus, primary action */
+  --gold:          #fbbf24;  /* MFT */
+  --bad:           #dc2626;  /* corrupted sector */
+  --lost:          #7f1d1d;  /* lost-file status */
+  --fragmented:    #f87171;  /* fragmented status */
+
+  /* Terrain ramp (mirrors canvas palette in index.js) */
+  --tone-empty:    #141a26;  /* empty, not fresh */
+  --tone-fresh:    #2e3643;  /* empty, fresh */
+  --tone-locked:   #64748b;  /* system lock */
+
+  /* Glows */
+  --accent-glow:      rgba(94, 234, 212, 0.5);
+  --accent-glow-soft: rgba(94, 234, 212, 0.08);
+  --gold-glow:        rgba(251, 191, 36, 0.6);
+}
+
+/* ---------- Reset ---------- */
+
 * { box-sizing: border-box; }
 
 body {
-  background: #06090f;
-  color: #c6cad4;
+  background: var(--bg);
+  color: var(--text);
   font-family: 'Consolas', 'Courier New', monospace;
   margin: 0;
   padding: 24px 16px;
   min-height: 100vh;
 }
+
+/* ---------- Layout shell ---------- */
 
 .frame {
   max-width: 960px;
@@ -26,31 +70,15 @@ h1 {
   font-size: 30px;
   margin: 0;
   letter-spacing: 4px;
-  color: #5eead4;
-  text-shadow: 0 0 12px rgba(94, 234, 212, 0.5);
+  color: var(--accent);
+  text-shadow: 0 0 12px var(--accent-glow);
 }
 
 h1 .sub {
-  color: #475569;
+  color: var(--text-dimmer);
   font-size: 16px;
   letter-spacing: 2px;
 }
-
-.hud {
-  display: flex;
-  gap: 18px;
-  flex: 1;
-  padding: 8px 14px;
-  background: #0e1420;
-  border: 1px solid #1f2a3a;
-  font-size: 12px;
-  align-items: center;
-}
-
-.stat { display: flex; gap: 6px; align-items: baseline; }
-.stat label { color: #64748b; letter-spacing: 1px; }
-.stat span { color: #e2e8f0; font-weight: bold; font-size: 14px; }
-.stat.mft span { color: #fbbf24; text-shadow: 0 0 6px rgba(251, 191, 36, 0.6); }
 
 main {
   display: flex;
@@ -58,27 +86,52 @@ main {
   align-items: flex-start;
 }
 
+/* ---------- HUD ---------- */
+
+.hud {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex: 1;
+  padding: 8px 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.stat        { display: flex; gap: 6px; align-items: baseline; }
+.stat label  { color: var(--text-dim); letter-spacing: 1px; }
+.stat span   { color: var(--text-bright); font-weight: bold; font-size: 14px; }
+.stat.mft span {
+  color: var(--gold);
+  text-shadow: 0 0 6px var(--gold-glow);
+}
+
+/* ---------- Grid canvas ---------- */
+
 #grid {
-  background: #0a0f18;
-  border: 1px solid #1f2a3a;
-  box-shadow: 0 0 24px rgba(94, 234, 212, 0.08) inset;
+  background: var(--grid-bg);
+  border: 1px solid var(--border);
+  box-shadow: inset 0 0 24px var(--accent-glow-soft);
   image-rendering: pixelated;
   cursor: crosshair;
 }
 
+/* ---------- Sidebar / file list ---------- */
+
 .sidebar {
   flex: 1;
   min-width: 240px;
-  background: #0e1420;
-  border: 1px solid #1f2a3a;
+  background: var(--panel);
+  border: 1px solid var(--border);
   padding: 10px 14px;
 }
 
 .sidebar h2 {
   margin: 0 0 10px;
   font-size: 11px;
-  color: #64748b;
   letter-spacing: 3px;
+  color: var(--text-dim);
 }
 
 #file-list {
@@ -93,7 +146,7 @@ main {
   gap: 8px;
   padding: 8px 0;
   font-size: 11px;
-  border-bottom: 1px solid #172033;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 #file-list li:last-child { border-bottom: none; }
@@ -107,7 +160,7 @@ main {
 
 .fname {
   flex: 1;
-  color: #c6cad4;
+  color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -119,26 +172,48 @@ main {
   border: 1px solid currentColor;
 }
 
-.status.defragged { color: #5eead4; }
-.status.fragmented { color: #f87171; }
-.status.archived { color: #475569; border-color: #334155; }
-.status.lost { color: #7f1d1d; }
+.status.defragged  { color: var(--accent); }
+.status.fragmented { color: var(--fragmented); }
+.status.lost       { color: var(--lost); }
+.status.archived   { color: var(--text-dimmer); border-color: var(--text-dimmest); }
 
-#file-list button {
-  background: #0a0f18;
-  border: 1px solid #5eead4;
-  color: #5eead4;
+/* ---------- Buttons ---------- */
+
+button {
+  background: var(--panel);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  padding: 8px 18px;
   font-family: inherit;
+  font-size: 12px;
+  letter-spacing: 2px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+/* Compact variant for inline archive actions — base rules cascade. */
+#file-list button {
   font-size: 10px;
   padding: 3px 8px;
-  cursor: pointer;
   letter-spacing: 1px;
 }
 
-#file-list button:hover {
-  background: #5eead4;
-  color: #06090f;
+/* Secondary button (NEW DISK) — muted instead of accent. */
+#restart {
+  border-color: var(--text-dim);
+  color: var(--text-dim);
 }
+
+#restart:hover {
+  background: var(--text-dim);
+  color: var(--bg);
+}
+
+/* ---------- Controls row ---------- */
 
 .controls {
   margin-top: 12px;
@@ -148,49 +223,25 @@ main {
   flex-wrap: wrap;
 }
 
-button {
-  background: #0e1420;
-  color: #5eead4;
-  border: 1px solid #5eead4;
-  padding: 8px 18px;
-  font-family: inherit;
-  font-size: 12px;
-  letter-spacing: 2px;
-  cursor: pointer;
-}
-
-button:hover {
-  background: #5eead4;
-  color: #06090f;
-}
-
-#restart {
-  border-color: #64748b;
-  color: #64748b;
-}
-
-#restart:hover {
-  background: #64748b;
-  color: #06090f;
-}
-
 .message {
   flex: 1;
-  color: #94a3b8;
-  font-size: 11px;
   padding-left: 10px;
+  color: var(--text-muted);
+  font-size: 11px;
 }
+
+/* ---------- Legend ---------- */
 
 .legend {
   margin-top: 16px;
   padding: 10px 14px;
   display: flex;
   gap: 20px;
-  font-size: 10px;
-  color: #64748b;
-  background: #0e1420;
-  border: 1px solid #1f2a3a;
   flex-wrap: wrap;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  font-size: 10px;
+  color: var(--text-dim);
 }
 
 .legend div {
@@ -205,9 +256,9 @@ button:hover {
   margin-right: 6px;
 }
 
-.box.empty { background: #141a26; border: 1px solid #1f2a3a; }
-.box.system { background: #64748b; }
-.box.bad { background: #dc2626; }
-.box.mft { background: #fbbf24; }
-.box.defragged { background: transparent; border: 2px solid #e2e8f0; }
-.box.fresh { background: #2e3643; border: 1px solid #1f2a3a; }
+.box.empty     { background: var(--tone-empty); border: 1px solid var(--border); }
+.box.fresh     { background: var(--tone-fresh); border: 1px solid var(--border); }
+.box.system    { background: var(--tone-locked); }
+.box.bad       { background: var(--bad); }
+.box.mft       { background: var(--gold); }
+.box.defragged { background: transparent; border: 2px solid var(--text-bright); }
