@@ -16,7 +16,10 @@
       "Bash(git -C /mnt/c/work/yuwakisaweb/warrior status --short index.js)",
       "Bash(git -C /mnt/c/work/yuwakisaweb/warrior rev-parse --show-toplevel)",
       "Bash(git -C /mnt/c/work/yuwakisaweb diff --stat warrior/index.js)",
-      "Bash(git -C /mnt/c/work/yuwakisaweb diff warrior/index.js)"
+      "Bash(git -C /mnt/c/work/yuwakisaweb diff warrior/index.js)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(git push:*)"
     ]
   }
 }
