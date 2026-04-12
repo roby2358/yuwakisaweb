@@ -1,13 +1,14 @@
 // sound.js — Combat audio for Warrior
 //
-// Square wave, short decay, monophonic.
+// Square wave + noise burst, short decay.
 // 8 pentatonic notes: low 4 for enemy-hits-player, high 4 for player-hits-enemy.
 
 import { Rando } from './rando.js';
 
 const PENTATONIC = [0, 2, 4, 7, 9];
-const BASE_FREQ = 55; // A1
+const BASE_FREQ = 32;
 const VOLUME = 0.08;
+const NOISE_VOLUME = 0.06;
 const NOTE_DUR = 0.10; // 100ms
 const KILL_DUR = 0.20; // 200ms
 
@@ -31,12 +32,18 @@ export class Sound {
         this.ctx = null;
         this.osc = null;
         this.gain = null;
+        this.noiseBuffer = null;
         this.muted = false;
     }
 
     init() {
         if (this.ctx) return;
         this.ctx = new AudioContext();
+        // Pre-generate 1 second of white noise
+        const sr = this.ctx.sampleRate;
+        this.noiseBuffer = this.ctx.createBuffer(1, sr, sr);
+        const data = this.noiseBuffer.getChannelData(0);
+        for (let i = 0; i < sr; i++) data[i] = Math.random() * 2 - 1;
     }
 
     voice(freq, duration) {
@@ -61,26 +68,44 @@ export class Sound {
         this.gain = gain;
     }
 
+    // Short noise burst layered under hit sounds
+    noiseBurst(startTime, duration) {
+        const src = this.ctx.createBufferSource();
+        src.buffer = this.noiseBuffer;
+        const gain = this.ctx.createGain();
+        src.connect(gain);
+        gain.connect(this.ctx.destination);
+        gain.gain.setValueAtTime(NOISE_VOLUME, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+        src.start(startTime);
+        src.stop(startTime + duration);
+    }
+
     // Light footstep tick on player move
     tick() {
         this.voice(BASE_FREQ * 4, 0.02);
     }
 
-    // Enemy hits player — random low note
+    // Enemy hits player — random low note + noise
     hitPlayer() {
+        if (!this.ctx || this.muted) return;
         this.voice(Rando.choice(LOW), NOTE_DUR);
+        this.noiseBurst(this.ctx.currentTime, NOTE_DUR * 0.6);
     }
 
-    // Player hits enemy — random high note
+    // Player hits enemy — random high note + noise
     hitEnemy() {
+        if (!this.ctx || this.muted) return;
         this.voice(Rando.choice(HIGH), NOTE_DUR);
+        this.noiseBurst(this.ctx.currentTime, NOTE_DUR * 0.6);
     }
 
-    // Enemy destroyed — hit note + delayed kill confirmation
+    // Enemy destroyed — hit note + noise, then delayed kill confirmation
     killEnemy() {
         if (!this.ctx || this.muted) return;
         const t = this.ctx.currentTime;
         this.scheduleNote(Rando.choice(HIGH), t, NOTE_DUR);
+        this.noiseBurst(t, NOTE_DUR * 0.6);
         this.scheduleNote(Rando.choice(HIGH), t + NOTE_DUR + 0.02, KILL_DUR);
     }
 
