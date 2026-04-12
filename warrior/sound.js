@@ -1,6 +1,6 @@
 // sound.js — Combat audio for Warrior
 //
-// Square wave + noise burst, short decay.
+// 12.5% pulse wave + noise burst for hits, square wave for ticks/fanfares.
 // 8 pentatonic notes: low 4 for enemy-hits-player, high 4 for player-hits-enemy.
 
 import { Rando } from './rando.js';
@@ -11,6 +11,18 @@ const VOLUME = 0.08;
 const NOISE_VOLUME = 0.06;
 const NOTE_DUR = 0.10; // 100ms
 const KILL_DUR = 0.20; // 200ms
+const PULSE_HARMONICS = 32; // harmonics for 12.5% pulse wave
+
+// Fourier coefficients for a 12.5% duty cycle pulse wave
+function buildPulseCoeffs(n) {
+    const real = new Float32Array(n + 1);
+    const imag = new Float32Array(n + 1);
+    const duty = 0.125;
+    for (let k = 1; k <= n; k++) {
+        imag[k] = 2 * Math.sin(Math.PI * k * duty) / (Math.PI * k);
+    }
+    return { real, imag };
+}
 
 function buildScale(count) {
     const freqs = [];
@@ -33,12 +45,16 @@ export class Sound {
         this.osc = null;
         this.gain = null;
         this.noiseBuffer = null;
+        this.pulseWave = null;
         this.muted = false;
     }
 
     init() {
         if (this.ctx) return;
         this.ctx = new AudioContext();
+        // Build 12.5% pulse periodic wave
+        const { real, imag } = buildPulseCoeffs(PULSE_HARMONICS);
+        this.pulseWave = this.ctx.createPeriodicWave(real, imag);
         // Pre-generate 1 second of white noise
         const sr = this.ctx.sampleRate;
         this.noiseBuffer = this.ctx.createBuffer(1, sr, sr);
@@ -46,7 +62,7 @@ export class Sound {
         for (let i = 0; i < sr; i++) data[i] = Math.random() * 2 - 1;
     }
 
-    voice(freq, duration) {
+    voice(freq, duration, pulse = false) {
         if (!this.ctx || this.muted) return;
         if (this.osc) {
             this.osc.stop();
@@ -54,9 +70,10 @@ export class Sound {
             this.gain.disconnect();
         }
         const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'square';
+        if (pulse) osc.setPeriodicWave(this.pulseWave);
+        else osc.type = 'square';
         osc.frequency.value = freq;
+        const gain = this.ctx.createGain();
         osc.connect(gain);
         gain.connect(this.ctx.destination);
         const t = this.ctx.currentTime;
@@ -86,27 +103,27 @@ export class Sound {
         this.voice(BASE_FREQ * 4, 0.02);
     }
 
-    // Enemy hits player — random low note + noise
+    // Enemy hits player — random low pulse note + noise
     hitPlayer() {
         if (!this.ctx || this.muted) return;
-        this.voice(Rando.choice(LOW), NOTE_DUR);
+        this.voice(Rando.choice(LOW), NOTE_DUR, true);
         this.noiseBurst(this.ctx.currentTime, NOTE_DUR * 0.6);
     }
 
-    // Player hits enemy — random high note + noise
+    // Player hits enemy — random high pulse note + noise
     hitEnemy() {
         if (!this.ctx || this.muted) return;
-        this.voice(Rando.choice(HIGH), NOTE_DUR);
+        this.voice(Rando.choice(HIGH), NOTE_DUR, true);
         this.noiseBurst(this.ctx.currentTime, NOTE_DUR * 0.6);
     }
 
-    // Enemy destroyed — hit note + noise, then delayed kill confirmation
+    // Enemy destroyed — pulse hit + noise, then delayed kill confirmation
     killEnemy() {
         if (!this.ctx || this.muted) return;
         const t = this.ctx.currentTime;
-        this.scheduleNote(Rando.choice(HIGH), t, NOTE_DUR);
+        this.scheduleNote(Rando.choice(HIGH), t, NOTE_DUR, true);
         this.noiseBurst(t, NOTE_DUR * 0.6);
-        this.scheduleNote(Rando.choice(HIGH), t + NOTE_DUR + 0.02, KILL_DUR);
+        this.scheduleNote(Rando.choice(HIGH), t + NOTE_DUR + 0.02, KILL_DUR, true);
     }
 
     // Victory fanfare — 5 player-attack notes, last one 3x duration
@@ -124,11 +141,12 @@ export class Sound {
         }
     }
 
-    scheduleNote(freq, startTime, duration) {
+    scheduleNote(freq, startTime, duration, pulse = false) {
         const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'square';
+        if (pulse) osc.setPeriodicWave(this.pulseWave);
+        else osc.type = 'square';
         osc.frequency.value = freq;
+        const gain = this.ctx.createGain();
         osc.connect(gain);
         gain.connect(this.ctx.destination);
         gain.gain.setValueAtTime(VOLUME, startTime);
