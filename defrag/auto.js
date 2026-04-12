@@ -80,6 +80,7 @@ export class Auto {
   // starting at the cursor, evicting any foreign blocks along the way.
   async defrag() {
     const g = this.game;
+    g.bleep.init();
     g.state.autoMode = true;
     g.state.gameOver = false;
     this.removeBadSectors();
@@ -147,8 +148,9 @@ export class Auto {
         g.state.grid[b.y][b.x] = { kind: g.EMPTY };
         g.state.grid[by][bx] = { kind: g.FILE, fileId: file.id };
         bufIdx--;
+        g.bleep.play(by);
         g.render();
-        await delay(12);
+        await delay(40);
       }
       if (toBuffer.length > 0) {
         g.syncFiles();
@@ -186,8 +188,9 @@ export class Auto {
           if (dest) {
             g.state.grid[dest.y][dest.x] = g.state.grid[y][x];
             g.state.grid[y][x] = { kind: g.EMPTY };
+            g.bleep.play(dest.y);
             g.render();
-            await delay(6);
+            await delay(20);
           }
         }
 
@@ -196,8 +199,9 @@ export class Auto {
         g.state.grid[src.y][src.x] = { kind: g.EMPTY };
         g.state.grid[y][x] = { kind: g.FILE, fileId: file.id };
         bi++;
+        g.bleep.play(y);
         g.render();
-        await delay(12);
+        await delay(40);
         idx++;
       }
 
