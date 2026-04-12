@@ -18,8 +18,8 @@ The emotional target is the old Windows defrag display: the hypnotic pleasure of
 
 ## Key Mechanics
 
-### Swap & Seek (Scarcity of Agency)
-Click two sectors to swap them. Cost = Manhattan distance. When seek hits zero, turn ends. Locked sectors (system, bad, MFT) cannot be moved. Every swap is a small question: is this 8-cost long-haul worth it, or should I do four 2-cost local tidies?
+### Swap & Clock (Scarcity of Agency)
+Click two sectors to swap them. Cost = Manhattan distance. There is no per-turn budget; instead, a single running **clock** accumulates the total distance you have ever moved this game. Every 20 units of accumulated movement, a **tick** fires — the disk runs its periodic update (writes, corruption spread, freshness decay, MFT damage). Locked sectors (system, bad, MFT) cannot be moved. A big 30-distance swap at the wrong time can trigger *two* ticks in one action (crossing both the next and the one after), while a careful sequence of 1- and 2-cost nudges costs nothing in "wasted budget" — they just push you steadily closer to the next tick. The central question is no longer "do I have enough seek left?" but "is this move worth the fraction of a tick it will cost me, and is the corruption about to catch up before I finish consolidating?"
 
 ### Continuous Run = Defragged (Accumulation)
 A file is DEFRAGGED when all of its blocks occupy **consecutive sector indices** in reading order (index = y × COLS + x) — a horizontal run that naturally wraps from the right edge of one row to the left edge of the next. Vertical columns and L-shapes and 2×2 squares don't count; the filesystem doesn't care how tidy your cluster *looks*, it cares whether the blocks are in sequence on the linear address line. This matches how a real filesystem thinks about contiguity, and it makes the defrag puzzle harder in a principled way: the target shape is a 1D run, not a 2D blob, so obstacles (system blocks, the MFT) are more punishing because they can only be routed around the row-wrap path, not over or under. Defragged files attract new OS writes to an adjacent empty cell (extending the run at one of its ends), so alignment compounds once you lock it in. Breaking the run (corruption, a write that lands off-line, a swap) re-fragments the file.
@@ -65,7 +65,7 @@ Each turn, the MFT takes damage equal to the number of bad sectors orthogonally 
 - Grid: 32 × 16 (512 sectors)
 - Files: 4, each 4–7 blocks at start (uniform random per file)
 - System obstacles: 20
-- Seek budget: 20 per turn
+- Tick threshold: one tick every 20 units of accumulated movement (no per-turn budget; swaps are always allowed)
 - Writes per turn: 2
 - Corruption spread: 20% base, +5% every 5 turns
 - Freshness decay: 10% per fresh sector per turn

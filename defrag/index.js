@@ -11,7 +11,7 @@ const FILE_COUNT = 4;
 const FILE_SIZE_MIN = 4;
 const FILE_SIZE_MAX = 7;
 const SYSTEM_COUNT = 20;
-const SEEK_BUDGET = 20;
+const SWAP_PER_TICK = 20;
 const WRITES_PER_TURN = 2;
 const MFT_HP_MAX = 5;
 const CORRUPT_BASE = 0.20;
@@ -40,7 +40,7 @@ const DIRS = [[0, -1], [0, 1], [-1, 0], [1, 0]];
 const state = {
   grid: [],
   files: [],
-  seek: SEEK_BUDGET,
+  swapTotal: 0,
   turn: 1,
   score: 0,
   archived: 0,
@@ -65,7 +65,7 @@ function init() {
     Array.from({ length: COLS }, () => ({ kind: EMPTY }))
   );
   state.files = [];
-  state.seek = SEEK_BUDGET;
+  state.swapTotal = 0;
   state.turn = 1;
   state.score = 0;
   state.archived = 0;
@@ -73,7 +73,7 @@ function init() {
   state.selected = null;
   state.gameOver = false;
   state.outcome = null;
-  state.message = 'Click a sector, then click another to swap. Cost = distance.';
+  state.message = 'Click a sector, then click another to swap. Every 20 units of movement advances the disk.';
 
   // MFT at center
   const mx = Math.floor(COLS / 2);
@@ -210,15 +210,24 @@ function trySwap(a, b) {
   if (!isMovable(ca) || !isMovable(cb)) return { ok: false, reason: 'locked' };
   if (ca.kind === EMPTY && cb.kind === EMPTY) return { ok: false, reason: 'no-op' };
   const cost = manhattan(a, b);
-  if (cost > state.seek) return { ok: false, reason: 'cost' };
   state.grid[a.y][a.x] = cb;
   state.grid[b.y][b.x] = ca;
-  state.seek -= cost;
   markFreshAround(a);
   markFreshAround(b);
   rebuildFileBlocks();
   recomputeDefragStatus();
+  advanceClock(cost);
   return { ok: true, cost };
+}
+
+function advanceClock(cost) {
+  const prevTicks = Math.floor(state.swapTotal / SWAP_PER_TICK);
+  state.swapTotal += cost;
+  const newTicks = Math.floor(state.swapTotal / SWAP_PER_TICK);
+  for (let i = prevTicks; i < newTicks; i++) {
+    runTick();
+    if (state.gameOver) return;
+  }
 }
 
 function markFreshAround(p) {
@@ -297,10 +306,9 @@ function checkEndGame() {
   }
 }
 
-// ---------- End turn ----------
-function endTurn() {
+// ---------- Tick (the periodic event pulse, fired every SWAP_PER_TICK units of movement) ----------
+function runTick() {
   if (state.gameOver) return;
-  state.selected = null;
 
   for (let i = 0; i < WRITES_PER_TURN; i++) writeBlock();
   rebuildFileBlocks();
@@ -314,7 +322,6 @@ function endTurn() {
   state.mft -= dmg;
 
   state.turn++;
-  state.seek = SEEK_BUDGET;
 
   const parts = [];
   for (const ev of lostEvents) parts.push(`${ev.name} LOST (-${ev.penalty})`);
@@ -325,7 +332,6 @@ function endTurn() {
     state.message = `Turn ${state.turn}: disk stable.`;
   }
   checkEndGame();
-  render();
 }
 
 function writeBlock() {
@@ -446,8 +452,6 @@ function render() {
     }
   }
 
-  if (state.selected) drawReachOverlay(state.selected);
-
   for (const file of state.files) {
     if (file.defragged) drawDefragOutline(file);
   }
@@ -519,26 +523,6 @@ function drawCell(x, y) {
     ctx.fillRect(px + CELL - 6, py + CELL - 6, 2, 2);
   }
 
-  if (c.fresh && c.kind === FILE) {
-    ctx.strokeStyle = 'rgba(226, 232, 240, 0.85)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(px + 2.5, py + 2.5, CELL - 5, CELL - 5);
-  }
-}
-
-function drawReachOverlay(src) {
-  const srcCell = at(src.x, src.y);
-  ctx.fillStyle = 'rgba(94, 234, 212, 0.10)';
-  for (let y = 0; y < ROWS; y++) {
-    for (let x = 0; x < COLS; x++) {
-      const d = Math.abs(x - src.x) + Math.abs(y - src.y);
-      if (d === 0 || d > state.seek) continue;
-      const c = at(x, y);
-      if (!isMovable(c)) continue;
-      if (srcCell.kind === EMPTY && c.kind === EMPTY) continue;
-      ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
-    }
-  }
 }
 
 function drawDefragOutline(file) {
@@ -598,7 +582,7 @@ function drawGameOver() {
 
 function renderHud() {
   document.getElementById('turn').textContent = state.turn;
-  document.getElementById('seek').textContent = state.seek;
+  document.getElementById('clock').textContent = state.swapTotal % SWAP_PER_TICK;
   document.getElementById('score').textContent = state.score;
   document.getElementById('archived').textContent = `${state.archived}/${FILE_COUNT}`;
   document.getElementById('mft').textContent = state.mft;
@@ -683,26 +667,19 @@ canvas.addEventListener('click', (e) => {
   const result = trySwap(a, b);
   state.selected = null;
 
-  if (result.ok) {
-    state.message = `Swapped (cost ${result.cost}). Seek ${state.seek}/${SEEK_BUDGET}.`;
-    if (state.seek <= 0) {
-      render();
-      endTurn();
-      return;
-    }
-  } else {
+  if (result.ok && !state.gameOver) {
+    state.message = `Swap cost ${result.cost}. Clock ${state.swapTotal % SWAP_PER_TICK}/${SWAP_PER_TICK}.`;
+  } else if (!result.ok) {
     const reasons = {
       same: 'Deselected.',
       locked: 'Destination locked.',
       'no-op': 'Both sectors empty.',
-      cost: `Too far — cost ${manhattan(a, b)} > seek ${state.seek}.`,
     };
     state.message = reasons[result.reason] || 'Swap failed.';
   }
   render();
 });
 
-document.getElementById('end-turn').addEventListener('click', endTurn);
 document.getElementById('restart').addEventListener('click', () => {
   init();
   render();
