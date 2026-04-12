@@ -1,6 +1,7 @@
 // DEFRAG — solo puzzle game. See DYNAMICS.md for design.
 
 import { ColorTheory } from './colortheory.js';
+import { Osnemes } from './osnemes.js';
 
 // ---------- Config ----------
 const COLS = 32;
@@ -19,14 +20,6 @@ const MFT_HP_MAX = 5;
 const CORRUPT_BASE = 0.20;
 const CORRUPT_GROWTH_PER_5 = 0.05;
 const FRESH_DECAY_CHANCE = 0.10;
-
-const FILE_NAME_POOL = [
-  'winlogon.exe', 'kernel32.dll', 'boot.cfg', 'user.dat',
-  'ntoskrnl.exe', 'hal.dll', 'system.ini', 'config.sys',
-  'autoexec.bat', 'mshtml.dll', 'shell32.dll', 'win.ini',
-  'pagefile.sys', 'hiberfil.sys', 'comctl32.dll', 'gdi32.dll',
-  'advapi.dll', 'registry.dat', 'driver.sys', 'ole32.dll',
-];
 
 // New-file spawn chance scales linearly with a sampled file's size:
 // size <= NEW_FILE_SIZE_MIN → 0% chance, size >= NEW_FILE_SIZE_MAX → 100%.
@@ -434,8 +427,10 @@ function spawnNewFile() {
 
 function pickFileName() {
   const used = new Set(state.files.map((f) => f.name));
-  const available = FILE_NAME_POOL.filter((n) => !used.has(n));
-  if (available.length > 0) return pick(available);
+  for (let i = 0; i < 50; i++) {
+    const name = Osnemes.generate(Math.random);
+    if (!used.has(name)) return name;
+  }
   return `tmp_${state.files.length + 1}.dat`;
 }
 
