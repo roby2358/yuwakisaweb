@@ -3,23 +3,40 @@ body {
   font-family: Arial, sans-serif;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   min-height: 100vh;
   margin: 0;
-  padding: 20px;
+  padding: 40px 20px;
+}
+
+.page {
+  max-width: 1200px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 60px;
 }
 
 .container {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 40px;
-  max-width: 1200px;
-  width: 100%;
 }
 
 .column {
   display: flex;
   flex-direction: column;
+}
+
+.games-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.games-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
 }
 
 h2 {
