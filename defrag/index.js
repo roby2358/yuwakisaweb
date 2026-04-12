@@ -3,7 +3,7 @@
 import { ColorTheory } from './colortheory.js';
 import { Osnemes } from './osnemes.js';
 import { Auto } from './auto.js';
-import { Bleep } from './bleep.js';
+import { Sound } from './sound.js';
 
 // ---------- Config ----------
 const COLS = 32;
@@ -327,7 +327,7 @@ function archiveFile(fileId) {
   file.archived = true;
   file.defragged = false;
   state.archived++;
-  bleep.archive();
+  sound.archive();
   state.message =
     `Archived ${file.name} (+${blockCount * 100})` +
     (cleansed ? ` — ${cleansed} sector${cleansed > 1 ? 's' : ''} cleansed` : '');
@@ -756,10 +756,10 @@ function fileStatus(file) {
 }
 
 // ---------- Input ----------
-const bleep = new Bleep(ROWS);
+const sound = new Sound(ROWS);
 
 canvas.addEventListener('click', (e) => {
-  bleep.init();
+  sound.init();
   if (state.gameOver) return;
   const rect = canvas.getBoundingClientRect();
   const scaleX = canvas.width / rect.width;
@@ -770,7 +770,7 @@ canvas.addEventListener('click', (e) => {
   const y = Math.floor(py / CELL);
   if (!inBounds(x, y)) return;
 
-  bleep.play(y);
+  sound.play(y);
 
   // Every click seeks the head — vertical distance costs tracks.
   const seekCost = seekHead(x, y);
@@ -837,7 +837,7 @@ export const game = {
   isMovable,
   activeFiles,
   archiveFile,
-  bleep,
+  sound,
 };
 
 // ---------- Auto mode ----------
