@@ -20,6 +20,19 @@ import { EnemyManager } from './enemies.js';
 import { Victory } from './victory.js';
 import { Sound } from './sound.js';
 
+// ---- Sprite sheet ----
+const SPRITE_COLS = 5;
+const SPRITE_ROWS = 20;
+const SPRITE_W = 48; // source sprite width in px
+const SPRITE_H = 51; // source sprite height in px
+const spriteImg = new Image();
+spriteImg.src = 'sprites.png';
+const spriteTmp = document.createElement('canvas'); // offscreen canvas for tinting
+spriteTmp.width = SPRITE_W; spriteTmp.height = SPRITE_H;
+const spriteTmpCtx = spriteTmp.getContext('2d');
+let playerSprite = null;    // { col, row }
+let enemySprites = {};      // { [enemyType]: { col, row } }
+
 // ---- Display constants ----
 const COUNTER_SIZE = 28;
 const TERRAIN_COLORS = {
@@ -108,7 +121,7 @@ function contrastText(hexColor) {
 // stats: { atk, def, mov } — all required for player/enemy counters
 // hpPct: 0..1 — draws HP bar when < 1; pass 1 to skip bar
 // labelColor: explicit text color; pass null to auto-contrast
-function drawCounter(cx, cy, color, label, hpPct, labelColor, stats) {
+function drawCounter(cx, cy, color, label, hpPct, labelColor, stats, sprite, spriteTint) {
     const s = COUNTER_SIZE;
     const x = cx - s / 2, y = cy - s / 2;
     const r = 4;
@@ -126,11 +139,29 @@ function drawCounter(cx, cy, color, label, hpPct, labelColor, stats) {
     roundRect(ctx, x, y, s, s, r);
     ctx.fillStyle = color; ctx.fill();
     ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke();
-    // Label
-    ctx.fillStyle = textColor;
-    ctx.font = 'bold ' + Math.floor(s * 0.55) + 'px monospace';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(label, cx, cy - 2);
+    // Sprite or label
+    const spriteDrawn = sprite && spriteImg.complete && spriteImg.naturalWidth > 0;
+    if (spriteDrawn) {
+        const sx = sprite.col * SPRITE_W, sy = sprite.row * SPRITE_H;
+        const ds = 16, dx = cx - ds / 2, dy = cy - ds / 2 - 2;
+        if (spriteTint) {
+            spriteTmpCtx.clearRect(0, 0, SPRITE_W, SPRITE_H);
+            spriteTmpCtx.drawImage(spriteImg, sx, sy, SPRITE_W, SPRITE_H, 0, 0, SPRITE_W, SPRITE_H);
+            spriteTmpCtx.globalCompositeOperation = 'source-in';
+            spriteTmpCtx.fillStyle = spriteTint;
+            spriteTmpCtx.fillRect(0, 0, SPRITE_W, SPRITE_H);
+            spriteTmpCtx.globalCompositeOperation = 'source-over';
+            ctx.drawImage(spriteTmp, 0, 0, SPRITE_W, SPRITE_H, dx, dy, ds, ds);
+        } else {
+            ctx.drawImage(spriteImg, sx, sy, SPRITE_W, SPRITE_H, dx, dy, ds, ds);
+        }
+    }
+    if (!spriteDrawn) {
+        ctx.fillStyle = textColor;
+        ctx.font = 'bold ' + Math.floor(s * 0.55) + 'px monospace';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(label, cx, cy - 2);
+    }
     // Stats: atk-def bottom-left, movement bottom-right
     if (stats) {
         ctx.font = Math.floor(s * 0.28) + 'px monospace';
@@ -2135,6 +2166,18 @@ function initGame() {
     em.generateCreatureTypes();
     em.spawnInitial(world, player.q, player.r);
     em.spawnInitialCreatures(world, player.q, player.r, world.visible);
+
+    // Assign sprites: player gets row 0 or 1, enemies get shuffled from rows 2-20
+    playerSprite = { col: Rando.int(0, SPRITE_COLS - 1), row: Rando.int(0, 1) };
+    const enemyRows = [];
+    for (let r = 2; r < SPRITE_ROWS; r++) enemyRows.push(r);
+    Rando.shuffle(enemyRows);
+    const allTypes = [...Object.values(ENEMY_TYPE), ...Object.keys(em.creatureDefs)];
+    enemySprites = {};
+    for (let i = 0; i < allTypes.length; i++) {
+        enemySprites[allTypes[i]] = { col: Rando.int(0, SPRITE_COLS - 1), row: enemyRows[i % enemyRows.length] };
+    }
+
     // Close panels and overlays
     closeAllPanels();
     document.getElementById('dialog-overlay').classList.add('hidden');
@@ -2300,7 +2343,8 @@ function render() {
         const color = enemyColor(enemy.type);
         const effMaxHp = enemyEffectiveMaxHp(enemy);
         const chaosLabelColor = (def.chaosSpawned && enemy.type !== ENEMY_TYPE.PHASE_WRAITH) ? '#d580ff' : null;
-        drawCounter(x, y, color, def.label, enemy.hp / effMaxHp, chaosLabelColor, { atk: enemyMeleeAttack(enemy, def), def: enemyDefense(enemy, def), mov: def.speed || 1 });
+        const spriteTint = def.chaosSpawned ? '#d580ff' : null;
+        drawCounter(x, y, color, def.label, enemy.hp / effMaxHp, chaosLabelColor, { atk: enemyMeleeAttack(enemy, def), def: enemyDefense(enemy, def), mov: def.speed || 1 }, enemySprites[enemy.type], spriteTint);
     }
 
     // Player
@@ -2310,7 +2354,7 @@ function render() {
         const wep = player.weapon();
         const pAtk = (wep ? wep.damage : 0) + (wep && wep.type === 'ranged' ? player.stats.reflex : player.stats.might);
         const pDef = playerDefense();
-        drawCounter(x, y, PLAYER_COLOR, 'C', player.hp / player.maxHP(), playerLabelColor, { atk: pAtk, def: pDef, mov: player.mp });
+        drawCounter(x, y, PLAYER_COLOR, 'C', player.hp / player.maxHP(), playerLabelColor, { atk: pAtk, def: pDef, mov: player.mp }, playerSprite);
         if (selected) {
             const s = COUNTER_SIZE + 4;
             roundRect(ctx, x - s / 2, y - s / 2, s, s, 6);
