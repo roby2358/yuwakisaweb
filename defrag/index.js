@@ -14,11 +14,11 @@ const FILE_SIZE_MAX = 7;
 const SPAWN_FILE_SIZE_MIN = 3;
 const SPAWN_FILE_SIZE_MAX = 5;
 const SYSTEM_COUNT = 20;
-const SWAP_PER_TICK = 7;
+const SWAP_PER_TICK = 10;
 const WRITES_PER_TURN = 1;
 const MFT_HP_MAX = 5;
-const CORRUPT_BASE = 0.20;
-const CORRUPT_GROWTH_PER_5 = 0.05;
+const CORRUPT_BASE = 0.10;
+const CORRUPT_GROWTH_PER_5 = 0.025;
 const FRESH_DECAY_CHANCE = 0.10;
 
 // New-file spawn chance scales linearly with a sampled file's size:
