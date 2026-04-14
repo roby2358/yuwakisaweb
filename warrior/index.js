@@ -2343,16 +2343,16 @@ function render() {
         const { x, y } = hexToScreen(enemy.q, enemy.r);
         const color = enemyColor(enemy.type);
         const effMaxHp = enemyEffectiveMaxHp(enemy);
-        const chaosLabelColor = (def.chaosSpawned && enemy.type !== ENEMY_TYPE.PHASE_WRAITH) ? '#d580ff' : null;
         let sprite = enemySprites[enemy.type];
         let isGuardianSprite = false;
         if (enemy.type === ENEMY_TYPE.BREACH_GUARDIAN) {
-            sprite = { sheet: guardianSheet, col: enemy.id % GSPRITE_COLS, row: 0 };
+            sprite = { sheet: guardianSheet, col: Math.floor(Math.random() * GSPRITE_COLS), row: 0 };
             isGuardianSprite = true;
         } else if (enemy.type === ENEMY_TYPE.UNRAVELER) {
-            sprite = { sheet: guardianSheet, col: enemy.id % GSPRITE_COLS, row: 1 };
+            sprite = { sheet: guardianSheet, col: Math.floor(Math.random() * GSPRITE_COLS), row: 1 };
             isGuardianSprite = true;
         }
+        const chaosLabelColor = (def.chaosSpawned && enemy.type !== ENEMY_TYPE.PHASE_WRAITH && !isGuardianSprite) ? '#d580ff' : null;
         const spriteTint = (def.chaosSpawned && !isGuardianSprite) ? '#d580ff' : null;
         drawCounter(x, y, color, def.label, enemy.hp / effMaxHp, chaosLabelColor, { atk: enemyMeleeAttack(enemy, def), def: enemyDefense(enemy, def), mov: def.speed || 1 }, sprite, spriteTint);
     }
@@ -2503,8 +2503,8 @@ function enemyColor(type) {
         case ENEMY_TYPE.BREACH_CRAWLER: return '#3a3a3a';
         case ENEMY_TYPE.FLUX_ARCHER: return '#333333';
         case ENEMY_TYPE.PHASE_WRAITH: return '#9b59b6';
-        case ENEMY_TYPE.BREACH_GUARDIAN: return '#242424';
-        case ENEMY_TYPE.UNRAVELER: return '#1a1a1a';
+        case ENEMY_TYPE.BREACH_GUARDIAN: return '#b890d8';
+        case ENEMY_TYPE.UNRAVELER: return '#d580ff';
         default: return '#cc3333';
     }
 }
