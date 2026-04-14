@@ -19,17 +19,15 @@ import { GameWorld } from './world.js';
 import { EnemyManager } from './enemies.js';
 import { Victory } from './victory.js';
 import { Sound } from './sound.js';
+import { SpriteSheet } from './sprite_sheet.js';
 
-// ---- Sprite sheet ----
+// ---- Sprite sheets ----
 const SPRITE_COLS = 5;
 const SPRITE_ROWS = 20;
-const SPRITE_W = 48; // source sprite width in px
-const SPRITE_H = 51; // source sprite height in px
-const spriteImg = new Image();
-spriteImg.src = 'sprites.png';
-const spriteTmp = document.createElement('canvas'); // offscreen canvas for tinting
-spriteTmp.width = SPRITE_W; spriteTmp.height = SPRITE_H;
-const spriteTmpCtx = spriteTmp.getContext('2d');
+const mainSheet = new SpriteSheet('sprites.png', 48, 51);
+// Guardian sheet: 5 cols × 2 rows, row 0 = breach guardians, row 1 = Unraveler
+const GSPRITE_COLS = 5;
+const guardianSheet = new SpriteSheet('sprites_guardians.png', 1024 / 5, 412 / 2);
 let playerSprite = null;    // { col, row }
 let enemySprites = {};      // { [enemyType]: { col, row } }
 
@@ -153,21 +151,11 @@ function drawCounter(cx, cy, color, label, hpPct, labelColor, stats, sprite, spr
     ctx.fillStyle = color; ctx.fill();
     ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke();
     // Sprite or label
-    const spriteDrawn = sprite && spriteImg.complete && spriteImg.naturalWidth > 0;
+    const sheet = sprite && (sprite.sheet || mainSheet);
+    const spriteDrawn = sprite && sheet.isReady();
     if (spriteDrawn) {
-        const sx = sprite.col * SPRITE_W, sy = sprite.row * SPRITE_H;
         const ds = 16, dx = cx - ds / 2, dy = cy - ds / 2 - 2;
-        if (spriteTint) {
-            spriteTmpCtx.clearRect(0, 0, SPRITE_W, SPRITE_H);
-            spriteTmpCtx.drawImage(spriteImg, sx, sy, SPRITE_W, SPRITE_H, 0, 0, SPRITE_W, SPRITE_H);
-            spriteTmpCtx.globalCompositeOperation = 'source-in';
-            spriteTmpCtx.fillStyle = spriteTint;
-            spriteTmpCtx.fillRect(0, 0, SPRITE_W, SPRITE_H);
-            spriteTmpCtx.globalCompositeOperation = 'source-over';
-            ctx.drawImage(spriteTmp, 0, 0, SPRITE_W, SPRITE_H, dx, dy, ds, ds);
-        } else {
-            ctx.drawImage(spriteImg, sx, sy, SPRITE_W, SPRITE_H, dx, dy, ds, ds);
-        }
+        sheet.draw(ctx, sprite.col, sprite.row, dx, dy, ds, ds, spriteTint);
     }
     if (!spriteDrawn) {
         ctx.fillStyle = textColor;
@@ -2356,8 +2344,17 @@ function render() {
         const color = enemyColor(enemy.type);
         const effMaxHp = enemyEffectiveMaxHp(enemy);
         const chaosLabelColor = (def.chaosSpawned && enemy.type !== ENEMY_TYPE.PHASE_WRAITH) ? '#d580ff' : null;
-        const spriteTint = def.chaosSpawned ? '#d580ff' : null;
-        drawCounter(x, y, color, def.label, enemy.hp / effMaxHp, chaosLabelColor, { atk: enemyMeleeAttack(enemy, def), def: enemyDefense(enemy, def), mov: def.speed || 1 }, enemySprites[enemy.type], spriteTint);
+        let sprite = enemySprites[enemy.type];
+        let isGuardianSprite = false;
+        if (enemy.type === ENEMY_TYPE.BREACH_GUARDIAN) {
+            sprite = { sheet: guardianSheet, col: enemy.id % GSPRITE_COLS, row: 0 };
+            isGuardianSprite = true;
+        } else if (enemy.type === ENEMY_TYPE.UNRAVELER) {
+            sprite = { sheet: guardianSheet, col: enemy.id % GSPRITE_COLS, row: 1 };
+            isGuardianSprite = true;
+        }
+        const spriteTint = (def.chaosSpawned && !isGuardianSprite) ? '#d580ff' : null;
+        drawCounter(x, y, color, def.label, enemy.hp / effMaxHp, chaosLabelColor, { atk: enemyMeleeAttack(enemy, def), def: enemyDefense(enemy, def), mov: def.speed || 1 }, sprite, spriteTint);
     }
 
     // Player
