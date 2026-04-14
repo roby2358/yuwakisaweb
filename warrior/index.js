@@ -33,6 +33,19 @@ const spriteTmpCtx = spriteTmp.getContext('2d');
 let playerSprite = null;    // { col, row }
 let enemySprites = {};      // { [enemyType]: { col, row } }
 
+// Assign sprites: player gets row 0 or 1, enemies get shuffled from rows 2-20
+function assignSprites() {
+    playerSprite = { col: Rando.int(0, SPRITE_COLS - 1), row: Rando.int(0, 1) };
+    const enemyRows = [];
+    for (let r = 2; r < SPRITE_ROWS; r++) enemyRows.push(r);
+    Rando.shuffle(enemyRows);
+    const allTypes = [...Object.values(ENEMY_TYPE), ...Object.keys(em.creatureDefs)];
+    enemySprites = {};
+    for (let i = 0; i < allTypes.length; i++) {
+        enemySprites[allTypes[i]] = { col: Rando.int(0, SPRITE_COLS - 1), row: enemyRows[i % enemyRows.length] };
+    }
+}
+
 // ---- Display constants ----
 const COUNTER_SIZE = 28;
 const TERRAIN_COLORS = {
@@ -2066,7 +2079,8 @@ function saveGame() {
         player: player.toJSON(),
         world: world.toJSON(),
         enemies: em.toJSON(),
-        equipment: ALL_EQUIPMENT
+        equipment: ALL_EQUIPMENT,
+        playerSprite, enemySprites
     };
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
 }
@@ -2109,6 +2123,14 @@ function loadGame() {
     world = GameWorld.fromJSON(data.world);
     player = Player.fromJSON(data.player);
     em = EnemyManager.fromJSON(data.enemies);
+
+    // Restore or assign sprites (old saves won't have them)
+    if (data.playerSprite && data.enemySprites) {
+        playerSprite = data.playerSprite;
+        enemySprites = data.enemySprites;
+    } else {
+        assignSprites();
+    }
 
     computeMawDistances();
     refreshVision();
@@ -2167,16 +2189,7 @@ function initGame() {
     em.spawnInitial(world, player.q, player.r);
     em.spawnInitialCreatures(world, player.q, player.r, world.visible);
 
-    // Assign sprites: player gets row 0 or 1, enemies get shuffled from rows 2-20
-    playerSprite = { col: Rando.int(0, SPRITE_COLS - 1), row: Rando.int(0, 1) };
-    const enemyRows = [];
-    for (let r = 2; r < SPRITE_ROWS; r++) enemyRows.push(r);
-    Rando.shuffle(enemyRows);
-    const allTypes = [...Object.values(ENEMY_TYPE), ...Object.keys(em.creatureDefs)];
-    enemySprites = {};
-    for (let i = 0; i < allTypes.length; i++) {
-        enemySprites[allTypes[i]] = { col: Rando.int(0, SPRITE_COLS - 1), row: enemyRows[i % enemyRows.length] };
-    }
+    assignSprites();
 
     // Close panels and overlays
     closeAllPanels();
