@@ -206,8 +206,8 @@ $(document).ready(function() {
         markov.tokenizer = tokenizer;
         markov.build();
         chainPage = 0;
-        console.log('Markov chain built with ' + tokens.length + ' tokens');
-        showMessage('Markov chain calculated successfully!', 'success');
+        const tokenCount = tokens.reduce((sum, group) => sum + group.length, 0);
+        showMessage('Markov chain built with ' + tokens.length + ' groups, ' + tokenCount + ' tokens', 'success');
     };
 
     const handleCalculate = () => {

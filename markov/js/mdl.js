@@ -46,7 +46,6 @@ function Mdl() {
         const normalized = prepare(text);
         if (normalized === null) return [];
         const encoded = TokenizeMdl.encode(normalized, vocabulary);
-        console.log('MDL encoded stream (' + encoded.length + ' tokens from ' + normalized.length + ' chars):', encoded);
         return [[MarkovConstants.Start, ...encoded, MarkovConstants.End]];
     };
 

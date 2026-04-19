@@ -257,8 +257,6 @@ function Markov(tokens, maxN) {
             groups.push(closeGroup(currentGroup));
         }
 
-        console.log("groups", groups);
-
         return groups;
     };
 }
