@@ -5,13 +5,6 @@ Created: 2026-04-02T20:11:47Z
 Updated: 2026-04-02T20:11:47Z
 Audit the inventory system and magic item generation pipeline. Clean up how items are created, stored, equipped, and displayed. Look for edge cases, inconsistencies, or unclear flows — especially around magic item properties, stacking, and equipment slot management.
 ----
-Priority:   70
-Status: ToDo
-ID: vit-def-5rar
-Created: 2026-04-08T14:36:27Z
-Updated: 2026-04-08T14:36:27Z
-bug: vitality 5 doesn't give +1 def
-----
 Priority:   60
 Status: ToDo
 ID: warrior-uwsu
@@ -95,6 +88,13 @@ ID: ui-jwif
 Created: 2026-03-29T09:14:05Z
 Updated: 2026-03-31T05:27:49Z
 Bug: selling a duplicate item removes both copies from inventory — filter by ID removes all matches
+----
+Priority:   70
+Status: Done
+ID: vit-def-5rar
+Created: 2026-04-08T14:36:27Z
+Updated: 2026-04-19T02:34:25Z
+bug: vitality 5 doesn't give +1 def
 ----
 Priority:   70
 Status: Done

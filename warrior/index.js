@@ -2648,6 +2648,7 @@ function updateCharPanel() {
             updateCharPanel();
             updateHUD();
             updateSkillBar();
+            render();
         });
     });
 }

@@ -76,7 +76,7 @@ Points of interest MUST be placed with minimum distance constraints so they don'
   - **Might**: Melee attack damage bonus
   - **Reflex**: Ranged attack damage, dodge chance (Reflex% capped at 30%), and turn order priority
   - **Warding**: Skill damage bonus and resistance to special attacks (reduces incoming skill damage by Warding%)
-  - **Vigor**: Maximum HP (base 50 + Vigor * 10) and HP restored when resting at camps/havens
+  - **Vigor**: Maximum HP (base 50 + Vigor * 10), HP restored when resting at camps/havens, and +1 Defense per 3 Vigor
 - Starting stats MUST be Might 3, Reflex 3, Warding 2, Vigor 3
 - The player MUST have the following resources:
   - **HP**: Health points. Reaching 0 MUST trigger defeat
