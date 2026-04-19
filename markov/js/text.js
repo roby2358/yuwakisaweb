@@ -3,6 +3,12 @@
  * Splits text into paragraphs, then words, and wraps paragraphs with Start/End markers
  */
 function Text() {
+    /**
+     * No-op: Text uses a fixed scheme (paragraph/word splitting with shared
+     * punctuation rules), so there is no per-corpus state to train.
+     */
+    this.calibrate = (sourceText) => {};
+
     this.tokenize = (text) => {
         if (!text || typeof text !== 'string') {
             return [];

@@ -33,6 +33,10 @@
                     <input type="radio" name="tokenization" value="phonetic">
                     <span>phonetic</span>
                 </label>
+                <label class="radio-label">
+                    <input type="radio" name="tokenization" value="mdl">
+                    <span>mdl</span>
+                </label>
             </div>
             <div class="source-actions">
                 <button class="action-button" id="calculate-btn">calculate</button>
@@ -60,6 +64,7 @@
                 <li><strong>Text mode:</strong> generates flowing paragraphs word-by-word with paragraph-aware boundaries.</li>
                 <li><strong>GPT mode:</strong> generates text using GPT tokenizer (BPE tokens) with token-level n-grams.</li>
                 <li><strong>Phonetic mode:</strong> converts text to IPA phonemes and generates phonetically plausible words. Use the Speak button to hear generated text aloud.</li>
+                <li><strong>MDL mode:</strong> learns a ~1100-token subword vocabulary directly from the source corpus using Minimum-Description-Length-style credit assignment, then generates with that learned vocabulary. Produces corpus-specific chunks that sit between Words (characters) and GPT (prebuilt BPE). Treats the corpus as a single stream — paragraph breaks are not preserved.</li>
             </ul>
             <p>Words and Text modes handle punctuation intelligently. Paired punctuation (quotes, brackets) is removed to avoid pairing errors, while unpaired punctuation (periods, commas, dashes) is properly separated and formatted. GPT mode uses the tokenizer's built-in punctuation handling.</p>
             <p><strong>Differences from vanilla Markov chains:</strong></p>
@@ -110,6 +115,8 @@
     <script src="js/words.js"></script>
     <script src="js/text.js"></script>
     <script src="js/gpt.js"></script>
+    <script src="js/tokenize_mdl.js"></script>
+    <script src="js/mdl.js"></script>
     <script src="js/espeakng/espeakng.min.js"></script>
     <script src="js/espeakng/espeakng-simple.js"></script>
     <script src="js/espeak.js"></script>

@@ -3,6 +3,7 @@ const textTokenizer = new Text();
 const gptTokenizerInstance = new Gpt();
 const espeakInstance = new Espeak();
 const phoneticTokenizer = new Phonetic(espeakInstance);
+const mdlTokenizer = new Mdl();
 const ngramLength = 3;
 
 /**
@@ -15,6 +16,8 @@ function getTokenizer(mode) {
         return gptTokenizerInstance;
     } else if (mode === 'phonetic') {
         return phoneticTokenizer;
+    } else if (mode === 'mdl') {
+        return mdlTokenizer;
     } else {
         return textTokenizer;
     }
@@ -114,6 +117,7 @@ $(document).ready(function() {
 
         const tokenizationMode = $('input[name="tokenization"]:checked').val();
         const tokenizer = getTokenizer(tokenizationMode);
+        tokenizer.calibrate(sourceText);
 
         if (tokenizationMode === 'phonetic') {
             showMessage('Converting to phonemes...', 'info', 0);

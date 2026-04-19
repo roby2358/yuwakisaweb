@@ -65,6 +65,12 @@ function Gpt() {
         return [MarkovConstants.Start, ...tokenStrings, MarkovConstants.End];
     };
 
+    /**
+     * No-op: GPT uses the prebuilt cl100k_base BPE vocabulary loaded at
+     * script init time, so there is no per-corpus state to train.
+     */
+    this.calibrate = (sourceText) => {};
+
     this.tokenize = (text) => {
         if (!text || typeof text !== 'string') {
             return [];

@@ -51,6 +51,12 @@ function Phonetic(espeak) {
     }
 
     /**
+     * No-op: Phonetic uses the espeak-ng IPA converter, which has no
+     * per-corpus state to train.
+     */
+    this.calibrate = function (sourceText) {};
+
+    /**
      * Async tokenization: converts text → IPA → phoneme token groups.
      * callback(err, groups) where groups is array of [Start, ...phonemes, End]
      */

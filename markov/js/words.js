@@ -4,6 +4,12 @@
  */
 function Words() {
 
+    /**
+     * No-op: Words uses a fixed scheme (character-per-word splitting with
+     * shared punctuation rules), so there is no per-corpus state to train.
+     */
+    this.calibrate = (sourceText) => {};
+
     this.tokenize = (text) => {
         if (!text || typeof text !== 'string') {
             return [];
