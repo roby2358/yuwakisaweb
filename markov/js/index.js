@@ -23,8 +23,18 @@ function getTokenizer(mode) {
     }
 }
 
+const CHAIN_PAGE_SIZE = 20;
+
+const escapeHtml = (s) => String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
 $(document).ready(function() {
     let markov = null;
+    let chainPage = 0;
 
     let messageTimeoutId = null;
     function showMessage(text, type = 'info', autoHideMs = 3500) {
@@ -64,8 +74,96 @@ $(document).ready(function() {
             return;
         }
 
+        if (targetTab === 'scheme') {
+            $('#scheme-panel').addClass('active');
+            renderScheme();
+            return;
+        }
+
+        if (targetTab === 'chain') {
+            $('#chain-panel').addClass('active');
+            renderChain();
+            return;
+        }
+
         if (targetTab === 'about') {
             $('#about-panel').addClass('active');
+        }
+    };
+
+    const renderScheme = () => {
+        const tokenizationMode = $('input[name="tokenization"]:checked').val();
+        const tokenizer = getTokenizer(tokenizationMode);
+        const description = tokenizer.describe();
+        $('#scheme-description').text(description.text);
+
+        if (!description.tokens) {
+            $('#scheme-table-wrapper').empty();
+            return;
+        }
+
+        const rows = description.tokens.map(entry =>
+            '<tr>' +
+                '<td><code>' + escapeHtml(entry.token) + '</code></td>' +
+                '<td>' + entry.raw + '</td>' +
+                '<td>' + entry.adjusted + '</td>' +
+                '<td>' + entry.score.toFixed(2) + '</td>' +
+            '</tr>'
+        ).join('');
+
+        $('#scheme-table-wrapper').html(
+            '<table class="scheme-table">' +
+                '<thead><tr><th>token</th><th>raw</th><th>adjusted</th><th>score</th></tr></thead>' +
+                '<tbody>' + rows + '</tbody>' +
+            '</table>'
+        );
+    };
+
+    const renderChain = () => {
+        if (!markov) {
+            $('#chain-content').html('<p>Calculate the Markov chain first.</p>');
+            $('#chain-page-info').text('—');
+            return;
+        }
+
+        const prefixes = Object.keys(markov.links).sort();
+        const totalPages = Math.max(1, Math.ceil(prefixes.length / CHAIN_PAGE_SIZE));
+        if (chainPage >= totalPages) chainPage = totalPages - 1;
+        if (chainPage < 0) chainPage = 0;
+
+        const start = chainPage * CHAIN_PAGE_SIZE;
+        const pagePrefixes = prefixes.slice(start, start + CHAIN_PAGE_SIZE);
+
+        const html = pagePrefixes.map(prefix => {
+            const suffixes = markov.links[prefix];
+            const suffixEntries = Object.entries(suffixes).sort((a, b) =>
+                a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0
+            );
+            const suffixItems = suffixEntries.map(([key, count]) =>
+                '<li><code>' + escapeHtml(key) + '</code> (' + count + ')</li>'
+            ).join('');
+            return '<li><code>' + escapeHtml(prefix) + '</code><ul>' + suffixItems + '</ul></li>';
+        }).join('');
+
+        $('#chain-content').html('<ul class="chain-list">' + html + '</ul>');
+        $('#chain-page-info').text('page ' + (chainPage + 1) + ' of ' + totalPages +
+            ' (' + prefixes.length + ' prefixes)');
+    };
+
+    const handleChainPrev = () => {
+        if (chainPage > 0) {
+            chainPage--;
+            renderChain();
+        }
+    };
+
+    const handleChainNext = () => {
+        if (!markov) return;
+        const prefixes = Object.keys(markov.links);
+        const totalPages = Math.ceil(prefixes.length / CHAIN_PAGE_SIZE);
+        if (chainPage < totalPages - 1) {
+            chainPage++;
+            renderChain();
         }
     };
 
@@ -96,6 +194,8 @@ $(document).ready(function() {
     $('.tab').on('click', handleTabClick);
     $('#no-newlines-btn').on('click', handleNoNewlines);
     $('#tweets-btn').on('click', handleTweets);
+    $('#chain-prev').on('click', handleChainPrev);
+    $('#chain-next').on('click', handleChainNext);
 
     const buildMarkov = (tokens) => {
         if (tokens.length === 0) {
@@ -104,6 +204,7 @@ $(document).ready(function() {
         }
         markov = new Markov(tokens, ngramLength);
         markov.build();
+        chainPage = 0;
         console.log('Markov chain built with ' + tokens.length + ' tokens');
         showMessage('Markov chain calculated successfully!', 'success');
     };

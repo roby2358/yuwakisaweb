@@ -10,6 +10,11 @@ function Words() {
      */
     this.calibrate = (sourceText) => {};
 
+    this.describe = () => ({
+        text: 'Words tokenizer. Splits text on whitespace into words after stripping paired punctuation (quotes, brackets) and separating unpaired punctuation (.,;:—?!) into its own tokens. Each word becomes a sequence of single-character tokens wrapped with Start/End markers, so the Markov chain generates letter by letter within a word. No per-corpus state.',
+        tokens: null
+    });
+
     this.tokenize = (text) => {
         if (!text || typeof text !== 'string') {
             return [];

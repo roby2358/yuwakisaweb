@@ -71,6 +71,11 @@ function Gpt() {
      */
     this.calibrate = (sourceText) => {};
 
+    this.describe = () => ({
+        text: 'GPT tokenizer. Uses the prebuilt cl100k_base BPE vocabulary (~100k tokens) loaded from a bundled script. Each paragraph is encoded by the BPE tokenizer and wrapped with Start/End markers. Tokens are subword pieces (often including a leading space) from OpenAI\'s training, so the vocabulary is fixed regardless of source corpus. No per-corpus state.',
+        tokens: null
+    });
+
     this.tokenize = (text) => {
         if (!text || typeof text !== 'string') {
             return [];

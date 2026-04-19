@@ -111,30 +111,52 @@ const TokenizeMdl = {
     },
 
     /**
-     * Score every candidate by adjusted_freq * (length - 1)^LENGTH_EXPONENT,
-     * take the top VOCAB_SIZE, add the alphabet for guaranteed single-char
+     * Score every candidate with adjusted frequency > 0 by
+     * adjusted_freq * (length - 1)^LENGTH_EXPONENT. Returns a list of
+     * { token, raw, adjusted, score } entries sorted by score descending.
+     */
+    rankCandidates(tally, adjusted) {
+        const exp = this.LENGTH_EXPONENT;
+        const ranked = [];
+        for (const token in adjusted) {
+            const adj = adjusted[token];
+            if (adj <= 0) continue;
+            ranked.push({
+                token,
+                raw: tally[token],
+                adjusted: adj,
+                score: adj * Math.pow(token.length - 1, exp)
+            });
+        }
+        ranked.sort((a, b) => b.score - a.score);
+        return ranked;
+    },
+
+    /**
+     * Combine learned tokens with the alphabet for guaranteed single-char
      * coverage, dedupe, and return sorted longest-first for greedy encoding.
      */
-    scoreAndSelect(adjusted) {
-        const exp = this.LENGTH_EXPONENT;
-        const scored = [];
-        for (const token in adjusted) {
-            const freq = adjusted[token];
-            if (freq <= 0) continue;
-            scored.push([token, freq * Math.pow(token.length - 1, exp)]);
-        }
-        scored.sort((a, b) => b[1] - a[1]);
-
-        const learned = scored.slice(0, this.VOCAB_SIZE).map(pair => pair[0]);
-        const vocabulary = Array.from(new Set(learned.concat(this.ALPHABET)));
+    buildVocabulary(learned) {
+        const tokens = learned.map(entry => entry.token);
+        const vocabulary = Array.from(new Set(tokens.concat(this.ALPHABET)));
         vocabulary.sort((a, b) => b.length - a.length);
         return vocabulary;
     },
 
+    /**
+     * Trains the MDL vocabulary from a normalized corpus. Returns both the
+     * learned stats (for introspection) and the encoding-ready vocabulary
+     * (learned tokens plus alphabet, sorted longest-first).
+     */
     trainVocabulary(normalizedCorpus) {
         const tally = this.collectCandidates(normalizedCorpus);
         const adjusted = this.assignCredit(tally);
-        return this.scoreAndSelect(adjusted);
+        const ranked = this.rankCandidates(tally, adjusted);
+        const learned = ranked.slice(0, this.VOCAB_SIZE);
+        return {
+            vocabulary: this.buildVocabulary(learned),
+            learned
+        };
     },
 
     /**

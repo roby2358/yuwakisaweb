@@ -9,6 +9,11 @@ function Text() {
      */
     this.calibrate = (sourceText) => {};
 
+    this.describe = () => ({
+        text: 'Text tokenizer. Splits the source on newlines into paragraphs, then each paragraph on whitespace into words (with the same paired/unpaired punctuation handling as Words). Each paragraph becomes a word-token sequence wrapped with Start/End markers, so the Markov chain generates word by word within a paragraph. No per-corpus state.',
+        tokens: null
+    });
+
     this.tokenize = (text) => {
         if (!text || typeof text !== 'string') {
             return [];

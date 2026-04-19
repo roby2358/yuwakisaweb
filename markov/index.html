@@ -11,6 +11,8 @@
         <div class="tabs">
             <button class="tab active" data-tab="source">source</button>
             <button class="tab" data-tab="generated">generated</button>
+            <button class="tab" data-tab="scheme">scheme</button>
+            <button class="tab" data-tab="chain">chain</button>
             <button class="tab" data-tab="about">about</button>
         </div>
         <div id="message-bar" class="message-bar" aria-live="polite">&nbsp;</div>
@@ -57,6 +59,20 @@
             <textarea id="generated-text" placeholder="Generated text will appear here..." autocomplete="off"></textarea>
         </div>
         
+        <div class="panel" id="scheme-panel">
+            <p id="scheme-description"></p>
+            <div id="scheme-table-wrapper"></div>
+        </div>
+
+        <div class="panel" id="chain-panel">
+            <div class="chain-pagination">
+                <button class="action-button" id="chain-prev">prev</button>
+                <span id="chain-page-info">—</span>
+                <button class="action-button" id="chain-next">next</button>
+            </div>
+            <div id="chain-content"></div>
+        </div>
+
         <div class="panel" id="about-panel">
             <p>This Markov chain text generator offers three modes:</p>
             <ul>

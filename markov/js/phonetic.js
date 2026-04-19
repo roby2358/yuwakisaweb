@@ -56,6 +56,13 @@ function Phonetic(espeak) {
      */
     this.calibrate = function (sourceText) {};
 
+    this.describe = function () {
+        return {
+            text: 'Phonetic tokenizer. Uses espeak-ng to convert text to IPA phonemes, recognizing multi-character phonemes (diphthongs like aɪ, affricates like tʃ, long vowels like iː) as single tokens. Each word becomes a phoneme sequence wrapped with Start/End markers, so the Markov chain generates phonemes. No per-corpus state.',
+            tokens: null
+        };
+    };
+
     /**
      * Async tokenization: converts text → IPA → phoneme token groups.
      * callback(err, groups) where groups is array of [Start, ...phonemes, End]
