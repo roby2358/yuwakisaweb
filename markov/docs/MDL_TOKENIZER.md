@@ -41,12 +41,18 @@ length) behave identically to the existing modes.
 
 ### Candidate Collection
 
-- The tokenizer MUST walk the normalized corpus character by character. At each
-  position, it MUST record every n-gram of length 2 through 7 that starts there
-  and satisfies the word-boundary rule below.
-- Word-boundary rule: an n-gram MUST NOT contain an interior space. A trailing
-  space at the final character of the n-gram IS permitted. This allows tokens
-  such as `the ` to exist while disallowing tokens that span two words.
+- The tokenizer MUST walk the normalized corpus character by character. At
+  every position, including positions that are themselves a space, it MUST
+  record every n-gram of length 2 through 12 that starts there and
+  satisfies the word-boundary rule below. The upper bound is chosen so
+  that most common English words fit as single candidates even with a
+  leading space (e.g., ` something`, ` landscape`, ` cultivate`).
+- Word-boundary rule: a space character MAY appear only as the first
+  character of an n-gram. All other positions MUST be non-space. This
+  allows tokens such as ` the` and ` and` to exist while disallowing
+  tokens that span two words. This follows the BPE convention used by
+  cl100k_base: the space that separates two words is attached to the
+  start of the following word.
 - The tokenizer MUST maintain a frequency tally of every candidate n-gram.
 - 1-grams MUST NOT be collected at this stage; single characters are added
   later as guaranteed alphabet coverage.
@@ -167,9 +173,13 @@ length) behave identically to the existing modes.
   not strict Minimum Description Length (which would include the cost of
   encoding the vocabulary itself). The name reflects the spirit of the
   credit-assignment step rather than a formal MDL objective.
-- **Trailing-space tokens.** Tokens MAY end in a space. During greedy encoding
-  these take precedence over their space-less variants when followed by a
-  space, packing common word-plus-separator pairs into a single token.
+- **Leading-space tokens.** Tokens MAY begin with a space (e.g., ` the`,
+  ` and`). During greedy encoding these take precedence over their
+  space-less variants when the cursor is on a space position, packing
+  common separator-plus-word pairs into a single token. This follows the
+  BPE convention — cl100k_base (used by GPT mode) stores spaces the same
+  way — so MDL and GPT output can be compared directly on the same
+  criterion.
 - **Greedy vs. optimal segmentation.** A locally longest match can preempt a
   better downstream segmentation. This is accepted. A future pass could
   improve segmentation using dynamic programming over token probabilities.

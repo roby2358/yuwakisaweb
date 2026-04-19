@@ -6,7 +6,7 @@ const TokenizeMdl = {
     NORMALIZE_STRIP: /[^A-Za-z0-9 .!?']/g,
     WHITESPACE_RUN: /\s+/g,
     MIN_NGRAM: 2,
-    MAX_NGRAM: 7,
+    MAX_NGRAM: 12,
     VOCAB_SIZE: 1024,
     LENGTH_EXPONENT: 1.5,
     SPACE_CHARCODE: 32,
@@ -31,32 +31,31 @@ const TokenizeMdl = {
 
     /**
      * Longest valid n-gram length starting at `start`: up to MAX_NGRAM, but
-     * stopping at the first space within the window. A trailing space is OK
-     * (it's allowed as the final char), so if a space is found at relative
-     * offset n-1, the n-gram of length n is the last valid length.
-     * Assumes corpus[start] is not itself a space.
+     * stopping just before any space found at positions start+1..start+n-1.
+     * A leading space at position `start` itself is fine (it becomes the
+     * opening char of a leading-space token like ` the`); interior spaces
+     * are not.
      */
     maxCandidateLength(corpus, start) {
         const SPACE = this.SPACE_CHARCODE;
-        const limit = Math.min(this.MAX_NGRAM, corpus.length - start);
-        for (let n = 1; n <= limit; n++) {
-            if (corpus.charCodeAt(start + n - 1) === SPACE) return n;
+        const maxPossible = Math.min(this.MAX_NGRAM, corpus.length - start);
+        for (let i = start + 1; i < start + maxPossible; i++) {
+            if (corpus.charCodeAt(i) === SPACE) return i - start;
         }
-        return limit;
+        return maxPossible;
     },
 
     /**
      * Walk the corpus and tally every n-gram of length MIN_NGRAM..MAX_NGRAM
-     * that starts at a non-space position and contains no interior space.
+     * that starts at any position (including space positions, which produce
+     * leading-space tokens) and has no space in its interior.
      */
     collectCandidates(corpus) {
         const tally = Object.create(null);
         const len = corpus.length;
-        const SPACE = this.SPACE_CHARCODE;
         const minN = this.MIN_NGRAM;
 
         for (let i = 0; i < len; i++) {
-            if (corpus.charCodeAt(i) === SPACE) continue;
             const limit = this.maxCandidateLength(corpus, i);
             for (let n = minN; n <= limit; n++) {
                 const gram = corpus.slice(i, i + n);
