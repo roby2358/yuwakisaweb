@@ -1,6 +1,6 @@
 Priority:   50
-Status: ToDo
+Status: Done
 ID: chain-mode-t7g6
 Created: 2026-04-19T18:49:15Z
-Updated: 2026-04-19T18:49:15Z
+Updated: 2026-04-19T20:52:09Z
 Bind the tokenizer to the Markov chain at calculate time rather than re-reading the radio button at generate time. Currently handleCalculate and handleGenerate in js/index.js each independently call getTokenizer() based on the radio button, so switching modes between calculate and generate silently corrupts output (e.g. MDL-calibrated chain parsed and formatted by Words). Fix: when buildMarkov runs, attach the tokenizer that produced the tokens to the chain — either set markov.tokenizer on the instance or pass it to the Markov constructor. At generate time use markov.tokenizer for seed parsing and format(), ignoring the radio button until the next calculate. Affected files: js/index.js (buildMarkov, handleCalculate, handleGenerate), optionally js/markov.js if constructor changes. This also reverses the generated text through the right scheme, which the user explicitly wants. Spec implication: tokenizer lifecycle is "calibrate → tokenize corpus → attach to chain → format via attached tokenizer".

@@ -197,12 +197,13 @@ $(document).ready(function() {
     $('#chain-prev').on('click', handleChainPrev);
     $('#chain-next').on('click', handleChainNext);
 
-    const buildMarkov = (tokens) => {
+    const buildMarkov = (tokens, tokenizer) => {
         if (tokens.length === 0) {
             showMessage('No tokens found. Please enter some text.', 'error');
             return;
         }
         markov = new Markov(tokens, ngramLength);
+        markov.tokenizer = tokenizer;
         markov.build();
         chainPage = 0;
         console.log('Markov chain built with ' + tokens.length + ' tokens');
@@ -227,11 +228,11 @@ $(document).ready(function() {
                     showMessage('Phonetic error: ' + err, 'error');
                     return;
                 }
-                buildMarkov(tokens);
+                buildMarkov(tokens, tokenizer);
             });
         } else {
             const tokens = tokenizer.tokenize(sourceText);
-            buildMarkov(tokens);
+            buildMarkov(tokens, tokenizer);
         }
     };
 
@@ -244,13 +245,12 @@ $(document).ready(function() {
         }
 
         const outputLength = parseInt($('#output-length').val()) || 500;
-        const tokenizationMode = $('input[name="tokenization"]:checked').val();
-        const tokenizer = getTokenizer(tokenizationMode);
+        const tokenizer = markov.tokenizer;
 
         const existingText = $('#generated-text').val().trim();
         let seed = null;
 
-        if (existingText && tokenizationMode !== 'phonetic') {
+        if (existingText && tokenizer !== phoneticTokenizer) {
             const seedGroups = tokenizer.tokenize(existingText);
             if (seedGroups.length > 0) {
                 const lastGroup = seedGroups[seedGroups.length - 1];
