@@ -34,7 +34,6 @@ function Mdl() {
         const result = TokenizeMdl.trainVocabulary(normalized);
         vocabulary = result.vocabulary;
         learned = result.learned;
-        console.log('MDL vocabulary (' + vocabulary.length + ' tokens):', vocabulary);
     };
 
     /**
