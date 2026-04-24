@@ -1,0 +1,17 @@
+{
+  "name": "markdown-is-a-solver",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser-based SMT playground: JSON + Markdown → Z3.",
+  "scripts": {
+    "bundle": "node scripts/bundle.mjs",
+    "upload": "bash scripts/upload.sh",
+    "serve": "node scripts/serve.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.21.0",
+    "wrangler": "^4.84.1",
+    "z3-solver": "^4.15.4"
+  }
+}

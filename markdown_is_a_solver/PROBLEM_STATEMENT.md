@@ -10,9 +10,9 @@ We want to load the z3 WASM from R2 and run the whole thing in the browswer. So 
 
 Please reference
 - ../markdown_is_a_prolog for the format, styling, parsing and processing of JSON facts and Prolog logic
-- /mnt/c/work/z3solver for an application that uses an LLM to translate problems into SMT-LIB-3 and then invokes the solver.
+- /mnt/c/work/z3solver for an application that uses an LLM to translate problems into SMT-LIB and then invokes the solver.
 
-Note that we DO NOT want to translate to SMT-LIB-3 like z3solver, we want to talk directly to the interface to build what we need. We want JSON and Markdown to go to internal representation node(value, children) or the like and interact directly with the solver.
+Note that we DO NOT want to translate to SMT-LIB like z3solver, we want to talk directly to the interface to build what we need. We want JSON and Markdown to go to internal representation node(value, children) or the like and interact directly with the solver.
 
 1. Facts in JSON
 2. Constraints and logic in Markdown (per MarkdownIsAProlog)

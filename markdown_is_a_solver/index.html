@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Is A Solver</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-left">
+                <svg class="icon-models" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <line x1="6" y1="4" x2="6" y2="20"></line>
+                    <line x1="6" y1="9" x2="18" y2="9"></line>
+                    <line x1="6" y1="15" x2="18" y2="15"></line>
+                </svg>
+                <h1 class="title">Markdown Is A Solver</h1>
+            </div>
+            <div class="header-actions">
+                <span id="z3Status" class="z3-status">Loading Z3…</span>
+                <button id="runBtn" class="btn btn-primary" disabled>
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                    Run
+                </button>
+            </div>
+        </header>
+
+        <nav class="example-nav">
+            <a href="#" class="example-link" data-example="easy">easy</a>
+            <a href="#" class="example-link" data-example="budget">budget</a>
+            <a href="#" class="example-link" data-example="physical">physical</a>
+            <a href="#" class="example-link" data-example="intake">intake</a>
+            <a href="#" class="example-link" data-example="scheduling">scheduling</a>
+            <a href="#" class="example-link" data-example="compliance">compliance</a>
+            <a href="#" class="example-link" data-example="fhir">fhir</a>
+            <a href="#" class="example-link" data-example="longitudinal">longitudinal</a>
+            <a href="#" class="example-link" data-example="social">social</a>
+        </nav>
+
+        <div class="main-content">
+            <div class="pane pane-json">
+                <div class="pane-header">
+                    <span>Facts (JSON)</span>
+                    <span>.json</span>
+                </div>
+                <textarea id="jsonEditor" class="editor" spellcheck="false"></textarea>
+            </div>
+
+            <div class="pane pane-rules">
+                <div class="pane-header">
+                    <span>Rules &amp; Check (Markdown)</span>
+                    <span>.md</span>
+                </div>
+                <textarea id="rulesEditor" class="editor" spellcheck="false"></textarea>
+            </div>
+
+            <div class="pane pane-output">
+                <div class="pane-header">
+                    <span>Result</span>
+                    <button id="clearBtn" class="btn-icon" title="Clear output">
+                        <svg class="icon-small" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div id="consoleOutput" class="console-content">
+                    <span class="console-placeholder">Ready to solve…</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Classic script (not module) so emscripten pthread workers can re-load
+         it as a Web Worker source. Exposes init on globalThis.MiasZ3. -->
+    <script src="vendor/z3-bundle.js"></script>
+    <script type="module" src="index.js"></script>
+</body>
+</html>
