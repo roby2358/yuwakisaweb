@@ -1,6 +1,6 @@
 // Examples ordered easy → hard so a first-time user sees the simplest usage
 // first. Each shows a different ergonomic:
-//   easy       — Markdown-only; three unknowns, no JSON input.
+//   easy       — three unknowns, single JSON parameter (the age total).
 //   budget     — JSON parameters + Markdown unknowns with inequality constraints.
 //   physical   — clinical checkup validation: physiological range checks,
 //                BMI consistency, BP coherence, label enumeration, smoker rule.
@@ -16,14 +16,16 @@
 
 export const EXAMPLES = {
   easy: {
-    json: `{}`,
+    json: `{
+  "total_age": 30
+}`,
     rules: `# declare
 * alice : Int
 * bob : Int
 * carol : Int
 
 # assert
-* =(+(alice, bob, carol), \`30\`)
+* =(+(alice, bob, carol), total_age)
 * =(alice, *(\`2\`, bob))
 * =(bob, +(carol, \`2\`))
 
