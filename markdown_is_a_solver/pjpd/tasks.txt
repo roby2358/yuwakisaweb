@@ -1,0 +1,69 @@
+Priority:   50
+Status: ToDo
+ID: mias-ggki
+Created: 2026-04-24T15:20:10Z
+Updated: 2026-04-24T15:20:10Z
+Add a transaction-monitoring example to examples.js alongside the existing nine built-ins — a fintech payment record plus BSA/AML-style rules (currency/country thresholds, sanctioned-counterparty equality, tier-dependent review threshold). Precursor to the batch-UI demo; validates the domain in the single-record UI before committing to batch.
+----
+Priority:   50
+Status: ToDo
+ID: mias-59m9
+Created: 2026-04-24T15:20:11Z
+Updated: 2026-04-24T15:20:11Z
+Refactor compile() in compiler.js to separate rule compilation from per-record evaluation. Currently builds constants, asserts JSON equalities, and asserts Markdown constraints all at once per Run. Split so the Markdown rule set compiles once into a reusable structure, and each record rebuilds only the JSON-equality scope. Target the 10–100× speedup called out in docs/COMMERCIAL_SCALE.md.
+----
+Priority:   50
+Status: ToDo
+ID: mias-7b88
+Created: 2026-04-24T15:20:12Z
+Updated: 2026-04-24T15:20:12Z
+Implement push/pop (or fresh-solver-per-record) between records in the batch evaluator. Z3 supports solver.push() / solver.pop(); between records pop the prior record's assertions, push fresh ones, and solve. Required for throughput so the batch-UI demo's few-hundred-record run feels fast.
+----
+Priority:   50
+Status: ToDo
+ID: mias-9ix8
+Created: 2026-04-24T15:20:14Z
+Updated: 2026-04-24T15:20:14Z
+Build a BaaS cross-border-remittance rule set as the batch-UI demo fixture. Written as a Markdown rule set: thresholds on amount/currency/destination-country, sanctioned-counterparty equality checks, account-age minimums, upstream-risk-score thresholds, a tier-dependent review rule. Realistic enough that a fintech compliance reader recognizes the shape.
+----
+Priority:   50
+Status: ToDo
+ID: mias-ezbd
+Created: 2026-04-24T15:20:16Z
+Updated: 2026-04-24T15:20:16Z
+Generate a synthetic JSONL file of a few hundred transactions for the batch demo — mix of transactions that pass cleanly and transactions that trip one or more rules (some single-rule hits, some multi-rule hits so unsat cores have something interesting to report). Deterministic seed so the demo is reproducible.
+----
+Priority:   50
+Status: ToDo
+ID: mias-8vn3
+Created: 2026-04-24T15:20:17Z
+Updated: 2026-04-24T15:20:17Z
+Include a deliberately contradictory rule pair in the batch demo fixture — two rules whose conjunction is infeasible — so the sat-check demonstrates "this rule set is infeasible before you deploy it" as a compliance-team-feelable feature. Pair with UI surfacing that distinguishes "bad rule set" from "flagged record."
+----
+Priority:   50
+Status: ToDo
+ID: mias-vskt
+Created: 2026-04-24T15:20:19Z
+Updated: 2026-04-24T15:20:19Z
+Batch-in-browser UI: JSONL file drag-and-drop + per-record evaluation loop. Accept a JSONL drop, parse line-by-line, run each record through the (pre-compiled) rule set, collect verdicts. Uses the compile-once + push/pop path so the loop is tight. New panel alongside the existing three-pane single-record UI, toggleable.
+----
+Priority:   50
+Status: ToDo
+ID: mias-k742
+Created: 2026-04-24T15:20:20Z
+Updated: 2026-04-24T15:20:20Z
+Batch-in-browser UI: aggregate dashboard + flagged-record list with unsat cores. Summary counts (sat / unsat / unknown), flagged-record table showing each flagged record's ID plus the exact subset of rules its unsat core named. This is the output the Tier-1 transaction-monitoring pitch rests on.
+----
+Priority:   50
+Status: ToDo
+ID: mias-nejv
+Created: 2026-04-24T15:20:22Z
+Updated: 2026-04-24T15:20:22Z
+Node CLI wrapper: `npx mias validate <rules.md> <facts.jsonl>`. Thin streaming wrapper over the existing parser/compiler (they already run unchanged in Node per SPEC.md). Reads JSONL from stdin or a file arg, emits line-delimited verdicts + unsat cores to stdout. Unlocks Tier-3 (CLI / library) customers per docs/COMMERCIAL_SCALE.md.
+----
+Priority:   50
+Status: ToDo
+ID: mias-46ix
+Created: 2026-04-24T15:20:23Z
+Updated: 2026-04-24T15:20:23Z
+Establish a record-identity convention — top-level `id` field in each JSON record — and surface it in the batch-UI flagged-record list and the CLI output. Required for the audit-log primitives tier and for any flagged-record UI to be actionable (you need to point at a specific record). Spell the requirement out in SPEC.md.

@@ -1,6 +1,24 @@
 # Commercial Scale
 
-An opinionated read of where this technology wins in market, and a path from "one record per run" to production throughput. Internal strategy doc. The external-facing argument for why MIAS exists lives in [WHY.md](./WHY.md).
+An opinionated read of where this technology wins in market, and a path from "one record per run" to production throughput. Holds both the pitch and the market analysis; marketing materials will be split out of here when there's a real need for them.
+
+## Pitch
+
+**Markdown Is A Solver** is a browser-based constraint engine. You write the data as JSON, you write the rules as Markdown, and a WebAssembly SMT solver returns a verdict — sat, unsat, or unknown — along with a minimal explanation when a record fails a rule. Everything runs in the user's browser. No server sees the data.
+
+"Why not just write this in Python or TypeScript?" is the question every engineering review asks, and it deserves a direct answer. Every built-in example — the compliance rule, the FHIR dose check, the longitudinal panel validation — is absolutely codeable as a handful of `if` statements in any general-purpose language. The case for MIAS isn't that you *can't* do it in code. It's that code is the wrong place for the logic to live, for five specific reasons.
+
+**Rules stop being code.** Markdown assertions are readable by the person who owns the policy — the compliance officer, the clinician, the research PI, the T&S analyst — not just the engineer who wrote the validator. A `if (request.dose_mg * request.frequency > 4000) ...` check is invisible to everyone outside engineering. ``<=(total_daily_mg, `4000`)`` is visible to every stakeholder on the project. Policy-as-code only pays off when the "code" crosses the engineer/stakeholder line; Markdown is what lets it cross.
+
+**Unsat cores explain failures for free.** A hand-rolled validator either returns the first error or you write your own "collect all errors" machinery; either way, you're designing the explanation by hand. An SMT solver produces a minimal explanation — the specific set of rules whose conjunction made the record infeasible — as a built-in feature. For a record that trips several constraints at once, that is the difference between actionable feedback and noise.
+
+**Satisfiability-checking catches contradictions at authoring time.** You can ask the solver "can any record satisfy this rule set?" *before* any records run against it. If the answer is unsat, the rules contradict each other — a class of bug that in a procedural validator only surfaces at runtime on the one record that hits both branches. SMT makes the rule set a formal object; a Python file is not a formal object.
+
+**The surface is narrow by design.** A Markdown-plus-JSON constraint cannot loop forever, cannot hit the network, cannot mutate shared state, cannot import arbitrary code. It is sat, unsat, or unknown, in bounded time. That is not a performance claim — it is an *audit* claim. A regulated-industry customer reviewing what can happen inside the evaluator has to convince themselves of a narrow formal thing, not a Turing-complete thing. Nothing in Python or TypeScript gives you that property.
+
+**LLMs write the surface well.** The vocabulary is a couple dozen operators and four sorts. A language model given a rule-in-English produces a Markdown constraint block that a human can read, review, and merge. The same model given "write me a Python validator" produces code that runs but carries several bugs per file, needs tests, and bit-rots the moment the schema changes. The authoring economics favor the restricted DSL.
+
+**When TS or Python is still the right call.** Regex-heavy text processing, rules that genuinely need network lookups, workflows that mutate state across steps, anything that depends on floating-point transcendentals or the full numeric tower. MIAS is a constraint engine, not a scripting language. The moment a rule needs to call a service to ask "is this IP on the block list," you are in imperative territory and should stay there. The pitch is not that MIAS replaces general-purpose code — it is that *declarative constraint logic belongs in a constraint engine*, and MIAS is what that looks like when the surface is Markdown.
 
 ## What the examples reveal
 
@@ -145,6 +163,3 @@ Two different things to scale, and they scale differently:
 3. **Audit log primitives** — record IDs, rule-set hashes, verdict timestamps, structured errors.
 4. **Managed service** — only once 1–3 are solid. Everything above this line is foundational; everything below is go-to-market.
 
-## Pitch
-
-The external-facing argument for why MIAS should exist — the "why not just Python/TypeScript" rebuttal, rules-stop-being-code, unsat-cores-as-explanation, satisfiability-at-authoring-time, narrow-surface-as-audit-claim, LLM-authoring economics — lives in [WHY.md](./WHY.md). That is the doc to hand to an investor or a design partner. This one stays internal.
