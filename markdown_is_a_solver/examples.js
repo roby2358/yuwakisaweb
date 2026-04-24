@@ -23,9 +23,8 @@ export const EXAMPLES = {
 * Int alice bob carol
 
 # assert
-* =
+* = total_age
   * + alice bob carol
-  * total_age
 * = alice
   * * \`2\` bob
 * = bob
@@ -44,9 +43,8 @@ export const EXAMPLES = {
 * Int mathematics physics philosophy
 
 # assert
-* =
+* = budget
   * + mathematics physics philosophy
-  * budget
 * = mathematics
   * * \`3\` physics
 * = physics
@@ -139,19 +137,15 @@ export const EXAMPLES = {
 * >= order.unit_price \`0\`
 * >= order.discount_rate \`0\`
 * <= order.discount_rate \`1\`
-* =
-  * order.subtotal
+* = order.subtotal
   * * order.quantity order.unit_price
-* =
-  * order.discount_amount
+* = order.discount_amount
   * * order.subtotal order.discount_rate
-* =
-  * order.tax
+* = order.tax
   * *
     * - order.subtotal order.discount_amount
     * order.tax_rate
-* =
-  * order.total
+* = order.total
   * -
     * + order.subtotal order.tax
     * order.discount_amount
@@ -250,17 +244,13 @@ export const EXAMPLES = {
   }
 }`,
     rules: `# assert
-* =
-  * respondent.age
+* = respondent.age
   * - respondent.wave_year respondent.birth_year
-* =
-  * respondent.hours_total
+* = respondent.hours_total
   * + respondent.hours_main respondent.hours_second
-* =
-  * respondent.income_total
+* = respondent.income_total
   * + respondent.wages_annual respondent.benefits_annual respondent.other_income
-* =
-  * respondent.wellbeing_sum
+* = respondent.wellbeing_sum
   * + respondent.wellbeing_1 respondent.wellbeing_2 respondent.wellbeing_3
 * >= respondent.age \`18\`
 * <= respondent.age \`110\`
@@ -339,8 +329,7 @@ export const EXAMPLES = {
 * Int total_engagement
 
 # assert
-* =
-  * total_engagement
+* = total_engagement
   * + post.likes post.replies post.reposts
 * >= post.likes \`0\`
 * >= post.replies \`0\`
@@ -402,16 +391,14 @@ export const EXAMPLES = {
 # assert
 * = patient.resourceType \`Patient\`
 * = medicationRequest.resourceType \`MedicationRequest\`
-* =
-  * total_daily_mg
+* = total_daily_mg
   * * medicationRequest.dose_mg medicationRequest.frequency_per_day
 * >= medicationRequest.dose_mg \`0\`
 * >= medicationRequest.frequency_per_day \`0\`
 * <= total_daily_mg \`4000\`
 * implies
   * < patient.age_years \`12\`
-  * <=
-    * total_daily_mg
+  * <= total_daily_mg
     * * \`75\` patient.weight_kg
 * or
   * = medicationRequest.status \`active\`
