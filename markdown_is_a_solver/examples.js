@@ -20,14 +20,16 @@ export const EXAMPLES = {
   "total_age": 30
 }`,
     rules: `# declare
-* alice : Int
-* bob : Int
-* carol : Int
+* Int alice bob carol
 
 # assert
-* =(+(alice, bob, carol), total_age)
-* =(alice, *(\`2\`, bob))
-* =(bob, +(carol, \`2\`))
+* =
+  * + alice bob carol
+  * total_age
+* = alice
+  * * \`2\` bob
+* = bob
+  * + carol \`2\`
 
 # check
 `,
@@ -39,17 +41,19 @@ export const EXAMPLES = {
   "minimum_each": 5
 }`,
     rules: `# declare
-* mathematics : Int
-* physics : Int
-* philosophy : Int
+* Int mathematics physics philosophy
 
 # assert
-* =(+(mathematics, physics, philosophy), budget)
-* =(mathematics, *(\`3\`, physics))
-* =(physics, +(philosophy, \`10\`))
-* >=(mathematics, minimum_each)
-* >=(physics, minimum_each)
-* >=(philosophy, minimum_each)
+* =
+  * + mathematics physics philosophy
+  * budget
+* = mathematics
+  * * \`3\` physics
+* = physics
+  * + philosophy \`10\`
+* >= mathematics minimum_each
+* >= physics minimum_each
+* >= philosophy minimum_each
 
 # check
 `,
@@ -72,25 +76,43 @@ export const EXAMPLES = {
   }
 }`,
     rules: `# assert
-* >=(observation.age_years, \`0\`)
-* <=(observation.age_years, \`120\`)
-* >=(observation.height_m, \`0.5\`)
-* <=(observation.height_m, \`2.5\`)
-* >=(observation.weight_kg, \`2\`)
-* <=(observation.weight_kg, \`300\`)
-* <=(-(observation.bmi, /(observation.weight_kg, *(observation.height_m, observation.height_m))), \`0.1\`)
-* <=(-(/(observation.weight_kg, *(observation.height_m, observation.height_m)), observation.bmi), \`0.1\`)
-* >=(observation.systolic_bp, \`40\`)
-* <=(observation.systolic_bp, \`250\`)
-* >=(observation.diastolic_bp, \`20\`)
-* <=(observation.diastolic_bp, \`150\`)
-* >=(observation.systolic_bp, +(observation.diastolic_bp, \`10\`))
-* >=(observation.resting_hr, \`20\`)
-* <=(observation.resting_hr, \`220\`)
-* >=(observation.temperature_c, \`25\`)
-* <=(observation.temperature_c, \`45\`)
-* or(=(observation.label, \`healthy\`), =(observation.label, \`at_risk\`), =(observation.label, \`chronic\`))
-* implies(observation.smoker, not(=(observation.label, \`healthy\`)))
+* >= observation.age_years \`0\`
+* <= observation.age_years \`120\`
+* >= observation.height_m \`0.5\`
+* <= observation.height_m \`2.5\`
+* >= observation.weight_kg \`2\`
+* <= observation.weight_kg \`300\`
+* <=
+  * -
+    * observation.bmi
+    * /
+      * observation.weight_kg
+      * * observation.height_m observation.height_m
+  * \`0.1\`
+* <=
+  * -
+    * /
+      * observation.weight_kg
+      * * observation.height_m observation.height_m
+    * observation.bmi
+  * \`0.1\`
+* >= observation.systolic_bp \`40\`
+* <= observation.systolic_bp \`250\`
+* >= observation.diastolic_bp \`20\`
+* <= observation.diastolic_bp \`150\`
+* >= observation.systolic_bp
+  * + observation.diastolic_bp \`10\`
+* >= observation.resting_hr \`20\`
+* <= observation.resting_hr \`220\`
+* >= observation.temperature_c \`25\`
+* <= observation.temperature_c \`45\`
+* or
+  * = observation.label \`healthy\`
+  * = observation.label \`at_risk\`
+  * = observation.label \`chronic\`
+* implies observation.smoker
+  * not
+    * = observation.label \`healthy\`
 
 # check
 `,
@@ -113,17 +135,39 @@ export const EXAMPLES = {
   }
 }`,
     rules: `# assert
-* >(order.quantity, \`0\`)
-* >=(order.unit_price, \`0\`)
-* >=(order.discount_rate, \`0\`)
-* <=(order.discount_rate, \`1\`)
-* =(order.subtotal, *(order.quantity, order.unit_price))
-* =(order.discount_amount, *(order.subtotal, order.discount_rate))
-* =(order.tax, *(-(order.subtotal, order.discount_amount), order.tax_rate))
-* =(order.total, -(+(order.subtotal, order.tax), order.discount_amount))
-* or(=(order.status, \`pending\`), =(order.status, \`shipped\`), =(order.status, \`delivered\`), =(order.status, \`cancelled\`))
-* or(=(order.customer_tier, \`bronze\`), =(order.customer_tier, \`silver\`), =(order.customer_tier, \`gold\`), =(order.customer_tier, \`platinum\`))
-* implies(=(order.customer_tier, \`gold\`), >=(order.discount_rate, \`0.1\`))
+* > order.quantity \`0\`
+* >= order.unit_price \`0\`
+* >= order.discount_rate \`0\`
+* <= order.discount_rate \`1\`
+* =
+  * order.subtotal
+  * * order.quantity order.unit_price
+* =
+  * order.discount_amount
+  * * order.subtotal order.discount_rate
+* =
+  * order.tax
+  * *
+    * - order.subtotal order.discount_amount
+    * order.tax_rate
+* =
+  * order.total
+  * -
+    * + order.subtotal order.tax
+    * order.discount_amount
+* or
+  * = order.status \`pending\`
+  * = order.status \`shipped\`
+  * = order.status \`delivered\`
+  * = order.status \`cancelled\`
+* or
+  * = order.customer_tier \`bronze\`
+  * = order.customer_tier \`silver\`
+  * = order.customer_tier \`gold\`
+  * = order.customer_tier \`platinum\`
+* implies
+  * = order.customer_tier \`gold\`
+  * >= order.discount_rate \`0.1\`
 
 # check
 `,
@@ -135,16 +179,18 @@ export const EXAMPLES = {
   "workday_end": 17
 }`,
     rules: `# declare
-* meeting_a : Int
-* meeting_b : Int
-* meeting_c : Int
+* Int meeting_a meeting_b meeting_c
 
 # assert
-* >=(meeting_a, workday_start)
-* <=(meeting_a, \`11\`)
-* >=(meeting_b, +(meeting_a, \`1\`))
-* >=(meeting_c, +(meeting_b, \`2\`))
-* <=(+(meeting_c, \`1\`), workday_end)
+* >= meeting_a workday_start
+* <= meeting_a \`11\`
+* >= meeting_b
+  * + meeting_a \`1\`
+* >= meeting_c
+  * + meeting_b \`2\`
+* <=
+  * + meeting_c \`1\`
+  * workday_end
 
 # check
 `,
@@ -162,8 +208,13 @@ export const EXAMPLES = {
   }
 }`,
     rules: `# assert
-* not(and(=(security_group.ingress.port, \`22\`), =(security_group.ingress.cidr, \`0.0.0.0/0\`)))
-* or(=(security_group.ingress.protocol, \`tcp\`), =(security_group.ingress.protocol, \`udp\`))
+* not
+  * and
+    * = security_group.ingress.port \`22\`
+    * = security_group.ingress.cidr \`0.0.0.0/0\`
+* or
+  * = security_group.ingress.protocol \`tcp\`
+  * = security_group.ingress.protocol \`udp\`
 
 # check
 `,
@@ -199,34 +250,64 @@ export const EXAMPLES = {
   }
 }`,
     rules: `# assert
-* =(respondent.age, -(respondent.wave_year, respondent.birth_year))
-* =(respondent.hours_total, +(respondent.hours_main, respondent.hours_second))
-* =(respondent.income_total, +(respondent.wages_annual, respondent.benefits_annual, respondent.other_income))
-* =(respondent.wellbeing_sum, +(respondent.wellbeing_1, respondent.wellbeing_2, respondent.wellbeing_3))
-* >=(respondent.age, \`18\`)
-* <=(respondent.age, \`110\`)
-* <=(respondent.hours_total, \`168\`)
-* >=(respondent.education_isced, \`0\`)
-* <=(respondent.education_isced, \`8\`)
-* >=(respondent.self_rated_health, \`1\`)
-* <=(respondent.self_rated_health, \`5\`)
-* >=(respondent.wellbeing_1, \`1\`)
-* <=(respondent.wellbeing_1, \`5\`)
-* >=(respondent.wellbeing_2, \`1\`)
-* <=(respondent.wellbeing_2, \`5\`)
-* >=(respondent.wellbeing_3, \`1\`)
-* <=(respondent.wellbeing_3, \`5\`)
-* <=(respondent.birth_year, respondent.enrollment_year)
-* <=(respondent.enrollment_year, respondent.wave_year)
-* or(=(respondent.sex, \`F\`), =(respondent.sex, \`M\`), =(respondent.sex, \`X\`))
-* or(=(respondent.marital_status, \`single\`), =(respondent.marital_status, \`married\`), =(respondent.marital_status, \`divorced\`), =(respondent.marital_status, \`widowed\`), =(respondent.marital_status, \`separated\`))
-* or(=(respondent.employment_status, \`employed\`), =(respondent.employment_status, \`self_employed\`), =(respondent.employment_status, \`retired\`), =(respondent.employment_status, \`unemployed\`), =(respondent.employment_status, \`homemaker\`))
-* or(=(respondent.smoking_status, \`never\`), =(respondent.smoking_status, \`former\`), =(respondent.smoking_status, \`current\`))
-* implies(=(respondent.smoking_status, \`never\`), =(respondent.pack_years, \`0\`))
-* implies(=(respondent.employment_status, \`retired\`), and(>(respondent.retirement_year, \`0\`), <=(respondent.retirement_year, respondent.wave_year)))
-* distinct(respondent.age, \`-999\`, \`-8\`, \`-9\`)
-* distinct(respondent.income_total, \`-999\`, \`-8\`, \`-9\`)
-* distinct(respondent.self_rated_health, \`-999\`, \`-8\`, \`-9\`)
+* =
+  * respondent.age
+  * - respondent.wave_year respondent.birth_year
+* =
+  * respondent.hours_total
+  * + respondent.hours_main respondent.hours_second
+* =
+  * respondent.income_total
+  * + respondent.wages_annual respondent.benefits_annual respondent.other_income
+* =
+  * respondent.wellbeing_sum
+  * + respondent.wellbeing_1 respondent.wellbeing_2 respondent.wellbeing_3
+* >= respondent.age \`18\`
+* <= respondent.age \`110\`
+* <= respondent.hours_total \`168\`
+* >= respondent.education_isced \`0\`
+* <= respondent.education_isced \`8\`
+* >= respondent.self_rated_health \`1\`
+* <= respondent.self_rated_health \`5\`
+* >= respondent.wellbeing_1 \`1\`
+* <= respondent.wellbeing_1 \`5\`
+* >= respondent.wellbeing_2 \`1\`
+* <= respondent.wellbeing_2 \`5\`
+* >= respondent.wellbeing_3 \`1\`
+* <= respondent.wellbeing_3 \`5\`
+* <= respondent.birth_year respondent.enrollment_year
+* <= respondent.enrollment_year respondent.wave_year
+* or
+  * = respondent.sex \`F\`
+  * = respondent.sex \`M\`
+  * = respondent.sex \`X\`
+* or
+  * = respondent.marital_status \`single\`
+  * = respondent.marital_status \`married\`
+  * = respondent.marital_status \`divorced\`
+  * = respondent.marital_status \`widowed\`
+  * = respondent.marital_status \`separated\`
+* or
+  * = respondent.employment_status \`employed\`
+  * = respondent.employment_status \`self_employed\`
+  * = respondent.employment_status \`retired\`
+  * = respondent.employment_status \`unemployed\`
+  * = respondent.employment_status \`homemaker\`
+* or
+  * = respondent.smoking_status \`never\`
+  * = respondent.smoking_status \`former\`
+  * = respondent.smoking_status \`current\`
+* implies
+  * = respondent.smoking_status \`never\`
+  * = respondent.pack_years \`0\`
+* implies
+  * = respondent.employment_status \`retired\`
+  * and
+    * > respondent.retirement_year \`0\`
+    * <= respondent.retirement_year respondent.wave_year
+* distinct respondent.age \`-999\` \`-8\` \`-9\`
+* distinct respondent.income_total \`-999\` \`-8\` \`-9\`
+* distinct respondent.self_rated_health \`-999\` \`-8\` \`-9\`
 
 # check
 `,
@@ -255,24 +336,42 @@ export const EXAMPLES = {
   }
 }`,
     rules: `# declare
-* total_engagement : Int
+* Int total_engagement
 
 # assert
-* =(total_engagement, +(post.likes, post.replies, post.reposts))
-* >=(post.likes, \`0\`)
-* >=(post.replies, \`0\`)
-* >=(post.reposts, \`0\`)
-* >=(post.impressions, \`0\`)
-* <=(total_engagement, post.impressions)
-* >=(account.created_at_days_ago, post.created_at_days_ago)
-* >=(account.follower_count, \`0\`)
-* >=(account.following_count, \`0\`)
-* >=(account.post_count, \`0\`)
-* or(=(account.language, \`en\`), =(account.language, \`es\`), =(account.language, \`fr\`), =(account.language, \`pt\`), =(account.language, \`de\`), =(account.language, \`ja\`))
-* implies(account.verified, >=(account.created_at_days_ago, \`30\`))
-* implies(<(account.created_at_days_ago, \`7\`), <=(account.post_count, \`50\`))
-* implies(and(>=(account.following_count, \`1000\`), <=(account.follower_count, \`10\`)), <=(account.post_count, \`5\`))
-* implies(post.flagged_spam, or(post.contains_link, >=(account.following_count, \`1000\`)))
+* =
+  * total_engagement
+  * + post.likes post.replies post.reposts
+* >= post.likes \`0\`
+* >= post.replies \`0\`
+* >= post.reposts \`0\`
+* >= post.impressions \`0\`
+* <= total_engagement post.impressions
+* >= account.created_at_days_ago post.created_at_days_ago
+* >= account.follower_count \`0\`
+* >= account.following_count \`0\`
+* >= account.post_count \`0\`
+* or
+  * = account.language \`en\`
+  * = account.language \`es\`
+  * = account.language \`fr\`
+  * = account.language \`pt\`
+  * = account.language \`de\`
+  * = account.language \`ja\`
+* implies account.verified
+  * >= account.created_at_days_ago \`30\`
+* implies
+  * < account.created_at_days_ago \`7\`
+  * <= account.post_count \`50\`
+* implies
+  * and
+    * >= account.following_count \`1000\`
+    * <= account.follower_count \`10\`
+  * <= account.post_count \`5\`
+* implies post.flagged_spam
+  * or
+    * post.contains_link
+    * >= account.following_count \`1000\`
 
 # check
 `,
@@ -298,19 +397,36 @@ export const EXAMPLES = {
   }
 }`,
     rules: `# declare
-* total_daily_mg : Int
+* Int total_daily_mg
 
 # assert
-* =(patient.resourceType, \`Patient\`)
-* =(medicationRequest.resourceType, \`MedicationRequest\`)
-* =(total_daily_mg, *(medicationRequest.dose_mg, medicationRequest.frequency_per_day))
-* >=(medicationRequest.dose_mg, \`0\`)
-* >=(medicationRequest.frequency_per_day, \`0\`)
-* <=(total_daily_mg, \`4000\`)
-* implies(<(patient.age_years, \`12\`), <=(total_daily_mg, *(\`75\`, patient.weight_kg)))
-* or(=(medicationRequest.status, \`active\`), =(medicationRequest.status, \`on-hold\`), =(medicationRequest.status, \`completed\`), =(medicationRequest.status, \`cancelled\`), =(medicationRequest.status, \`stopped\`))
-* or(=(medicationRequest.intent, \`proposal\`), =(medicationRequest.intent, \`plan\`), =(medicationRequest.intent, \`order\`))
-* implies(not(patient.active), not(=(medicationRequest.status, \`active\`)))
+* = patient.resourceType \`Patient\`
+* = medicationRequest.resourceType \`MedicationRequest\`
+* =
+  * total_daily_mg
+  * * medicationRequest.dose_mg medicationRequest.frequency_per_day
+* >= medicationRequest.dose_mg \`0\`
+* >= medicationRequest.frequency_per_day \`0\`
+* <= total_daily_mg \`4000\`
+* implies
+  * < patient.age_years \`12\`
+  * <=
+    * total_daily_mg
+    * * \`75\` patient.weight_kg
+* or
+  * = medicationRequest.status \`active\`
+  * = medicationRequest.status \`on-hold\`
+  * = medicationRequest.status \`completed\`
+  * = medicationRequest.status \`cancelled\`
+  * = medicationRequest.status \`stopped\`
+* or
+  * = medicationRequest.intent \`proposal\`
+  * = medicationRequest.intent \`plan\`
+  * = medicationRequest.intent \`order\`
+* implies
+  * not patient.active
+  * not
+    * = medicationRequest.status \`active\`
 
 # check
 `,

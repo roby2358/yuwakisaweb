@@ -67,3 +67,39 @@ ID: mias-46ix
 Created: 2026-04-24T15:20:23Z
 Updated: 2026-04-24T15:20:23Z
 Establish a record-identity convention — top-level `id` field in each JSON record — and surface it in the batch-UI flagged-record list and the CLI output. Required for the audit-log primitives tier and for any flagged-record UI to be actionable (you need to point at a specific record). Spell the requirement out in SPEC.md.
+----
+Priority:   50
+Status: ToDo
+ID: mias-jkv3
+Created: 2026-04-24T19:08:33Z
+Updated: 2026-04-24T19:08:33Z
+Add a `# define` section that lets users define reusable rule templates (MIAL-style functions) that expand inline inside `# assert` bullets. Keeps MIAS's "parse → static sort check → solve" pipeline intact — expansion is textual/tree substitution at compile time, not runtime evaluation. No closures-as-values, no quote/eval, no full MIAL semantics; this is macros, narrowly.
+
+Motivation: eliminate the enum-check and range-check boilerplate that dominates several examples. `longitudinal` has 4 blocks of `or(= field a, = field b, …)` and ~8 paired `>= x lo` / `<= x hi` range checks; `physical` is similar. Compliance shops can also ship reusable rule libraries (e.g. `(no-open-ssh sg)`) instead of hand-rewriting CIDR patterns per customer.
+
+Shape (sketch, not final):
+```
+# define
+* one-of x options
+  * member x options
+* in-range x lo hi
+  * and
+    * >= x lo
+    * <= x hi
+
+# assert
+* one-of respondent.sex
+  * list `F` `M` `X`
+* in-range observation.age_years `0` `120`
+```
+First child of the bullet under `# define` is the parameter list; remaining bullets are the body (single-expression in v1). A call inside `# assert` substitutes argument nodes for parameter names in the body tree, then the resulting tree goes through the normal compiler.
+
+Scope decisions to make when picking this up:
+- Pure substitution vs. a small evaluator. Pure substitution covers enum/range; doesn't cover "iterate over a list of field names to generate N assertions." If the HOF story matters, revisit after pure macros ship.
+- Recursion / nested calls. Probably allow (one definition can call another) but disallow self-recursion to keep expansion finite.
+- Naming collisions with built-in operators. Decide whether `define`-ing `and` is an error (probably yes) or just shadows (probably no).
+- Error locality. Expansion errors (wrong arity, unknown symbol inside a macro body) need to point back at the call site bullet, not the body.
+
+Why narrow vs. full MIAL-as-input: full MIAL gives closures, quote/eval, higher-order constraint builders, meta-rules — genuinely new territory, but costs the static sort-check pass, the SMT-LIB mental map, and the compliance-user audience who doesn't want a Lisp. `# define` gets ~80% of the ergonomic upside (enum macros, range macros, reusable rule libraries) at a fraction of the design surface.
+
+Cross-ref: follows the recent switch to MIAL-style bullet-tree syntax (see parser.js), which made the AST shape compatible with MIAL's `{value, children}`. That change is what makes this feasible as a narrow addition rather than a rewrite.

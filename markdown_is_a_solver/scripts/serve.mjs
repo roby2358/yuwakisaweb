@@ -5,7 +5,7 @@
 // Production sets these headers via the parent yuwakisaweb/_headers file.
 // IntelliJ's built-in preview does not, so use this for local testing.
 //
-//   node scripts/serve.mjs          # serves the app at http://localhost:8000
+//   node scripts/serve.mjs          # serves the app at http://localhost:8181
 //   node scripts/serve.mjs 8123     # custom port
 
 import { createServer } from 'http';
@@ -15,7 +15,7 @@ import { fileURLToPath } from 'url';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const root = resolve(here, '..');
-const port = Number(process.argv[2] ?? 8000);
+const port = Number(process.argv[2] ?? 8181);
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',

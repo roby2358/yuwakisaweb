@@ -195,21 +195,36 @@ const buildOp = (ctx, op, args) => {
   }
 };
 
-const compileTerm = (node, ctx, env) => {
-  const v = node.value;
-  if ('name' in v) {
-    const entry = env.get(v.name);
-    if (!entry) throw new Error(`Undeclared symbol '${v.name}'`);
-    return entry;
+// Lift a JS-primitive literal into a typed Z3 expression. Sort is inferred
+// from the JS type: integer → Int, fractional number → Real, boolean → Bool,
+// `{ string }` → String. Mirrors the MIAL literal shape the parser emits.
+const liftJSLiteral = (ctx, v) => {
+  if (typeof v === 'number') {
+    return liftLiteral(ctx, v, Number.isInteger(v) ? 'Int' : 'Real');
   }
-  if ('lit' in v) {
-    return liftLiteral(ctx, v.lit, v.sort);
+  if (typeof v === 'boolean') {
+    return liftLiteral(ctx, v, 'Bool');
   }
-  if ('op' in v) {
-    const args = node.children.map(child => compileTerm(child, ctx, env));
-    return buildOp(ctx, v.op, args);
+  if (v && typeof v === 'object' && 'string' in v) {
+    return liftLiteral(ctx, v.string, 'String');
   }
-  throw new Error(`Unknown node shape: ${JSON.stringify(v)}`);
+  throw new Error(`Unknown literal value: ${JSON.stringify(v)}`);
+};
+
+const compileTerm = (n, ctx, env) => {
+  if (n.children.length === 0) {
+    if (typeof n.value === 'string') {
+      const entry = env.get(n.value);
+      if (!entry) throw new Error(`Undeclared symbol '${n.value}'`);
+      return entry;
+    }
+    return liftJSLiteral(ctx, n.value);
+  }
+  if (typeof n.value !== 'string') {
+    throw new Error(`Compound term head must be an operator name; got ${JSON.stringify(n.value)}`);
+  }
+  const args = n.children.map(c => compileTerm(c, ctx, env));
+  return buildOp(ctx, n.value, args);
 };
 
 // Compile the parsed program against a fresh Z3 context.

@@ -10,7 +10,7 @@ Deploys as a subpath of a parent Cloudflare Pages project (`yuwakisaweb.pages.de
 
 ## Commands
 
-- `npm run serve` — local dev server on `http://localhost:8000` with COOP/COEP headers required for `SharedArrayBuffer`. Use this instead of IntelliJ's preview or any plain static server; without the headers, `solver.check()` fails at pthread creation.
+- `npm run serve` — local dev server on `http://localhost:8181` with COOP/COEP headers required for `SharedArrayBuffer`. Use this instead of IntelliJ's preview or any plain static server; without the headers, `solver.check()` fails at pthread creation.
 - `npm run bundle` — regenerate `vendor/z3-bundle.js` from `scripts/entry.js` via esbuild. Only needed when bumping `z3-solver` or changing the entry shim. Also copies `z3-built.wasm` into `vendor/` for upload.
 - `npm run upload` — run `scripts/upload.sh` to (re)upload the WASM to R2 with CORS + long-cache headers. Requires `wrangler login`.
 
@@ -22,20 +22,25 @@ The pipeline is a straight line: **parse → compile → solve**, with a uniform
 
 ### AST shape (the contract between modules)
 
+The shape is the same one MIAL (sibling `markdown_is_a_lisp`) uses: `{ value, children }`. Atoms have `children.length === 0`; compounds have `children.length > 0` and `value` is the operator name.
+
 ```
 node(value, children)
-  { name: 'port' }             — symbol reference
-  { lit: 443, sort: 'Int' }    — literal
-  { op: 'and' }                — compound, children are operand nodes
+  value: 'port'                 — symbol reference (string, no children)
+  value: 443                    — Int literal (integer JS number, no children)
+  value: 0.1                    — Real literal (fractional JS number, no children)
+  value: true | false           — Bool literal
+  value: { string: 'healthy' }  — String literal
+  value: 'and', children: [...] — compound (string value + non-empty children)
 ```
 
-Defined in `parser.js`. The compiler walks this shape and nothing else. JSON and Markdown halves compose cleanly because they produce the same shape.
+Sort is not tagged onto literals — the compiler infers it from the JS type. Defined in `parser.js`. The compiler walks this shape and nothing else. JSON and Markdown halves compose cleanly because they produce the same shape.
 
 ### parser.js
 
 Two halves merged into one program `{ declarations, assertions }`:
 - **JSON half**: every primitive becomes a typed declared constant. Sort inferred from JSON shape; `_types` sibling object overrides per-field. Nested objects flatten with dot notation (`security_group.ingress.port`). Arrays and `null` are rejected in v1.
-- **Markdown half**: sections `# declare`, `# assert`, `# check`. Prefix s-expression surface: `=(x, *(y, z))` with comma-separated args. Backticks wrap literals (`` `443` `` Int, `` `0.0.0.0/0` `` String). Indented bullets under an `assert` item are conjoined with `and`. Exactly one `# check` section, no bullets under it.
+- **Markdown half**: sections `# declare`, `# assert`, `# check`. MIAL-style bullet trees — nesting IS the expression tree. A bullet line's first token is the node's value; further tokens on the same line are flat children (compact form); indented sub-bullets become additional children. Either `*` or `-` MAY be the bullet marker. Backticks wrap literals (`` `443` `` → Int, `` `0.1` `` → Real, `` `true` `` → Bool, `` `"hello"` `` or `` `0.0.0.0/0` `` → String). Declarations put the sort first: `* Int alice bob carol` declares three Ints. Each top-level bullet under `# assert` is exactly one assertion — sibling bullets are NOT implicitly conjoined (use an explicit `and`). Exactly one `# check` section, no bullets under it.
 
 A name declared in both JSON and Markdown is a hard error (no silent shadowing).
 
