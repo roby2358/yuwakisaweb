@@ -62,8 +62,8 @@ The application presents a single-page three-pane layout beneath a header. The h
 ### Results Pane
 
 - On completion the pane MUST display one of `sat`, `unsat`, or `unknown`.
-- On `sat` the pane MUST display a formatted model listing each declared constant and its assigned value; JSON-derived constants SHOULD be included.
-- On `unsat` the pane MUST display an unsat core: the minimal set of JSON facts and Markdown assertions whose conjunction is infeasible. Each core entry MUST be rendered as the original source text of the assertion or fact so the user can map the verdict back to the rule or datum responsible.
+- On `sat` the pane MUST display a JSON object `{"sat": true, ...model}` where each declared constant is set at its dot-qualified path, reconstructing the nested shape of the input. Any field the caller supplied in the input JSON (including a top-level `id`) round-trips to the output unchanged, so batch consumers can correlate outputs to inputs by reading whatever identifier they already put in — no separate correlation plumbing is required.
+- On `unsat` the pane MUST display a JSON object `{"sat": false, "conflicts": "..."}` where `conflicts` is the Markdown source text of the failing rules (the minimal unsat core) joined by blank lines, preserving the original bullet-tree form so the user can map the verdict back to the rules or JSON facts responsible.
 - A clear action MUST reset the pane to its placeholder state.
 
 ## Non-Functional Requirements

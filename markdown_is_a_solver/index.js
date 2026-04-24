@@ -31,9 +31,38 @@ const appendLine = (text, className) => {
 
 const appendError = (message) => appendLine(`Error: ${message}`, 'log-line-error');
 const appendVerdict = (verdict) => appendLine(verdict, `log-line-verdict-${verdict}`);
-const appendModelLabel = (label) => appendLine(label, 'log-line-model-label');
-const appendBinding = (name, value) => appendLine(`${name} = ${value}`, 'log-line-binding');
-const appendCore = (source) => appendLine(`• ${source}`, 'log-line-core');
+const appendJSON = (obj) => appendLine(JSON.stringify(obj, null, 2), 'log-line-binding');
+
+// Unwrap a Z3 model value back to a JS-native primitive using the sort we
+// tracked at compile time. Falls back to the Z3 toString() form if an
+// extraction method isn't available for this value (shouldn't happen for
+// v1 sorts, but keeps rendering honest rather than throwing).
+const modelValue = (model, entry) => {
+  const v = model.eval(entry.expr, true);
+  try {
+    if (entry.sort === 'Int')    return Number(v.asString());
+    if (entry.sort === 'Real')   return v.asNumber();
+    if (entry.sort === 'Bool')   return v.toString() === 'true';
+    if (entry.sort === 'String') {
+      const s = v.toString();
+      return s.startsWith('"') && s.endsWith('"') ? s.slice(1, -1) : s;
+    }
+  } catch {}
+  return v.toString();
+};
+
+// Set a dot-qualified path on a nested object, creating intermediate
+// objects as needed. `observation.bmi` → `{ observation: { bmi: ... } }`.
+const setPath = (obj, path, value) => {
+  const parts = path.split('.');
+  let cur = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const p = parts[i];
+    if (cur[p] == null || typeof cur[p] !== 'object') cur[p] = {};
+    cur = cur[p];
+  }
+  cur[parts[parts.length - 1]] = value;
+};
 
 // ── Z3 lifecycle ───────────────────────────────────────────────────────
 
@@ -95,20 +124,23 @@ const handleRun = async () => {
     appendVerdict(result);
     if (result === 'sat') {
       const model = solver.model();
-      appendModelLabel('model');
+      const out = { sat: true };
       for (const [name, entry] of env) {
-        try {
-          // Z3 Real values often come back as e.g. "25/2" — keep as-is; UI shows raw solver output.
-          appendBinding(name, model.eval(entry.expr, true).toString());
-        } catch {
-          appendBinding(name, '(unavailable)');
-        }
+        setPath(out, name, modelValue(model, entry));
       }
+      appendJSON(out);
     } else if (result === 'unsat') {
-      appendModelLabel('conflicting rules');
-      for (const lit of solver.unsatCore()) {
-        appendCore(labels.get(lit.toString()));
+      const conflicts = [...solver.unsatCore()]
+        .map(lit => labels.get(lit.toString()))
+        .join('\n\n');
+      const out = { sat: false };
+      for (const d of program.declarations) {
+        if (d.origin === 'json') setPath(out, d.name, d.value);
       }
+      out.conflicts = conflicts;
+      appendJSON(out);
+    } else {
+      appendJSON({ sat: null });
     }
   } catch (e) {
     appendError(`Solver: ${e.message}`);
