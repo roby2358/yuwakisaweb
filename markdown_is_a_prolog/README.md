@@ -1,101 +1,100 @@
-# MarkdownIsAProlog
+# JSON Facts
 
-A logic programming interpreter where Markdown is the source syntax.
+A browser-based logic programming playground. Write structured data as JSON, query it with a Markdown-flavored Prolog dialect, and see results instantly — no install, no build step.
 
-Headings define predicates. Bullets enumerate alternative clauses (disjunction). Sub-bullets list body goals (conjunction). Inline syntax carries term structure — brackets for lists, parentheses for compound terms, commas for argument separation. The visual nesting IS the logical nesting.
+## What It Does
 
-Companion to [MarkdownIsALISP](../markdown_is_a_lisp/), which maps Markdown to LISP. Where MIAL proves that bullet nesting encodes S-expressions, this project proves that Markdown's document hierarchy encodes Horn clause logic programs.
+**Left pane:** Define facts as JSON. Each top-level key becomes a predicate; values are flattened into arguments automatically.
 
-## Try It
+**Middle pane:** Write rules and queries in Markdown Prolog — headings define predicates, bullet points define clauses, indented bullets are body goals.
 
-Open `index.html` in a browser. No build step, no dependencies.
+**Right pane:** Hit Run (or Ctrl+Enter) and see query results with variable bindings.
 
-Ctrl+Enter runs the program from the editor.
+## Quick Example
 
-## How It Works
+Given this JSON:
 
-Prolog programs are collections of Horn clauses grouped by predicate. Each predicate has a name, and its clauses are tried top-to-bottom. A clause with no conditions is a fact; a clause with conditions is a rule. A query asks the interpreter to find variable bindings that satisfy a goal using depth-first search with backtracking.
-
-Markdown maps onto this directly:
-
-| Markdown | Prolog | Role |
-|---|---|---|
-| Heading (`#`) | Predicate name | Groups related clauses |
-| Top-level bullet | Clause | One way to satisfy the predicate |
-| Bullet content | Head arguments | What the clause matches against |
-| Sub-bullets | Body goals | Conditions (conjunction) |
-| Multiple bullets | Alternatives | Tried top-to-bottom (disjunction) |
-| `# ?` heading | Query | What to solve |
-
-### Syntax Mapping
-
-```
-# parent                →  predicate "parent"
-* `tom`, `bob`          →  fact: parent(tom, bob)
-* `bob`, `ann`          →  fact: parent(bob, ann)
-
-# ancestor              →  predicate "ancestor"
-* X, Y                  →  clause head: ancestor(X, Y) :-
-  * parent X, Y         →    body goal: parent(X, Y)
-* X, Z                  →  clause head: ancestor(X, Z) :-
-  * parent X, Y         →    body goal: parent(X, Y)
-  * ancestor Y, Z       →    body goal: ancestor(Y, Z)
-
-# ?                     →  queries
-* ancestor `tom`, Who   →  ?- ancestor(tom, Who)
+```json
+{
+  "parent": {
+    "tom": ["bob", "liz"],
+    "bob": ["ann", "pat"]
+  }
+}
 ```
 
-Output: `Who = bob`, `Who = ann`. Two solutions found.
+And these rules:
 
-### Term Syntax
+```markdown
+# ancestor
+* X, Y
+  * parent X, Y
+* X, Z
+  * parent X, Y
+  * ancestor Y, Z
 
-| Syntax | Term | Notes |
+# ?
+* ancestor tom, Who
+```
+
+You get:
+
+```
+?- ancestor(tom, Who)
+  Who = bob
+  Who = liz
+  Who = ann
+  Who = pat
+  4 solutions.
+```
+
+## JSON Flattening
+
+Top-level keys become predicate names. Values map to facts:
+
+| JSON pattern | Example | Produces |
 |---|---|---|
-| `X`, `Who` | Variable | Uppercase or `_`-prefixed |
-| `_` | Anonymous variable | Unique per occurrence |
-| `tom`, `hello` | Atom | Bare lowercase |
-| `` `tom` `` | Atom | Backtick-wrapped (same as bare) |
-| `` `42` ``, `` `3.14` `` | Number | Backtick-wrapped digits |
-| `[]` | Empty list | |
-| `[H \| T]` | Head/tail | Cons cell decomposition |
-| `[a, b, c]` | List | Sugar for nested cons cells |
-| `pair(a, b)` | Compound term | Functor with arguments |
-| `+(N, \`1\`)` | Arithmetic | Operators as compound terms |
+| Key → array of primitives | `"human": ["alice", "bob"]` | `human(alice).` `human(bob).` |
+| Key → array of arrays | `"edge": [["a","b"]]` | `edge(a, b).` |
+| Key → object → primitives | `"capital": {"france": "paris"}` | `capital(france, paris).` |
+| Key → object → array | `"parent": {"tom": ["bob","liz"]}` | `parent(tom, bob).` `parent(tom, liz).` |
 
-### Control
+Objects and arrays nest to arbitrary depth.
 
-- **`cut`** — succeeds once, commits to the current clause
-- **`not`** — negation-as-failure; consumes the rest of the bullet as a sub-goal
+## Markdown Prolog Syntax
 
-## Documentation
+- `# name` — defines a predicate
+- `# ?` — defines a query section
+- `* args` — clause head (or query goal at top level)
+- Indented `* goal` — body goal
+- Uppercase or `_`-prefixed tokens are variables; `_` alone is anonymous
+- `` `value` `` — literal (number or atom)
+- `[H | T]`, `[a, b, c]` — list syntax
+- `not goal` — negation as failure
 
-- [SPEC.md](SPEC.md) — Full technical specification
+## Built-in Predicates
 
-## Builtin Reference
+`true`, `fail`, `=`, `\=`, `not`, `cut`, `write`, `nl`, `atom`, `number`, `var`, `nonvar`, `is`, `<`, `>`, `=<`, `>=`, `=:=`, `=\=`
 
-### Predicates
+Arithmetic operators: `+`, `-`, `*`, `//`, `mod`
 
-| Name | Description |
+Standard library: `append`, `member`, `length`
+
+## Included Examples
+
+| Example | Demonstrates |
 |---|---|
-| `true` | Always succeeds |
-| `fail` | Always fails |
-| `=` | Unify two terms |
-| `\=` | Succeeds when two terms do not unify |
-| `write` | Output a term to the console |
-| `nl` | Output a newline |
-| `atom` | Test if a term is an atom |
-| `number` | Test if a term is a number |
-| `var` | Test if a term is an unbound variable |
-| `nonvar` | Test if a term is not an unbound variable |
+| **family** | Recursive ancestor queries over a family tree |
+| **employees** | Arithmetic comparisons, transitive team membership |
+| **graph** | Path finding with list accumulation, toll costs |
+| **aws** | Infrastructure auditing — public buckets, open security groups, cross-region access |
+| **inventory** | Stock filtering with price/quantity constraints |
+| **social** | Mutual follows, influencer detection |
 
-### Arithmetic
+## Trace Mode
 
-`is` evaluates an expression and unifies the result: `is Result, +(A, B)`
+Toggle the **trace** checkbox before running to see a step-by-step log of the resolver — each goal attempted, indented by depth. The trace panel is collapsible.
 
-Operators: `+`, `-`, `*`, `//` (integer division), `mod`
+## Running
 
-Comparisons: `<`, `>`, `=<`, `>=`, `=:=`, `=\=`
-
-### Standard Library
-
-`append`, `member`, and `length` are implemented as Markdown Prolog clauses loaded before user code — inspectable and overridable.
+Open `index.html` in a browser. That's it — no dependencies, no build.

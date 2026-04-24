@@ -1,7 +1,7 @@
 /**
- * MarkdownIsAProlog — Phase 1+2 Interpreter
+ * Prolog Interpreter — forked from MarkdownIsAProlog
  *
- * Same { value, children } node shape as MIAL.
+ * Same { value, children } node shape.
  * Immutable substitution maps — no trailing, no mutation.
  * Generator-based solver for backtracking.
  * Lists as cons cells: node('.', [head, tail]), node('[]') for empty.
@@ -25,7 +25,6 @@ const getIndentLevel = (line) => {
 };
 
 // Split text by a separator character, respecting backtick/bracket/paren nesting.
-// Shared by parseArgList (split on ',') and parseList (split on '|').
 const splitAtDepth0 = (text, separator) => {
   const segments = [];
   let current = '';
@@ -391,11 +390,6 @@ const makeBuiltins = (logFn) => {
 };
 
 // ── Solver ─────────────────────────────────────────────────────
-//
-// Body goals and continuation are resolved separately so that
-// cut is scoped to the right predicate's clause loop.
-// Cut sets a flag; the clause loop checks it after each clause.
-// Not tries a sub-goal and succeeds when it fails.
 
 const makeSolver = (db, builtins, stepLimit, traceFn) => {
   const freshCounter = { count: 0 };
@@ -538,19 +532,3 @@ const STDLIB = `
   * length T, N1
   * is N, +( N1, \`1\`)
 `;
-
-// ── Runner ─────────────────────────────────────────────────────
-
-const runMarkdownIsAProlog = (code, logFn, traceFn) => {
-  const entries = parseMarkdown(STDLIB + '\n' + code);
-  const { db, queries } = buildDatabase(entries);
-  const builtins = makeBuiltins(logFn);
-  const solve = makeSolver(db, builtins, 10000, traceFn);
-
-  if (queries.length === 0) {
-    logFn('No queries found. Add a # ? section with goals.');
-    return;
-  }
-
-  queries.forEach(q => executeQuery(q, solve, logFn));
-};

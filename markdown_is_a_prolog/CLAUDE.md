@@ -2,51 +2,34 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project
+## What This Is
 
-MarkdownIsAProlog — a Prolog interpreter that uses Markdown as its source syntax. Companion to MarkdownIsALISP. Runs entirely in-browser with no build step, no dependencies, no frameworks.
-
-## Running
-
-Open `index.html` in a browser. No build, no server required. Ctrl+Enter runs the program from the editor.
+JSON Facts: a browser-based Prolog playground that converts JSON into facts and queries them with a Markdown-flavored Prolog syntax. No build step, no dependencies — open `index.html` in a browser.
 
 ## Architecture
 
-Two files, mirroring MIAL's structure:
+Three files loaded in strict order via `<script>` tags (globals, not ES modules):
 
-- **`interpreter.js`** — the complete Prolog engine: parser, unifier, solver, builtins, stdlib. Exposes `runMarkdownIsAProlog(code, logFn, traceFn)` as the single entry point. Loaded as a plain script (not ES module despite the spec saying so).
-- **`index.js`** — UI controller. Wires up the editor, example programs, console output, and trace panel. Calls `runMarkdownIsAProlog` on run.
+1. **interpreter.js** — The Prolog engine. Defines all core primitives (`node`, `isVar`, `deref`, `unify`), the Markdown parser (`parseMarkdown`), the solver (`makeSolver`), builtins (`makeBuiltins`), query execution, formatting, and the standard library (`STDLIB`). Everything else depends on this file.
 
-### Interpreter internals
+2. **json_parser.js** — Converts JSON objects into the same `{ name, clauses }` entry format the Markdown parser produces. Depends on `node` and `buildConsList` from interpreter.js.
 
-All terms use the same `{ value, children }` node shape as MIAL. Variables are `{ value: { var: 'X' }, children: [] }`. Lists are cons cells: `node('.', [head, tail])` with `node('[]')` for empty.
+3. **index.js** — UI controller. Wires up DOM elements, manages examples, runs queries by combining JSON + Markdown entries into a unified database. Depends on everything above.
 
-Key sections in `interpreter.js` (top to bottom):
-1. **Nodes & helpers** — `node()`, `isVar()`, `NUM_RE`
-2. **Parser** — `parseMarkdown()` turns Markdown into predicate entries. `splitAtDepth0` handles nesting-aware splitting. `parseTerm`/`parseGoal`/`parseArgList` handle inline syntax.
-3. **Unification** — immutable substitution maps (Map). `deref` walks binding chains, `deepDeref` fully resolves, `unify` returns new Map or null.
-4. **Variable freshening** — `freshenClause` renames variables with `__N` suffixes per clause attempt.
-5. **Formatting** — `formatTerm`/`formatGoal` for output display.
-6. **Database** — `buildDatabase` groups clauses by `name/arity` key.
-7. **Arithmetic** — `evalArith` walks term trees as expression trees. `ARITH_OPS` for `+`, `-`, `*`, `//`, `mod`.
-8. **Builtins** — `makeBuiltins(logFn)` returns a Map of `key → (args, subst) → subst|null`. Builtins access `.value` directly on terms, no unwrapper functions.
-9. **Solver** — generator-based (`function*`) depth-first search. `makeSolver` returns a function that yields substitutions. Cut sets a flag checked by the clause loop. Not uses negation-as-failure.
-10. **Stdlib** — `append`, `member`, `length` defined as Markdown Prolog, prepended to user code.
-11. **Runner** — `runMarkdownIsAProlog` parses stdlib+user code, builds DB, runs queries.
+### Key Data Shape
 
-### Markdown-to-Prolog mapping
+All terms use `{ value, children }` nodes. Variables have `value: { var: 'Name' }`. Lists are cons cells: `node('.', [head, tail])` with `node('[]')` for empty. Substitutions are immutable `Map` instances.
 
-- `# heading` → predicate name
-- Top-level `*` bullet → clause (multiple = disjunction)
-- Bullet content → head arguments (predicate name comes from heading)
-- Sub-bullets → body goals (conjunction)
-- `# ?` section → queries (each bullet is a query)
-- Body goal syntax: first word = predicate name, rest = arguments
+Parsers (both JSON and Markdown) produce arrays of `{ name, clauses }` entries. Each clause has `{ headArgs, body }` (for rules/facts) or `{ goals }` (for queries). The database indexes by `name/arity` string keys.
+
+## Development
+
+No build, no tests, no linter. To develop: edit files, refresh browser.
 
 ## Conventions
 
-- No tests in this project
-- Vanilla JS, no build tools, no npm
-- Named `const` arrow functions with separate `addEventListener` binding (not inline anonymous handlers)
-- Builtins access `.value` directly on node terms — no universal unwrapper/helper functions
-- Prefer the simplest clean fix over broader structural changes
+- No build tooling — plain browser JS with global scope
+- Script load order matters — do not reorder `<script>` tags or convert to ES modules without updating all three files
+- Both parsers must produce the same entry shape so they merge seamlessly in `buildDatabase`
+- Backtick literals in Markdown Prolog (`` `90000` ``) distinguish literal values from variable names
+- The `#` heading in Markdown Prolog defines predicate names; `# ?` defines queries

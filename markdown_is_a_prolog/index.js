@@ -1,15 +1,22 @@
 /**
- * MarkdownIsAProlog — UI Controller
+ * JSON Facts — UI Controller
+ *
+ * Left pane:  JSON facts (parsed into Prolog database entries)
+ * Middle pane: Prolog rules & queries (Markdown syntax)
+ * Right pane: Query results
  */
 
 const EXAMPLES = {
-  family: `# parent
-* tom, bob
-* tom, liz
-* bob, ann
-* bob, pat
-
-# ancestor
+  family: {
+    json: `{
+  "parent": {
+    "tom": ["bob", "liz"],
+    "bob": ["ann", "pat"]
+  },
+  "male": ["tom", "bob"],
+  "female": ["liz", "ann", "pat"]
+}`,
+    rules: `# ancestor
 * X, Y
   * parent X, Y
 * X, Z
@@ -17,107 +24,194 @@ const EXAMPLES = {
   * ancestor Y, Z
 
 # ?
-* ancestor tom, Who`,
+* ancestor tom, Who
+* ancestor X, ann`
+  },
 
-  lists: `# reverse
-* [], []
-* [H | T], R
-  * reverse T, RevT
-  * append RevT, [H], R
+  employees: {
+    json: `{
+  "employee": [
+    ["alice", "engineering", 95000],
+    ["bob", "engineering", 88000],
+    ["carol", "sales", 72000],
+    ["dave", "sales", 68000],
+    ["eve", "engineering", 102000]
+  ],
+  "manager": [
+    ["alice", "bob"],
+    ["alice", "eve"],
+    ["carol", "dave"]
+  ]
+}`,
+    rules: `# high-earner
+* Name, Dept
+  * employee Name, Dept, Salary
+  * >= Salary, \`90000\`
 
-# ?
-* append [a, b], [c, d], R
-* member X, [x, y, z]
-* reverse [a, b, c], R
-* append X, Y, [a, b, c]`,
-
-  arithmetic: `# factorial
-* \`0\`, \`1\`
-* N, F
-  * > N, \`0\`
-  * is N1, -(N, \`1\`)
-  * factorial N1, F1
-  * is F, *(N, F1)
-
-# fibonacci
-* \`0\`, \`0\`
-* \`1\`, \`1\`
-* N, F
-  * > N, \`1\`
-  * is N1, -(N, \`1\`)
-  * is N2, -(N, \`2\`)
-  * fibonacci N1, F1
-  * fibonacci N2, F2
-  * is F, +(F1, F2)
+# team-member
+* Manager, Employee
+  * manager Manager, Employee
+* Manager, Employee
+  * manager Manager, Mid
+  * team-member Mid, Employee
 
 # ?
-* factorial \`7\`, F
-* fibonacci \`10\`, F`,
+* high-earner Who, Dept
+* team-member alice, Who`
+  },
 
-  cut: `# max
-* X, Y, X
-  * >= X, Y
-  * cut
-* X, Y, Y
+  graph: {
+    json: `{
+  "road": {
+    "silverton": ["bramblewood", "moonhaven"],
+    "bramblewood": ["foxhollow"],
+    "foxhollow": ["moonhaven", "dunmere"],
+    "moonhaven": ["dunmere"]
+  },
+  "toll": [
+    ["silverton", "bramblewood", 5],
+    ["bramblewood", "foxhollow", 3],
+    ["foxhollow", "moonhaven", 2],
+    ["foxhollow", "dunmere", 7],
+    ["moonhaven", "dunmere", 4],
+    ["silverton", "moonhaven", 6]
+  ]
+}`,
+    rules: `# path
+* X, Y, [X, Y]
+  * road X, Y
+* X, Z, [X | Rest]
+  * road X, Y
+  * path Y, Z, Rest
 
-# classify
-* N, positive
-  * > N, \`0\`
-  * cut
-* \`0\`, zero
-  * cut
-* _, negative
+# leg-cost
+* From, To, Cost
+  * road From, To
+  * toll From, To, Cost
 
 # ?
-* max \`5\`, \`3\`, M
-* classify \`7\`, C
-* classify \`0\`, C
-* classify \`-3\`, C`,
+* road silverton, Where
+* path silverton, dunmere, Route
+* leg-cost From, To, Cost`
+  },
 
-  negation: `# human
-* alice
-* bob
-* carol
+  aws: {
+    json: `{
+  "s3-bucket": ["logs-prod", "site-assets", "backups", "dev-dumps"],
+  "s3-region": {
+    "logs-prod": "us-east-1",
+    "site-assets": "us-east-1",
+    "backups": "us-west-2",
+    "dev-dumps": "us-west-2"
+  },
+  "s3-public": ["site-assets", "dev-dumps"],
+  "s3-encrypted": ["logs-prod", "backups"],
+  "s3-versioned": ["logs-prod"],
+  "ec2-instance": ["web-1", "web-2", "dev-box"],
+  "ec2-region": {
+    "web-1": "us-east-1",
+    "web-2": "us-east-1",
+    "dev-box": "us-west-2"
+  },
+  "ec2-sg": {
+    "web-1": "sg-web",
+    "web-2": "sg-web",
+    "dev-box": "sg-dev"
+  },
+  "sg-ingress": {
+    "sg-web": ["0.0.0.0/0", "10.0.0.0/8"],
+    "sg-dev": ["10.0.0.0/8"]
+  }
+}`,
+    rules: `# public-unencrypted
+* Bucket
+  * s3-public Bucket
+  * not s3-encrypted Bucket
 
-# vegetarian
-* bob
-* carol
+# unversioned
+* Bucket
+  * s3-bucket Bucket
+  * not s3-versioned Bucket
 
-# meat-eater
-* X
-  * human X
-  * not vegetarian X
+# open-to-internet
+* Instance, SG
+  * ec2-sg Instance, SG
+  * sg-ingress SG, 0.0.0.0/0
 
-# safe-pair
+# cross-region
+* Bucket, Instance
+  * s3-region Bucket, R1
+  * ec2-region Instance, R2
+  * \\= R1, R2
+
+# ?
+* public-unencrypted Bucket
+* unversioned Bucket
+* open-to-internet Instance, SG
+* cross-region Bucket, Instance`
+  },
+
+  inventory: {
+    json: `{
+  "item": [
+    ["widget", 4.99, 150],
+    ["gadget", 12.50, 42],
+    ["doohickey", 2.25, 300],
+    ["thingamajig", 8.75, 0],
+    ["whatchamacallit", 15.00, 17]
+  ]
+}`,
+    rules: `# in-stock
+* Name, Price
+  * item Name, Price, Qty
+  * > Qty, \`0\`
+
+# affordable
+* Name, Price
+  * in-stock Name, Price
+  * =< Price, \`5\`
+
+# out-of-stock
+* Name
+  * item Name, _, \`0\`
+
+# ?
+* affordable Name, Price
+* out-of-stock Name`
+  },
+
+  social: {
+    json: `{
+  "follows": [
+    ["alice", "bob"],
+    ["bob", "carol"],
+    ["carol", "alice"],
+    ["dave", "alice"],
+    ["dave", "carol"]
+  ]
+}`,
+    rules: `# mutual
 * X, Y
-  * human X
-  * human Y
-  * not = X, Y
+  * follows X, Y
+  * follows Y, X
+
+# influencer
+* X
+  * follows A, X
+  * follows B, X
+  * not = A, B
 
 # ?
-* meat-eater Who
-* safe-pair X, Y`,
-
-  hanoi: `# hanoi
-* \`0\`, _, _, _
-* N, From, To, Via
-  * > N, \`0\`
-  * is N1, -(N, \`1\`)
-  * hanoi N1, From, Via, To
-  * write From
-  * write to
-  * write To
-  * nl
-  * hanoi N1, Via, To, From
-
-# ?
-* hanoi \`3\`, left, right, center`
+* mutual X, Y
+* influencer Who`
+  }
 };
 
 const DEFAULT_EXAMPLE = 'family';
 
 const initApp = () => {
-  const codeEditor = document.getElementById('codeEditor');
+  const jsonEditor = document.getElementById('jsonEditor');
+  const rulesEditor = document.getElementById('rulesEditor');
   const consoleOutput = document.getElementById('consoleOutput');
   const runBtn = document.getElementById('runBtn');
   const clearBtn = document.getElementById('clearBtn');
@@ -126,8 +220,6 @@ const initApp = () => {
   const tracePanel = document.getElementById('tracePanel');
   const traceHeader = document.getElementById('traceHeader');
   const traceOutput = document.getElementById('traceOutput');
-
-  codeEditor.value = EXAMPLES[DEFAULT_EXAMPLE];
 
   // ── Console ────────────────────────────────────────────────
 
@@ -182,7 +274,30 @@ const initApp = () => {
       ? (depth, text) => traceLines.push({ depth, text })
       : null;
 
-    runMarkdownIsAProlog(codeEditor.value, appendLog, traceFn);
+    // Parse JSON facts
+    let jsonEntries;
+    try {
+      jsonEntries = parseJSONFacts(jsonEditor.value);
+    } catch (e) {
+      appendLog(`  Error: Invalid JSON — ${e.message}`);
+      return;
+    }
+
+    // Parse Markdown rules + queries (with stdlib)
+    const markdownEntries = parseMarkdown(STDLIB + '\n' + rulesEditor.value);
+
+    // Merge: JSON facts first, then Markdown rules/queries
+    const allEntries = [...jsonEntries, ...markdownEntries];
+    const { db, queries } = buildDatabase(allEntries);
+    const builtins = makeBuiltins(appendLog);
+    const solve = makeSolver(db, builtins, 10000, traceFn);
+
+    if (queries.length === 0) {
+      appendLog('No queries found. Add a # ? section with goals.');
+      return;
+    }
+
+    queries.forEach(q => executeQuery(q, solve, appendLog));
 
     if (tracing) {
       tracePanel.classList.add('visible');
@@ -196,8 +311,10 @@ const initApp = () => {
   // ── Examples ───────────────────────────────────────────────
 
   const loadExample = (name) => {
-    if (!EXAMPLES[name]) return;
-    codeEditor.value = EXAMPLES[name];
+    const example = EXAMPLES[name];
+    if (!example) return;
+    jsonEditor.value = example.json;
+    rulesEditor.value = example.rules;
     clearConsole();
     tracePanel.classList.remove('visible');
   };
@@ -207,26 +324,34 @@ const initApp = () => {
     exampleSelect.value = '';
   };
 
-  // ── Event binding ───────────────────────────────────────��──
+  // ── Event binding ──────────────────────────────────────────
 
   runBtn.addEventListener('click', handleRun);
   clearBtn.addEventListener('click', clearConsole);
   exampleSelect.addEventListener('change', handleExampleChange);
   traceHeader.addEventListener('click', toggleTraceCollapse);
 
+  const handleExampleClick = (e) => {
+    e.preventDefault();
+    loadExample(e.currentTarget.getAttribute('data-example'));
+  };
+
   document.querySelectorAll('.example-link').forEach(link => {
-    link.addEventListener('click', (e) => {
-      e.preventDefault();
-      loadExample(link.getAttribute('data-example'));
-    });
+    link.addEventListener('click', handleExampleClick);
   });
 
-  codeEditor.addEventListener('keydown', (e) => {
+  const handleKeydown = (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault();
       handleRun();
     }
-  });
+  };
+
+  jsonEditor.addEventListener('keydown', handleKeydown);
+  rulesEditor.addEventListener('keydown', handleKeydown);
+
+  // Load default
+  loadExample(DEFAULT_EXAMPLE);
 };
 
 if (document.readyState === 'loading') {
