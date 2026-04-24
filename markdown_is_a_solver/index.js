@@ -33,6 +33,7 @@ const appendError = (message) => appendLine(`Error: ${message}`, 'log-line-error
 const appendVerdict = (verdict) => appendLine(verdict, `log-line-verdict-${verdict}`);
 const appendModelLabel = (label) => appendLine(label, 'log-line-model-label');
 const appendBinding = (name, value) => appendLine(`${name} = ${value}`, 'log-line-binding');
+const appendCore = (source) => appendLine(`• ${source}`, 'log-line-core');
 
 // ── Z3 lifecycle ───────────────────────────────────────────────────────
 
@@ -79,9 +80,9 @@ const handleRun = async () => {
     return;
   }
 
-  let solver, env;
+  let solver, env, labels;
   try {
-    ({ solver, env } = compile(program, z3Context));
+    ({ solver, env, labels } = compile(program, z3Context));
   } catch (e) {
     appendError(e.message);
     return;
@@ -102,6 +103,11 @@ const handleRun = async () => {
         } catch {
           appendBinding(name, '(unavailable)');
         }
+      }
+    } else if (result === 'unsat') {
+      appendModelLabel('conflicting rules');
+      for (const lit of solver.unsatCore()) {
+        appendCore(labels.get(lit.toString()));
       }
     }
   } catch (e) {

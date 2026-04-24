@@ -213,31 +213,41 @@ const compileTerm = (node, ctx, env) => {
 };
 
 // Compile the parsed program against a fresh Z3 context.
-// Returns { solver, env } — caller invokes solver.check() / solver.model().
+// Returns { solver, env, labels } — caller invokes solver.check() / .model() / .unsatCore().
+// `labels` maps each tracking constant name to the human-readable source text of
+// the assertion it guards, so an unsat core can be rendered as the set of rules
+// (or JSON facts) that conflict.
 export const compile = (program, ctx) => {
   const env = new Map();
   const solver = new ctx.Solver();
+  const labels = new Map();
+
+  const track = (source, expr) => {
+    const label = `_a${labels.size}`;
+    labels.set(label, source);
+    solver.addAndTrack(expr, label);
+  };
 
   for (const d of program.declarations) {
     env.set(d.name, { expr: makeConstant(ctx, d.name, d.sort), sort: d.sort });
   }
 
-  // JSON-derived constants: assert equality to their literal value.
+  // JSON-derived constants: track-assert equality to their literal value.
   for (const d of program.declarations) {
     if (d.origin !== 'json') continue;
     const lhs = env.get(d.name);
     const rhs = liftLiteral(ctx, d.value, d.sort);
-    solver.add(lhs.expr.eq(rhs.expr));
+    track(`${d.name} = ${JSON.stringify(d.value)}`, lhs.expr.eq(rhs.expr));
   }
 
-  // Markdown assertions.
+  // Markdown assertions — one tracking constant per top-level `assert` bullet.
   for (const a of program.assertions) {
-    const typed = compileTerm(a, ctx, env);
+    const typed = compileTerm(a.node, ctx, env);
     if (typed.sort !== 'Bool') {
       throw new Error(`Assertion must be Bool, got ${typed.sort}`);
     }
-    solver.add(typed.expr);
+    track(a.source, typed.expr);
   }
 
-  return { solver, env };
+  return { solver, env, labels };
 };

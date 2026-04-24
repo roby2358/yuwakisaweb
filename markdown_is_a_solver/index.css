@@ -276,6 +276,11 @@ body {
   padding-left: 1rem;
 }
 
+.log-line-core {
+  color: #fda4af;
+  padding-left: 1rem;
+}
+
 .log-line-error {
   color: #fca5a5;
 }

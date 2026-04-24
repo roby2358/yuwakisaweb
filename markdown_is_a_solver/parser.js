@@ -2,8 +2,10 @@
 //
 // Output shape:
 //   {
-//     declarations: [{ name, sort, value? }],   // JSON-sourced and Markdown-declared constants
-//     assertions:   [Node],                     // one AST per top-level `assert` bullet
+//     declarations: [{ name, sort, value? }],       // JSON-sourced and Markdown-declared constants
+//     assertions:   [{ source: string, node: Node }], // one per top-level `assert` bullet;
+//                                                     // `source` preserves the original text so
+//                                                     // the solver's unsat core can name the rule.
 //   }
 //
 // Nodes use the uniform { value, children } shape shared by both parsers.
@@ -211,12 +213,10 @@ export const parseMarkdown = (text) => {
     } else if (name === 'assert') {
       for (const b of bullets) {
         const head = parseTerm(b.head);
-        if (b.children.length === 0) {
-          assertions.push(head);
-        } else {
-          const children = [head, ...b.children.map(c => parseTerm(c.head))];
-          assertions.push(node({ op: 'and' }, children));
-        }
+        const ast = b.children.length === 0
+          ? head
+          : node({ op: 'and' }, [head, ...b.children.map(c => parseTerm(c.head))]);
+        assertions.push({ source: b.head, node: ast });
       }
     } else if (name === 'check') {
       checkCount++;

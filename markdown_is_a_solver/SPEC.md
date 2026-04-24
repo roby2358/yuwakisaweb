@@ -63,6 +63,7 @@ The application presents a single-page three-pane layout beneath a header. The h
 
 - On completion the pane MUST display one of `sat`, `unsat`, or `unknown`.
 - On `sat` the pane MUST display a formatted model listing each declared constant and its assigned value; JSON-derived constants SHOULD be included.
+- On `unsat` the pane MUST display an unsat core: the minimal set of JSON facts and Markdown assertions whose conjunction is infeasible. Each core entry MUST be rendered as the original source text of the assertion or fact so the user can map the verdict back to the rule or datum responsible.
 - A clear action MUST reset the pane to its placeholder state.
 
 ## Non-Functional Requirements
@@ -132,7 +133,6 @@ MIAS fails hard in v1: on any error in parse, compile, or solve, no partial resu
 
 ## Future Work
 
-- Unsat cores so failing compliance rules can be pinpointed.
 - Enumerate-all-solutions for finite problems.
 - Arrays, bitvectors, uninterpreted functions, datatypes, quantifiers.
 - Multiple `check` sections with push/pop scoping.

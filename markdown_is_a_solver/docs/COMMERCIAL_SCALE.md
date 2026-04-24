@@ -26,7 +26,7 @@ Each is a real market. They rank differently.
 
 **1. Compliance-as-code for cloud infrastructure.** The closest analogues are Open Policy Agent / Rego, AWS Config, HashiCorp Sentinel, Checkov, and the Kubernetes admission-controller ecosystem. Policy engines have product-market fit; the market spends real money on them. The MIAS angle is surface-level: Markdown + JSON is dramatically more readable than Rego to humans *and* to LLMs, and the browser-native evaluator lets security teams author and test rules without a server round-trip. The risk is that incumbents (especially OPA) have mindshare; the opportunity is that their authoring experience is genuinely bad, and LLM-assisted policy authoring is a fresh lane.
 
-**2. Clinical data validation at ingest.** EHR integration engines (Rhapsody, Mirth Connect) and registry-submission tools validate FHIR and HL7 records before acceptance. The market is real and budget-approved. MIAS's defining advantage here is **no PHI leaves the browser**, which collapses a large chunk of the HIPAA/BAA compliance surface for pilot customers. The `fhir` example is close to a demoable pilot once unsat-core surfacing lands (see open questions below). The risk is sales cycle length in healthcare; the opportunity is that the cross-origin-isolated, client-only story is genuinely differentiated and lands hard with compliance officers.
+**2. Clinical data validation at ingest.** EHR integration engines (Rhapsody, Mirth Connect) and registry-submission tools validate FHIR and HL7 records before acceptance. The market is real and budget-approved. MIAS's defining advantage here is **no PHI leaves the browser**, which collapses a large chunk of the HIPAA/BAA compliance surface for pilot customers. With unsat cores already naming the conflicting facts and rules, the `fhir` example is demoable today. The risk is sales cycle length in healthcare; the opportunity is that the cross-origin-isolated, client-only story is genuinely differentiated and lands hard with compliance officers.
 
 **3. Pre-ML training-set validation.** Every serious ML shop has a `validate.py` that hand-rolls range checks, skip-logic, sentinel rejection, and derived-field tolerance. The `longitudinal` example encodes in 30 lines what a research shop typically spreads across 300. Market ranges from academic social-science consortia (small budgets, high pain) to pharma biostats (large budgets, slow procurement). Feature-store vendors (Tecton, Feast) are complementary rather than competing — MIAS as a validation step *upstream* of the feature store. The shape to aim at is a polars/pandas/DuckDB UDF or a Great Expectations alternative.
 
@@ -102,7 +102,6 @@ Two different things to scale, and they scale differently:
 
 ### Open questions worth deciding before scaling
 
-- **Unsat-core surfacing.** At tier 2 and above, "unsat" is useless without "which rule fired." Z3 supports unsat cores, but the compiler has to opt in: each rule assertion needs `solver.assert_and_track(expr, label)` with a tracking literal, and unsat runs call `solver.unsat_core()` to get the set of fired labels. Non-negotiable before batch.
 - **Record identity.** For audit logs and deduplication, every record needs an addressable identifier; today the JSON is anonymous. Conventionally a top-level `id` field; worth encoding in the spec.
 - **Rule versioning.** Once the same rule set runs against years of records, verdict reproducibility requires rule hashes in the audit record. Content-addressable rules are the natural shape.
 - **Error taxonomy.** Parse error, compile error, undeclared symbol, sort mismatch, solver timeout, unsat — all currently surface as opaque strings. Structured error codes are a precondition for programmatic consumers at tier 3+.
@@ -111,11 +110,10 @@ Two different things to scale, and they scale differently:
 
 ## What to build next, in order
 
-1. **Unsat core display** — lowest effort, highest leverage, needed for *any* batch use. Requires switching the compiler to `assert_and_track` and labeling each Markdown assertion by source line.
-2. **Batch-in-browser UI** — drag JSONL, render aggregate + flagged-record list. Sellable pilot for compliance and clinical.
-3. **Node CLI** — reuses the same parser/compiler; new file is a thin streaming wrapper. Unlocks tier 3 customers.
-4. **Audit log primitives** — record IDs, rule-set hashes, verdict timestamps, structured errors.
-5. **Managed service** — only once 1–4 are solid. Everything above this line is foundational; everything below is go-to-market.
+1. **Batch-in-browser UI** — drag JSONL, render aggregate + flagged-record list. Sellable pilot for compliance and clinical. Unsat-core surfacing is already in place, so flagged records arrive with their reasons attached.
+2. **Node CLI** — reuses the same parser/compiler; new file is a thin streaming wrapper. Unlocks tier 3 customers.
+3. **Audit log primitives** — record IDs, rule-set hashes, verdict timestamps, structured errors.
+4. **Managed service** — only once 1–3 are solid. Everything above this line is foundational; everything below is go-to-market.
 
 ## Pitch
 
