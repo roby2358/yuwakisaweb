@@ -39,17 +39,17 @@ export const EXAMPLES = {
   "minimum_each": 5
 }`,
     rules: `# declare
-* alice : Int
-* bob : Int
-* carol : Int
+* mathematics : Int
+* physics : Int
+* philosophy : Int
 
 # assert
-* =(+(alice, bob, carol), budget)
-* =(alice, *(\`3\`, bob))
-* =(bob, +(carol, \`10\`))
-* >=(alice, minimum_each)
-* >=(bob, minimum_each)
-* >=(carol, minimum_each)
+* =(+(mathematics, physics, philosophy), budget)
+* =(mathematics, *(\`3\`, physics))
+* =(physics, +(philosophy, \`10\`))
+* >=(mathematics, minimum_each)
+* >=(physics, minimum_each)
+* >=(philosophy, minimum_each)
 
 # check
 `,
