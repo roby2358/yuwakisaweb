@@ -1648,7 +1648,30 @@ function closeBreach(poi) {
     victory.breachesSealed++;
     logCombat(`Breach sealed! (${world.breachesClosed} total)`, 'log-info');
     sound.victory(poi.type === POI.MAW ? 2 : 1);
+    if (poi.type === POI.BREACH) showBreachLootDialog();
     render();
+}
+
+function showBreachLootDialog() {
+    const goldFound = Rando.int(50, 100);
+    player.gold += goldFound;
+    victory.goldCollected += goldFound;
+
+    let body = `<p>Closing the breach scatters its hoard...</p><p style="color:#ffc107">Found ${goldFound} gold!</p>`;
+
+    const available = NON_MAGICAL_ITEMS.filter(i => !playerHasItem(i.id));
+    Rando.shuffle(available);
+    const nonMagicalCount = Math.min(Rando.int(1, 3), available.length);
+    for (let i = 0; i < nonMagicalCount; i++) {
+        player.inventory.push(available[i].id);
+        body += `<p style="color:#ffc107">Found: ${available[i].name}</p>`;
+    }
+
+    const magicalDrop = rollMagicItem();
+    player.inventory.push(magicalDrop.id);
+    body += `<p style="color:#e040fb">Found: ${magicalDrop.name}!</p>`;
+
+    showDialog('Breach Sealed', body, [{ label: 'Continue', cls: 'btn-primary' }]);
 }
 
 function tryPoiInteract() {
