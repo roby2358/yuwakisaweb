@@ -2006,8 +2006,12 @@ async function runEnemyPhase() {
     // Guardian respawn: breaches/maw spawn guardians if none nearby
     for (const poi of world.pois) {
         if ((poi.type === POI.BREACH || poi.type === POI.MAW) && !poi.closed) {
-            // Unraveler never respawns
-            if (poi.type === POI.MAW) continue;
+            // Skip Maw only while the Unraveler is alive AND near (≤ 11 hex). If displaced
+            // farther, guardians pour forth to protect the Maw in its absence.
+            if (poi.type === POI.MAW) {
+                const unraveler = em.enemies.find(e => e.type === ENEMY_TYPE.UNRAVELER);
+                if (unraveler && hexDistance(unraveler.q, unraveler.r, poi.q, poi.r) <= 11) continue;
+            }
             // Check for existing guardian within 3 hexes
             const hasGuardian = em.enemies.some(e =>
                 e.type === ENEMY_TYPE.BREACH_GUARDIAN && hexDistance(poi.q, poi.r, e.q, e.r) <= 3
