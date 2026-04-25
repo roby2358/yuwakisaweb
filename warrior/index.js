@@ -3035,8 +3035,8 @@ function showVillageDialog(poi) {
 }
 
 function showHutDialog(poi) {
-    // 5% chance the Wise Man's skill refreshes to something the player hasn't learned
-    if (Rando.bool(0.05)) {
+    // 10% chance the Wise Man's skill refreshes to something the player hasn't learned
+    if (Rando.bool(0.10)) {
         const unlearnedPool = Object.values(SKILLS).filter(s => s.id !== 'restore' && !player.learnedSkills.has(s.id));
         if (unlearnedPool.length > 0) {
             poi.skill = Rando.choice(unlearnedPool).id;
@@ -3257,7 +3257,7 @@ function tryRuinInteraction(poi) {
     } else {
         showDialog(ruinTitle, '<p>The ruins are quiet\u2026</p>', [
             { label: 'Search', cls: 'primary', action: () => {
-                if (Rando.bool(0.05)) {
+                if (Rando.bool(0.10)) {
                     activateRuinSpawn(poi, 'New creatures have moved into the ruins!');
                 } else {
                     logCombat('Nothing of interest here.', 'log-info');
