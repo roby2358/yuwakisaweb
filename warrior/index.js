@@ -494,6 +494,12 @@ function meleeAttack(enemy) {
         dealDamageToEnemy(enemy, dmg, 'Double Strike', opts);
     }
 
+    // Triple strike: hit same enemy two more times
+    if (!killed && wep && wep.special === 'triple_strike') {
+        dealDamageToEnemy(enemy, dmg, 'Triple Strike', opts);
+        if (enemy.hp > 0) dealDamageToEnemy(enemy, dmg, 'Triple Strike', opts);
+    }
+
     // Burn: mark target for damage next turn (melee)
     if (wep && wep.special === 'burn' && enemy.hp > 0) {
         enemy.burnDamage = (enemy.burnDamage || 0) + wep.burnDamage;
@@ -571,8 +577,38 @@ function rangedAttack(targetQ, targetR) {
     } else if (wep && wep.special === 'double_shot') {
         dealDamageToEnemy(enemy, dmg, 'Shot 1', rangedOpts);
         if (enemy.hp > 0) dealDamageToEnemy(enemy, dmg, 'Shot 2', rangedOpts);
+    } else if (wep && wep.special === 'triple_shot') {
+        dealDamageToEnemy(enemy, dmg, 'Shot 1', rangedOpts);
+        if (enemy.hp > 0) dealDamageToEnemy(enemy, dmg, 'Shot 2', rangedOpts);
+        if (enemy.hp > 0) dealDamageToEnemy(enemy, dmg, 'Shot 3', rangedOpts);
     } else {
         dealDamageToEnemy(enemy, dmg, 'Ranged', rangedOpts);
+    }
+
+    // Lifesteal
+    if (wep && wep.special === 'lifesteal') {
+        const heal = wep.lifestealAmount;
+        player.hp = Math.min(player.maxHP(), player.hp + heal);
+        logCombat(`+${heal} HP (lifesteal)`, 'log-heal');
+    }
+
+    // Aether siphon
+    if (wep && wep.special === 'aether_siphon') {
+        player.aether = Math.min(player.maxAether(), player.aether + wep.siphonAmount);
+        logCombat(`+${wep.siphonAmount} AE (siphon)`, 'log-info');
+    }
+
+    // Defense shred (only if enemy survives)
+    if (wep && wep.special === 'defense_shred' && enemy.hp > 0) {
+        enemy.defReduction = (enemy.defReduction || 0) + wep.shredAmount;
+        logCombat(`Shreds ${wep.shredAmount} defense!`, 'log-info');
+    }
+
+    // Recoil: self-damage
+    if (wep && wep.special === 'recoil') {
+        player.hp -= wep.recoilDamage;
+        logCombat(`Recoil: ${wep.recoilDamage} dmg to you`, 'log-dmg');
+        if (player.hp <= 0) { player.hp = 0; endGame(false); }
     }
 
     // Burn: mark target for damage next turn
