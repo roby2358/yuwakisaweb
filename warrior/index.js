@@ -1596,8 +1596,7 @@ function checkHexEntry() {
 
     // Gold pickup
     if (hex.goldDeposit > 0) {
-        const multiplier = hex.terrain === TERRAIN.SHATTERED_GOLD ? 2 : 1;
-        const goldAmt = hex.goldDeposit * multiplier;
+        const goldAmt = hex.goldDeposit;
         player.gold += goldAmt;
         victory.goldCollected += goldAmt;
         hex.goldDeposit = 0;
@@ -3025,7 +3024,7 @@ function showShopDialog(poi) {
         if (!equip) continue;
         if (owned.has(item.id)) continue;
         const nameColor = equip.magical ? '#e040fb' : '#ccc';
-        const shopPrice = equip.magical ? item.price * 2 : item.price;
+        const shopPrice = item.price;
         bodyHtml += `<div class="shop-item">
             <div><span style="color:${nameColor}">${item.name}</span><br><span style="color:#aaa;font-size:11px">${itemStatLine(equip)}</span></div>
             <button data-id="${item.id}" data-price="${shopPrice}" ${player.gold < shopPrice ? 'disabled' : ''}>Buy ${shopPrice}g</button>

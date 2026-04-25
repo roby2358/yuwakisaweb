@@ -165,7 +165,7 @@ export class GameWorld {
         const forestCount = Math.round(n * 0.10);
         const goldCount = Math.max(3, Math.round(n * 0.01));
         for (let i = 0; i < forestCount && idx < plains.length; i++, idx++) plains[idx].terrain = TERRAIN.FOREST;
-        for (let i = 0; i < goldCount && idx < plains.length; i++, idx++) { plains[idx].terrain = TERRAIN.GOLD; plains[idx].goldDeposit = 10; }
+        for (let i = 0; i < goldCount && idx < plains.length; i++, idx++) { plains[idx].terrain = TERRAIN.GOLD; plains[idx].goldDeposit = Rando.int(10, 20); }
         const hills = inner.filter(h => h.terrain === TERRAIN.HILLS);
         Rando.shuffle(hills);
         const quarryCount = Math.max(2, Math.round(n * 0.02));
