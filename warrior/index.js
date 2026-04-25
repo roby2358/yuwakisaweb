@@ -438,6 +438,71 @@ function rollNonMagicalDrops(min, max) {
     return pool.slice(0, count);
 }
 
+// Roll loot for a POI search/seal: 1-3 unique non-magical + 1 magical item,
+// plus gold in [goldMin, goldMax]. Mutates player + victory; returns dialog data.
+function rollPoiLoot(goldMin, goldMax) {
+    const goldFound = Rando.int(goldMin, goldMax);
+    player.gold += goldFound;
+    victory.goldCollected += goldFound;
+
+    const items = [];
+    const available = NON_MAGICAL_ITEMS.filter(i => !playerHasItem(i.id));
+    Rando.shuffle(available);
+    const nonMagicalCount = Math.min(Rando.int(1, 3), available.length);
+    for (let i = 0; i < nonMagicalCount; i++) {
+        player.inventory.push(available[i].id);
+        items.push({ name: available[i].name, magical: false });
+    }
+
+    const magicalDrop = rollMagicItem();
+    player.inventory.push(magicalDrop.id);
+    items.push({ name: magicalDrop.name, magical: true });
+
+    return { goldFound, items };
+}
+
+function formatLootHtml(intro, loot) {
+    let body = `<p>${intro}</p><p style="color:#ffc107">Found ${loot.goldFound} gold!</p>`;
+    for (const item of loot.items) {
+        const color = item.magical ? '#e040fb' : '#ffc107';
+        const suffix = item.magical ? '!' : '';
+        body += `<p style="color:${color}">Found: ${item.name}${suffix}</p>`;
+    }
+    return body;
+}
+
+// Apply weapon on-hit effects after a strike. Lifesteal/siphon/recoil fire
+// regardless of kill; shred/burn only mark the enemy if it's still alive.
+function applyOnHitEffects(wep, enemy) {
+    if (!wep) return;
+
+    if (wep.special === 'lifesteal') {
+        const heal = wep.lifestealAmount;
+        player.hp = Math.min(player.maxHP(), player.hp + heal);
+        logCombat(`+${heal} HP (lifesteal)`, 'log-heal');
+    }
+    if (wep.special === 'aether_siphon') {
+        player.aether = Math.min(player.maxAether(), player.aether + wep.siphonAmount);
+        logCombat(`+${wep.siphonAmount} AE (siphon)`, 'log-info');
+    }
+    if (wep.special === 'recoil') {
+        player.hp -= wep.recoilDamage;
+        logCombat(`Recoil: ${wep.recoilDamage} dmg to you`, 'log-dmg');
+        if (player.hp <= 0) { player.hp = 0; endGame(false); }
+    }
+
+    if (enemy.hp <= 0) return;
+
+    if (wep.special === 'defense_shred') {
+        enemy.defReduction = (enemy.defReduction || 0) + wep.shredAmount;
+        logCombat(`Shreds ${wep.shredAmount} defense!`, 'log-info');
+    }
+    if (wep.special === 'burn') {
+        enemy.burnDamage = (enemy.burnDamage || 0) + wep.burnDamage;
+        logCombat(`${em.getDef(enemy.type).name} is burning!`, 'log-dmg');
+    }
+}
+
 function applyEquipmentBonusDamage(baseDmg) {
     let dmg = baseDmg;
     const breach = player.equipped('breach_jewel');
@@ -464,30 +529,7 @@ function meleeAttack(enemy) {
     if (wep && wep.special === 'armor_pierce') opts.pierceAmount = wep.pierceAmount;
     const { killed } = dealDamageToEnemy(enemy, dmg, 'Melee', opts);
 
-    if (!killed && wep && wep.special === 'defense_shred') {
-        enemy.defReduction = (enemy.defReduction || 0) + wep.shredAmount;
-        logCombat(`Nullblade shreds ${wep.shredAmount} defense!`, 'log-info');
-    }
-
-    // Lifesteal
-    if (wep && wep.special === 'lifesteal') {
-        const heal = wep.lifestealAmount;
-        player.hp = Math.min(player.maxHP(), player.hp + heal);
-        logCombat(`+${heal} HP (lifesteal)`, 'log-heal');
-    }
-
-    // Aether siphon
-    if (wep && wep.special === 'aether_siphon') {
-        player.aether = Math.min(player.maxAether(), player.aether + wep.siphonAmount);
-        logCombat(`+${wep.siphonAmount} AE (siphon)`, 'log-info');
-    }
-
-    // Recoil: self-damage
-    if (wep && wep.special === 'recoil') {
-        player.hp -= wep.recoilDamage;
-        logCombat(`Recoil: ${wep.recoilDamage} dmg to you`, 'log-dmg');
-        if (player.hp <= 0) { player.hp = 0; endGame(false); }
-    }
+    applyOnHitEffects(wep, enemy);
 
     // Double strike: hit same enemy again
     if (!killed && wep && wep.special === 'double_strike') {
@@ -498,12 +540,6 @@ function meleeAttack(enemy) {
     if (!killed && wep && wep.special === 'triple_strike') {
         dealDamageToEnemy(enemy, dmg, 'Triple Strike', opts);
         if (enemy.hp > 0) dealDamageToEnemy(enemy, dmg, 'Triple Strike', opts);
-    }
-
-    // Burn: mark target for damage next turn (melee)
-    if (wep && wep.special === 'burn' && enemy.hp > 0) {
-        enemy.burnDamage = (enemy.burnDamage || 0) + wep.burnDamage;
-        logCombat(`${em.getDef(enemy.type).name} is burning!`, 'log-dmg');
     }
 
     // Chain: damage bounces to nearby enemies
@@ -585,37 +621,7 @@ function rangedAttack(targetQ, targetR) {
         dealDamageToEnemy(enemy, dmg, 'Ranged', rangedOpts);
     }
 
-    // Lifesteal
-    if (wep && wep.special === 'lifesteal') {
-        const heal = wep.lifestealAmount;
-        player.hp = Math.min(player.maxHP(), player.hp + heal);
-        logCombat(`+${heal} HP (lifesteal)`, 'log-heal');
-    }
-
-    // Aether siphon
-    if (wep && wep.special === 'aether_siphon') {
-        player.aether = Math.min(player.maxAether(), player.aether + wep.siphonAmount);
-        logCombat(`+${wep.siphonAmount} AE (siphon)`, 'log-info');
-    }
-
-    // Defense shred (only if enemy survives)
-    if (wep && wep.special === 'defense_shred' && enemy.hp > 0) {
-        enemy.defReduction = (enemy.defReduction || 0) + wep.shredAmount;
-        logCombat(`Shreds ${wep.shredAmount} defense!`, 'log-info');
-    }
-
-    // Recoil: self-damage
-    if (wep && wep.special === 'recoil') {
-        player.hp -= wep.recoilDamage;
-        logCombat(`Recoil: ${wep.recoilDamage} dmg to you`, 'log-dmg');
-        if (player.hp <= 0) { player.hp = 0; endGame(false); }
-    }
-
-    // Burn: mark target for damage next turn
-    if (wep && wep.special === 'burn' && enemy.hp > 0) {
-        enemy.burnDamage = (enemy.burnDamage || 0) + wep.burnDamage;
-        logCombat(`${em.getDef(enemy.type).name} is burning!`, 'log-dmg');
-    }
+    applyOnHitEffects(wep, enemy);
 
     // Chain: damage bounces to nearby enemies
     if (wep && wep.special === 'chain') {
@@ -1653,24 +1659,8 @@ function closeBreach(poi) {
 }
 
 function showBreachLootDialog() {
-    const goldFound = Rando.int(50, 100);
-    player.gold += goldFound;
-    victory.goldCollected += goldFound;
-
-    let body = `<p>Closing the breach scatters its hoard...</p><p style="color:#ffc107">Found ${goldFound} gold!</p>`;
-
-    const available = NON_MAGICAL_ITEMS.filter(i => !playerHasItem(i.id));
-    Rando.shuffle(available);
-    const nonMagicalCount = Math.min(Rando.int(1, 3), available.length);
-    for (let i = 0; i < nonMagicalCount; i++) {
-        player.inventory.push(available[i].id);
-        body += `<p style="color:#ffc107">Found: ${available[i].name}</p>`;
-    }
-
-    const magicalDrop = rollMagicItem();
-    player.inventory.push(magicalDrop.id);
-    body += `<p style="color:#e040fb">Found: ${magicalDrop.name}!</p>`;
-
+    const loot = rollPoiLoot(50, 100);
+    const body = formatLootHtml('Closing the breach scatters its hoard...', loot);
     showDialog('Breach Sealed', body, [{ label: 'Continue', cls: 'btn-primary' }]);
 }
 
@@ -3271,26 +3261,8 @@ function tryRuinInteraction(poi) {
 function showRuinLootDialog(poi) {
     poi.ruinState = 'explored';
     victory.ruinsExplored++;
-    const goldFound = Rando.int(5, 20);
-    player.gold += goldFound;
-    victory.goldCollected += goldFound;
-
-    let body = `<p>You explore the ruins...</p><p style="color:#ffc107">Found ${goldFound} gold!</p>`;
-
-    // Non-magical items (1-3, skip items already owned)
-    const available = NON_MAGICAL_ITEMS.filter(i => !playerHasItem(i.id));
-    Rando.shuffle(available);
-    const nonMagicalCount = Math.min(Rando.int(1, 3), available.length);
-    for (let i = 0; i < nonMagicalCount; i++) {
-        player.inventory.push(available[i].id);
-        body += `<p style="color:#ffc107">Found: ${available[i].name}</p>`;
-    }
-
-    // Magical item — roll a fresh one
-    const magicalDrop = rollMagicItem();
-    player.inventory.push(magicalDrop.id);
-    body += `<p style="color:#e040fb">Found: ${magicalDrop.name}!</p>`;
-
+    const loot = rollPoiLoot(5, 20);
+    const body = formatLootHtml('You explore the ruins...', loot);
     showDialog(POI_SYMBOLS[POI.RUIN] + ' Ruins', body, [{ label: 'Continue', action: () => {
         player.mp = 0;
     }}]);
