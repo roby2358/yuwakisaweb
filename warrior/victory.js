@@ -55,7 +55,7 @@ Victory.WEIGHTS = {
     hexesRestored: 0.075,
     settlementsRestored: 3,
     ruinsExplored: 6.5,
-    goldCollected: 0.017,
+    goldCollected: 0.1,
     breachesSealed: 14,
 };
 

@@ -7,13 +7,6 @@ Double the Maw proximity bonus for enemies to make the endgame more challenging.
 ----
 Priority:   55
 Status: ToDo
-ID: warrior-spwy
-Created: 2026-04-26T08:28:59Z
-Updated: 2026-04-26T08:30:21Z
-Final gold score is gold/10 (in Warrior — when computing the player's end-of-game score, divide accumulated gold by 10).
-----
-Priority:   55
-Status: ToDo
 ID: gold-sink-e4ya
 Created: 2026-03-31T01:38:16Z
 Updated: 2026-04-26T08:30:22Z
@@ -60,3 +53,10 @@ ID: warrior-g356
 Created: 2026-04-12T20:20:39Z
 Updated: 2026-04-26T21:49:42Z
 When the player tries to Restore the Maw but the Unraveler is still alive, show a dialog saying the Unraveler must be defeated first before the Maw can be sealed. Only show this dialog once, because the player will have to Restore multiple times.
+----
+Priority:   55
+Status: Done
+ID: warrior-spwy
+Created: 2026-04-26T08:28:59Z
+Updated: 2026-04-26T21:57:00Z
+Final gold score is gold/10 (in Warrior — when computing the player's end-of-game score, divide accumulated gold by 10).
