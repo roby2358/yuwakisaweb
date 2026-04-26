@@ -1,58 +1,65 @@
-Priority:   50
-Status: ToDo
-ID: gold-sink-e4ya
-Created: 2026-03-31T01:38:16Z
-Updated: 2026-03-31T01:38:16Z
-Add a gold sink or reward for accumulating 1000 gold. Could be a powerful item, a special upgrade, unlocking an ability, or a world event. Give the player something meaningful to spend or celebrate when hitting 1000g.
-----
-Priority:   50
-Status: ToDo
-ID: warrior-g356
-Created: 2026-04-12T20:20:39Z
-Updated: 2026-04-12T20:20:39Z
-When the player tries to Restore the Maw but the Unraveler is still alive, show a dialog saying the Unraveler must be defeated first before the Maw can be sealed.
-----
-Priority:   50
-Status: ToDo
-ID: warrior-nzrr
-Created: 2026-04-12T20:26:23Z
-Updated: 2026-04-12T20:26:23Z
-When the Unraveler is defeated, show a dialog: if it reforms into another chaos spawn, say "The Unraveler has jumped to another host!"; if it's the final defeat (no chaos spawns left), say "The Unraveler is vanquished! Now close the Maw!"
-----
-Priority:   50
-Status: ToDo
-ID: warrior-wwg4
-Created: 2026-04-12T20:28:57Z
-Updated: 2026-04-12T20:28:57Z
-Add a use for XP after reaching max level 10. Possible idea: spend accumulated XP to heal/restore chaos-corrupted hexes, giving endgame players something meaningful to do with excess XP.
-----
-Priority:   50
-Status: ToDo
-ID: warrior-69ti
-Created: 2026-04-19T02:36:48Z
-Updated: 2026-04-19T02:36:48Z
-Double the Maw proximity bonus for enemies to make the endgame more challenging. In index.js mawProximityBonus(), change attack from 10→20, defense from 5→10, and hp from 10→20 at the Maw (scaling linearly to 0 at half the max BFS distance). Verify enemy counters and combat feel appropriately harder near the Maw without trivializing approach hexes.
-----
-Priority:   50
+Priority:   68
 Status: ToDo
 ID: warrior-jfzf
 Created: 2026-04-19T02:37:28Z
-Updated: 2026-04-19T02:37:28Z
+Updated: 2026-04-26T08:30:21Z
 Scale Ruin monster spawns linearly instead of quadratically. In index.js spawnRuinCreatures() at line 3155, replace `const targetMight = player.level * player.level * 2;` with a linear formula (e.g. player.level * K + base). Tune K so early ruins stay interesting while late-game ruins don't explode into unfair fights. Current quadratic: L1=2, L5=50, L10=200.
 ----
-Priority:   50
+Priority:   65
 Status: ToDo
-ID: warrior-8bz5
-Created: 2026-04-19T02:38:32Z
-Updated: 2026-04-19T02:38:32Z
-Add a Skills archive tier so skills fall into three buckets: (1) HUD-equipped (the 4 slots in player.skills), (2) Learned-but-unequipped (swappable from the Skills panel), (3) Archived (learned but tucked away — shown in a collapsed/separate section, not offered for equip by default). Add `player.archivedSkills` (Set) alongside learnedSkills, a button in updateSkillsPanel() to archive/unarchive a learned skill, and persist it in toJSON/fromJSON. Archived skills should not appear in the default unequipped swap list but remain retrievable. Useful when the player accumulates skills they'll never slot (e.g. off-build casters on a melee run) and the swap list gets cluttered.
+ID: warrior-g356
+Created: 2026-04-12T20:20:39Z
+Updated: 2026-04-26T08:30:21Z
+When the player tries to Restore the Maw but the Unraveler is still alive, show a dialog saying the Unraveler must be defeated first before the Maw can be sealed.
 ----
-Priority:   50
+Priority:   65
+Status: ToDo
+ID: warrior-nzrr
+Created: 2026-04-12T20:26:23Z
+Updated: 2026-04-26T08:30:21Z
+When the Unraveler is defeated, show a dialog: if it reforms into another chaos spawn, say "The Unraveler has jumped to another host!"; if it's the final defeat (no chaos spawns left), say "The Unraveler is vanquished! Now close the Maw!"
+----
+Priority:   55
+Status: ToDo
+ID: warrior-69ti
+Created: 2026-04-19T02:36:48Z
+Updated: 2026-04-26T08:30:21Z
+Double the Maw proximity bonus for enemies to make the endgame more challenging. In index.js mawProximityBonus(), change attack from 10→20, defense from 5→10, and hp from 10→20 at the Maw (scaling linearly to 0 at half the max BFS distance). Verify enemy counters and combat feel appropriately harder near the Maw without trivializing approach hexes.
+----
+Priority:   55
+Status: ToDo
+ID: warrior-spwy
+Created: 2026-04-26T08:28:59Z
+Updated: 2026-04-26T08:30:21Z
+Final gold score is gold/10 (in Warrior — when computing the player's end-of-game score, divide accumulated gold by 10).
+----
+Priority:   55
+Status: ToDo
+ID: gold-sink-e4ya
+Created: 2026-03-31T01:38:16Z
+Updated: 2026-04-26T08:30:22Z
+Add a gold sink or reward for accumulating 1000 gold. Could be a powerful item, a special upgrade, unlocking an ability, or a world event. Give the player something meaningful to spend or celebrate when hitting 1000g.
+----
+Priority:   45
+Status: ToDo
+ID: warrior-wwg4
+Created: 2026-04-12T20:28:57Z
+Updated: 2026-04-26T08:30:22Z
+Add a use for XP after reaching max level 10. Possible idea: spend accumulated XP to heal/restore chaos-corrupted hexes, giving endgame players something meaningful to do with excess XP.
+----
+Priority:   40
 Status: ToDo
 ID: warrior-4mfy
 Created: 2026-04-19T02:40:01Z
-Updated: 2026-04-19T02:40:01Z
+Updated: 2026-04-26T08:30:22Z
 Add a Land Health mechanic that rewards cleaning up chaos (shattered/distressed) hexes and offsets a ramped-up Maw bonus. Design: track total chaos-hex count vs. cleaned count as a world-level "Land Health" ratio (0..1). Player gets a scaling bonus (e.g. +attack/+def/+hp-regen or Aether regen) tied to Land Health — stronger the cleaner the world. Simultaneously, ramp the Maw proximity bonus for enemies higher than today (pairs with warrior-69ti), so the endgame is genuinely nastier unless the player has invested in restoration. This makes Restore/Salvage skills strategically valuable beyond the per-hex terrain change, gives a reason to clear distant breaches, and creates a pacing knob: rush the Maw weak, or sanitize first and fight it stronger. Consider showing a Land Health indicator in the HUD. Requires: chaos hex accounting in world.js, bonus calc somewhere player.defense()/meleeDamage() can read, HUD display, and tuning that Maw scaling stays beatable without full cleanup.
+----
+Priority:   32
+Status: ToDo
+ID: warrior-8bz5
+Created: 2026-04-19T02:38:32Z
+Updated: 2026-04-26T08:30:23Z
+Add a Skills archive tier so skills fall into three buckets: (1) HUD-equipped (the 4 slots in player.skills), (2) Learned-but-unequipped (swappable from the Skills panel), (3) Archived (learned but tucked away — shown in a collapsed/separate section, not offered for equip by default). Add `player.archivedSkills` (Set) alongside learnedSkills, a button in updateSkillsPanel() to archive/unarchive a learned skill, and persist it in toJSON/fromJSON. Archived skills should not appear in the default unequipped swap list but remain retrievable. Useful when the player accumulates skills they'll never slot (e.g. off-build casters on a melee run) and the swap list gets cluttered.
 ----
 Priority:   90
 Status: Done
