@@ -89,7 +89,6 @@ let hoveredHex = null;
 let threatOverlay = null;   // Map<string, number> or null — threat heatmap for Ground Weeps
 let showingWorldMap = false;
 let combatAlerted = false;  // set when player attacks; nearby enemies ignore forest stealth
-let poiInteracted = false;  // set after POI dialog shown; prevents re-show until next turn
 let mawDistances = null;    // Map<hexKey, cost> — BFS distances from the Maw
 let mawMaxDist = 1;         // max BFS distance to Maw (for scaling)
 
@@ -1646,7 +1645,8 @@ function checkHexEntry() {
         hex.crop = false;
     }
 
-    tryPoiInteract();
+    const enteredPoi = world.poiAt(player.q, player.r);
+    if (enteredPoi) openPoiDialog(enteredPoi);
 }
 
 function closeBreach(poi) {
@@ -1664,21 +1664,20 @@ function showBreachLootDialog() {
     showDialog('Breach Sealed', body, [{ label: 'Continue', cls: 'btn-primary' }]);
 }
 
-function tryPoiInteract() {
-    if (poiInteracted) return false;
-    const poi = world.poiAt(player.q, player.r);
-    if (!poi) return false;
-    poiInteracted = true;
-    if (poi.type === POI.HAVEN) { showHavenDialog(poi); return true; }
-    if (poi.type === POI.VILLAGE) { showVillageDialog(poi); return true; }
-    if (poi.type === POI.HUT) { showHutDialog(poi); return true; }
-    if (poi.type === POI.RUIN) { tryRuinInteraction(poi); return true; }
-    return false;
+// Dialog buttons set player.mp = 0 to make their action costly (turn ends
+// via checkEndTurn); leaving MP alone keeps the action free.
+function openPoiDialog(poi) {
+    if (poi.type === POI.HAVEN) showHavenDialog(poi);
+    else if (poi.type === POI.VILLAGE) showVillageDialog(poi);
+    else if (poi.type === POI.HUT) showHutDialog(poi);
+    else if (poi.type === POI.RUIN) tryRuinInteraction(poi);
 }
 
-function interactOrEndTurn() {
+// New hex-action types branch here.
+function hexAction() {
     if (gameOver || phase !== 'player') return;
-    if (tryPoiInteract()) return;
+    const poi = world.poiAt(player.q, player.r);
+    if (poi) { openPoiDialog(poi); return; }
     endTurn();
 }
 
@@ -2083,7 +2082,6 @@ async function runEnemyPhase() {
 
 function startPlayerTurn() {
     combatAlerted = false;
-    poiInteracted = false;
     if (player.hp > 0 && player.hp / player.maxHP() < 0.10) victory.nearDeathMoments++;
     render();
 }
@@ -3039,7 +3037,7 @@ function showHutDialog(poi) {
     if (player.learnedSkills.has(poi.skill)) {
         showDialog(POI_SYMBOLS[POI.HUT] + " Wise Man's Hut",
             `<p>An old sage peers at you.</p><p style="color:#a1887f">"I have nothing to teach you."</p>`,
-            [{ label: 'Leave' }]);
+            [{ label: 'Leave', action: () => { player.mp = 0; } }]);
     } else {
         showDialog(POI_SYMBOLS[POI.HUT] + " Wise Man's Hut",
             `<p>The sage's eyes light up.</p><p style="color:#b388ff">"I can teach you <b>${skillName}</b>."</p><p class="s-desc">${skill.desc}</p>`,
@@ -3054,7 +3052,7 @@ function showHutDialog(poi) {
                     updateSkillsPanel();
                 }
             },
-            { label: 'Decline' }]);
+            { label: 'Decline', action: () => { player.mp = 0; } }]);
     }
 }
 
@@ -3108,7 +3106,7 @@ function showShopDialog(poi) {
         }
     }
 
-    showDialog(POI_SYMBOLS[POI.HAVEN] + ' Shop', bodyHtml, [{ label: 'Done' }]);
+    showDialog(POI_SYMBOLS[POI.HAVEN] + ' Shop', bodyHtml, [{ label: 'Done', action: () => { player.mp = 0; } }]);
 
     // Wire up buy/sell buttons
     const body = document.getElementById('dialog-body');
@@ -3225,6 +3223,7 @@ function activateRuinSpawn(poi, message) {
         logCombat(message, 'log-info');
     }
     render();
+    return spawned;
 }
 
 function tryRuinInteraction(poi) {
@@ -3238,7 +3237,8 @@ function tryRuinInteraction(poi) {
     if (poi.ruinState === 'new') {
         showDialog(ruinTitle, '<p>Ancient ruins loom before you.</p>', [
             { label: 'Search', cls: 'primary', action: () => {
-                activateRuinSpawn(poi, 'Something stirs in the ruins...');
+                const spawned = activateRuinSpawn(poi, 'Something stirs in the ruins...');
+                if (spawned === 0) player.mp = 0;
             }},
             { label: 'Leave' }
         ]);
@@ -3247,11 +3247,13 @@ function tryRuinInteraction(poi) {
     } else {
         showDialog(ruinTitle, '<p>The ruins are quiet\u2026</p>', [
             { label: 'Search', cls: 'primary', action: () => {
+                let spawned = 0;
                 if (Rando.bool(0.10)) {
-                    activateRuinSpawn(poi, 'New creatures have moved into the ruins!');
+                    spawned = activateRuinSpawn(poi, 'New creatures have moved into the ruins!');
                 } else {
                     logCombat('Nothing of interest here.', 'log-info');
                 }
+                if (spawned === 0) player.mp = 0;
             }},
             { label: 'Leave' }
         ]);
@@ -3470,9 +3472,7 @@ canvas.addEventListener('contextmenu', e => {
     if (targeting) { targeting = null; render(); updateSkillBar(); }
 });
 
-document.getElementById('end-turn').addEventListener('click', () => {
-    if (phase === 'player' && !gameOver) interactOrEndTurn();
-});
+document.getElementById('end-turn').addEventListener('click', hexAction);
 
 document.getElementById('new-game').addEventListener('click', () => {
     if (confirm('Start a new game?')) initGame();
@@ -3531,7 +3531,7 @@ window.addEventListener('keydown', e => {
 
     if (e.key === ' ' || e.key === 'e' || e.key === 'E') {
         e.preventDefault();
-        if (phase === 'player') interactOrEndTurn();
+        hexAction();
     } else if (e.key === 'Escape') {
         if (targeting) { targeting = null; render(); updateSkillBar(); }
         else { deselectPlayer(); closeAllPanels(); render(); }
