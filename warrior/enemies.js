@@ -3,6 +3,12 @@ import { hexKey, hexNeighbors, hexDistance, hexesInRange, findPath } from './hex
 import { Rando } from './rando.js';
 import { ColorTheory } from './colortheory.js';
 
+function wildlifeBehaviorFor(attack) {
+    if (attack >= 30) return 'ruins-guardian';
+    if (attack >= 20) return 'monster';
+    return 'wildlife';
+}
+
 export class EnemyManager {
     constructor() {
         this.enemies = [];
@@ -92,7 +98,7 @@ export class EnemyManager {
                 aggroRange,
                 xp,
                 gold,
-                behavior: 'wildlife',
+                behavior: wildlifeBehaviorFor(attack),
                 chaosSpawned: false,
                 color
             };
@@ -274,6 +280,10 @@ export class EnemyManager {
         em.enemies = data.enemies;
         em.creatureDefs = data.creatureDefs;
         em.nextId = data.nextId;
+        // Re-derive behavior from attack so saves predating the tiered behavior model migrate forward.
+        for (const def of Object.values(em.creatureDefs)) {
+            def.behavior = wildlifeBehaviorFor(def.attack);
+        }
         return em;
     }
 

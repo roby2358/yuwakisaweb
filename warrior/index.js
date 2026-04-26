@@ -399,8 +399,8 @@ function killEnemy(enemy, opts = {}) {
         logCombat(`Opportunist: +${bonusGold}g`, 'log-gold');
     }
 
-    // Settlement bounty: felling an apex predator (atk ≥ 30) near a haven/village rewards the player
-    if (!def.chaosSpawned && def.attack >= 30) {
+    // Settlement bounty: felling a monster or ruins-guardian near a haven/village rewards the player
+    if (def.behavior === 'monster' || def.behavior === 'ruins-guardian') {
         offerSettlementReward([{ q: enemy.q, r: enemy.r }]);
     }
 
@@ -812,7 +812,8 @@ function executeSkill(skillId, targetQ, targetR) {
             const unravelerAlive = em.enemies.find(e => e.type === ENEMY_TYPE.UNRAVELER);
             if (mawInRange && unravelerAlive) {
                 showOnceDialog('mawBlockedByUnraveler', 'The Maw Resists',
-                    '<p>The Maw seethes with chaos and refuses to close. The Unraveler must be defeated first before the Maw can be sealed.</p>');
+                    '<p>The Maw seethes with chaos and refuses to close. The Unraveler must be defeated first before the Maw can be sealed.</p>',
+                    [{ label: 'OK', cls: 'btn-primary' }]);
             }
             if (shatteredHexes.length === 0 && !breachInRange) {
                 logCombat('No shattered terrain in range!', 'log-info');
@@ -1805,19 +1806,110 @@ function tryTerrainShatter(enemy, def) {
     }
 }
 
-async function runWildlifeTurn(enemy, def, aggro, occupied) {
+async function tryAggroChase(enemy, def, aggro, occupied) {
     const dist = hexDistance(enemy.q, enemy.r, player.q, player.r);
-    if (playerInForest() && !(combatAlerted && dist <= 5)) aggro = Math.max(1, aggro - 2);
+    if (dist > aggro) return false;
     const prevKey = hexKey(enemy.q, enemy.r);
-    if (dist <= aggro) {
-        em.moveWildlifeToward(enemy, player.q, player.r, occupied, player.q, player.r, world);
-        if (enemyIsVisible(enemy, prevKey)) { await animDelay(80); render(); }
-        if (hexDistance(enemy.q, enemy.r, player.q, player.r) === 1) {
-            dealDamageToPlayer(enemyMeleeAttack(enemy, def), def.name, false, { attacker: enemy });
-            await animDelay(150); render();
-        }
-    } else if (Rando.bool(0.3)) {
+    em.moveWildlifeToward(enemy, player.q, player.r, occupied, player.q, player.r, world);
+    if (enemyIsVisible(enemy, prevKey)) { await animDelay(80); render(); }
+    if (hexDistance(enemy.q, enemy.r, player.q, player.r) === 1) {
+        dealDamageToPlayer(enemyMeleeAttack(enemy, def), def.name, false, { attacker: enemy });
+        await animDelay(150); render();
+    }
+    return true;
+}
+
+function forestModifiedAggro(enemy, aggro) {
+    if (!playerInForest()) return aggro;
+    const dist = hexDistance(enemy.q, enemy.r, player.q, player.r);
+    if (combatAlerted && dist <= 5) return aggro;
+    return Math.max(1, aggro - 2);
+}
+
+async function runWildlifeTurn(enemy, def, aggro, occupied) {
+    aggro = forestModifiedAggro(enemy, aggro);
+    if (await tryAggroChase(enemy, def, aggro, occupied)) return;
+    if (Rando.bool(0.3)) {
         em.wanderWildlife(enemy, occupied, player.q, player.r, world);
+    }
+}
+
+function nearestPoiOfType(q, r, types) {
+    const set = new Set(types);
+    let best = null;
+    for (const poi of world.pois) {
+        if (!set.has(poi.type)) continue;
+        const d = hexDistance(q, r, poi.q, poi.r);
+        if (!best || d < best.dist) best = { poi, dist: d };
+    }
+    return best;
+}
+
+function nearestSettlement(q, r) {
+    return nearestPoiOfType(q, r, [POI.HAVEN, POI.VILLAGE]);
+}
+
+async function animateMove(enemy, prevKey) {
+    if (enemyIsVisible(enemy, prevKey)) { await animDelay(80); render(); }
+}
+
+async function runMonsterTurn(enemy, def, aggro, occupied) {
+    aggro = forestModifiedAggro(enemy, aggro);
+    if (await tryAggroChase(enemy, def, aggro, occupied)) return;
+
+    const prevKey = hexKey(enemy.q, enemy.r);
+    const settle = nearestSettlement(enemy.q, enemy.r);
+
+    // Lurk near a settlement (within 2). Settlement hexes are already excluded from validAdjacentMoves.
+    if (settle && settle.dist <= 2) {
+        em.wanderWildlife(enemy, occupied, player.q, player.r, world);
+        await animateMove(enemy, prevKey);
+        return;
+    }
+
+    // Hunt a settlement within aggro * 2
+    if (settle && settle.dist <= aggro * 2) {
+        em.moveWildlifeToward(enemy, settle.poi.q, settle.poi.r, occupied, player.q, player.r, world);
+        await animateMove(enemy, prevKey);
+        return;
+    }
+
+    em.wanderWildlife(enemy, occupied, player.q, player.r, world);
+    await animateMove(enemy, prevKey);
+}
+
+function patrolAroundPoi(enemy, occupied, poi) {
+    const valid = em.validAdjacentMoves(enemy, occupied, true, player.q, player.r, world)
+        .filter(n => !(n.q === poi.q && n.r === poi.r));
+    if (valid.length > 0) em.moveEnemyToNearest(enemy, [Rando.choice(valid)], occupied);
+}
+
+async function runRuinsGuardianTurn(enemy, def, aggro, occupied) {
+    aggro = forestModifiedAggro(enemy, aggro);
+    if (await tryAggroChase(enemy, def, aggro, occupied)) return;
+
+    const prevKey = hexKey(enemy.q, enemy.r);
+    const ruin = nearestPoiOfType(enemy.q, enemy.r, [POI.RUIN]);
+
+    // Patrol within 2 of a ruin: 30% chance to wander, never onto the ruin itself
+    if (ruin && ruin.dist <= 2) {
+        if (Rando.bool(0.3)) {
+            patrolAroundPoi(enemy, occupied, ruin.poi);
+            await animateMove(enemy, prevKey);
+        }
+        return;
+    }
+
+    // Return to a ruin within aggro * 2
+    if (ruin && ruin.dist <= aggro * 2) {
+        em.moveWildlifeToward(enemy, ruin.poi.q, ruin.poi.r, occupied, player.q, player.r, world);
+        await animateMove(enemy, prevKey);
+        return;
+    }
+
+    if (Rando.bool(0.5)) {
+        em.wanderWildlife(enemy, occupied, player.q, player.r, world);
+        await animateMove(enemy, prevKey);
     }
 }
 
@@ -1984,6 +2076,10 @@ async function runEnemyPhase() {
 
         if (def.behavior === 'wildlife') {
             await runWildlifeTurn(enemy, def, aggro, occupied);
+        } else if (def.behavior === 'monster') {
+            await runMonsterTurn(enemy, def, aggro, occupied);
+        } else if (def.behavior === 'ruins-guardian') {
+            await runRuinsGuardianTurn(enemy, def, aggro, occupied);
         } else {
             await runChaosTurn(enemy, def, occupied);
         }
@@ -2945,7 +3041,7 @@ function showDialog(title, bodyHtml, buttons) {
     overlay.classList.remove('hidden');
 }
 
-function showOnceDialog(key, title, bodyHtml, buttons = [{ label: 'OK', cls: 'btn-primary' }]) {
+function showOnceDialog(key, title, bodyHtml, buttons) {
     if (player.seenDialogs.has(key)) return;
     player.seenDialogs.add(key);
     showDialog(title, bodyHtml, buttons);
