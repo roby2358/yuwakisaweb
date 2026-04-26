@@ -399,6 +399,11 @@ function killEnemy(enemy, opts = {}) {
         logCombat(`Opportunist: +${bonusGold}g`, 'log-gold');
     }
 
+    // Settlement bounty: felling an apex predator (atk ≥ 30) near a haven/village rewards the player
+    if (!def.chaosSpawned && def.attack >= 30) {
+        offerSettlementReward([{ q: enemy.q, r: enemy.r }]);
+    }
+
     // Crawler and Guardian drops: 0-3 non-magical + 10% magical
     if (enemy.type === ENEMY_TYPE.BREACH_CRAWLER || enemy.type === ENEMY_TYPE.BREACH_GUARDIAN) {
         const nmDrops = rollNonMagicalDrops(0, 3);
@@ -862,51 +867,7 @@ function executeSkill(skillId, targetQ, targetR) {
             }
             // Settlement gratitude: reward if restore cleared hexes near a haven/village
             if (shatteredHexes.length > 0) {
-                const restoredKeys = new Set(shatteredHexes.map(h => hexKey(h.q, h.r)));
-                const allCleared = new Set();
-                for (const hex of shatteredHexes) {
-                    for (const coord of hexesInRange(hex.q, hex.r, 3)) {
-                        allCleared.add(hexKey(coord.q, coord.r));
-                    }
-                }
-                for (const poi of world.pois) {
-                    if (poi.type !== POI.HAVEN && poi.type !== POI.VILLAGE) continue;
-                    if (!allCleared.has(hexKey(poi.q, poi.r))) continue;
-                    const isHaven = poi.type === POI.HAVEN;
-                    const reward = isHaven ? Rando.int(5, 20) : Rando.int(1, 10);
-                    const name = isHaven ? 'Haven' : 'Village';
-                    const symbol = POI_SYMBOLS[poi.type];
-                    const havenMessages = [
-                        'The garrison salutes you. "The realm stands stronger for your service."',
-                        'A captain approaches with a pouch of coin. "The crown recognizes your valor."',
-                        'The haven\'s council offers a formal thanks and a modest stipend.',
-                        '"We feared the corruption would reach our walls. You have our gratitude."',
-                        'A herald announces your deed to the fortress. Soldiers raise their blades in honor.',
-                        '"The mages sensed the restoration. The haven is in your debt, warrior."',
-                        'The keep\'s steward presents you with a reward from the treasury.',
-                        '"Few would brave the chaos as you have. Accept this with our thanks."',
-                        'Word of your deed spreads quickly through the haven. A collection is taken.',
-                        'The haven commander clasps your hand. "You\'ve bought us time. Use this well."',
-                    ];
-                    const villageMessages = [
-                        'A farmer presses a few coins into your hand. "Bless you, stranger."',
-                        'The village elder hobbles over with a small pouch. "It ain\'t much, but it\'s honest."',
-                        'Children run out to greet you. Their parents follow with a modest gift.',
-                        '"Our crops might grow again, thanks to you." A villager offers what they can spare.',
-                        'An old woman waves you over. "Take this. You\'ve earned more than we can give."',
-                        'The innkeeper sets out a meal and slides some coin across the table.',
-                        '"We thought we\'d have to abandon our homes. Thank you." They pass the hat.',
-                        'A shepherd offers a pouch of coin. "The flock can graze safely now."',
-                        'Smoke rises from the village hearths again. A grateful elder finds you.',
-                        '"Stranger, you\'ve given us hope." The village pools together a small reward.',
-                    ];
-                    const msg = Rando.choice(isHaven ? havenMessages : villageMessages);
-                    showDialog(`${symbol} ${name}`, `<p>${msg}</p><p style="color:#ffc107">Offering: ${reward} gold</p>`, [
-                        { label: 'Accept', cls: 'primary', action: () => { player.gold += reward; victory.goldCollected += reward; victory.settlementsRestored++; logCombat(`+${reward}g from ${name.toLowerCase()}`, 'log-gold'); }},
-                        { label: 'Decline' }
-                    ]);
-                    break;
-                }
+                offerSettlementReward(shatteredHexes);
             }
             // Attempt to seal a breach in range
             if (breachInRange) {
@@ -2988,6 +2949,50 @@ function showOnceDialog(key, title, bodyHtml, buttons = [{ label: 'OK', cls: 'bt
     if (player.seenDialogs.has(key)) return;
     player.seenDialogs.add(key);
     showDialog(title, bodyHtml, buttons);
+}
+
+const HAVEN_GRATITUDE_MESSAGES = [
+    'The garrison salutes you. "The realm stands stronger for your service."',
+    'A captain approaches with a pouch of coin. "The crown recognizes your valor."',
+    'The haven\'s council offers a formal thanks and a modest stipend.',
+    '"We feared the corruption would reach our walls. You have our gratitude."',
+    'A herald announces your deed to the fortress. Soldiers raise their blades in honor.',
+    '"The mages sensed the restoration. The haven is in your debt, warrior."',
+    'The keep\'s steward presents you with a reward from the treasury.',
+    '"Few would brave the chaos as you have. Accept this with our thanks."',
+    'Word of your deed spreads quickly through the haven. A collection is taken.',
+    'The haven commander clasps your hand. "You\'ve bought us time. Use this well."',
+];
+
+const VILLAGE_GRATITUDE_MESSAGES = [
+    'A farmer presses a few coins into your hand. "Bless you, stranger."',
+    'The village elder hobbles over with a small pouch. "It ain\'t much, but it\'s honest."',
+    'Children run out to greet you. Their parents follow with a modest gift.',
+    '"Our crops might grow again, thanks to you." A villager offers what they can spare.',
+    'An old woman waves you over. "Take this. You\'ve earned more than we can give."',
+    'The innkeeper sets out a meal and slides some coin across the table.',
+    '"We thought we\'d have to abandon our homes. Thank you." They pass the hat.',
+    'A shepherd offers a pouch of coin. "The flock can graze safely now."',
+    'Smoke rises from the village hearths again. A grateful elder finds you.',
+    '"Stranger, you\'ve given us hope." The village pools together a small reward.',
+];
+
+function offerSettlementReward(originHexes) {
+    for (const poi of world.pois) {
+        if (poi.type !== POI.HAVEN && poi.type !== POI.VILLAGE) continue;
+        if (!originHexes.some(h => hexDistance(poi.q, poi.r, h.q, h.r) <= 3)) continue;
+        const isHaven = poi.type === POI.HAVEN;
+        const reward = isHaven ? Rando.int(5, 20) : Rando.int(1, 10);
+        const name = isHaven ? 'Haven' : 'Village';
+        const symbol = POI_SYMBOLS[poi.type];
+        const msg = Rando.choice(isHaven ? HAVEN_GRATITUDE_MESSAGES : VILLAGE_GRATITUDE_MESSAGES);
+        showDialog(`${symbol} ${name}`, `<p>${msg}</p><p style="color:#ffc107">Offering: ${reward} gold</p>`, [
+            { label: 'Accept', cls: 'primary', action: () => { player.gold += reward; victory.goldCollected += reward; victory.settlementsRestored++; logCombat(`+${reward}g from ${name.toLowerCase()}`, 'log-gold'); }},
+            { label: 'Decline' }
+        ]);
+        return true;
+    }
+    return false;
 }
 
 function showHavenDialog(poi) {

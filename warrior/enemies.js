@@ -67,7 +67,7 @@ export class EnemyManager {
             } while (usedNames.has(name));
             usedNames.add(name);
 
-            const attack = 3 + Math.floor(i * 9 / 11);
+            const attack = Math.round(3 * Math.pow(10, i / 11));
             const hp = attack * 4 + Rando.int(-3, 3);
             const defense = Math.floor(attack / 4);
             const xp = attack * 2;
