@@ -3202,7 +3202,7 @@ function spawnRuinCreatures(poi) {
     });
     if (spots.length === 0) return 0;
     Rando.shuffle(spots);
-    const targetMight = player.level * player.level * 2;
+    const targetMight = player.level * 10;
     let mightSum = 0, count = 0;
     for (let i = 0; i < spots.length && mightSum < targetMight; i++) {
         const type = Rando.choice(creatureTypes);

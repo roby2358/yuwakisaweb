@@ -1,10 +1,3 @@
-Priority:   68
-Status: ToDo
-ID: warrior-jfzf
-Created: 2026-04-19T02:37:28Z
-Updated: 2026-04-26T08:30:21Z
-Scale Ruin monster spawns linearly instead of quadratically. In index.js spawnRuinCreatures() at line 3155, replace `const targetMight = player.level * player.level * 2;` with a linear formula (e.g. player.level * K + base). Tune K so early ruins stay interesting while late-game ruins don't explode into unfair fights. Current quadratic: L1=2, L5=50, L10=200.
-----
 Priority:   65
 Status: ToDo
 ID: warrior-g356
@@ -60,3 +53,10 @@ ID: warrior-8bz5
 Created: 2026-04-19T02:38:32Z
 Updated: 2026-04-26T08:30:23Z
 Add a Skills archive tier so skills fall into three buckets: (1) HUD-equipped (the 4 slots in player.skills), (2) Learned-but-unequipped (swappable from the Skills panel), (3) Archived (learned but tucked away — shown in a collapsed/separate section, not offered for equip by default). Add `player.archivedSkills` (Set) alongside learnedSkills, a button in updateSkillsPanel() to archive/unarchive a learned skill, and persist it in toJSON/fromJSON. Archived skills should not appear in the default unequipped swap list but remain retrievable. Useful when the player accumulates skills they'll never slot (e.g. off-build casters on a melee run) and the swap list gets cluttered.
+----
+Priority:   68
+Status: Done
+ID: warrior-jfzf
+Created: 2026-04-19T02:37:28Z
+Updated: 2026-04-26T21:25:58Z
+Scale Ruin monster spawns linearly instead of quadratically. In index.js spawnRuinCreatures() at line 3155, replace `const targetMight = player.level * player.level * 2;` with a linear formula (e.g. player.level * K + base). Tune K so early ruins stay interesting while late-game ruins don't explode into unfair fights. Current quadratic: L1=2, L5=50, L10=200.
