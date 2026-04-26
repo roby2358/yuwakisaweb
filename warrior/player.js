@@ -29,6 +29,7 @@ export class Player {
         this.movedThisTurn = false;
         this.hexesMovedThisTurn = 0;
         this.hasGarrisonCharter = false;
+        this.seenDialogs = new Set();
     }
 
     weapon() {
@@ -158,7 +159,8 @@ export class Player {
             skills: this.skills, inventory: this.inventory,
             statPoints: this.statPoints, pendingSkillChoice: this.pendingSkillChoice,
             mp: this.mp, warpShieldTurns: this.warpShieldTurns,
-            hasGarrisonCharter: this.hasGarrisonCharter
+            hasGarrisonCharter: this.hasGarrisonCharter,
+            seenDialogs: [...this.seenDialogs]
         };
     }
 
@@ -166,6 +168,7 @@ export class Player {
         const p = new Player(data.q, data.r);
         Object.assign(p, data);
         p.learnedSkills = new Set(data.learnedSkills);
+        p.seenDialogs = new Set(data.seenDialogs || []);
         p.usedSkillsThisTurn = new Set();
         p.movedThisTurn = false;
         p.hexesMovedThisTurn = 0;

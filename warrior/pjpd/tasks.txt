@@ -1,17 +1,3 @@
-Priority:   65
-Status: ToDo
-ID: warrior-g356
-Created: 2026-04-12T20:20:39Z
-Updated: 2026-04-26T08:30:21Z
-When the player tries to Restore the Maw but the Unraveler is still alive, show a dialog saying the Unraveler must be defeated first before the Maw can be sealed. Only show this dialog once, because the player will have to Restore multiple times.
-----
-Priority:   65
-Status: ToDo
-ID: warrior-nzrr
-Created: 2026-04-12T20:26:23Z
-Updated: 2026-04-26T08:30:21Z
-When the Unraveler is defeated, show a dialog: if it reforms into another chaos spawn, say "The Unraveler has jumped to another host!"; if it's the final defeat (no chaos spawns left), say "The Unraveler is vanquished! Now close the Maw!"
-----
 Priority:   55
 Status: ToDo
 ID: warrior-69ti
@@ -60,3 +46,17 @@ ID: warrior-jfzf
 Created: 2026-04-19T02:37:28Z
 Updated: 2026-04-26T21:25:58Z
 Scale Ruin monster spawns linearly instead of quadratically. In index.js spawnRuinCreatures() at line 3155, replace `const targetMight = player.level * player.level * 2;` with a linear formula (e.g. player.level * K + base). Tune K so early ruins stay interesting while late-game ruins don't explode into unfair fights. Current quadratic: L1=2, L5=50, L10=200.
+----
+Priority:   65
+Status: Done
+ID: warrior-nzrr
+Created: 2026-04-12T20:26:23Z
+Updated: 2026-04-26T21:49:42Z
+When the Unraveler is defeated, show a dialog: if it reforms into another chaos spawn, say "The Unraveler has jumped to another host!"; if it's the final defeat (no chaos spawns left), say "The Unraveler is vanquished! Now close the Maw!"
+----
+Priority:   65
+Status: Done
+ID: warrior-g356
+Created: 2026-04-12T20:20:39Z
+Updated: 2026-04-26T21:49:42Z
+When the player tries to Restore the Maw but the Unraveler is still alive, show a dialog saying the Unraveler must be defeated first before the Maw can be sealed. Only show this dialog once, because the player will have to Restore multiple times.

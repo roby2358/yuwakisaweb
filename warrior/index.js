@@ -199,6 +199,12 @@ function refreshVision() {
             if (world.hexes.has(key)) { world.revealed.add(key); world.visible.add(key); }
         }
     }
+    // First-sight intro for the Unraveler
+    if (unraveler && world.visible.has(hexKey(unraveler.q, unraveler.r))) {
+        showOnceDialog('unravelerSighted', 'The Unraveler',
+            '<p>A chaos-wrought figure stirs near the Maw. <b>The Unraveler</b> walks the world.</p><p>While it lives, the Maw cannot be sealed. Hunt it down — and beware: each time you fell it, it reforms within another chaos spawn until none remain.</p>',
+            [{ label: 'Steady', cls: 'btn-primary' }]);
+    }
 }
 
 // ================================================================
@@ -349,9 +355,10 @@ function killEnemy(enemy, opts = {}) {
             }
             gainXP(def.xp);
             sound.killEnemy();
+            showDialog('The Unraveler', '<p>The Unraveler has jumped to another host!</p>', [{ label: 'OK', cls: 'btn-primary' }]);
             return;
         }
-        showDialog('The Unraveler Defeated', '<p>You have hunted The Unraveler to its last form. Now use Restore near the Maw to seal it forever.</p>', [{ label: 'OK', cls: 'btn-primary' }]);
+        showDialog('The Unraveler Vanquished', '<p>The Unraveler is vanquished! Now close the Maw!</p>', [{ label: 'OK', cls: 'btn-primary' }]);
         sound.victory(2);
     }
     victory.enemiesDefeated++;
@@ -792,6 +799,16 @@ function executeSkill(skillId, targetQ, targetR) {
                 p.guardianDefeated && !p.closed &&
                 hexDistance(player.q, player.r, p.q, p.r) <= range
             );
+            // One-shot warning: Maw can't be sealed while the Unraveler lives
+            const mawInRange = world.pois.find(p =>
+                p.type === POI.MAW && !p.closed &&
+                hexDistance(player.q, player.r, p.q, p.r) <= range
+            );
+            const unravelerAlive = em.enemies.find(e => e.type === ENEMY_TYPE.UNRAVELER);
+            if (mawInRange && unravelerAlive) {
+                showOnceDialog('mawBlockedByUnraveler', 'The Maw Resists',
+                    '<p>The Maw seethes with chaos and refuses to close. The Unraveler must be defeated first before the Maw can be sealed.</p>');
+            }
             if (shatteredHexes.length === 0 && !breachInRange) {
                 logCombat('No shattered terrain in range!', 'log-info');
                 player.usedSkillsThisTurn.delete(skillId);
@@ -2965,6 +2982,12 @@ function showDialog(title, bodyHtml, buttons) {
         btnContainer.appendChild(btn);
     }
     overlay.classList.remove('hidden');
+}
+
+function showOnceDialog(key, title, bodyHtml, buttons = [{ label: 'OK', cls: 'btn-primary' }]) {
+    if (player.seenDialogs.has(key)) return;
+    player.seenDialogs.add(key);
+    showDialog(title, bodyHtml, buttons);
 }
 
 function showHavenDialog(poi) {
