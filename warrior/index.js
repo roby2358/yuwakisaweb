@@ -245,9 +245,9 @@ function mawProximityBonus(q, r) {
     if (dist > threshold) return { attack: 0, defense: 0, hp: 0 };
     const t = 1 - dist / threshold; // 1 at Maw, 0 at threshold
     return {
-        attack: Math.round(10 * t),
-        defense: Math.round(5 * t),
-        hp: Math.round(10 * t)
+        attack: Math.round(20 * t),
+        defense: Math.round(10 * t),
+        hp: Math.round(20 * t)
     };
 }
 

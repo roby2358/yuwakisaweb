@@ -1,12 +1,5 @@
 Priority:   55
 Status: ToDo
-ID: warrior-69ti
-Created: 2026-04-19T02:36:48Z
-Updated: 2026-04-26T08:30:21Z
-Double the Maw proximity bonus for enemies to make the endgame more challenging. In index.js mawProximityBonus(), change attack from 10→20, defense from 5→10, and hp from 10→20 at the Maw (scaling linearly to 0 at half the max BFS distance). Verify enemy counters and combat feel appropriately harder near the Maw without trivializing approach hexes.
-----
-Priority:   55
-Status: ToDo
 ID: gold-sink-e4ya
 Created: 2026-03-31T01:38:16Z
 Updated: 2026-04-26T08:30:22Z
@@ -53,6 +46,13 @@ ID: warrior-g356
 Created: 2026-04-12T20:20:39Z
 Updated: 2026-04-26T21:49:42Z
 When the player tries to Restore the Maw but the Unraveler is still alive, show a dialog saying the Unraveler must be defeated first before the Maw can be sealed. Only show this dialog once, because the player will have to Restore multiple times.
+----
+Priority:   55
+Status: Done
+ID: warrior-69ti
+Created: 2026-04-19T02:36:48Z
+Updated: 2026-04-27T00:21:30Z
+Double the Maw proximity bonus for enemies to make the endgame more challenging. In index.js mawProximityBonus(), change attack from 10→20, defense from 5→10, and hp from 10→20 at the Maw (scaling linearly to 0 at half the max BFS distance). Verify enemy counters and combat feel appropriately harder near the Maw without trivializing approach hexes.
 ----
 Priority:   55
 Status: Done
