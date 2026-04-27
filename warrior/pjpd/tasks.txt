@@ -5,6 +5,54 @@ Created: 2026-03-31T01:38:16Z
 Updated: 2026-04-26T08:30:22Z
 Add a gold sink or reward for accumulating 1000 gold. Could be a powerful item, a special upgrade, unlocking an ability, or a world event. Give the player something meaningful to spend or celebrate when hitting 1000g.
 ----
+Priority:   50
+Status: ToDo
+ID: warrior-qjct
+Created: 2026-04-27T00:35:03Z
+Updated: 2026-04-27T00:43:30Z
+Add a "Reflect" respec skill purchasable at a haven for 1000 gold. Functions as a gold sink (pairs with gold-sink-e4ya) and gives the player a way to rebuild their skill loadout late-run. The skill represents the warrior reflecting on their training: using Reflect returns all spent skill points to the pool so the player can re-allocate. Implementation: add Reflect to SKILLS in config.js, add a "Buy Reflect (1000g)" option to the haven dialog when the player has the gold and hasn't already learned it; deduct gold and add to player.learnedSkills on purchase. When activated, refund all learnedSkills (other than Restore and Reflect itself) back into an available-points pool the player can re-spend from the Skills panel. Decide whether Reflect itself is consumed on use or stays available.
+----
+Priority:   47
+Status: ToDo
+ID: combo-skill-56hq
+Created: 2026-04-27T05:55:51Z
+Updated: 2026-04-27T06:00:27Z
+Break the "dump everything into warding" dominant strategy by reshaping the skill roster around two tiers, AND repassing aether costs at the same time.
+
+Today the power trio (cosmic bolt, starfall, meteor) all scale ~3× warding, which double-dips with warding's role as the aether pool — at warding=27 each cast hits 81, dwarfing melee, and the aether costs are low enough to spam them.
+
+Two-tier fix:
+
+(1) Add new combo skills — scale on warding + a second stat, cheaper aether. These become the bread-and-butter rotation, and each is best for a different stat investment so optimizing one stat no longer optimizes everything.
+  - Cosmic bolt → combo: warding × 2 + reflex (precision burst, single-target king)
+  - Add new combat-flavored combos: warding + might (raw force), warding + vigor (sustain/heal-on-hit)
+  - Combo skills cost ~2-4 AE so they're sustainable
+
+(2) Keep meteor and starfall as pure-warding nukes, but make them expensive — "saved up for this" moments, not per-turn rotation. Warding pool still funds them; scarcity not formula does the balancing.
+  - Starfall — keep ~3× warding AoE (the ruin-popper stays brutal), aether cost ~6
+  - Meteor — keep 3× warding AoE, aether cost ~5
+
+Aether-cost calibration: +3 AE magic items are common, so 3 AE is effectively the "break even" cost (an item refund covers it). Anything cheap enough to spam should be ≤3 AE; anything that's supposed to be a finisher should be ≥5 AE so an item proc doesn't fully refund it.
+
+Audit the rest of SKILLS for any other pure-warding scalers and either give them a thematic second stat (combat → might, precision → reflex, healing/sustain → vigor) or move them to the expensive-nuke tier.
+
+Pairs with warrior-4mfy: Land Health items reward non-warding builds, and this fix makes those builds actually competitive instead of strictly worse. Also pairs with might-def-pmtb (melee survivability buff).
+
+Tradeoff: don't nerf in isolation. Tune so a balanced-stat caster lands near today's pure-warding output, and a pure-warding 27 build still has the burst nukes but can't sustain them. Update SKILLS damage formulas + aether costs in config.js (or wherever skill resolution lives in index.js); retest end-game encounters.
+----
+Priority:   46
+Status: ToDo
+ID: might-def-pmtb
+Created: 2026-04-27T05:57:05Z
+Updated: 2026-04-27T05:57:05Z
+Give might a small defense bonus so melee builds get inherent survivability from their primary stat. Add `Math.floor(this.stats.might / 5)` to player.defense() in player.js (alongside the existing `vigor / 3` term). At might=20 that's +4 def, at might=27 it's +5 — meaningful but not overpowering.
+
+Why: melee players currently rely on vigor for both HP and defense, while caster builds dump warding and hide behind range. A small might→def coupling rewards committing to melee and shores up the survivability gap that makes pure-warding so attractive.
+
+Pairs with combo-skill-56hq (nerfs caster ceiling) and warrior-4mfy (rewards non-warding builds) as a three-part balance pass on the warding-dump dominant strategy.
+
+Implementation: one-line addition to player.defense(). Retest that high-might melee feels noticeably tankier without trivializing early-game enemy threat.
+----
 Priority:   45
 Status: ToDo
 ID: warrior-wwg4
@@ -12,12 +60,97 @@ Created: 2026-04-12T20:28:57Z
 Updated: 2026-04-26T08:30:22Z
 Add a use for XP after reaching max level 10. Possible idea: spend accumulated XP to heal/restore chaos-corrupted hexes, giving endgame players something meaningful to do with excess XP.
 ----
+Priority:   44
+Status: ToDo
+ID: ae-discount-84n9
+Created: 2026-04-27T06:05:45Z
+Updated: 2026-04-27T06:07:21Z
+Add passive artifact powers that reduce skill aether cost by 1 / 2 / 3 — the "flip side" of the existing +1 / +2 / +3 AE-per-turn regen artifacts. Same value tier and rarity as the matching regen items.
+
+Mechanics:
+  - New artifact special: `aether_discount` with `aetherDiscount: 1|2|3`
+  - Hook into the skill-cast site (index.js, wherever the SKILL aether cost is deducted) — read `player.equipped('aether_discount')` and subtract aetherDiscount from the cost
+  - No floor — let it reach 0. A -3 discount on a 3-AE break-even skill making it free is intentional. Discovering combos that break the rules is part of the fun.
+  - Discount and regen are NOT equivalent in feel: regen tops you back up between turns (sustained casting), discount only fires at cast time (front-loaded relief). A -3 discount lets you spam cheap skills free, but you don't get aether back if you don't cast — so it's burst-rotation-flavored, while +3/turn is attrition-flavored.
+
+Design feel: regen rewards drawn-out attrition fights; discount rewards burst rotations and is most impactful on cheap combo skills. Pairs with combo-skill-56hq's aether-cost repass — under that framework, 3 AE is "break-even", so -3 makes break-even skills free, which is fine and good. Tune item drop/price tiers to match regen counterparts.
+
+Implementation: ALL_EQUIPMENT entries in config.js (artifact slot), special handling in the skill-cast deduction in index.js, no save-format changes since equipment is already serialized.
+----
+Priority:   43
+Status: ToDo
+ID: vigor-gear-zy62
+Created: 2026-04-27T06:40:59Z
+Updated: 2026-04-27T06:40:59Z
+Add armor and artifact items that grant +vigor as a stat boost (not flat HP), so the +vigor naturally propagates through both vigor-derived formulas:
+  - maxHP(vigor) — bigger HP pool
+  - Math.floor(vigor / 3) in player.defense() — extra defense
+Single stat bump, double payoff. Natural tanking gear that complements warrior-4mfy's Tank shield.
+
+Mechanics:
+  - New equipment special: `vigor_bonus` with `vigorBonus: 1|2|3` (or similar tiers)
+  - Slots: armor and artifact (per user's call-out)
+  - In player.maxHP() and player.defense(), use `this.stats.vigor + this._bonusVigor()` where `_bonusVigor()` sums equipped vigor bonuses — so the +vigor flows through both maxHP scaling and the /3 def term automatically
+  - Don't add separate hp_bonus/def_bonus terms — the whole point is the synergy from one stat moving two derived values
+
+Design feel: pairs the existing flat hp_bonus / dodge_bonus / etc. items with a "stat-up" tier that hits multiple derived stats at once. A +3 vigor artifact ends up effectively +HP and +1 def from one slot, which is strong but appropriately rare.
+
+Possibly extend the same pattern to the other stats (might_bonus, reflex_bonus, warding_bonus) on appropriate slots, but vigor first since the user specifically wants better tanking gear. Implementation: ALL_EQUIPMENT entries in config.js, small refactor to player.maxHP() and player.defense() to read the bonus.
+----
 Priority:   40
 Status: ToDo
 ID: warrior-4mfy
 Created: 2026-04-19T02:40:01Z
-Updated: 2026-04-26T08:30:22Z
-Add a Land Health mechanic that rewards cleaning up chaos (shattered/distressed) hexes and offsets a ramped-up Maw bonus. Design: track total chaos-hex count vs. cleaned count as a world-level "Land Health" ratio (0..1). Player gets a scaling bonus (e.g. +attack/+def/+hp-regen or Aether regen) tied to Land Health — stronger the cleaner the world. Simultaneously, ramp the Maw proximity bonus for enemies higher than today (pairs with warrior-69ti), so the endgame is genuinely nastier unless the player has invested in restoration. This makes Restore/Salvage skills strategically valuable beyond the per-hex terrain change, gives a reason to clear distant breaches, and creates a pacing knob: rush the Maw weak, or sanitize first and fight it stronger. Consider showing a Land Health indicator in the HUD. Requires: chaos hex accounting in world.js, bonus calc somewhere player.defense()/meleeDamage() can read, HUD display, and tuning that Maw scaling stays beatable without full cleanup.
+Updated: 2026-04-27T06:33:07Z
+Land Health mechanic that rewards cleaning up chaos (shattered/distressed) hexes and offsets a ramped-up Maw bonus. Track total chaos-hex count vs. cleaned count as a world-level "Land Health" ratio (0..1). Pair with warrior-69ti so the endgame Maw bonus is genuinely nastier unless the player has invested in restoration — rush the Maw weak, or sanitize first and fight it stronger.
+
+Player-side bonus delivered via 3 magic items, each tied to a physical archetype (mutually exclusive build choice, not stacking buffs). Deliberately no caster/warding item — pure-warding mages opt themselves out of the Land Health reward system.
+
+  1. Tank — Shield: boosts defense, vigor, and might
+  2. Archer — Void cannon: boosts reflex and vigor
+  3. Fighter — Cloak (or banner/warhorn/etc., name TBD): boosts might and vigor
+
+Item bonus scales with Land Health (cleaner world → bigger bonus). Item only activates / scales from level 6+ so it's a mid/late-game payoff, not an early-run crutch.
+
+Note on caster builds: this isn't anti-mage, it's anti-monomaniacal-warding. Once combo-skill-56hq lands, hybrid casters who put points into reflex (cosmic bolt scales warding × 2 + reflex) or might (combat combos) ALSO benefit from these items — picking up the Archer or Fighter item makes their secondary stat hit harder. The build that gets shut out is the pure cosmic-bolt-and-starfall-your-way-to-the-Maw warding dump. Good luck to them.
+
+Details TBD: exact stat numbers per item, scaling curve (linear vs. tiered), whether the item is granted/found/bought, whether the choice is one-shot or swappable, final names/flavor for the fighter item. Requires: chaos hex accounting in world.js, Land Health calc readable from player.defense()/meleeDamage()/etc., the 3 items added to ALL_EQUIPMENT with new specials, optional HUD Land Health indicator, and tuning so Maw scaling stays beatable without full cleanup.
+----
+Priority:   40
+Status: ToDo
+ID: ranged-enm-ue9z
+Created: 2026-04-27T06:48:49Z
+Updated: 2026-04-27T06:48:49Z
+Add more ranged enemies and put a visual marker on the enemy token so the player can tell at a glance which counters are ranged threats.
+
+(1) Roster expansion — current ranged enemy lineup is sparse. Add ranged variants across the tier curve so ranged threat shows up in early, mid, and late game, not just one or two creature types. Suggested directions, mapping to existing creature themes:
+  - Early-tier: skirmishers / archers (low damage, range 2-3)
+  - Mid-tier: spellslingers / hex-hurlers (medium damage, range 3-4, possibly chaos-flavored)
+  - Late/guardian-tier: a ranged guardian or two so endgame fights aren't all melee bruisers
+  - Garrison-defender ranged variant for variety on garrison kill events
+
+Each new enemy gets a creatureDef in config.js (or wherever ENEMY_DEFS lives) with appropriate damage, range, HP, AI. Ranged enemy AI should already exist for the current ranged ones — reuse, don't fork.
+
+(2) Visual marker on the token — small overlay so ranged enemies are identifiable without hovering. Options to pick from:
+  - A small bow/arrow glyph in a corner of the token
+  - A colored ring or dot on the token border
+  - A subtle range-indicator color shift on the enemy's name/HP tag
+Whichever option, keep it readable in fog (revealed-but-not-visible state) and at zoom — don't crowd the existing token sprite. Implementation likely lives in the token-draw pass in index.js or in SpriteSheet.drawCell consumers; either overlay-draw after the token, or add a small accent sprite to the sheet.
+
+Tactical justification: ranged enemies meaningfully change approach planning — the player decides whether to close, take cover behind terrain (forest/hill defense bonuses already exist), or out-range them. Without a visual marker the player has to memorize creature types or hover everything, which is tedious. The marker is small UX work for a clear gameplay payoff.
+
+Tuning: don't overpopulate ranged on a single map — they're a counter to slow players and can feel oppressive in clusters. Aim for ~20-30% of spawns being ranged at the appropriate tier, not 50%+.
+----
+Priority:   38
+Status: ToDo
+ID: commune-ae-fjc2
+Created: 2026-04-27T06:03:42Z
+Updated: 2026-04-27T06:03:42Z
+Raise the Commune skill's aether cost to 20+ so it can only be cast late in the run. Right now it's affordable too early, which spoils the narrative reveal — Commune is meant to land as a late-game beat once the player has invested heavily in warding and aether-pool gear.
+
+Implementation: bump Commune's cost in the SKILLS table in config.js. With max aether scaling off warding plus +3 AE items being common, a 20+ cost means the player needs a strong warding investment and at least one aether-bonus item to even cast it once — naturally gating it past the early game without any explicit level lock.
+
+Pairs with combo-skill-56hq's aether-cost repass: same calibration framework (3 AE = break-even, ≥5 AE = finisher tier). Commune sits in its own "ritual / lore-gate" tier above the nukes.
 ----
 Priority:   32
 Status: ToDo
@@ -25,6 +158,59 @@ ID: warrior-8bz5
 Created: 2026-04-19T02:38:32Z
 Updated: 2026-04-26T08:30:23Z
 Add a Skills archive tier so skills fall into three buckets: (1) HUD-equipped (the 4 slots in player.skills), (2) Learned-but-unequipped (swappable from the Skills panel), (3) Archived (learned but tucked away — shown in a collapsed/separate section, not offered for equip by default). Add `player.archivedSkills` (Set) alongside learnedSkills, a button in updateSkillsPanel() to archive/unarchive a learned skill, and persist it in toJSON/fromJSON. Archived skills should not appear in the default unequipped swap list but remain retrievable. Useful when the player accumulates skills they'll never slot (e.g. off-build casters on a melee run) and the swap list gets cluttered.
+----
+Priority:   30
+Status: ToDo
+ID: rand-skill-mj87
+Created: 2026-04-27T06:43:23Z
+Updated: 2026-04-27T06:43:23Z
+Procedurally generated attack skills as a parallel pool to the hand-crafted SKILLS table. When the player gets to pick a skill (level-up via pendingSkillChoice, or possibly at ruins/POIs), roll first: with some probability pick a standard skill from SKILLS as today, otherwise roll a randomized attack skill instead.
+
+Random skill template:
+  - Pick 2 random stats from {might, reflex, vigor, warding} as the scaling pair (matches the combo-skill-56hq design philosophy — every attack skill should scale on 2 stats, never 1)
+  - Pick a damage formula: e.g. (statA × N) + (statB × M), or (statA + statB) × scale
+  - Roll a bonus effect from a pool — AoE-1, knockback, bleed/DoT, stun, lifesteal, armor-pierce, chain-to-adjacent, mark-for-bonus-damage, terrain-aware multiplier, etc.
+  - Generate a flavorful name (template-driven, e.g. "[Adjective] [Noun]" pulled from word pools, or stat-themed: might+reflex → "Searing Strike", warding+vigor → "Aether Bulwark Bolt")
+  - Aether cost rolled in the standard tier (≤3 cheap, 4-5 mid, ≥6 finisher) keyed to power level
+
+System pieces:
+  - Random skill generator: takes a Rando, returns a runtime SKILL object with {id, name, scaling, cost, range, effect} matching the SKILLS table shape so the rest of the engine doesn't care if a skill came from the hand-crafted table or the RNG
+  - Skill-pick site: at level-up dialog (and any other skill-pick UI), roll once; if random-skill, generate one and offer it instead of (or alongside) a standard option
+  - Persistence: a rolled-and-kept random skill needs to survive save/load. Either serialize the full skill object on player.learnedSkills (currently a Set of string IDs — would need to widen) or seed-based regen so the same skill comes back from the same seed
+  - Scope check: should random skills be offered alongside standard ones (player picks among 3 of each), or as a separate "wild" option (player rolls into a random one)?
+
+Design feel: every run gets weird, unique tools. Pairs with the broader design principle of "discoverable rule-breaking combos are fun" — random skills + items + stat builds = more degrees of freedom for the player to find a busted combo.
+
+Details TBD: probability of random vs. standard, the bonus-effect pool, formula tuning, name generation pool, save format change for random skills.
+----
+Priority:   30
+Status: ToDo
+ID: map-deco-hk27
+Created: 2026-04-27T06:45:15Z
+Updated: 2026-04-27T06:45:15Z
+Dress up the hex map with per-terrain visual character. The current green/brown/yellow/gray/blue palette is good — clean and readable — but flat. Add subtle decorative accents so each terrain feels like a place, not a colored cell.
+
+Two approaches (probably both):
+  1. Sprite-sheet additions: extend or add a new sheet (e.g. `terrainSheet`) with small per-terrain icons — trees for forest, rocks/peaks for hills/mountains, reeds for marsh, ripples or waves for water, ruins/cracks for shattered/distressed hexes, grass tufts for plains. SpriteSheet.drawCell already handles tinting so terrain palette can still drive color.
+  2. Drawn accents: cheap programmatic canvas shapes — small triangles for mountains, dots for sand, wavy lines for water, jagged scribbles for chaos hexes. No asset pipeline needed.
+
+Design constraints:
+  - Tactical readability stays paramount. A decorated forest hex must still be obviously "forest" at a glance and not be confused with hills. Keep accents low-contrast and small relative to the hex.
+  - Determinism: per-hex accent variant should be picked from a Rando seeded on (q, r) so the map looks the same every render and across save/load — no flicker, no churn.
+  - Density: don't decorate every hex; some hexes plain, some with one accent, rare hexes with a "feature" sprite (a bigger tree, a boulder cluster). Variation > uniformity.
+  - Fog/visibility: accents fog and reveal alongside the terrain layer; revealed-but-not-visible accents desaturate same as everything else.
+  - Don't conflict with POI tokens, enemy tokens, or highlight overlays — accents draw beneath those layers.
+
+Implementation: extend the render pipeline in index.js's hex draw step, after terrain fill and before tokens/highlights. Probably a new helper like `drawTerrainAccent(ctx, hex, x, y)` that picks a deterministic variant from a per-terrain table. New sprite sheet PNG if going the sprite route.
+
+Stretch: chaos/shattered hexes get animated-feeling accents (jittered cracks redrawn each frame) — but that breaks determinism and could be a separate task.
+----
+Priority:   20
+Status: ToDo
+ID: warrior-h92a
+Created: 2026-04-27T00:29:25Z
+Updated: 2026-04-27T00:31:09Z
+Run-end medals + villager testimonials + Unraveler jeers. (1) Medals: extend the Victory final-screen breakdown with thematic badges based on existing counters — e.g. Pacifist (≤20 enemiesDefeated), Cartographer (≥80% map revealed), Pyrrhic (≥10 nearDeathMoments), Restorer (≥50 hexesRestored), Treasurer (≥1000 goldCollected), Maw-Slayer (breachesSealed ≥1), Builder (≥3 garrisonsCompleted). One pass over existing Victory counters; no new tracking needed. (2) Testimonials from villagers: short flavor lines on the end screen "spoken" by havens/villages the player visited, conditional on what they did there (restored nearby terrain, built a garrison, slew an apex predator, accepted a bounty). Warm, grateful tone — extends the existing settlement-gratitude voice. (3) Jeers from the Unraveler: taunting counterparts on what the player failed to do or shied from — breaches left unsealed, corrupted hexes ignored, settlements never visited, weapons hoarded but unused, an ending reached without the Unraveler fully vanquished. Voice consistent with the existing host-jump / vanquished narrative. Pulls testimonials and jeers from separate pools keyed by event tags accumulated during the run. Likely v2 polish — file behind the gold-sink and land-health work.
 ----
 Priority:   68
 Status: Done
