@@ -1109,13 +1109,7 @@ function executeSkill(skillId, targetQ, targetR) {
                 if (UNDISTRESSED_VERSION[hex.terrain] !== undefined) continue;
                 cleanCount++;
             }
-            const aeGain = Math.floor(cleanCount / 6);
-            if (aeGain <= 0) {
-                logCombat('No healthy land nearby!', 'log-info');
-                player.usedSkillsThisTurn.delete(skillId);
-                usedMP = false;
-                break;
-            }
+            const aeGain = 1 + Math.floor(cleanCount / 6);
             player.aether = Math.min(player.maxAether(), player.aether + aeGain);
             logCombat(`Aether Tap: +${aeGain} AE (${cleanCount} clean hexes)`, 'log-info');
             player.mp = 0;

@@ -274,7 +274,7 @@ The skill bar visually grays out skills whose usage conditions aren't met, provi
 
 | Skill | Cost | Target | Usage | Level | Effect |
 |-------|------|--------|-------|-------|--------|
-| Aether Tap | 0 | AoE Self (2) | Pristine | 2 | Draw AE from healthy land. +1 AE per 6 non-shattered, non-distressed hexes within 2. Ends turn. |
+| Aether Tap | 0 | AoE Self (2) | Pristine | 2 | Draw AE from healthy land. +1 AE base, plus +1 per 6 non-shattered, non-distressed hexes within 2. Ends turn. |
 | Farsight | 2 AE | Self | Non-combat | 2 | Reveal all hexes within 12 (permanent terrain + temporary visibility). Free action. |
 | Bountiful Harvest | 4 AE | Self | Pristine | 4 | Sprout crops (1-3g each) on all healthy hexes within 2. Ends turn. |
 | Prospect | 1 AE | Self | Pristine | 4 | Reveal gold deposits within 8. 20% chance to create a gold deposit on a nearby hex within 4. |
