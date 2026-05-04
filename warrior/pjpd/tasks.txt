@@ -1,14 +1,3 @@
-Priority:   70
-Status: ToDo
-ID: recall-ctr-3yj3
-Created: 2026-04-27T06:58:59Z
-Updated: 2026-04-27T06:58:59Z
-Recall should re-center the map on the player. Currently it doesn't, which means after a long expedition the player has to manually pan back to find themselves on the map — defeats the point of "recall."
-
-Fix: in the recall handler, set panX/panY so the player's hex sits at the canvas center. The math is the inverse of hexToScreen for the player's (q, r). Trigger render() after to repaint with the new pan.
-
-Quick UX fix, one small block in index.js wherever recall is handled.
-----
 Priority:   60
 Status: ToDo
 ID: mundane-eq-28xc
@@ -83,6 +72,19 @@ ID: warrior-wwg4
 Created: 2026-04-12T20:28:57Z
 Updated: 2026-04-26T08:30:22Z
 Add a use for XP after reaching max level 10. Possible idea: spend accumulated XP to heal/restore chaos-corrupted hexes, giving endgame players something meaningful to do with excess XP.
+----
+Priority:   45
+Status: ToDo
+ID: food-heal-tz8g
+Created: 2026-05-04T18:11:51Z
+Updated: 2026-05-04T18:11:51Z
+Food should heal as well as feed the wallet. When the player picks up a crop (Bountiful Harvest sprout, or any village/haven food source that currently just grants gold), heal 10-20 HP on top of the existing gold reward.
+
+Implementation: in the harvest path in index.js (around line 1617, where `hex.crop` is consumed and `+${goldAmt}g (harvest)` is logged), roll a heal in [10, 20] via Rando.int and apply it to player.hp clamped to player.maxHP(). Log it on its own line with the heal class (e.g. logCombat(`+${heal} HP (food)`, 'log-heal')) so the gold and heal feedback are both visible. Apply the same treatment to the village food pickup site if it's a separate code path.
+
+Design feel: Bountiful Harvest already costs 4 AE and is a non-combat skill — letting the crops it spawns also restore HP makes it a meaningful sustain option, not just a gold spigot. Pairs naturally with the village-as-safe-haven theme (rest, eat, recover). Keeps the heal modest (10-20) so it doesn't replace Restore or trivialize attrition combat — it's a top-up, not a full reset.
+
+Tuning notes: 10-20 is a starter range; if it feels too strong with multi-crop Bountiful Harvest casts (each crop healing on pickup stacks fast), consider either lowering the per-crop range or capping total heal per turn. If it feels too weak at high level when maxHP is large, switch to a percentage (e.g. 5-10% of maxHP) instead of a flat range.
 ----
 Priority:   44
 Status: ToDo
@@ -235,38 +237,3 @@ ID: warrior-h92a
 Created: 2026-04-27T00:29:25Z
 Updated: 2026-04-27T00:31:09Z
 Run-end medals + villager testimonials + Unraveler jeers. (1) Medals: extend the Victory final-screen breakdown with thematic badges based on existing counters — e.g. Pacifist (≤20 enemiesDefeated), Cartographer (≥80% map revealed), Pyrrhic (≥10 nearDeathMoments), Restorer (≥50 hexesRestored), Treasurer (≥1000 goldCollected), Maw-Slayer (breachesSealed ≥1), Builder (≥3 garrisonsCompleted). One pass over existing Victory counters; no new tracking needed. (2) Testimonials from villagers: short flavor lines on the end screen "spoken" by havens/villages the player visited, conditional on what they did there (restored nearby terrain, built a garrison, slew an apex predator, accepted a bounty). Warm, grateful tone — extends the existing settlement-gratitude voice. (3) Jeers from the Unraveler: taunting counterparts on what the player failed to do or shied from — breaches left unsealed, corrupted hexes ignored, settlements never visited, weapons hoarded but unused, an ending reached without the Unraveler fully vanquished. Voice consistent with the existing host-jump / vanquished narrative. Pulls testimonials and jeers from separate pools keyed by event tags accumulated during the run. Likely v2 polish — file behind the gold-sink and land-health work.
-----
-Priority:   68
-Status: Done
-ID: warrior-jfzf
-Created: 2026-04-19T02:37:28Z
-Updated: 2026-04-26T21:25:58Z
-Scale Ruin monster spawns linearly instead of quadratically. In index.js spawnRuinCreatures() at line 3155, replace `const targetMight = player.level * player.level * 2;` with a linear formula (e.g. player.level * K + base). Tune K so early ruins stay interesting while late-game ruins don't explode into unfair fights. Current quadratic: L1=2, L5=50, L10=200.
-----
-Priority:   65
-Status: Done
-ID: warrior-nzrr
-Created: 2026-04-12T20:26:23Z
-Updated: 2026-04-26T21:49:42Z
-When the Unraveler is defeated, show a dialog: if it reforms into another chaos spawn, say "The Unraveler has jumped to another host!"; if it's the final defeat (no chaos spawns left), say "The Unraveler is vanquished! Now close the Maw!"
-----
-Priority:   65
-Status: Done
-ID: warrior-g356
-Created: 2026-04-12T20:20:39Z
-Updated: 2026-04-26T21:49:42Z
-When the player tries to Restore the Maw but the Unraveler is still alive, show a dialog saying the Unraveler must be defeated first before the Maw can be sealed. Only show this dialog once, because the player will have to Restore multiple times.
-----
-Priority:   55
-Status: Done
-ID: warrior-69ti
-Created: 2026-04-19T02:36:48Z
-Updated: 2026-04-27T00:21:30Z
-Double the Maw proximity bonus for enemies to make the endgame more challenging. In index.js mawProximityBonus(), change attack from 10→20, defense from 5→10, and hp from 10→20 at the Maw (scaling linearly to 0 at half the max BFS distance). Verify enemy counters and combat feel appropriately harder near the Maw without trivializing approach hexes.
-----
-Priority:   55
-Status: Done
-ID: warrior-spwy
-Created: 2026-04-26T08:28:59Z
-Updated: 2026-04-26T21:57:00Z
-Final gold score is gold/10 (in Warrior — when computing the player's end-of-game score, divide accumulated gold by 10).

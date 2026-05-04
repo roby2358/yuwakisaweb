@@ -1,0 +1,45 @@
+Priority:   70
+Status: Done
+ID: recall-ctr-3yj3
+Created: 2026-04-27T06:58:59Z
+Updated: 2026-05-04T19:30:45Z
+Recall should re-center the map on the player. Currently it doesn't, which means after a long expedition the player has to manually pan back to find themselves on the map — defeats the point of "recall."
+
+Fix: in the recall handler, set panX/panY so the player's hex sits at the canvas center. The math is the inverse of hexToScreen for the player's (q, r). Trigger render() after to repaint with the new pan.
+
+Quick UX fix, one small block in index.js wherever recall is handled.
+----
+Priority:   68
+Status: Done
+ID: warrior-jfzf
+Created: 2026-04-19T02:37:28Z
+Updated: 2026-04-26T21:25:58Z
+Scale Ruin monster spawns linearly instead of quadratically. In index.js spawnRuinCreatures() at line 3155, replace `const targetMight = player.level * player.level * 2;` with a linear formula (e.g. player.level * K + base). Tune K so early ruins stay interesting while late-game ruins don't explode into unfair fights. Current quadratic: L1=2, L5=50, L10=200.
+----
+Priority:   65
+Status: Done
+ID: warrior-nzrr
+Created: 2026-04-12T20:26:23Z
+Updated: 2026-04-26T21:49:42Z
+When the Unraveler is defeated, show a dialog: if it reforms into another chaos spawn, say "The Unraveler has jumped to another host!"; if it's the final defeat (no chaos spawns left), say "The Unraveler is vanquished! Now close the Maw!"
+----
+Priority:   65
+Status: Done
+ID: warrior-g356
+Created: 2026-04-12T20:20:39Z
+Updated: 2026-04-26T21:49:42Z
+When the player tries to Restore the Maw but the Unraveler is still alive, show a dialog saying the Unraveler must be defeated first before the Maw can be sealed. Only show this dialog once, because the player will have to Restore multiple times.
+----
+Priority:   55
+Status: Done
+ID: warrior-69ti
+Created: 2026-04-19T02:36:48Z
+Updated: 2026-04-27T00:21:30Z
+Double the Maw proximity bonus for enemies to make the endgame more challenging. In index.js mawProximityBonus(), change attack from 10→20, defense from 5→10, and hp from 10→20 at the Maw (scaling linearly to 0 at half the max BFS distance). Verify enemy counters and combat feel appropriately harder near the Maw without trivializing approach hexes.
+----
+Priority:   55
+Status: Done
+ID: warrior-spwy
+Created: 2026-04-26T08:28:59Z
+Updated: 2026-04-26T21:57:00Z
+Final gold score is gold/10 (in Warrior — when computing the player's end-of-game score, divide accumulated gold by 10).

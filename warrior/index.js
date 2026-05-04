@@ -1305,6 +1305,7 @@ function executeSkill(skillId, targetQ, targetR) {
             player.q = nearest.q;
             player.r = nearest.r;
             refreshVision();
+            centerOn({ q: player.q, r: player.r });
             logCombat(`Recall! Teleported to haven.`, 'log-info');
             player.mp = 0;
             break;
