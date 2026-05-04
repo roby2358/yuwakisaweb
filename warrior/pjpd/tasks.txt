@@ -53,19 +53,6 @@ Pairs with warrior-4mfy: Land Health items reward non-warding builds, and this f
 
 Tradeoff: don't nerf in isolation. Tune so a balanced-stat caster lands near today's pure-warding output, and a pure-warding 27 build still has the burst nukes but can't sustain them. Update SKILLS damage formulas + aether costs in config.js (or wherever skill resolution lives in index.js); retest end-game encounters.
 ----
-Priority:   46
-Status: ToDo
-ID: might-def-pmtb
-Created: 2026-04-27T05:57:05Z
-Updated: 2026-04-27T05:57:05Z
-Give might a small defense bonus so melee builds get inherent survivability from their primary stat. Add `Math.floor(this.stats.might / 5)` to player.defense() in player.js (alongside the existing `vigor / 3` term). At might=20 that's +4 def, at might=27 it's +5 — meaningful but not overpowering.
-
-Why: melee players currently rely on vigor for both HP and defense, while caster builds dump warding and hide behind range. A small might→def coupling rewards committing to melee and shores up the survivability gap that makes pure-warding so attractive.
-
-Pairs with combo-skill-56hq (nerfs caster ceiling) and warrior-4mfy (rewards non-warding builds) as a three-part balance pass on the warding-dump dominant strategy.
-
-Implementation: one-line addition to player.defense(). Retest that high-might melee feels noticeably tankier without trivializing early-game enemy threat.
-----
 Priority:   45
 Status: ToDo
 ID: warrior-wwg4

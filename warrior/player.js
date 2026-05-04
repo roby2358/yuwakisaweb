@@ -58,6 +58,7 @@ export class Player {
         const arm = this.armor();
         let def = arm ? (arm.defense || 0) : 0;
         def += Math.floor(this.stats.vigor / 3);
+        def += Math.floor(this.stats.might / 5);
         def += TERRAIN_DEFENSE_BONUS[terrainType] || 0;
         const lastStand = this.equipped('last_stand');
         if (lastStand && this.hp <= this.maxHP() / 2) def += lastStand.lastStandBonus;
