@@ -1,16 +1,3 @@
-Priority:   60
-Status: ToDo
-ID: mundane-eq-28xc
-Created: 2026-04-27T06:55:55Z
-Updated: 2026-04-27T06:55:55Z
-Rusty blade and worn leather (the starter weapon/armor) are currently treated as magical items but should be classified as non-magical, so they sell alongside the other mundane gear at the appropriate (lower) price.
-
-Fix: tag `rusty_blade` and `worn_leather` in ALL_EQUIPMENT (config.js) the same way the other non-magic items are flagged — likely a `magical: false` flag, a missing `special` field, or whatever the existing sell logic checks. Verify that the shop/sell dialog routes them through the non-magic price tier and visual treatment, not the magic-item path.
-
-Flavor justification: starter gear is supposed to feel like rusty/worn junk the warrior leaves the home village with — calling it "magical" undercuts the upgrade arc when the player finds their first real magic weapon. Cleaning this up also means selling them feels right (a few coins, not a magical-item windfall).
-
-Quick fix; small config edit + maybe a one-line check in the sell flow.
-----
 Priority:   55
 Status: ToDo
 ID: gold-sink-e4ya

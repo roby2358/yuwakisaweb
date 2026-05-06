@@ -240,6 +240,7 @@ export const EQUIP_SLOT = { WEAPON: 'weapon', ARMOR: 'armor', ARTIFACT: 'artifac
 
 // Non-magical weapons
 export const WEAPONS = [
+    { id: 'rusty_blade', name: 'Rusty Blade', type: 'melee', damage: 1, range: 0, special: null, price: 0, tier: 0, magical: false },
     { id: 'iron_sword', name: 'Iron Sword', type: 'melee', damage: 2, range: 0, special: null, price: 12, tier: 1, magical: false },
     { id: 'spear', name: 'Spear', type: 'melee', damage: 2, range: 0, special: null, price: 12, tier: 1, magical: false },
     { id: 'battle_axe', name: 'Battle Axe', type: 'melee', damage: 3, range: 0, special: null, price: 25, tier: 2, magical: false },
@@ -256,6 +257,7 @@ export const WEAPONS = [
 
 // Non-magical armor
 export const ARMORS = [
+    { id: 'worn_leather', name: 'Worn Leather', defense: 1, special: null, price: 0, tier: 0, magical: false },
     { id: 'leather_armor', name: 'Leather Armor', defense: 2, special: null, price: 15, tier: 1, magical: false },
     { id: 'chain_mail', name: 'Chain Mail', defense: 3, special: null, price: 30, tier: 2, magical: false },
     { id: 'scale_armor', name: 'Scale Armor', defense: 4, special: null, price: 50, tier: 3, magical: false },

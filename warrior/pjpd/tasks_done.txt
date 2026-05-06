@@ -30,6 +30,19 @@ Created: 2026-04-12T20:20:39Z
 Updated: 2026-04-26T21:49:42Z
 When the player tries to Restore the Maw but the Unraveler is still alive, show a dialog saying the Unraveler must be defeated first before the Maw can be sealed. Only show this dialog once, because the player will have to Restore multiple times.
 ----
+Priority:   60
+Status: Done
+ID: mundane-eq-28xc
+Created: 2026-04-27T06:55:55Z
+Updated: 2026-05-06T21:04:58Z
+Rusty blade and worn leather (the starter weapon/armor) are currently treated as magical items but should be classified as non-magical, so they sell alongside the other mundane gear at the appropriate (lower) price.
+
+Fix: tag `rusty_blade` and `worn_leather` in ALL_EQUIPMENT (config.js) the same way the other non-magic items are flagged — likely a `magical: false` flag, a missing `special` field, or whatever the existing sell logic checks. Verify that the shop/sell dialog routes them through the non-magic price tier and visual treatment, not the magic-item path.
+
+Flavor justification: starter gear is supposed to feel like rusty/worn junk the warrior leaves the home village with — calling it "magical" undercuts the upgrade arc when the player finds their first real magic weapon. Cleaning this up also means selling them feels right (a few coins, not a magical-item windfall).
+
+Quick fix; small config edit + maybe a one-line check in the sell flow.
+----
 Priority:   55
 Status: Done
 ID: warrior-69ti

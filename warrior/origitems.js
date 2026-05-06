@@ -2,7 +2,6 @@
 // Not imported anywhere; purely an archive.
 
 export const ORIG_WEAPONS = [
-    { id: 'rusty_blade', name: 'Rusty Blade', type: 'melee', damage: 1, range: 0, special: null, price: 0, tier: 0, magical: true },
     { id: 'void_cleaver', name: 'Void Cleaver', type: 'melee', damage: 7, range: 0, special: 'chaos_bonus', price: 40, tier: 1, magical: true },
     { id: 'starforged_sword', name: 'Starforged Sword', type: 'melee', damage: 10, range: 0, special: null, price: 100, tier: 2, magical: true },
     { id: 'dimensional_edge', name: 'Dimensional Edge', type: 'melee', damage: 12, range: 0, special: 'cleave', price: 150, tier: 3, magical: true },
@@ -38,7 +37,6 @@ export const ORIG_WEAPONS = [
 ];
 
 export const ORIG_ARMORS = [
-    { id: 'worn_leather', name: 'Worn Leather', defense: 1, special: null, price: 0, tier: 0, magical: true },
     { id: 'warded_mail', name: 'Warded Mail', defense: 4, special: 'hp_bonus', hpBonus: 10, price: 50, tier: 1, magical: true },
     { id: 'chaosweave_cloak', name: 'Chaosweave Cloak', defense: 3, special: 'vision_bonus', visionBonus: 2, price: 45, tier: 1, magical: true },
     { id: 'starplate', name: 'Starplate', defense: 8, special: 'mp_penalty', mpPenalty: 1, price: 120, tier: 2, magical: true },
