@@ -685,8 +685,8 @@ function rangedAttack(targetQ, targetR) {
         }
     }
 
-    // Ranged attack costs 1 aether (unless free or non-magical)
-    if (wep && wep.magical && wep.special !== 'free_ranged') {
+    // Ranged attack costs 1 aether (unless free, life-eating, or non-magical)
+    if (wep && wep.magical && wep.special !== 'free_ranged' && wep.special !== 'recoil') {
         player.aether = Math.max(0, player.aether - 1);
     }
     player.mp = 0; // ends movement
@@ -2684,7 +2684,7 @@ function updateSkillBar() {
     const rangedSlot = document.getElementById('ranged-slot');
     const wep = player.weapon();
     const hasRanged = wep && wep.type === 'ranged';
-    const rangedCost = hasRanged && wep.magical && wep.special !== 'free_ranged' ? 1 : 0;
+    const rangedCost = hasRanged && wep.magical && wep.special !== 'free_ranged' && wep.special !== 'recoil' ? 1 : 0;
     const canRanged = hasRanged && player.aether >= rangedCost && phase === 'player' && !gameOver;
     rangedSlot.classList.toggle('disabled', !canRanged);
     rangedSlot.classList.toggle('active', targeting && targeting.skill === '__ranged__');
@@ -3745,7 +3745,7 @@ function tickGarrisons() {
 function activateRangedWeapon() {
     const wep = player.weapon();
     if (!wep || wep.type !== 'ranged') { logCombat('No ranged weapon!', 'log-info'); return; }
-    const cost = (!wep.magical || wep.special === 'free_ranged') ? 0 : 1;
+    const cost = (!wep.magical || wep.special === 'free_ranged' || wep.special === 'recoil') ? 0 : 1;
     if (player.aether < cost) { logCombat('Not enough Aether!', 'log-info'); return; }
     const playerPoi = world.poiAt(player.q, player.r);
     const range = player.weaponRange(playerTerrain(), playerPoi ? playerPoi.type : null);
