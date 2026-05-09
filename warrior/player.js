@@ -28,7 +28,6 @@ export class Player {
         this.usedSkillsThisTurn = new Set();
         this.movedThisTurn = false;
         this.hexesMovedThisTurn = 0;
-        this.hasGarrisonCharter = false;
         this.seenDialogs = new Set();
     }
 
@@ -160,7 +159,6 @@ export class Player {
             skills: this.skills, inventory: this.inventory,
             statPoints: this.statPoints, pendingSkillChoice: this.pendingSkillChoice,
             mp: this.mp, warpShieldTurns: this.warpShieldTurns,
-            hasGarrisonCharter: this.hasGarrisonCharter,
             seenDialogs: [...this.seenDialogs]
         };
     }
@@ -175,6 +173,13 @@ export class Player {
         p.hexesMovedThisTurn = 0;
         if (p.hp == null) p.hp = p.maxHP();
         if (p.aether == null) p.aether = p.maxAether();
+        // Migrate: pre-skill garrison charter → garrison skill
+        if (data.hasGarrisonCharter && !p.learnedSkills.has('garrison')) {
+            p.learnedSkills.add('garrison');
+            const emptySlot = p.skills.indexOf(null);
+            if (emptySlot >= 0) p.skills[emptySlot] = 'garrison';
+            delete p.hasGarrisonCharter;
+        }
         return p;
     }
 }

@@ -718,6 +718,7 @@ export const SKILLS = {
     },
     commune: {
         id: 'commune', name: 'Commune', cost: 2, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
+        shopPrice: 2000, shopOnly: true,
         desc: 'Reveal all POI locations on the map. Ends turn.', minLevel: 4
     },
     salvage: {
@@ -767,6 +768,12 @@ export const SKILLS = {
     bountiful_harvest: {
         id: 'bountiful_harvest', name: 'Bountiful Harvest', cost: 4, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
         range: 2, desc: 'Sprout crops (1-3g each) on all healthy hexes within 2. Ends turn.', minLevel: 4
+    },
+    // ---- Shop-only skills (not in random skill pools) ----
+    garrison: {
+        id: 'garrison', name: 'Commission Garrison', cost: 0, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
+        shopPrice: 1000, goldCost: 1000, shopOnly: true,
+        desc: 'Spend 1000g to commission a garrison on this hex. A haven or village must be in sight. Ends turn.', minLevel: 0
     }
 };
 

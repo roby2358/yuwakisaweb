@@ -1048,6 +1048,32 @@ function executeLifedrainBlast(action) {
     }
 }
 
+function executeGarrison(action) {
+    const { player, world, logCombat } = action.ctx;
+    const skill = action.skill;
+    if (player.gold < skill.goldCost) {
+        return action.abortSkillWithRefund(`Need ${skill.goldCost}g to commission a garrison.`);
+    }
+    if (world.poiAt(player.q, player.r)) {
+        return action.abortSkillWithRefund('Cannot build on an existing point of interest.');
+    }
+    const hex = world.getHex(player.q, player.r);
+    if (!hex || !world.isPassable(hex)) {
+        return action.abortSkillWithRefund('Cannot build here.');
+    }
+    const hasNearbySettlement = world.pois.some(p =>
+        (p.type === POI.HAVEN || p.type === POI.VILLAGE) && world.visible.has(hexKey(p.q, p.r))
+    );
+    if (!hasNearbySettlement) {
+        return action.abortSkillWithRefund('A haven or village must be in sight to commission a garrison.');
+    }
+    player.gold -= skill.goldCost;
+    const poi = { q: player.q, r: player.r, type: POI.GARRISON_BUILD, id: world.pois.length };
+    world.pois.push(poi);
+    hex.poi = POI.GARRISON_BUILD;
+    logCombat('Garrison commissioned. Construction underway.', 'log-info');
+}
+
 function executeBountifulHarvest(action) {
     const { player, world, logCombat } = action.ctx;
     let crops = 0;
@@ -1101,4 +1127,5 @@ const SKILL_HANDLERS = {
     aether_blast: executeAetherBlast,
     lifedrain_blast: executeLifedrainBlast,
     bountiful_harvest: executeBountifulHarvest,
+    garrison: executeGarrison,
 };

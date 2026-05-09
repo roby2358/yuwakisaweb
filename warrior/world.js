@@ -202,7 +202,7 @@ export class GameWorld {
                 if (type === POI.MAW) { poi.closed = false; poi.guardianId = null; }
                 if (type === POI.HUT) {
                     // Assign a random skill (excluding restore which everyone starts with)
-                    const skillPool = Object.values(SKILLS).filter(s => s.id !== 'restore');
+                    const skillPool = Object.values(SKILLS).filter(s => s.id !== 'restore' && !s.shopOnly);
                     poi.skill = Rando.choice(skillPool).id;
                 }
                 self.pois.push(poi);
