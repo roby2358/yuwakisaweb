@@ -768,6 +768,14 @@ function moveAndAttack(enemyQ, enemyR) {
     new MoveAndAttackAction(actionCtx, enemyQ, enemyR).execute();
 }
 
+function eatCrop() {
+    const heal = Math.ceil(player.maxHP() / 10);
+    const before = player.hp;
+    player.hp = Math.min(player.maxHP(), player.hp + heal);
+    const gained = player.hp - before;
+    if (gained > 0) logCombat(`+${gained} HP (food)`, 'log-heal');
+}
+
 function checkHexEntry() {
     const hex = world.getHex(player.q, player.r);
     if (!hex) return;
@@ -779,6 +787,7 @@ function checkHexEntry() {
         victory.goldCollected += goldAmt;
         hex.goldDeposit = 0;
         logCombat(`+${goldAmt}g (${hex.crop ? 'harvest' : 'gold deposit'})`, 'log-gold');
+        if (hex.crop) eatCrop();
         hex.crop = false;
     }
 

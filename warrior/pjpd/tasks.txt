@@ -1,10 +1,3 @@
-Priority:   55
-Status: ToDo
-ID: gold-sink-e4ya
-Created: 2026-03-31T01:38:16Z
-Updated: 2026-04-26T08:30:22Z
-Add a gold sink or reward for accumulating 1000 gold. Could be a powerful item, a special upgrade, unlocking an ability, or a world event. Give the player something meaningful to spend or celebrate when hitting 1000g.
-----
 Priority:   47
 Status: ToDo
 ID: combo-skill-56hq
@@ -133,17 +126,6 @@ Whichever option, keep it readable in fog (revealed-but-not-visible state) and a
 Tactical justification: ranged enemies meaningfully change approach planning — the player decides whether to close, take cover behind terrain (forest/hill defense bonuses already exist), or out-range them. Without a visual marker the player has to memorize creature types or hover everything, which is tedious. The marker is small UX work for a clear gameplay payoff.
 
 Tuning: don't overpopulate ranged on a single map — they're a counter to slow players and can feel oppressive in clusters. Aim for ~20-30% of spawns being ranged at the appropriate tier, not 50%+.
-----
-Priority:   38
-Status: ToDo
-ID: commune-ae-fjc2
-Created: 2026-04-27T06:03:42Z
-Updated: 2026-04-27T06:03:42Z
-Raise the Commune skill's aether cost to 20+ so it can only be cast late in the run. Right now it's affordable too early, which spoils the narrative reveal — Commune is meant to land as a late-game beat once the player has invested heavily in warding and aether-pool gear.
-
-Implementation: bump Commune's cost in the SKILLS table in config.js. With max aether scaling off warding plus +3 AE items being common, a 20+ cost means the player needs a strong warding investment and at least one aether-bonus item to even cast it once — naturally gating it past the early game without any explicit level lock.
-
-Pairs with combo-skill-56hq's aether-cost repass: same calibration framework (3 AE = break-even, ≥5 AE = finisher tier). Commune sits in its own "ritual / lore-gate" tier above the nukes.
 ----
 Priority:   32
 Status: ToDo

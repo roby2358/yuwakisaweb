@@ -45,6 +45,13 @@ Quick fix; small config edit + maybe a one-line check in the sell flow.
 ----
 Priority:   55
 Status: Done
+ID: gold-sink-e4ya
+Created: 2026-03-31T01:38:16Z
+Updated: 2026-05-09T18:55:15Z
+Add a gold sink or reward for accumulating 1000 gold. Could be a powerful item, a special upgrade, unlocking an ability, or a world event. Give the player something meaningful to spend or celebrate when hitting 1000g.
+----
+Priority:   55
+Status: Done
 ID: warrior-69ti
 Created: 2026-04-19T02:36:48Z
 Updated: 2026-04-27T00:21:30Z
@@ -76,3 +83,14 @@ Why: melee players currently rely on vigor for both HP and defense, while caster
 Pairs with combo-skill-56hq (nerfs caster ceiling) and warrior-4mfy (rewards non-warding builds) as a three-part balance pass on the warding-dump dominant strategy.
 
 Implementation: one-line addition to player.defense(). Retest that high-might melee feels noticeably tankier without trivializing early-game enemy threat.
+----
+Priority:   38
+Status: Done
+ID: commune-ae-fjc2
+Created: 2026-04-27T06:03:42Z
+Updated: 2026-05-09T18:55:15Z
+Raise the Commune skill's aether cost to 20+ so it can only be cast late in the run. Right now it's affordable too early, which spoils the narrative reveal — Commune is meant to land as a late-game beat once the player has invested heavily in warding and aether-pool gear.
+
+Implementation: bump Commune's cost in the SKILLS table in config.js. With max aether scaling off warding plus +3 AE items being common, a 20+ cost means the player needs a strong warding investment and at least one aether-bonus item to even cast it once — naturally gating it past the early game without any explicit level lock.
+
+Pairs with combo-skill-56hq's aether-cost repass: same calibration framework (3 AE = break-even, ≥5 AE = finisher tier). Commune sits in its own "ritual / lore-gate" tier above the nukes.
