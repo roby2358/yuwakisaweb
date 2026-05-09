@@ -532,6 +532,37 @@ function applyEquipmentBonusDamage(baseDmg) {
     return dmg;
 }
 
+// MP cost tiers: 0 (free), 1 (natural melee), 2 (ranged), 'all' (zeroes MP).
+// 'free_action' magical affix forces 0 regardless of weapon type.
+function weaponMpCost(wep) {
+    if (!wep) return 1;
+    if (wep.special === 'free_action') return 0;
+    return wep.type === 'ranged' ? 2 : 1;
+}
+
+function spendMP(cost) {
+    if (cost === 'all') player.mp = 0;
+    else player.mp = Math.max(0, player.mp - cost);
+}
+
+function skillMpCost(skill) {
+    return skill.mpCost === undefined ? 'all' : skill.mpCost;
+}
+
+function skillMpLabel(skill) {
+    const c = skillMpCost(skill);
+    return c === 'all' ? 'All MP' : `${c} MP`;
+}
+
+function skillCostLabel(skill) {
+    return `${skill.cost} AE, ${skillMpLabel(skill)}`;
+}
+
+function refreshSelectionAfterAction() {
+    if (player.mp > 0) computeReachable();
+    else deselectPlayer();
+}
+
 function meleeAttack(enemy) {
     combatAlerted = true;
     let dmg = applyEquipmentBonusDamage(player.meleeDamage(em.getDef(enemy.type).chaosSpawned));
@@ -689,7 +720,7 @@ function rangedAttack(targetQ, targetR) {
     if (wep && wep.magical && wep.special !== 'free_ranged' && wep.special !== 'recoil') {
         player.aether = Math.max(0, player.aether - 1);
     }
-    player.mp = 0; // ends movement
+    spendMP(weaponMpCost(wep));
 }
 
 function gainXP(amount) {
@@ -780,567 +811,563 @@ function checkSkillUsage(skill) {
     return null;
 }
 
+// Skill handlers: each takes (skill, targetQ, targetR) and runs the skill body.
+// Return false to skip the MP spend (for early-exit aborts, or for skills that
+// keep the player's turn alive — e.g. ground_weeps overlay). Default return
+// (undefined) lets the dispatcher charge mpCost normally.
+
+function abortSkill(skill, message) {
+    if (message) logCombat(message, 'log-info');
+    player.usedSkillsThisTurn.delete(skill.id);
+    return false;
+}
+
+function abortSkillWithRefund(skill, message) {
+    if (message) logCombat(message, 'log-info');
+    player.aether += skill.cost;
+    player.usedSkillsThisTurn.delete(skill.id);
+    return false;
+}
+
+// Restore shattered hexes; decrement nearby shatteredCount; revert distressed
+// hexes whose count dropped to 0; distress restored hexes still near shatters.
+// Shared by Restore and Salvage.
+function restoreShatteredHexes(hexes) {
+    for (const hex of hexes) {
+        hex.terrain = UNSHATTERED_VERSION[hex.terrain];
+    }
+    for (const hex of hexes) {
+        for (const coord of hexesInRange(hex.q, hex.r, 3)) {
+            const h = world.getHex(coord.q, coord.r);
+            if (h) h.shatteredCount = Math.max(0, h.shatteredCount - 1);
+        }
+    }
+    const checked = new Set();
+    for (const hex of hexes) {
+        for (const coord of hexesInRange(hex.q, hex.r, 3)) {
+            const key = hexKey(coord.q, coord.r);
+            if (checked.has(key)) continue;
+            checked.add(key);
+            const h = world.getHex(coord.q, coord.r);
+            if (!h) continue;
+            if (h.shatteredCount === 0 && UNDISTRESSED_VERSION[h.terrain] !== undefined) {
+                h.terrain = UNDISTRESSED_VERSION[h.terrain];
+            }
+        }
+        if (hex.shatteredCount > 0 && DISTRESSED_VERSION[hex.terrain] !== undefined) {
+            hex.terrain = DISTRESSED_VERSION[hex.terrain];
+        }
+    }
+}
+
+// ---- Combat skills (anytime) ----
+
+function executeRestore(skill, targetQ, targetR) {
+    const range = 1 + Math.floor(player.level / 3);
+    const shatteredHexes = hexesInRange(player.q, player.r, range)
+        .map(h => world.getHex(h.q, h.r))
+        .filter(h => h && UNSHATTERED_VERSION[h.terrain] !== undefined);
+    const breachInRange = world.pois.find(p =>
+        (p.type === POI.BREACH || p.type === POI.MAW) &&
+        p.guardianDefeated && !p.closed &&
+        hexDistance(player.q, player.r, p.q, p.r) <= range
+    );
+    // One-shot warning: Maw can't be sealed while the Unraveler lives
+    const mawInRange = world.pois.find(p =>
+        p.type === POI.MAW && !p.closed &&
+        hexDistance(player.q, player.r, p.q, p.r) <= range
+    );
+    const unravelerAlive = em.enemies.find(e => e.type === ENEMY_TYPE.UNRAVELER);
+    if (mawInRange && unravelerAlive) {
+        showOnceDialog('mawBlockedByUnraveler', 'The Maw Resists',
+            '<p>The Maw seethes with chaos and refuses to close. The Unraveler must be defeated first before the Maw can be sealed.</p>',
+            [{ label: 'OK', cls: 'btn-primary' }]);
+    }
+    if (shatteredHexes.length === 0 && !breachInRange) {
+        return abortSkill(skill, 'No shattered terrain in range!');
+    }
+    restoreShatteredHexes(shatteredHexes);
+    player.aether = Math.min(player.maxAether(), player.aether + 1);
+    let goldFound = 0;
+    for (let i = 0; i < shatteredHexes.length; i++) {
+        if (Rando.bool(0.16)) goldFound++;
+    }
+    if (goldFound > 0) { player.gold += goldFound; victory.goldCollected += goldFound; }
+    victory.hexesRestored += shatteredHexes.length;
+    if (shatteredHexes.length > 0) {
+        gainXP(shatteredHexes.length * 3);
+        let msg = `Restored ${shatteredHexes.length} hex${shatteredHexes.length > 1 ? 'es' : ''}! +1 AE`;
+        if (goldFound > 0) msg += `, +${goldFound}g`;
+        logCombat(msg, 'log-heal');
+        offerSettlementReward(shatteredHexes);
+    }
+    if (breachInRange) {
+        const chance = breachInRange.type === POI.MAW ? 0.20 : 0.40;
+        if (Rando.bool(chance)) {
+            closeBreach(breachInRange);
+            if (breachInRange.type === POI.MAW) endGame(true);
+        } else {
+            showDialog('Restore', 'Restore did not close the breach.', [{ label: 'OK', cls: 'btn-primary' }]);
+        }
+    }
+}
+
+function executeVoidStrike(skill, targetQ, targetR) {
+    const enemy = em.enemyAt(targetQ, targetR);
+    if (!enemy) return;
+    const wep = player.weapon();
+    const dmg = (wep ? wep.damage : 1) + player.stats.might + player.stats.warding;
+    dealDamageToEnemy(enemy, dmg, 'Void Strike');
+}
+
+function executePhaseStep(skill, targetQ, targetR) {
+    player.q = targetQ;
+    player.r = targetR;
+    refreshVision();
+    logCombat('Phase Step!', 'log-info');
+    checkHexEntry();
+}
+
+function executeCosmicBolt(skill, targetQ, targetR) {
+    const enemy = em.enemyAt(targetQ, targetR);
+    if (!enemy) return;
+    dealDamageToEnemy(enemy, skill.baseDamage + player.stats.warding, 'Cosmic Bolt');
+}
+
+function executeShockwave(skill, targetQ, targetR) {
+    const dmg = skill.baseDamage + player.stats.might;
+    const survivors = [];
+    for (const h of hexesInRange(player.q, player.r, skill.range)) {
+        const enemy = em.enemyAt(h.q, h.r);
+        if (!enemy) continue;
+        dealDamageToEnemy(enemy, dmg, 'Shockwave');
+        if (enemy.hp > 0) survivors.push(enemy);
+    }
+    for (const enemy of survivors) pushEnemyAway(enemy, player.q, player.r);
+    logCombat('Shockwave!', 'log-info');
+}
+
+function executeSiphonStrike(skill, targetQ, targetR) {
+    const enemy = em.enemyAt(targetQ, targetR);
+    if (!enemy) return;
+    const wep = player.weapon();
+    const dmg = (wep ? wep.damage : 1) + player.stats.might;
+    const rolled = Rando.bellCurve(dmg);
+    const eDef = enemyDefense(enemy, em.getDef(enemy.type));
+    const actualDmg = Math.max(1, rolled - eDef);
+    enemy.hp -= actualDmg;
+    logCombat(`Siphon Strike: ${actualDmg} dmg to ${em.getDef(enemy.type).name}`, 'log-dmg');
+    sound.hitEnemy();
+    player.hp = Math.min(player.maxHP(), player.hp + actualDmg);
+    logCombat(`+${actualDmg} HP (siphon)`, 'log-heal');
+    if (enemy.hp <= 0) killEnemy(enemy);
+}
+
+function executePiercingShot(skill, targetQ, targetR) {
+    const enemy = em.enemyAt(targetQ, targetR);
+    if (!enemy) return;
+    const dmg = skill.baseDamage + player.stats.reflex;
+    const actualDmg = Math.max(1, dmg);
+    enemy.hp -= actualDmg;
+    logCombat(`Piercing Shot: ${actualDmg} dmg to ${em.getDef(enemy.type).name}`, 'log-dmg');
+    sound.hitEnemy();
+    if (enemy.hp <= 0) killEnemy(enemy);
+}
+
+function executeWarpShield(skill, targetQ, targetR) {
+    player.warpShieldTurns = skill.duration;
+    logCombat('Warp Shield active!', 'log-info');
+}
+
+function executeBreachPulse(skill, targetQ, targetR) {
+    applyAoeDamage('Breach Pulse', skill.baseDamage + player.stats.warding, skill.range);
+}
+
+function executeChainLightning(skill, targetQ, targetR) {
+    const enemy = em.enemyAt(targetQ, targetR);
+    if (!enemy) return;
+    const dmg = skill.baseDamage + player.stats.warding;
+    dealDamageToEnemy(enemy, dmg, 'Chain Lightning');
+    chainBounce('Chain Lightning', dmg, targetQ, targetR, skill.chainCount, skill.chainRange, new Set([enemy]), false);
+}
+
+function executeImmolate(skill, targetQ, targetR) {
+    const enemy = em.enemyAt(targetQ, targetR);
+    if (!enemy) return;
+    const wep = player.weapon();
+    const dmg = (wep ? wep.damage : 1) + player.stats.might;
+    dealDamageToEnemy(enemy, dmg, 'Immolate');
+    if (enemy.hp > 0) {
+        enemy.burnDamage = (enemy.burnDamage || 0) + skill.burnDamage;
+        logCombat(`${em.getDef(enemy.type).name} is burning!`, 'log-dmg');
+    }
+}
+
+function executeMendingLight(skill, targetQ, targetR) {
+    const heal = skill.baseHeal + player.stats.vigor * 3;
+    player.hp = Math.min(player.maxHP(), player.hp + heal);
+    logCombat(`Healed ${heal} HP`, 'log-heal');
+}
+
+function executeGravityWell(skill, targetQ, targetR) {
+    for (const h of hexesInRange(player.q, player.r, skill.range)) {
+        const enemy = em.enemyAt(h.q, h.r);
+        if (!enemy) continue;
+        let closest = null, closestDist = Infinity;
+        for (const n of hexNeighbors(enemy.q, enemy.r)) {
+            const d = hexDistance(n.q, n.r, player.q, player.r);
+            const hex = world.getHex(n.q, n.r);
+            if (!hex || !world.isPassable(hex)) continue;
+            if (em.enemies.some(e2 => e2 !== enemy && e2.q === n.q && e2.r === n.r)) continue;
+            if (n.q === player.q && n.r === player.r) continue;
+            if (d < closestDist) { closestDist = d; closest = n; }
+        }
+        if (closest) { enemy.q = closest.q; enemy.r = closest.r; }
+    }
+    logCombat('Gravity Well!', 'log-info');
+}
+
+function executeSunderingBlow(skill, targetQ, targetR) {
+    const enemy = em.enemyAt(targetQ, targetR);
+    if (!enemy) return;
+    const wep = player.weapon();
+    const dmg = (wep ? wep.damage : 1) + player.stats.might;
+    dealDamageToEnemy(enemy, dmg, 'Sundering Blow');
+    if (enemy.hp > 0) {
+        enemy.defReduction = (enemy.defReduction || 0) + skill.shredAmount;
+        logCombat(`Sundered ${skill.shredAmount} defense!`, 'log-info');
+    }
+}
+
+function executeMeteor(skill, targetQ, targetR) {
+    const dmg = skill.baseDamage + player.stats.warding;
+    applyAoeDamageAt('Meteor', dmg, targetQ, targetR, skill.aoeRange);
+    logCombat('Meteor!', 'log-info');
+}
+
+function executeDimensionalRend(skill, targetQ, targetR) {
+    const enemy = em.enemyAt(targetQ, targetR);
+    if (!enemy) return;
+    const wep = player.weapon();
+    dealDamageToEnemy(enemy, (wep ? wep.damage : 1) * 3, 'Dimensional Rend');
+}
+
+function executeExecute(skill, targetQ, targetR) {
+    const enemy = em.enemyAt(targetQ, targetR);
+    if (!enemy) return;
+    const wep = player.weapon();
+    const dmg = (wep ? wep.damage : 1) * 2 + player.stats.might * 2;
+    dealDamageToEnemy(enemy, dmg, 'Execute');
+}
+
+function executeRicochet(skill, targetQ, targetR) {
+    const enemy = em.enemyAt(targetQ, targetR);
+    if (!enemy) return;
+    const dmg = skill.baseDamage + player.stats.reflex;
+    dealDamageToEnemy(enemy, dmg, 'Ricochet');
+    chainBounce('Ricochet', dmg, targetQ, targetR, skill.bounceCount, skill.bounceRange, new Set([enemy]), true);
+}
+
+function executeStarfall(skill, targetQ, targetR) {
+    applyAoeDamage('Starfall', skill.baseDamage + player.stats.warding * 2, skill.range);
+}
+
+function executeVoidSalvo(skill, targetQ, targetR) {
+    const enemy = em.enemyAt(targetQ, targetR);
+    if (!enemy) return;
+    const dmg = skill.baseDamage + player.stats.reflex;
+    for (let i = 0; i < skill.shotCount; i++) {
+        if (enemy.hp <= 0) break;
+        dealDamageToEnemy(enemy, dmg, `Salvo ${i + 1}`);
+    }
+}
+
+function executeRecall(skill, targetQ, targetR) {
+    const havens = world.havens();
+    if (havens.length === 0) return abortSkillWithRefund(skill, 'No havens exist!');
+    let nearest = havens[0], nearestDist = Infinity;
+    for (const h of havens) {
+        const d = hexDistance(player.q, player.r, h.q, h.r);
+        if (d < nearestDist) { nearestDist = d; nearest = h; }
+    }
+    player.q = nearest.q;
+    player.r = nearest.r;
+    refreshVision();
+    centerOn({ q: player.q, r: player.r });
+    logCombat(`Recall! Teleported to haven.`, 'log-info');
+}
+
+// ---- Non-combat skills ----
+
+function executeAetherTap(skill, targetQ, targetR) {
+    let cleanCount = 0;
+    for (const h of hexesInRange(player.q, player.r, skill.range)) {
+        const hex = world.getHex(h.q, h.r);
+        if (!hex || !world.isPassable(hex)) continue;
+        if (UNSHATTERED_VERSION[hex.terrain] !== undefined) continue;
+        if (UNDISTRESSED_VERSION[hex.terrain] !== undefined) continue;
+        cleanCount++;
+    }
+    const aeGain = 1 + Math.floor(cleanCount / 6);
+    player.aether = Math.min(player.maxAether(), player.aether + aeGain);
+    logCombat(`Aether Tap: +${aeGain} AE (${cleanCount} clean hexes)`, 'log-info');
+}
+
+function executeFarsight(skill, targetQ, targetR) {
+    const farRange = skill.range || 12;
+    for (const h of hexesInRange(player.q, player.r, farRange)) {
+        const key = hexKey(h.q, h.r);
+        if (world.hexes.has(key)) {
+            world.revealed.add(key);
+            world.visible.add(key);
+        }
+    }
+    logCombat('Farsight! Vision expanded.', 'log-info');
+}
+
+function executeProspect(skill, targetQ, targetR) {
+    let revealed = 0;
+    for (const h of hexesInRange(player.q, player.r, skill.revealRange)) {
+        const hex = world.getHex(h.q, h.r);
+        if (hex && hex.goldDeposit > 0) {
+            const key = hexKey(h.q, h.r);
+            if (!world.revealed.has(key)) revealed++;
+            world.revealed.add(key);
+        }
+    }
+    if (Rando.bool(0.2)) {
+        const candidates = hexesInRange(player.q, player.r, 4)
+            .map(h => world.getHex(h.q, h.r))
+            .filter(h => h && world.isPassable(h) && h.goldDeposit === 0);
+        if (candidates.length > 0) {
+            const target = Rando.choice(candidates);
+            target.goldDeposit = 10;
+            world.revealed.add(hexKey(target.q, target.r));
+            logCombat('Struck gold nearby!', 'log-gold');
+        }
+    }
+    if (revealed > 0) logCombat(`Prospect: revealed ${revealed} gold deposit${revealed > 1 ? 's' : ''}`, 'log-gold');
+    else logCombat('Prospect: sensed the earth.', 'log-info');
+}
+
+function executeCommune(skill, targetQ, targetR) {
+    let poiCount = 0;
+    for (const poi of world.pois) {
+        const key = hexKey(poi.q, poi.r);
+        if (!world.revealed.has(key)) poiCount++;
+        world.revealed.add(key);
+    }
+    if (poiCount > 0) logCombat(`Commune: revealed ${poiCount} location${poiCount > 1 ? 's' : ''}!`, 'log-info');
+    else logCombat('Commune: the world has no more secrets.', 'log-info');
+}
+
+function executeSalvage(skill, targetQ, targetR) {
+    const salvageHexes = hexesInRange(player.q, player.r, skill.range)
+        .map(h => world.getHex(h.q, h.r))
+        .filter(h => h && UNSHATTERED_VERSION[h.terrain] !== undefined);
+    if (salvageHexes.length === 0) {
+        return abortSkill(skill, 'No shattered terrain nearby to salvage!');
+    }
+    restoreShatteredHexes(salvageHexes);
+    let totalGold = 0;
+    for (const hex of salvageHexes) {
+        const gold = Rando.int(1, 10);
+        hex.goldDeposit = (hex.goldDeposit || 0) + gold;
+        totalGold += gold;
+    }
+    logCombat(`Salvage: restored ${salvageHexes.length} hex${salvageHexes.length > 1 ? 'es' : ''}, ${totalGold}g in deposits!`, 'log-gold');
+}
+
+function executeSkillSeek(skill, targetQ, targetR) {
+    const chance = player.level * 0.05;
+    if (Rando.bool(chance)) {
+        logCombat('Insight! A new skill reveals itself!', 'log-info');
+        player.pendingSkillChoice = true;
+        setTimeout(() => showSkillChoiceDialog(), 300);
+    } else {
+        logCombat('The patterns elude you...', 'log-info');
+    }
+}
+
+function executeSpiritWalk(skill, targetQ, targetR) {
+    player.q = targetQ;
+    player.r = targetR;
+    refreshVision();
+    logCombat('Spirit Walk!', 'log-info');
+    checkHexEntry();
+}
+
+// Threat overlay persists until dismissed; turn stays alive (no MP spent),
+// and the skill can be re-used after dismiss.
+function executeGroundWeeps(skill, targetQ, targetR) {
+    threatOverlay = new Map();
+    for (const [key, hex] of world.hexes) {
+        if (hex.isEdge) continue;
+        let threat = 0;
+        for (const enemy of em.enemies) {
+            const d = hexDistance(hex.q, hex.r, enemy.q, enemy.r);
+            if (d <= 3) {
+                const def = em.getDef(enemy.type);
+                threat += enemyMeleeAttack(enemy, def) * (4 - d) / 3;
+            }
+        }
+        if (threat > 0) threatOverlay.set(key, threat);
+    }
+    logCombat('The ground weeps... threats revealed.', 'log-info');
+    player.usedSkillsThisTurn.delete(skill.id);
+    return false;
+}
+
+function executeRespec(skill, targetQ, targetR) {
+    const stats = ['might', 'reflex', 'warding', 'vigor'];
+    let refund = 0;
+    for (const s of stats) {
+        refund += player.stats[s] - STARTING_STATS[s];
+        player.stats[s] = STARTING_STATS[s];
+    }
+    player.statPoints += refund;
+    player.hp = Math.min(player.hp, player.maxHP());
+    player.aether = Math.min(player.aether, player.maxAether());
+    logCombat(`Reflect: ${refund} stat points refunded.`, 'log-info');
+    setTimeout(() => showLevelUpDialog(), 100);
+}
+
+function executeSanctuary(skill, targetQ, targetR) {
+    const existingPoi = world.poiAt(player.q, player.r);
+    if (existingPoi) {
+        return abortSkillWithRefund(skill, 'Cannot sanctify — already a point of interest!');
+    }
+    const pHex = world.getHex(player.q, player.r);
+    const tempVillage = { q: player.q, r: player.r, type: POI.VILLAGE, id: world.pois.length, temporary: true };
+    world.pois.push(tempVillage);
+    pHex.poi = POI.VILLAGE;
+    logCombat('Sanctuary! A temporary village appears.', 'log-heal');
+}
+
+// ---- Special combat skills ----
+
+function executeLoot(skill, targetQ, targetR) {
+    const enemy = em.enemyAt(targetQ, targetR);
+    if (!enemy) return;
+    const goldStolen = Rando.int(1, 5);
+    player.gold += goldStolen;
+    victory.goldCollected += goldStolen;
+    logCombat(`Looted ${goldStolen}g!`, 'log-gold');
+}
+
+function executeHavensLight(skill, targetQ, targetR) {
+    const poi = world.poiAt(player.q, player.r);
+    if (!poi || (poi.type !== POI.HAVEN && poi.type !== POI.VILLAGE)) {
+        return abortSkillWithRefund(skill, 'Must be at a haven or village!');
+    }
+    const dmg = skill.baseDamage + player.stats.warding;
+    let hitCount = 0;
+    for (const h of hexesInRange(player.q, player.r, skill.range)) {
+        const enemy = em.enemyAt(h.q, h.r);
+        if (!enemy) continue;
+        dealDamageToEnemy(enemy, dmg, "Haven's Light");
+        hitCount++;
+    }
+    logCombat(`Haven's Light: hit ${hitCount} enemies!`, 'log-info');
+}
+
+// ---- Peaceful skills ----
+
+function executeAetherBlast(skill, targetQ, targetR) {
+    let hits = 0;
+    for (const h of hexesInRange(player.q, player.r, skill.range)) {
+        if (em.enemyAt(h.q, h.r)) hits++;
+    }
+    applyAoeDamage('Aether Blast', skill.baseDamage + Math.floor(player.stats.warding / 2), skill.range);
+    if (hits > 0) {
+        const gained = hits * skill.aetherPerHit;
+        player.aether = Math.min(player.maxAether(), player.aether + gained);
+        logCombat(`+${gained} AE (${hits} hit)`, 'log-info');
+    }
+}
+
+function executeLifedrainBlast(skill, targetQ, targetR) {
+    let hits = 0;
+    for (const h of hexesInRange(player.q, player.r, skill.range)) {
+        if (em.enemyAt(h.q, h.r)) hits++;
+    }
+    applyAoeDamage('Lifedrain Blast', skill.baseDamage + player.stats.vigor, skill.range);
+    if (hits > 0) {
+        const healed = hits * skill.hpPerHit;
+        player.hp = Math.min(player.maxHP(), player.hp + healed);
+        logCombat(`+${healed} HP (${hits} hit)`, 'log-heal');
+    }
+}
+
+function executeBountifulHarvest(skill, targetQ, targetR) {
+    let crops = 0;
+    for (const h of hexesInRange(player.q, player.r, skill.range)) {
+        const hex = world.getHex(h.q, h.r);
+        if (!hex || !world.isPassable(hex) || hex.goldDeposit > 0) continue;
+        if (UNSHATTERED_VERSION[hex.terrain] !== undefined) continue;
+        if (UNDISTRESSED_VERSION[hex.terrain] !== undefined) continue;
+        hex.goldDeposit = Rando.int(1, 3);
+        hex.crop = Rando.choice(CROP_ICONS);
+        crops++;
+    }
+    if (crops > 0) logCombat(`Bountiful Harvest: ${crops} crop${crops > 1 ? 's' : ''} sprouted!`, 'log-gold');
+    else logCombat('No suitable ground for crops.', 'log-info');
+}
+
+const SKILL_HANDLERS = {
+    restore: executeRestore,
+    void_strike: executeVoidStrike,
+    phase_step: executePhaseStep,
+    cosmic_bolt: executeCosmicBolt,
+    shockwave: executeShockwave,
+    siphon_strike: executeSiphonStrike,
+    piercing_shot: executePiercingShot,
+    warp_shield: executeWarpShield,
+    breach_pulse: executeBreachPulse,
+    chain_lightning: executeChainLightning,
+    immolate: executeImmolate,
+    mending_light: executeMendingLight,
+    gravity_well: executeGravityWell,
+    sundering_blow: executeSunderingBlow,
+    meteor: executeMeteor,
+    dimensional_rend: executeDimensionalRend,
+    execute: executeExecute,
+    ricochet: executeRicochet,
+    starfall: executeStarfall,
+    void_salvo: executeVoidSalvo,
+    recall: executeRecall,
+    aether_tap: executeAetherTap,
+    farsight: executeFarsight,
+    prospect: executeProspect,
+    commune: executeCommune,
+    salvage: executeSalvage,
+    skill_seek: executeSkillSeek,
+    spirit_walk: executeSpiritWalk,
+    ground_weeps: executeGroundWeeps,
+    respec: executeRespec,
+    sanctuary: executeSanctuary,
+    loot: executeLoot,
+    havens_light: executeHavensLight,
+    aether_blast: executeAetherBlast,
+    lifedrain_blast: executeLifedrainBlast,
+    bountiful_harvest: executeBountifulHarvest,
+};
+
 function executeSkill(skillId, targetQ, targetR) {
     const skill = SKILLS[skillId];
     if (!skill) return;
     if (player.aether < skill.cost) { logCombat('Not enough Aether!', 'log-info'); return; }
     if (player.usedSkillsThisTurn.has(skillId)) { logCombat('Already used this turn!', 'log-info'); return; }
 
+    const handler = SKILL_HANDLERS[skillId];
+    if (!handler) { targeting = null; return; }
+
     player.aether -= skill.cost;
     player.usedSkillsThisTurn.add(skillId);
     combatAlerted = true;
 
-    let usedMP = true; // most skills consume MP; free actions set this false
-
-    switch (skillId) {
-        case 'restore': {
-            const range = 1 + Math.floor(player.level / 3);
-            const shatteredHexes = hexesInRange(player.q, player.r, range)
-                .map(h => world.getHex(h.q, h.r))
-                .filter(h => h && UNSHATTERED_VERSION[h.terrain] !== undefined);
-            // Check for breaches in range
-            const breachInRange = world.pois.find(p =>
-                (p.type === POI.BREACH || p.type === POI.MAW) &&
-                p.guardianDefeated && !p.closed &&
-                hexDistance(player.q, player.r, p.q, p.r) <= range
-            );
-            // One-shot warning: Maw can't be sealed while the Unraveler lives
-            const mawInRange = world.pois.find(p =>
-                p.type === POI.MAW && !p.closed &&
-                hexDistance(player.q, player.r, p.q, p.r) <= range
-            );
-            const unravelerAlive = em.enemies.find(e => e.type === ENEMY_TYPE.UNRAVELER);
-            if (mawInRange && unravelerAlive) {
-                showOnceDialog('mawBlockedByUnraveler', 'The Maw Resists',
-                    '<p>The Maw seethes with chaos and refuses to close. The Unraveler must be defeated first before the Maw can be sealed.</p>',
-                    [{ label: 'OK', cls: 'btn-primary' }]);
-            }
-            if (shatteredHexes.length === 0 && !breachInRange) {
-                logCombat('No shattered terrain in range!', 'log-info');
-                player.usedSkillsThisTurn.delete(skillId);
-                usedMP = false;
-                break;
-            }
-            // Restore shattered hexes to normal
-            for (const hex of shatteredHexes) {
-                hex.terrain = UNSHATTERED_VERSION[hex.terrain];
-            }
-            // Decrement shatteredCount within 3 of each restored hex
-            for (const hex of shatteredHexes) {
-                for (const coord of hexesInRange(hex.q, hex.r, 3)) {
-                    const h = world.getHex(coord.q, coord.r);
-                    if (h) h.shatteredCount = Math.max(0, h.shatteredCount - 1);
-                }
-            }
-            // Revert distressed hexes that dropped to 0; distress restored hexes still near shatters
-            const checked = new Set();
-            for (const hex of shatteredHexes) {
-                for (const coord of hexesInRange(hex.q, hex.r, 3)) {
-                    const key = hexKey(coord.q, coord.r);
-                    if (checked.has(key)) continue;
-                    checked.add(key);
-                    const h = world.getHex(coord.q, coord.r);
-                    if (!h) continue;
-                    if (h.shatteredCount === 0 && UNDISTRESSED_VERSION[h.terrain] !== undefined) {
-                        h.terrain = UNDISTRESSED_VERSION[h.terrain];
-                    }
-                }
-                // The restored hex itself: if still near other shatters, distress it
-                if (hex.shatteredCount > 0 && DISTRESSED_VERSION[hex.terrain] !== undefined) {
-                    hex.terrain = DISTRESSED_VERSION[hex.terrain];
-                }
-            }
-            // Gain 1 AE
-            player.aether = Math.min(player.maxAether(), player.aether + 1);
-            // 16% chance per hex to find gold
-            let goldFound = 0;
-            for (let i = 0; i < shatteredHexes.length; i++) {
-                if (Rando.bool(0.16)) goldFound++;
-            }
-            if (goldFound > 0) { player.gold += goldFound; victory.goldCollected += goldFound; }
-            victory.hexesRestored += shatteredHexes.length;
-            player.mp = 0; // ends turn
-            if (shatteredHexes.length > 0) {
-                gainXP(shatteredHexes.length * 3);
-                let msg = `Restored ${shatteredHexes.length} hex${shatteredHexes.length > 1 ? 'es' : ''}! +1 AE`;
-                if (goldFound > 0) msg += `, +${goldFound}g`;
-                logCombat(msg, 'log-heal');
-            }
-            // Settlement gratitude: reward if restore cleared hexes near a haven/village
-            if (shatteredHexes.length > 0) {
-                offerSettlementReward(shatteredHexes);
-            }
-            // Attempt to seal a breach in range
-            if (breachInRange) {
-                const chance = breachInRange.type === POI.MAW ? 0.20 : 0.40;
-                if (Rando.bool(chance)) {
-                    closeBreach(breachInRange);
-                    if (breachInRange.type === POI.MAW) endGame(true);
-                } else {
-                    showDialog('Restore', 'Restore did not close the breach.', [{ label: 'OK', cls: 'btn-primary' }]);
-                }
-            }
-            break;
-        }
-        case 'void_strike': {
-            const enemy = em.enemyAt(targetQ, targetR);
-            if (!enemy) break;
-            const wep = player.weapon();
-            const dmg = (wep ? wep.damage : 1) + player.stats.might + player.stats.warding;
-            dealDamageToEnemy(enemy, dmg, 'Void Strike');
-            break;
-        }
-        case 'phase_step': {
-            player.q = targetQ;
-            player.r = targetR;
-            refreshVision();
-            logCombat('Phase Step!', 'log-info');
-            checkHexEntry();
-            usedMP = false; // free action
-            break;
-        }
-        case 'cosmic_bolt': {
-            const enemy = em.enemyAt(targetQ, targetR);
-            if (!enemy) break;
-            dealDamageToEnemy(enemy, skill.baseDamage + player.stats.warding, 'Cosmic Bolt');
-            break;
-        }
-        case 'respec': {
-            const stats = ['might', 'reflex', 'warding', 'vigor'];
-            let refund = 0;
-            for (const s of stats) {
-                refund += player.stats[s] - STARTING_STATS[s];
-                player.stats[s] = STARTING_STATS[s];
-            }
-            player.statPoints += refund;
-            player.hp = Math.min(player.hp, player.maxHP());
-            player.aether = Math.min(player.aether, player.maxAether());
-            player.mp = 0;
-            logCombat(`Reflect: ${refund} stat points refunded.`, 'log-info');
-            setTimeout(() => showLevelUpDialog(), 100);
-            break;
-        }
-        case 'warp_shield': {
-            player.warpShieldTurns = skill.duration;
-            logCombat('Warp Shield active!', 'log-info');
-            break;
-        }
-        case 'breach_pulse': {
-            const dmg = skill.baseDamage + player.stats.warding;
-            applyAoeDamage('Breach Pulse', dmg, skill.range);
-            break;
-        }
-        case 'aether_blast': {
-            let hits = 0;
-            for (const h of hexesInRange(player.q, player.r, skill.range)) {
-                if (em.enemyAt(h.q, h.r)) hits++;
-            }
-            applyAoeDamage('Aether Blast', skill.baseDamage + Math.floor(player.stats.warding / 2), skill.range);
-            if (hits > 0) {
-                const gained = hits * skill.aetherPerHit;
-                player.aether = Math.min(player.maxAether(), player.aether + gained);
-                logCombat(`+${gained} AE (${hits} hit)`, 'log-info');
-            }
-            break;
-        }
-        case 'lifedrain_blast': {
-            let hits = 0;
-            for (const h of hexesInRange(player.q, player.r, skill.range)) {
-                if (em.enemyAt(h.q, h.r)) hits++;
-            }
-            applyAoeDamage('Lifedrain Blast', skill.baseDamage + player.stats.vigor, skill.range);
-            if (hits > 0) {
-                const healed = hits * skill.hpPerHit;
-                player.hp = Math.min(player.maxHP(), player.hp + healed);
-                logCombat(`+${healed} HP (${hits} hit)`, 'log-heal');
-            }
-            break;
-        }
-        case 'mending_light': {
-            const heal = skill.baseHeal + player.stats.vigor * 3;
-            player.hp = Math.min(player.maxHP(), player.hp + heal);
-            logCombat(`Healed ${heal} HP`, 'log-heal');
-            break;
-        }
-        case 'gravity_well': {
-            for (const h of hexesInRange(player.q, player.r, skill.range)) {
-                const enemy = em.enemyAt(h.q, h.r);
-                if (!enemy) continue;
-                let closest = null, closestDist = Infinity;
-                for (const n of hexNeighbors(enemy.q, enemy.r)) {
-                    const d = hexDistance(n.q, n.r, player.q, player.r);
-                    const hex = world.getHex(n.q, n.r);
-                    if (!hex || !world.isPassable(hex)) continue;
-                    if (em.enemies.some(e2 => e2 !== enemy && e2.q === n.q && e2.r === n.r)) continue;
-                    if (n.q === player.q && n.r === player.r) continue;
-                    if (d < closestDist) { closestDist = d; closest = n; }
-                }
-                if (closest) { enemy.q = closest.q; enemy.r = closest.r; }
-            }
-            logCombat('Gravity Well!', 'log-info');
-            break;
-        }
-        case 'dimensional_rend': {
-            const enemy = em.enemyAt(targetQ, targetR);
-            if (!enemy) break;
-            const wep = player.weapon();
-            dealDamageToEnemy(enemy, (wep ? wep.damage : 1) * 3, 'Dimensional Rend');
-            break;
-        }
-        case 'starfall': {
-            applyAoeDamage('Starfall', skill.baseDamage + player.stats.warding * 2, skill.range);
-            break;
-        }
-        case 'shockwave': {
-            const dmg = skill.baseDamage + player.stats.might;
-            const hits = [];
-            for (const h of hexesInRange(player.q, player.r, skill.range)) {
-                const enemy = em.enemyAt(h.q, h.r);
-                if (enemy) {
-                    dealDamageToEnemy(enemy, dmg, 'Shockwave');
-                    if (enemy.hp > 0) hits.push(enemy);
-                }
-            }
-            for (const enemy of hits) pushEnemyAway(enemy, player.q, player.r);
-            logCombat('Shockwave!', 'log-info');
-            break;
-        }
-        case 'siphon_strike': {
-            const enemy = em.enemyAt(targetQ, targetR);
-            if (!enemy) break;
-            const wep = player.weapon();
-            const dmg = (wep ? wep.damage : 1) + player.stats.might;
-            const rolled = Rando.bellCurve(dmg);
-            const eDef = enemyDefense(enemy, em.getDef(enemy.type));
-            const actualDmg = Math.max(1, rolled - eDef);
-            enemy.hp -= actualDmg;
-            logCombat(`Siphon Strike: ${actualDmg} dmg to ${em.getDef(enemy.type).name}`, 'log-dmg');
-            sound.hitEnemy();
-            player.hp = Math.min(player.maxHP(), player.hp + actualDmg);
-            logCombat(`+${actualDmg} HP (siphon)`, 'log-heal');
-            if (enemy.hp <= 0) killEnemy(enemy);
-            break;
-        }
-        case 'piercing_shot': {
-            const enemy = em.enemyAt(targetQ, targetR);
-            if (!enemy) break;
-            const dmg = skill.baseDamage + player.stats.reflex;
-            const actualDmg = Math.max(1, dmg);
-            enemy.hp -= actualDmg;
-            logCombat(`Piercing Shot: ${actualDmg} dmg to ${em.getDef(enemy.type).name}`, 'log-dmg');
-            sound.hitEnemy();
-            if (enemy.hp <= 0) killEnemy(enemy);
-            break;
-        }
-        case 'chain_lightning': {
-            const enemy = em.enemyAt(targetQ, targetR);
-            if (!enemy) break;
-            const dmg = skill.baseDamage + player.stats.warding;
-            dealDamageToEnemy(enemy, dmg, 'Chain Lightning');
-            const hitSet = new Set([enemy]);
-            chainBounce('Chain Lightning', dmg, targetQ, targetR, skill.chainCount, skill.chainRange, hitSet, false);
-            break;
-        }
-        case 'immolate': {
-            const enemy = em.enemyAt(targetQ, targetR);
-            if (!enemy) break;
-            const wep = player.weapon();
-            const dmg = (wep ? wep.damage : 1) + player.stats.might;
-            dealDamageToEnemy(enemy, dmg, 'Immolate');
-            if (enemy.hp > 0) {
-                enemy.burnDamage = (enemy.burnDamage || 0) + skill.burnDamage;
-                logCombat(`${em.getDef(enemy.type).name} is burning!`, 'log-dmg');
-            }
-            break;
-        }
-        case 'sundering_blow': {
-            const enemy = em.enemyAt(targetQ, targetR);
-            if (!enemy) break;
-            const wep = player.weapon();
-            const dmg = (wep ? wep.damage : 1) + player.stats.might;
-            dealDamageToEnemy(enemy, dmg, 'Sundering Blow');
-            if (enemy.hp > 0) {
-                enemy.defReduction = (enemy.defReduction || 0) + skill.shredAmount;
-                logCombat(`Sundered ${skill.shredAmount} defense!`, 'log-info');
-            }
-            break;
-        }
-        case 'meteor': {
-            const dmg = skill.baseDamage + player.stats.warding;
-            applyAoeDamageAt('Meteor', dmg, targetQ, targetR, skill.aoeRange);
-            logCombat('Meteor!', 'log-info');
-            break;
-        }
-        case 'execute': {
-            const enemy = em.enemyAt(targetQ, targetR);
-            if (!enemy) break;
-            const wep = player.weapon();
-            const dmg = (wep ? wep.damage : 1) * 2 + player.stats.might * 2;
-            dealDamageToEnemy(enemy, dmg, 'Execute');
-            break;
-        }
-        case 'ricochet': {
-            const enemy = em.enemyAt(targetQ, targetR);
-            if (!enemy) break;
-            const dmg = skill.baseDamage + player.stats.reflex;
-            dealDamageToEnemy(enemy, dmg, 'Ricochet');
-            const hitSet = new Set([enemy]);
-            chainBounce('Ricochet', dmg, targetQ, targetR, skill.bounceCount, skill.bounceRange, hitSet, true);
-            break;
-        }
-        case 'void_salvo': {
-            const enemy = em.enemyAt(targetQ, targetR);
-            if (!enemy) break;
-            const dmg = skill.baseDamage + player.stats.reflex;
-            for (let i = 0; i < skill.shotCount; i++) {
-                if (enemy.hp <= 0) break;
-                dealDamageToEnemy(enemy, dmg, `Salvo ${i + 1}`);
-            }
-            break;
-        }
-        // ---- Non-combat skills ----
-        case 'aether_tap': {
-            let cleanCount = 0;
-            for (const h of hexesInRange(player.q, player.r, skill.range)) {
-                const hex = world.getHex(h.q, h.r);
-                if (!hex || !world.isPassable(hex)) continue;
-                // Healthy = not shattered, not distressed
-                if (UNSHATTERED_VERSION[hex.terrain] !== undefined) continue;
-                if (UNDISTRESSED_VERSION[hex.terrain] !== undefined) continue;
-                cleanCount++;
-            }
-            const aeGain = 1 + Math.floor(cleanCount / 6);
-            player.aether = Math.min(player.maxAether(), player.aether + aeGain);
-            logCombat(`Aether Tap: +${aeGain} AE (${cleanCount} clean hexes)`, 'log-info');
-            player.mp = 0;
-            break;
-        }
-        case 'farsight': {
-            const farRange = skill.range || 12;
-            for (const h of hexesInRange(player.q, player.r, farRange)) {
-                const key = hexKey(h.q, h.r);
-                if (world.hexes.has(key)) {
-                    world.revealed.add(key);
-                    world.visible.add(key);
-                }
-            }
-            logCombat('Farsight! Vision expanded.', 'log-info');
-            usedMP = false; // free action
-            break;
-        }
-        case 'prospect': {
-            // Reveal hexes with gold deposits within 8
-            let revealed = 0;
-            for (const h of hexesInRange(player.q, player.r, skill.revealRange)) {
-                const hex = world.getHex(h.q, h.r);
-                if (hex && hex.goldDeposit > 0) {
-                    const key = hexKey(h.q, h.r);
-                    if (!world.revealed.has(key)) revealed++;
-                    world.revealed.add(key);
-                }
-            }
-            // 20% chance to create a gold deposit on a random passable hex within 4
-            if (Rando.bool(0.2)) {
-                const candidates = hexesInRange(player.q, player.r, 4)
-                    .map(h => world.getHex(h.q, h.r))
-                    .filter(h => h && world.isPassable(h) && h.goldDeposit === 0);
-                if (candidates.length > 0) {
-                    const target = Rando.choice(candidates);
-                    target.goldDeposit = 10;
-                    world.revealed.add(hexKey(target.q, target.r));
-                    logCombat('Struck gold nearby!', 'log-gold');
-                }
-            }
-            if (revealed > 0) logCombat(`Prospect: revealed ${revealed} gold deposit${revealed > 1 ? 's' : ''}`, 'log-gold');
-            else logCombat('Prospect: sensed the earth.', 'log-info');
-            break;
-        }
-        case 'commune': {
-            let poiCount = 0;
-            for (const poi of world.pois) {
-                const key = hexKey(poi.q, poi.r);
-                if (!world.revealed.has(key)) poiCount++;
-                world.revealed.add(key);
-            }
-            if (poiCount > 0) logCombat(`Commune: revealed ${poiCount} location${poiCount > 1 ? 's' : ''}!`, 'log-info');
-            else logCombat('Commune: the world has no more secrets.', 'log-info');
-            break;
-        }
-        case 'salvage': {
-            const salvageRange = skill.range;
-            const salvageHexes = hexesInRange(player.q, player.r, salvageRange)
-                .map(h => world.getHex(h.q, h.r))
-                .filter(h => h && UNSHATTERED_VERSION[h.terrain] !== undefined);
-            if (salvageHexes.length === 0) {
-                logCombat('No shattered terrain nearby to salvage!', 'log-info');
-                player.usedSkillsThisTurn.delete(skillId);
-                usedMP = false;
-                break;
-            }
-            // Restore shattered hexes (same as restore skill)
-            for (const hex of salvageHexes) {
-                hex.terrain = UNSHATTERED_VERSION[hex.terrain];
-            }
-            for (const hex of salvageHexes) {
-                for (const coord of hexesInRange(hex.q, hex.r, 3)) {
-                    const h = world.getHex(coord.q, coord.r);
-                    if (h) h.shatteredCount = Math.max(0, h.shatteredCount - 1);
-                }
-            }
-            const checkedSalv = new Set();
-            for (const hex of salvageHexes) {
-                for (const coord of hexesInRange(hex.q, hex.r, 3)) {
-                    const key = hexKey(coord.q, coord.r);
-                    if (checkedSalv.has(key)) continue;
-                    checkedSalv.add(key);
-                    const h = world.getHex(coord.q, coord.r);
-                    if (!h) continue;
-                    if (h.shatteredCount === 0 && UNDISTRESSED_VERSION[h.terrain] !== undefined) {
-                        h.terrain = UNDISTRESSED_VERSION[h.terrain];
-                    }
-                }
-                if (hex.shatteredCount > 0 && DISTRESSED_VERSION[hex.terrain] !== undefined) {
-                    hex.terrain = DISTRESSED_VERSION[hex.terrain];
-                }
-            }
-            // Drop 1-10 gold deposit on each restored hex
-            let totalGold = 0;
-            for (const hex of salvageHexes) {
-                const gold = Rando.int(1, 10);
-                hex.goldDeposit = (hex.goldDeposit || 0) + gold;
-                totalGold += gold;
-            }
-            logCombat(`Salvage: restored ${salvageHexes.length} hex${salvageHexes.length > 1 ? 'es' : ''}, ${totalGold}g in deposits!`, 'log-gold');
-            player.mp = 0;
-            break;
-        }
-        case 'skill_seek': {
-            const chance = player.level * 0.05;
-            if (Rando.bool(chance)) {
-                logCombat('Insight! A new skill reveals itself!', 'log-info');
-                // Trigger skill choice dialog
-                player.pendingSkillChoice = true;
-                setTimeout(() => showSkillChoiceDialog(), 300);
-            } else {
-                logCombat('The patterns elude you...', 'log-info');
-            }
-            break;
-        }
-        case 'spirit_walk': {
-            player.q = targetQ;
-            player.r = targetR;
-            refreshVision();
-            logCombat('Spirit Walk!', 'log-info');
-            checkHexEntry();
-            player.mp = 0;
-            break;
-        }
-        case 'ground_weeps': {
-            // Compute threat heatmap
-            threatOverlay = new Map();
-            for (const [key, hex] of world.hexes) {
-                if (hex.isEdge) continue;
-                let threat = 0;
-                for (const enemy of em.enemies) {
-                    const d = hexDistance(hex.q, hex.r, enemy.q, enemy.r);
-                    if (d <= 3) {
-                        const def = em.getDef(enemy.type);
-                        threat += enemyMeleeAttack(enemy, def) * (4 - d) / 3;
-                    }
-                }
-                if (threat > 0) threatOverlay.set(key, threat);
-            }
-            logCombat('The ground weeps... threats revealed.', 'log-info');
-            // Don't end turn yet — overlay persists until dismissed
-            player.usedSkillsThisTurn.delete(skillId);
-            usedMP = false;
-            break;
-        }
-        case 'sanctuary': {
-            const pHex = world.getHex(player.q, player.r);
-            const existingPoi = world.poiAt(player.q, player.r);
-            if (existingPoi) {
-                logCombat('Cannot sanctify — already a point of interest!', 'log-info');
-                player.usedSkillsThisTurn.delete(skillId);
-                player.aether += skill.cost; // refund
-                usedMP = false;
-                break;
-            }
-            // Create temporary village POI
-            const tempVillage = { q: player.q, r: player.r, type: POI.VILLAGE, id: world.pois.length, temporary: true };
-            world.pois.push(tempVillage);
-            pHex.poi = POI.VILLAGE;
-            logCombat('Sanctuary! A temporary village appears.', 'log-heal');
-            break;
-        }
-        case 'bountiful_harvest': {
-            let crops = 0;
-            for (const h of hexesInRange(player.q, player.r, skill.range)) {
-                const hex = world.getHex(h.q, h.r);
-                if (!hex || !world.isPassable(hex) || hex.goldDeposit > 0) continue;
-                if (UNSHATTERED_VERSION[hex.terrain] !== undefined) continue;
-                if (UNDISTRESSED_VERSION[hex.terrain] !== undefined) continue;
-                hex.goldDeposit = Rando.int(1, 3);
-                hex.crop = Rando.choice(CROP_ICONS);
-                crops++;
-            }
-            if (crops > 0) logCombat(`Bountiful Harvest: ${crops} crop${crops > 1 ? 's' : ''} sprouted!`, 'log-gold');
-            else logCombat('No suitable ground for crops.', 'log-info');
-            break;
-        }
-        case 'recall': {
-            const havens = world.havens();
-            if (havens.length === 0) {
-                logCombat('No havens exist!', 'log-info');
-                player.usedSkillsThisTurn.delete(skillId);
-                player.aether += skill.cost;
-                usedMP = false;
-                break;
-            }
-            let nearest = havens[0], nearestDist = Infinity;
-            for (const h of havens) {
-                const d = hexDistance(player.q, player.r, h.q, h.r);
-                if (d < nearestDist) { nearestDist = d; nearest = h; }
-            }
-            player.q = nearest.q;
-            player.r = nearest.r;
-            refreshVision();
-            centerOn({ q: player.q, r: player.r });
-            logCombat(`Recall! Teleported to haven.`, 'log-info');
-            player.mp = 0;
-            break;
-        }
-        case 'loot': {
-            const enemy = em.enemyAt(targetQ, targetR);
-            if (!enemy) break;
-            const goldStolen = Rando.int(1, 5);
-            player.gold += goldStolen;
-            victory.goldCollected += goldStolen;
-            logCombat(`Looted ${goldStolen}g!`, 'log-gold');
-            break;
-        }
-        case 'havens_light': {
-            const poi = world.poiAt(player.q, player.r);
-            if (!poi || (poi.type !== POI.HAVEN && poi.type !== POI.VILLAGE)) {
-                logCombat('Must be at a haven or village!', 'log-info');
-                player.aether += skill.cost;
-                player.usedSkillsThisTurn.delete(skillId);
-                usedMP = false;
-                break;
-            }
-            const dmg = skill.baseDamage + player.stats.warding;
-            let hitCount = 0;
-            for (const h of hexesInRange(player.q, player.r, skill.range)) {
-                const enemy = em.enemyAt(h.q, h.r);
-                if (!enemy) continue;
-                dealDamageToEnemy(enemy, dmg, "Haven's Light");
-                hitCount++;
-            }
-            logCombat(`Haven's Light: hit ${hitCount} enemies!`, 'log-info');
-            break;
-        }
-    }
-    if (usedMP && !skill.freeAction) player.mp = 0;
+    const result = handler(skill, targetQ, targetR);
+    if (result !== false) spendMP(skillMpCost(skill));
     targeting = null;
 }
 
@@ -1551,8 +1578,8 @@ function moveAndAttack(enemyQ, enemyR) {
                         checkHexEntry();
                     }
                 }
-                player.mp = 0;
-                deselectPlayer();
+                spendMP(weaponMpCost(player.weapon()));
+                refreshSelectionAfterAction();
                 return;
             }
         }
@@ -1588,6 +1615,7 @@ function moveAndAttack(enemyQ, enemyR) {
 
     // Attack
     const { killed } = meleeAttack(enemy);
+    spendMP(weaponMpCost(player.weapon()));
     if (killed) {
         const hex = world.getHex(enemyQ, enemyR);
         if (hex && world.isPassable(hex)) {
@@ -1602,7 +1630,7 @@ function moveAndAttack(enemyQ, enemyR) {
         }
     }
 
-    deselectPlayer();
+    refreshSelectionAfterAction();
 }
 
 function checkHexEntry() {
@@ -2782,7 +2810,7 @@ function updateSkillsPanel() {
         if (skillId) {
             const skill = SKILLS[skillId];
             html += `<div class="skill-entry" style="cursor:pointer;border-left:2px solid #7c4dff;padding-left:6px" data-unequip="${i}">
-                <div><span class="s-name">${skill.name}</span> <span class="s-cost">(${skill.cost} AE)</span> <span style="color:#555">[${i + 1}]</span></div>
+                <div><span class="s-name">${skill.name}</span> <span class="s-cost">(${skillCostLabel(skill)})</span> <span style="color:#555">[${i + 1}]</span></div>
                 <div class="s-desc">${skill.desc}</div>
             </div>`;
         } else {
@@ -2806,7 +2834,7 @@ function updateSkillsPanel() {
             const nameStyle = isUsable ? 'cursor:pointer;color:#b388ff;border:1px solid #7c4dff;border-radius:3px;padding:1px 6px;background:rgba(124,77,255,0.15)' : '';
             const dim = 'opacity:0.7';
             html += `<div class="skill-entry" style="cursor:pointer" data-equip="${skillId}">
-                <div><span class="s-name" ${isUsable ? `data-use="${skillId}" style="${nameStyle}"` : `style="${dim}"`}>${skill.name}</span> <span class="s-cost" style="${dim}">(${skill.cost} AE)</span></div>
+                <div><span class="s-name" ${isUsable ? `data-use="${skillId}" style="${nameStyle}"` : `style="${dim}"`}>${skill.name}</span> <span class="s-cost" style="${dim}">(${skillCostLabel(skill)})</span></div>
                 <div class="s-desc" style="${dim}">${skill.desc}</div>
             </div>`;
         }
@@ -2913,6 +2941,7 @@ function itemStatLine(item) {
     const parts = [];
     if (item.damage !== undefined) parts.push(`Dmg ${item.damage}`);
     if (item.range) parts.push(`Range ${item.range}`);
+    if (item.type === 'melee' || item.type === 'ranged') parts.push(`${weaponMpCost(item)} MP`);
     if (item.defense !== undefined) parts.push(`Def ${item.defense}`);
     if (item.special) {
         const specials = {
@@ -2937,6 +2966,7 @@ function itemStatLine(item) {
             double_shot: 'Double shot',
             triple_shot: 'Triple shot',
             free_ranged: 'Free ranged',
+            free_action: '0 MP attack',
             piercing: 'Pierce-through',
             sniper: `+${item.sniperBonus} at max range`,
             splash: `Splash ${item.splashDamage}`,
@@ -3159,7 +3189,7 @@ function showHutDialog(poi) {
             [{ label: 'Leave', action: () => { player.mp = 0; } }]);
     } else {
         showDialog(POI_SYMBOLS[POI.HUT] + " Wise Man's Hut",
-            `<p>The sage's eyes light up.</p><p style="color:#b388ff">"I can teach you <b>${skillName}</b>."</p><p class="s-desc">${skill.desc}</p>`,
+            `<p>The sage's eyes light up.</p><p style="color:#b388ff">"I can teach you <b>${skillName}</b>."</p><p class="s-cost">(${skillCostLabel(skill)})</p><p class="s-desc">${skill.desc}</p>`,
             [{
                 label: 'Learn', cls: 'primary', action: () => {
                     player.learnedSkills.add(poi.skill);
@@ -3439,7 +3469,7 @@ function showSkillChoiceDialog() {
     let body = '<p>Choose a skill to learn:</p><div style="max-height:260px;overflow-y:auto">';
     for (const skill of offered) {
         body += `<div class="skill-choice" data-skill="${skill.id}">
-            <div><span class="sc-name">${skill.name}</span> <span class="sc-cost">(${skill.cost} AE)</span></div>
+            <div><span class="sc-name">${skill.name}</span> <span class="sc-cost">(${skillCostLabel(skill)})</span></div>
             <div class="sc-desc">${skill.desc}</div>
         </div>`;
     }

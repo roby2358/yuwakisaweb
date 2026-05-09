@@ -348,6 +348,7 @@ const EFFECT_NAMING = {
     double_shot:       { v: ['Flickering', 'Blazing', 'Shrieking'], a: ['Replicant', 'Ranger', 'Starpilot'] },
     triple_shot:       { v: ['Flickering', 'Shrieking', 'Blazing'], a: ['Replicant', 'Starpilot', 'Zealot'] },
     free_ranged:       { v: ['Flickering', 'Warding', 'Weeping'],   a: ['Navigator', 'Seer', 'Wanderer'] },
+    free_action:       { v: ['Flickering', 'Blazing', 'Weeping'],   a: ['Wanderer', 'Wayfarer', 'Pilot'] },
     piercing:          { v: ['Piercing', 'Rending', 'Sundering'],   a: ['Ranger', 'Scout', 'Slayer'] },
     sniper:            { v: ['Piercing', 'Warding', 'Searing'],     a: ['Ranger', 'Scout', 'Starpilot'] },
     splash:            { v: ['Blazing', 'Shrieking', 'Searing'],    a: ['Operator', 'Technomancer', 'Xenarch'] },
@@ -420,6 +421,7 @@ const MELEE_EFFECTS = [
     { special: 'riposte', riposteDamage: 1, value: 2 },
     { special: 'riposte', riposteDamage: 2, value: 3 },
     { special: 'riposte', riposteDamage: 3, value: 4 },
+    { special: 'free_action', value: 4 },
 ];
 
 const RANGED_EFFECTS = [
@@ -454,6 +456,7 @@ const RANGED_EFFECTS = [
     { special: 'sniper', sniperBonus: 4, value: 3 },
     { special: 'sniper', sniperBonus: 8, value: 4 },
     { special: 'splash', splashDamage: 2, value: 4 },
+    { special: 'free_action', value: 5 },
 ];
 
 const ARMOR_EFFECTS = [
@@ -621,8 +624,8 @@ export const SKILLS = {
         desc: 'Melee attack: weapon + Might + Warding. No counter-attack.', minLevel: 1
     },
     phase_step: {
-        id: 'phase_step', name: 'Phase Step', cost: 2, target: SKILL_TARGET.TELEPORT, usage: SKILL_USAGE.ANYTIME,
-        range: 3, desc: 'Teleport to visible hex within 3. Free action.', minLevel: 2, freeAction: true
+        id: 'phase_step', name: 'Phase Step', cost: 2, mpCost: 0, target: SKILL_TARGET.TELEPORT, usage: SKILL_USAGE.ANYTIME,
+        range: 3, desc: 'Teleport to visible hex within 3.', minLevel: 2
     },
     cosmic_bolt: {
         id: 'cosmic_bolt', name: 'Cosmic Bolt', cost: 3, target: SKILL_TARGET.RANGED, usage: SKILL_USAGE.ANYTIME,
@@ -641,7 +644,7 @@ export const SKILLS = {
         range: 4, baseDamage: 6, desc: 'Ranged: 6 + Reflex. Ignores defense.', minLevel: 2
     },
     warp_shield: {
-        id: 'warp_shield', name: 'Warp Shield', cost: 5, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
+        id: 'warp_shield', name: 'Warp Shield', cost: 5, mpCost: 1, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
         duration: 1, desc: 'Block all damage from enemies for one turn.', minLevel: 4
     },
     breach_pulse: {
@@ -658,11 +661,11 @@ export const SKILLS = {
         burnDamage: 4, desc: 'Melee: weapon + Might. Target burns for 4 next turn. No counter.', minLevel: 4
     },
     mending_light: {
-        id: 'mending_light', name: 'Mending Light', cost: 2, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
+        id: 'mending_light', name: 'Mending Light', cost: 2, mpCost: 2, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
         baseHeal: 10, desc: 'Heal 10 + Vigor*3 HP.', minLevel: 6
     },
     gravity_well: {
-        id: 'gravity_well', name: 'Gravity Well', cost: 3, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
+        id: 'gravity_well', name: 'Gravity Well', cost: 3, mpCost: 1, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
         range: 3, desc: 'Pull enemies within 3 one hex closer.', minLevel: 6
     },
     sundering_blow: {
@@ -704,8 +707,8 @@ export const SKILLS = {
         range: 2, desc: 'Draw Aether from healthy land. +1 AE, plus +1 per 6 clean hexes within 2. Ends turn.', minLevel: 2
     },
     farsight: {
-        id: 'farsight', name: 'Farsight', cost: 2, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.NON_COMBAT,
-        range: 12, desc: 'Reveal all hexes within 12. Free action.', minLevel: 2, freeAction: true
+        id: 'farsight', name: 'Farsight', cost: 2, mpCost: 0, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.NON_COMBAT,
+        range: 12, desc: 'Reveal all hexes within 12.', minLevel: 2
     },
     prospect: {
         id: 'prospect', name: 'Prospect', cost: 1, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
@@ -741,7 +744,7 @@ export const SKILLS = {
     },
     // ---- Special combat skills ----
     loot: {
-        id: 'loot', name: 'Loot', cost: 0, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
+        id: 'loot', name: 'Loot', cost: 0, mpCost: 1, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
         desc: 'Take 1-5 gold from adjacent enemy instead of dealing damage.', minLevel: 2
     },
     havens_light: {
@@ -750,12 +753,12 @@ export const SKILLS = {
     },
     // ---- Peaceful skills ----
     aether_blast: {
-        id: 'aether_blast', name: 'Aether Blast', cost: 2, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
+        id: 'aether_blast', name: 'Aether Blast', cost: 2, mpCost: 2, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
         range: 2, baseDamage: 3, aetherPerHit: 3,
         desc: 'AoE: 3 + Warding/2 dmg to enemies within 2. Gain +3 AE per enemy hit.', minLevel: 4
     },
     lifedrain_blast: {
-        id: 'lifedrain_blast', name: 'Lifedrain Blast', cost: 2, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
+        id: 'lifedrain_blast', name: 'Lifedrain Blast', cost: 2, mpCost: 2, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
         range: 2, baseDamage: 3, hpPerHit: 2,
         desc: 'AoE: 3 + Vigor dmg to enemies within 2. Gain +2 HP per enemy hit.', minLevel: 4
     },
