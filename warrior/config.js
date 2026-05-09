@@ -718,11 +718,6 @@ export const SKILLS = {
         id: 'prospect', name: 'Prospect', cost: 1, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
         revealRange: 8, desc: 'Reveal gold hexes within 8. 20% chance to discover a gold deposit.', minLevel: 4
     },
-    commune: {
-        id: 'commune', name: 'Commune', cost: 2, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
-        shopPrice: 2000, shopOnly: true,
-        desc: 'Reveal all POI locations on the map. Ends turn.', minLevel: 4
-    },
     salvage: {
         id: 'salvage', name: 'Salvage', cost: 0, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.PRISTINE,
         range: 1, desc: 'Restore adjacent shattered hexes and reveals gold. Ends turn.', minLevel: 4
@@ -738,10 +733,6 @@ export const SKILLS = {
     ground_weeps: {
         id: 'ground_weeps', name: 'Ground Weeps', cost: 4, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.NON_COMBAT,
         desc: 'Show enemy threat heatmap over entire map. Press Space/click to dismiss.', minLevel: 8
-    },
-    respec: {
-        id: 'respec', name: 'Reflect', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
-        desc: 'Refund all spent stat points and reallocate them. Requires clean hex, no enemies. Ends turn.', minLevel: 4
     },
     sanctuary: {
         id: 'sanctuary', name: 'Sanctuary', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
@@ -772,6 +763,16 @@ export const SKILLS = {
         range: 2, desc: 'Sprout crops (1-3g each) on all healthy hexes within 2. Ends turn.', minLevel: 4
     },
     // ---- Shop-only skills (not in random skill pools) ----
+    commune: {
+        id: 'commune', name: 'Commune', cost: 2, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
+        shopPrice: 2000, shopOnly: true,
+        desc: 'Reveal all POI locations on the map. Ends turn.', minLevel: 4
+    },
+    respec: {
+        id: 'respec', name: 'Reflect', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
+        shopPrice: 1000, shopOnly: true,
+        desc: 'Refund all spent stat points and reallocate them. Requires clean hex, no enemies. Ends turn.', minLevel: 4
+    },
     garrison: {
         id: 'garrison', name: 'Commission Garrison', cost: 0, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
         shopPrice: 1000, goldCost: 1000, shopOnly: true,

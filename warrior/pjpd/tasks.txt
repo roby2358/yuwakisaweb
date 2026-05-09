@@ -5,13 +5,6 @@ Created: 2026-03-31T01:38:16Z
 Updated: 2026-04-26T08:30:22Z
 Add a gold sink or reward for accumulating 1000 gold. Could be a powerful item, a special upgrade, unlocking an ability, or a world event. Give the player something meaningful to spend or celebrate when hitting 1000g.
 ----
-Priority:   50
-Status: ToDo
-ID: warrior-qjct
-Created: 2026-04-27T00:35:03Z
-Updated: 2026-04-27T00:43:30Z
-Add a "Reflect" respec skill purchasable at a haven for 1000 gold. Functions as a gold sink (pairs with gold-sink-e4ya) and gives the player a way to rebuild their skill loadout late-run. The skill represents the warrior reflecting on their training: using Reflect returns all spent skill points to the pool so the player can re-allocate. Implementation: add Reflect to SKILLS in config.js, add a "Buy Reflect (1000g)" option to the haven dialog when the player has the gold and hasn't already learned it; deduct gold and add to player.learnedSkills on purchase. When activated, refund all learnedSkills (other than Restore and Reflect itself) back into an available-points pool the player can re-spend from the Skills panel. Decide whether Reflect itself is consumed on use or stays available.
-----
 Priority:   47
 Status: ToDo
 ID: combo-skill-56hq
