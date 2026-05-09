@@ -81,7 +81,7 @@ Shattered terrain is visually distinct (dark red tones) and distressed terrain s
 - Starts with Rusty Blade (1 melee damage), Worn Leather (1 defense), Stick Bow (1 ranged damage, range 2) in inventory, Restore skill learned
 - Regenerates 1 HP per turn naturally (at start of enemy phase)
 - Dodge chance = Reflex% (capped at 30%, extendable by dodge_bonus armor)
-- Melee damage = weapon damage + Might (+ special bonuses: chaos_bonus, momentum, etc.)
+- Melee damage = weapon damage + Might (+ special bonuses: chaos_bonus, charge, etc.)
 - Ranged damage = weapon damage + Reflex (+ sniper bonus at max range)
 - Bell curve damage rolls: 3 rolls of 1..strength*2, averaged. Mean ≈ strength, with natural variance.
 
@@ -210,14 +210,14 @@ Magical items are generated at runtime via `rollMagicItem()`. Each item gets a u
 **Armor**: defense 2-6, price = defense * 15 + 10
 **Artifacts**: price 40-80, no base stat (effect only)
 
-#### Melee Weapon Effects (34 variants)
-armor_pierce (2/4), aether_siphon (1/2), burn (2/3/5), chain (2/3/5), chaos_bonus (2/4/6), counter_mastery, defense_shred (1/2), double_strike, triple_strike, ignore_defense, knockback, lifesteal (1/2/3), momentum (2/3/4), recoil (3/5/8 bonus, 1/3/5 self-dmg), reverberate, riposte (1/2/3)
+#### Melee Weapon Effects (35 variants)
+armor_pierce (2/4), aether_siphon (1/2), burn (2/3/5), chain (2/3/5), chaos_bonus (2/4/6), counter_mastery, defense_shred (1/2), double_strike, triple_strike, ignore_defense, knockback, lifesteal (1/2/3), charge (+4/+6/+8 bonus, x2 multiplier), recoil (3/5/8 bonus, 1/3/5 self-dmg), reverberate, riposte (1/2/3)
 
 #### Ranged Weapon Effects (30 variants)
 armor_pierce (2/4), aether_siphon (1/2), burn (2/3/5), chain (2/3/5), chaos_bonus (2/4/6), defense_shred (1/2), double_shot, triple_shot, free_ranged, ignore_defense, knockback, lifesteal (1/2/3), piercing, recoil (5/8/13 bonus, 1/3/5 self-dmg), sniper (2/4/8), splash (2)
 
 #### Armor Effects (21 variants)
-burning_aura (2/5), dodge_bonus (10/20/30%), heal_on_kill (5/8), high_def_mp_penalty (+5 def, -1 MP), last_stand (4/6), momentum_defense (1/2/3), ranged_defense (2/4), ranged_immune, thorns (50/100%), wall_of_steel (2/4/6)
+burning_aura (2/5), dodge_bonus (10/20/30%), heal_on_kill (5/8), high_def_mp_penalty (+5 def, -1 MP), last_stand (4/6), momentum (1/2/3), ranged_defense (2/4), ranged_immune, thorns (50/100%), wall_of_steel (2/4/6)
 
 #### Artifact Effects (38 variants)
 aether_bonus (10/20), aether_regen (1/2/3), aether_signet (3/5), blink_ring (range 4, +2 bonus), breach_jewel (4/6), chaos_attune (2/4 might, 2/3 def), chaos_circlet, chaos_defense (2/4), disengage, displacement_immune, heal (1/2/3 per turn), hp_bonus (10/20), mp_bonus (2/4), opportunist, ranger_defense (1/2/4), reveal_maw, revive (1/2 hp+ae), soul_harvest (2/4 XP), strider, threat_shroud, vision_bonus (2/4), wraith_immune
@@ -321,7 +321,7 @@ LOS is checked by walking the line between two hexes and testing for mountains. 
 Explore cautiously from starting haven. The Rusty Blade (1 damage) and Stick Bow (1 damage, range 2) mean early fights are slow — hunt wildlife for XP and gold while avoiding chaos-spawned enemies until you upgrade. Loot gold hexes for currency. Buy a weapon at the haven ASAP; even a modest magical weapon with lifesteal or a non-magical upgrade transforms your combat ability. Avoid ruins until level 2+ since they spawn enemies on entry. Visit Wise Man huts whenever safe — a free skill early is a windfall. The level 2 skill choice is critical with many options: Phase Step for mobility, Cosmic Bolt/Piercing Shot for ranged damage, Siphon Strike for sustain, Shockwave for defensive AoE, Loot for economy, Aether Tap for resource management, or Farsight for scouting.
 
 ### Mid Game (Levels 4-6)
-Assault the first breach. Use terrain tactically: forest for +1 defense when you expect to be attacked, hills for +1 ranged range. Clear ruins for equipment upgrades and gold. Close the first breach to reduce spawn pressure. Weapon specials start mattering: armor_pierce weapons cut through Guardian defense, momentum weapons reward aggressive charging, defense_shred weapons weaken enemies over sustained fights. Non-combat skills like Prospect, Salvage, and Bountiful Harvest fund equipment purchases. Use Commune to reveal all POIs and plan your route to the next breach.
+Assault the first breach. Use terrain tactically: forest for +1 defense when you expect to be attacked, hills for +1 ranged range. Clear ruins for equipment upgrades and gold. Close the first breach to reduce spawn pressure. Weapon specials start mattering: armor_pierce weapons cut through Guardian defense, charge weapons reward aggressive movement-into-attack, defense_shred weapons weaken enemies over sustained fights. Non-combat skills like Prospect, Salvage, and Bountiful Harvest fund equipment purchases. Use Commune to reveal all POIs and plan your route to the next breach.
 
 ### Late Game (Levels 7-10)
 Close the second breach. Gear up for the Maw. Starfall (level 10) trivializes mob fights with 15 + 2*Warding AoE, but you may not have the XP patience to reach it. Void Salvo (level 10) gives ranged builds a devastating finisher. The Unraveler fight demands both damage output and sustain — pure Might builds lack healing, pure Warding builds lack kill speed. The Unraveler's dual attack (12 melee + 6 ranged at range 4), 6 defense, and Void Stalker spawning every 3 turns means you need to close quickly or get overwhelmed. Recall (5 AE) provides an emergency escape if things go wrong. Ground Weeps helps plan your approach by revealing enemy concentration. Haven's Light (level 6) can devastate enemies that follow you back to a haven or village.

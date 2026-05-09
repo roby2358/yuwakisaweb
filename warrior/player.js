@@ -61,8 +61,8 @@ export class Player {
         def += TERRAIN_DEFENSE_BONUS[terrainType] || 0;
         const lastStand = this.equipped('last_stand');
         if (lastStand && this.hp <= this.maxHP() / 2) def += lastStand.lastStandBonus;
-        const momDef = this.equipped('momentum_defense');
-        if (momDef) def += this.hexesMovedThisTurn * (momDef.momentumDefense || 1);
+        const momDef = this.equipped('momentum');
+        if (momDef) def += this.hexesMovedThisTurn * (momDef.momentumBonus || 1);
         const ranger = this.equipped('ranger_defense');
         if (ranger && RANGER_TERRAIN.includes(terrainType)) def += ranger.rangerBonus;
         const chaosDef = this.equipped('chaos_defense');
@@ -114,7 +114,10 @@ export class Player {
         const wep = this.weapon();
         const wepDmg = wep ? (wep.type === 'ranged' ? Math.ceil(wep.damage / 4) : wep.damage) : 1;
         let dmg = wepDmg + this.stats.might + this._chaosBonus(wep, isChaosEnemy);
-        if (wep && wep.special === 'momentum' && this.movedThisTurn) dmg += wep.momentumBonus;
+        if (wep && wep.special === 'charge' && this.movedThisTurn) {
+            if (wep.chargeBonus) dmg += wep.chargeBonus;
+            if (wep.chargeMultiplier) dmg *= wep.chargeMultiplier;
+        }
         const wallItem = this.equipped('wall_of_steel') || this.equipped('wall_crown');
         if (wallItem && !this.movedThisTurn) dmg += (wallItem.wallBonus || wallItem.wallCrownBonus);
         return dmg;

@@ -2084,7 +2084,9 @@ function itemStatLine(item) {
             ignore_defense: 'Ignore def',
             knockback: 'Knockback 1',
             lifesteal: `+${item.lifestealAmount} HP/hit`,
-            momentum: `+${item.momentumBonus} if moved`,
+            charge: item.chargeMultiplier
+                ? `x${item.chargeMultiplier} dmg if moved`
+                : `+${item.chargeBonus} if moved`,
             recoil: `+${item.recoilBonus} dmg, ${item.recoilDamage} self-dmg`,
             reverberate: `Chain ${item.chainCount} +${item.chainBonus}/jump`,
             riposte: `+${item.riposteDamage || 1} counter-atk`,
@@ -2102,7 +2104,7 @@ function itemStatLine(item) {
             heal_on_kill: `+${item.healOnKill} HP/kill`,
             high_def_mp_penalty: `+${item.defBonus} def -${item.mpPenalty} MP`,
             last_stand: `+${item.lastStandBonus} def <50% HP`,
-            momentum_defense: `+${item.momentumDefense || 1} def/hex moved`,
+            momentum: `+${item.momentumBonus || 1} def/hex moved`,
             ranged_defense: `+${item.rangedDefenseBonus} def vs ranged`,
             ranged_immune: 'Ranged immune',
             thorns: `${item.thornsPercent || item.thornsDamage || '?'}% reflect`,
