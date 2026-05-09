@@ -6,7 +6,7 @@ import {
     xpForLevel,
     POI, POI_SYMBOLS, POI_COLORS, POI_DEFENSE_BONUS,
     ENEMY_TYPE,
-    EQUIP_SLOT, WEAPONS, ARMORS, ARTIFACTS, ALL_EQUIPMENT, NON_MAGICAL_ITEMS,
+    EQUIP_SLOT, WEAPONS, ARMORS, ARTIFACTS, ALL_EQUIPMENT, NON_MAGICAL_ITEMS, CROP_ICONS,
     rollMagicItem, resetEquipment,
     isChaosTerrain, SELL_PRICE_RATIO,
     SKILL_TARGET, SKILL_USAGE, SKILLS, SKILL_UNLOCK_LEVELS,
@@ -20,6 +20,10 @@ import { EnemyManager } from './enemies.js';
 import { Victory } from './victory.js';
 import { Sound } from './sound.js';
 import { SpriteSheet } from './sprite_sheet.js';
+import {
+    MoveAction, RangedAction, MoveAndAttackAction, SkillAction,
+    weaponMpCost, skillCostLabel
+} from './actions.js';
 
 // ---- Sprite sheets ----
 const SPRITE_COLS = 5;
@@ -91,6 +95,45 @@ let showingWorldMap = false;
 let combatAlerted = false;  // set when player attacks; nearby enemies ignore forest stealth
 let mawDistances = null;    // Map<hexKey, cost> — BFS distances from the Maw
 let mawMaxDist = 1;         // max BFS distance to Maw (for scaling)
+
+// Dependency bundle for action classes (actions.js). Live game state is exposed
+// via getters so that loadGame()/initGame() reassignments of player/world/em/
+// victory don't strand stale references inside the actions.
+const actionCtx = {
+    get player() { return player; },
+    get world() { return world; },
+    get em() { return em; },
+    get victory() { return victory; },
+    get sound() { return sound; },
+    get reachable() { return reachable; },
+    // combat callbacks
+    dealDamageToEnemy: (...a) => dealDamageToEnemy(...a),
+    dealDamageToPlayer: (...a) => dealDamageToPlayer(...a),
+    killEnemy: (...a) => killEnemy(...a),
+    gainXP: (...a) => gainXP(...a),
+    enemyDefense: (...a) => enemyDefense(...a),
+    enemyMeleeAttack: (...a) => enemyMeleeAttack(...a),
+    // orchestration
+    logCombat: (...a) => logCombat(...a),
+    refreshVision: () => refreshVision(),
+    checkHexEntry: () => checkHexEntry(),
+    centerOn: (h) => centerOn(h),
+    closeBreach: (p) => closeBreach(p),
+    endGame: (won) => endGame(won),
+    offerSettlementReward: (h) => offerSettlementReward(h),
+    showDialog: (...a) => showDialog(...a),
+    showOnceDialog: (...a) => showOnceDialog(...a),
+    showSkillChoiceDialog: () => showSkillChoiceDialog(),
+    showLevelUpDialog: () => showLevelUpDialog(),
+    // selection / movement
+    deselectPlayer: () => deselectPlayer(),
+    refreshSelectionAfterAction: () => refreshSelectionAfterAction(),
+    playerMoveCost: (h) => playerMoveCost(h),
+    playerTerrain: () => playerTerrain(),
+    // module-state setters
+    setCombatAlerted: (v) => { combatAlerted = v; },
+    setThreatOverlay: (v) => { threatOverlay = v; },
+};
 
 // ---- View state ----
 let panX = 0, panY = 0;
@@ -482,245 +525,13 @@ function formatLootHtml(intro, loot) {
     return body;
 }
 
-// Apply weapon on-hit effects after a strike. Lifesteal/siphon/recoil fire
-// regardless of kill; shred/burn only mark the enemy if it's still alive.
-function applyOnHitEffects(wep, enemy) {
-    if (!wep) return;
-
-    if (wep.special === 'lifesteal') {
-        const heal = wep.lifestealAmount;
-        player.hp = Math.min(player.maxHP(), player.hp + heal);
-        logCombat(`+${heal} HP (lifesteal)`, 'log-heal');
-    }
-    if (wep.special === 'aether_siphon') {
-        player.aether = Math.min(player.maxAether(), player.aether + wep.siphonAmount);
-        logCombat(`+${wep.siphonAmount} AE (siphon)`, 'log-info');
-    }
-    if (wep.special === 'recoil') {
-        player.hp -= wep.recoilDamage;
-        logCombat(`Recoil: ${wep.recoilDamage} dmg to you`, 'log-dmg');
-        if (player.hp <= 0) { player.hp = 0; endGame(false); }
-    }
-
-    if (enemy.hp <= 0) return;
-
-    if (wep.special === 'defense_shred') {
-        enemy.defReduction = (enemy.defReduction || 0) + wep.shredAmount;
-        logCombat(`Shreds ${wep.shredAmount} defense!`, 'log-info');
-    }
-    if (wep.special === 'burn') {
-        enemy.burnDamage = (enemy.burnDamage || 0) + wep.burnDamage;
-        logCombat(`${em.getDef(enemy.type).name} is burning!`, 'log-dmg');
-    }
-}
-
-function applyEquipmentBonusDamage(baseDmg) {
-    let dmg = baseDmg;
-    const breach = player.equipped('breach_jewel');
-    if (breach) {
-        const near = world.pois.some(p => (p.type === POI.BREACH || p.type === POI.MAW) && hexDistance(player.q, player.r, p.q, p.r) <= 3);
-        if (near) { dmg += breach.breachBonus; logCombat(`Breach Jewel: +${breach.breachBonus} might!`, 'log-info'); }
-    }
-    const signet = player.equipped('aether_signet');
-    if (signet && player.aether >= player.maxAether()) {
-        dmg += signet.aetherSignetDamage;
-        player.aether -= signet.aetherSignetCost;
-        logCombat(`Aether Signet: +${signet.aetherSignetDamage} dmg!`, 'log-info');
-    }
-    const attune = player.equipped('chaos_attune');
-    if (attune && isChaosTerrain(playerTerrain())) dmg += attune.chaosAttuneMight;
-    return dmg;
-}
-
-// MP cost tiers: 0 (free), 1 (natural melee), 2 (ranged), 'all' (zeroes MP).
-// 'free_action' magical affix forces 0 regardless of weapon type.
-function weaponMpCost(wep) {
-    if (!wep) return 1;
-    if (wep.special === 'free_action') return 0;
-    return wep.type === 'ranged' ? 2 : 1;
-}
-
-function spendMP(cost) {
-    if (cost === 'all') player.mp = 0;
-    else player.mp = Math.max(0, player.mp - cost);
-}
-
-function skillMpCost(skill) {
-    return skill.mpCost === undefined ? 'all' : skill.mpCost;
-}
-
-function skillMpLabel(skill) {
-    const c = skillMpCost(skill);
-    return c === 'all' ? 'All MP' : `${c} MP`;
-}
-
-function skillCostLabel(skill) {
-    return `${skill.cost} AE, ${skillMpLabel(skill)}`;
-}
-
 function refreshSelectionAfterAction() {
     if (player.mp > 0) computeReachable();
     else deselectPlayer();
 }
 
-function meleeAttack(enemy) {
-    combatAlerted = true;
-    let dmg = applyEquipmentBonusDamage(player.meleeDamage(em.getDef(enemy.type).chaosSpawned));
-    const wep = player.weapon();
-    const opts = {};
-    if (wep && wep.special === 'armor_pierce') opts.pierceAmount = wep.pierceAmount;
-    const { killed } = dealDamageToEnemy(enemy, dmg, 'Melee', opts);
-
-    applyOnHitEffects(wep, enemy);
-
-    // Double strike: hit same enemy again
-    if (!killed && wep && wep.special === 'double_strike') {
-        dealDamageToEnemy(enemy, dmg, 'Double Strike', opts);
-    }
-
-    // Triple strike: hit same enemy two more times
-    if (!killed && wep && wep.special === 'triple_strike') {
-        dealDamageToEnemy(enemy, dmg, 'Triple Strike', opts);
-        if (enemy.hp > 0) dealDamageToEnemy(enemy, dmg, 'Triple Strike', opts);
-    }
-
-    // Chain: damage bounces to nearby enemies
-    if (wep && wep.special === 'chain' && enemy.hp > 0) {
-        chainBounce('Chain', dmg, enemy.q, enemy.r, wep.chainCount || 1, 2, new Set([enemy]), false);
-    }
-
-    // Reverberate: chain with +bonus per jump
-    if (wep && wep.special === 'reverberate' && enemy.hp > 0) {
-        chainBounce('Reverberate', dmg, enemy.q, enemy.r, wep.chainCount || 1, 2, new Set([enemy]), false, wep.chainBonus || 0);
-    }
-
-    // Cleave: hit adjacent enemies too
-    if (wep && wep.special === 'cleave') {
-        const adj = hexNeighbors(enemy.q, enemy.r);
-        for (const n of adj) {
-            const adjEnemy = em.enemies.find(e => e.q === n.q && e.r === n.r);
-            if (adjEnemy) dealDamageToEnemy(adjEnemy, dmg, 'Cleave');
-        }
-    }
-
-    if (!killed) {
-        const def = em.getDef(enemy.type);
-        let counterDmg = enemyMeleeAttack(enemy, def);
-        if (wep && wep.special === 'riposte') counterDmg = Math.floor(counterDmg / 2);
-        dealDamageToPlayer(counterDmg, `${def.name} counters`, false, { attacker: enemy });
-    }
-    return { killed };
-}
-
-function knockbackHex(fromQ, fromR, targetQ, targetR) {
-    // Push target 1 hex away from source
-    const dq = targetQ - fromQ, dr = targetR - fromR;
-    // Normalize to nearest hex direction
-    const dirs = [
-        { q: 1, r: 0 }, { q: 1, r: -1 }, { q: 0, r: -1 },
-        { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 }
-    ];
-    let best = dirs[0], bestDot = -Infinity;
-    for (const d of dirs) {
-        const dot = d.q * dq + d.r * dr;
-        if (dot > bestDot) { bestDot = dot; best = d; }
-    }
-    return { q: targetQ + best.q, r: targetR + best.r };
-}
-
 function rangedAttack(targetQ, targetR) {
-    combatAlerted = true;
-    const enemy = em.enemies.find(e => e.q === targetQ && e.r === targetR);
-    if (!enemy) return;
-    const wep = player.weapon();
-    const dist = hexDistance(player.q, player.r, targetQ, targetR);
-    const eDef = em.getDef(enemy.type);
-    let dmg = applyEquipmentBonusDamage(player.rangedDamage(dist, eDef.chaosSpawned));
-
-    // Sniper: bonus damage at max range
-    if (wep && wep.special === 'sniper' && dist >= wep.range) {
-        dmg += wep.sniperBonus;
-        logCombat(`Sniper: +${wep.sniperBonus} at max range`, 'log-info');
-    }
-
-    // Fire primary shot
-    const rangedOpts = {};
-    if (wep && wep.special === 'armor_pierce') rangedOpts.pierceAmount = wep.pierceAmount;
-    if (wep && wep.special === 'ignore_defense') {
-        const actualDmg = Math.max(1, dmg);
-        enemy.hp -= actualDmg;
-        logCombat(`Ranged: ${actualDmg} dmg to ${em.getDef(enemy.type).name}`, 'log-dmg');
-        sound.hitEnemy();
-        if (enemy.hp <= 0) killEnemy(enemy);
-    } else if (wep && wep.special === 'double_shot') {
-        dealDamageToEnemy(enemy, dmg, 'Shot 1', rangedOpts);
-        if (enemy.hp > 0) dealDamageToEnemy(enemy, dmg, 'Shot 2', rangedOpts);
-    } else if (wep && wep.special === 'triple_shot') {
-        dealDamageToEnemy(enemy, dmg, 'Shot 1', rangedOpts);
-        if (enemy.hp > 0) dealDamageToEnemy(enemy, dmg, 'Shot 2', rangedOpts);
-        if (enemy.hp > 0) dealDamageToEnemy(enemy, dmg, 'Shot 3', rangedOpts);
-    } else {
-        dealDamageToEnemy(enemy, dmg, 'Ranged', rangedOpts);
-    }
-
-    applyOnHitEffects(wep, enemy);
-
-    // Chain: damage bounces to nearby enemies
-    if (wep && wep.special === 'chain') {
-        chainBounce('Chain', dmg, targetQ, targetR, wep.chainCount || 1, 2, new Set([enemy]), false);
-    }
-
-    // Reverberate: chain with +bonus per jump
-    if (wep && wep.special === 'reverberate') {
-        chainBounce('Reverberate', dmg, targetQ, targetR, wep.chainCount || 1, 2, new Set([enemy]), false, wep.chainBonus || 0);
-    }
-
-    // Splash: full attack damage to all adjacent enemies (ignores defense)
-    if (wep && wep.special === 'splash') {
-        const sDmg = Math.max(1, dmg);
-        for (const n of hexNeighbors(targetQ, targetR)) {
-            const splashTarget = em.enemies.find(e => e.q === n.q && e.r === n.r && e !== enemy);
-            if (!splashTarget) continue;
-            splashTarget.hp -= sDmg;
-            logCombat(`Splash: ${sDmg} dmg to ${em.getDef(splashTarget.type).name}`, 'log-dmg');
-            sound.hitEnemy();
-            if (splashTarget.hp <= 0) killEnemy(splashTarget);
-        }
-    }
-
-    // Piercing: continue through target to hit next enemy in line
-    if (wep && wep.special === 'piercing') {
-        const kb = knockbackHex(player.q, player.r, targetQ, targetR);
-        const dq = kb.q - targetQ, dr = kb.r - targetR;
-        for (let i = 1; i <= wep.range - dist; i++) {
-            const pq = targetQ + dq * i, pr = targetR + dr * i;
-            const pierceTarget = em.enemies.find(e => e.q === pq && e.r === pr);
-            if (pierceTarget) {
-                dealDamageToEnemy(pierceTarget, dmg, 'Pierce');
-                break;
-            }
-            const hex = world.getHex(pq, pr);
-            if (!hex || hex.terrain === TERRAIN.MOUNTAIN) break;
-        }
-    }
-
-    // Knockback: push target 1 hex away
-    if (wep && wep.special === 'knockback' && enemy.hp > 0) {
-        const dest = knockbackHex(player.q, player.r, targetQ, targetR);
-        const hex = world.getHex(dest.q, dest.r);
-        const occupied = em.enemies.some(e => e.q === dest.q && e.r === dest.r);
-        if (hex && world.isPassable(hex) && !occupied && !(dest.q === player.q && dest.r === player.r)) {
-            enemy.q = dest.q;
-            enemy.r = dest.r;
-            logCombat(`Knocked back!`, 'log-info');
-        }
-    }
-
-    // Ranged attack costs 1 aether (unless free, life-eating, or non-magical)
-    if (wep && wep.magical && wep.special !== 'free_ranged' && wep.special !== 'recoil') {
-        player.aether = Math.max(0, player.aether - 1);
-    }
-    spendMP(weaponMpCost(wep));
+    new RangedAction(actionCtx, targetQ, targetR).execute();
 }
 
 function gainXP(amount) {
@@ -744,64 +555,16 @@ function gainXP(amount) {
 }
 
 // ================================================================
-// SKILL EXECUTION
+// SKILL EXECUTION  (handlers live in actions.js)
 // ================================================================
 
-function applyAoeDamage(skillName, dmg, range) {
-    for (const h of hexesInRange(player.q, player.r, range)) {
-        const enemy = em.enemyAt(h.q, h.r);
-        if (enemy) dealDamageToEnemy(enemy, dmg, skillName);
-    }
-}
-
-function applyAoeDamageAt(skillName, dmg, centerQ, centerR, range) {
-    for (const h of hexesInRange(centerQ, centerR, range)) {
-        const enemy = em.enemyAt(h.q, h.r);
-        if (enemy) dealDamageToEnemy(enemy, dmg, skillName);
-    }
-}
-
-function pushEnemyAway(enemy, fromQ, fromR) {
-    const dest = knockbackHex(fromQ, fromR, enemy.q, enemy.r);
-    const hex = world.getHex(dest.q, dest.r);
-    const occupied = em.enemies.some(e => e !== enemy && e.q === dest.q && e.r === dest.r);
-    if (hex && world.isPassable(hex) && !occupied && !(dest.q === player.q && dest.r === player.r)) {
-        enemy.q = dest.q;
-        enemy.r = dest.r;
-    }
-}
-
-function chainBounce(skillName, dmg, startQ, startR, bounceCount, bounceRange, hitSet, useBellCurve, perJumpBonus = 0) {
-    let curQ = startQ, curR = startR;
-    for (let i = 0; i < bounceCount; i++) {
-        dmg += perJumpBonus;
-        let closest = null, closestDist = Infinity;
-        for (const enemy of em.enemies) {
-            if (hitSet.has(enemy)) continue;
-            const d = hexDistance(curQ, curR, enemy.q, enemy.r);
-            if (d <= bounceRange && d < closestDist) { closestDist = d; closest = enemy; }
-        }
-        if (!closest) break;
-        hitSet.add(closest);
-        if (useBellCurve) {
-            dealDamageToEnemy(closest, dmg, `${skillName} bounce`);
-        } else {
-            const closestDef = em.getDef(closest.type);
-            const eDef = enemyDefense(closest, closestDef);
-            const actualDmg = Math.max(1, dmg - eDef);
-            closest.hp -= actualDmg;
-            logCombat(`${skillName} chain: ${actualDmg} dmg to ${closestDef.name}`, 'log-dmg');
-            sound.hitEnemy();
-            if (closest.hp <= 0) killEnemy(closest);
-        }
-        curQ = closest.q; curR = closest.r;
-    }
-}
-
+// UI-side guard: returns null if the skill is usable in the current context,
+// or a short reason string ("Too close to enemies!", "Cannot use on shattered
+// terrain!") to display in tooltips and disable buttons. Skill handlers
+// themselves don't call this — they trust the caller has filtered.
 function checkSkillUsage(skill) {
     const usage = skill.usage || SKILL_USAGE.ANYTIME;
     if (usage === SKILL_USAGE.ANYTIME) return null;
-    // Non-combat and pristine both require no enemies within 2
     const nearbyEnemy = em.enemies.some(e => hexDistance(player.q, player.r, e.q, e.r) <= 2);
     if (nearbyEnemy) return 'Too close to enemies!';
     if (usage === SKILL_USAGE.PRISTINE) {
@@ -811,563 +574,8 @@ function checkSkillUsage(skill) {
     return null;
 }
 
-// Skill handlers: each takes (skill, targetQ, targetR) and runs the skill body.
-// Return false to skip the MP spend (for early-exit aborts, or for skills that
-// keep the player's turn alive — e.g. ground_weeps overlay). Default return
-// (undefined) lets the dispatcher charge mpCost normally.
-
-function abortSkill(skill, message) {
-    if (message) logCombat(message, 'log-info');
-    player.usedSkillsThisTurn.delete(skill.id);
-    return false;
-}
-
-function abortSkillWithRefund(skill, message) {
-    if (message) logCombat(message, 'log-info');
-    player.aether += skill.cost;
-    player.usedSkillsThisTurn.delete(skill.id);
-    return false;
-}
-
-// Restore shattered hexes; decrement nearby shatteredCount; revert distressed
-// hexes whose count dropped to 0; distress restored hexes still near shatters.
-// Shared by Restore and Salvage.
-function restoreShatteredHexes(hexes) {
-    for (const hex of hexes) {
-        hex.terrain = UNSHATTERED_VERSION[hex.terrain];
-    }
-    for (const hex of hexes) {
-        for (const coord of hexesInRange(hex.q, hex.r, 3)) {
-            const h = world.getHex(coord.q, coord.r);
-            if (h) h.shatteredCount = Math.max(0, h.shatteredCount - 1);
-        }
-    }
-    const checked = new Set();
-    for (const hex of hexes) {
-        for (const coord of hexesInRange(hex.q, hex.r, 3)) {
-            const key = hexKey(coord.q, coord.r);
-            if (checked.has(key)) continue;
-            checked.add(key);
-            const h = world.getHex(coord.q, coord.r);
-            if (!h) continue;
-            if (h.shatteredCount === 0 && UNDISTRESSED_VERSION[h.terrain] !== undefined) {
-                h.terrain = UNDISTRESSED_VERSION[h.terrain];
-            }
-        }
-        if (hex.shatteredCount > 0 && DISTRESSED_VERSION[hex.terrain] !== undefined) {
-            hex.terrain = DISTRESSED_VERSION[hex.terrain];
-        }
-    }
-}
-
-// ---- Combat skills (anytime) ----
-
-function executeRestore(skill, targetQ, targetR) {
-    const range = 1 + Math.floor(player.level / 3);
-    const shatteredHexes = hexesInRange(player.q, player.r, range)
-        .map(h => world.getHex(h.q, h.r))
-        .filter(h => h && UNSHATTERED_VERSION[h.terrain] !== undefined);
-    const breachInRange = world.pois.find(p =>
-        (p.type === POI.BREACH || p.type === POI.MAW) &&
-        p.guardianDefeated && !p.closed &&
-        hexDistance(player.q, player.r, p.q, p.r) <= range
-    );
-    // One-shot warning: Maw can't be sealed while the Unraveler lives
-    const mawInRange = world.pois.find(p =>
-        p.type === POI.MAW && !p.closed &&
-        hexDistance(player.q, player.r, p.q, p.r) <= range
-    );
-    const unravelerAlive = em.enemies.find(e => e.type === ENEMY_TYPE.UNRAVELER);
-    if (mawInRange && unravelerAlive) {
-        showOnceDialog('mawBlockedByUnraveler', 'The Maw Resists',
-            '<p>The Maw seethes with chaos and refuses to close. The Unraveler must be defeated first before the Maw can be sealed.</p>',
-            [{ label: 'OK', cls: 'btn-primary' }]);
-    }
-    if (shatteredHexes.length === 0 && !breachInRange) {
-        return abortSkill(skill, 'No shattered terrain in range!');
-    }
-    restoreShatteredHexes(shatteredHexes);
-    player.aether = Math.min(player.maxAether(), player.aether + 1);
-    let goldFound = 0;
-    for (let i = 0; i < shatteredHexes.length; i++) {
-        if (Rando.bool(0.16)) goldFound++;
-    }
-    if (goldFound > 0) { player.gold += goldFound; victory.goldCollected += goldFound; }
-    victory.hexesRestored += shatteredHexes.length;
-    if (shatteredHexes.length > 0) {
-        gainXP(shatteredHexes.length * 3);
-        let msg = `Restored ${shatteredHexes.length} hex${shatteredHexes.length > 1 ? 'es' : ''}! +1 AE`;
-        if (goldFound > 0) msg += `, +${goldFound}g`;
-        logCombat(msg, 'log-heal');
-        offerSettlementReward(shatteredHexes);
-    }
-    if (breachInRange) {
-        const chance = breachInRange.type === POI.MAW ? 0.20 : 0.40;
-        if (Rando.bool(chance)) {
-            closeBreach(breachInRange);
-            if (breachInRange.type === POI.MAW) endGame(true);
-        } else {
-            showDialog('Restore', 'Restore did not close the breach.', [{ label: 'OK', cls: 'btn-primary' }]);
-        }
-    }
-}
-
-function executeVoidStrike(skill, targetQ, targetR) {
-    const enemy = em.enemyAt(targetQ, targetR);
-    if (!enemy) return;
-    const wep = player.weapon();
-    const dmg = (wep ? wep.damage : 1) + player.stats.might + player.stats.warding;
-    dealDamageToEnemy(enemy, dmg, 'Void Strike');
-}
-
-function executePhaseStep(skill, targetQ, targetR) {
-    player.q = targetQ;
-    player.r = targetR;
-    refreshVision();
-    logCombat('Phase Step!', 'log-info');
-    checkHexEntry();
-}
-
-function executeCosmicBolt(skill, targetQ, targetR) {
-    const enemy = em.enemyAt(targetQ, targetR);
-    if (!enemy) return;
-    dealDamageToEnemy(enemy, skill.baseDamage + player.stats.warding, 'Cosmic Bolt');
-}
-
-function executeShockwave(skill, targetQ, targetR) {
-    const dmg = skill.baseDamage + player.stats.might;
-    const survivors = [];
-    for (const h of hexesInRange(player.q, player.r, skill.range)) {
-        const enemy = em.enemyAt(h.q, h.r);
-        if (!enemy) continue;
-        dealDamageToEnemy(enemy, dmg, 'Shockwave');
-        if (enemy.hp > 0) survivors.push(enemy);
-    }
-    for (const enemy of survivors) pushEnemyAway(enemy, player.q, player.r);
-    logCombat('Shockwave!', 'log-info');
-}
-
-function executeSiphonStrike(skill, targetQ, targetR) {
-    const enemy = em.enemyAt(targetQ, targetR);
-    if (!enemy) return;
-    const wep = player.weapon();
-    const dmg = (wep ? wep.damage : 1) + player.stats.might;
-    const rolled = Rando.bellCurve(dmg);
-    const eDef = enemyDefense(enemy, em.getDef(enemy.type));
-    const actualDmg = Math.max(1, rolled - eDef);
-    enemy.hp -= actualDmg;
-    logCombat(`Siphon Strike: ${actualDmg} dmg to ${em.getDef(enemy.type).name}`, 'log-dmg');
-    sound.hitEnemy();
-    player.hp = Math.min(player.maxHP(), player.hp + actualDmg);
-    logCombat(`+${actualDmg} HP (siphon)`, 'log-heal');
-    if (enemy.hp <= 0) killEnemy(enemy);
-}
-
-function executePiercingShot(skill, targetQ, targetR) {
-    const enemy = em.enemyAt(targetQ, targetR);
-    if (!enemy) return;
-    const dmg = skill.baseDamage + player.stats.reflex;
-    const actualDmg = Math.max(1, dmg);
-    enemy.hp -= actualDmg;
-    logCombat(`Piercing Shot: ${actualDmg} dmg to ${em.getDef(enemy.type).name}`, 'log-dmg');
-    sound.hitEnemy();
-    if (enemy.hp <= 0) killEnemy(enemy);
-}
-
-function executeWarpShield(skill, targetQ, targetR) {
-    player.warpShieldTurns = skill.duration;
-    logCombat('Warp Shield active!', 'log-info');
-}
-
-function executeBreachPulse(skill, targetQ, targetR) {
-    applyAoeDamage('Breach Pulse', skill.baseDamage + player.stats.warding, skill.range);
-}
-
-function executeChainLightning(skill, targetQ, targetR) {
-    const enemy = em.enemyAt(targetQ, targetR);
-    if (!enemy) return;
-    const dmg = skill.baseDamage + player.stats.warding;
-    dealDamageToEnemy(enemy, dmg, 'Chain Lightning');
-    chainBounce('Chain Lightning', dmg, targetQ, targetR, skill.chainCount, skill.chainRange, new Set([enemy]), false);
-}
-
-function executeImmolate(skill, targetQ, targetR) {
-    const enemy = em.enemyAt(targetQ, targetR);
-    if (!enemy) return;
-    const wep = player.weapon();
-    const dmg = (wep ? wep.damage : 1) + player.stats.might;
-    dealDamageToEnemy(enemy, dmg, 'Immolate');
-    if (enemy.hp > 0) {
-        enemy.burnDamage = (enemy.burnDamage || 0) + skill.burnDamage;
-        logCombat(`${em.getDef(enemy.type).name} is burning!`, 'log-dmg');
-    }
-}
-
-function executeMendingLight(skill, targetQ, targetR) {
-    const heal = skill.baseHeal + player.stats.vigor * 3;
-    player.hp = Math.min(player.maxHP(), player.hp + heal);
-    logCombat(`Healed ${heal} HP`, 'log-heal');
-}
-
-function executeGravityWell(skill, targetQ, targetR) {
-    for (const h of hexesInRange(player.q, player.r, skill.range)) {
-        const enemy = em.enemyAt(h.q, h.r);
-        if (!enemy) continue;
-        let closest = null, closestDist = Infinity;
-        for (const n of hexNeighbors(enemy.q, enemy.r)) {
-            const d = hexDistance(n.q, n.r, player.q, player.r);
-            const hex = world.getHex(n.q, n.r);
-            if (!hex || !world.isPassable(hex)) continue;
-            if (em.enemies.some(e2 => e2 !== enemy && e2.q === n.q && e2.r === n.r)) continue;
-            if (n.q === player.q && n.r === player.r) continue;
-            if (d < closestDist) { closestDist = d; closest = n; }
-        }
-        if (closest) { enemy.q = closest.q; enemy.r = closest.r; }
-    }
-    logCombat('Gravity Well!', 'log-info');
-}
-
-function executeSunderingBlow(skill, targetQ, targetR) {
-    const enemy = em.enemyAt(targetQ, targetR);
-    if (!enemy) return;
-    const wep = player.weapon();
-    const dmg = (wep ? wep.damage : 1) + player.stats.might;
-    dealDamageToEnemy(enemy, dmg, 'Sundering Blow');
-    if (enemy.hp > 0) {
-        enemy.defReduction = (enemy.defReduction || 0) + skill.shredAmount;
-        logCombat(`Sundered ${skill.shredAmount} defense!`, 'log-info');
-    }
-}
-
-function executeMeteor(skill, targetQ, targetR) {
-    const dmg = skill.baseDamage + player.stats.warding;
-    applyAoeDamageAt('Meteor', dmg, targetQ, targetR, skill.aoeRange);
-    logCombat('Meteor!', 'log-info');
-}
-
-function executeDimensionalRend(skill, targetQ, targetR) {
-    const enemy = em.enemyAt(targetQ, targetR);
-    if (!enemy) return;
-    const wep = player.weapon();
-    dealDamageToEnemy(enemy, (wep ? wep.damage : 1) * 3, 'Dimensional Rend');
-}
-
-function executeExecute(skill, targetQ, targetR) {
-    const enemy = em.enemyAt(targetQ, targetR);
-    if (!enemy) return;
-    const wep = player.weapon();
-    const dmg = (wep ? wep.damage : 1) * 2 + player.stats.might * 2;
-    dealDamageToEnemy(enemy, dmg, 'Execute');
-}
-
-function executeRicochet(skill, targetQ, targetR) {
-    const enemy = em.enemyAt(targetQ, targetR);
-    if (!enemy) return;
-    const dmg = skill.baseDamage + player.stats.reflex;
-    dealDamageToEnemy(enemy, dmg, 'Ricochet');
-    chainBounce('Ricochet', dmg, targetQ, targetR, skill.bounceCount, skill.bounceRange, new Set([enemy]), true);
-}
-
-function executeStarfall(skill, targetQ, targetR) {
-    applyAoeDamage('Starfall', skill.baseDamage + player.stats.warding * 2, skill.range);
-}
-
-function executeVoidSalvo(skill, targetQ, targetR) {
-    const enemy = em.enemyAt(targetQ, targetR);
-    if (!enemy) return;
-    const dmg = skill.baseDamage + player.stats.reflex;
-    for (let i = 0; i < skill.shotCount; i++) {
-        if (enemy.hp <= 0) break;
-        dealDamageToEnemy(enemy, dmg, `Salvo ${i + 1}`);
-    }
-}
-
-function executeRecall(skill, targetQ, targetR) {
-    const havens = world.havens();
-    if (havens.length === 0) return abortSkillWithRefund(skill, 'No havens exist!');
-    let nearest = havens[0], nearestDist = Infinity;
-    for (const h of havens) {
-        const d = hexDistance(player.q, player.r, h.q, h.r);
-        if (d < nearestDist) { nearestDist = d; nearest = h; }
-    }
-    player.q = nearest.q;
-    player.r = nearest.r;
-    refreshVision();
-    centerOn({ q: player.q, r: player.r });
-    logCombat(`Recall! Teleported to haven.`, 'log-info');
-}
-
-// ---- Non-combat skills ----
-
-function executeAetherTap(skill, targetQ, targetR) {
-    let cleanCount = 0;
-    for (const h of hexesInRange(player.q, player.r, skill.range)) {
-        const hex = world.getHex(h.q, h.r);
-        if (!hex || !world.isPassable(hex)) continue;
-        if (UNSHATTERED_VERSION[hex.terrain] !== undefined) continue;
-        if (UNDISTRESSED_VERSION[hex.terrain] !== undefined) continue;
-        cleanCount++;
-    }
-    const aeGain = 1 + Math.floor(cleanCount / 6);
-    player.aether = Math.min(player.maxAether(), player.aether + aeGain);
-    logCombat(`Aether Tap: +${aeGain} AE (${cleanCount} clean hexes)`, 'log-info');
-}
-
-function executeFarsight(skill, targetQ, targetR) {
-    const farRange = skill.range || 12;
-    for (const h of hexesInRange(player.q, player.r, farRange)) {
-        const key = hexKey(h.q, h.r);
-        if (world.hexes.has(key)) {
-            world.revealed.add(key);
-            world.visible.add(key);
-        }
-    }
-    logCombat('Farsight! Vision expanded.', 'log-info');
-}
-
-function executeProspect(skill, targetQ, targetR) {
-    let revealed = 0;
-    for (const h of hexesInRange(player.q, player.r, skill.revealRange)) {
-        const hex = world.getHex(h.q, h.r);
-        if (hex && hex.goldDeposit > 0) {
-            const key = hexKey(h.q, h.r);
-            if (!world.revealed.has(key)) revealed++;
-            world.revealed.add(key);
-        }
-    }
-    if (Rando.bool(0.2)) {
-        const candidates = hexesInRange(player.q, player.r, 4)
-            .map(h => world.getHex(h.q, h.r))
-            .filter(h => h && world.isPassable(h) && h.goldDeposit === 0);
-        if (candidates.length > 0) {
-            const target = Rando.choice(candidates);
-            target.goldDeposit = 10;
-            world.revealed.add(hexKey(target.q, target.r));
-            logCombat('Struck gold nearby!', 'log-gold');
-        }
-    }
-    if (revealed > 0) logCombat(`Prospect: revealed ${revealed} gold deposit${revealed > 1 ? 's' : ''}`, 'log-gold');
-    else logCombat('Prospect: sensed the earth.', 'log-info');
-}
-
-function executeCommune(skill, targetQ, targetR) {
-    let poiCount = 0;
-    for (const poi of world.pois) {
-        const key = hexKey(poi.q, poi.r);
-        if (!world.revealed.has(key)) poiCount++;
-        world.revealed.add(key);
-    }
-    if (poiCount > 0) logCombat(`Commune: revealed ${poiCount} location${poiCount > 1 ? 's' : ''}!`, 'log-info');
-    else logCombat('Commune: the world has no more secrets.', 'log-info');
-}
-
-function executeSalvage(skill, targetQ, targetR) {
-    const salvageHexes = hexesInRange(player.q, player.r, skill.range)
-        .map(h => world.getHex(h.q, h.r))
-        .filter(h => h && UNSHATTERED_VERSION[h.terrain] !== undefined);
-    if (salvageHexes.length === 0) {
-        return abortSkill(skill, 'No shattered terrain nearby to salvage!');
-    }
-    restoreShatteredHexes(salvageHexes);
-    let totalGold = 0;
-    for (const hex of salvageHexes) {
-        const gold = Rando.int(1, 10);
-        hex.goldDeposit = (hex.goldDeposit || 0) + gold;
-        totalGold += gold;
-    }
-    logCombat(`Salvage: restored ${salvageHexes.length} hex${salvageHexes.length > 1 ? 'es' : ''}, ${totalGold}g in deposits!`, 'log-gold');
-}
-
-function executeSkillSeek(skill, targetQ, targetR) {
-    const chance = player.level * 0.05;
-    if (Rando.bool(chance)) {
-        logCombat('Insight! A new skill reveals itself!', 'log-info');
-        player.pendingSkillChoice = true;
-        setTimeout(() => showSkillChoiceDialog(), 300);
-    } else {
-        logCombat('The patterns elude you...', 'log-info');
-    }
-}
-
-function executeSpiritWalk(skill, targetQ, targetR) {
-    player.q = targetQ;
-    player.r = targetR;
-    refreshVision();
-    logCombat('Spirit Walk!', 'log-info');
-    checkHexEntry();
-}
-
-// Threat overlay persists until dismissed; turn stays alive (no MP spent),
-// and the skill can be re-used after dismiss.
-function executeGroundWeeps(skill, targetQ, targetR) {
-    threatOverlay = new Map();
-    for (const [key, hex] of world.hexes) {
-        if (hex.isEdge) continue;
-        let threat = 0;
-        for (const enemy of em.enemies) {
-            const d = hexDistance(hex.q, hex.r, enemy.q, enemy.r);
-            if (d <= 3) {
-                const def = em.getDef(enemy.type);
-                threat += enemyMeleeAttack(enemy, def) * (4 - d) / 3;
-            }
-        }
-        if (threat > 0) threatOverlay.set(key, threat);
-    }
-    logCombat('The ground weeps... threats revealed.', 'log-info');
-    player.usedSkillsThisTurn.delete(skill.id);
-    return false;
-}
-
-function executeRespec(skill, targetQ, targetR) {
-    const stats = ['might', 'reflex', 'warding', 'vigor'];
-    let refund = 0;
-    for (const s of stats) {
-        refund += player.stats[s] - STARTING_STATS[s];
-        player.stats[s] = STARTING_STATS[s];
-    }
-    player.statPoints += refund;
-    player.hp = Math.min(player.hp, player.maxHP());
-    player.aether = Math.min(player.aether, player.maxAether());
-    logCombat(`Reflect: ${refund} stat points refunded.`, 'log-info');
-    setTimeout(() => showLevelUpDialog(), 100);
-}
-
-function executeSanctuary(skill, targetQ, targetR) {
-    const existingPoi = world.poiAt(player.q, player.r);
-    if (existingPoi) {
-        return abortSkillWithRefund(skill, 'Cannot sanctify — already a point of interest!');
-    }
-    const pHex = world.getHex(player.q, player.r);
-    const tempVillage = { q: player.q, r: player.r, type: POI.VILLAGE, id: world.pois.length, temporary: true };
-    world.pois.push(tempVillage);
-    pHex.poi = POI.VILLAGE;
-    logCombat('Sanctuary! A temporary village appears.', 'log-heal');
-}
-
-// ---- Special combat skills ----
-
-function executeLoot(skill, targetQ, targetR) {
-    const enemy = em.enemyAt(targetQ, targetR);
-    if (!enemy) return;
-    const goldStolen = Rando.int(1, 5);
-    player.gold += goldStolen;
-    victory.goldCollected += goldStolen;
-    logCombat(`Looted ${goldStolen}g!`, 'log-gold');
-}
-
-function executeHavensLight(skill, targetQ, targetR) {
-    const poi = world.poiAt(player.q, player.r);
-    if (!poi || (poi.type !== POI.HAVEN && poi.type !== POI.VILLAGE)) {
-        return abortSkillWithRefund(skill, 'Must be at a haven or village!');
-    }
-    const dmg = skill.baseDamage + player.stats.warding;
-    let hitCount = 0;
-    for (const h of hexesInRange(player.q, player.r, skill.range)) {
-        const enemy = em.enemyAt(h.q, h.r);
-        if (!enemy) continue;
-        dealDamageToEnemy(enemy, dmg, "Haven's Light");
-        hitCount++;
-    }
-    logCombat(`Haven's Light: hit ${hitCount} enemies!`, 'log-info');
-}
-
-// ---- Peaceful skills ----
-
-function executeAetherBlast(skill, targetQ, targetR) {
-    let hits = 0;
-    for (const h of hexesInRange(player.q, player.r, skill.range)) {
-        if (em.enemyAt(h.q, h.r)) hits++;
-    }
-    applyAoeDamage('Aether Blast', skill.baseDamage + Math.floor(player.stats.warding / 2), skill.range);
-    if (hits > 0) {
-        const gained = hits * skill.aetherPerHit;
-        player.aether = Math.min(player.maxAether(), player.aether + gained);
-        logCombat(`+${gained} AE (${hits} hit)`, 'log-info');
-    }
-}
-
-function executeLifedrainBlast(skill, targetQ, targetR) {
-    let hits = 0;
-    for (const h of hexesInRange(player.q, player.r, skill.range)) {
-        if (em.enemyAt(h.q, h.r)) hits++;
-    }
-    applyAoeDamage('Lifedrain Blast', skill.baseDamage + player.stats.vigor, skill.range);
-    if (hits > 0) {
-        const healed = hits * skill.hpPerHit;
-        player.hp = Math.min(player.maxHP(), player.hp + healed);
-        logCombat(`+${healed} HP (${hits} hit)`, 'log-heal');
-    }
-}
-
-function executeBountifulHarvest(skill, targetQ, targetR) {
-    let crops = 0;
-    for (const h of hexesInRange(player.q, player.r, skill.range)) {
-        const hex = world.getHex(h.q, h.r);
-        if (!hex || !world.isPassable(hex) || hex.goldDeposit > 0) continue;
-        if (UNSHATTERED_VERSION[hex.terrain] !== undefined) continue;
-        if (UNDISTRESSED_VERSION[hex.terrain] !== undefined) continue;
-        hex.goldDeposit = Rando.int(1, 3);
-        hex.crop = Rando.choice(CROP_ICONS);
-        crops++;
-    }
-    if (crops > 0) logCombat(`Bountiful Harvest: ${crops} crop${crops > 1 ? 's' : ''} sprouted!`, 'log-gold');
-    else logCombat('No suitable ground for crops.', 'log-info');
-}
-
-const SKILL_HANDLERS = {
-    restore: executeRestore,
-    void_strike: executeVoidStrike,
-    phase_step: executePhaseStep,
-    cosmic_bolt: executeCosmicBolt,
-    shockwave: executeShockwave,
-    siphon_strike: executeSiphonStrike,
-    piercing_shot: executePiercingShot,
-    warp_shield: executeWarpShield,
-    breach_pulse: executeBreachPulse,
-    chain_lightning: executeChainLightning,
-    immolate: executeImmolate,
-    mending_light: executeMendingLight,
-    gravity_well: executeGravityWell,
-    sundering_blow: executeSunderingBlow,
-    meteor: executeMeteor,
-    dimensional_rend: executeDimensionalRend,
-    execute: executeExecute,
-    ricochet: executeRicochet,
-    starfall: executeStarfall,
-    void_salvo: executeVoidSalvo,
-    recall: executeRecall,
-    aether_tap: executeAetherTap,
-    farsight: executeFarsight,
-    prospect: executeProspect,
-    commune: executeCommune,
-    salvage: executeSalvage,
-    skill_seek: executeSkillSeek,
-    spirit_walk: executeSpiritWalk,
-    ground_weeps: executeGroundWeeps,
-    respec: executeRespec,
-    sanctuary: executeSanctuary,
-    loot: executeLoot,
-    havens_light: executeHavensLight,
-    aether_blast: executeAetherBlast,
-    lifedrain_blast: executeLifedrainBlast,
-    bountiful_harvest: executeBountifulHarvest,
-};
-
 function executeSkill(skillId, targetQ, targetR) {
-    const skill = SKILLS[skillId];
-    if (!skill) return;
-    if (player.aether < skill.cost) { logCombat('Not enough Aether!', 'log-info'); return; }
-    if (player.usedSkillsThisTurn.has(skillId)) { logCombat('Already used this turn!', 'log-info'); return; }
-
-    const handler = SKILL_HANDLERS[skillId];
-    if (!handler) { targeting = null; return; }
-
-    player.aether -= skill.cost;
-    player.usedSkillsThisTurn.add(skillId);
-    combatAlerted = true;
-
-    const result = handler(skill, targetQ, targetR);
-    if (result !== false) spendMP(skillMpCost(skill));
+    new SkillAction(actionCtx, skillId, targetQ, targetR).execute();
     targeting = null;
 }
 
@@ -1528,109 +736,13 @@ function resolveEndTurn() {
 }
 
 function movePlayer(q, r) {
-    const key = hexKey(q, r);
-    const cost = reachable.get(key);
+    const cost = reachable.get(hexKey(q, r));
     if (cost === undefined) return;
-
-    victory.distanceTraveled += hexDistance(player.q, player.r, q, r);
-    player.q = q;
-    player.r = r;
-    player.mp -= cost;
-    player.movedThisTurn = true;
-    sound.tick();
-    player.hexesMovedThisTurn += cost;
-    refreshVision();
-    checkHexEntry();
-    deselectPlayer();
+    new MoveAction(actionCtx, q, r, cost).execute();
 }
 
 function moveAndAttack(enemyQ, enemyR) {
-    const enemy = em.enemies.find(e => e.q === enemyQ && e.r === enemyR);
-    if (!enemy) return;
-
-    // Blink Ring: teleport to random adjacent hex if within blink range
-    const blinkItemAtk = player.equipped('blink_ring');
-    if (blinkItemAtk) {
-        const dist = hexDistance(player.q, player.r, enemyQ, enemyR);
-        if (dist > 1 && dist <= (blinkItemAtk.blinkRange || 4)) {
-            const adjHexesBlink = hexNeighbors(enemyQ, enemyR).filter(n => {
-                const h = world.getHex(n.q, n.r);
-                if (!h || !world.isPassable(h)) return false;
-                if (em.enemies.some(e => e.q === n.q && e.r === n.r)) return false;
-                return true;
-            });
-            if (adjHexesBlink.length > 0) {
-                const dest = Rando.choice(adjHexesBlink);
-                player.q = dest.q;
-                player.r = dest.r;
-                player.movedThisTurn = true;
-                refreshVision();
-                logCombat(`Blink Ring: teleported!`, 'log-info');
-                const origMight = player.stats.might;
-                player.stats.might += blinkItemAtk.blinkBonus;
-                const { killed } = meleeAttack(enemy);
-                player.stats.might = origMight;
-                if (killed) {
-                    const hex = world.getHex(enemyQ, enemyR);
-                    if (hex && world.isPassable(hex)) {
-                        player.q = enemyQ; player.r = enemyR;
-                        refreshVision();
-                        checkHexEntry();
-                    }
-                }
-                spendMP(weaponMpCost(player.weapon()));
-                refreshSelectionAfterAction();
-                return;
-            }
-        }
-    }
-
-    // Find best adjacent hex to attack from
-    const adjHexes = hexNeighbors(enemyQ, enemyR);
-    let bestHex = null, bestCost = Infinity;
-
-    // Check if already adjacent
-    if (hexDistance(player.q, player.r, enemyQ, enemyR) === 1) {
-        bestHex = { q: player.q, r: player.r };
-        bestCost = 0;
-    } else {
-        for (const n of adjHexes) {
-            const nk = hexKey(n.q, n.r);
-            const cost = reachable ? reachable.get(nk) : undefined;
-            if (cost !== undefined && cost < bestCost) { bestCost = cost; bestHex = n; }
-        }
-    }
-
-    if (!bestHex) return;
-
-    // Move to adjacent hex if not already there
-    if (bestCost > 0) {
-        player.q = bestHex.q;
-        player.r = bestHex.r;
-        player.mp -= bestCost;
-        player.movedThisTurn = true;
-        player.hexesMovedThisTurn += bestCost;
-        refreshVision();
-    }
-
-    // Attack
-    const { killed } = meleeAttack(enemy);
-    spendMP(weaponMpCost(player.weapon()));
-    if (killed) {
-        const hex = world.getHex(enemyQ, enemyR);
-        if (hex && world.isPassable(hex)) {
-            const moveCost = playerMoveCost(hex);
-            if (player.mp >= moveCost) {
-                player.q = enemyQ;
-                player.r = enemyR;
-                player.mp -= moveCost;
-                refreshVision();
-                checkHexEntry();
-            }
-        }
-    }
-
-    refreshSelectionAfterAction();
+    new MoveAndAttackAction(actionCtx, enemyQ, enemyR).execute();
 }
 
 function checkHexEntry() {
@@ -3131,7 +2243,7 @@ function showHavenDialog(poi) {
     ]);
 }
 
-const CROP_ICONS = ['\u{1F33D}', '\u{1F345}', '\u{1F346}', '\u{1F955}', '\u{1F952}', '\u{1F33F}', '\u{1FAD1}', '\u{1F33E}'];
+// CROP_ICONS lives in config.js (used by bountiful_harvest in actions.js)
 
 function trySpawnVillageCrop(poi) {
     if (!Rando.bool(0.25)) return;

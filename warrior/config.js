@@ -127,6 +127,8 @@ export const TERRAIN_RANGE_BONUS = {
     [TERRAIN.RUINS]: 1
 };
 
+export const CROP_ICONS = ['\u{1F33D}', '\u{1F345}', '\u{1F346}', '\u{1F955}', '\u{1F952}', '\u{1F33F}', '\u{1FAD1}', '\u{1F33E}'];
+
 export const PLAYER_MP = 4;
 export const MAP_COLS = 100;
 export const MAP_ROWS = 100;
