@@ -114,6 +114,26 @@ Design feel: regen rewards drawn-out attrition fights; discount rewards burst ro
 
 Implementation: ALL_EQUIPMENT entries in config.js (artifact slot), special handling in the skill-cast deduction in index.js, no save-format changes since equipment is already serialized.
 ----
+Priority:   43
+Status: Done
+ID: vigor-gear-zy62
+Created: 2026-04-27T06:40:59Z
+Updated: 2026-05-09T19:39:25Z
+Add armor and artifact items that grant +vigor as a stat boost (not flat HP), so the +vigor naturally propagates through both vigor-derived formulas:
+  - maxHP(vigor) — bigger HP pool
+  - Math.floor(vigor / 3) in player.defense() — extra defense
+Single stat bump, double payoff. Natural tanking gear that complements warrior-4mfy's Tank shield.
+
+Mechanics:
+  - New equipment special: `vigor_bonus` with `vigorBonus: 1|2|3` (or similar tiers)
+  - Slots: armor and artifact (per user's call-out)
+  - In player.maxHP() and player.defense(), use `this.stats.vigor + this._bonusVigor()` where `_bonusVigor()` sums equipped vigor bonuses — so the +vigor flows through both maxHP scaling and the /3 def term automatically
+  - Don't add separate hp_bonus/def_bonus terms — the whole point is the synergy from one stat moving two derived values
+
+Design feel: pairs the existing flat hp_bonus / dodge_bonus / etc. items with a "stat-up" tier that hits multiple derived stats at once. A +3 vigor artifact ends up effectively +HP and +1 def from one slot, which is strong but appropriately rare.
+
+Possibly extend the same pattern to the other stats (might_bonus, reflex_bonus, warding_bonus) on appropriate slots, but vigor first since the user specifically wants better tanking gear. Implementation: ALL_EQUIPMENT entries in config.js, small refactor to player.maxHP() and player.defense() to read the bonus.
+----
 Priority:   38
 Status: Done
 ID: commune-ae-fjc2

@@ -33,26 +33,6 @@ Created: 2026-04-12T20:28:57Z
 Updated: 2026-04-26T08:30:22Z
 Add a use for XP after reaching max level 10. Possible idea: spend accumulated XP to heal/restore chaos-corrupted hexes, giving endgame players something meaningful to do with excess XP.
 ----
-Priority:   43
-Status: ToDo
-ID: vigor-gear-zy62
-Created: 2026-04-27T06:40:59Z
-Updated: 2026-04-27T06:40:59Z
-Add armor and artifact items that grant +vigor as a stat boost (not flat HP), so the +vigor naturally propagates through both vigor-derived formulas:
-  - maxHP(vigor) — bigger HP pool
-  - Math.floor(vigor / 3) in player.defense() — extra defense
-Single stat bump, double payoff. Natural tanking gear that complements warrior-4mfy's Tank shield.
-
-Mechanics:
-  - New equipment special: `vigor_bonus` with `vigorBonus: 1|2|3` (or similar tiers)
-  - Slots: armor and artifact (per user's call-out)
-  - In player.maxHP() and player.defense(), use `this.stats.vigor + this._bonusVigor()` where `_bonusVigor()` sums equipped vigor bonuses — so the +vigor flows through both maxHP scaling and the /3 def term automatically
-  - Don't add separate hp_bonus/def_bonus terms — the whole point is the synergy from one stat moving two derived values
-
-Design feel: pairs the existing flat hp_bonus / dodge_bonus / etc. items with a "stat-up" tier that hits multiple derived stats at once. A +3 vigor artifact ends up effectively +HP and +1 def from one slot, which is strong but appropriately rare.
-
-Possibly extend the same pattern to the other stats (might_bonus, reflex_bonus, warding_bonus) on appropriate slots, but vigor first since the user specifically wants better tanking gear. Implementation: ALL_EQUIPMENT entries in config.js, small refactor to player.maxHP() and player.defense() to read the bonus.
-----
 Priority:   40
 Status: ToDo
 ID: warrior-4mfy
