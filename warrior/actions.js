@@ -48,8 +48,14 @@ export function skillMpLabel(skill) {
     return c === 'all' ? 'All MP' : `${c} MP`;
 }
 
-export function skillCostLabel(skill) {
-    return `${skill.cost} AE, ${skillMpLabel(skill)}`;
+export function effectiveAetherCost(player, skill) {
+    const disc = player.equipped('aether_discount');
+    const cost = skill.cost - (disc ? disc.aetherDiscount : 0);
+    return Math.max(0, cost);
+}
+
+export function skillCostLabel(skill, player) {
+    return `${effectiveAetherCost(player, skill)} AE, ${skillMpLabel(skill)}`;
 }
 
 // Push target one hex away from source along the closest hex direction.
@@ -487,13 +493,15 @@ export class SkillAction extends Action {
         const ctx = this.ctx;
         const { player, logCombat } = ctx;
         if (!this.skill) return;
-        if (player.aether < this.skill.cost) { logCombat('Not enough Aether!', 'log-info'); return; }
+        const cost = effectiveAetherCost(player, this.skill);
+        if (player.aether < cost) { logCombat('Not enough Aether!', 'log-info'); return; }
         if (player.usedSkillsThisTurn.has(this.skillId)) { logCombat('Already used this turn!', 'log-info'); return; }
 
         const handler = SKILL_HANDLERS[this.skillId];
         if (!handler) return;
 
-        player.aether -= this.skill.cost;
+        this.aetherSpent = cost;
+        player.aether -= cost;
         player.usedSkillsThisTurn.add(this.skillId);
         ctx.setCombatAlerted(true);
 
@@ -509,7 +517,7 @@ export class SkillAction extends Action {
 
     abortSkillWithRefund(message) {
         if (message) this.ctx.logCombat(message, 'log-info');
-        this.ctx.player.aether += this.skill.cost;
+        this.ctx.player.aether += this.aetherSpent || 0;
         this.ctx.player.usedSkillsThisTurn.delete(this.skillId);
         return false;
     }

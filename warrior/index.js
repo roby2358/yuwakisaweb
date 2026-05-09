@@ -22,7 +22,7 @@ import { Sound } from './sound.js';
 import { SpriteSheet } from './sprite_sheet.js';
 import {
     MoveAction, RangedAction, MoveAndAttackAction, SkillAction,
-    weaponMpCost, skillCostLabel
+    weaponMpCost, skillCostLabel, effectiveAetherCost
 } from './actions.js';
 
 // ---- Sprite sheets ----
@@ -1870,7 +1870,7 @@ function updateSkillBar() {
         if (skillId) {
             const skill = SKILLS[skillId];
             nameEl.textContent = skill.name;
-            const canUse = player.aether >= skill.cost && !player.usedSkillsThisTurn.has(skillId) && phase === 'player' && !gameOver && !checkSkillUsage(skill);
+            const canUse = player.aether >= effectiveAetherCost(player, skill) && !player.usedSkillsThisTurn.has(skillId) && phase === 'player' && !gameOver && !checkSkillUsage(skill);
             slot.classList.toggle('disabled', !canUse);
             slot.classList.toggle('used', player.usedSkillsThisTurn.has(skillId));
             slot.classList.toggle('active', targeting && targeting.skill === skillId);
@@ -1945,7 +1945,7 @@ function updateSkillsPanel() {
         if (skillId) {
             const skill = SKILLS[skillId];
             html += `<div class="skill-entry" style="cursor:pointer;border-left:2px solid #7c4dff;padding-left:6px" data-unequip="${i}">
-                <div><span class="s-name">${skill.name}</span> <span class="s-cost">(${skillCostLabel(skill)})</span> <span style="color:#555">[${i + 1}]</span></div>
+                <div><span class="s-name">${skill.name}</span> <span class="s-cost">(${skillCostLabel(skill, player)})</span> <span style="color:#555">[${i + 1}]</span></div>
                 <div class="s-desc">${skill.desc}</div>
             </div>`;
         } else {
@@ -1963,13 +1963,13 @@ function updateSkillsPanel() {
             const skill = SKILLS[skillId];
             const isUsable = canInvokeFromPanel
                 && skill.usage !== SKILL_USAGE.ANYTIME
-                && player.aether >= skill.cost
+                && player.aether >= effectiveAetherCost(player, skill)
                 && !player.usedSkillsThisTurn.has(skillId)
                 && !checkSkillUsage(skill);
             const nameStyle = isUsable ? 'cursor:pointer;color:#b388ff;border:1px solid #7c4dff;border-radius:3px;padding:1px 6px;background:rgba(124,77,255,0.15)' : '';
             const dim = 'opacity:0.7';
             html += `<div class="skill-entry" style="cursor:pointer" data-equip="${skillId}">
-                <div><span class="s-name" ${isUsable ? `data-use="${skillId}" style="${nameStyle}"` : `style="${dim}"`}>${skill.name}</span> <span class="s-cost" style="${dim}">(${skillCostLabel(skill)})</span></div>
+                <div><span class="s-name" ${isUsable ? `data-use="${skillId}" style="${nameStyle}"` : `style="${dim}"`}>${skill.name}</span> <span class="s-cost" style="${dim}">(${skillCostLabel(skill, player)})</span></div>
                 <div class="s-desc" style="${dim}">${skill.desc}</div>
             </div>`;
         }
@@ -2120,6 +2120,7 @@ function itemStatLine(item) {
             wall_of_steel: `+${item.wallBonus} melee if stationary`,
             // Passive effects
             aether_bonus: `+${item.aetherBonus} max AE`,
+            aether_discount: `-${item.aetherDiscount} AE skill cost`,
             aether_regen: `+${item.aetherRegen || 1} AE/turn`,
             aether_signet: `+${item.aetherSignetDamage} dmg when AE full (costs ${item.aetherSignetCost} AE)`,
             blink_ring: `Blink ${item.blinkRange} hex melee +${item.blinkBonus}`,
@@ -2326,7 +2327,7 @@ function showHutDialog(poi) {
             [{ label: 'Leave', action: () => { player.mp = 0; } }]);
     } else {
         showDialog(POI_SYMBOLS[POI.HUT] + " Wise Man's Hut",
-            `<p>The sage's eyes light up.</p><p style="color:#b388ff">"I can teach you <b>${skillName}</b>."</p><p class="s-cost">(${skillCostLabel(skill)})</p><p class="s-desc">${skill.desc}</p>`,
+            `<p>The sage's eyes light up.</p><p style="color:#b388ff">"I can teach you <b>${skillName}</b>."</p><p class="s-cost">(${skillCostLabel(skill, player)})</p><p class="s-desc">${skill.desc}</p>`,
             [{
                 label: 'Learn', cls: 'primary', action: () => {
                     player.learnedSkills.add(poi.skill);
@@ -2620,7 +2621,7 @@ function showSkillChoiceDialog() {
     let body = '<p>Choose a skill to learn:</p><div style="max-height:260px;overflow-y:auto">';
     for (const skill of offered) {
         body += `<div class="skill-choice" data-skill="${skill.id}">
-            <div><span class="sc-name">${skill.name}</span> <span class="sc-cost">(${skillCostLabel(skill)})</span></div>
+            <div><span class="sc-name">${skill.name}</span> <span class="sc-cost">(${skillCostLabel(skill, player)})</span></div>
             <div class="sc-desc">${skill.desc}</div>
         </div>`;
     }
@@ -2910,7 +2911,7 @@ function activateSkill(skillId) {
     if (phase !== 'player' || gameOver) return;
     const skill = SKILLS[skillId];
     if (!skill) return;
-    if (player.aether < skill.cost) { logCombat('Not enough Aether!', 'log-info'); return; }
+    if (player.aether < effectiveAetherCost(player, skill)) { logCombat('Not enough Aether!', 'log-info'); return; }
     if (player.usedSkillsThisTurn.has(skillId)) { logCombat('Already used this turn!', 'log-info'); return; }
     const usageBlock = checkSkillUsage(skill);
     if (usageBlock) { logCombat(usageBlock, 'log-info'); return; }
