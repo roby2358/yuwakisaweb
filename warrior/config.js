@@ -386,6 +386,7 @@ const EFFECT_NAMING = {
     soul_harvest:      { v: ['Reaping', 'Thirsting', 'Withering'],   a: ['Wraith', 'Witch', 'Slayer'] },
     strider:           { v: ['Coursing', 'Flickering', 'Blazing'],   a: ['Wanderer', 'Wayfarer', 'Ranger'] },
     threat_shroud:     { v: ['Cloaking', 'Veiling', 'Flickering'],   a: ['Scout', 'Wraith', 'Wanderer'] },
+    vigor_bonus:       { v: ['Thriving', 'Hardy', 'Warding'],        a: ['Warden', 'Sentinel', 'Surgeon'] },
     vision_bonus:      { v: ['Watching', 'Piercing', 'Flickering'],  a: ['Seer', 'Scout', 'Navigator'] },
     wraith_immune:     { v: ['Hallowed', 'Warding', 'Blazing'],      a: ['Sentinel', 'Warden', 'Technomancer'] },
 };
@@ -527,6 +528,9 @@ const PASSIVE_EFFECTS = [
     { special: 'soul_harvest', soulHarvestXP: 4, value: 3 },
     { special: 'strider', value: 3 },
     { special: 'threat_shroud', value: 3 },
+    { special: 'vigor_bonus', vigorBonus: 3, value: 2 },
+    { special: 'vigor_bonus', vigorBonus: 6, value: 3 },
+    { special: 'vigor_bonus', vigorBonus: 12, value: 4 },
     { special: 'vision_bonus', visionBonus: 2, value: 2 },
     { special: 'vision_bonus', visionBonus: 4, value: 3 },
     { special: 'wraith_immune', value: 3 },

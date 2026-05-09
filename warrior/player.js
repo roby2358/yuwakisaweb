@@ -53,10 +53,19 @@ export class Player {
         return null;
     }
 
+    effectiveVigor() {
+        let v = this.stats.vigor;
+        for (const slot of ['weapon', 'armor', 'artifact']) {
+            const item = this[slot]();
+            if (item && item.special === 'vigor_bonus') v += item.vigorBonus;
+        }
+        return v;
+    }
+
     defense(terrainType) {
         const arm = this.armor();
         let def = arm ? (arm.defense || 0) : 0;
-        def += Math.floor(this.stats.vigor / 3);
+        def += Math.floor(this.effectiveVigor() / 3);
         def += Math.floor(this.stats.might / 5);
         def += TERRAIN_DEFENSE_BONUS[terrainType] || 0;
         const lastStand = this.equipped('last_stand');
@@ -73,7 +82,7 @@ export class Player {
     }
 
     maxHP() {
-        let hp = maxHP(this.stats.vigor);
+        let hp = maxHP(this.effectiveVigor());
         const hpItem = this.equipped('hp_bonus');
         if (hpItem) hp += hpItem.hpBonus;
         return hp;

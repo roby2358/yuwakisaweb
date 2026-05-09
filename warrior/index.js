@@ -2140,6 +2140,7 @@ function itemStatLine(item) {
             soul_harvest: `+${item.soulHarvestXP} XP/kill`,
             strider: 'Rough terrain 1 MP',
             threat_shroud: '-2 enemy detect range',
+            vigor_bonus: `+${item.vigorBonus} vigor`,
             vision_bonus: `+${item.visionBonus} vision`,
             wraith_immune: 'Wraith immune',
             // Legacy specials (origitems compatibility)
