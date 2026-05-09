@@ -748,7 +748,7 @@ export const SKILLS = {
     // ---- Special combat skills ----
     loot: {
         id: 'loot', name: 'Loot', cost: 0, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
-        desc: 'Take 1-5 gold from adjacent enemy instead of dealing damage. Ends turn.', minLevel: 2
+        desc: "Take 0 to enemy's might in gold from adjacent enemy instead of dealing damage. Ends turn.", minLevel: 2
     },
     havens_light: {
         id: 'havens_light', name: "Haven's Light", cost: 3, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,

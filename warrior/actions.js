@@ -992,7 +992,9 @@ function executeLoot(action) {
     const { player, em, victory, logCombat } = action.ctx;
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
-    const goldStolen = Rando.int(1, 5);
+    const def = em.getDef(enemy.type);
+    const might = def ? def.attack : 0;
+    const goldStolen = Rando.int(0, might);
     player.gold += goldStolen;
     victory.goldCollected += goldStolen;
     logCombat(`Looted ${goldStolen}g!`, 'log-gold');
