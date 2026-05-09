@@ -84,6 +84,36 @@ Pairs with combo-skill-56hq (nerfs caster ceiling) and warrior-4mfy (rewards non
 
 Implementation: one-line addition to player.defense(). Retest that high-might melee feels noticeably tankier without trivializing early-game enemy threat.
 ----
+Priority:   45
+Status: Done
+ID: food-heal-tz8g
+Created: 2026-05-04T18:11:51Z
+Updated: 2026-05-09T19:07:57Z
+Food should heal as well as feed the wallet. When the player picks up a crop (Bountiful Harvest sprout, or any village/haven food source that currently just grants gold), heal 10-20 HP on top of the existing gold reward.
+
+Implementation: in the harvest path in index.js (around line 1617, where `hex.crop` is consumed and `+${goldAmt}g (harvest)` is logged), roll a heal in [10, 20] via Rando.int and apply it to player.hp clamped to player.maxHP(). Log it on its own line with the heal class (e.g. logCombat(`+${heal} HP (food)`, 'log-heal')) so the gold and heal feedback are both visible. Apply the same treatment to the village food pickup site if it's a separate code path.
+
+Design feel: Bountiful Harvest already costs 4 AE and is a non-combat skill — letting the crops it spawns also restore HP makes it a meaningful sustain option, not just a gold spigot. Pairs naturally with the village-as-safe-haven theme (rest, eat, recover). Keeps the heal modest (10-20) so it doesn't replace Restore or trivialize attrition combat — it's a top-up, not a full reset.
+
+Tuning notes: 10-20 is a starter range; if it feels too strong with multi-crop Bountiful Harvest casts (each crop healing on pickup stacks fast), consider either lowering the per-crop range or capping total heal per turn. If it feels too weak at high level when maxHP is large, switch to a percentage (e.g. 5-10% of maxHP) instead of a flat range.
+----
+Priority:   44
+Status: Done
+ID: ae-discount-84n9
+Created: 2026-04-27T06:05:45Z
+Updated: 2026-05-09T19:07:57Z
+Add passive artifact powers that reduce skill aether cost by 1 / 2 / 3 — the "flip side" of the existing +1 / +2 / +3 AE-per-turn regen artifacts. Same value tier and rarity as the matching regen items.
+
+Mechanics:
+  - New artifact special: `aether_discount` with `aetherDiscount: 1|2|3`
+  - Hook into the skill-cast site (index.js, wherever the SKILL aether cost is deducted) — read `player.equipped('aether_discount')` and subtract aetherDiscount from the cost
+  - No floor — let it reach 0. A -3 discount on a 3-AE break-even skill making it free is intentional. Discovering combos that break the rules is part of the fun.
+  - Discount and regen are NOT equivalent in feel: regen tops you back up between turns (sustained casting), discount only fires at cast time (front-loaded relief). A -3 discount lets you spam cheap skills free, but you don't get aether back if you don't cast — so it's burst-rotation-flavored, while +3/turn is attrition-flavored.
+
+Design feel: regen rewards drawn-out attrition fights; discount rewards burst rotations and is most impactful on cheap combo skills. Pairs with combo-skill-56hq's aether-cost repass — under that framework, 3 AE is "break-even", so -3 makes break-even skills free, which is fine and good. Tune item drop/price tiers to match regen counterparts.
+
+Implementation: ALL_EQUIPMENT entries in config.js (artifact slot), special handling in the skill-cast deduction in index.js, no save-format changes since equipment is already serialized.
+----
 Priority:   38
 Status: Done
 ID: commune-ae-fjc2
