@@ -16,7 +16,7 @@ import { hexToPixel, pixelToHex, hexKey, parseHexKey, hexNeighbors, hexDistance,
 import { Rando } from './rando.js';
 import { Player } from './player.js';
 import { GameWorld } from './world.js';
-import { EnemyManager } from './enemies.js';
+import { EnemyManager, NUM_CREATURE_TIERS, spawnTierWeights } from './enemies.js';
 import { Victory } from './victory.js';
 import { Sound } from './sound.js';
 import { SpriteSheet } from './sprite_sheet.js';
@@ -278,6 +278,29 @@ function computeMawDistances() {
     for (const cost of mawDistances.values()) {
         if (cost > mawMaxDist) mawMaxDist = cost;
     }
+}
+
+// Peak creature tier at a hex: ramps linearly from NUM_CREATURE_TIERS-1 at the Maw
+// to 0 at the far edge. Hexes disconnected from the Maw default to peak 0 (easiest).
+function mawDistancePeak(q, r) {
+    if (!mawDistances || mawMaxDist <= 0) return 0;
+    const dist = mawDistances.get(hexKey(q, r));
+    if (dist === undefined) return 0;
+    const t = Math.min(1, dist / mawMaxDist);
+    return (NUM_CREATURE_TIERS - 1) * (1 - t);
+}
+
+// Spawn picker: closer to the Maw → tougher creatures, and packs scale to player attack.
+// Pack size: roll bellCurve(playerAttack) and divide by the chosen creature's attack —
+// strong creatures spawn alone, weak ones swarm.
+function pickSpawnPack(q, r) {
+    const peak = mawDistancePeak(q, r);
+    const type = Rando.weighted(spawnTierWeights(em.creatureDefs, peak));
+    const def = em.getDef(type);
+    const playerAttack = player.meleeDamage(false);
+    const roll = Rando.bellCurve(playerAttack);
+    const packSize = Math.max(1, Math.ceil(roll / def.attack));
+    return { type, packSize };
 }
 
 function mawProximityBonus(q, r) {
@@ -1272,7 +1295,7 @@ async function runEnemyPhase() {
     }
 
     // Wildlife population maintenance
-    em.spawnWildlife(world, player.q, player.r);
+    em.spawnWildlife(world, player.q, player.r, pickSpawnPack);
 
     // Garrison construction + defense
     tickGarrisons();
@@ -1434,7 +1457,7 @@ function initGame() {
     em = new EnemyManager();
     em.generateCreatureTypes();
     em.spawnInitial(world, player.q, player.r);
-    em.spawnInitialCreatures(world, player.q, player.r, world.visible);
+    em.spawnInitialCreatures(world, player.q, player.r, pickSpawnPack, world.visible);
 
     assignSprites();
 
@@ -2452,9 +2475,14 @@ function ruinEnemiesNearby(poi) {
     return em.enemies.some(e => hexDistance(e.q, e.r, poi.q, poi.r) <= 2);
 }
 
+// Ruins are deliberately tougher than the surrounding field: same Maw-distance
+// gradient as wildlife, biased up by RUIN_TIER_BIAS so the modal creature is
+// a rung above what's wandering nearby. The Gaussian tail still allows surprise
+// elite encounters even at far ruins.
+const RUIN_TIER_BIAS = 2;
+
 function spawnRuinCreatures(poi) {
-    const creatureTypes = Object.keys(em.creatureDefs);
-    if (creatureTypes.length === 0) return 0;
+    if (Object.keys(em.creatureDefs).length === 0) return 0;
     const occupied = buildOccupiedSet();
     const spots = hexesInRange(poi.q, poi.r, 2).filter(h => {
         const hex = world.getHex(h.q, h.r);
@@ -2463,14 +2491,15 @@ function spawnRuinCreatures(poi) {
     });
     if (spots.length === 0) return 0;
     Rando.shuffle(spots);
+    const peak = Math.min(NUM_CREATURE_TIERS - 1, mawDistancePeak(poi.q, poi.r) + RUIN_TIER_BIAS);
+    const weights = spawnTierWeights(em.creatureDefs, peak);
     const targetMight = player.level * 10;
     let mightSum = 0, count = 0;
     for (let i = 0; i < spots.length && mightSum < targetMight; i++) {
-        const type = Rando.choice(creatureTypes);
+        const type = Rando.weighted(weights);
         const e = em.spawn(type, spots[i].q, spots[i].r);
         if (e) {
-            const def = em.getDef(type);
-            mightSum += def.attack;
+            mightSum += em.getDef(type).attack;
             count++;
         }
     }

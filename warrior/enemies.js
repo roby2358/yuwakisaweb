@@ -9,6 +9,17 @@ function wildlifeBehaviorFor(attack) {
     return 'wildlife';
 }
 
+export const NUM_CREATURE_TIERS = 12;
+
+// Gaussian weight over tiers, peaked at `peakTier`. Sigma = 2 so ±2 tiers common, ±4 rare.
+export function spawnTierWeights(creatureDefs, peakTier) {
+    const sigma = 2;
+    return Object.keys(creatureDefs).map(type => {
+        const d = (creatureDefs[type].tier - peakTier) / sigma;
+        return { item: type, weight: Math.exp(-d * d) };
+    });
+}
+
 export class EnemyManager {
     constructor() {
         this.enemies = [];
@@ -63,7 +74,7 @@ export class EnemyManager {
         const usedNames = new Set();
         const palette = ColorTheory.randomScheme(() => Math.random());
 
-        for (let i = 0; i < 12; i++) {
+        for (let i = 0; i < NUM_CREATURE_TIERS; i++) {
             let name;
             do {
                 const prefix = Rando.choice(prefixes);
@@ -98,6 +109,7 @@ export class EnemyManager {
                 aggroRange,
                 xp,
                 gold,
+                tier: i,
                 behavior: wildlifeBehaviorFor(attack),
                 chaosSpawned: false,
                 color
@@ -162,9 +174,8 @@ export class EnemyManager {
         return total;
     }
 
-    spawnInitialCreatures(world, playerQ, playerR, visibleSet) {
-        const creatureTypes = Object.keys(this.creatureDefs);
-        if (creatureTypes.length === 0) return;
+    spawnInitialCreatures(world, playerQ, playerR, pickPack, visibleSet) {
+        if (Object.keys(this.creatureDefs).length === 0) return;
 
         const candidates = world.passableHexes().filter(h => {
             const key = hexKey(h.q, h.r);
@@ -180,16 +191,16 @@ export class EnemyManager {
             const idx = Rando.int(0, candidates.length - 1);
             const hex = candidates[idx];
             candidates.splice(idx, 1);
-            const type = Rando.choice(creatureTypes);
-            this.spawn(type, hex.q, hex.r);
+            if (this.enemyAt(hex.q, hex.r)) continue;
+            const { type, packSize } = pickPack(hex.q, hex.r);
+            this.spawnPack(world, hex.q, hex.r, type, packSize, playerQ, playerR);
         }
     }
 
-    spawnWildlife(world, playerQ, playerR) {
+    spawnWildlife(world, playerQ, playerR, pickPack) {
         if (this.wildlifeMight() >= 1000) return;
         if (!Rando.bool(0.20)) return;
-        const creatureTypes = Object.keys(this.creatureDefs);
-        if (creatureTypes.length === 0) return;
+        if (Object.keys(this.creatureDefs).length === 0) return;
         const pool = world.passableHexes().filter(h => {
             if (this.enemyAt(h.q, h.r)) return false;
             if (world.poiAt(h.q, h.r)) return false;
@@ -200,7 +211,32 @@ export class EnemyManager {
         });
         if (pool.length === 0) return;
         const spot = Rando.choice(pool);
-        this.spawn(Rando.choice(creatureTypes), spot.q, spot.r);
+        const { type, packSize } = pickPack(spot.q, spot.r);
+        this.spawnPack(world, spot.q, spot.r, type, packSize, playerQ, playerR);
+    }
+
+    // Place a pack of `packSize` enemies of `type`: first at (q,r), the rest on
+    // eligible hexes within 2 of the origin, preferring adjacent. Pack members
+    // honor the same player-safety buffer as the origin.
+    spawnPack(world, q, r, type, packSize, playerQ, playerR) {
+        this.spawn(type, q, r);
+        if (packSize <= 1) return;
+        const slots = hexesInRange(q, r, 2).filter(n => {
+            if (n.q === q && n.r === r) return false;
+            if (this.enemyAt(n.q, n.r)) return false;
+            if (world.poiAt(n.q, n.r)) return false;
+            const hex = world.getHex(n.q, n.r);
+            if (!hex || !world.isPassable(hex)) return false;
+            if (UNSHATTERED_VERSION[hex.terrain] !== undefined) return false;
+            return hexDistance(n.q, n.r, playerQ, playerR) > 6;
+        });
+        Rando.shuffle(slots);
+        // Stable sort by ring distance: adjacent (dist 1) before dist 2.
+        slots.sort((a, b) => hexDistance(a.q, a.r, q, r) - hexDistance(b.q, b.r, q, r));
+        const fill = Math.min(packSize - 1, slots.length);
+        for (let i = 0; i < fill; i++) {
+            this.spawn(type, slots[i].q, slots[i].r);
+        }
     }
 
     // --- Movement methods ---
@@ -281,8 +317,10 @@ export class EnemyManager {
         em.creatureDefs = data.creatureDefs;
         em.nextId = data.nextId;
         // Re-derive behavior from attack so saves predating the tiered behavior model migrate forward.
-        for (const def of Object.values(em.creatureDefs)) {
+        // Re-derive tier from type key for saves predating level-weighted spawning.
+        for (const [type, def] of Object.entries(em.creatureDefs)) {
             def.behavior = wildlifeBehaviorFor(def.attack);
+            if (def.tier === undefined) def.tier = parseInt(type.slice('creature_'.length), 10);
         }
         return em;
     }
