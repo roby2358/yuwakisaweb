@@ -673,7 +673,7 @@ export const SKILLS = {
         burnDamage: 4, desc: 'Melee: weapon + Might. Target burns for 4 next turn. No counter.', minLevel: 4
     },
     mending_light: {
-        id: 'mending_light', name: 'Mending Light', cost: 2, mpCost: 2, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
+        id: 'mending_light', name: 'Mending Light', cost: 2, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
         baseHeal: 10, desc: 'Heal 10 + Vigor*3 HP.', minLevel: 6
     },
     gravity_well: {
