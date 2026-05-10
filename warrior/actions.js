@@ -248,10 +248,10 @@ export class MeleeAction extends Action {
             if (enemy.hp > 0) dealDamageToEnemy(enemy, dmg, 'Triple Strike', opts);
         }
 
-        if (wep && wep.special === 'chain' && enemy.hp > 0) {
+        if (wep && wep.special === 'chain') {
             this.chainBounce('Chain', dmg, enemy.q, enemy.r, wep.chainCount || 1, 2, new Set([enemy]), false);
         }
-        if (wep && wep.special === 'reverberate' && enemy.hp > 0) {
+        if (wep && wep.special === 'reverberate') {
             this.chainBounce('Reverberate', dmg, enemy.q, enemy.r, wep.chainCount || 1, 2, new Set([enemy]), false, wep.chainBonus || 0);
         }
 

@@ -32,6 +32,13 @@ When the player tries to Restore the Maw but the Unraveler is still alive, show 
 ----
 Priority:   60
 Status: Done
+ID: bug-ckd5
+Created: 2026-05-10T16:12:14Z
+Updated: 2026-05-10T16:37:07Z
+Bug: chain damage stops if the first target dies in one hit. Investigate the chain/cleave skill logic — when the initial target is killed by the first hit, subsequent chain hops fail to fire. Expected: chain should continue propagating to remaining valid targets even when an earlier link is dispatched in one shot. Check skill resolution in index.js and skill defs in config.js for early-exit on dead target.
+----
+Priority:   60
+Status: Done
 ID: mundane-eq-28xc
 Created: 2026-04-27T06:55:55Z
 Updated: 2026-05-06T21:04:58Z
