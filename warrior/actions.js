@@ -585,8 +585,9 @@ function executeRestore(action) {
     const shatteredHexes = hexesInRange(player.q, player.r, range)
         .map(h => world.getHex(h.q, h.r))
         .filter(h => h && UNSHATTERED_VERSION[h.terrain] !== undefined);
+    const unravelerAlive = em.enemies.find(e => e.type === ENEMY_TYPE.UNRAVELER);
     const breachInRange = world.pois.find(p =>
-        (p.type === POI.BREACH || p.type === POI.MAW) &&
+        (p.type === POI.BREACH || (p.type === POI.MAW && !unravelerAlive)) &&
         p.guardianDefeated && !p.closed &&
         hexDistance(player.q, player.r, p.q, p.r) <= range
     );
@@ -594,7 +595,6 @@ function executeRestore(action) {
         p.type === POI.MAW && !p.closed &&
         hexDistance(player.q, player.r, p.q, p.r) <= range
     );
-    const unravelerAlive = em.enemies.find(e => e.type === ENEMY_TYPE.UNRAVELER);
     if (mawInRange && unravelerAlive) {
         showOnceDialog('mawBlockedByUnraveler', 'The Maw Resists',
             '<p>The Maw seethes with chaos and refuses to close. The Unraveler must be defeated first before the Maw can be sealed.</p>',
