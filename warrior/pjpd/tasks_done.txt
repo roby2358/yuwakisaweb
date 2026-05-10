@@ -32,6 +32,13 @@ When the player tries to Restore the Maw but the Unraveler is still alive, show 
 ----
 Priority:   60
 Status: Done
+ID: return-mvp-8gj8
+Created: 2026-05-09T21:59:48Z
+Updated: 2026-05-10T17:16:44Z
+Closing the Maw grants the player a RETURN (all caps) skill via panel notification. The player can keep playing post-victory; the game ends only when the player dies or invokes RETURN. RETURN should trigger the victory/score breakdown flow.
+----
+Priority:   60
+Status: Done
 ID: bug-ckd5
 Created: 2026-05-10T16:12:14Z
 Updated: 2026-05-10T16:37:07Z

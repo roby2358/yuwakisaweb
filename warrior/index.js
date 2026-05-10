@@ -120,6 +120,7 @@ const actionCtx = {
     centerOn: (h) => centerOn(h),
     closeBreach: (p) => closeBreach(p),
     endGame: (won) => endGame(won),
+    grantReturnSkill: () => grantReturnSkill(),
     offerSettlementReward: (h) => offerSettlementReward(h),
     showDialog: (...a) => showDialog(...a),
     showOnceDialog: (...a) => showOnceDialog(...a),
@@ -2313,7 +2314,7 @@ function showVillageDialog(poi) {
 function showHutDialog(poi) {
     // 10% chance the Wise Man's skill refreshes to something the player hasn't learned
     if (Rando.bool(0.10)) {
-        const unlearnedPool = Object.values(SKILLS).filter(s => s.id !== 'restore' && !s.shopOnly && !player.learnedSkills.has(s.id));
+        const unlearnedPool = Object.values(SKILLS).filter(s => s.id !== 'restore' && s.id !== 'return' && !s.shopOnly && !player.learnedSkills.has(s.id));
         if (unlearnedPool.length > 0) {
             poi.skill = Rando.choice(unlearnedPool).id;
         }
@@ -2612,6 +2613,7 @@ function showLevelUpDialog() {
 function showSkillChoiceDialog() {
     player.pendingSkillChoice = false;
     const available = Object.values(SKILLS).filter(s => !s.shopOnly &&
+        s.id !== 'return' &&
         s.minLevel <= player.level &&
         !player.learnedSkills.has(s.id)
     );
@@ -2651,6 +2653,22 @@ function showSkillChoiceDialog() {
 // ================================================================
 // GAME OVER
 // ================================================================
+
+function grantReturnSkill() {
+    if (!player.learnedSkills.has('return')) {
+        player.learnedSkills.add('return');
+        const emptySlot = player.skills.indexOf(null);
+        if (emptySlot >= 0) player.skills[emptySlot] = 'return';
+    }
+    logCombat('RETURN granted — invoke when ready to depart.', 'log-info');
+    showDialog('The Maw is Sealed',
+        '<p>You have closed the Maw. The world breathes again.</p>' +
+        '<p>You may keep walking the land for as long as you wish. When you are ready to depart, invoke <b>RETURN</b> to tally your journey.</p>' +
+        '<p style="color:#aaa;font-size:12px">RETURN has been added to your skills. If your hotbar was full, equip it from the Skills panel.</p>',
+        [{ label: 'Continue', cls: 'btn-primary' }]);
+    updateSkillBar();
+    updateSkillsPanel();
+}
 
 function endGame(won) {
     gameOver = true;
@@ -2912,6 +2930,13 @@ function activateSkill(skillId) {
     if (phase !== 'player' || gameOver) return;
     const skill = SKILLS[skillId];
     if (!skill) return;
+    if (skillId === 'return') {
+        showDialog('Return',
+            '<p>End your journey here? Your final score will be tallied.</p>',
+            [{ label: 'Cancel', action: () => {} },
+             { label: 'Return', cls: 'btn-primary', action: () => endGame(true) }]);
+        return;
+    }
     if (player.aether < effectiveAetherCost(player, skill)) { logCombat('Not enough Aether!', 'log-info'); return; }
     if (player.usedSkillsThisTurn.has(skillId)) { logCombat('Already used this turn!', 'log-info'); return; }
     const usageBlock = checkSkillUsage(skill);

@@ -785,6 +785,11 @@ export const SKILLS = {
         id: 'garrison', name: 'Commission Garrison', cost: 0, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
         shopPrice: 1000, goldCost: 1000, shopOnly: true,
         desc: 'Spend 1000g to commission a garrison on this hex. A haven or village must be in sight. Ends turn.', minLevel: 0
+    },
+    // Granted only by sealing the Maw. Filtered out of all random/learn pools.
+    return: {
+        id: 'return', name: 'RETURN', cost: 0, mpCost: 0, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
+        desc: 'End your journey and tally your final score.', minLevel: 0
     }
 };
 
