@@ -798,8 +798,8 @@ export const SKILLS = {
     },
     // Granted only by sealing the Maw. Filtered out of all random/learn pools.
     return: {
-        id: 'return', name: 'RETURN', cost: 0, mpCost: 0, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
-        desc: 'End your journey and tally your final score.', minLevel: 0
+        id: 'return', name: 'RETURN', cost: 4, mpCost: 0, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
+        desc: 'End your journey and tally your final score. Requires a peaceful, unshattered hex.', minLevel: 0
     }
 };
 

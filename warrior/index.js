@@ -2979,6 +2979,9 @@ function activateSkill(skillId) {
     if (phase !== 'player' || gameOver) return;
     const skill = SKILLS[skillId];
     if (!skill) return;
+    if (player.aether < effectiveAetherCost(player, skill)) { logCombat('Not enough Aether!', 'log-info'); return; }
+    const usageBlock = checkSkillUsage(skill);
+    if (usageBlock) { logCombat(usageBlock, 'log-info'); return; }
     if (skillId === 'return') {
         showDialog('Return',
             '<p>End your journey here? Your final score will be tallied.</p>',
@@ -2986,9 +2989,6 @@ function activateSkill(skillId) {
              { label: 'Return', cls: 'btn-primary', action: () => endGame(true) }]);
         return;
     }
-    if (player.aether < effectiveAetherCost(player, skill)) { logCombat('Not enough Aether!', 'log-info'); return; }
-    const usageBlock = checkSkillUsage(skill);
-    if (usageBlock) { logCombat(usageBlock, 'log-info'); return; }
 
     if (skill.target === SKILL_TARGET.SELF || skill.target === SKILL_TARGET.AOE_SELF) {
         executeSkill(skillId, player.q, player.r);
