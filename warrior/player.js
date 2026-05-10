@@ -25,7 +25,6 @@ export class Player {
         this.pendingSkillChoice = false;
         this.mp = PLAYER_MP;
         this.warpShieldTurns = 0;
-        this.usedSkillsThisTurn = new Set();
         this.movedThisTurn = false;
         this.hexesMovedThisTurn = 0;
         this.seenDialogs = new Set();
@@ -182,7 +181,6 @@ export class Player {
         Object.assign(p, data);
         p.learnedSkills = new Set(data.learnedSkills);
         p.seenDialogs = new Set(data.seenDialogs || []);
-        p.usedSkillsThisTurn = new Set();
         p.movedThisTurn = false;
         p.hexesMovedThisTurn = 0;
         if (p.hp == null) p.hp = p.maxHP();

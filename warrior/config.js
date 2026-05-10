@@ -616,7 +616,9 @@ export const SKILL_TARGET = {
     RANGED_AOE: 'ranged_aoe', // pick any visible hex within range (damages area)
     AOE_SELF: 'aoe_self', // centered on self
     TELEPORT: 'teleport',  // pick any visible hex in range
-    TELEPORT_REVEALED: 'teleport_revealed' // pick any revealed hex in range
+    TELEPORT_REVEALED: 'teleport_revealed', // pick any revealed hex in range
+    WATER_SKIP: 'water_skip', // land->water, water->water, or water->land
+    MOUNTAIN_SKIP: 'mountain_skip' // land->mountain, mountain->mountain, or mountain->land
 };
 
 export const SKILL_USAGE = {
@@ -638,6 +640,14 @@ export const SKILLS = {
     phase_step: {
         id: 'phase_step', name: 'Phase Step', cost: 2, mpCost: 0, target: SKILL_TARGET.TELEPORT, usage: SKILL_USAGE.ANYTIME,
         range: 3, desc: 'Teleport to visible hex within 3.', minLevel: 2
+    },
+    water_skip: {
+        id: 'water_skip', name: 'Water Skip', cost: 3, mpCost: 1, target: SKILL_TARGET.WATER_SKIP, usage: SKILL_USAGE.ANYTIME,
+        range: 4, desc: 'Skip to a water hex within 4. From water, may skip to water or land.', minLevel: 2
+    },
+    mountain_skip: {
+        id: 'mountain_skip', name: 'Mountain Skip', cost: 3, mpCost: 1, target: SKILL_TARGET.MOUNTAIN_SKIP, usage: SKILL_USAGE.ANYTIME,
+        range: 4, desc: 'Skip to a mountain hex within 4. From mountain, may skip to mountain or land.', minLevel: 2
     },
     cosmic_bolt: {
         id: 'cosmic_bolt', name: 'Cosmic Bolt', cost: 3, target: SKILL_TARGET.RANGED, usage: SKILL_USAGE.ANYTIME,
@@ -678,7 +688,7 @@ export const SKILLS = {
     },
     gravity_well: {
         id: 'gravity_well', name: 'Gravity Well', cost: 3, mpCost: 1, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
-        range: 3, desc: 'Pull enemies within 3 one hex closer.', minLevel: 6
+        range: 5, desc: 'Pull enemies within 5 one hex closer.', minLevel: 6
     },
     sundering_blow: {
         id: 'sundering_blow', name: 'Sundering Blow', cost: 2, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,

@@ -495,14 +495,12 @@ export class SkillAction extends Action {
         if (!this.skill) return;
         const cost = effectiveAetherCost(player, this.skill);
         if (player.aether < cost) { logCombat('Not enough Aether!', 'log-info'); return; }
-        if (player.usedSkillsThisTurn.has(this.skillId)) { logCombat('Already used this turn!', 'log-info'); return; }
 
         const handler = SKILL_HANDLERS[this.skillId];
         if (!handler) return;
 
         this.aetherSpent = cost;
         player.aether -= cost;
-        player.usedSkillsThisTurn.add(this.skillId);
         ctx.setCombatAlerted(true);
 
         const result = handler(this);
@@ -511,14 +509,12 @@ export class SkillAction extends Action {
 
     abortSkill(message) {
         if (message) this.ctx.logCombat(message, 'log-info');
-        this.ctx.player.usedSkillsThisTurn.delete(this.skillId);
         return false;
     }
 
     abortSkillWithRefund(message) {
         if (message) this.ctx.logCombat(message, 'log-info');
         this.ctx.player.aether += this.aetherSpent || 0;
-        this.ctx.player.usedSkillsThisTurn.delete(this.skillId);
         return false;
     }
 
@@ -644,6 +640,24 @@ function executePhaseStep(action) {
     player.r = action.targetR;
     refreshVision();
     logCombat('Phase Step!', 'log-info');
+    checkHexEntry();
+}
+
+function executeWaterSkip(action) {
+    const { player, refreshVision, checkHexEntry, logCombat } = action.ctx;
+    player.q = action.targetQ;
+    player.r = action.targetR;
+    refreshVision();
+    logCombat('Water Skip!', 'log-info');
+    checkHexEntry();
+}
+
+function executeMountainSkip(action) {
+    const { player, refreshVision, checkHexEntry, logCombat } = action.ctx;
+    player.q = action.targetQ;
+    player.r = action.targetR;
+    refreshVision();
+    logCombat('Mountain Skip!', 'log-info');
     checkHexEntry();
 }
 
@@ -962,7 +976,6 @@ function executeGroundWeeps(action) {
     }
     setThreatOverlay(overlay);
     logCombat('The ground weeps... threats revealed.', 'log-info');
-    player.usedSkillsThisTurn.delete(action.skillId);
     return false;
 }
 
@@ -1104,6 +1117,8 @@ const SKILL_HANDLERS = {
     restore: executeRestore,
     void_strike: executeVoidStrike,
     phase_step: executePhaseStep,
+    water_skip: executeWaterSkip,
+    mountain_skip: executeMountainSkip,
     cosmic_bolt: executeCosmicBolt,
     shockwave: executeShockwave,
     siphon_strike: executeSiphonStrike,

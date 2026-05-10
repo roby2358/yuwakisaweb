@@ -681,6 +681,52 @@ function getSkillTargets(skillId) {
             }
             break;
         }
+        case SKILL_TARGET.WATER_SKIP: {
+            const range = skill.range || 4;
+            const playerHex = world.getHex(player.q, player.r);
+            const playerOnWater = playerHex && playerHex.terrain === TERRAIN.WATER;
+            const inRange = hexesInRange(player.q, player.r, range);
+            for (const h of inRange) {
+                const key = hexKey(h.q, h.r);
+                if (h.q === player.q && h.r === player.r) continue;
+                const hex = world.getHex(h.q, h.r);
+                if (!hex || hex.isEdge) continue;
+                const isWater = hex.terrain === TERRAIN.WATER;
+                if (playerOnWater) {
+                    if (!isWater && !world.isPassable(hex)) continue;
+                } else {
+                    if (!isWater) continue;
+                }
+                if (em.enemies.some(e => e.q === h.q && e.r === h.r)) continue;
+                if (!world.visible.has(key)) continue;
+                if (!world.hasLOS(player, h)) continue;
+                targets.add(key);
+            }
+            break;
+        }
+        case SKILL_TARGET.MOUNTAIN_SKIP: {
+            const range = skill.range || 4;
+            const playerHex = world.getHex(player.q, player.r);
+            const playerOnMountain = playerHex && playerHex.terrain === TERRAIN.MOUNTAIN;
+            const inRange = hexesInRange(player.q, player.r, range);
+            for (const h of inRange) {
+                const key = hexKey(h.q, h.r);
+                if (h.q === player.q && h.r === player.r) continue;
+                const hex = world.getHex(h.q, h.r);
+                if (!hex || hex.isEdge) continue;
+                const isMountain = hex.terrain === TERRAIN.MOUNTAIN;
+                if (playerOnMountain) {
+                    if (!isMountain && !world.isPassable(hex)) continue;
+                } else {
+                    if (!isMountain) continue;
+                }
+                if (em.enemies.some(e => e.q === h.q && e.r === h.r)) continue;
+                if (!world.visible.has(key)) continue;
+                if (!world.hasLOS(player, h)) continue;
+                targets.add(key);
+            }
+            break;
+        }
         case SKILL_TARGET.AOE_SELF:
             targets.add(hexKey(player.q, player.r));
             break;
@@ -1317,7 +1363,6 @@ async function runEnemyPhase() {
         player.mp = Math.max(1, Math.floor(player.mp / 2));
         logCombat('Engaged! Half MP.', 'log-info');
     }
-    player.usedSkillsThisTurn.clear();
     player.movedThisTurn = false;
     player.hexesMovedThisTurn = 0;
 }
@@ -1620,7 +1665,7 @@ function render() {
     // Targeting highlights
     if (targeting) {
         const skill = SKILLS[targeting.skill];
-        const isSpatial = skill && (skill.target === SKILL_TARGET.TELEPORT || skill.target === SKILL_TARGET.TELEPORT_REVEALED || skill.target === SKILL_TARGET.RANGED_AOE);
+        const isSpatial = skill && (skill.target === SKILL_TARGET.TELEPORT || skill.target === SKILL_TARGET.TELEPORT_REVEALED || skill.target === SKILL_TARGET.WATER_SKIP || skill.target === SKILL_TARGET.MOUNTAIN_SKIP || skill.target === SKILL_TARGET.RANGED_AOE);
         const color = isSpatial ? 'rgba(100, 200, 255, 0.3)' : 'rgba(100, 100, 255, 0.35)';
         for (const key of targeting.validHexes) {
             const { q, r } = parseHexKey(key);
@@ -1876,9 +1921,9 @@ function updateSkillBar() {
         if (skillId) {
             const skill = SKILLS[skillId];
             nameEl.textContent = skill.name;
-            const canUse = player.aether >= effectiveAetherCost(player, skill) && !player.usedSkillsThisTurn.has(skillId) && phase === 'player' && !gameOver && !checkSkillUsage(skill);
+            const canUse = player.aether >= effectiveAetherCost(player, skill) && phase === 'player' && !gameOver && !checkSkillUsage(skill);
             slot.classList.toggle('disabled', !canUse);
-            slot.classList.toggle('used', player.usedSkillsThisTurn.has(skillId));
+            slot.classList.toggle('used', false);
             slot.classList.toggle('active', targeting && targeting.skill === skillId);
         } else {
             nameEl.textContent = '-';
@@ -1970,7 +2015,6 @@ function updateSkillsPanel() {
             const isUsable = canInvokeFromPanel
                 && skill.usage !== SKILL_USAGE.ANYTIME
                 && player.aether >= effectiveAetherCost(player, skill)
-                && !player.usedSkillsThisTurn.has(skillId)
                 && !checkSkillUsage(skill);
             const nameStyle = isUsable ? 'cursor:pointer;color:#b388ff;border:1px solid #7c4dff;border-radius:3px;padding:1px 6px;background:rgba(124,77,255,0.15)' : '';
             const dim = 'opacity:0.7';
@@ -2943,7 +2987,6 @@ function activateSkill(skillId) {
         return;
     }
     if (player.aether < effectiveAetherCost(player, skill)) { logCombat('Not enough Aether!', 'log-info'); return; }
-    if (player.usedSkillsThisTurn.has(skillId)) { logCombat('Already used this turn!', 'log-info'); return; }
     const usageBlock = checkSkillUsage(skill);
     if (usageBlock) { logCombat(usageBlock, 'log-info'); return; }
 
