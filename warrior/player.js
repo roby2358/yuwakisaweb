@@ -127,6 +127,7 @@ export class Player {
             if (wep.chargeBonus) dmg += wep.chargeBonus;
             if (wep.chargeMultiplier) dmg *= wep.chargeMultiplier;
         }
+        if (wep && wep.special === 'recoil') dmg += (wep.recoilBonus || 0);
         const wallItem = this.equipped('wall_of_steel') || this.equipped('wall_crown');
         if (wallItem && !this.movedThisTurn) dmg += (wallItem.wallBonus || wallItem.wallCrownBonus);
         return dmg;
@@ -138,6 +139,7 @@ export class Player {
         if (wep && wep.special === 'sniper' && dist !== undefined && dist >= wep.range) {
             dmg += wep.sniperBonus;
         }
+        if (wep && wep.special === 'recoil') dmg += (wep.recoilBonus || 0);
         return dmg;
     }
 
