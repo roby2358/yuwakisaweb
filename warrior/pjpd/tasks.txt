@@ -33,6 +33,20 @@ Created: 2026-04-12T20:28:57Z
 Updated: 2026-04-26T08:30:22Z
 Add a use for XP after reaching max level 10. Possible idea: spend accumulated XP to heal/restore chaos-corrupted hexes, giving endgame players something meaningful to do with excess XP.
 ----
+Priority:   45
+Status: ToDo
+ID: bug-jzxy
+Created: 2026-05-10T20:44:11Z
+Updated: 2026-05-10T20:44:11Z
+Breaches must only spawn on land hexes reachable from the Maw via passable terrain (same connected component as the Maw). Today breach POIs can land on islands or disconnected landmasses where the player can never reach them — wasted breaches contribute nothing to encounter pressure or the breach-sealed victory tally. Fix the world-gen placement loop in world.js (see place() and the BREACH branch around the POI placement logic) to filter candidate hexes by BFS reachability from the Maw's hex over isPassable terrain before picking a spot. Probably reuse or mirror the BFS already used by computeMawDistances() in index.js. Verify by generating a few worlds and confirming every breach is in the same connected region as the Maw.
+----
+Priority:   45
+Status: ToDo
+ID: bug-k3sj
+Created: 2026-05-10T20:45:51Z
+Updated: 2026-05-10T20:45:51Z
+Breach and Maw POI hexes should be impassable to the player and to all enemies except BREACH_GUARDIAN (which spawns on the POI hex by design and acts as the door). Today nothing in pathing blocks entry, so the player can walk onto a Maw/Breach hex and so can wraiths, crawlers, etc. — which both looks wrong (the POI is a chaos rift, not standable terrain) and lets units skip past the guardian. Implementation: extend the isPassable / occupancy checks in world.js (and any movement validators in hex.js / index.js that compute reachable hexes and enemy AI move targets) so any hex whose poi is BREACH or MAW is rejected unless the moving entity is a BREACH_GUARDIAN whose home POI matches that hex. Check both the player's reachable BFS (computeReachable) and the enemy AI move/path code in enemies.js. Edge cases: the BREACH_GUARDIAN must still be able to spawn on and occupy the hex; Restore from an adjacent hex must still work (range is from the player's hex, not onto the POI); the Unraveler can stand wherever it likes since it doesn't move via normal pathing.
+----
 Priority:   40
 Status: ToDo
 ID: warrior-4mfy
