@@ -582,8 +582,9 @@ function executeRestore(action) {
         .map(h => world.getHex(h.q, h.r))
         .filter(h => h && UNSHATTERED_VERSION[h.terrain] !== undefined);
     const unravelerAlive = em.enemies.find(e => e.type === ENEMY_TYPE.UNRAVELER);
+    const openBreach = world.pois.find(p => p.type === POI.BREACH && !p.closed);
     const breachInRange = world.pois.find(p =>
-        (p.type === POI.BREACH || (p.type === POI.MAW && !unravelerAlive)) &&
+        (p.type === POI.BREACH || (p.type === POI.MAW && !unravelerAlive && !openBreach)) &&
         p.guardianDefeated && !p.closed &&
         hexDistance(player.q, player.r, p.q, p.r) <= range
     );
@@ -594,6 +595,13 @@ function executeRestore(action) {
     if (mawInRange && unravelerAlive) {
         showOnceDialog('mawBlockedByUnraveler', 'The Maw Resists',
             '<p>The Maw seethes with chaos and refuses to close. The Unraveler must be defeated first before the Maw can be sealed.</p>',
+            [{ label: 'OK', cls: 'btn-primary' }]);
+    } else if (mawInRange && openBreach) {
+        for (const p of world.pois) {
+            if (p.type === POI.BREACH && !p.closed) world.revealed.add(hexKey(p.q, p.r));
+        }
+        showOnceDialog('mawBlockedByBreaches', 'The Maw Hungers',
+            '<p>Open breaches still feed the Maw. Seal every breach before the Maw can be closed.</p><p>The remaining breaches reveal themselves on your map.</p>',
             [{ label: 'OK', cls: 'btn-primary' }]);
     }
     if (shatteredHexes.length === 0 && !breachInRange) {
