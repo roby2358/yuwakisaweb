@@ -1396,6 +1396,11 @@ function loadGame() {
     resetEquipment();
     if (data.equipment) {
         for (const [id, item] of Object.entries(data.equipment)) {
+            if (item && item.special === 'recoil') {
+                item.special = 'channel';
+                if (item.recoilBonus !== undefined) { item.channelBonus = item.recoilBonus; delete item.recoilBonus; }
+                if (item.recoilDamage !== undefined) { item.channelDamage = item.recoilDamage; delete item.recoilDamage; }
+            }
             ALL_EQUIPMENT[id] = item;
         }
     }
@@ -1857,7 +1862,7 @@ function updateSkillBar() {
     const rangedSlot = document.getElementById('ranged-slot');
     const wep = player.weapon();
     const hasRanged = wep && wep.type === 'ranged';
-    const rangedCost = hasRanged && wep.magical && wep.special !== 'free_ranged' && wep.special !== 'recoil' ? 1 : 0;
+    const rangedCost = hasRanged && wep.magical && wep.special !== 'free_ranged' && wep.special !== 'channel' ? 1 : 0;
     const canRanged = hasRanged && player.aether >= rangedCost && phase === 'player' && !gameOver;
     rangedSlot.classList.toggle('disabled', !canRanged);
     rangedSlot.classList.toggle('active', targeting && targeting.skill === '__ranged__');
@@ -2097,7 +2102,7 @@ function itemStatLine(item) {
             charge: item.chargeMultiplier
                 ? `x${item.chargeMultiplier} dmg if moved`
                 : `+${item.chargeBonus} if moved`,
-            recoil: `+${item.recoilBonus} dmg, ${item.recoilDamage} self-dmg`,
+            channel: `+${item.channelBonus} dmg, ${item.channelDamage} self-dmg`,
             reverberate: `Chain ${item.chainCount} +${item.chainBonus}/jump`,
             riposte: `+${item.riposteDamage || 1} counter-atk`,
             // Ranged weapon effects
@@ -2909,7 +2914,7 @@ function tickGarrisons() {
 function activateRangedWeapon() {
     const wep = player.weapon();
     if (!wep || wep.type !== 'ranged') { logCombat('No ranged weapon!', 'log-info'); return; }
-    const cost = (!wep.magical || wep.special === 'free_ranged' || wep.special === 'recoil') ? 0 : 1;
+    const cost = (!wep.magical || wep.special === 'free_ranged' || wep.special === 'channel') ? 0 : 1;
     if (player.aether < cost) { logCombat('Not enough Aether!', 'log-info'); return; }
     const playerPoi = world.poiAt(player.q, player.r);
     const range = player.weaponRange(playerTerrain(), playerPoi ? playerPoi.type : null);

@@ -113,7 +113,7 @@ export class Action {
         return dmg;
     }
 
-    // Apply weapon on-hit effects after a strike. Lifesteal/siphon/recoil fire
+    // Apply weapon on-hit effects after a strike. Lifesteal/siphon/channel fire
     // regardless of kill; shred/burn only mark the enemy if it's still alive.
     applyOnHitEffects(wep, enemy) {
         if (!wep) return;
@@ -128,9 +128,9 @@ export class Action {
             player.aether = Math.min(player.maxAether(), player.aether + wep.siphonAmount);
             logCombat(`+${wep.siphonAmount} AE (siphon)`, 'log-info');
         }
-        if (wep.special === 'recoil') {
-            player.hp -= wep.recoilDamage;
-            logCombat(`Recoil: ${wep.recoilDamage} dmg to you`, 'log-dmg');
+        if (wep.special === 'channel') {
+            player.hp -= wep.channelDamage;
+            logCombat(`Channel: ${wep.channelDamage} dmg to you`, 'log-dmg');
             if (player.hp <= 0) { player.hp = 0; endGame(false); }
         }
 
@@ -369,8 +369,8 @@ export class RangedAction extends Action {
             }
         }
 
-        // Magical ranged costs 1 aether (free_ranged and recoil bypass)
-        if (wep && wep.magical && wep.special !== 'free_ranged' && wep.special !== 'recoil') {
+        // Magical ranged costs 1 aether (free_ranged and channel bypass)
+        if (wep && wep.magical && wep.special !== 'free_ranged' && wep.special !== 'channel') {
             player.aether = Math.max(0, player.aether - 1);
         }
         this.spendWeaponMP();

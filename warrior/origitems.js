@@ -11,7 +11,7 @@ export const ORIG_WEAPONS = [
     { id: 'emberstrike', name: 'Emberstrike', type: 'melee', damage: 8, range: 0, special: 'charge', chargeBonus: 4, price: 75, tier: 2, magical: true },
     { id: 'soulreaver', name: 'Soulreaver', type: 'melee', damage: 7, range: 0, special: 'aether_siphon', price: 70, tier: 2, magical: true },
     { id: 'nullblade', name: 'Nullblade', type: 'melee', damage: 9, range: 0, special: 'defense_shred', price: 110, tier: 3, magical: true },
-    { id: 'worldsplitter', name: 'Worldsplitter', type: 'melee', damage: 14, range: 0, special: 'recoil', recoilDamage: 3, price: 130, tier: 3, magical: true },
+    { id: 'worldsplitter', name: 'Worldsplitter', type: 'melee', damage: 14, range: 0, special: 'channel', channelDamage: 3, price: 130, tier: 3, magical: true },
     { id: 'flux_bow', name: 'Flux Bow', type: 'ranged', damage: 5, range: 3, special: 'armor_pierce', pierceAmount: 2, price: 35, tier: 1, magical: true },
     { id: 'phase_rifle', name: 'Phase Rifle', type: 'ranged', damage: 8, range: 5, special: 'ignore_defense', price: 120, tier: 3, magical: true },
     { id: 'aether_lance', name: 'Aether Lance', type: 'ranged', damage: 6, range: 3, special: 'free_ranged', price: 60, tier: 2, magical: true },
