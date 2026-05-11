@@ -27,6 +27,7 @@ export class Player {
         this.warpShieldTurns = 0;
         this.movedThisTurn = false;
         this.hexesMovedThisTurn = 0;
+        this.phaseStepUsedThisTurn = false;
         this.seenDialogs = new Set();
     }
 
@@ -183,6 +184,7 @@ export class Player {
         p.seenDialogs = new Set(data.seenDialogs || []);
         p.movedThisTurn = false;
         p.hexesMovedThisTurn = 0;
+        p.phaseStepUsedThisTurn = false;
         if (p.hp == null) p.hp = p.maxHP();
         if (p.aether == null) p.aether = p.maxAether();
         // Migrate: pre-skill garrison charter → garrison skill

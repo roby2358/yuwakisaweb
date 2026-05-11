@@ -647,6 +647,7 @@ function executePhaseStep(action) {
     const { player, refreshVision, checkHexEntry, logCombat } = action.ctx;
     player.q = action.targetQ;
     player.r = action.targetR;
+    player.phaseStepUsedThisTurn = true;
     refreshVision();
     logCombat('Phase Step!', 'log-info');
     checkHexEntry();
