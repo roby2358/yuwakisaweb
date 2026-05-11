@@ -587,6 +587,7 @@ function gainXP(amount) {
 // terrain!") to display in tooltips and disable buttons. Skill handlers
 // themselves don't call this — they trust the caller has filtered.
 function checkSkillUsage(skill) {
+    if (skill.id === 'phase_step' && player.phaseStepUsedThisTurn) return 'Phase Step already used this turn!';
     const usage = skill.usage || SKILL_USAGE.ANYTIME;
     if (usage === SKILL_USAGE.ANYTIME) return null;
     const nearbyEnemy = em.enemies.some(e => hexDistance(player.q, player.r, e.q, e.r) <= 2);
@@ -1365,6 +1366,7 @@ async function runEnemyPhase() {
     }
     player.movedThisTurn = false;
     player.hexesMovedThisTurn = 0;
+    player.phaseStepUsedThisTurn = false;
 }
 
 function startPlayerTurn() {
@@ -2464,6 +2466,7 @@ function showShopDialog(poi) {
             const emptySlot = player.skills.indexOf(null);
             if (emptySlot >= 0) player.skills[emptySlot] = skillId;
             logCombat(`Learned ${SKILLS[skillId].name}`, 'log-gold');
+            refreshOpenPanels();
             showShopDialog(poi);
         });
     });
@@ -2475,6 +2478,7 @@ function showShopDialog(poi) {
                 player.gold -= price;
                 player.inventory.push(id);
                 logCombat(`Bought ${ALL_EQUIPMENT[id].name}`, 'log-gold');
+                refreshOpenPanels();
                 showShopDialog(poi); // refresh
             }
         });
@@ -2506,6 +2510,7 @@ function showShopDialog(poi) {
             body.querySelectorAll('button[data-id]').forEach(b => {
                 b.disabled = player.gold < parseInt(b.dataset.price);
             });
+            refreshOpenPanels();
         });
     }
     body.querySelectorAll('button[data-sell]').forEach(btn => {
@@ -2529,6 +2534,7 @@ function showShopDialog(poi) {
             body.querySelectorAll('button[data-id]').forEach(b => {
                 b.disabled = player.gold < parseInt(b.dataset.price);
             });
+            refreshOpenPanels();
         });
     });
 }
