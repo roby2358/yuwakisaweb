@@ -572,18 +572,32 @@ export function rollMagicItem(category) {
         case 'melee': {
             const { value, ...effect } = Rando.choice(MELEE_EFFECTS);
             const name = _rollName(MELEE_ITEMS, EFFECT_NAMING[effect.special]);
-            const damage = Rando.int(2, 6);
+            let damage = Rando.int(2, 6);
+            // d6: 1-3 normal, 4-5 fast (0 MP), 6 heavy (all MP, 2x dmg)
+            const variant = Rando.int(1, 6);
+            const heavy = variant === 6;
+            const fast = variant === 4 || variant === 5;
+            if (heavy) damage *= 2;
             const price = (damage + 1) * 60 * value;
             item = { id, name, type: 'melee', slot: EQUIP_SLOT.WEAPON, damage, range: 0, price, magical: true, ...effect };
+            if (heavy) item.mpCost = 'all';
+            else if (fast) item.mpCost = 0;
             break;
         }
         case 'ranged': {
             const { value, ...effect } = Rando.choice(RANGED_EFFECTS);
             const name = _rollName(RANGED_ITEMS, EFFECT_NAMING[effect.special]);
-            const damage = Rando.int(2, 6);
+            let damage = Rando.int(2, 6);
             const range = Rando.int(3, 5);
+            // d6: 1-4 normal, 5 fast (0 MP), 6 heavy (all MP, 2x dmg)
+            const variant = Rando.int(1, 6);
+            const heavy = variant === 6;
+            const fast = variant === 5;
+            if (heavy) damage *= 2;
             const price = (damage + range + 1) * 30 * value;
             item = { id, name, type: 'ranged', slot: EQUIP_SLOT.WEAPON, damage, range, price, magical: true, ...effect };
+            if (heavy) item.mpCost = 'all';
+            else if (fast) item.mpCost = 0;
             break;
         }
         case 'armor': {

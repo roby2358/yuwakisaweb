@@ -36,6 +36,7 @@ import { Rando } from './rando.js';
 export function weaponMpCost(wep) {
     if (!wep) return 1;
     if (wep.special === 'free_action') return 0;
+    if (wep.mpCost !== undefined) return wep.mpCost;
     return wep.type === 'ranged' ? 2 : 1;
 }
 
