@@ -2374,7 +2374,7 @@ function showHutDialog(poi) {
 
     if (player.learnedSkills.has(poi.skill)) {
         showDialog(POI_SYMBOLS[POI.HUT] + " Wise Man's Hut",
-            `<p>An old sage peers at you.</p><p style="color:#a1887f">"I have nothing to teach you."</p>`,
+            `<p>An old sage peers at you.</p><p style="color:#a1887f">"I have nothing to teach you at this time."</p>`,
             [{ label: 'Leave', action: () => { player.mp = 0; } }]);
     } else {
         showDialog(POI_SYMBOLS[POI.HUT] + " Wise Man's Hut",
