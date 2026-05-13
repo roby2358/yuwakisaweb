@@ -96,6 +96,37 @@ let combatAlerted = false;  // set when player attacks; nearby enemies ignore fo
 let mawDistances = null;    // Map<hexKey, cost> — BFS distances from the Maw
 let mawMaxDist = 1;         // max BFS distance to Maw (for scaling)
 
+// Turn timing metrics (session-only, rolling window of last 1000 turns).
+const TURN_METRICS_CAP = 1000;
+let turnStartTime = null;
+const turnTimesAll = [];
+const turnTimesNonPoi = [];
+
+function recordTurnTime() {
+    if (turnStartTime === null) return;
+    const elapsed = performance.now() - turnStartTime;
+    turnStartTime = null;
+    turnTimesAll.push(elapsed);
+    if (turnTimesAll.length > TURN_METRICS_CAP) turnTimesAll.shift();
+    if (world && !world.poiAt(player.q, player.r)) {
+        turnTimesNonPoi.push(elapsed);
+        if (turnTimesNonPoi.length > TURN_METRICS_CAP) turnTimesNonPoi.shift();
+    }
+}
+
+function turnTimeStats(arr) {
+    if (arr.length === 0) return null;
+    const sorted = [...arr].sort((a, b) => a - b);
+    const sum = sorted.reduce((a, b) => a + b, 0);
+    const pct = p => sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))];
+    return {
+        n: sorted.length,
+        avg: sum / sorted.length,
+        p10: pct(0.10), p25: pct(0.25), p50: pct(0.50),
+        p75: pct(0.75), p90: pct(0.90),
+    };
+}
+
 // Dependency bundle for action classes (actions.js). Live game state is exposed
 // via getters so that loadGame()/initGame() reassignments of player/world/em/
 // victory don't strand stale references inside the actions.
@@ -877,6 +908,7 @@ function hexAction() {
 
 function endTurn() {
     if (gameOver) return;
+    recordTurnTime();
     deselectPlayer();
     resolveEndTurn();
 }
@@ -1372,6 +1404,7 @@ async function runEnemyPhase() {
 function startPlayerTurn() {
     combatAlerted = false;
     if (player.hp > 0 && player.hp / player.maxHP() < 0.10) victory.nearDeathMoments++;
+    turnStartTime = performance.now();
     render();
 }
 
@@ -1971,6 +2004,15 @@ function updateCharPanel() {
     }
     ehtml += '</div>';
     equip.innerHTML = ehtml;
+
+    // Turn timing metrics (rolling, last 1000 turns)
+    const metrics = document.getElementById('char-metrics');
+    const fmt = v => v == null ? '–' : Math.round(v) + 'ms';
+    const row = (label, s) => s
+        ? `<div style="margin-top:6px;color:#888;font-size:11px">${label} (n=${s.n})</div>
+           <div style="font-size:11px">avg ${fmt(s.avg)} · p10 ${fmt(s.p10)} · p25 ${fmt(s.p25)} · p50 ${fmt(s.p50)} · p75 ${fmt(s.p75)} · p90 ${fmt(s.p90)}</div>`
+        : `<div style="margin-top:6px;color:#888;font-size:11px">${label}</div><div style="font-size:11px;color:#555">no data</div>`;
+    metrics.innerHTML = `<div class="derived-section" style="margin-top:10px"><div style="color:#888;font-size:11px;margin-bottom:2px">TURN TIMING</div>${row('All turns', turnTimeStats(turnTimesAll))}${row('Outside POI', turnTimeStats(turnTimesNonPoi))}</div>`;
 
     // Stat point buttons
     panel.querySelectorAll('.plus-btn').forEach(btn => {
