@@ -21,6 +21,11 @@
 //                tuples plus a parametric self-loop on goal_city that lets
 //                shorter real paths pad to the ceiling at zero cost. JSON
 //                controls start/goal/budget freely without touching rules.
+//   zebra      — Einstein-style mini logic puzzle (3 houses x 3 categories).
+//                Pure-positional clues land directly in JSON as known facts
+//                (alice = 1, green = 2). Markdown declares the remaining
+//                seven unknowns, the three distincts, and the relational
+//                clues as one-line assertions.
 
 export const EXAMPLES = {
   easy: {
@@ -638,6 +643,50 @@ export const EXAMPLES = {
   * + leg1 leg2 leg3 leg4
 
 * <= total_cost max_cost
+
+# check
+`,
+  },
+
+  zebra: {
+    json: `{
+  "alice": 1,
+  "green": 2
+}`,
+    rules: `# declare
+* Int bob carol
+* Int red blue
+* Int dog cat fish
+
+# assert
+* >= bob \`1\`
+* <= bob \`3\`
+* >= carol \`1\`
+* <= carol \`3\`
+* >= red \`1\`
+* <= red \`3\`
+* >= blue \`1\`
+* <= blue \`3\`
+* >= dog \`1\`
+* <= dog \`3\`
+* >= cat \`1\`
+* <= cat \`3\`
+* >= fish \`1\`
+* <= fish \`3\`
+
+* distinct alice bob carol
+* distinct red green blue
+* distinct dog cat fish
+
+* = bob green
+* = cat
+  * + dog \`1\`
+* or
+  * = cat
+    * + carol \`1\`
+  * = cat
+    * - carol \`1\`
+* < red blue
 
 # check
 `,
