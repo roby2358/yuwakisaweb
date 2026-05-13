@@ -16,10 +16,11 @@
 //                rejection, Likert ranges, composite score reconciliation.
 //   social     — account + post record for bot/abuse triage: engagement ratio,
 //                timestamp ordering, verification rule, follow-asymmetry check.
-//   route      — shortest-path finder over a fixed 6-node graph: JSON picks
-//                start/goal/budget, Markdown encodes each leg as a disjunction
-//                over (hop-pair, cost) tuples. Tighten max_cost to force a
-//                unique route; loosen it to let the solver pick.
+//   route      — shortest-path finder over a fixed 6-node graph (4-leg
+//                ceiling). Each leg is a disjunction over (hop-pair, cost)
+//                tuples plus a parametric self-loop on goal_city that lets
+//                shorter real paths pad to the ceiling at zero cost. JSON
+//                controls start/goal/budget freely without touching rules.
 
 export const EXAMPLES = {
   easy: {
@@ -474,22 +475,60 @@ export const EXAMPLES = {
   "max_cost": 13
 }`,
     rules: `# declare
-* String hop1 hop2 hop3 hop4
-* Int leg1 leg2 leg3
+* String hop1 hop2 hop3 hop4 hop5
+* Int leg1 leg2 leg3 leg4 total_cost
 
 # assert
 * = hop1 start_city
-* = hop4 goal_city
+* = hop5 goal_city
 
 * or
   * and
+    * = hop1 \`a\`
     * = hop2 \`b\`
     * = leg1 \`4\`
   * and
+    * = hop1 \`a\`
     * = hop2 \`c\`
     * = leg1 \`2\`
+  * and
+    * = hop1 \`b\`
+    * = hop2 \`d\`
+    * = leg1 \`5\`
+  * and
+    * = hop1 \`b\`
+    * = hop2 \`e\`
+    * = leg1 \`10\`
+  * and
+    * = hop1 \`c\`
+    * = hop2 \`d\`
+    * = leg1 \`8\`
+  * and
+    * = hop1 \`c\`
+    * = hop2 \`e\`
+    * = leg1 \`7\`
+  * and
+    * = hop1 \`d\`
+    * = hop2 \`f\`
+    * = leg1 \`6\`
+  * and
+    * = hop1 \`e\`
+    * = hop2 \`f\`
+    * = leg1 \`3\`
+  * and
+    * = hop1 goal_city
+    * = hop2 goal_city
+    * = leg1 \`0\`
 
 * or
+  * and
+    * = hop2 \`a\`
+    * = hop3 \`b\`
+    * = leg2 \`4\`
+  * and
+    * = hop2 \`a\`
+    * = hop3 \`c\`
+    * = leg2 \`2\`
   * and
     * = hop2 \`b\`
     * = hop3 \`d\`
@@ -506,18 +545,99 @@ export const EXAMPLES = {
     * = hop2 \`c\`
     * = hop3 \`e\`
     * = leg2 \`7\`
+  * and
+    * = hop2 \`d\`
+    * = hop3 \`f\`
+    * = leg2 \`6\`
+  * and
+    * = hop2 \`e\`
+    * = hop3 \`f\`
+    * = leg2 \`3\`
+  * and
+    * = hop2 goal_city
+    * = hop3 goal_city
+    * = leg2 \`0\`
 
 * or
   * and
+    * = hop3 \`a\`
+    * = hop4 \`b\`
+    * = leg3 \`4\`
+  * and
+    * = hop3 \`a\`
+    * = hop4 \`c\`
+    * = leg3 \`2\`
+  * and
+    * = hop3 \`b\`
+    * = hop4 \`d\`
+    * = leg3 \`5\`
+  * and
+    * = hop3 \`b\`
+    * = hop4 \`e\`
+    * = leg3 \`10\`
+  * and
+    * = hop3 \`c\`
+    * = hop4 \`d\`
+    * = leg3 \`8\`
+  * and
+    * = hop3 \`c\`
+    * = hop4 \`e\`
+    * = leg3 \`7\`
+  * and
     * = hop3 \`d\`
+    * = hop4 \`f\`
     * = leg3 \`6\`
   * and
     * = hop3 \`e\`
+    * = hop4 \`f\`
     * = leg3 \`3\`
+  * and
+    * = hop3 goal_city
+    * = hop4 goal_city
+    * = leg3 \`0\`
 
-* <=
-  * + leg1 leg2 leg3
-  * max_cost
+* or
+  * and
+    * = hop4 \`a\`
+    * = hop5 \`b\`
+    * = leg4 \`4\`
+  * and
+    * = hop4 \`a\`
+    * = hop5 \`c\`
+    * = leg4 \`2\`
+  * and
+    * = hop4 \`b\`
+    * = hop5 \`d\`
+    * = leg4 \`5\`
+  * and
+    * = hop4 \`b\`
+    * = hop5 \`e\`
+    * = leg4 \`10\`
+  * and
+    * = hop4 \`c\`
+    * = hop5 \`d\`
+    * = leg4 \`8\`
+  * and
+    * = hop4 \`c\`
+    * = hop5 \`e\`
+    * = leg4 \`7\`
+  * and
+    * = hop4 \`d\`
+    * = hop5 \`f\`
+    * = leg4 \`6\`
+  * and
+    * = hop4 \`e\`
+    * = hop5 \`f\`
+    * = leg4 \`3\`
+  * and
+    * = hop4 goal_city
+    * = hop5 goal_city
+    * = leg4 \`0\`
+
+* = total_cost
+  * + leg1 leg2 leg3 leg4
+
+* <= total_cost max_cost
 
 # check
 `,
