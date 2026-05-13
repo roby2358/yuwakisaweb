@@ -1,0 +1,6 @@
+Priority:   50
+Status: Done
+ID: mias-46ix
+Created: 2026-04-24T15:20:23Z
+Updated: 2026-04-24T19:30:22Z
+Establish a record-identity convention — top-level `id` field in each JSON record — and surface it in the batch-UI flagged-record list and the CLI output. Required for the audit-log primitives tier and for any flagged-record UI to be actionable (you need to point at a specific record). Spell the requirement out in SPEC.md.
