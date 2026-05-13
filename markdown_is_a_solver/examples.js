@@ -2,6 +2,9 @@
 // first. Each shows a different ergonomic:
 //   easy       — three unknowns, single JSON parameter (the age total).
 //   budget     — JSON parameters + Markdown unknowns with inequality constraints.
+//   fulfillment — multi-record JSON: cross-record referential integrity
+//                (customer/order/shipment), status enumeration, conditional
+//                tracking rule keyed on order status.
 //   physical   — clinical checkup validation: physiological range checks,
 //                BMI consistency, BP coherence, label enumeration, smoker rule.
 //   intake     — business-rule validation of an order record: arithmetic
@@ -52,6 +55,47 @@ export const EXAMPLES = {
 * >= mathematics minimum_each
 * >= physics minimum_each
 * >= philosophy minimum_each
+
+# check
+`,
+  },
+
+  fulfillment: {
+    json: `{
+  "customer": {
+    "id": "cust-100"
+  },
+  "order": {
+    "id": "ord-500",
+    "customer_ref": "cust-100",
+    "status": "shipped",
+    "amount": 250
+  },
+  "shipment": {
+    "order_ref": "ord-500",
+    "tracking_present": "yes"
+  }
+}`,
+    rules: `# declare
+* Int order_amount
+
+# assert
+* = order.customer_ref customer.id
+* = shipment.order_ref order.id
+* or
+  * = order.status \`pending\`
+  * = order.status \`shipped\`
+  * = order.status \`delivered\`
+  * = order.status \`cancelled\`
+* = order_amount order.amount
+* >= order_amount \`1\`
+* <= order_amount \`10000\`
+* implies
+  * = order.status \`shipped\`
+  * = shipment.tracking_present \`yes\`
+* implies
+  * = order.status \`pending\`
+  * = shipment.tracking_present \`no\`
 
 # check
 `,
