@@ -16,6 +16,10 @@
 //                rejection, Likert ranges, composite score reconciliation.
 //   social     — account + post record for bot/abuse triage: engagement ratio,
 //                timestamp ordering, verification rule, follow-asymmetry check.
+//   route      — shortest-path finder over a fixed 6-node graph: JSON picks
+//                start/goal/budget, Markdown encodes each leg as a disjunction
+//                over (hop-pair, cost) tuples. Tighten max_cost to force a
+//                unique route; loosen it to let the solver pick.
 
 export const EXAMPLES = {
   easy: {
@@ -458,6 +462,62 @@ export const EXAMPLES = {
   * not patient.active
   * not
     * = medicationRequest.status \`active\`
+
+# check
+`,
+  },
+
+  route: {
+    json: `{
+  "start_city": "a",
+  "goal_city": "f",
+  "max_cost": 13
+}`,
+    rules: `# declare
+* String hop1 hop2 hop3 hop4
+* Int leg1 leg2 leg3
+
+# assert
+* = hop1 start_city
+* = hop4 goal_city
+
+* or
+  * and
+    * = hop2 \`b\`
+    * = leg1 \`4\`
+  * and
+    * = hop2 \`c\`
+    * = leg1 \`2\`
+
+* or
+  * and
+    * = hop2 \`b\`
+    * = hop3 \`d\`
+    * = leg2 \`5\`
+  * and
+    * = hop2 \`b\`
+    * = hop3 \`e\`
+    * = leg2 \`10\`
+  * and
+    * = hop2 \`c\`
+    * = hop3 \`d\`
+    * = leg2 \`8\`
+  * and
+    * = hop2 \`c\`
+    * = hop3 \`e\`
+    * = leg2 \`7\`
+
+* or
+  * and
+    * = hop3 \`d\`
+    * = leg3 \`6\`
+  * and
+    * = hop3 \`e\`
+    * = leg3 \`3\`
+
+* <=
+  * + leg1 leg2 leg3
+  * max_cost
 
 # check
 `,
