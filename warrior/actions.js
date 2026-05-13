@@ -370,9 +370,10 @@ export class RangedAction extends Action {
             }
         }
 
-        // Magical ranged costs 1 aether (free_ranged and channel bypass)
+        // Magical ranged costs 1 aether by default; heavy variant doubles it.
+        // free_ranged and channel bypass entirely.
         if (wep && wep.magical && wep.special !== 'free_ranged' && wep.special !== 'channel') {
-            player.aether = Math.max(0, player.aether - 1);
+            player.aether = Math.max(0, player.aether - (wep.aetherCost || 1));
         }
         this.spendWeaponMP();
     }
