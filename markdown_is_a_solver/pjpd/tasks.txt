@@ -98,8 +98,24 @@ Why narrow vs. full MIAL-as-input: full MIAL gives closures, quote/eval, higher-
 Cross-ref: follows the recent switch to MIAL-style bullet-tree syntax (see parser.js), which made the AST shape compatible with MIAL's `{value, children}`. That change is what makes this feasible as a narrow addition rather than a rewrite.
 ----
 Priority:   50
-Status: Done
-ID: mias-46ix
-Created: 2026-04-24T15:20:23Z
-Updated: 2026-04-24T19:30:22Z
-Establish a record-identity convention — top-level `id` field in each JSON record — and surface it in the batch-UI flagged-record list and the CLI output. Required for the audit-log primitives tier and for any flagged-record UI to be actionable (you need to point at a specific record). Spell the requirement out in SPEC.md.
+Status: ToDo
+ID: mias-clues-kjeu
+Created: 2026-05-13T09:48:40Z
+Updated: 2026-05-13T09:48:40Z
+Markdown Is A Solver (MIAS): allow Markdown-style constraint expressions inside the JSON input, not just primitives.
+
+Today, the JSON half can only declare typed primitive constants (Int/Real/Bool/String) — every JSON value becomes a declared constant with that value. Relationship/hint constraints must live in the Markdown half.
+
+Proposed: let JSON fields carry constraint expressions (e.g. as bullet-tree strings or as a reserved key like `"_assert"` whose value is a list of Markdown bullet strings or already-parsed AST snippets). These get parsed with the same MIAL bullet-tree parser and folded into the program's `assertions` list alongside the Markdown ones.
+
+Concrete use case (Zebra example in examples.js):
+- Static Markdown: declarations for people/colors/pets, the three `distinct` constraints, domain bounds — i.e. the universal puzzle structure.
+- JSON input: the actual clues — `* = alice \`1\``, `* = bob green`, `* = cat (+ dog 1)`, `* or ... cat next to carol`, `* < red blue`, etc. Swapping puzzles becomes a JSON edit only.
+
+Design questions to settle:
+1. Surface syntax: bare string values that look like bullet trees? A reserved `_assert` array key? Per-field type hint via the existing `_types` sibling?
+2. Name collisions: if JSON declares `alice = 1` and also asserts `* = bob alice`, the existing "no shadowing" rule should still apply — only one declaration per name.
+3. Unsat-core labeling: each JSON-sourced assertion needs an `origin: 'json'` source string so `labels` renders it back to the user's JSON input pane on unsat.
+4. UI: the JSON pane stays JSON-valid (no raw bullet text outside string values), and the Markdown pane is unaffected.
+
+Touchpoints in the repo: `parser.js` (JSON half — `collectJSON` + `parseJSON`, currently rejects non-primitives), `index.js` (no change expected if `compile()` already loops over `program.assertions`).
