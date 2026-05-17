@@ -179,8 +179,9 @@ export class GameWorld {
         const MIN_DIST = 10;
         const self = this;
 
-        function place(type, count, preferRight) {
+        function place(type, count, preferRight, reachable) {
             let pool = candidates.filter(h => !used.has(hexKey(h.q, h.r)));
+            if (reachable) pool = pool.filter(h => reachable.has(hexKey(h.q, h.r)));
             if (preferRight) pool.sort((a, b) => b.col - a.col);
             else Rando.shuffle(pool);
 
@@ -215,8 +216,10 @@ export class GameWorld {
         place(POI.HAVEN, Rando.int(4, 6), false);
         place(POI.VILLAGE, Rando.int(8, 12), false);
         place(POI.RUIN, Rando.int(12, 20), false);
-        place(POI.BREACH, Rando.int(6, 8), false);
         place(POI.MAW, 1, true);
+        // Breaches must be reachable from the Maw — otherwise the player
+        // can never close them and they waste an encounter slot.
+        place(POI.BREACH, Rando.int(6, 8), false, this.mawDistanceMap());
         place(POI.HUT, Rando.int(8, 12), false);
     }
 

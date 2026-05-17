@@ -100,6 +100,13 @@ Implementation: one-line addition to player.defense(). Retest that high-might me
 ----
 Priority:   45
 Status: Done
+ID: bug-jzxy
+Created: 2026-05-10T20:44:11Z
+Updated: 2026-05-17T18:34:25Z
+Breaches must only spawn on land hexes reachable from the Maw via passable terrain (same connected component as the Maw). Today breach POIs can land on islands or disconnected landmasses where the player can never reach them — wasted breaches contribute nothing to encounter pressure or the breach-sealed victory tally. Fix the world-gen placement loop in world.js (see place() and the BREACH branch around the POI placement logic) to filter candidate hexes by BFS reachability from the Maw's hex over isPassable terrain before picking a spot. Probably reuse or mirror the BFS already used by computeMawDistances() in index.js. Verify by generating a few worlds and confirming every breach is in the same connected region as the Maw.
+----
+Priority:   45
+Status: Done
 ID: food-heal-tz8g
 Created: 2026-05-04T18:11:51Z
 Updated: 2026-05-09T19:07:57Z
