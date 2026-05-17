@@ -99,3 +99,7 @@ Canvas clicks are ignored when `phase !== 'player'`.
 
 - `SPEC.md` — Full game specification with functional requirements
 - `DYNAMICS.md` — Game design philosophy, key drivers, strategy analysis
+
+## Repo Layout Gotcha
+
+The git root is `/work/yuwakisaweb`, but the working directory is the `warrior/` subdirectory inside it. `git status` and `git diff` print paths from the repo root (e.g. `warrior/world.js`), but `git add` from this cwd must use paths relative to cwd (e.g. `world.js`, `pjpd/tasks.txt`). Don't copy the `warrior/`-prefixed paths out of diff output into `git add` — that will fail with "did not match any files".
