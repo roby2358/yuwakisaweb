@@ -507,7 +507,7 @@ export class RangedAction extends Action {
 
     execute() {
         const ctx = this.ctx;
-        const { player, em } = ctx;
+        const { player, em, refreshSelectionAfterAction } = ctx;
         ctx.setCombatAlerted(true);
 
         const enemy = em.enemies.find(e => e.q === this.targetQ && e.r === this.targetR);
@@ -524,6 +524,7 @@ export class RangedAction extends Action {
             player.aether = Math.max(0, player.aether - (wep.aetherCost || 1));
         }
         this.spendWeaponMP();
+        refreshSelectionAfterAction();
     }
 }
 
