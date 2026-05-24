@@ -216,6 +216,95 @@ function drawStunOverlay(cx, cy) {
     ctx.stroke();
 }
 
+const ATTACK_ICON_STROKE = 'rgba(200, 200, 200, 0.9)';
+
+function drawCrosshair(cx, cy) {
+    const r = HEX_SIZE * 0.35, arm = HEX_SIZE * 0.55;
+    ctx.strokeStyle = ATTACK_ICON_STROKE;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.moveTo(cx - arm, cy); ctx.lineTo(cx + arm, cy);
+    ctx.moveTo(cx, cy - arm); ctx.lineTo(cx, cy + arm);
+    ctx.stroke();
+}
+
+function drawSword(cx, cy) {
+    const h = HEX_SIZE * 0.95;
+    const top = cy - h * 0.5;
+    const shoulderY = top + HEX_SIZE * 0.16;
+    const crossY = cy + h * 0.18;
+    const gripBot = cy + h * 0.45;
+    const bladeW = HEX_SIZE * 0.13;
+    const gripW = HEX_SIZE * 0.11;
+    const crossW = HEX_SIZE * 0.5;
+    ctx.strokeStyle = ATTACK_ICON_STROKE;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    // Blade: pointy tip + parallel sides to crossguard
+    ctx.moveTo(cx, top);
+    ctx.lineTo(cx - bladeW / 2, shoulderY);
+    ctx.lineTo(cx - bladeW / 2, crossY);
+    ctx.moveTo(cx, top);
+    ctx.lineTo(cx + bladeW / 2, shoulderY);
+    ctx.lineTo(cx + bladeW / 2, crossY);
+    // Crossguard
+    ctx.moveTo(cx - crossW / 2, crossY);
+    ctx.lineTo(cx + crossW / 2, crossY);
+    // Grip: open at the crossguard, closed at the bottom
+    ctx.moveTo(cx - gripW / 2, crossY);
+    ctx.lineTo(cx - gripW / 2, gripBot);
+    ctx.lineTo(cx + gripW / 2, gripBot);
+    ctx.lineTo(cx + gripW / 2, crossY);
+    ctx.stroke();
+}
+
+function drawHeptagram(cx, cy) {
+    const r = HEX_SIZE * 0.45, N = 7, step = 3;
+    ctx.strokeStyle = ATTACK_ICON_STROKE;
+    ctx.lineWidth = 1.5;
+    const pts = [];
+    for (let i = 0; i < N; i++) {
+        const a = (i * 2 * Math.PI / N) - Math.PI / 2;
+        pts.push({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) });
+    }
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    let idx = 0;
+    for (let i = 0; i < N; i++) {
+        idx = (idx + step) % N;
+        ctx.lineTo(pts[idx].x, pts[idx].y);
+    }
+    ctx.stroke();
+}
+
+function attackIconForTargeting(t) {
+    if (t.skill === '__ranged__') return drawCrosshair;
+    const skill = SKILLS[t.skill];
+    if (!skill) return null;
+    if (skill.target === SKILL_TARGET.MELEE) return drawSword;
+    if (skill.target === SKILL_TARGET.RANGED) return drawCrosshair;
+    if (skill.target === SKILL_TARGET.RANGED_AOE) return drawHeptagram;
+    return null;
+}
+
+function drawIconOnHexes(iconFn, hexKeys) {
+    for (const key of hexKeys) {
+        const { q, r } = parseHexKey(key);
+        const { x, y } = hexToScreen(q, r);
+        iconFn(x, y);
+    }
+}
+
+function drawAttackIcons() {
+    if (targeting) {
+        const iconFn = attackIconForTargeting(targeting);
+        if (iconFn) drawIconOnHexes(iconFn, targeting.validHexes);
+        return;
+    }
+    if (selected && attackable) drawIconOnHexes(drawSword, attackable);
+}
+
 // stats: { atk, def, mov } — all required for player/enemy counters
 // hpPct: 0..1 — draws HP bar when < 1; pass 1 to skip bar
 // labelColor: explicit text color; pass null to auto-contrast
@@ -1742,8 +1831,8 @@ function render() {
     // Targeting highlights
     if (targeting) {
         const skill = SKILLS[targeting.skill];
-        const isSpatial = skill && (skill.target === SKILL_TARGET.TELEPORT || skill.target === SKILL_TARGET.TELEPORT_REVEALED || skill.target === SKILL_TARGET.WATER_SKIP || skill.target === SKILL_TARGET.MOUNTAIN_SKIP || skill.target === SKILL_TARGET.RANGED_AOE);
-        const color = isSpatial ? 'rgba(100, 200, 255, 0.3)' : 'rgba(100, 100, 255, 0.35)';
+        const isMovement = skill && (skill.target === SKILL_TARGET.TELEPORT || skill.target === SKILL_TARGET.TELEPORT_REVEALED || skill.target === SKILL_TARGET.WATER_SKIP || skill.target === SKILL_TARGET.MOUNTAIN_SKIP);
+        const color = isMovement ? 'rgba(100, 200, 255, 0.3)' : 'rgba(255, 60, 60, 0.35)';
         for (const key of targeting.validHexes) {
             const { q, r } = parseHexKey(key);
             const { x, y } = hexToScreen(q, r);
@@ -1798,6 +1887,9 @@ function render() {
             ctx.stroke();
         }
     }
+
+    // Attack-target icon overlays — drawn after enemies/player so sprites don't cover them
+    drawAttackIcons();
 
     updateHUD();
     refreshOpenPanels();
