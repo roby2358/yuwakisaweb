@@ -2929,6 +2929,9 @@ function endGame(won) {
 // COMBAT LOG
 // ================================================================
 
+let logPinned = false;
+const LOG_FADE_MS = 4500;
+
 function logCombat(msg, cls) {
     const log = document.getElementById('combat-log');
     const entry = document.createElement('div');
@@ -2936,9 +2939,25 @@ function logCombat(msg, cls) {
     entry.textContent = msg;
     log.appendChild(entry);
     log.scrollTop = log.scrollHeight;
-    // Remove after animation
-    setTimeout(() => { if (entry.parentNode) entry.remove(); }, 4500);
+    if (!logPinned) armLogEntryFade(entry);
 }
+
+function armLogEntryFade(entry) {
+    entry.fadeTimeout = setTimeout(() => { if (entry.parentNode) entry.remove(); }, LOG_FADE_MS);
+}
+
+function toggleLogPin() {
+    logPinned = !logPinned;
+    const log = document.getElementById('combat-log');
+    log.classList.toggle('log-pinned', logPinned);
+    document.getElementById('log-pin-btn').classList.toggle('active', logPinned);
+    for (const entry of log.querySelectorAll('.log-entry')) {
+        if (entry.fadeTimeout) { clearTimeout(entry.fadeTimeout); entry.fadeTimeout = null; }
+        if (!logPinned) armLogEntryFade(entry);
+    }
+}
+
+document.getElementById('log-pin-btn').addEventListener('click', toggleLogPin);
 
 // ================================================================
 // INPUT HANDLING
