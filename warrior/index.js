@@ -205,15 +205,11 @@ function contrastText(hexColor) {
     return (0.2126 * r + 0.7152 * g + 0.0722 * b) > 0.4 ? '#000' : '#fff';
 }
 
-// Gray X over a counter — used to mark stunned enemies.
 function drawStunOverlay(cx, cy) {
-    const s = COUNTER_SIZE, hx = cx - s / 2, hy = cy - s / 2;
-    ctx.strokeStyle = 'rgba(180, 180, 180, 0.85)';
-    ctx.lineWidth = 3;
+    ctx.fillStyle = 'rgba(180, 180, 180, 0.85)';
     ctx.beginPath();
-    ctx.moveTo(hx, hy); ctx.lineTo(hx + s, hy + s);
-    ctx.moveTo(hx + s, hy); ctx.lineTo(hx, hy + s);
-    ctx.stroke();
+    ctx.arc(cx, cy, COUNTER_SIZE / 4, 0, Math.PI * 2);
+    ctx.fill();
 }
 
 const ATTACK_ICON_STROKE = 'rgba(200, 200, 200, 0.9)';
