@@ -478,7 +478,7 @@ function enemyRangedAttack(enemy, def) {
 function dealDamageToEnemy(enemy, damage, source, opts = {}) {
     const def = em.getDef(enemy.type);
     const rolled = Rando.bellCurve(damage);
-    let eDef = enemyDefense(enemy, def);
+    let eDef = opts.ignoreDefense ? 0 : enemyDefense(enemy, def);
     if (opts.pierceAmount) eDef = Math.max(0, eDef - opts.pierceAmount);
     const dealt = Math.max(1, rolled - eDef);
     enemy.hp -= dealt;

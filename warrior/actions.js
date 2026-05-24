@@ -178,23 +178,10 @@ export class Action {
         return closest;
     }
 
-    // Bounce damage hex-to-hex with full rolled-damage semantics
-    // (bellCurve + enemy defense + stun roll). Used by Ricochet.
-    chainBounceRolled(skillName, dmg, startQ, startR, bounceCount, bounceRange, hitSet, stunBucket) {
-        const { dealDamageToEnemy } = this.ctx;
-        let curQ = startQ, curR = startR;
-        for (let i = 0; i < bounceCount; i++) {
-            const closest = this.nearestUnhit(curQ, curR, bounceRange, hitSet);
-            if (!closest) break;
-            hitSet.add(closest);
-            dealDamageToEnemy(closest, dmg, `${skillName} bounce`, { stunBucket });
-            curQ = closest.q; curR = closest.r;
-        }
-    }
-
     // Bounce damage hex-to-hex with raw (no bellCurve) damage minus flat
-    // defense. Per-jump bonus stacks each hop. Used by weapon chain/reverberate
-    // and Chain Lightning, where the primary roll already happened.
+    // defense. Per-jump bonus stacks each hop. Used by Chain Lightning, where
+    // the skill's primary roll already happened. Weapon chain/reverberate now
+    // route through WeaponStrike/RangedStrike and don't use this helper.
     chainBounceRaw(skillName, dmg, startQ, startR, bounceCount, bounceRange, hitSet, perJumpBonus, stunBucket) {
         const { em, sound, logCombat, killEnemy, enemyDefense, rollPlayerStun } = this.ctx;
         let curQ = startQ, curR = startR;
@@ -228,74 +215,208 @@ export class Action {
 
 }
 
-// A configured weapon strike that can be applied to an enemy. Equipment
-// damage bonus, pre-hit (shred/pierce), primary hit, post-hit
-// (lifesteal/siphon/channel/burn/knockback), multi-hit (double/triple),
-// chain/reverberate, cleave/sweep. Does NOT trigger the enemy counter;
-// MeleeAction handles that itself.
-export class WeaponStrike {
-    constructor(action, baseDmg, sourceName, stunBucket) {
+// Base for weapon-driven strikes. Two-phase: Phase 1 collects all targets
+// (primary + affix-driven secondaries) into entries. Phase 2 applies each
+// entry uniformly — pre-hit, N damage hits, post-hit — so post-hit effects
+// (burn, lifesteal, knockback, shred) fire on every target the strike
+// touches, not just the primary. Subclasses define affix-specific target
+// collection. Options: { hitCount, suppressWeaponMulti, bypassDefense }.
+class Strike {
+    constructor(action, baseDmg, sourceName, stunBucket, options) {
         this.action = action;
         this.ctx = action.ctx;
         this.baseDmg = baseDmg;
         this.sourceName = sourceName;
         this.stunBucket = stunBucket;
+        this.options = options || {};
+        this.hitTargets = new Set();
     }
 
     apply(enemy) {
-        const { player, dealDamageToEnemy } = this.ctx;
-        this.enemy = enemy;
-        this.wep = player.weapon();
+        this.primary = enemy;
+        this.wep = this.ctx.player.weapon();
+        this.setupDamage();
+        for (const entry of this.collectTargets()) this.applyEntry(entry);
+        return this.primaryResult;
+    }
+
+    setupDamage() {
         this.dmg = this.action.applyEquipmentBonusDamage(this.baseDmg);
-        this.opts = { stunBucket: this.stunBucket, ...this.action.applyPreHitEffects(this.wep, enemy) };
-        this.result = dealDamageToEnemy(enemy, this.dmg, this.sourceName, this.opts);
-        this.action.applyOnHitEffects(this.wep, enemy);
-        if (this.wep) {
-            this.applyMultiHit();
-            this.applyChainAffix();
-            this.applyAreaAffix();
-        }
-        return this.result;
     }
 
-    applyMultiHit() {
-        if (this.result.killed) return;
+    collectTargets() {
+        const entries = [this.primaryEntry()];
+        if (this.wep && !this.options.suppressWeaponMulti) this.appendWeaponAffixes(entries);
+        if (this.options.skillChain) this.appendSkillChain(entries);
+        return entries;
+    }
+
+    primaryEntry() {
+        return {
+            target: this.primary,
+            hitCount: this.options.hitCount ?? this.weaponPrimaryHitCount(),
+            label: this.sourceName,
+            dmg: this.dmg
+        };
+    }
+
+    secondaryEntry(target, label) {
+        return { target, hitCount: 1, label, dmg: this.dmg };
+    }
+
+    appendSkillChain(entries) {
+        const sc = this.options.skillChain;
+        this.appendChain(entries, sc.label, sc.bounceCount, sc.bounceRange, sc.perJumpBonus || 0);
+    }
+
+    // Override per subclass: returns primary-hit count from weapon affix.
+    weaponPrimaryHitCount() { return 1; }
+
+    // Override per subclass: push affix-driven secondaries onto entries.
+    appendWeaponAffixes(entries) {}
+
+    // Override per subclass: whether this strike bypasses enemy defense.
+    ignoreDefense() { return false; }
+
+    applyEntry(entry) {
+        if (this.hitTargets.has(entry.target)) return;
+        this.hitTargets.add(entry.target);
+        const opts = this.buildOpts(entry.target);
+        const result = this.deliverDamage(entry, opts);
+        this.action.applyOnHitEffects(this.wep, entry.target);
+        if (entry.target === this.primary) this.primaryResult = result;
+    }
+
+    buildOpts(target) {
+        const opts = { stunBucket: this.stunBucket, ...this.action.applyPreHitEffects(this.wep, target) };
+        if (this.ignoreDefense()) opts.ignoreDefense = true;
+        return opts;
+    }
+
+    deliverDamage(entry, opts) {
         const { dealDamageToEnemy } = this.ctx;
-        if (this.wep.special === 'double_strike') {
-            dealDamageToEnemy(this.enemy, this.dmg, 'Double Strike', this.opts);
-        } else if (this.wep.special === 'triple_strike') {
-            dealDamageToEnemy(this.enemy, this.dmg, 'Triple Strike', this.opts);
-            if (this.enemy.hp > 0) dealDamageToEnemy(this.enemy, this.dmg, 'Triple Strike', this.opts);
+        const numbered = entry.hitCount > 1;
+        let result = null;
+        for (let i = 1; i <= entry.hitCount; i++) {
+            if (entry.target.hp <= 0) break;
+            const label = numbered ? `${entry.label} ${i}` : entry.label;
+            result = dealDamageToEnemy(entry.target, entry.dmg, label, opts);
         }
+        return result;
     }
 
-    applyChainAffix() {
-        const hitSet = new Set([this.enemy]);
+    // Public: apply a single ad-hoc secondary hit on a target. Reuses the same
+    // pre/post effect chain so callers can extend a strike beyond its affixes.
+    hitSecondary(target, label) {
+        this.applyEntry(this.secondaryEntry(target, label));
+    }
+
+    // Helper: enemies adjacent to primary, excluding primary itself. Used by
+    // cleave / sweep (melee) and splash (ranged).
+    neighborEnemies() {
+        const { em } = this.ctx;
+        const result = [];
+        for (const n of hexNeighbors(this.primary.q, this.primary.r)) {
+            const adj = em.enemies.find(e => e.q === n.q && e.r === n.r && e !== this.primary);
+            if (adj) result.push(adj);
+        }
+        return result;
+    }
+
+    // Helper: trace and append a chain bounce sequence. Each bounce becomes
+    // its own entry with optional per-jump damage bonus (reverberate).
+    appendChain(entries, label, bounceCount, bounceRange, perJumpBonus) {
+        const seen = new Set([this.primary]);
+        let curQ = this.primary.q, curR = this.primary.r, dmg = this.dmg;
+        for (let i = 0; i < bounceCount; i++) {
+            dmg += perJumpBonus;
+            const closest = this.action.nearestUnhit(curQ, curR, bounceRange, seen);
+            if (!closest) break;
+            seen.add(closest);
+            entries.push({ target: closest, hitCount: 1, label: `${label} bounce`, dmg });
+            curQ = closest.q; curR = closest.r;
+        }
+    }
+}
+
+// Melee weapon strike: chain/reverberate, cleave/sweep, double/triple_strike.
+export class WeaponStrike extends Strike {
+    weaponPrimaryHitCount() {
+        if (this.wep.special === 'double_strike') return 2;
+        if (this.wep.special === 'triple_strike') return 3;
+        return 1;
+    }
+
+    appendWeaponAffixes(entries) {
         if (this.wep.special === 'chain') {
-            this.action.chainBounceRaw('Chain', this.dmg, this.enemy.q, this.enemy.r, this.wep.chainCount || 1, 2, hitSet, 0, this.stunBucket);
+            this.appendChain(entries, 'Chain', this.wep.chainCount || 1, 2, 0);
         } else if (this.wep.special === 'reverberate') {
-            this.action.chainBounceRaw('Reverberate', this.dmg, this.enemy.q, this.enemy.r, this.wep.chainCount || 1, 2, hitSet, this.wep.chainBonus || 0, this.stunBucket);
-        }
-    }
-
-    applyAreaAffix() {
-        const { em, dealDamageToEnemy } = this.ctx;
-        if (this.wep.special === 'cleave') {
-            for (const n of hexNeighbors(this.enemy.q, this.enemy.r)) {
-                const adj = em.enemies.find(e => e.q === n.q && e.r === n.r);
-                if (adj) dealDamageToEnemy(adj, this.dmg, 'Cleave', { stunBucket: this.stunBucket });
-            }
-            return;
-        }
-        if (this.wep.special === 'sweep') {
+            this.appendChain(entries, 'Reverberate', this.wep.chainCount || 1, 2, this.wep.chainBonus || 0);
+        } else if (this.wep.special === 'cleave') {
+            for (const adj of this.neighborEnemies()) entries.push(this.secondaryEntry(adj, 'Cleave'));
+        } else if (this.wep.special === 'sweep') {
             let remaining = this.wep.sweepCount;
-            for (const n of hexNeighbors(this.enemy.q, this.enemy.r)) {
+            for (const adj of this.neighborEnemies()) {
                 if (remaining <= 0) break;
-                const adj = em.enemies.find(e => e.q === n.q && e.r === n.r && e !== this.enemy);
-                if (!adj) continue;
-                dealDamageToEnemy(adj, this.dmg, 'Sweep', { stunBucket: this.stunBucket });
+                entries.push(this.secondaryEntry(adj, 'Sweep'));
                 remaining--;
             }
+        }
+    }
+}
+
+// Ranged weapon strike: chain/reverberate, splash, piercing line, double/
+// triple_shot, sniper at max range, ignore_defense (skill or affix). Sniper
+// adds to primary damage during setup so it rides on every entry's dmg.
+export class RangedStrike extends Strike {
+    setupDamage() {
+        const { player, logCombat } = this.ctx;
+        this.dist = hexDistance(player.q, player.r, this.primary.q, this.primary.r);
+        let dmg = this.action.applyEquipmentBonusDamage(this.baseDmg);
+        if (this.wep && this.wep.special === 'sniper' && this.dist >= this.wep.range) {
+            dmg += this.wep.sniperBonus;
+            logCombat(`Sniper: +${this.wep.sniperBonus} at max range`, 'log-info');
+        }
+        this.dmg = dmg;
+    }
+
+    ignoreDefense() {
+        return Boolean(this.options.bypassDefense) || (this.wep && this.wep.special === 'ignore_defense');
+    }
+
+    weaponPrimaryHitCount() {
+        if (this.wep.special === 'double_shot') return 2;
+        if (this.wep.special === 'triple_shot') return 3;
+        return 1;
+    }
+
+    appendWeaponAffixes(entries) {
+        if (this.wep.special === 'chain') {
+            this.appendChain(entries, 'Chain', this.wep.chainCount || 1, 2, 0);
+        } else if (this.wep.special === 'reverberate') {
+            this.appendChain(entries, 'Reverberate', this.wep.chainCount || 1, 2, this.wep.chainBonus || 0);
+        } else if (this.wep.special === 'splash') {
+            for (const adj of this.neighborEnemies()) entries.push(this.secondaryEntry(adj, 'Splash'));
+        } else if (this.wep.special === 'piercing') {
+            this.appendPiercingLine(entries);
+        }
+    }
+
+    // Piercing affix: walk past primary in the same direction, hex by hex,
+    // until we hit one more enemy or run out of range / hit a mountain.
+    appendPiercingLine(entries) {
+        const { em, world, player } = this.ctx;
+        const kb = knockbackHex(player.q, player.r, this.primary.q, this.primary.r);
+        const dq = kb.q - this.primary.q, dr = kb.r - this.primary.r;
+        for (let i = 1; i <= this.wep.range - this.dist; i++) {
+            const pq = this.primary.q + dq * i, pr = this.primary.r + dr * i;
+            const target = em.enemies.find(e => e.q === pq && e.r === pr);
+            if (target) {
+                entries.push(this.secondaryEntry(target, 'Pierce'));
+                return;
+            }
+            const hex = world.getHex(pq, pr);
+            if (!hex || hex.terrain === TERRAIN.MOUNTAIN) return;
         }
     }
 }
@@ -376,79 +497,19 @@ export class RangedAction extends Action {
 
     execute() {
         const ctx = this.ctx;
-        const { player, world, em, sound, logCombat, dealDamageToEnemy, killEnemy, rollPlayerStun } = ctx;
+        const { player, em } = ctx;
         ctx.setCombatAlerted(true);
 
         const enemy = em.enemies.find(e => e.q === this.targetQ && e.r === this.targetR);
         if (!enemy) return;
-        const wep = player.weapon();
         const dist = hexDistance(player.q, player.r, this.targetQ, this.targetR);
-        const eDef = em.getDef(enemy.type);
-        let dmg = this.applyEquipmentBonusDamage(player.rangedDamage(dist, eDef.chaosSpawned));
+        const baseDmg = player.rangedDamage(dist, em.getDef(enemy.type).chaosSpawned);
 
-        if (wep && wep.special === 'sniper' && dist >= wep.range) {
-            dmg += wep.sniperBonus;
-            logCombat(`Sniper: +${wep.sniperBonus} at max range`, 'log-info');
-        }
-
-        const rangedOpts = { stunBucket: 'other', ...this.applyPreHitEffects(wep, enemy) };
-        if (wep && wep.special === 'ignore_defense') {
-            const actualDmg = Math.max(1, dmg);
-            enemy.hp -= actualDmg;
-            logCombat(`Ranged: ${actualDmg} dmg to ${em.getDef(enemy.type).name}`, 'log-dmg');
-            sound.hitEnemy();
-            rollPlayerStun(enemy, dmg, 'other');
-            if (enemy.hp <= 0) killEnemy(enemy);
-        } else if (wep && wep.special === 'double_shot') {
-            dealDamageToEnemy(enemy, dmg, 'Shot 1', rangedOpts);
-            if (enemy.hp > 0) dealDamageToEnemy(enemy, dmg, 'Shot 2', rangedOpts);
-        } else if (wep && wep.special === 'triple_shot') {
-            dealDamageToEnemy(enemy, dmg, 'Shot 1', rangedOpts);
-            if (enemy.hp > 0) dealDamageToEnemy(enemy, dmg, 'Shot 2', rangedOpts);
-            if (enemy.hp > 0) dealDamageToEnemy(enemy, dmg, 'Shot 3', rangedOpts);
-        } else {
-            dealDamageToEnemy(enemy, dmg, 'Ranged', rangedOpts);
-        }
-
-        this.applyOnHitEffects(wep, enemy);
-
-        if (wep && wep.special === 'chain') {
-            this.chainBounceRaw('Chain', dmg, this.targetQ, this.targetR, wep.chainCount || 1, 2, new Set([enemy]), 0, 'other');
-        }
-        if (wep && wep.special === 'reverberate') {
-            this.chainBounceRaw('Reverberate', dmg, this.targetQ, this.targetR, wep.chainCount || 1, 2, new Set([enemy]), wep.chainBonus || 0, 'other');
-        }
-
-        if (wep && wep.special === 'splash') {
-            const sDmg = Math.max(1, dmg);
-            for (const n of hexNeighbors(this.targetQ, this.targetR)) {
-                const splashTarget = em.enemies.find(e => e.q === n.q && e.r === n.r && e !== enemy);
-                if (!splashTarget) continue;
-                splashTarget.hp -= sDmg;
-                logCombat(`Splash: ${sDmg} dmg to ${em.getDef(splashTarget.type).name}`, 'log-dmg');
-                sound.hitEnemy();
-                rollPlayerStun(splashTarget, sDmg, 'other');
-                if (splashTarget.hp <= 0) killEnemy(splashTarget);
-            }
-        }
-
-        if (wep && wep.special === 'piercing') {
-            const kb = knockbackHex(player.q, player.r, this.targetQ, this.targetR);
-            const dq = kb.q - this.targetQ, dr = kb.r - this.targetR;
-            for (let i = 1; i <= wep.range - dist; i++) {
-                const pq = this.targetQ + dq * i, pr = this.targetR + dr * i;
-                const pierceTarget = em.enemies.find(e => e.q === pq && e.r === pr);
-                if (pierceTarget) {
-                    dealDamageToEnemy(pierceTarget, dmg, 'Pierce', { stunBucket: 'other' });
-                    break;
-                }
-                const hex = world.getHex(pq, pr);
-                if (!hex || hex.terrain === TERRAIN.MOUNTAIN) break;
-            }
-        }
+        new RangedStrike(this, baseDmg, 'Ranged', 'other').apply(enemy);
 
         // Magical ranged costs 1 aether by default; heavy variant doubles it.
         // free_ranged and channel bypass entirely.
+        const wep = player.weapon();
         if (wep && wep.magical && wep.special !== 'free_ranged' && wep.special !== 'channel') {
             player.aether = Math.max(0, player.aether - (wep.aetherCost || 1));
         }
@@ -785,16 +846,11 @@ function executeSiphonStrike(action) {
 }
 
 function executePiercingShot(action) {
-    const { player, em, sound, logCombat, killEnemy, rollPlayerStun } = action.ctx;
+    const { player, em } = action.ctx;
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
     const dmg = action.skill.baseDamage + player.stats.reflex;
-    const actualDmg = Math.max(1, dmg);
-    enemy.hp -= actualDmg;
-    logCombat(`Piercing Shot: ${actualDmg} dmg to ${em.getDef(enemy.type).name}`, 'log-dmg');
-    sound.hitEnemy();
-    rollPlayerStun(enemy, dmg, 'other');
-    if (enemy.hp <= 0) killEnemy(enemy);
+    new RangedStrike(action, dmg, 'Piercing Shot', 'other', { bypassDefense: true }).apply(enemy);
 }
 
 function executeWarpShield(action) {
@@ -893,12 +949,15 @@ function executeExecute(action) {
 }
 
 function executeRicochet(action) {
-    const { player, em, dealDamageToEnemy } = action.ctx;
+    const { player, em } = action.ctx;
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
-    const dmg = action.skill.baseDamage + player.stats.reflex;
-    dealDamageToEnemy(enemy, dmg, 'Ricochet', { stunBucket: 'other' });
-    action.chainBounceRolled('Ricochet', dmg, action.targetQ, action.targetR, action.skill.bounceCount, action.skill.bounceRange, new Set([enemy]), 'other');
+    const skill = action.skill;
+    const dmg = skill.baseDamage + player.stats.reflex;
+    new RangedStrike(action, dmg, 'Ricochet', 'other', {
+        suppressWeaponMulti: true,
+        skillChain: { label: 'Ricochet', bounceCount: skill.bounceCount, bounceRange: skill.bounceRange }
+    }).apply(enemy);
 }
 
 function executeStarfall(action) {
@@ -907,14 +966,11 @@ function executeStarfall(action) {
 }
 
 function executeVoidSalvo(action) {
-    const { player, em, dealDamageToEnemy } = action.ctx;
+    const { player, em } = action.ctx;
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
     const dmg = action.skill.baseDamage + player.stats.reflex;
-    for (let i = 0; i < action.skill.shotCount; i++) {
-        if (enemy.hp <= 0) break;
-        dealDamageToEnemy(enemy, dmg, `Salvo ${i + 1}`, { stunBucket: 'other' });
-    }
+    new RangedStrike(action, dmg, 'Salvo', 'other', { hitCount: action.skill.shotCount, suppressWeaponMulti: true }).apply(enemy);
 }
 
 function executeRecall(action) {
