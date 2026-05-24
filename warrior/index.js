@@ -2203,6 +2203,7 @@ function itemStatLine(item) {
             splash: `Splash ${item.splashDamage}`,
             // Armor effects
             burning_aura: `Burn adjacent ${item.burnAuraDamage}/turn`,
+            counter_deflect: `-${item.counterDeflect}% counter-attack dmg`,
             dodge_bonus: `+${item.dodgeBonus}% dodge`,
             heal_on_kill: `+${item.healOnKill} HP/kill`,
             high_def_mp_penalty: `+${item.defBonus} def -${item.mpPenalty} MP`,

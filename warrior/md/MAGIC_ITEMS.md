@@ -297,6 +297,9 @@ Defensive effects with a combat component -- reactive damage, evasion, or combat
 |-----------------------|--------------------------------------------------|------------------------------------|------------------------------------|
 | `burning_aura`        | Deal 2 fire damage to adjacent enemies each turn | Smouldering, Blazing, Burning      | Zealot, Witch, Xenarch             |
 | `burning_aura`        | Deal 5 fire damage to adjacent enemies each turn | Smouldering, Blazing, Burning      | Zealot, Witch, Xenarch             |
+| `counter_deflect`     | Reduce enemy counter-attack damage by 50%        | Parrying, Deflecting, Warding      | Sentinel, Warden, Slayer           |
+| `counter_deflect`     | Reduce enemy counter-attack damage by 70%        | Parrying, Deflecting, Warding      | Sentinel, Warden, Slayer           |
+| `counter_deflect`     | Reduce enemy counter-attack damage by 90%        | Parrying, Deflecting, Warding      | Sentinel, Warden, Slayer           |
 | `dodge_bonus`         | 10% Chance to completely avoid attacks           | Slipping, Flickering, Vanishing      | Scout, Wanderer, Wraith            |
 | `dodge_bonus`         | 20% Chance to completely avoid attacks           | Slipping, Flickering, Vanishing      | Scout, Wanderer, Wraith            |
 | `dodge_bonus`         | 30% Chance to completely avoid attacks           | Slipping, Flickering, Vanishing      | Scout, Wanderer, Wraith            |

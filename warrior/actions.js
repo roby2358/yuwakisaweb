@@ -267,6 +267,8 @@ export class MeleeAction extends Action {
             const def = em.getDef(enemy.type);
             let counterDmg = enemyMeleeAttack(enemy, def);
             if (wep && wep.special === 'riposte') counterDmg = Math.floor(counterDmg / 2);
+            const deflect = this.ctx.player.equipped('counter_deflect');
+            if (deflect) counterDmg = Math.floor(counterDmg * (100 - deflect.counterDeflect) / 100);
             dealDamageToPlayer(counterDmg, `${def.name} counters`, false, { attacker: enemy });
         }
 
@@ -1001,7 +1003,7 @@ function executeRespec(action) {
     player.statPoints += refund;
     player.hp = Math.min(player.hp, player.maxHP());
     player.aether = Math.min(player.aether, player.maxAether());
-    logCombat(`Reflect: ${refund} stat points refunded.`, 'log-info');
+    logCombat(`Retrain: ${refund} stat points refunded.`, 'log-info');
     setTimeout(() => showLevelUpDialog(), 100);
 }
 

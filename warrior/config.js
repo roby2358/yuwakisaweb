@@ -338,6 +338,7 @@ const EFFECT_NAMING = {
     chain:             { v: ['Arcing', 'Shrieking', 'Flickering'],   a: ['Technomancer', 'Operator', 'Starpilot'] },
     chaos_bonus:       { v: ['Maddening', 'Warding', 'Sundering'],   a: ['Sentinel', 'Warden', 'Zealot'] },
     counter_mastery:   { v: ['Vigilant', 'Warding', 'Piercing'],     a: ['Warden', 'Sentinel', 'Slayer'] },
+    counter_deflect:   { v: ['Parrying', 'Deflecting', 'Warding'],   a: ['Sentinel', 'Warden', 'Slayer'] },
     defense_shred:     { v: ['Shredding', 'Sundering', 'Rending'],   a: ['Surgeon', 'Operator', 'Slayer'] },
     double_strike:     { v: ['Twinning', 'Flickering', 'Blazing'],   a: ['Replicant', 'Slayer', 'Pilot'] },
     triple_strike:     { v: ['Trebling', 'Flickering', 'Shrieking'], a: ['Replicant', 'Slayer', 'Zealot'] },
@@ -468,6 +469,9 @@ const RANGED_EFFECTS = [
 const ARMOR_EFFECTS = [
     { special: 'burning_aura', burnAuraDamage: 2, value: 2 },
     { special: 'burning_aura', burnAuraDamage: 5, value: 4 },
+    { special: 'counter_deflect', counterDeflect: 50, value: 2 },
+    { special: 'counter_deflect', counterDeflect: 70, value: 3 },
+    { special: 'counter_deflect', counterDeflect: 90, value: 4 },
     { special: 'dodge_bonus', dodgeBonus: 10, value: 2 },
     { special: 'dodge_bonus', dodgeBonus: 20, value: 3 },
     { special: 'dodge_bonus', dodgeBonus: 30, value: 4 },
@@ -802,7 +806,7 @@ export const SKILLS = {
         desc: 'Reveal all POI locations on the map. Ends turn.', minLevel: 4
     },
     respec: {
-        id: 'respec', name: 'Reflect', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
+        id: 'respec', name: 'Retrain', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
         shopPrice: 1000, shopOnly: true,
         desc: 'Refund all spent stat points and reallocate them. Requires clean hex, no enemies. Ends turn.', minLevel: 4
     },

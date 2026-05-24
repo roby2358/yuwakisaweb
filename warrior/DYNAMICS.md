@@ -216,8 +216,8 @@ armor_pierce (2/4), aether_siphon (1/2), burn (2/3/5), chain (2/3/5), chaos_bonu
 #### Ranged Weapon Effects (30 variants)
 armor_pierce (2/4), aether_siphon (1/2), burn (2/3/5), chain (2/3/5), chaos_bonus (2/4/6), defense_shred (1/2), double_shot, triple_shot, free_ranged, ignore_defense, knockback, lifesteal (1/2/3), piercing, recoil (5/8/13 bonus, 1/3/5 self-dmg), sniper (2/4/8), splash (2)
 
-#### Armor Effects (21 variants)
-burning_aura (2/5), dodge_bonus (10/20/30%), heal_on_kill (5/8), high_def_mp_penalty (+5 def, -1 MP), last_stand (4/6), momentum (1/2/3), ranged_defense (2/4), ranged_immune, thorns (50/100%), wall_of_steel (2/4/6)
+#### Armor Effects (24 variants)
+burning_aura (2/5), counter_deflect (50/70/90%), dodge_bonus (10/20/30%), heal_on_kill (5/8), high_def_mp_penalty (+5 def, -1 MP), last_stand (4/6), momentum (1/2/3), ranged_defense (2/4), ranged_immune, thorns (50/100%), wall_of_steel (2/4/6)
 
 #### Artifact Effects (38 variants)
 aether_bonus (10/20), aether_regen (1/2/3), aether_signet (3/5), blink_ring (range 4, +2 bonus), breach_jewel (4/6), chaos_attune (2/4 might, 2/3 def), chaos_circlet, chaos_defense (2/4), disengage, displacement_immune, heal (1/2/3 per turn), hp_bonus (10/20), mp_bonus (2/4), opportunist, ranger_defense (1/2/4), reveal_maw, revive (1/2 hp+ae), soul_harvest (2/4 XP), strider, threat_shroud, vision_bonus (2/4), wraith_immune
