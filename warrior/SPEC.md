@@ -74,9 +74,9 @@ Points of interest MUST be placed with minimum distance constraints so they don'
 
 - The player MUST have 4 base stats:
   - **Might**: Melee attack damage bonus
-  - **Reflex**: Ranged attack damage, dodge chance (Reflex% capped at 30%), and turn order priority
+  - **Reflex**: Ranged attack damage and turn order priority
   - **Warding**: Skill damage bonus and resistance to special attacks (reduces incoming skill damage by Warding%)
-  - **Vigor**: Maximum HP (base 50 + Vigor * 10), HP restored when resting at camps/havens, and +1 Defense per 3 Vigor
+  - **Vigor**: Maximum HP (base 50 + Vigor * 10), HP restored when resting at camps/havens, +1 Defense per 3 Vigor, and dodge chance (Vigor × 2%, capped at 90%)
 - Starting stats MUST be Might 3, Reflex 3, Warding 2, Vigor 3
 - The player MUST have the following resources:
   - **HP**: Health points. Reaching 0 MUST trigger defeat
@@ -110,7 +110,8 @@ Combat takes place directly on the world map in the same turn structure as explo
 - Outgoing damage = base damage + stat bonus (Might for melee, Reflex for ranged, Warding for skills)
 - Incoming damage = attacker base damage - player defense
 - Minimum damage MUST be 1 (attacks always deal at least 1 damage)
-- Dodge: each incoming attack has a Reflex% chance to be completely avoided (cap 30%)
+- Dodge: each incoming attack has a (Vigor × 2)% chance to be completely avoided, plus any dodge_bonus armor (cap 90%)
+- Stun: each enemy gets a single stun roll per player turn. Chance = damage / 40 for melee attacks and Might/Vigor-based skills; damage / 60 for everything else. Melee `stun` weapon affix adds +20/30/40% to the primary bucket. Cap 90%. On success the attack's counter is suppressed and the target skips its next turn
 
 #### Enemy Types
 

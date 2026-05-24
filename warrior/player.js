@@ -144,9 +144,10 @@ export class Player {
     }
 
     dodge() {
-        let d = Math.min(this.stats.reflex, MAX_DODGE);
+        let d = 2 * this.stats.vigor;
         const dodgeItem = this.equipped('dodge_bonus');
         if (dodgeItem) d += dodgeItem.dodgeBonus;
+        d = Math.min(d, MAX_DODGE);
         return d;
     }
 

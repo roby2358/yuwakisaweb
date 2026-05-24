@@ -80,7 +80,7 @@ Shattered terrain is visually distinct (dark red tones) and distressed terrain s
 - 4 active skill slots, 3 equipment slots (weapon, armor, artifact)
 - Starts with Rusty Blade (1 melee damage), Worn Leather (1 defense), Stick Bow (1 ranged damage, range 2) in inventory, Restore skill learned
 - Regenerates 1 HP per turn naturally (at start of enemy phase)
-- Dodge chance = Reflex% (capped at 30%, extendable by dodge_bonus armor)
+- Dodge chance = Vigor × 2% (capped at 90%, includes dodge_bonus armor)
 - Melee damage = weapon damage + Might (+ special bonuses: chaos_bonus, charge, etc.)
 - Ranged damage = weapon damage + Reflex (+ sniper bonus at max range)
 - Bell curve damage rolls: 3 rolls of 1..strength*2, averaged. Mean ≈ strength, with natural variance.
@@ -101,7 +101,8 @@ Press 1-4 to activate. Each skill usable once per turn. Costs Aether. Some requi
 
 ### Defensive Mechanics
 - **Warp Shield**: Absorbs the next hit entirely. Duration 3 turns. Consumed on first hit.
-- **Dodge**: Reflex% chance (cap 30%, extendable by dodge_bonus armor up to +30%). Checked before damage.
+- **Dodge**: Vigor × 2% chance (cap 90%, includes dodge_bonus armor). Checked before damage.
+- **Stun**: One stun roll per enemy per player turn. Chance = rolled damage / 40 for melee attacks and Might/Vigor-based skills; / 60 for everything else. Melee `stun` weapon affix adds +20/30/40%. Cap 90%. On success: suppresses that attack's counter, target loses next turn.
 - **Ranged Immune**: ranged_immune armor negates all incoming ranged damage.
 - **Thorns**: thorns armor reflects 50-100% of damage to melee attackers.
 - **Last Stand**: last_stand armor grants +4/+6 defense below 50% HP.
@@ -210,8 +211,8 @@ Magical items are generated at runtime via `rollMagicItem()`. Each item gets a u
 **Armor**: defense 2-6, price = defense * 15 + 10
 **Artifacts**: price 40-80, no base stat (effect only)
 
-#### Melee Weapon Effects (35 variants)
-armor_pierce (2/4), aether_siphon (1/2), burn (2/3/5), chain (2/3/5), chaos_bonus (2/4/6), counter_mastery, defense_shred (1/2), double_strike, triple_strike, ignore_defense, knockback, lifesteal (1/2/3), charge (+4/+6/+8 bonus, x2 multiplier), recoil (3/5/8 bonus, 1/3/5 self-dmg), reverberate, riposte (1/2/3)
+#### Melee Weapon Effects (41 variants)
+armor_pierce (2/4), aether_siphon (1/2), burn (2/3/5), chain (2/3/5), chaos_bonus (2/4/6), counter_mastery, defense_shred (1/2), double_strike, triple_strike, ignore_defense, knockback, lifesteal (1/2/3), charge (+4/+6/+8 bonus, x2 multiplier), recoil (3/5/8 bonus, 1/3/5 self-dmg), reverberate, riposte (1/2/3), sweep (2/3/5 adjacent), stun (+20/30/40%)
 
 #### Ranged Weapon Effects (30 variants)
 armor_pierce (2/4), aether_siphon (1/2), burn (2/3/5), chain (2/3/5), chaos_bonus (2/4/6), defense_shred (1/2), double_shot, triple_shot, free_ranged, ignore_defense, knockback, lifesteal (1/2/3), piercing, recoil (5/8/13 bonus, 1/3/5 self-dmg), sniper (2/4/8), splash (2)

@@ -138,7 +138,10 @@ export const BASE_VISION = 6;
 // ---- Player defaults ----
 export const STARTING_STATS = { might: 3, reflex: 3, warding: 2, vigor: 3 };
 export const STAT_POINTS_PER_LEVEL = 3;
-export const MAX_DODGE = 30;
+export const MAX_DODGE = 90;
+export const MAX_STUN_CHANCE = 90;
+export const STUN_DIVISOR_PRIMARY = 40;
+export const STUN_DIVISOR_OTHER = 60;
 
 // HP = 50 + vigor * 10
 export function maxHP(vigor) { return 50 + vigor * 10; }
@@ -356,6 +359,8 @@ const EFFECT_NAMING = {
     piercing:          { v: ['Piercing', 'Rending', 'Sundering'],    a: ['Ranger', 'Scout', 'Slayer'] },
     sniper:            { v: ['Sniping', 'Warding', 'Searing'],       a: ['Ranger', 'Scout', 'Starpilot'] },
     splash:            { v: ['Bursting', 'Blazing', 'Shrieking'],    a: ['Operator', 'Technomancer', 'Xenarch'] },
+    stun:              { v: ['Concussing', 'Stunning', 'Crushing'],  a: ['Sentinel', 'Slayer', 'Warden'] },
+    sweep:             { v: ['Sweeping', 'Crashing', 'Reaping'],     a: ['Slayer', 'Warden', 'Sentinel'] },
     burning_aura:      { v: ['Smouldering', 'Blazing', 'Burning'],   a: ['Zealot', 'Witch', 'Xenarch'] },
     dodge_bonus:       { v: ['Slipping', 'Flickering', 'Vanishing'], a: ['Scout', 'Wanderer', 'Wraith'] },
     heal_on_kill:      { v: ['Devouring', 'Thirsting', 'Rending'],   a: ['Slayer', 'Wraith', 'Surgeon'] },
@@ -428,6 +433,12 @@ const MELEE_EFFECTS = [
     { special: 'riposte', riposteDamage: 1, value: 2 },
     { special: 'riposte', riposteDamage: 2, value: 3 },
     { special: 'riposte', riposteDamage: 3, value: 4 },
+    { special: 'sweep', sweepCount: 2, value: 2 },
+    { special: 'sweep', sweepCount: 3, value: 3 },
+    { special: 'sweep', sweepCount: 5, value: 4 },
+    { special: 'stun', stunBonus: 20, value: 2 },
+    { special: 'stun', stunBonus: 30, value: 3 },
+    { special: 'stun', stunBonus: 40, value: 4 },
     { special: 'free_action', value: 4 },
 ];
 

@@ -18,3 +18,24 @@ ID: warrior-fkd5
 Created: 2026-05-24T02:30:50Z
 Updated: 2026-05-24T02:30:50Z
 Skill levels: learning a skill multiple times levels it up and increases its power. Design how each skill scales per level (damage, range, AOE radius, duration, AE cost reduction, etc.), how level is stored on the player's skill entry, how the shop/level-up flow offers re-learning, and how the skill panel displays current level + next-level preview.
+----
+Priority:   50
+Status: ToDo
+ID: warrior-zqkr
+Created: 2026-05-24T02:35:50Z
+Updated: 2026-05-24T02:35:50Z
+Earned revival mechanism: give the player one second-chance per run, but only if they've earned it — e.g. consumable dropped by a rare enemy, purchased at a haven for a steep gold cost, granted by closing N breaches, or rewarded for a quest. Keep hardcore feel by making it a meaningful resource decision, not a default safety net. Decide: one-shot consumable in inventory? Auto-trigger on lethal hit vs. activatable? Revive HP/AE/MP state? Penalty (lost gold, drained Aether, etc.)? Compatibility with existing 'revive' artifact affix.
+----
+Priority:   50
+Status: ToDo
+ID: warrior-t2b8
+Created: 2026-05-24T06:37:57Z
+Updated: 2026-05-24T06:37:57Z
+Add 'Crossbow' to the RANGED_ITEMS name list in config.js so it can roll as a procedural magical ranged weapon type. Non-magical Crossbow already exists at config.js:255 (damage 3, range 3) and 'Arbalest' (synonym) is in the list, but 'Crossbow' itself is missing. Single-line edit.
+----
+Priority:   50
+Status: ToDo
+ID: warrior-nqya
+Created: 2026-05-24T06:38:39Z
+Updated: 2026-05-24T06:38:39Z
+Bug: -2 defense effect only applies -1. defense_shred at shredAmount=2 (config.js:414, 457) appears to reduce enemy defense by only 1. Investigate the apply path: actions.js:140-142 adds wep.shredAmount to enemy.defReduction, index.js:360 subtracts defReduction in enemyDefense. Check whether shredAmount is being read correctly off the rolled magical item (might be losing the field during rollMagicItem spread) or whether the cap/clamp is wrong. Compare to Sundering Blow path (actions.js:812) which uses skill.shredAmount.

@@ -149,8 +149,8 @@ export class Action {
 
     // Bounce damage from start hex to nearby enemies. useBellCurve picks the
     // damage path: dealDamageToEnemy (rolled + defense) vs raw (skill chains).
-    chainBounce(skillName, dmg, startQ, startR, bounceCount, bounceRange, hitSet, useBellCurve, perJumpBonus) {
-        const { em, world, sound, logCombat, dealDamageToEnemy, killEnemy, enemyDefense } = this.ctx;
+    chainBounce(skillName, dmg, startQ, startR, bounceCount, bounceRange, hitSet, useBellCurve, perJumpBonus, stunBucket) {
+        const { em, world, sound, logCombat, dealDamageToEnemy, killEnemy, enemyDefense, rollPlayerStun } = this.ctx;
         let curQ = startQ, curR = startR;
         for (let i = 0; i < bounceCount; i++) {
             dmg += (perJumpBonus || 0);
@@ -163,7 +163,7 @@ export class Action {
             if (!closest) break;
             hitSet.add(closest);
             if (useBellCurve) {
-                dealDamageToEnemy(closest, dmg, `${skillName} bounce`);
+                dealDamageToEnemy(closest, dmg, `${skillName} bounce`, { stunBucket });
             } else {
                 const closestDef = em.getDef(closest.type);
                 const eDef = enemyDefense(closest, closestDef);
@@ -171,6 +171,7 @@ export class Action {
                 closest.hp -= actualDmg;
                 logCombat(`${skillName} chain: ${actualDmg} dmg to ${closestDef.name}`, 'log-dmg');
                 sound.hitEnemy();
+                rollPlayerStun(closest, dmg, stunBucket);
                 if (closest.hp <= 0) killEnemy(closest);
             }
             curQ = closest.q; curR = closest.r;
@@ -235,7 +236,7 @@ export class MeleeAction extends Action {
 
         let dmg = this.applyEquipmentBonusDamage(player.meleeDamage(em.getDef(enemy.type).chaosSpawned));
         const wep = player.weapon();
-        const opts = {};
+        const opts = { stunBucket: 'primary' };
         if (wep && wep.special === 'armor_pierce') opts.pierceAmount = wep.pierceAmount;
         const { killed } = dealDamageToEnemy(enemy, dmg, 'Melee', opts);
 
@@ -250,20 +251,31 @@ export class MeleeAction extends Action {
         }
 
         if (wep && wep.special === 'chain') {
-            this.chainBounce('Chain', dmg, enemy.q, enemy.r, wep.chainCount || 1, 2, new Set([enemy]), false);
+            this.chainBounce('Chain', dmg, enemy.q, enemy.r, wep.chainCount || 1, 2, new Set([enemy]), false, 0, 'primary');
         }
         if (wep && wep.special === 'reverberate') {
-            this.chainBounce('Reverberate', dmg, enemy.q, enemy.r, wep.chainCount || 1, 2, new Set([enemy]), false, wep.chainBonus || 0);
+            this.chainBounce('Reverberate', dmg, enemy.q, enemy.r, wep.chainCount || 1, 2, new Set([enemy]), false, wep.chainBonus || 0, 'primary');
         }
 
         if (wep && wep.special === 'cleave') {
             for (const n of hexNeighbors(enemy.q, enemy.r)) {
                 const adjEnemy = em.enemies.find(e => e.q === n.q && e.r === n.r);
-                if (adjEnemy) dealDamageToEnemy(adjEnemy, dmg, 'Cleave');
+                if (adjEnemy) dealDamageToEnemy(adjEnemy, dmg, 'Cleave', { stunBucket: 'primary' });
             }
         }
 
-        if (!killed) {
+        if (wep && wep.special === 'sweep') {
+            let remaining = wep.sweepCount;
+            for (const n of hexNeighbors(enemy.q, enemy.r)) {
+                if (remaining <= 0) break;
+                const adjEnemy = em.enemies.find(e => e.q === n.q && e.r === n.r && e !== enemy);
+                if (!adjEnemy) continue;
+                dealDamageToEnemy(adjEnemy, dmg, 'Sweep', { stunBucket: 'primary' });
+                remaining--;
+            }
+        }
+
+        if (!killed && !enemy.stunnedNextTurn) {
             const def = em.getDef(enemy.type);
             let counterDmg = enemyMeleeAttack(enemy, def);
             if (wep && wep.special === 'riposte') counterDmg = Math.floor(counterDmg / 2);
@@ -291,7 +303,7 @@ export class RangedAction extends Action {
 
     execute() {
         const ctx = this.ctx;
-        const { player, world, em, sound, logCombat, dealDamageToEnemy, killEnemy } = ctx;
+        const { player, world, em, sound, logCombat, dealDamageToEnemy, killEnemy, rollPlayerStun } = ctx;
         ctx.setCombatAlerted(true);
 
         const enemy = em.enemies.find(e => e.q === this.targetQ && e.r === this.targetR);
@@ -306,13 +318,14 @@ export class RangedAction extends Action {
             logCombat(`Sniper: +${wep.sniperBonus} at max range`, 'log-info');
         }
 
-        const rangedOpts = {};
+        const rangedOpts = { stunBucket: 'other' };
         if (wep && wep.special === 'armor_pierce') rangedOpts.pierceAmount = wep.pierceAmount;
         if (wep && wep.special === 'ignore_defense') {
             const actualDmg = Math.max(1, dmg);
             enemy.hp -= actualDmg;
             logCombat(`Ranged: ${actualDmg} dmg to ${em.getDef(enemy.type).name}`, 'log-dmg');
             sound.hitEnemy();
+            rollPlayerStun(enemy, dmg, 'other');
             if (enemy.hp <= 0) killEnemy(enemy);
         } else if (wep && wep.special === 'double_shot') {
             dealDamageToEnemy(enemy, dmg, 'Shot 1', rangedOpts);
@@ -328,10 +341,10 @@ export class RangedAction extends Action {
         this.applyOnHitEffects(wep, enemy);
 
         if (wep && wep.special === 'chain') {
-            this.chainBounce('Chain', dmg, this.targetQ, this.targetR, wep.chainCount || 1, 2, new Set([enemy]), false);
+            this.chainBounce('Chain', dmg, this.targetQ, this.targetR, wep.chainCount || 1, 2, new Set([enemy]), false, 0, 'other');
         }
         if (wep && wep.special === 'reverberate') {
-            this.chainBounce('Reverberate', dmg, this.targetQ, this.targetR, wep.chainCount || 1, 2, new Set([enemy]), false, wep.chainBonus || 0);
+            this.chainBounce('Reverberate', dmg, this.targetQ, this.targetR, wep.chainCount || 1, 2, new Set([enemy]), false, wep.chainBonus || 0, 'other');
         }
 
         if (wep && wep.special === 'splash') {
@@ -342,6 +355,7 @@ export class RangedAction extends Action {
                 splashTarget.hp -= sDmg;
                 logCombat(`Splash: ${sDmg} dmg to ${em.getDef(splashTarget.type).name}`, 'log-dmg');
                 sound.hitEnemy();
+                rollPlayerStun(splashTarget, sDmg, 'other');
                 if (splashTarget.hp <= 0) killEnemy(splashTarget);
             }
         }
@@ -353,7 +367,7 @@ export class RangedAction extends Action {
                 const pq = this.targetQ + dq * i, pr = this.targetR + dr * i;
                 const pierceTarget = em.enemies.find(e => e.q === pq && e.r === pr);
                 if (pierceTarget) {
-                    dealDamageToEnemy(pierceTarget, dmg, 'Pierce');
+                    dealDamageToEnemy(pierceTarget, dmg, 'Pierce', { stunBucket: 'other' });
                     break;
                 }
                 const hex = world.getHex(pq, pr);
@@ -522,19 +536,19 @@ export class SkillAction extends Action {
         return false;
     }
 
-    applyAoeDamage(skillName, dmg, range) {
+    applyAoeDamage(skillName, dmg, range, stunBucket) {
         const { player, em, dealDamageToEnemy } = this.ctx;
         for (const h of hexesInRange(player.q, player.r, range)) {
             const enemy = em.enemyAt(h.q, h.r);
-            if (enemy) dealDamageToEnemy(enemy, dmg, skillName);
+            if (enemy) dealDamageToEnemy(enemy, dmg, skillName, { stunBucket });
         }
     }
 
-    applyAoeDamageAt(skillName, dmg, centerQ, centerR, range) {
+    applyAoeDamageAt(skillName, dmg, centerQ, centerR, range, stunBucket) {
         const { em, dealDamageToEnemy } = this.ctx;
         for (const h of hexesInRange(centerQ, centerR, range)) {
             const enemy = em.enemyAt(h.q, h.r);
-            if (enemy) dealDamageToEnemy(enemy, dmg, skillName);
+            if (enemy) dealDamageToEnemy(enemy, dmg, skillName, { stunBucket });
         }
     }
 
@@ -643,7 +657,7 @@ function executeVoidStrike(action) {
     if (!enemy) return;
     const wep = player.weapon();
     const dmg = (wep ? wep.damage : 1) + player.stats.might + player.stats.warding;
-    dealDamageToEnemy(enemy, dmg, 'Void Strike');
+    dealDamageToEnemy(enemy, dmg, 'Void Strike', { stunBucket: 'primary' });
 }
 
 function executePhaseStep(action) {
@@ -678,7 +692,7 @@ function executeCosmicBolt(action) {
     const { player, em, dealDamageToEnemy } = action.ctx;
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
-    dealDamageToEnemy(enemy, action.skill.baseDamage + player.stats.warding, 'Cosmic Bolt');
+    dealDamageToEnemy(enemy, action.skill.baseDamage + player.stats.warding, 'Cosmic Bolt', { stunBucket: 'other' });
 }
 
 function executeShockwave(action) {
@@ -689,7 +703,7 @@ function executeShockwave(action) {
     for (const h of hexesInRange(player.q, player.r, skill.range)) {
         const enemy = em.enemyAt(h.q, h.r);
         if (!enemy) continue;
-        dealDamageToEnemy(enemy, dmg, 'Shockwave');
+        dealDamageToEnemy(enemy, dmg, 'Shockwave', { stunBucket: 'primary' });
         if (enemy.hp > 0) survivors.push(enemy);
     }
     for (const enemy of survivors) action.pushEnemyAway(enemy, player.q, player.r);
@@ -697,7 +711,7 @@ function executeShockwave(action) {
 }
 
 function executeSiphonStrike(action) {
-    const { player, em, sound, logCombat, killEnemy, enemyDefense } = action.ctx;
+    const { player, em, sound, logCombat, killEnemy, enemyDefense, rollPlayerStun } = action.ctx;
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
     const wep = player.weapon();
@@ -710,11 +724,12 @@ function executeSiphonStrike(action) {
     sound.hitEnemy();
     player.hp = Math.min(player.maxHP(), player.hp + actualDmg);
     logCombat(`+${actualDmg} HP (siphon)`, 'log-heal');
+    rollPlayerStun(enemy, rolled, 'primary');
     if (enemy.hp <= 0) killEnemy(enemy);
 }
 
 function executePiercingShot(action) {
-    const { player, em, sound, logCombat, killEnemy } = action.ctx;
+    const { player, em, sound, logCombat, killEnemy, rollPlayerStun } = action.ctx;
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
     const dmg = action.skill.baseDamage + player.stats.reflex;
@@ -722,6 +737,7 @@ function executePiercingShot(action) {
     enemy.hp -= actualDmg;
     logCombat(`Piercing Shot: ${actualDmg} dmg to ${em.getDef(enemy.type).name}`, 'log-dmg');
     sound.hitEnemy();
+    rollPlayerStun(enemy, dmg, 'other');
     if (enemy.hp <= 0) killEnemy(enemy);
 }
 
@@ -733,7 +749,7 @@ function executeWarpShield(action) {
 
 function executeBreachPulse(action) {
     const { player } = action.ctx;
-    action.applyAoeDamage('Breach Pulse', action.skill.baseDamage + player.stats.warding, action.skill.range);
+    action.applyAoeDamage('Breach Pulse', action.skill.baseDamage + player.stats.warding, action.skill.range, 'other');
 }
 
 function executeChainLightning(action) {
@@ -742,8 +758,8 @@ function executeChainLightning(action) {
     if (!enemy) return;
     const skill = action.skill;
     const dmg = skill.baseDamage + player.stats.warding;
-    dealDamageToEnemy(enemy, dmg, 'Chain Lightning');
-    action.chainBounce('Chain Lightning', dmg, action.targetQ, action.targetR, skill.chainCount, skill.chainRange, new Set([enemy]), false);
+    dealDamageToEnemy(enemy, dmg, 'Chain Lightning', { stunBucket: 'other' });
+    action.chainBounce('Chain Lightning', dmg, action.targetQ, action.targetR, skill.chainCount, skill.chainRange, new Set([enemy]), false, 0, 'other');
 }
 
 function executeImmolate(action) {
@@ -752,7 +768,7 @@ function executeImmolate(action) {
     if (!enemy) return;
     const wep = player.weapon();
     const dmg = (wep ? wep.damage : 1) + player.stats.might;
-    dealDamageToEnemy(enemy, dmg, 'Immolate');
+    dealDamageToEnemy(enemy, dmg, 'Immolate', { stunBucket: 'primary' });
     if (enemy.hp > 0) {
         enemy.burnDamage = (enemy.burnDamage || 0) + action.skill.burnDamage;
         logCombat(`${em.getDef(enemy.type).name} is burning!`, 'log-dmg');
@@ -791,7 +807,7 @@ function executeSunderingBlow(action) {
     if (!enemy) return;
     const wep = player.weapon();
     const dmg = (wep ? wep.damage : 1) + player.stats.might;
-    dealDamageToEnemy(enemy, dmg, 'Sundering Blow');
+    dealDamageToEnemy(enemy, dmg, 'Sundering Blow', { stunBucket: 'primary' });
     if (enemy.hp > 0) {
         enemy.defReduction = (enemy.defReduction || 0) + action.skill.shredAmount;
         logCombat(`Sundered ${action.skill.shredAmount} defense!`, 'log-info');
@@ -801,7 +817,7 @@ function executeSunderingBlow(action) {
 function executeMeteor(action) {
     const { player, logCombat } = action.ctx;
     const dmg = action.skill.baseDamage + player.stats.warding;
-    action.applyAoeDamageAt('Meteor', dmg, action.targetQ, action.targetR, action.skill.aoeRange);
+    action.applyAoeDamageAt('Meteor', dmg, action.targetQ, action.targetR, action.skill.aoeRange, 'other');
     logCombat('Meteor!', 'log-info');
 }
 
@@ -810,7 +826,7 @@ function executeDimensionalRend(action) {
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
     const wep = player.weapon();
-    dealDamageToEnemy(enemy, (wep ? wep.damage : 1) * 3, 'Dimensional Rend');
+    dealDamageToEnemy(enemy, (wep ? wep.damage : 1) * 3, 'Dimensional Rend', { stunBucket: 'other' });
 }
 
 function executeExecute(action) {
@@ -819,7 +835,7 @@ function executeExecute(action) {
     if (!enemy) return;
     const wep = player.weapon();
     const dmg = (wep ? wep.damage : 1) * 2 + player.stats.might * 2;
-    dealDamageToEnemy(enemy, dmg, 'Execute');
+    dealDamageToEnemy(enemy, dmg, 'Execute', { stunBucket: 'primary' });
 }
 
 function executeRicochet(action) {
@@ -827,13 +843,13 @@ function executeRicochet(action) {
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
     const dmg = action.skill.baseDamage + player.stats.reflex;
-    dealDamageToEnemy(enemy, dmg, 'Ricochet');
-    action.chainBounce('Ricochet', dmg, action.targetQ, action.targetR, action.skill.bounceCount, action.skill.bounceRange, new Set([enemy]), true);
+    dealDamageToEnemy(enemy, dmg, 'Ricochet', { stunBucket: 'other' });
+    action.chainBounce('Ricochet', dmg, action.targetQ, action.targetR, action.skill.bounceCount, action.skill.bounceRange, new Set([enemy]), true, 0, 'other');
 }
 
 function executeStarfall(action) {
     const { player } = action.ctx;
-    action.applyAoeDamage('Starfall', action.skill.baseDamage + player.stats.warding * 2, action.skill.range);
+    action.applyAoeDamage('Starfall', action.skill.baseDamage + player.stats.warding * 2, action.skill.range, 'other');
 }
 
 function executeVoidSalvo(action) {
@@ -843,7 +859,7 @@ function executeVoidSalvo(action) {
     const dmg = action.skill.baseDamage + player.stats.reflex;
     for (let i = 0; i < action.skill.shotCount; i++) {
         if (enemy.hp <= 0) break;
-        dealDamageToEnemy(enemy, dmg, `Salvo ${i + 1}`);
+        dealDamageToEnemy(enemy, dmg, `Salvo ${i + 1}`, { stunBucket: 'other' });
     }
 }
 
@@ -1046,7 +1062,7 @@ function executeHavensLight(action) {
     for (const h of hexesInRange(player.q, player.r, skill.range)) {
         const enemy = em.enemyAt(h.q, h.r);
         if (!enemy) continue;
-        dealDamageToEnemy(enemy, dmg, "Haven's Light");
+        dealDamageToEnemy(enemy, dmg, "Haven's Light", { stunBucket: 'other' });
         hitCount++;
     }
     logCombat(`Haven's Light: hit ${hitCount} enemies!`, 'log-info');
@@ -1061,7 +1077,7 @@ function executeAetherBlast(action) {
     for (const h of hexesInRange(player.q, player.r, skill.range)) {
         if (em.enemyAt(h.q, h.r)) hits++;
     }
-    action.applyAoeDamage('Aether Blast', skill.baseDamage + Math.floor(player.stats.warding / 2), skill.range);
+    action.applyAoeDamage('Aether Blast', skill.baseDamage + Math.floor(player.stats.warding / 2), skill.range, 'other');
     if (hits > 0) {
         const gained = hits * skill.aetherPerHit;
         player.aether = Math.min(player.maxAether(), player.aether + gained);
@@ -1076,7 +1092,7 @@ function executeLifedrainBlast(action) {
     for (const h of hexesInRange(player.q, player.r, skill.range)) {
         if (em.enemyAt(h.q, h.r)) hits++;
     }
-    action.applyAoeDamage('Lifedrain Blast', skill.baseDamage + player.stats.vigor, skill.range);
+    action.applyAoeDamage('Lifedrain Blast', skill.baseDamage + player.stats.vigor, skill.range, 'primary');
     if (hits > 0) {
         const healed = hits * skill.hpPerHit;
         player.hp = Math.min(player.maxHP(), player.hp + healed);

@@ -288,6 +288,12 @@ Offensive effects that trigger when attacking.
 | `sniper`         | 4 Bonus damage at max range              | Sniping, Warding, Searing          | Ranger, Scout, Starpilot           |
 | `sniper`         | 8 Bonus damage at max range              | Sniping, Warding, Searing          | Ranger, Scout, Starpilot           |
 | `splash`         | AoE damage around target                 | Bursting, Blazing, Shrieking       | Operator, Technomancer, Xenarch    |
+| `sweep` (melee)  | Full damage to 2 adjacent enemies of target | Sweeping, Crashing, Reaping     | Slayer, Warden, Sentinel           |
+| `sweep` (melee)  | Full damage to 3 adjacent enemies of target | Sweeping, Crashing, Reaping     | Slayer, Warden, Sentinel           |
+| `sweep` (melee)  | Full damage to 5 adjacent enemies of target | Sweeping, Crashing, Reaping     | Slayer, Warden, Sentinel           |
+| `stun` (melee)   | +20% stun chance on hit                  | Concussing, Stunning, Crushing     | Sentinel, Slayer, Warden           |
+| `stun` (melee)   | +30% stun chance on hit                  | Concussing, Stunning, Crushing     | Sentinel, Slayer, Warden           |
+| `stun` (melee)   | +40% stun chance on hit                  | Concussing, Stunning, Crushing     | Sentinel, Slayer, Warden           |
 
 ## Armor Effects
 

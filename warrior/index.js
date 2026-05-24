@@ -3,6 +3,7 @@
 import {
     HEX_SIZE, MAP_COLS, MAP_ROWS, TERRAIN, TERRAIN_NAMES, MOVEMENT_COST,
     STAT_POINTS_PER_LEVEL, STARTING_STATS,
+    MAX_STUN_CHANCE, STUN_DIVISOR_PRIMARY, STUN_DIVISOR_OTHER,
     xpForLevel,
     POI, POI_SYMBOLS, POI_COLORS, POI_DEFENSE_BONUS,
     ENEMY_TYPE,
@@ -139,6 +140,7 @@ const actionCtx = {
     get reachable() { return reachable; },
     // combat callbacks
     dealDamageToEnemy: (...a) => dealDamageToEnemy(...a),
+    rollPlayerStun: (...a) => rollPlayerStun(...a),
     dealDamageToPlayer: (...a) => dealDamageToPlayer(...a),
     killEnemy: (...a) => killEnemy(...a),
     gainXP: (...a) => gainXP(...a),
@@ -201,6 +203,17 @@ function contrastText(hexColor) {
     const g = parseInt(hexColor.slice(3, 5), 16) / 255;
     const b = parseInt(hexColor.slice(5, 7), 16) / 255;
     return (0.2126 * r + 0.7152 * g + 0.0722 * b) > 0.4 ? '#000' : '#fff';
+}
+
+// Gray X over a counter — used to mark stunned enemies.
+function drawStunOverlay(cx, cy) {
+    const s = COUNTER_SIZE, hx = cx - s / 2, hy = cy - s / 2;
+    ctx.strokeStyle = 'rgba(180, 180, 180, 0.85)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(hx, hy); ctx.lineTo(hx + s, hy + s);
+    ctx.moveTo(hx + s, hy); ctx.lineTo(hx, hy + s);
+    ctx.stroke();
 }
 
 // stats: { atk, def, mov } — all required for player/enemy counters
@@ -383,9 +396,32 @@ function dealDamageToEnemy(enemy, damage, source, opts = {}) {
     victory.damageDealt += dealt;
     logCombat(`${source}: ${dealt} dmg to ${def.name}`, 'log-dmg');
     sound.hitEnemy();
+    const stunned = rollPlayerStun(enemy, rolled, opts.stunBucket);
     const killed = enemy.hp <= 0;
     if (killed) killEnemy(enemy);
-    return { dealt, killed };
+    return { dealt, killed, stunned };
+}
+
+// One stun roll per enemy per player turn (enemy.stunRolledThisTurn gates this).
+// bucket: 'primary' = melee/Might-coded (damage/40 + melee weapon stun affix),
+//         'other'   = ranged/Reflex/Warding (damage/60, no weapon bonus).
+// Falsy bucket = no stun roll. Cap 90%. Dead enemies skip.
+function rollPlayerStun(enemy, rolledDmg, bucket) {
+    if (!bucket || !enemy || enemy.hp <= 0 || enemy.stunRolledThisTurn) return false;
+    enemy.stunRolledThisTurn = true;
+    const divisor = bucket === 'primary' ? STUN_DIVISOR_PRIMARY : STUN_DIVISOR_OTHER;
+    let pct = rolledDmg / divisor * 100;
+    if (bucket === 'primary') {
+        const wep = player.weapon();
+        if (wep && wep.special === 'stun') pct += wep.stunBonus;
+    }
+    pct = Math.min(pct, MAX_STUN_CHANCE);
+    if (Math.random() * 100 < pct) {
+        enemy.stunnedNextTurn = true;
+        logCombat('Stunned!', 'log-info');
+        return true;
+    }
+    return false;
 }
 
 function dealDamageToPlayer(damage, source, isSkillDamage, opts = {}) {
@@ -1317,6 +1353,11 @@ async function runEnemyPhase() {
         if (gameOver) break;
         const def = em.getDef(enemy.type);
         if (!def) continue;
+        if (enemy.stunnedNextTurn) {
+            enemy.stunnedNextTurn = false;
+            enemy.turnsSinceSpawn++;
+            continue;
+        }
         let aggro = def.aggroRange || def.detectRange || 0;
         if (player.equipped('threat_shroud')) aggro = Math.max(1, aggro - 2);
         enemy.turnsSinceSpawn++;
@@ -1399,6 +1440,7 @@ async function runEnemyPhase() {
     player.movedThisTurn = false;
     player.hexesMovedThisTurn = 0;
     player.phaseStepUsedThisTurn = false;
+    for (const e of em.enemies) e.stunRolledThisTurn = false;
 }
 
 function startPlayerTurn() {
@@ -1732,6 +1774,7 @@ function render() {
         const chaosLabelColor = (def.chaosSpawned && enemy.type !== ENEMY_TYPE.PHASE_WRAITH && !isGuardianSprite) ? '#d580ff' : null;
         const spriteTint = (def.chaosSpawned && !isGuardianSprite) ? '#d580ff' : null;
         drawCounter(x, y, color, def.label, enemy.hp / effMaxHp, chaosLabelColor, { atk: enemyMeleeAttack(enemy, def), def: enemyDefense(enemy, def), mov: def.speed || 1 }, sprite, spriteTint);
+        if (enemy.stunnedNextTurn) drawStunOverlay(x, y);
     }
 
     // Player
@@ -2201,6 +2244,8 @@ function itemStatLine(item) {
             piercing: 'Pierce-through',
             sniper: `+${item.sniperBonus} at max range`,
             splash: `Splash ${item.splashDamage}`,
+            stun: `+${item.stunBonus}% stun`,
+            sweep: `Sweep ${item.sweepCount} adjacent`,
             // Armor effects
             burning_aura: `Burn adjacent ${item.burnAuraDamage}/turn`,
             counter_deflect: `-${item.counterDeflect}% counter-attack dmg`,
