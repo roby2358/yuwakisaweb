@@ -25,3 +25,10 @@ ID: warrior-nqya
 Created: 2026-05-24T06:38:39Z
 Updated: 2026-05-24T06:38:39Z
 Bug: -2 defense effect only applies -1. defense_shred at shredAmount=2 (config.js:414, 457) appears to reduce enemy defense by only 1. Investigate the apply path: actions.js:140-142 adds wep.shredAmount to enemy.defReduction, index.js:360 subtracts defReduction in enemyDefense. Check whether shredAmount is being read correctly off the rolled magical item (might be losing the field during rollMagicItem spread) or whether the cap/clamp is wrong. Compare to Sundering Blow path (actions.js:812) which uses skill.shredAmount.
+----
+Priority:   50
+Status: ToDo
+ID: loot-chain-3xgk
+Created: 2026-05-24T16:12:57Z
+Updated: 2026-05-24T16:12:57Z
+Loot skill combines with chain/cleave/sweep weapon affixes to loot multiple adjacent enemies. Current executeLoot (actions.js:1063) steals gold from one target only. Design as preAttack + postAttack actions on the Loot skill: primary loot on the target, then on a chain weapon, loot adjacent enemies up to chainCount; on cleave, loot all neighbors; on sweep, loot up to sweepCount neighbors. Per-target gold roll uses the looted enemy's attack stat as the cap (same formula as primary).
