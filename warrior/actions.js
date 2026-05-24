@@ -235,6 +235,7 @@ class Strike {
     apply(enemy) {
         this.primary = enemy;
         this.wep = this.ctx.player.weapon();
+        this.totalDealt = 0;
         this.setupDamage();
         for (const entry of this.collectTargets()) this.applyEntry(entry);
         return this.primaryResult;
@@ -309,6 +310,7 @@ class Strike {
             if (entry.target.hp <= 0) break;
             const label = numbered ? `${entry.label} ${i}` : entry.label;
             result = dealDamageToEnemy(entry.target, entry.dmg, label, opts);
+            this.totalDealt += result.dealt;
         }
         return result;
     }
@@ -846,10 +848,11 @@ function executeSiphonStrike(action) {
     if (!enemy) return;
     const wep = player.weapon();
     const dmg = (wep ? wep.damage : 1) + player.stats.might;
-    const { dealt } = new WeaponStrike(action, dmg, 'Siphon Strike', 'primary').apply(enemy);
-    if (dealt > 0) {
-        player.hp = Math.min(player.maxHP(), player.hp + dealt);
-        logCombat(`+${dealt} HP (siphon)`, 'log-heal');
+    const strike = new WeaponStrike(action, dmg, 'Siphon Strike', 'primary');
+    strike.apply(enemy);
+    if (strike.totalDealt > 0) {
+        player.hp = Math.min(player.maxHP(), player.hp + strike.totalDealt);
+        logCombat(`+${strike.totalDealt} HP (siphon)`, 'log-heal');
     }
 }
 
