@@ -701,8 +701,8 @@ export const SKILLS = {
     },
     reflect: {
         id: 'reflect', name: 'Reflect', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
-        duration: 1, takePercent: 10, reflectPercent: 90,
-        desc: 'Ends turn. Next enemy turn: melee hits deal 10% (min 1), reflect 90% to attacker. Ranged unaffected.',
+        duration: 1, takePercent: 10, reflectPercent: 90, successPercent: 90,
+        desc: 'Ends turn. Next enemy turn (melee only): 90% chance to take 10% (min 1) and reflect 90% (min 1); 10% chance the reflect fails and you eat full damage.',
         minLevel: 4
     },
     channel: {

@@ -532,8 +532,13 @@ function dealDamageToPlayer(damage, source, isSkillDamage, opts = {}) {
     let dealt = Math.max(1, rolled - def);
     let reflected = 0;
     if (player.reflectTurns > 0 && opts.attacker && !opts.isRanged) {
-        reflected = Math.round(dealt * (SKILLS.reflect.reflectPercent / 100));
-        dealt = Math.max(1, dealt - reflected);
+        const r = SKILLS.reflect;
+        if (Rando.bool(r.successPercent / 100)) {
+            reflected = Math.max(1, Math.round(dealt * r.reflectPercent / 100));
+            dealt = Math.max(1, Math.round(dealt * r.takePercent / 100));
+        } else {
+            logCombat('Reflect fails!', 'log-info');
+        }
     }
     player.hp -= dealt;
     victory.damageTaken += dealt;
