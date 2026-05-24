@@ -589,7 +589,7 @@ export function rollMagicItem(category) {
             const name = _rollName(RANGED_ITEMS, EFFECT_NAMING[effect.special]);
             let damage = Rando.int(2, 6);
             const range = Rando.int(3, 5);
-            // d6: 1-4 single-shot (all MP), 5 fast (1 MP), 6 heavy (all MP, 2x dmg, 2x AE)
+            // d6: 1-4 normal (2 MP), 5 fast (1 MP), 6 heavy (all MP, 2x dmg, 2x AE)
             const variant = Rando.int(1, 6);
             const heavy = variant === 6;
             const fast = variant === 5;
@@ -598,7 +598,7 @@ export function rollMagicItem(category) {
             item = { id, name, type: 'ranged', slot: EQUIP_SLOT.WEAPON, damage, range, price, magical: true, ...effect };
             if (heavy) { item.mpCost = 'all'; item.aetherCost = 2; }
             else if (fast) item.mpCost = 1;
-            else item.mpCost = 'all';
+            else item.mpCost = 2;
             break;
         }
         case 'armor': {
