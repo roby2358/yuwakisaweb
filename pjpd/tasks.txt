@@ -1,0 +1,20 @@
+Priority:   50
+Status: ToDo
+ID: warrior-ppdm
+Created: 2026-05-24T02:19:55Z
+Updated: 2026-05-24T02:19:55Z
+melee knockback not working
+----
+Priority:   50
+Status: ToDo
+ID: warrior-eckg
+Created: 2026-05-24T02:30:02Z
+Updated: 2026-05-24T02:30:02Z
+armor and artifact effects don't stack — player.equipped(special) returns the first match across weapon/armor/artifact and stops, so e.g. two pieces with the same passive only apply once. Decide stacking policy per effect and update equipped() or callers accordingly.
+----
+Priority:   50
+Status: ToDo
+ID: warrior-fkd5
+Created: 2026-05-24T02:30:50Z
+Updated: 2026-05-24T02:30:50Z
+Skill levels: learning a skill multiple times levels it up and increases its power. Design how each skill scales per level (damage, range, AOE radius, duration, AE cost reduction, etc.), how level is stored on the player's skill entry, how the shop/level-up flow offers re-learning, and how the skill panel displays current level + next-level preview.
