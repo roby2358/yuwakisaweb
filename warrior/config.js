@@ -725,15 +725,15 @@ export const SKILLS = {
         burnDamage: 4, desc: 'Melee: weapon + Might. Target burns for 4 next turn. No counter.', minLevel: 4
     },
     mending_light: {
-        id: 'mending_light', name: 'Mending Light', cost: 2, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
-        baseHeal: 10, desc: 'Heal 10 + Vigor*3 HP.', minLevel: 6
+        id: 'mending_light', name: 'Mending Light', cost: 2, mpCost: 1, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
+        baseHeal: 10, desc: 'Heal 10 + Vigor*3 HP. Costs 1 MP.', minLevel: 6
     },
     gravity_well: {
         id: 'gravity_well', name: 'Gravity Well', cost: 3, mpCost: 1, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
         range: 5, desc: 'Pull enemies within 5 one hex closer.', minLevel: 6
     },
     sundering_blow: {
-        id: 'sundering_blow', name: 'Sundering Blow', cost: 2, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
+        id: 'sundering_blow', name: 'Shredding Blow', cost: 2, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
         shredAmount: 3, desc: 'Melee: weapon + Might. Permanently shred 3 enemy def. No counter.', minLevel: 6
     },
     meteor: {
@@ -809,9 +809,9 @@ export const SKILLS = {
     },
     // ---- Peaceful skills ----
     aether_blast: {
-        id: 'aether_blast', name: 'Aether Blast', cost: 2, mpCost: 2, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
+        id: 'aether_blast', name: 'Aether Blast', cost: 2, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
         range: 2, baseDamage: 3, aetherPerHit: 3,
-        desc: 'AoE: 3 + Warding/2 dmg to enemies within 2. Gain +3 AE per enemy hit.', minLevel: 4
+        desc: 'AoE: 3 + Warding/2 dmg to enemies within 2. Gain +3 AE per enemy hit. Ends turn.', minLevel: 4
     },
     lifedrain_blast: {
         id: 'lifedrain_blast', name: 'Lifedrain Blast', cost: 2, mpCost: 2, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,

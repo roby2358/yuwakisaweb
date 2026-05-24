@@ -941,7 +941,7 @@ function executeSunderingBlow(action) {
     const dmg = (wep ? wep.damage : 1) + player.stats.might;
     enemy.defReduction = (enemy.defReduction || 0) + action.skill.shredAmount;
     logCombat(`Sundered ${action.skill.shredAmount} defense!`, 'log-info');
-    new WeaponStrike(action, dmg, 'Sundering Blow', 'primary').apply(enemy);
+    new WeaponStrike(action, dmg, 'Shredding Blow', 'primary').apply(enemy);
 }
 
 function executeMeteor(action) {
