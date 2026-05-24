@@ -318,12 +318,12 @@ const MELEE_ITEMS = [
 ];
 const RANGED_ITEMS = [
     'Bolt', 'Bow', 'Cannon', 'Caster', 'Lance', 'Launcher', 'Longbow',
-    'Repeater', 'Rifle', 'Rod', 'Sling', 'Arbalest', 'Javelin', 'Handcannon',
+    'Repeater', 'Rifle', 'Rod', 'Sling', 'Arbalest', 'Crossbow', 'Javelin', 'Handcannon',
     'Wand', 'Accelerator', 'Emitter', 'Coilgun'
 ];
 const ARMOR_ITEMS = [
     'Aegis', 'Cloak', 'Cuirass', 'Hide', 'Mail', 'Plate', 'Robe', 'Shield',
-    'Tunic', 'Vest', 'Weave', 'Mantle', 'Carapace', 'Hauberk', 'Wrap', 'Cowl'
+    'Tunic', 'Vest', 'Weave', 'Mantle', 'Carapace', 'Hauberk', 'Wrap', 'Cowl', 'Baldric'
 ];
 const ARTIFACT_ITEMS = [
     'Amulet', 'Anchor', 'Boots', 'Bracers', 'Circlet', 'Compass', 'Crown',
