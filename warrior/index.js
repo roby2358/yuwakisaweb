@@ -276,6 +276,7 @@ function drawHeptagram(cx, cy) {
 
 function attackIconForTargeting(t) {
     if (t.skill === '__ranged__') return drawCrosshair;
+    if (t.skill === '__melee__') return drawSword;
     const skill = SKILLS[t.skill];
     if (!skill) return null;
     if (skill.target === SKILL_TARGET.MELEE) return drawSword;
@@ -298,7 +299,11 @@ function drawAttackIcons() {
         if (iconFn) drawIconOnHexes(iconFn, targeting.validHexes);
         return;
     }
-    if (selected && attackable) drawIconOnHexes(drawSword, attackable);
+    if (selected && attackable) {
+        const wep = player.weapon();
+        const iconFn = (wep && wep.type === 'ranged') ? drawCrosshair : drawSword;
+        drawIconOnHexes(iconFn, attackable);
+    }
 }
 
 // stats: { atk, def, mov } — all required for player/enemy counters
@@ -768,8 +773,50 @@ function checkSkillUsage(skill) {
 }
 
 function executeSkill(skillId, targetQ, targetR) {
+    const skill = SKILLS[skillId];
+    if (isMeleeSkill(skill) && hexDistance(player.q, player.r, targetQ, targetR) > 1) {
+        moveAdjacentForSkill(targetQ, targetR);
+    }
     new SkillAction(actionCtx, skillId, targetQ, targetR).execute();
     targeting = null;
+}
+
+function isMeleeSkill(skill) {
+    return skill && (skill.target === SKILL_TARGET.MELEE || skill.target === SKILL_TARGET.MELEE_EXECUTE);
+}
+
+function meleeSkillTargets(enemyFilter) {
+    const result = new Set();
+    const findEnemy = (q, r) => em.enemies.find(e => e.q === q && e.r === r);
+    for (const n of hexNeighbors(player.q, player.r)) {
+        const enemy = findEnemy(n.q, n.r);
+        if (enemy && enemyFilter(enemy)) result.add(hexKey(n.q, n.r));
+    }
+    if (reachable) {
+        for (const [key] of reachable) {
+            const { q, r } = parseHexKey(key);
+            for (const n of hexNeighbors(q, r)) {
+                const enemy = findEnemy(n.q, n.r);
+                if (enemy && enemyFilter(enemy)) result.add(hexKey(n.q, n.r));
+            }
+        }
+    }
+    return result;
+}
+
+function moveAdjacentForSkill(targetQ, targetR) {
+    let bestHex = null, bestCost = Infinity;
+    for (const n of hexNeighbors(targetQ, targetR)) {
+        const cost = reachable ? reachable.get(hexKey(n.q, n.r)) : undefined;
+        if (cost !== undefined && cost < bestCost) { bestCost = cost; bestHex = n; }
+    }
+    if (!bestHex || bestCost <= 0) return;
+    player.q = bestHex.q;
+    player.r = bestHex.r;
+    player.mp -= bestCost;
+    player.movedThisTurn = true;
+    player.hexesMovedThisTurn += bestCost;
+    refreshVision();
 }
 
 function getSkillTargets(skillId) {
@@ -787,18 +834,12 @@ function getSkillTargets(skillId) {
             targets.add(hexKey(player.q, player.r));
             break;
         case SKILL_TARGET.MELEE: {
-            const adj = hexNeighbors(player.q, player.r);
-            for (const n of adj) {
-                if (em.enemies.some(e => e.q === n.q && e.r === n.r)) targets.add(hexKey(n.q, n.r));
-            }
+            for (const k of meleeSkillTargets(() => true)) targets.add(k);
             break;
         }
         case SKILL_TARGET.MELEE_EXECUTE: {
-            const adj = hexNeighbors(player.q, player.r);
-            for (const n of adj) {
-                const enemy = em.enemies.find(e => e.q === n.q && e.r === n.r);
-                if (enemy && enemy.hp <= enemyEffectiveMaxHp(enemy) / 2) targets.add(hexKey(n.q, n.r));
-            }
+            const isExec = enemy => enemy && enemy.hp <= enemyEffectiveMaxHp(enemy) / 2;
+            for (const k of meleeSkillTargets(isExec)) targets.add(k);
             break;
         }
         case SKILL_TARGET.RANGED: {
@@ -938,32 +979,54 @@ function computeReachable() {
     }, player.mp);
     reachable.delete(hexKey(player.q, player.r));
 
-    // Attackable: enemy hexes adjacent to any reachable hex (or current position)
-    attackable = new Set();
-    // Can attack enemies adjacent to player's current position
+    attackable = computeAttackable(enemyKeys);
+}
+
+function computeAttackable(enemyKeys) {
+    const wep = player.weapon();
+    if (wep && wep.type === 'ranged') return computeRangedAttackable();
+    return computeMeleeAttackable(enemyKeys);
+}
+
+function computeRangedAttackable() {
+    const result = new Set();
+    const wep = player.weapon();
+    const cost = (!wep.magical || wep.special === 'free_ranged' || wep.special === 'channel') ? 0 : 1;
+    if (player.aether < cost) return result;
+    const playerPoi = world.poiAt(player.q, player.r);
+    const range = player.weaponRange(playerTerrain(), playerPoi ? playerPoi.type : null);
+    for (const h of hexesInRange(player.q, player.r, range)) {
+        if (em.enemies.some(en => en.q === h.q && en.r === h.r && world.visible.has(hexKey(en.q, en.r))) && world.hasLOS(player, h)) {
+            result.add(hexKey(h.q, h.r));
+        }
+    }
+    return result;
+}
+
+function computeMeleeAttackable(enemyKeys) {
+    const result = new Set();
     for (const n of hexNeighbors(player.q, player.r)) {
         const nk = hexKey(n.q, n.r);
-        if (enemyKeys.has(nk)) attackable.add(nk);
+        if (enemyKeys.has(nk)) result.add(nk);
     }
-    // Can attack enemies adjacent to reachable hexes (need to move there first, cost permitting)
     for (const [key] of reachable) {
         const { q, r } = parseHexKey(key);
         for (const n of hexNeighbors(q, r)) {
             const nk = hexKey(n.q, n.r);
-            if (enemyKeys.has(nk)) attackable.add(nk);
+            if (enemyKeys.has(nk)) result.add(nk);
         }
     }
-    // Blink Ring: can attack enemies within blink range
     const blinkItem = player.equipped('blink_ring');
     if (blinkItem) {
         const blinkRange = blinkItem.blinkRange || 4;
         for (const enemy of em.enemies) {
             const dist = hexDistance(player.q, player.r, enemy.q, enemy.r);
             if (dist <= blinkRange && dist > 1) {
-                attackable.add(hexKey(enemy.q, enemy.r));
+                result.add(hexKey(enemy.q, enemy.r));
             }
         }
     }
+    return result;
 }
 
 function checkEndTurn() {
@@ -3016,6 +3079,9 @@ canvas.addEventListener('mousedown', e => {
                 if (targeting.skill === '__ranged__') {
                     rangedAttack(hex.q, hex.r);
                     targeting = null;
+                } else if (targeting.skill === '__melee__') {
+                    moveAndAttack(hex.q, hex.r);
+                    targeting = null;
                 } else {
                     executeSkill(targeting.skill, hex.q, hex.r);
                 }
@@ -3033,7 +3099,9 @@ canvas.addEventListener('mousedown', e => {
             if (hex.q === player.q && hex.r === player.r) {
                 deselectPlayer();
             } else if (attackable && attackable.has(key)) {
-                moveAndAttack(hex.q, hex.r);
+                const wep = player.weapon();
+                if (wep && wep.type === 'ranged') rangedAttack(hex.q, hex.r);
+                else moveAndAttack(hex.q, hex.r);
             } else if (reachable && reachable.has(key)) {
                 movePlayer(hex.q, hex.r);
             } else {
@@ -3132,13 +3200,14 @@ window.addEventListener('keydown', e => {
         togglePanel('skills-panel');
     } else if (e.key === 'i' || e.key === 'I') {
         togglePanel('inv-panel');
-    } else if (e.key === 'n' || e.key === 'N') {
-        if (confirm('Start a new game?')) initGame();
     } else if (e.key >= '1' && e.key <= '4') {
         activateSkillSlot(parseInt(e.key) - 1);
     } else if (e.key === 'r' || e.key === 'R') {
         if (phase !== 'player') return;
         activateRangedWeapon();
+    } else if (e.key === 'a' || e.key === 'A') {
+        if (phase !== 'player') return;
+        activateMeleeAttack();
     }
 });
 
@@ -3178,6 +3247,18 @@ function tickGarrisons() {
             logCombat(`Garrison slays ${def.name}!`, 'log-dmg');
         }
     }
+}
+
+function activateMeleeAttack() {
+    computeReachable();
+    const enemyKeys = new Set(em.enemies.map(e => hexKey(e.q, e.r)));
+    const validHexes = computeMeleeAttackable(enemyKeys);
+    if (validHexes.size === 0) return;
+    selected = false;
+    attackable = null;
+    targeting = { skill: '__melee__', validHexes };
+    render();
+    updateSkillBar();
 }
 
 function activateRangedWeapon() {
@@ -3224,11 +3305,15 @@ function activateSkill(skillId) {
         return;
     }
 
-    // Enter targeting mode
+    // Enter targeting mode. Melee skills need `reachable` populated so
+    // getSkillTargets can find move-and-attack candidates and executeSkill
+    // can move the player adjacent.
+    if (isMeleeSkill(skill)) computeReachable();
     const validHexes = getSkillTargets(skillId);
     if (validHexes.size === 0) { logCombat('No valid targets!', 'log-info'); return; }
     targeting = { skill: skillId, validHexes };
-    deselectPlayer();
+    if (isMeleeSkill(skill)) selected = false; // hide selection box; keep reachable for the move step
+    else deselectPlayer();
     render();
     updateSkillBar();
 }
