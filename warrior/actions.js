@@ -147,33 +147,51 @@ export class Action {
         }
     }
 
-    // Bounce damage from start hex to nearby enemies. useBellCurve picks the
-    // damage path: dealDamageToEnemy (rolled + defense) vs raw (skill chains).
-    chainBounce(skillName, dmg, startQ, startR, bounceCount, bounceRange, hitSet, useBellCurve, perJumpBonus, stunBucket) {
-        const { em, world, sound, logCombat, dealDamageToEnemy, killEnemy, enemyDefense, rollPlayerStun } = this.ctx;
+    // Nearest enemy within bounceRange of (q,r) that isn't in hitSet, else null.
+    nearestUnhit(q, r, bounceRange, hitSet) {
+        const { em } = this.ctx;
+        let closest = null, closestDist = Infinity;
+        for (const enemy of em.enemies) {
+            if (hitSet.has(enemy)) continue;
+            const d = hexDistance(q, r, enemy.q, enemy.r);
+            if (d <= bounceRange && d < closestDist) { closestDist = d; closest = enemy; }
+        }
+        return closest;
+    }
+
+    // Bounce damage hex-to-hex with full rolled-damage semantics
+    // (bellCurve + enemy defense + stun roll). Used by Ricochet.
+    chainBounceRolled(skillName, dmg, startQ, startR, bounceCount, bounceRange, hitSet, stunBucket) {
+        const { dealDamageToEnemy } = this.ctx;
         let curQ = startQ, curR = startR;
         for (let i = 0; i < bounceCount; i++) {
-            dmg += (perJumpBonus || 0);
-            let closest = null, closestDist = Infinity;
-            for (const enemy of em.enemies) {
-                if (hitSet.has(enemy)) continue;
-                const d = hexDistance(curQ, curR, enemy.q, enemy.r);
-                if (d <= bounceRange && d < closestDist) { closestDist = d; closest = enemy; }
-            }
+            const closest = this.nearestUnhit(curQ, curR, bounceRange, hitSet);
             if (!closest) break;
             hitSet.add(closest);
-            if (useBellCurve) {
-                dealDamageToEnemy(closest, dmg, `${skillName} bounce`, { stunBucket });
-            } else {
-                const closestDef = em.getDef(closest.type);
-                const eDef = enemyDefense(closest, closestDef);
-                const actualDmg = Math.max(1, dmg - eDef);
-                closest.hp -= actualDmg;
-                logCombat(`${skillName} chain: ${actualDmg} dmg to ${closestDef.name}`, 'log-dmg');
-                sound.hitEnemy();
-                rollPlayerStun(closest, dmg, stunBucket);
-                if (closest.hp <= 0) killEnemy(closest);
-            }
+            dealDamageToEnemy(closest, dmg, `${skillName} bounce`, { stunBucket });
+            curQ = closest.q; curR = closest.r;
+        }
+    }
+
+    // Bounce damage hex-to-hex with raw (no bellCurve) damage minus flat
+    // defense. Per-jump bonus stacks each hop. Used by weapon chain/reverberate
+    // and Chain Lightning, where the primary roll already happened.
+    chainBounceRaw(skillName, dmg, startQ, startR, bounceCount, bounceRange, hitSet, perJumpBonus, stunBucket) {
+        const { em, sound, logCombat, killEnemy, enemyDefense, rollPlayerStun } = this.ctx;
+        let curQ = startQ, curR = startR;
+        for (let i = 0; i < bounceCount; i++) {
+            dmg += perJumpBonus;
+            const closest = this.nearestUnhit(curQ, curR, bounceRange, hitSet);
+            if (!closest) break;
+            hitSet.add(closest);
+            const closestDef = em.getDef(closest.type);
+            const eDef = enemyDefense(closest, closestDef);
+            const actualDmg = Math.max(1, dmg - eDef);
+            closest.hp -= actualDmg;
+            logCombat(`${skillName} chain: ${actualDmg} dmg to ${closestDef.name}`, 'log-dmg');
+            sound.hitEnemy();
+            rollPlayerStun(closest, dmg, stunBucket);
+            if (closest.hp <= 0) killEnemy(closest);
             curQ = closest.q; curR = closest.r;
         }
     }
@@ -251,10 +269,10 @@ export class MeleeAction extends Action {
         }
 
         if (wep && wep.special === 'chain') {
-            this.chainBounce('Chain', dmg, enemy.q, enemy.r, wep.chainCount || 1, 2, new Set([enemy]), false, 0, 'primary');
+            this.chainBounceRaw('Chain', dmg, enemy.q, enemy.r, wep.chainCount || 1, 2, new Set([enemy]), 0, 'primary');
         }
         if (wep && wep.special === 'reverberate') {
-            this.chainBounce('Reverberate', dmg, enemy.q, enemy.r, wep.chainCount || 1, 2, new Set([enemy]), false, wep.chainBonus || 0, 'primary');
+            this.chainBounceRaw('Reverberate', dmg, enemy.q, enemy.r, wep.chainCount || 1, 2, new Set([enemy]), wep.chainBonus || 0, 'primary');
         }
 
         if (wep && wep.special === 'cleave') {
@@ -341,10 +359,10 @@ export class RangedAction extends Action {
         this.applyOnHitEffects(wep, enemy);
 
         if (wep && wep.special === 'chain') {
-            this.chainBounce('Chain', dmg, this.targetQ, this.targetR, wep.chainCount || 1, 2, new Set([enemy]), false, 0, 'other');
+            this.chainBounceRaw('Chain', dmg, this.targetQ, this.targetR, wep.chainCount || 1, 2, new Set([enemy]), 0, 'other');
         }
         if (wep && wep.special === 'reverberate') {
-            this.chainBounce('Reverberate', dmg, this.targetQ, this.targetR, wep.chainCount || 1, 2, new Set([enemy]), false, wep.chainBonus || 0, 'other');
+            this.chainBounceRaw('Reverberate', dmg, this.targetQ, this.targetR, wep.chainCount || 1, 2, new Set([enemy]), wep.chainBonus || 0, 'other');
         }
 
         if (wep && wep.special === 'splash') {
@@ -759,7 +777,7 @@ function executeChainLightning(action) {
     const skill = action.skill;
     const dmg = skill.baseDamage + player.stats.warding;
     dealDamageToEnemy(enemy, dmg, 'Chain Lightning', { stunBucket: 'other' });
-    action.chainBounce('Chain Lightning', dmg, action.targetQ, action.targetR, skill.chainCount, skill.chainRange, new Set([enemy]), false, 0, 'other');
+    action.chainBounceRaw('Chain Lightning', dmg, action.targetQ, action.targetR, skill.chainCount, skill.chainRange, new Set([enemy]), 0, 'other');
 }
 
 function executeImmolate(action) {
@@ -844,7 +862,7 @@ function executeRicochet(action) {
     if (!enemy) return;
     const dmg = action.skill.baseDamage + player.stats.reflex;
     dealDamageToEnemy(enemy, dmg, 'Ricochet', { stunBucket: 'other' });
-    action.chainBounce('Ricochet', dmg, action.targetQ, action.targetR, action.skill.bounceCount, action.skill.bounceRange, new Set([enemy]), true, 0, 'other');
+    action.chainBounceRolled('Ricochet', dmg, action.targetQ, action.targetR, action.skill.bounceCount, action.skill.bounceRange, new Set([enemy]), 'other');
 }
 
 function executeStarfall(action) {
