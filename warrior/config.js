@@ -741,8 +741,8 @@ export const SKILLS = {
         range: 4, aoeRange: 1, baseDamage: 8, desc: 'Target hex: 8 + Warding to all enemies within 1.', minLevel: 6
     },
     dimensional_rend: {
-        id: 'dimensional_rend', name: 'Dimensional Rend', cost: 4, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
-        desc: 'Melee: weapon damage * 3. Must be adjacent.', minLevel: 8
+        id: 'dimensional_rend', name: 'Dimensional Rend', cost: 4, hpCost: 10, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
+        desc: 'Melee: weapon damage * 3. Costs 10 HP. Must be adjacent.', minLevel: 8
     },
     execute: {
         id: 'execute', name: 'Execute', cost: 3, target: SKILL_TARGET.MELEE_EXECUTE, usage: SKILL_USAGE.ANYTIME,

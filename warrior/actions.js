@@ -952,9 +952,17 @@ function executeMeteor(action) {
 }
 
 function executeDimensionalRend(action) {
-    const { player, em } = action.ctx;
+    const { player, em, logCombat } = action.ctx;
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
+    const hpCost = action.skill.hpCost;
+    const tooLow = player.hp <= hpCost;
+    player.hp -= hpCost;
+    logCombat(`Dimensional Rend tears at you: -${hpCost} HP`, 'log-dmg');
+    if (tooLow) {
+        logCombat('Health too low — the rift fizzles.', 'log-info');
+        return;
+    }
     const wep = player.weapon();
     new WeaponStrike(action, (wep ? wep.damage : 1) * 3, 'Dimensional Rend', 'other').apply(enemy);
 }

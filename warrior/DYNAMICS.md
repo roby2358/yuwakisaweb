@@ -264,7 +264,7 @@ The skill bar visually grays out skills whose usage conditions aren't met, provi
 | Gravity Well | 3 AE | AoE Self (3) | — | Anytime | 6 | Pull enemies within 3 one hex closer. |
 | Sundering Blow | 2 AE | Melee | Might | Anytime | 6 | weapon + Might damage. Permanently shred 3 enemy defense. No counter. |
 | Meteor | 4 AE | Ranged AoE (4) | Warding | Anytime | 6 | Target hex: 8 + Warding to all enemies within 1 of target. |
-| Dimensional Rend | 4 AE | Melee | weapon | Anytime | 8 | weapon damage * 3. Must be adjacent. |
+| Dimensional Rend | 4 AE + 10 HP | Melee | weapon | Anytime | 8 | weapon damage * 3. Must be adjacent. |
 | Execute | 3 AE | Melee | Might+weapon | Anytime | 8 | weapon*2 + Might*2 damage. Only targets enemies below 50% HP. |
 | Ricochet | 3 AE | Ranged (4) | Reflex | Anytime | 8 | 5 + Reflex damage. Bounces to 2 more enemies within 2 hexes. |
 | Starfall | 5 AE | AoE Self (3) | Warding | Anytime | 10 | 15 + Warding*2 damage to all enemies within 3. |
