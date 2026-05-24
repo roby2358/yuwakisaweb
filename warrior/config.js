@@ -705,6 +705,12 @@ export const SKILLS = {
         desc: 'Ends turn. Next enemy turn: melee hits deal 10% (min 1), reflect 90% to attacker. Ranged unaffected.',
         minLevel: 4
     },
+    channel: {
+        id: 'channel', name: 'Channel Aether', cost: 0, mpCost: 2, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
+        desc: 'Burn HP for AE at 4:1, up to filling AE or half current HP. Min 1 AE — blood from a stone.',
+        shopPrice: 1, shopOnly: true,
+        minLevel: 3
+    },
     breach_pulse: {
         id: 'breach_pulse', name: 'Breach Pulse', cost: 3, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
         range: 2, baseDamage: 5, desc: 'AoE: 5 + Warding to enemies within 2.', minLevel: 4

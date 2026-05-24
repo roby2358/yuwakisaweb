@@ -865,6 +865,20 @@ function executeReflect(action) {
     logCombat('Reflect stance!', 'log-info');
 }
 
+function executeChannel(action) {
+    const { player, logCombat } = action.ctx;
+    const aeDeficit = player.maxAether() - player.aether;
+    if (aeDeficit <= 0) {
+        logCombat('Channel Aether: already at max AE.', 'log-info');
+        return;
+    }
+    const hpLost = Math.min(aeDeficit * 4, Math.floor(player.hp / 2));
+    const aeGain = Math.max(1, Math.floor(hpLost / 4));
+    player.hp -= hpLost;
+    player.aether = Math.min(player.maxAether(), player.aether + aeGain);
+    logCombat(`Channel Aether: -${hpLost} HP, +${aeGain} AE`, 'log-info');
+}
+
 function executeBreachPulse(action) {
     const { player } = action.ctx;
     action.applyAoeDamage('Breach Pulse', action.skill.baseDamage + player.stats.warding, action.skill.range, 'other');
@@ -1270,6 +1284,7 @@ const SKILL_HANDLERS = {
     piercing_shot: executePiercingShot,
     warp_shield: executeWarpShield,
     reflect: executeReflect,
+    channel: executeChannel,
     breach_pulse: executeBreachPulse,
     chain_lightning: executeChainLightning,
     immolate: executeImmolate,
