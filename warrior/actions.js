@@ -114,8 +114,21 @@ export class Action {
         return dmg;
     }
 
+    // Runs before the damage calc. Shred mutates enemy.defReduction in place
+    // so the current hit benefits; pierce is returned as a per-hit modifier
+    // the caller merges into the dealDamageToEnemy opts.
+    applyPreHitEffects(wep, enemy) {
+        if (!wep) return {};
+        if (wep.special === 'defense_shred') {
+            enemy.defReduction = (enemy.defReduction || 0) + wep.shredAmount;
+            this.ctx.logCombat(`Shreds ${wep.shredAmount} defense!`, 'log-info');
+        }
+        if (wep.special === 'armor_pierce') return { pierceAmount: wep.pierceAmount };
+        return {};
+    }
+
     // Apply weapon on-hit effects after a strike. Lifesteal/siphon/channel fire
-    // regardless of kill; shred/burn only mark the enemy if it's still alive.
+    // regardless of kill; burn only marks the enemy if it's still alive.
     applyOnHitEffects(wep, enemy) {
         if (!wep) return;
         const { player, em, logCombat, endGame } = this.ctx;
@@ -137,10 +150,6 @@ export class Action {
 
         if (enemy.hp <= 0) return;
 
-        if (wep.special === 'defense_shred') {
-            enemy.defReduction = (enemy.defReduction || 0) + wep.shredAmount;
-            logCombat(`Shreds ${wep.shredAmount} defense!`, 'log-info');
-        }
         if (wep.special === 'burn') {
             enemy.burnDamage = (enemy.burnDamage || 0) + wep.burnDamage;
             logCombat(`${em.getDef(enemy.type).name} is burning!`, 'log-dmg');
@@ -254,8 +263,7 @@ export class MeleeAction extends Action {
 
         let dmg = this.applyEquipmentBonusDamage(player.meleeDamage(em.getDef(enemy.type).chaosSpawned));
         const wep = player.weapon();
-        const opts = { stunBucket: 'primary' };
-        if (wep && wep.special === 'armor_pierce') opts.pierceAmount = wep.pierceAmount;
+        const opts = { stunBucket: 'primary', ...this.applyPreHitEffects(wep, enemy) };
         const { killed } = dealDamageToEnemy(enemy, dmg, 'Melee', opts);
 
         this.applyOnHitEffects(wep, enemy);
@@ -336,8 +344,7 @@ export class RangedAction extends Action {
             logCombat(`Sniper: +${wep.sniperBonus} at max range`, 'log-info');
         }
 
-        const rangedOpts = { stunBucket: 'other' };
-        if (wep && wep.special === 'armor_pierce') rangedOpts.pierceAmount = wep.pierceAmount;
+        const rangedOpts = { stunBucket: 'other', ...this.applyPreHitEffects(wep, enemy) };
         if (wep && wep.special === 'ignore_defense') {
             const actualDmg = Math.max(1, dmg);
             enemy.hp -= actualDmg;
@@ -825,11 +832,9 @@ function executeSunderingBlow(action) {
     if (!enemy) return;
     const wep = player.weapon();
     const dmg = (wep ? wep.damage : 1) + player.stats.might;
+    enemy.defReduction = (enemy.defReduction || 0) + action.skill.shredAmount;
+    logCombat(`Sundered ${action.skill.shredAmount} defense!`, 'log-info');
     dealDamageToEnemy(enemy, dmg, 'Sundering Blow', { stunBucket: 'primary' });
-    if (enemy.hp > 0) {
-        enemy.defReduction = (enemy.defReduction || 0) + action.skill.shredAmount;
-        logCombat(`Sundered ${action.skill.shredAmount} defense!`, 'log-info');
-    }
 }
 
 function executeMeteor(action) {
