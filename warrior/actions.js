@@ -128,10 +128,10 @@ export class Action {
     }
 
     // Apply weapon on-hit effects after a strike. Lifesteal/siphon/channel fire
-    // regardless of kill; burn only marks the enemy if it's still alive.
+    // regardless of kill; burn/knockback only mark the enemy if it's still alive.
     applyOnHitEffects(wep, enemy) {
         if (!wep) return;
-        const { player, em, logCombat, endGame } = this.ctx;
+        const { player, em, world, logCombat, endGame } = this.ctx;
 
         if (wep.special === 'lifesteal') {
             const heal = wep.lifestealAmount;
@@ -153,6 +153,16 @@ export class Action {
         if (wep.special === 'burn') {
             enemy.burnDamage = (enemy.burnDamage || 0) + wep.burnDamage;
             logCombat(`${em.getDef(enemy.type).name} is burning!`, 'log-dmg');
+        }
+        if (wep.special === 'knockback') {
+            const dest = knockbackHex(player.q, player.r, enemy.q, enemy.r);
+            const hex = world.getHex(dest.q, dest.r);
+            const occupied = em.enemies.some(e => e.q === dest.q && e.r === dest.r);
+            if (hex && world.isPassable(hex) && !occupied && !(dest.q === player.q && dest.r === player.r)) {
+                enemy.q = dest.q;
+                enemy.r = dest.r;
+                logCombat(`Knocked back!`, 'log-info');
+            }
         }
     }
 
@@ -397,17 +407,6 @@ export class RangedAction extends Action {
                 }
                 const hex = world.getHex(pq, pr);
                 if (!hex || hex.terrain === TERRAIN.MOUNTAIN) break;
-            }
-        }
-
-        if (wep && wep.special === 'knockback' && enemy.hp > 0) {
-            const dest = knockbackHex(player.q, player.r, this.targetQ, this.targetR);
-            const hex = world.getHex(dest.q, dest.r);
-            const occupied = em.enemies.some(e => e.q === dest.q && e.r === dest.r);
-            if (hex && world.isPassable(hex) && !occupied && !(dest.q === player.q && dest.r === player.r)) {
-                enemy.q = dest.q;
-                enemy.r = dest.r;
-                logCombat(`Knocked back!`, 'log-info');
             }
         }
 
