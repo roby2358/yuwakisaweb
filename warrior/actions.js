@@ -850,7 +850,7 @@ function executePiercingShot(action) {
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
     const dmg = action.skill.baseDamage + player.stats.reflex;
-    new RangedStrike(action, dmg, 'Piercing Shot', 'other', { bypassDefense: true }).apply(enemy);
+    new RangedStrike(action, dmg, 'Penetrating Shot', 'other', { bypassDefense: true }).apply(enemy);
 }
 
 function executeWarpShield(action) {

@@ -692,7 +692,7 @@ export const SKILLS = {
         desc: 'Melee: weapon + Might. Heal HP equal to damage dealt. No counter.', minLevel: 2
     },
     piercing_shot: {
-        id: 'piercing_shot', name: 'Piercing Shot', cost: 2, target: SKILL_TARGET.RANGED, usage: SKILL_USAGE.ANYTIME,
+        id: 'piercing_shot', name: 'Penetrating Shot', cost: 2, target: SKILL_TARGET.RANGED, usage: SKILL_USAGE.ANYTIME,
         range: 4, baseDamage: 6, desc: 'Ranged: 6 + Reflex. Ignores defense.', minLevel: 2
     },
     warp_shield: {

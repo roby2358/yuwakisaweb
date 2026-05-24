@@ -254,7 +254,7 @@ The skill bar visually grays out skills whose usage conditions aren't met, provi
 | Cosmic Bolt | 3 AE | Ranged (4) | Warding | Anytime | 2 | 8 + Warding ranged damage. |
 | Shockwave | 2 AE | AoE Self (2) | Might | Anytime | 2 | 4 + Might damage to enemies within 2. Pushes each 1 hex away. |
 | Siphon Strike | 2 AE | Melee | Might | Anytime | 2 | weapon + Might damage. Heal HP equal to damage dealt. No counter. |
-| Piercing Shot | 2 AE | Ranged (4) | Reflex | Anytime | 2 | 6 + Reflex damage. Ignores defense. |
+| Penetrating Shot | 2 AE | Ranged (4) | Reflex | Anytime | 2 | 6 + Reflex damage. Ignores defense. |
 | Warp Shield | 2 AE | Self | — | Anytime | 4 | Absorb next hit. Lasts 3 turns. |
 | Breach Pulse | 3 AE | AoE Self (2) | Warding | Anytime | 4 | 5 + Warding damage to all enemies within 2. |
 | Chain Lightning | 3 AE | Ranged (3) | Warding | Anytime | 4 | 6 + Warding to target. Chains to 2 nearby enemies for 4 flat dmg. |
@@ -319,7 +319,7 @@ LOS is checked by walking the line between two hexes and testing for mountains. 
 ## Strategies
 
 ### Early Game (Levels 1-3)
-Explore cautiously from starting haven. The Rusty Blade (1 damage) and Stick Bow (1 damage, range 2) mean early fights are slow — hunt wildlife for XP and gold while avoiding chaos-spawned enemies until you upgrade. Loot gold hexes for currency. Buy a weapon at the haven ASAP; even a modest magical weapon with lifesteal or a non-magical upgrade transforms your combat ability. Avoid ruins until level 2+ since they spawn enemies on entry. Visit Wise Man huts whenever safe — a free skill early is a windfall. The level 2 skill choice is critical with many options: Phase Step for mobility, Cosmic Bolt/Piercing Shot for ranged damage, Siphon Strike for sustain, Shockwave for defensive AoE, Loot for economy, Aether Tap for resource management, or Farsight for scouting.
+Explore cautiously from starting haven. The Rusty Blade (1 damage) and Stick Bow (1 damage, range 2) mean early fights are slow — hunt wildlife for XP and gold while avoiding chaos-spawned enemies until you upgrade. Loot gold hexes for currency. Buy a weapon at the haven ASAP; even a modest magical weapon with lifesteal or a non-magical upgrade transforms your combat ability. Avoid ruins until level 2+ since they spawn enemies on entry. Visit Wise Man huts whenever safe — a free skill early is a windfall. The level 2 skill choice is critical with many options: Phase Step for mobility, Cosmic Bolt/Penetrating Shot for ranged damage, Siphon Strike for sustain, Shockwave for defensive AoE, Loot for economy, Aether Tap for resource management, or Farsight for scouting.
 
 ### Mid Game (Levels 4-6)
 Assault the first breach. Use terrain tactically: forest for +1 defense when you expect to be attacked, hills for +1 ranged range. Clear ruins for equipment upgrades and gold. Close the first breach to reduce spawn pressure. Weapon specials start mattering: armor_pierce weapons cut through Guardian defense, charge weapons reward aggressive movement-into-attack, defense_shred weapons weaken enemies over sustained fights. Non-combat skills like Prospect, Salvage, and Bountiful Harvest fund equipment purchases. Use Commune to reveal all POIs and plan your route to the next breach.
@@ -332,14 +332,14 @@ Close the second breach. Gear up for the Maw. Starfall (level 10) trivializes mo
 - **Skill Caster**: aether_siphon weapon + aether_regen armor + aether_bonus artifact — infinite Aether, skill every turn
 - **Glass Cannon**: recoil weapon + dodge_bonus armor — huge burst, pray for dodges
 - **Tank Breacher**: armor_pierce weapon + last_stand armor + Sundering Blow — grind through Guardian fights
-- **Sniper**: sniper ranged weapon + vision_bonus artifact + Piercing Shot — shoot from 6+ hexes, never get touched
+- **Sniper**: sniper ranged weapon + vision_bonus artifact + Penetrating Shot — shoot from 6+ hexes, never get touched
 - **Kite Control**: knockback ranged weapon + thorns armor + Shockwave — push enemies away, punish the ones that reach you
 - **Boss Killer**: defense_shred weapon + ranged_immune armor + Execute — shred the Unraveler's defense, negate its ranged, finish with Execute
 - **Explorer**: Farsight + Commune + Spirit Walk + Prospect — maximum map knowledge and economy
 - **Harvester**: Loot + Bountiful Harvest + Salvage + Prospect — maximize gold income for shop upgrades
 
 ### Key Decisions
-- **Melee vs Ranged build**: Melee (Might + melee weapon) does more single-target damage and benefits from Void Strike/Dimensional Rend/Execute. Ranged (Reflex + ranged weapon) avoids counter-attacks and kites safely but has lower burst. Reflex double-scales: ranged damage AND dodge chance. Piercing Shot and Void Salvo give Reflex builds skill scaling. Weapons with ignore_defense are excellent against high-defense targets (Breach Guardian at 5 def, Unraveler at 6 def).
+- **Melee vs Ranged build**: Melee (Might + melee weapon) does more single-target damage and benefits from Void Strike/Dimensional Rend/Execute. Ranged (Reflex + ranged weapon) avoids counter-attacks and kites safely but has lower burst. Reflex double-scales: ranged damage AND dodge chance. Penetrating Shot and Void Salvo give Reflex builds skill scaling. Weapons with ignore_defense are excellent against high-defense targets (Breach Guardian at 5 def, Unraveler at 6 def).
 - **When to engage breaches**: Each sealed breach reduces spawn pressure but the guardian fight (50 HP, 10 atk, 8 ranged atk at range 5, 5 def) is dangerous. Their long ranged reach and aggro range of 6 means you can't safely plunk away from a distance. Sundering Blow (-3 def) makes guardians far more approachable.
 - **Skill slot management**: 33 skills, 4 slots. The Skills panel lets you swap freely, but mid-combat you're locked to your equipped 4. Do you bring 4 combat skills for the breach assault, or keep Restore equipped for the aftermath? Pristine skills incentivize returning to safe territory between fights.
 - **High defense trade-off**: Armor with high_def_mp_penalty offers +5 defense but -1 MP (3 instead of 4), severely limiting mobility. Best paired with Phase Step for repositioning.
