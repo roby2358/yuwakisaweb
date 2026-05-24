@@ -859,6 +859,12 @@ function executeWarpShield(action) {
     logCombat('Warp Shield active!', 'log-info');
 }
 
+function executeReflect(action) {
+    const { player, logCombat } = action.ctx;
+    player.reflectTurns = action.skill.duration;
+    logCombat('Reflect stance!', 'log-info');
+}
+
 function executeBreachPulse(action) {
     const { player } = action.ctx;
     action.applyAoeDamage('Breach Pulse', action.skill.baseDamage + player.stats.warding, action.skill.range, 'other');
@@ -1263,6 +1269,7 @@ const SKILL_HANDLERS = {
     siphon_strike: executeSiphonStrike,
     piercing_shot: executePiercingShot,
     warp_shield: executeWarpShield,
+    reflect: executeReflect,
     breach_pulse: executeBreachPulse,
     chain_lightning: executeChainLightning,
     immolate: executeImmolate,

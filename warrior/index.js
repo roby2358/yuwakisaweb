@@ -529,13 +529,24 @@ function dealDamageToPlayer(damage, source, isSkillDamage, opts = {}) {
     const rolled = Rando.bellCurve(damage);
     let def = playerDefense();
     if (isSkillDamage) def += Math.round(player.stats.warding / 100 * rolled);
-    const dealt = Math.max(1, rolled - def);
+    let dealt = Math.max(1, rolled - def);
+    let reflected = 0;
+    if (player.reflectTurns > 0 && opts.attacker && !opts.isRanged) {
+        reflected = Math.round(dealt * (SKILLS.reflect.reflectPercent / 100));
+        dealt = Math.max(1, dealt - reflected);
+    }
     player.hp -= dealt;
     victory.damageTaken += dealt;
     logCombat(`${source}: ${dealt} dmg to you`, 'log-dmg');
     sound.hitPlayer();
+    if (reflected > 0) {
+        opts.attacker.hp -= reflected;
+        logCombat(`Reflect: ${reflected} dmg to ${em.getDef(opts.attacker.type).name}`, 'log-dmg');
+        sound.hitEnemy();
+        if (opts.attacker.hp <= 0) killEnemy(opts.attacker);
+    }
 
-    if (opts.attacker && !opts.isRanged) {
+    if (opts.attacker && !opts.isRanged && opts.attacker.hp > 0) {
         const thornsItem = player.equipped('thorns');
         if (thornsItem) {
             const thornDmg = thornsItem.thornsDamage || Math.round(dealt * (thornsItem.thornsPercent || 50) / 100);
@@ -1465,6 +1476,7 @@ async function runEnemyPhase() {
     if (gameOver) return;
 
     if (player.warpShieldTurns > 0) player.warpShieldTurns--;
+    if (player.reflectTurns > 0) player.reflectTurns--;
 
     // Guardian respawn: breaches/maw spawn guardians if none nearby
     for (const poi of world.pois) {
@@ -1882,6 +1894,13 @@ function render() {
         // Warp Shield indicator
         if (player.warpShieldTurns > 0) {
             ctx.strokeStyle = '#7c4dff'; ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(x, y, COUNTER_SIZE / 2 + 6, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        // Reflect indicator
+        if (player.reflectTurns > 0) {
+            ctx.strokeStyle = '#ffb74d'; ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.arc(x, y, COUNTER_SIZE / 2 + 6, 0, Math.PI * 2);
             ctx.stroke();

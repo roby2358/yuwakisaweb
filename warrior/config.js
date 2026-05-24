@@ -699,6 +699,12 @@ export const SKILLS = {
         id: 'warp_shield', name: 'Warp Shield', cost: 5, mpCost: 1, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
         duration: 1, desc: 'Block all damage from enemies for one turn.', minLevel: 4
     },
+    reflect: {
+        id: 'reflect', name: 'Reflect', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
+        duration: 1, takePercent: 10, reflectPercent: 90,
+        desc: 'Ends turn. Next enemy turn: melee hits deal 10% (min 1), reflect 90% to attacker. Ranged unaffected.',
+        minLevel: 4
+    },
     breach_pulse: {
         id: 'breach_pulse', name: 'Breach Pulse', cost: 3, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
         range: 2, baseDamage: 5, desc: 'AoE: 5 + Warding to enemies within 2.', minLevel: 4

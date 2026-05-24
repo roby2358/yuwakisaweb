@@ -25,6 +25,7 @@ export class Player {
         this.pendingSkillChoice = false;
         this.mp = PLAYER_MP;
         this.warpShieldTurns = 0;
+        this.reflectTurns = 0;
         this.movedThisTurn = false;
         this.hexesMovedThisTurn = 0;
         this.phaseStepUsedThisTurn = false;
@@ -173,7 +174,7 @@ export class Player {
             learnedSkills: [...this.learnedSkills],
             skills: this.skills, inventory: this.inventory,
             statPoints: this.statPoints, pendingSkillChoice: this.pendingSkillChoice,
-            mp: this.mp, warpShieldTurns: this.warpShieldTurns,
+            mp: this.mp, warpShieldTurns: this.warpShieldTurns, reflectTurns: this.reflectTurns,
             seenDialogs: [...this.seenDialogs]
         };
     }
