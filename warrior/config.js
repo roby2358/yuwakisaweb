@@ -722,7 +722,7 @@ export const SKILLS = {
     },
     immolate: {
         id: 'immolate', name: 'Immolate', cost: 1, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
-        burnDamage: 4, desc: 'Melee: weapon + Might. Target burns for 4 next turn. No counter.', minLevel: 4
+        burnDamage: 6, desc: 'Melee: weapon + Might. Target burns for 6 next turn. No counter.', minLevel: 4
     },
     mending_light: {
         id: 'mending_light', name: 'Mending Light', cost: 2, mpCost: 1, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,

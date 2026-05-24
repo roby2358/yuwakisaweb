@@ -281,9 +281,17 @@ class Strike {
     applyEntry(entry) {
         if (this.hitTargets.has(entry.target)) return;
         this.hitTargets.add(entry.target);
+        if (this.options.skillShred) {
+            entry.target.defReduction = (entry.target.defReduction || 0) + this.options.skillShred;
+            this.ctx.logCombat(`Sundered ${this.options.skillShred} defense!`, 'log-info');
+        }
         const opts = this.buildOpts(entry.target);
         const result = this.deliverDamage(entry, opts);
         this.action.applyOnHitEffects(this.wep, entry.target);
+        if (this.options.skillBurn && entry.target.hp > 0) {
+            entry.target.burnDamage = (entry.target.burnDamage || 0) + this.options.skillBurn;
+            this.ctx.logCombat(`${this.ctx.em.getDef(entry.target.type).name} is burning!`, 'log-dmg');
+        }
         if (entry.target === this.primary) this.primaryResult = result;
     }
 
@@ -895,16 +903,12 @@ function executeChainLightning(action) {
 }
 
 function executeImmolate(action) {
-    const { player, em, logCombat } = action.ctx;
+    const { player, em } = action.ctx;
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
     const wep = player.weapon();
     const dmg = (wep ? wep.damage : 1) + player.stats.might;
-    const { killed } = new WeaponStrike(action, dmg, 'Immolate', 'primary').apply(enemy);
-    if (!killed) {
-        enemy.burnDamage = (enemy.burnDamage || 0) + action.skill.burnDamage;
-        logCombat(`${em.getDef(enemy.type).name} is burning!`, 'log-dmg');
-    }
+    new WeaponStrike(action, dmg, 'Immolate', 'primary', { skillBurn: action.skill.burnDamage }).apply(enemy);
 }
 
 function executeMendingLight(action) {
@@ -934,14 +938,12 @@ function executeGravityWell(action) {
 }
 
 function executeSunderingBlow(action) {
-    const { player, em, logCombat } = action.ctx;
+    const { player, em } = action.ctx;
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
     const wep = player.weapon();
     const dmg = (wep ? wep.damage : 1) + player.stats.might;
-    enemy.defReduction = (enemy.defReduction || 0) + action.skill.shredAmount;
-    logCombat(`Sundered ${action.skill.shredAmount} defense!`, 'log-info');
-    new WeaponStrike(action, dmg, 'Shredding Blow', 'primary').apply(enemy);
+    new WeaponStrike(action, dmg, 'Shredding Blow', 'primary', { skillShred: action.skill.shredAmount }).apply(enemy);
 }
 
 function executeMeteor(action) {
