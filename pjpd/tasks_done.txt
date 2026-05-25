@@ -11,3 +11,10 @@ ID: warrior-t2b8
 Created: 2026-05-24T06:37:57Z
 Updated: 2026-05-24T15:18:10Z
 Add 'Crossbow' to the RANGED_ITEMS name list in config.js so it can roll as a procedural magical ranged weapon type. Non-magical Crossbow already exists at config.js:255 (damage 3, range 3) and 'Arbalest' (synonym) is in the list, but 'Crossbow' itself is missing. Single-line edit.
+----
+Priority:   40
+Status: Done
+ID: enemy-ai-dzx7
+Created: 2026-05-24T23:39:15Z
+Updated: 2026-05-25T00:08:10Z
+Extract enemy AI out of index.js into a new enemy_ai.js module. Move runEnemyPhase, runMonsterTurn, runChaosTurn, runRuinsGuardianTurn, runWildlifeTurn, tryAggroChase, trySwarmMarch, patrolAroundPoi, pickSwarmTarget, greedyMoveToward, moveEnemyStep, enemyCanRangedAttack, doEnemyMelee, doEnemyRanged, enemyAttacks, tryBossSpawn, tryTerrainShatter, forestModifiedAggro, pickSpawnPack, mawProximityBonus, animateMove, and supporting helpers. Use the same ctx-shim pattern actions.js uses to get back to combat callbacks (dealDamageToPlayer, killEnemy, etc.) and module state (occupied set, mawDistances, gameGeneration). Goal: shrink index.js from 3343 lines and stop further AI work from piling on there. See docs/ASPIRATIONS.md item #1. Watch for: async/await chain to endTurnResolve, gameGeneration invalidation, and animDelay timing — must keep identical behavior, not refactored behavior.

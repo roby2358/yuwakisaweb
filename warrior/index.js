@@ -25,6 +25,10 @@ import {
     MoveAction, RangedAction, MoveAndAttackAction, SkillAction,
     weaponMpCost, skillCostLabel, effectiveAetherCost
 } from './actions.js';
+import {
+    runEnemyPhase as runEnemyPhaseImpl,
+    computeMawDistances, mawProximityBonus, mawDistancePeak, pickSpawnPack
+} from './enemy_ai.js';
 
 // ---- Sprite sheets ----
 const SPRITE_COLS = 5;
@@ -94,8 +98,6 @@ let hoveredHex = null;
 let threatOverlay = null;   // Map<string, number> or null — threat heatmap for Ground Weeps
 let showingWorldMap = false;
 let combatAlerted = false;  // set when player attacks; nearby enemies ignore forest stealth
-let mawDistances = null;    // Map<hexKey, cost> — BFS distances from the Maw
-let mawMaxDist = 1;         // max BFS distance to Maw (for scaling)
 
 // Turn timing metrics (session-only, rolling window of last 1000 turns).
 const TURN_METRICS_CAP = 1000;
@@ -167,6 +169,36 @@ const actionCtx = {
     // module-state setters
     setCombatAlerted: (v) => { combatAlerted = v; },
     setThreatOverlay: (v) => { threatOverlay = v; },
+};
+
+// ---- Enemy AI context: see enemy_ai.js header for the contract ----
+const enemyAiCtx = {
+    get player() { return player; },
+    get world() { return world; },
+    get em() { return em; },
+    get victory() { return victory; },
+    get sound() { return sound; },
+    // predicates
+    combatAlerted: () => combatAlerted,
+    isGameOver: () => gameOver,
+    playerInForest: () => playerInForest(),
+    playerTerrain: () => playerTerrain(),
+    // combat math (still owned by index.js)
+    enemyMeleeAttack: (e, d) => enemyMeleeAttack(e, d),
+    enemyRangedAttack: (e, d) => enemyRangedAttack(e, d),
+    enemyDefense: (e, d) => enemyDefense(e, d),
+    enemyEffectiveMaxHp: (e) => enemyEffectiveMaxHp(e),
+    enemyOnCorruptedTerrain: (e, d) => enemyOnCorruptedTerrain(e, d),
+    // side-effects
+    dealDamageToPlayer: (...a) => dealDamageToPlayer(...a),
+    killEnemy: (...a) => killEnemy(...a),
+    gainXP: (...a) => gainXP(...a),
+    logCombat: (...a) => logCombat(...a),
+    render: () => render(),
+    animDelay: (ms) => animDelay(ms),
+    // round bookkeeping
+    tickGarrisons: () => tickGarrisons(),
+    advanceTurn: () => advanceTurn(),
 };
 
 // ---- View state ----
@@ -399,57 +431,6 @@ function enemyOnCorruptedTerrain(enemy, def) {
     if (!def.chaosSpawned) return false;
     const hex = world.getHex(enemy.q, enemy.r);
     return hex && (UNSHATTERED_VERSION[hex.terrain] !== undefined || UNDISTRESSED_VERSION[hex.terrain] !== undefined);
-}
-
-function computeMawDistances() {
-    const maw = world.pois.find(p => p.type === POI.MAW);
-    if (!maw) { mawDistances = new Map(); mawMaxDist = 1; return; }
-    const mawHex = world.getHex(maw.q, maw.r);
-    mawDistances = bfsHexes(mawHex, world.hexes, hex => {
-        const c = MOVEMENT_COST[hex.terrain];
-        return c === undefined ? Infinity : c;
-    }, Infinity);
-    mawMaxDist = 1;
-    for (const cost of mawDistances.values()) {
-        if (cost > mawMaxDist) mawMaxDist = cost;
-    }
-}
-
-// Peak creature tier at a hex: ramps linearly from NUM_CREATURE_TIERS-1 at the Maw
-// to 0 at the far edge. Hexes disconnected from the Maw default to peak 0 (easiest).
-function mawDistancePeak(q, r) {
-    if (!mawDistances || mawMaxDist <= 0) return 0;
-    const dist = mawDistances.get(hexKey(q, r));
-    if (dist === undefined) return 0;
-    const t = Math.min(1, dist / mawMaxDist);
-    return (NUM_CREATURE_TIERS - 1) * (1 - t);
-}
-
-// Spawn picker: closer to the Maw → tougher creatures, and packs scale to player attack.
-// Pack size: roll bellCurve(playerAttack) and divide by the chosen creature's attack —
-// strong creatures spawn alone, weak ones swarm.
-function pickSpawnPack(q, r) {
-    const peak = mawDistancePeak(q, r);
-    const type = Rando.weighted(spawnTierWeights(em.creatureDefs, peak));
-    const def = em.getDef(type);
-    const playerAttack = player.meleeDamage(false);
-    const roll = Rando.bellCurve(playerAttack);
-    const packSize = Math.max(1, Math.ceil(roll / def.attack));
-    return { type, packSize };
-}
-
-function mawProximityBonus(q, r) {
-    if (!mawDistances) return { attack: 0, defense: 0, hp: 0 };
-    const dist = mawDistances.get(hexKey(q, r));
-    if (dist === undefined) return { attack: 0, defense: 0, hp: 0 };
-    const threshold = mawMaxDist * 0.5;
-    if (dist > threshold) return { attack: 0, defense: 0, hp: 0 };
-    const t = 1 - dist / threshold; // 1 at Maw, 0 at threshold
-    return {
-        attack: Math.round(20 * t),
-        defense: Math.round(10 * t),
-        hp: Math.round(20 * t)
-    };
 }
 
 function enemyEffectiveMaxHp(enemy) {
@@ -1113,489 +1094,11 @@ function endTurn() {
     resolveEndTurn();
 }
 
-// Returns true if either of the enemy's before/after positions is currently visible.
-function enemyIsVisible(enemy, prevKey) {
-    return world.visible.has(prevKey) || world.visible.has(hexKey(enemy.q, enemy.r));
-}
-
-function moveEnemyStep(enemy, def, dist, aggro, prefersRanged, occupied) {
-    if (def.behavior === 'guard') {
-        if (hexDistance(enemy.q, enemy.r, enemy.homeQ, enemy.homeR) > (def.guardRadius || 2)) {
-            em.moveEnemyToward(enemy, enemy.homeQ, enemy.homeR, occupied, world);
-            return true;
-        }
-        if (dist <= aggro) {
-            const next = em.getNextStepToward(enemy, player.q, player.r, occupied, world);
-            if (next && hexDistance(next.q, next.r, enemy.homeQ, enemy.homeR) <= (def.guardRadius || 2)) {
-                occupied.delete(hexKey(enemy.q, enemy.r));
-                enemy.q = next.q; enemy.r = next.r;
-                occupied.add(hexKey(enemy.q, enemy.r));
-                return true;
-            }
-        }
-        return false;
-    }
-    if (def.behavior === 'kite') {
-        if (dist <= aggro) {
-            if (dist < 2) em.moveEnemyAway(enemy, player.q, player.r, occupied, player.q, player.r, world);
-            else if (dist > 3) em.moveEnemyToward(enemy, player.q, player.r, occupied, world);
-            return true;
-        }
-        if (Rando.bool(0.5)) { em.wanderEnemy(enemy, occupied, player.q, player.r, world); return true; }
-        return false;
-    }
-    if (def.behavior === 'boss') {
-        if (dist <= aggro) { em.moveEnemyToward(enemy, player.q, player.r, occupied, world); return true; }
-        return false;
-    }
-    // chase or default
-    if (dist <= aggro && !prefersRanged) {
-        em.moveEnemyToward(enemy, player.q, player.r, occupied, world);
-        return true;
-    }
-    if (!prefersRanged && Rando.bool(0.5)) {
-        em.wanderEnemy(enemy, occupied, player.q, player.r, world);
-        return true;
-    }
-    return false;
-}
-
-function enemyCanRangedAttack(enemy, def, newDist) {
-    return def.rangedAttack && def.range && newDist <= def.range && world.hasLOS(enemy, player);
-}
-
-function doEnemyMelee(enemy, def) {
-    dealDamageToPlayer(enemyMeleeAttack(enemy, def), def.name, false, { attacker: enemy });
-    // Counter mastery: player counter-attacks after being hit in melee
-    if (player.equipped('counter_mastery') && enemy.hp > 0) {
-        const pWep = player.weapon();
-        const counterDmg = (pWep ? pWep.damage : 1) + player.stats.might;
-        const rolled = Rando.bellCurve(counterDmg);
-        const eDef = enemyDefense(enemy, def);
-        const actualDmg = Math.max(1, rolled - eDef);
-        enemy.hp -= actualDmg;
-        logCombat(`Counter Mastery: ${actualDmg} dmg!`, 'log-dmg');
-        sound.hitEnemy();
-        if (enemy.hp <= 0) { killEnemy(enemy); }
-    }
-}
-
-function doEnemyRanged(enemy, def) {
-    dealDamageToPlayer(enemyRangedAttack(enemy, def), `${def.name} (ranged)`, false, { attacker: enemy, isRanged: true });
-}
-
-function enemyAttacks(enemy, def, prefersRanged, newDist) {
-    if (def.behavior === 'kite') {
-        if (Rando.bool(0.5) && newDist > 1 && enemyCanRangedAttack(enemy, def, newDist)) {
-            doEnemyRanged(enemy, def);
-            return true;
-        }
-        return false;
-    }
-    if (newDist === 1) {
-        doEnemyMelee(enemy, def);
-        return true;
-    }
-    if (enemyCanRangedAttack(enemy, def, newDist)) {
-        if (def.behavior === 'guard' || def.behavior === 'boss' || prefersRanged) {
-            doEnemyRanged(enemy, def);
-            return true;
-        }
-    }
-    return false;
-}
-
-function tryBossSpawn(enemy, def, occupied) {
-    if (def.behavior !== 'boss') return;
-    if (enemy.noSpawn) return;
-    if (enemy.turnsSinceSpawn === 0) return;
-    if (!Rando.bool(def.spawnChance ?? 0.16)) return;
-    const adj = hexNeighbors(enemy.q, enemy.r).filter(n => {
-        const k = hexKey(n.q, n.r);
-        const h = world.getHex(n.q, n.r);
-        return h && world.isPassable(h) && !occupied.has(k);
-    });
-    if (adj.length === 0) return;
-    const spot = Rando.choice(adj);
-    const wraithCount = em.enemies.filter(e => e.type === ENEMY_TYPE.PHASE_WRAITH).length;
-    const bossPool = wraithCount >= 10
-        ? [ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.FLUX_ARCHER, ENEMY_TYPE.FLUX_ARCHER, ENEMY_TYPE.BREACH_CRAWLER]
-        : [ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.FLUX_ARCHER, ENEMY_TYPE.FLUX_ARCHER, ENEMY_TYPE.BREACH_CRAWLER, ENEMY_TYPE.PHASE_WRAITH];
-    const spawnType = Rando.choice(bossPool);
-    const spawned = em.spawn(spawnType, spot.q, spot.r);
-    if (spawned) {
-        occupied.add(hexKey(spot.q, spot.r));
-        logCombat(`The Unraveler spawns a ${em.getDef(spawnType).name}!`, 'log-info');
-    }
-}
-
-function tryTerrainShatter(enemy, def) {
-    if (!def.chaosSpawned || !Rando.bool(0.02)) return;
-    const eHex = world.getHex(enemy.q, enemy.r);
-    if (!eHex) return;
-    const undistressed = UNDISTRESSED_VERSION[eHex.terrain];
-    if (undistressed !== undefined) eHex.terrain = undistressed;
-    if (SHATTERED_VERSION[eHex.terrain] === undefined) return;
-    const poi = world.poiAt(enemy.q, enemy.r);
-    if (poi && (poi.type === POI.HAVEN || poi.type === POI.VILLAGE)) return;
-    // Shatter the hex
-    eHex.terrain = SHATTERED_VERSION[eHex.terrain];
-    // Spread distress within radius 3
-    for (const coord of hexesInRange(eHex.q, eHex.r, 3)) {
-        const h = world.getHex(coord.q, coord.r);
-        if (!h) continue;
-        const hPoi = world.poiAt(coord.q, coord.r);
-        if (hPoi && (hPoi.type === POI.HAVEN || hPoi.type === POI.VILLAGE)) continue;
-        h.shatteredCount++;
-        if (DISTRESSED_VERSION[h.terrain] !== undefined) {
-            h.terrain = DISTRESSED_VERSION[h.terrain];
-        }
-    }
-}
-
-async function tryAggroChase(enemy, def, aggro, occupied) {
-    const dist = hexDistance(enemy.q, enemy.r, player.q, player.r);
-    if (dist > aggro) return false;
-    const prevKey = hexKey(enemy.q, enemy.r);
-    em.moveWildlifeToward(enemy, player.q, player.r, occupied, player.q, player.r, world);
-    if (enemyIsVisible(enemy, prevKey)) { await animDelay(80); render(); }
-    if (hexDistance(enemy.q, enemy.r, player.q, player.r) === 1) {
-        dealDamageToPlayer(enemyMeleeAttack(enemy, def), def.name, false, { attacker: enemy });
-        await animDelay(150); render();
-    }
-    return true;
-}
-
-function forestModifiedAggro(enemy, aggro) {
-    if (!playerInForest()) return aggro;
-    const dist = hexDistance(enemy.q, enemy.r, player.q, player.r);
-    if (combatAlerted && dist <= 5) return aggro;
-    return Math.max(1, aggro - 2);
-}
-
-async function runWildlifeTurn(enemy, def, aggro, occupied) {
-    aggro = forestModifiedAggro(enemy, aggro);
-    if (await tryAggroChase(enemy, def, aggro, occupied)) return;
-    if (Rando.bool(0.3)) {
-        em.wanderWildlife(enemy, occupied, player.q, player.r, world);
-    }
-}
-
-function nearestPoiOfType(q, r, types) {
-    const set = new Set(types);
-    let best = null;
-    for (const poi of world.pois) {
-        if (!set.has(poi.type)) continue;
-        const d = hexDistance(q, r, poi.q, poi.r);
-        if (!best || d < best.dist) best = { poi, dist: d };
-    }
-    return best;
-}
-
-function nearestSettlement(q, r) {
-    return nearestPoiOfType(q, r, [POI.HAVEN, POI.VILLAGE]);
-}
-
-async function animateMove(enemy, prevKey) {
-    if (enemyIsVisible(enemy, prevKey)) { await animDelay(80); render(); }
-}
-
-async function runMonsterTurn(enemy, def, aggro, occupied) {
-    aggro = forestModifiedAggro(enemy, aggro);
-    if (await tryAggroChase(enemy, def, aggro, occupied)) return;
-
-    const prevKey = hexKey(enemy.q, enemy.r);
-    const settle = nearestSettlement(enemy.q, enemy.r);
-
-    // Lurk near a settlement (within 2). Settlement hexes are already excluded from validAdjacentMoves.
-    if (settle && settle.dist <= 2) {
-        em.wanderWildlife(enemy, occupied, player.q, player.r, world);
-        await animateMove(enemy, prevKey);
-        return;
-    }
-
-    // Hunt a settlement within aggro * 2
-    if (settle && settle.dist <= aggro * 2) {
-        em.moveWildlifeToward(enemy, settle.poi.q, settle.poi.r, occupied, player.q, player.r, world);
-        await animateMove(enemy, prevKey);
-        return;
-    }
-
-    em.wanderWildlife(enemy, occupied, player.q, player.r, world);
-    await animateMove(enemy, prevKey);
-}
-
-function patrolAroundPoi(enemy, occupied, poi) {
-    const valid = em.validAdjacentMoves(enemy, occupied, true, player.q, player.r, world)
-        .filter(n => !(n.q === poi.q && n.r === poi.r));
-    if (valid.length > 0) em.moveEnemyToNearest(enemy, [Rando.choice(valid)], occupied);
-}
-
-async function runRuinsGuardianTurn(enemy, def, aggro, occupied) {
-    aggro = forestModifiedAggro(enemy, aggro);
-    if (await tryAggroChase(enemy, def, aggro, occupied)) return;
-
-    const prevKey = hexKey(enemy.q, enemy.r);
-    const ruin = nearestPoiOfType(enemy.q, enemy.r, [POI.RUIN]);
-
-    // Patrol within 2 of a ruin: 30% chance to wander, never onto the ruin itself
-    if (ruin && ruin.dist <= 2) {
-        if (Rando.bool(0.3)) {
-            patrolAroundPoi(enemy, occupied, ruin.poi);
-            await animateMove(enemy, prevKey);
-        }
-        return;
-    }
-
-    // Return to a ruin within aggro * 2
-    if (ruin && ruin.dist <= aggro * 2) {
-        em.moveWildlifeToward(enemy, ruin.poi.q, ruin.poi.r, occupied, player.q, player.r, world);
-        await animateMove(enemy, prevKey);
-        return;
-    }
-
-    if (Rando.bool(0.5)) {
-        em.wanderWildlife(enemy, occupied, player.q, player.r, world);
-        await animateMove(enemy, prevKey);
-    }
-}
-
-function pickSwarmTarget(enemy) {
-    const settlements = world.pois
-        .filter(p => p.type === POI.HAVEN || p.type === POI.VILLAGE)
-        .map(p => ({ poi: p, dist: hexDistance(enemy.q, enemy.r, p.q, p.r) }))
-        .sort((a, b) => a.dist - b.dist);
-    if (settlements.length === 0) return null;
-    const weights = [20, 10, 5, 5];
-    const weighted = settlements.slice(0, weights.length)
-        .map((s, i) => ({ item: s.poi, weight: weights[i] }));
-    return Rando.weighted(weighted);
-}
-
-function greedyMoveToward(enemy, tq, tr, occupied) {
-    const valid = em.validAdjacentMoves(enemy, occupied, false, player.q, player.r, world);
-    valid.sort((a, b) => hexDistance(a.q, a.r, tq, tr) - hexDistance(b.q, b.r, tq, tr));
-    em.moveEnemyToNearest(enemy, valid, occupied);
-}
-
-function trySwarmMarch(enemy, def, occupied) {
-    if (def.behavior === 'boss' || def.behavior === 'guard') return false;
-    // Clear target if arrived
-    if (enemy.swarmTargetQ != null && hexDistance(enemy.q, enemy.r, enemy.swarmTargetQ, enemy.swarmTargetR) <= 3) {
-        enemy.swarmTargetQ = null;
-        enemy.swarmTargetR = null;
-    }
-    // Already marching toward a target
-    if (enemy.swarmTargetQ != null) {
-        greedyMoveToward(enemy, enemy.swarmTargetQ, enemy.swarmTargetR, occupied);
-        return true;
-    }
-    // Check swarm trigger: 5+ chaos allies within 3
-    const nearbyAllies = em.enemies.filter(e =>
-        e !== enemy &&
-        hexDistance(e.q, e.r, enemy.q, enemy.r) <= 3 &&
-        em.getDef(e.type)?.chaosSpawned
-    ).length;
-    if (nearbyAllies < 5) return false;
-    // Pick a target settlement
-    const target = pickSwarmTarget(enemy);
-    if (!target) return false;
-    enemy.swarmTargetQ = target.q;
-    enemy.swarmTargetR = target.r;
-    greedyMoveToward(enemy, target.q, target.r, occupied);
-    return true;
-}
-
-async function runChaosTurn(enemy, def, occupied) {
-    // Chaos monsters heal on corrupted terrain
-    const effMax = enemyEffectiveMaxHp(enemy);
-    if (enemyOnCorruptedTerrain(enemy, def) && enemy.hp < effMax) {
-        enemy.hp = Math.min(effMax, enemy.hp + 1);
-    }
-
-    const dist = hexDistance(enemy.q, enemy.r, player.q, player.r);
-    let aggro = def.aggroRange || def.detectRange || 0;
-    if (player.equipped('threat_shroud')) aggro = Math.max(1, aggro - 2);
-    // Forest stealth: reduce detection, wraiths lose track entirely
-    const inForest = playerInForest();
-    if (inForest && !(combatAlerted && dist <= 5)) {
-        if (def.behavior === 'teleport') aggro = 0;
-        else aggro = Math.max(1, aggro - 2);
-    }
-    const prevKey = hexKey(enemy.q, enemy.r);
-
-    // Phase Wraith teleport (blocked by wraith_immune)
-    if (def.behavior === 'teleport' && dist <= aggro && !player.equipped('wraith_immune') && Math.random() < (def.teleportChance || 0.3)) {
-        const valid = hexesInRange(player.q, player.r, def.teleportRange).filter(t => {
-            const k = hexKey(t.q, t.r);
-            const h = world.getHex(t.q, t.r);
-            if (!h || !world.isPassable(h) || occupied.has(k)) return false;
-            if (t.q === player.q && t.r === player.r) return false;
-            const poi = world.poiAt(t.q, t.r);
-            if (poi && (poi.type === POI.HAVEN || poi.type === POI.VILLAGE)) return false;
-            return true;
-        });
-        if (valid.length > 0) {
-            occupied.delete(hexKey(enemy.q, enemy.r));
-            const dest = Rando.choice(valid);
-            enemy.q = dest.q; enemy.r = dest.r;
-            occupied.add(hexKey(enemy.q, enemy.r));
-            if (enemyIsVisible(enemy, prevKey)) { await animDelay(100); render(); }
-        }
-    }
-
-    const swarming = trySwarmMarch(enemy, def, occupied);
-
-    // Ranged-capable chasers (Void Stalker): 50% prefer ranged, skip closing in
-    const prefersRanged = def.rangedAttack && def.behavior === 'chase' && Rando.bool(0.5);
-
-    let moved = swarming;
-    const speed = def.speed || 1;
-    for (let step = 0; step < speed && !swarming; step++) {
-        if (moveEnemyStep(enemy, def, dist, aggro, prefersRanged, occupied)) moved = true;
-    }
-    if (moved && enemyIsVisible(enemy, prevKey)) { await animDelay(80); render(); }
-
-    const newDist = hexDistance(enemy.q, enemy.r, player.q, player.r);
-    const attacked = enemyAttacks(enemy, def, prefersRanged, newDist);
-    if (attacked) { await animDelay(150); render(); }
-
-    tryBossSpawn(enemy, def, occupied);
-    tryTerrainShatter(enemy, def);
-}
-
 async function runEnemyPhase() {
-    // Natural HP recovery
-    player.hp = Math.min(player.maxHP(), player.hp + 1);
-    // HP regen (any slot)
-    const healItem = player.equipped('heal') || player.equipped('regen') || player.equipped('armor_regen');
-    if (healItem) {
-        const amt = healItem.healPerTurn || healItem.regenAmount || 1;
-        player.hp = Math.min(player.maxHP(), player.hp + amt);
-    }
-    // Revive: HP + AE regen
-    const reviveItem = player.equipped('revive');
-    if (reviveItem) {
-        player.hp = Math.min(player.maxHP(), player.hp + reviveItem.reviveHp);
-        player.aether = Math.min(player.maxAether(), player.aether + reviveItem.reviveAether);
-    }
-    // Regen combo (legacy): HP + AE regen
-    const regenCombo = player.equipped('regen_combo');
-    if (regenCombo) {
-        player.hp = Math.min(player.maxHP(), player.hp + regenCombo.regenAmount);
-        player.aether = Math.min(player.maxAether(), player.aether + 1);
-    }
-    // Aether regen (any slot — covers aether_regen, aether_regen_small, aether_regen_large)
-    const aeRegenItem = player.equipped('aether_regen') || player.equipped('aether_regen_small') || player.equipped('aether_regen_large');
-    if (aeRegenItem) {
-        const aeAmt = aeRegenItem.aetherRegen || (aeRegenItem.special === 'aether_regen_large' ? 3 : 1);
-        player.aether = Math.min(player.maxAether(), player.aether + aeAmt);
-    }
-    // Chaos Circlet: +1 AE on corrupted/distressed terrain
-    const chaosCirclet = player.equipped('chaos_circlet');
-    if (chaosCirclet) {
-        const pTerrain = playerTerrain();
-        if (isChaosTerrain(pTerrain)) {
-            player.aether = Math.min(player.maxAether(), player.aether + 1);
-            logCombat('Chaos Circlet: +1 AE', 'log-info');
-        }
-    }
-    // Burn tick: enemies with burn take damage
-    for (const enemy of [...em.enemies]) {
-        if (enemy.burnDamage && enemy.burnDamage > 0) {
-            const bDef = em.getDef(enemy.type);
-            enemy.hp -= enemy.burnDamage;
-            logCombat(`Burn: ${enemy.burnDamage} dmg to ${bDef.name}`, 'log-dmg');
-            enemy.burnDamage = 0;
-            if (enemy.hp <= 0) killEnemy(enemy);
-        }
-    }
+    await runEnemyPhaseImpl(enemyAiCtx);
+}
 
-    const occupied = buildOccupiedSet();
-
-    for (const enemy of [...em.enemies]) {
-        if (gameOver) break;
-        const def = em.getDef(enemy.type);
-        if (!def) continue;
-        if (enemy.stunnedNextTurn) {
-            enemy.stunnedNextTurn = false;
-            enemy.turnsSinceSpawn++;
-            continue;
-        }
-        let aggro = def.aggroRange || def.detectRange || 0;
-        if (player.equipped('threat_shroud')) aggro = Math.max(1, aggro - 2);
-        enemy.turnsSinceSpawn++;
-
-        if (def.behavior === 'wildlife') {
-            await runWildlifeTurn(enemy, def, aggro, occupied);
-        } else if (def.behavior === 'monster') {
-            await runMonsterTurn(enemy, def, aggro, occupied);
-        } else if (def.behavior === 'ruins-guardian') {
-            await runRuinsGuardianTurn(enemy, def, aggro, occupied);
-        } else {
-            await runChaosTurn(enemy, def, occupied);
-        }
-    }
-
-    if (gameOver) return;
-
-    if (player.warpShieldTurns > 0) player.warpShieldTurns--;
-    if (player.reflectTurns > 0) player.reflectTurns--;
-
-    // Guardian respawn: breaches/maw spawn guardians if none nearby
-    for (const poi of world.pois) {
-        if ((poi.type === POI.BREACH || poi.type === POI.MAW) && !poi.closed) {
-            // Skip Maw only while the Unraveler is alive AND near (≤ 11 hex). If displaced
-            // farther, guardians pour forth to protect the Maw in its absence.
-            if (poi.type === POI.MAW) {
-                const unraveler = em.enemies.find(e => e.type === ENEMY_TYPE.UNRAVELER);
-                if (unraveler && hexDistance(unraveler.q, unraveler.r, poi.q, poi.r) <= 11) continue;
-            }
-            // Check for existing guardian within 3 hexes
-            const hasGuardian = em.enemies.some(e =>
-                e.type === ENEMY_TYPE.BREACH_GUARDIAN && hexDistance(poi.q, poi.r, e.q, e.r) <= 3
-            );
-            if (!hasGuardian && Math.random() < 0.3 && !occupied.has(hexKey(poi.q, poi.r))) {
-                const g = em.spawn(ENEMY_TYPE.BREACH_GUARDIAN, poi.q, poi.r, poi.q, poi.r);
-                if (g) {
-                    poi.guardianId = g.id;
-                    poi.guardianDefeated = false;
-                    occupied.add(hexKey(poi.q, poi.r));
-                }
-            }
-        }
-    }
-
-    // Spawn phase — cap total chaos might at 500
-    if (em.chaosMight() < 500) {
-        const wraiths = em.enemies.filter(e => e.type === ENEMY_TYPE.PHASE_WRAITH).length;
-        const chaosPool = wraiths >= 10
-            ? [ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.FLUX_ARCHER, ENEMY_TYPE.FLUX_ARCHER, ENEMY_TYPE.BREACH_CRAWLER]
-            : [ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.FLUX_ARCHER, ENEMY_TYPE.FLUX_ARCHER, ENEMY_TYPE.BREACH_CRAWLER, ENEMY_TYPE.PHASE_WRAITH];
-        for (const poi of world.pois) {
-            if (poi.type === POI.BREACH && !poi.closed && Math.random() < 0.075) {
-                const adj = hexNeighbors(poi.q, poi.r).filter(n => {
-                    const k = hexKey(n.q, n.r);
-                    const h = world.getHex(n.q, n.r);
-                    return h && world.isPassable(h) && !occupied.has(k);
-                });
-                if (adj.length > 0) {
-                    const spot = Rando.choice(adj);
-                    const type = Rando.choice(chaosPool);
-                    em.spawn(type, spot.q, spot.r, poi.q, poi.r);
-                    occupied.add(hexKey(spot.q, spot.r));
-                }
-            }
-        }
-    }
-
-    // Wildlife population maintenance
-    em.spawnWildlife(world, player.q, player.r, pickSpawnPack);
-
-    // Garrison construction + defense
-    tickGarrisons();
-
-    // Start new turn
+function advanceTurn() {
     turn++;
     player.mp = player.maxMP();
     if (player.isEngaged(em.enemies) && !player.equipped('disengage')) {
@@ -1704,7 +1207,7 @@ function loadGame() {
         assignSprites();
     }
 
-    computeMawDistances();
+    computeMawDistances(world);
     refreshVision();
     closeAllPanels();
     document.getElementById('dialog-overlay').classList.add('hidden');
@@ -1755,11 +1258,13 @@ function initGame() {
 
     player = new Player(startHaven.q, startHaven.r);
     refreshVision();
-    computeMawDistances();
+    computeMawDistances(world);
     em = new EnemyManager();
     em.generateCreatureTypes();
     em.spawnInitial(world, player.q, player.r);
-    em.spawnInitialCreatures(world, player.q, player.r, pickSpawnPack, world.visible);
+    em.spawnInitialCreatures(world, player.q, player.r,
+        (q, r) => pickSpawnPack(q, r, player, em),
+        world.visible);
 
     assignSprites();
 
