@@ -81,15 +81,16 @@ Priority:   40
 Status: ToDo
 ID: savemigrate-ikfh
 Created: 2026-05-31T08:02:56Z
-Updated: 2026-05-31T08:02:56Z
-Roll up all save-game migration logic into one place. Today, migration of old saves is scattered across each class's fromJSON plus the load path in index.js, with no version stamp:
+Updated: 2026-05-31T23:38:56Z
+Remove all save-game migration logic. There are no outstanding old saves in the wild that need migrating, so the scattered backfill/upgrade branches can simply be deleted (no consolidation or version-stamping needed — the current per-class fromJSON structure is fine, it just shouldn't carry migration code anymore).
 
-- player.js Player.fromJSON: garrison-charter -> garrison skill migration; null hp/aether backfill; reset of transient per-turn fields (movedThisTurn, hexesMovedThisTurn, phaseStepUsedThisTurn).
+Migrations to remove:
+- player.js Player.fromJSON: garrison-charter -> garrison skill migration (the `data.hasGarrisonCharter` block); null hp/aether backfill (`if (p.hp == null) ...`, `if (p.aether == null) ...`). Keep the legitimate transient-field resets (movedThisTurn, hexesMovedThisTurn, phaseStepUsedThisTurn) and the seenDialogs default — those are not migrations.
 - enemies.js EnemyManager.fromJSON: re-derive creatureDef.behavior from attack; re-derive creatureDef.tier from the type key for pre-tiered saves.
-- world.js GameWorld.fromJSON: set breach/maw POI hexes to the impassable BREACH/MAW terrain for pre-impassable saves (added with bug-k3sj).
-- index.js load path: equipment registry restore; sprite restore/assign for old saves lacking them.
+- world.js GameWorld.fromJSON: the breach/maw -> impassable BREACH/MAW terrain backfill loop for pre-impassable saves (added with bug-k3sj).
+- index.js load path: equipment registry restore and sprite restore/assign branches that exist only to patch old saves lacking them (keep whatever the current save format legitimately produces).
 
-Goal: a single, discoverable migration step (e.g. a version field on the save snapshot + an ordered list of migration functions, or one migrateSave(data) entry point) so future format changes have an obvious home and old migrations are easy to audit/retire. Keep per-class fromJSON focused on plain deserialization. Decide whether to stamp a schema version into the snapshot composed in the save code.
+After removal, sanity-check that a freshly created + saved + loaded game round-trips cleanly (new saves contain all fields, so nothing should depend on the deleted branches). Per-class fromJSON stays as plain deserialization.
 ----
 Priority:   32
 Status: ToDo
