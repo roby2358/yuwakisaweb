@@ -260,6 +260,13 @@ export const WEAPONS = [
     { id: 'great_bow', name: 'Great Bow', type: 'ranged', damage: 5, range: 4, special: null, price: 70, tier: 4, magical: false }
 ];
 
+// A weapon counts as ranged iff it has reach — range > 0. This (not the `type`
+// field) is the single source of truth for melee-vs-ranged behavior, so any
+// weapon granted range, magical or otherwise, fires and flows as a bow.
+export function weaponIsRanged(wep) {
+    return !!(wep && wep.range > 0);
+}
+
 // Non-magical armor
 export const ARMORS = [
     { id: 'worn_leather', name: 'Worn Leather', defense: 1, special: null, price: 0, tier: 0, magical: false },
@@ -665,7 +672,7 @@ export const SKILLS = {
     },
     void_strike: {
         id: 'void_strike', name: 'Void Strike', cost: 1, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
-        desc: 'Melee attack: weapon + Might + Warding. No counter-attack.', minLevel: 1
+        weaponClass: 'melee', desc: 'Melee attack: weapon + Might + Warding. No counter-attack.', minLevel: 1
     },
     phase_step: {
         id: 'phase_step', name: 'Phase Step', cost: 2, mpCost: 0, target: SKILL_TARGET.TELEPORT, usage: SKILL_USAGE.ANYTIME,
@@ -689,11 +696,11 @@ export const SKILLS = {
     },
     siphon_strike: {
         id: 'siphon_strike', name: 'Siphon Strike', cost: 2, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
-        desc: 'Melee: weapon + Might. Heal HP equal to damage dealt. No counter.', minLevel: 2
+        weaponClass: 'melee', desc: 'Melee: weapon + Might. Heal HP equal to damage dealt. No counter.', minLevel: 2
     },
     piercing_shot: {
         id: 'piercing_shot', name: 'Penetrating Shot', cost: 2, target: SKILL_TARGET.RANGED, usage: SKILL_USAGE.ANYTIME,
-        range: 4, baseDamage: 6, desc: 'Ranged: 6 + Reflex. Ignores defense.', minLevel: 2
+        weaponClass: 'ranged', range: 4, baseDamage: 6, desc: 'Ranged: 6 + Reflex. Ignores defense.', minLevel: 2
     },
     warp_shield: {
         id: 'warp_shield', name: 'Warp Shield', cost: 5, mpCost: 1, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
@@ -722,7 +729,7 @@ export const SKILLS = {
     },
     immolate: {
         id: 'immolate', name: 'Immolate', cost: 1, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
-        burnDamage: 6, desc: 'Melee: weapon + Might. Target burns for 6 next turn. No counter.', minLevel: 4
+        weaponClass: 'melee', burnDamage: 6, desc: 'Melee: weapon + Might. Target burns for 6 next turn. No counter.', minLevel: 4
     },
     mending_light: {
         id: 'mending_light', name: 'Mending Light', cost: 2, mpCost: 1, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
@@ -734,7 +741,7 @@ export const SKILLS = {
     },
     sundering_blow: {
         id: 'sundering_blow', name: 'Shredding Blow', cost: 2, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
-        shredAmount: 3, desc: 'Melee: weapon + Might. Permanently shred 3 enemy def. No counter.', minLevel: 6
+        weaponClass: 'melee', shredAmount: 3, desc: 'Melee: weapon + Might. Permanently shred 3 enemy def. No counter.', minLevel: 6
     },
     meteor: {
         id: 'meteor', name: 'Meteor', cost: 4, target: SKILL_TARGET.RANGED_AOE, usage: SKILL_USAGE.ANYTIME,
@@ -742,15 +749,15 @@ export const SKILLS = {
     },
     dimensional_rend: {
         id: 'dimensional_rend', name: 'Dimensional Rend', cost: 4, hpCost: 10, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
-        desc: 'Melee: weapon damage * 3. Costs 10 HP. Must be adjacent.', minLevel: 8
+        weaponClass: 'melee', desc: 'Melee: weapon damage * 3. Costs 10 HP. Must be adjacent.', minLevel: 8
     },
     execute: {
         id: 'execute', name: 'Execute', cost: 3, target: SKILL_TARGET.MELEE_EXECUTE, usage: SKILL_USAGE.ANYTIME,
-        desc: 'Melee: weapon*2 + Might*2. Only targets enemies below 50% HP.', minLevel: 8
+        weaponClass: 'melee', desc: 'Melee: weapon*2 + Might*2. Only targets enemies below 50% HP.', minLevel: 8
     },
     ricochet: {
         id: 'ricochet', name: 'Ricochet', cost: 3, target: SKILL_TARGET.RANGED, usage: SKILL_USAGE.ANYTIME,
-        range: 4, baseDamage: 5, bounceCount: 2, bounceRange: 2,
+        weaponClass: 'ranged', range: 4, baseDamage: 5, bounceCount: 2, bounceRange: 2,
         desc: 'Ranged: 5 + Reflex. Bounces to 2 more enemies within 2.', minLevel: 8
     },
     starfall: {
@@ -759,7 +766,7 @@ export const SKILLS = {
     },
     void_salvo: {
         id: 'void_salvo', name: 'Void Salvo', cost: 4, target: SKILL_TARGET.RANGED, usage: SKILL_USAGE.ANYTIME,
-        range: 3, baseDamage: 5, shotCount: 3, desc: 'Fire 3 shots: each deals 5 + Reflex.', minLevel: 10
+        weaponClass: 'ranged', range: 3, baseDamage: 5, shotCount: 3, desc: 'Fire 3 shots: each deals 5 + Reflex.', minLevel: 10
     },
     recall: {
         id: 'recall', name: 'Recall', cost: 5, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,

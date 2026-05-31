@@ -22,7 +22,7 @@
 import {
     POI, ENEMY_TYPE, TERRAIN, STARTING_STATS, CROP_ICONS,
     SKILLS, UNSHATTERED_VERSION, UNDISTRESSED_VERSION, DISTRESSED_VERSION,
-    isChaosTerrain
+    isChaosTerrain, weaponIsRanged
 } from './config.js';
 import { hexKey, hexNeighbors, hexDistance, hexesInRange } from './hex.js';
 import { Rando } from './rando.js';
@@ -37,16 +37,38 @@ export function weaponMpCost(wep) {
     if (!wep) return 1;
     if (wep.special === 'free_action') return 0;
     if (wep.mpCost !== undefined) return wep.mpCost;
-    return wep.type === 'ranged' ? 2 : 1;
+    return weaponIsRanged(wep) ? 2 : 1;
 }
 
 export function skillMpCost(skill) {
     return skill.mpCost === undefined ? 'all' : skill.mpCost;
 }
 
+// True when the held weapon's type matches a weapon-flow skill's class, so the
+// skill flows through it (affixes, range, MP floor). Neutral skills (no
+// weaponClass) and type mismatches never match — those act as-is.
+export function skillWeaponMatches(player, skill) {
+    const cls = skill.weaponClass;
+    if (!cls) return false;
+    const wep = player.weapon();
+    if (!wep) return false;
+    return cls === 'ranged' ? weaponIsRanged(wep) : !weaponIsRanged(wep);
+}
+
+// Weapon-flow skills pay max(skill MP, weapon MP) when a matching weapon is
+// held; neutral skills and mismatches pay the skill's own MP. 'all' stays 'all'.
+export function effectiveSkillMpCost(player, skill) {
+    const base = skillMpCost(skill);
+    if (base === 'all' || !skillWeaponMatches(player, skill)) return base;
+    return Math.max(base, weaponMpCost(player.weapon()));
+}
+
+function mpLabel(cost) {
+    return cost === 'all' ? 'All MP' : `${cost} MP`;
+}
+
 export function skillMpLabel(skill) {
-    const c = skillMpCost(skill);
-    return c === 'all' ? 'All MP' : `${c} MP`;
+    return mpLabel(skillMpCost(skill));
 }
 
 export function effectiveAetherCost(player, skill) {
@@ -56,7 +78,13 @@ export function effectiveAetherCost(player, skill) {
 }
 
 export function skillCostLabel(skill, player) {
-    return `${effectiveAetherCost(player, skill)} AE, ${skillMpLabel(skill)}`;
+    return `${effectiveAetherCost(player, skill)} AE, ${mpLabel(effectiveSkillMpCost(player, skill))}`;
+}
+
+// Weapon damage a weapon-flow skill adds: the held weapon's damage only when
+// its type matches the skill's class; otherwise the skill acts unarmed (1).
+function matchedWeaponDamage(player, skill) {
+    return skillWeaponMatches(player, skill) ? player.weapon().damage : 1;
 }
 
 // Push target one hex away from source along the closest hex direction.
@@ -235,11 +263,17 @@ class Strike {
     apply(enemy) {
         this.primary = enemy;
         this.wep = this.ctx.player.weapon();
+        // Affixes apply only when the weapon's type matches this strike's class.
+        this.matched = this.weaponMatches();
         this.totalDealt = 0;
         this.setupDamage();
         for (const entry of this.collectTargets()) this.applyEntry(entry);
         return this.primaryResult;
     }
+
+    // Override per subclass: whether the held weapon's type matches this
+    // strike's class (melee/ranged). Base = false (neutral, no weapon flow).
+    weaponMatches() { return false; }
 
     setupDamage() {
         this.dmg = this.action.applyEquipmentBonusDamage(this.baseDmg);
@@ -247,7 +281,7 @@ class Strike {
 
     collectTargets() {
         const entries = [this.primaryEntry()];
-        if (this.wep && !this.options.suppressWeaponMulti) this.appendWeaponAffixes(entries);
+        if (this.matched && !this.options.suppressWeaponMulti) this.appendWeaponAffixes(entries);
         if (this.options.skillChain) this.appendSkillChain(entries);
         return entries;
     }
@@ -255,7 +289,7 @@ class Strike {
     primaryEntry() {
         return {
             target: this.primary,
-            hitCount: this.options.hitCount ?? this.weaponPrimaryHitCount(),
+            hitCount: this.options.hitCount ?? (this.matched ? this.weaponPrimaryHitCount() : 1),
             label: this.sourceName,
             dmg: this.dmg
         };
@@ -288,7 +322,7 @@ class Strike {
         }
         const opts = this.buildOpts(entry.target);
         const result = this.deliverDamage(entry, opts);
-        this.action.applyOnHitEffects(this.wep, entry.target);
+        this.action.applyOnHitEffects(this.matched ? this.wep : null, entry.target);
         if (this.options.skillBurn && entry.target.hp > 0) {
             entry.target.burnDamage = (entry.target.burnDamage || 0) + this.options.skillBurn;
             this.ctx.logCombat(`${this.ctx.em.getDef(entry.target.type).name} is burning!`, 'log-dmg');
@@ -297,7 +331,7 @@ class Strike {
     }
 
     buildOpts(target) {
-        const opts = { stunBucket: this.stunBucket, ...this.action.applyPreHitEffects(this.wep, target) };
+        const opts = { stunBucket: this.stunBucket, ...this.action.applyPreHitEffects(this.matched ? this.wep : null, target) };
         if (this.ignoreDefense()) opts.ignoreDefense = true;
         return opts;
     }
@@ -351,6 +385,8 @@ class Strike {
 
 // Melee weapon strike: chain/reverberate, cleave/sweep, double/triple_strike.
 export class WeaponStrike extends Strike {
+    weaponMatches() { return !!(this.wep && !weaponIsRanged(this.wep)); }
+
     weaponPrimaryHitCount() {
         if (this.wep.special === 'double_strike') return 2;
         if (this.wep.special === 'triple_strike') return 3;
@@ -379,11 +415,13 @@ export class WeaponStrike extends Strike {
 // triple_shot, sniper at max range, ignore_defense (skill or affix). Sniper
 // adds to primary damage during setup so it rides on every entry's dmg.
 export class RangedStrike extends Strike {
+    weaponMatches() { return !!(this.wep && weaponIsRanged(this.wep)); }
+
     setupDamage() {
         const { player, logCombat } = this.ctx;
         this.dist = hexDistance(player.q, player.r, this.primary.q, this.primary.r);
         let dmg = this.action.applyEquipmentBonusDamage(this.baseDmg);
-        if (this.wep && this.wep.special === 'sniper' && this.dist >= this.wep.range) {
+        if (this.matched && this.wep.special === 'sniper' && this.dist >= this.wep.range) {
             dmg += this.wep.sniperBonus;
             logCombat(`Sniper: +${this.wep.sniperBonus} at max range`, 'log-info');
         }
@@ -391,7 +429,7 @@ export class RangedStrike extends Strike {
     }
 
     ignoreDefense() {
-        return Boolean(this.options.bypassDefense) || (this.wep && this.wep.special === 'ignore_defense');
+        return Boolean(this.options.bypassDefense) || (this.matched && this.wep.special === 'ignore_defense');
     }
 
     weaponPrimaryHitCount() {
@@ -655,7 +693,7 @@ export class SkillAction extends Action {
         ctx.setCombatAlerted(true);
 
         const result = handler(this);
-        if (result !== false) this.spendMP(skillMpCost(this.skill));
+        if (result !== false) this.spendMP(effectiveSkillMpCost(player, this.skill));
     }
 
     abortSkill(message) {
@@ -788,8 +826,7 @@ function executeVoidStrike(action) {
     const { player, em } = action.ctx;
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
-    const wep = player.weapon();
-    const dmg = (wep ? wep.damage : 1) + player.stats.might + player.stats.warding;
+    const dmg = matchedWeaponDamage(player, action.skill) + player.stats.might + player.stats.warding;
     new WeaponStrike(action, dmg, 'Void Strike', 'primary').apply(enemy);
 }
 
@@ -847,8 +884,7 @@ function executeSiphonStrike(action) {
     const { player, em, logCombat } = action.ctx;
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
-    const wep = player.weapon();
-    const dmg = (wep ? wep.damage : 1) + player.stats.might;
+    const dmg = matchedWeaponDamage(player, action.skill) + player.stats.might;
     const strike = new WeaponStrike(action, dmg, 'Siphon Strike', 'primary');
     strike.apply(enemy);
     if (strike.totalDealt > 0) {
@@ -910,8 +946,7 @@ function executeImmolate(action) {
     const { player, em } = action.ctx;
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
-    const wep = player.weapon();
-    const dmg = (wep ? wep.damage : 1) + player.stats.might;
+    const dmg = matchedWeaponDamage(player, action.skill) + player.stats.might;
     new WeaponStrike(action, dmg, 'Immolate', 'primary', { skillBurn: action.skill.burnDamage }).apply(enemy);
 }
 
@@ -945,8 +980,7 @@ function executeSunderingBlow(action) {
     const { player, em } = action.ctx;
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
-    const wep = player.weapon();
-    const dmg = (wep ? wep.damage : 1) + player.stats.might;
+    const dmg = matchedWeaponDamage(player, action.skill) + player.stats.might;
     new WeaponStrike(action, dmg, 'Shredding Blow', 'primary', { skillShred: action.skill.shredAmount }).apply(enemy);
 }
 
@@ -969,16 +1003,14 @@ function executeDimensionalRend(action) {
         logCombat('Health too low — the rift fizzles.', 'log-info');
         return;
     }
-    const wep = player.weapon();
-    new WeaponStrike(action, (wep ? wep.damage : 1) * 3, 'Dimensional Rend', 'other').apply(enemy);
+    new WeaponStrike(action, matchedWeaponDamage(player, action.skill) * 3, 'Dimensional Rend', 'other').apply(enemy);
 }
 
 function executeExecute(action) {
     const { player, em } = action.ctx;
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
-    const wep = player.weapon();
-    const dmg = (wep ? wep.damage : 1) * 2 + player.stats.might * 2;
+    const dmg = matchedWeaponDamage(player, action.skill) * 2 + player.stats.might * 2;
     new WeaponStrike(action, dmg, 'Execute', 'primary').apply(enemy);
 }
 

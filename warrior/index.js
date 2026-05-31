@@ -33,7 +33,8 @@ import {
     rollMagicItem, resetEquipment,
     isChaosTerrain, SELL_PRICE_RATIO,
     SKILL_TARGET, SKILL_USAGE, SKILLS, SKILL_UNLOCK_LEVELS,
-    SHATTERED_VERSION, UNSHATTERED_VERSION, DISTRESSED_VERSION, UNDISTRESSED_VERSION
+    SHATTERED_VERSION, UNSHATTERED_VERSION, DISTRESSED_VERSION, UNDISTRESSED_VERSION,
+    weaponIsRanged
 } from './config.js';
 import { hexToPixel, pixelToHex, hexKey, parseHexKey, hexNeighbors, hexDistance, hexesInRange, bfsHexes, drawHexPath } from './hex.js';
 import { Rando } from './rando.js';
@@ -355,7 +356,7 @@ function drawAttackIcons() {
     }
     if (selected && attackable) {
         const wep = player.weapon();
-        const iconFn = (wep && wep.type === 'ranged') ? drawCrosshair : drawSword;
+        const iconFn = weaponIsRanged(wep) ? drawCrosshair : drawSword;
         drawIconOnHexes(iconFn, attackable);
     }
 }
@@ -822,6 +823,17 @@ function moveAdjacentForSkill(targetQ, targetR) {
     refreshVision();
 }
 
+// A ranged-class skill fires through the held bow: its range becomes the
+// weapon's effective (terrain/POI-modified) range when a ranged weapon is
+// equipped, otherwise it falls back to the skill's own range.
+function effectiveSkillRange(skill) {
+    if (skill.weaponClass === 'ranged' && weaponIsRanged(player.weapon())) {
+        const poi = world.poiAt(player.q, player.r);
+        return player.weaponRange(playerTerrain(), poi ? poi.type : null);
+    }
+    return skill.range || 4;
+}
+
 function getSkillTargets(skillId) {
     const skill = SKILLS[skillId];
     if (!skill) return new Set();
@@ -846,7 +858,7 @@ function getSkillTargets(skillId) {
             break;
         }
         case SKILL_TARGET.RANGED: {
-            const range = skill.range || 4;
+            const range = effectiveSkillRange(skill);
             const inRange = hexesInRange(player.q, player.r, range);
             for (const h of inRange) {
                 if (h.q === player.q && h.r === player.r) continue;
@@ -987,7 +999,7 @@ function computeReachable() {
 
 function computeAttackable(enemyKeys) {
     const wep = player.weapon();
-    if (wep && wep.type === 'ranged') return computeRangedAttackable();
+    if (weaponIsRanged(wep)) return computeRangedAttackable();
     return computeMeleeAttackable(enemyKeys);
 }
 
@@ -1474,7 +1486,7 @@ function render() {
         const { x, y } = hexToScreen(player.q, player.r);
         const playerLabelColor = phase === 'player' ? '#000' : '#b8941a';
         const wep = player.weapon();
-        const pAtk = (wep ? wep.damage : 0) + (wep && wep.type === 'ranged' ? player.stats.reflex : player.stats.might);
+        const pAtk = (wep ? wep.damage : 0) + (weaponIsRanged(wep) ? player.stats.reflex : player.stats.might);
         const pDef = playerDefense();
         drawCounter(x, y, PLAYER_COLOR, 'C', player.hp / player.maxHP(), playerLabelColor, { atk: pAtk, def: pDef, mov: player.mp }, playerSprite);
         if (selected) {
@@ -1686,7 +1698,7 @@ function updateSkillBar() {
     // Ranged slot
     const rangedSlot = document.getElementById('ranged-slot');
     const wep = player.weapon();
-    const hasRanged = wep && wep.type === 'ranged';
+    const hasRanged = weaponIsRanged(wep);
     const rangedCost = hasRanged && wep.magical && wep.special !== 'free_ranged' && wep.special !== 'channel' ? 1 : 0;
     const canRanged = hasRanged && player.aether >= rangedCost && phase === 'player' && !gameOver;
     rangedSlot.classList.toggle('disabled', !canRanged);
@@ -1732,7 +1744,7 @@ function updateCharPanel() {
     const derived = document.getElementById('char-derived');
     const wep = player.weapon();
     derived.innerHTML = `<div class="derived-section">
-        <div>Attack: ${wep ? wep.damage : 0} + ${wep?.type === 'ranged' ? player.stats.reflex : player.stats.might}</div>
+        <div>Attack: ${wep ? wep.damage : 0} + ${weaponIsRanged(wep) ? player.stats.reflex : player.stats.might}</div>
         <div>Defense: ${playerDefense()}</div>
         <div>Dodge: ${player.dodge()}%</div>
         <div>Vision: ${player.vision()}</div>
@@ -2627,7 +2639,7 @@ canvas.addEventListener('mousedown', e => {
                 deselectPlayer();
             } else if (attackable && attackable.has(key)) {
                 const wep = player.weapon();
-                if (wep && wep.type === 'ranged') rangedAttack(hex.q, hex.r);
+                if (weaponIsRanged(wep)) rangedAttack(hex.q, hex.r);
                 else moveAndAttack(hex.q, hex.r);
             } else if (reachable && reachable.has(key)) {
                 movePlayer(hex.q, hex.r);
@@ -2790,7 +2802,7 @@ function activateMeleeAttack() {
 
 function activateRangedWeapon() {
     const wep = player.weapon();
-    if (!wep || wep.type !== 'ranged') { logCombat('No ranged weapon!', 'log-info'); return; }
+    if (!weaponIsRanged(wep)) { logCombat('No ranged weapon!', 'log-info'); return; }
     const cost = (!wep.magical || wep.special === 'free_ranged' || wep.special === 'channel') ? 0 : 1;
     if (player.aether < cost) { logCombat('Not enough Aether!', 'log-info'); return; }
     const playerPoi = world.poiAt(player.q, player.r);

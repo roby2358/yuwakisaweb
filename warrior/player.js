@@ -3,7 +3,7 @@ import {
     maxHP, maxAether, PLAYER_MP, BASE_VISION,
     EQUIP_SLOT, ALL_EQUIPMENT,
     TERRAIN_DEFENSE_BONUS, TERRAIN_RANGE_BONUS,
-    RANGER_TERRAIN, isChaosTerrain, POI_RANGE_BONUS
+    RANGER_TERRAIN, isChaosTerrain, POI_RANGE_BONUS, weaponIsRanged
 } from './config.js';
 import { hexDistance } from './hex.js';
 
@@ -122,7 +122,7 @@ export class Player {
 
     meleeDamage(isChaosEnemy) {
         const wep = this.weapon();
-        const wepDmg = wep ? (wep.type === 'ranged' ? Math.ceil(wep.damage / 4) : wep.damage) : 1;
+        const wepDmg = wep ? (weaponIsRanged(wep) ? Math.ceil(wep.damage / 4) : wep.damage) : 1;
         let dmg = wepDmg + this.stats.might + this._chaosBonus(wep, isChaosEnemy);
         if (wep && wep.special === 'charge' && this.movedThisTurn) {
             if (wep.chargeBonus) dmg += wep.chargeBonus;
@@ -154,7 +154,7 @@ export class Player {
 
     weaponRange(terrainType, poiType) {
         const wep = this.weapon();
-        if (!wep || wep.type !== 'ranged') return 0;
+        if (!weaponIsRanged(wep)) return 0;
         let range = wep.range;
         range += TERRAIN_RANGE_BONUS[terrainType] || 0;
         range += POI_RANGE_BONUS[poiType] || 0;
