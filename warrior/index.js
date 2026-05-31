@@ -97,6 +97,8 @@ const TERRAIN_COLORS = {
     [TERRAIN.DISTRESSED_GOLD]: '#a89a5a',
     [TERRAIN.DISTRESSED_QUARRY]: '#7a7a6a',
     [TERRAIN.RUINS]: '#c8c8c8',
+    [TERRAIN.BREACH]: '#3a1040',
+    [TERRAIN.MAW]: '#400810',
 };
 const PLAYER_COLOR = '#daa520';
 
@@ -1091,6 +1093,9 @@ function checkHexEntry() {
 
 function closeBreach(poi) {
     world.closeBreach(poi);
+    // A sealed rift is no longer impassable chaos terrain — it settles into hills.
+    const hex = world.getHex(poi.q, poi.r);
+    if (hex) hex.terrain = TERRAIN.HILLS;
     victory.breachesSealed++;
     logCombat(`Breach sealed! (${world.breachesClosed} total)`, 'log-info');
     sound.victory(poi.type === POI.MAW ? 2 : 1);

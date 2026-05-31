@@ -22,7 +22,9 @@ export const TERRAIN = {
     DISTRESSED_FOREST: 14,
     DISTRESSED_GOLD: 15,
     DISTRESSED_QUARRY: 16,
-    RUINS: 17
+    RUINS: 17,
+    BREACH: 18,
+    MAW: 19
 };
 
 export function isChaosTerrain(t) { return t >= TERRAIN.SHATTERED_PLAINS && t <= TERRAIN.DISTRESSED_QUARRY; }
@@ -55,7 +57,9 @@ export const TERRAIN_NAMES = {
     [TERRAIN.DISTRESSED_FOREST]: 'Distressed Forest',
     [TERRAIN.DISTRESSED_GOLD]: 'Distressed Gold Deposit',
     [TERRAIN.DISTRESSED_QUARRY]: 'Distressed Quarry',
-    [TERRAIN.RUINS]: 'Ruins'
+    [TERRAIN.RUINS]: 'Ruins',
+    [TERRAIN.BREACH]: 'Breach',
+    [TERRAIN.MAW]: 'Maw'
 };
 
 export const MOVEMENT_COST = {
@@ -76,7 +80,12 @@ export const MOVEMENT_COST = {
     [TERRAIN.DISTRESSED_FOREST]: 2,
     [TERRAIN.DISTRESSED_GOLD]: 1,
     [TERRAIN.DISTRESSED_QUARRY]: 2,
-    [TERRAIN.RUINS]: 2
+    [TERRAIN.RUINS]: 2,
+    // Chaos rifts are impassable terrain — the BREACH_GUARDIAN spawns onto one
+    // as the "door," but once any unit (guardian included) steps off it can
+    // never path back. Sealed via Restore, they revert to HILLS.
+    [TERRAIN.BREACH]: Infinity,
+    [TERRAIN.MAW]: Infinity
 };
 
 // Shattered <-> normal terrain lookups

@@ -28,7 +28,9 @@ export class GameWorld {
     }
 
     isPassable(hex) {
-        return hex && !hex.isEdge && hex.terrain !== TERRAIN.WATER && hex.terrain !== TERRAIN.MOUNTAIN;
+        return hex && !hex.isEdge
+            && hex.terrain !== TERRAIN.WATER && hex.terrain !== TERRAIN.MOUNTAIN
+            && hex.terrain !== TERRAIN.BREACH && hex.terrain !== TERRAIN.MAW;
     }
 
     passableHexes() {
@@ -199,8 +201,8 @@ export class GameWorld {
                 const poi = { q: hex.q, r: hex.r, type, id: self.pois.length };
                 if (type === POI.HAVEN) poi.shopItems = self._generateShopItems();
                 if (type === POI.RUIN) { poi.ruinState = 'new'; hex.terrain = TERRAIN.RUINS; }
-                if (type === POI.BREACH) { poi.closed = false; poi.guardianId = null; }
-                if (type === POI.MAW) { poi.closed = false; poi.guardianId = null; }
+                if (type === POI.BREACH) { poi.closed = false; poi.guardianId = null; hex.terrain = TERRAIN.BREACH; }
+                if (type === POI.MAW) { poi.closed = false; poi.guardianId = null; hex.terrain = TERRAIN.MAW; }
                 if (type === POI.HUT) {
                     // Assign a random skill (excluding restore which everyone starts with,
                     // and return which is granted only by sealing the Maw)
@@ -285,6 +287,16 @@ export class GameWorld {
         w.revealed = new Set(data.revealed);
         w.visible = new Set();
         w.breachesClosed = data.breachesClosed;
+        // Migrate pre-impassable saves: breach/maw POIs whose hex still carries
+        // ordinary terrain. Open rifts become impassable BREACH/MAW; sealed ones
+        // are already hills (closeBreach handles that going forward).
+        for (const poi of w.pois) {
+            if (poi.closed) continue;
+            const hex = w.getHex(poi.q, poi.r);
+            if (!hex) continue;
+            if (poi.type === POI.BREACH && hex.terrain !== TERRAIN.BREACH) hex.terrain = TERRAIN.BREACH;
+            if (poi.type === POI.MAW && hex.terrain !== TERRAIN.MAW) hex.terrain = TERRAIN.MAW;
+        }
         return w;
     }
 }
