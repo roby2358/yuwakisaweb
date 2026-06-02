@@ -1,0 +1,6 @@
+Priority:   50
+Status: ToDo
+ID: z3-engine-gir5
+Created: 2026-06-02T20:52:25Z
+Updated: 2026-06-02T20:52:25Z
+Integrate the Z3 solver as the MIAR v2 constraint engine. Add a post-parse constraint-generation pass (over the resolved, typed AST) that lowers borrow/lifetime facts to Z3 via the builder API directly — NOT SMT-LIB text and NOT a round-trip through MIAS Markdown (the family's defining anti-pattern; reuse MIAS's builder layer if anything). This is new in v2: v1's lexical borrow checker is a hand-rolled state machine with no solver. Z3 earns its place only for NLL/Polonius-style region inference and refinement/bounds proofs. Map unsat/unsat-core back to source-text diagnostics. Note the cost: pulls in the Z3 WASM plus COOP/COEP cross-origin-isolation headers, breaking MIAR's zero-dependency / plain-script-tags property. See RUST.md and SPEC.md (Future Work).
