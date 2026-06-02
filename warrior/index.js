@@ -63,6 +63,9 @@ const guardianSheet = new SpriteSheet('sprites_guardians.png', 1024 / 5, 412 / 2
 let playerSprite = null;    // { col, row }
 let enemySprites = {};      // { [enemyType]: { col, row } }
 
+// HUD skill hotbar size (keys 1-N). Must match the .skill-slot count in index.html.
+const SKILL_SLOTS = 5;
+
 // Assign sprites: player gets row 0 or 1, enemies get shuffled from rows 2-20
 function assignSprites() {
     playerSprite = { col: Rando.int(0, SPRITE_COLS - 1), row: Rando.int(0, 1) };
@@ -1736,8 +1739,8 @@ function updateSkillBar() {
     rangedSlot.classList.toggle('active', targeting && targeting.skill === '__ranged__');
     rangedSlot.style.display = hasRanged ? '' : 'none';
 
-    // Skill slots 1-4
-    for (let i = 0; i < 4; i++) {
+    // Skill slots 1-N
+    for (let i = 0; i < SKILL_SLOTS; i++) {
         const slot = document.querySelector(`.skill-slot[data-slot="${i}"]`);
         const nameEl = slot.querySelector('.skill-name');
         const skillId = player.skills[i];
@@ -1823,7 +1826,7 @@ function updateSkillsPanel() {
     let html = '';
     // Show equipped slots
     html += '<div style="color:#888;margin-bottom:4px;font-size:11px">EQUIPPED (click to unequip)</div>';
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < SKILL_SLOTS; i++) {
         const skillId = player.skills[i];
         if (skillId) {
             const skill = SKILLS[skillId];
@@ -1875,8 +1878,8 @@ function updateSkillsPanel() {
             if (emptySlot >= 0) {
                 player.skills[emptySlot] = skillId;
             } else {
-                // Replace last slot
-                player.skills[3] = skillId;
+                // No opening — swap into the last slot
+                player.skills[SKILL_SLOTS - 1] = skillId;
             }
             updateSkillsPanel();
             updateSkillBar();
@@ -2781,7 +2784,7 @@ window.addEventListener('keydown', e => {
         togglePanel('skills-panel');
     } else if (e.key === 'i' || e.key === 'I') {
         togglePanel('inv-panel');
-    } else if (e.key >= '1' && e.key <= '4') {
+    } else if (e.key >= '1' && e.key <= String(SKILL_SLOTS)) {
         activateSkillSlot(parseInt(e.key) - 1);
     } else if (e.key === 'r' || e.key === 'R') {
         if (phase !== 'player') return;
