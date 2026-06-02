@@ -764,7 +764,7 @@ export class SkillAction extends Action {
 // ---- Combat skills (anytime) ----
 
 function executeRestore(action) {
-    const { player, world, em, victory, logCombat, gainXP, closeBreach, grantReturnSkill, offerSettlementReward, showDialog, showOnceDialog } = action.ctx;
+    const { player, world, em, victory, logCombat, gainXP, closeBreach, offerSettlementReward, showDialog, showOnceDialog } = action.ctx;
     const skill = action.skill;
     const range = 1 + Math.floor(player.level / 3);
     const shatteredHexes = hexesInRange(player.q, player.r, range)
@@ -815,7 +815,6 @@ function executeRestore(action) {
         const chance = breachInRange.type === POI.MAW ? 0.20 : 0.40;
         if (Rando.bool(chance)) {
             closeBreach(breachInRange);
-            if (breachInRange.type === POI.MAW) grantReturnSkill();
         } else {
             showDialog('Restore', 'Restore did not close the breach.', [{ label: 'OK', cls: 'btn-primary' }]);
         }

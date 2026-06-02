@@ -180,7 +180,6 @@ const actionCtx = {
     centerOn: (h) => centerOn(h),
     closeBreach: (p) => closeBreach(p),
     endGame: (won) => endGame(won),
-    grantReturnSkill: () => grantReturnSkill(),
     offerSettlementReward: (h) => offerSettlementReward(h),
     showDialog: (...a) => showDialog(...a),
     showOnceDialog: (...a) => showOnceDialog(...a),
@@ -1100,7 +1099,20 @@ function closeBreach(poi) {
     logCombat(`Breach sealed! (${world.breachesClosed} total)`, 'log-info');
     sound.victory(poi.type === POI.MAW ? 2 : 1);
     if (poi.type === POI.BREACH) showBreachLootDialog();
+    if (poi.type === POI.MAW) sealMaw(poi);
     render();
+}
+
+// Sealing the Maw leaves a RETURN scroll within 3 hexes of the settling ground.
+// The scroll is NOT revealed — the player seals from within 3 hexes, so it will
+// usually be in sight, but must be sought out and stepped on to be claimed.
+function sealMaw(maw) {
+    world.placeScroll('return', maw.q, maw.r, h => hexDistance(h.q, h.r, maw.q, maw.r) <= 3);
+    logCombat('The Maw is sealed. A scroll smolders in the quieted ground nearby.', 'log-info');
+    showDialog('The Maw is Sealed',
+        '<p>You have closed the Maw. The world breathes again.</p>' +
+        '<p>Where the rift collapsed, a <b>\u{1F4DC} scroll</b> has settled into the ground nearby. Seek it out.</p>',
+        [{ label: 'Continue', cls: 'btn-primary' }]);
 }
 
 function showBreachLootDialog() {
@@ -1116,6 +1128,7 @@ function openPoiDialog(poi) {
     else if (poi.type === POI.VILLAGE) showVillageDialog(poi);
     else if (poi.type === POI.HUT) showHutDialog(poi);
     else if (poi.type === POI.RUIN) tryRuinInteraction(poi);
+    else if (poi.type === POI.SCROLL) pickUpScroll(poi);
 }
 
 // New hex-action types branch here.
@@ -1294,6 +1307,19 @@ function initGame() {
         return db - da;
     });
     const startHaven = settlements[0] || world.pois[0];
+
+    // Drop the two map scrolls now that the start is known. Channel Aether sits
+    // within 11 hexes of the start; Retrain hides in the half too far from the
+    // Maw to earn a proximity bonus. Both must be reachable on foot from start.
+    world.placeScroll('channel', startHaven.q, startHaven.r,
+        h => hexDistance(h.q, h.r, startHaven.q, startHaven.r) <= 11);
+    if (mawDists) {
+        let mawMax = 1;
+        for (const c of mawDists.values()) if (c > mawMax) mawMax = c;
+        const farThreshold = mawMax * 0.5;
+        world.placeScroll('respec', startHaven.q, startHaven.r,
+            h => (mawDists.get(hexKey(h.q, h.r)) ?? 0) > farThreshold);
+    }
 
     player = new Player(startHaven.q, startHaven.r);
     refreshVision();
@@ -2172,7 +2198,7 @@ function showVillageDialog(poi) {
 function showHutDialog(poi) {
     // 10% chance the Wise Man's skill refreshes to something the player hasn't learned
     if (Rando.bool(0.10)) {
-        const unlearnedPool = Object.values(SKILLS).filter(s => s.id !== 'restore' && s.id !== 'return' && !s.shopOnly && !player.learnedSkills.has(s.id));
+        const unlearnedPool = Object.values(SKILLS).filter(s => s.id !== 'restore' && !s.shopOnly && !s.scrollOnly && !player.learnedSkills.has(s.id));
         if (unlearnedPool.length > 0) {
             poi.skill = Rando.choice(unlearnedPool).id;
         }
@@ -2201,6 +2227,33 @@ function showHutDialog(poi) {
             },
             { label: 'Decline', action: () => { player.mp = 0; } }]);
     }
+}
+
+// Stepping onto a scroll claims its skill and consumes the scroll.
+function pickUpScroll(poi) {
+    const skill = SKILLS[poi.skill];
+    world.pois = world.pois.filter(p => p !== poi);
+    const hex = world.getHex(poi.q, poi.r);
+    if (hex) hex.poi = null;
+
+    if (!player.learnedSkills.has(poi.skill)) {
+        player.learnedSkills.add(poi.skill);
+        const emptySlot = player.skills.indexOf(null);
+        if (emptySlot >= 0) player.skills[emptySlot] = poi.skill;
+    }
+    logCombat(`You unfurl a scroll and learn ${skill.name}!`, 'log-info');
+    updateSkillBar();
+    updateSkillsPanel();
+
+    const intro = poi.skill === 'return'
+        ? 'You unfurl the scroll the sealed Maw left behind. The way home opens to you. Walk the land as long as you wish; invoke RETURN to tally your journey.'
+        : 'You unfurl an ancient scroll. Its knowledge becomes yours.';
+    showDialog('\u{1F4DC} ' + skill.name,
+        `<p>${intro}</p>` +
+        `<p class="s-cost">(${skillCostLabel(skill, player)})</p>` +
+        `<p class="s-desc">${skill.desc}</p>` +
+        `<p style="color:#aaa;font-size:12px">Added to your skills. If your hotbar was full, equip it from the Skills panel.</p>`,
+        [{ label: 'Continue', cls: 'btn-primary' }]);
 }
 
 function showShopDialog(poi) {
@@ -2475,7 +2528,7 @@ function showLevelUpDialog() {
 function showSkillChoiceDialog() {
     player.pendingSkillChoice = false;
     const available = Object.values(SKILLS).filter(s => !s.shopOnly &&
-        s.id !== 'return' &&
+        !s.scrollOnly &&
         s.minLevel <= player.level &&
         !player.learnedSkills.has(s.id)
     );
@@ -2515,22 +2568,6 @@ function showSkillChoiceDialog() {
 // ================================================================
 // GAME OVER
 // ================================================================
-
-function grantReturnSkill() {
-    if (!player.learnedSkills.has('return')) {
-        player.learnedSkills.add('return');
-        const emptySlot = player.skills.indexOf(null);
-        if (emptySlot >= 0) player.skills[emptySlot] = 'return';
-    }
-    logCombat('RETURN granted — invoke when ready to depart.', 'log-info');
-    showDialog('The Maw is Sealed',
-        '<p>You have closed the Maw. The world breathes again.</p>' +
-        '<p>You may keep walking the land for as long as you wish. When you are ready to depart, invoke <b>RETURN</b> to tally your journey.</p>' +
-        '<p style="color:#aaa;font-size:12px">RETURN has been added to your skills. If your hotbar was full, equip it from the Skills panel.</p>',
-        [{ label: 'Continue', cls: 'btn-primary' }]);
-    updateSkillBar();
-    updateSkillsPanel();
-}
 
 function endGame(won) {
     gameOver = true;

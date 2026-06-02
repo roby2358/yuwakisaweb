@@ -204,9 +204,9 @@ export class GameWorld {
                 if (type === POI.BREACH) { poi.closed = false; poi.guardianId = null; hex.terrain = TERRAIN.BREACH; }
                 if (type === POI.MAW) { poi.closed = false; poi.guardianId = null; hex.terrain = TERRAIN.MAW; }
                 if (type === POI.HUT) {
-                    // Assign a random skill (excluding restore which everyone starts with,
-                    // and return which is granted only by sealing the Maw)
-                    const skillPool = Object.values(SKILLS).filter(s => s.id !== 'restore' && s.id !== 'return' && !s.shopOnly);
+                    // Assign a random skill (excluding restore which everyone starts
+                    // with, plus shop-only and scroll-only skills which are placed elsewhere)
+                    const skillPool = Object.values(SKILLS).filter(s => s.id !== 'restore' && !s.shopOnly && !s.scrollOnly);
                     poi.skill = Rando.choice(skillPool).id;
                 }
                 self.pois.push(poi);
@@ -241,14 +241,35 @@ export class GameWorld {
     }
 
 
-    mawDistanceMap() {
-        const maw = this.pois.find(p => p.type === POI.MAW);
-        if (!maw) return null;
-        const start = this.getHex(maw.q, maw.r);
+    // Movement-cost reachability from an arbitrary passable origin.
+    reachableFrom(q, r) {
+        const start = this.getHex(q, r);
+        if (!start) return new Map();
         return bfsHexes(start, this.hexes, hex => {
             const c = MOVEMENT_COST[hex.terrain];
             return c === undefined ? Infinity : c;
         }, Infinity);
+    }
+
+    mawDistanceMap() {
+        const maw = this.pois.find(p => p.type === POI.MAW);
+        if (!maw) return null;
+        return this.reachableFrom(maw.q, maw.r);
+    }
+
+    // Drop a single scroll POI carrying `skillId` on a random hex that is
+    // passable, unoccupied, reachable from (originQ, originR), and accepted by
+    // pred(hex). Returns the new poi, or null if nowhere qualifies.
+    placeScroll(skillId, originQ, originR, pred) {
+        const reachable = this.reachableFrom(originQ, originR);
+        const pool = this.passableHexes().filter(h =>
+            !h.poi && reachable.has(hexKey(h.q, h.r)) && pred(h));
+        if (pool.length === 0) return null;
+        const hex = Rando.choice(pool);
+        hex.poi = POI.SCROLL;
+        const poi = { q: hex.q, r: hex.r, type: POI.SCROLL, id: this.pois.length, skill: skillId };
+        this.pois.push(poi);
+        return poi;
     }
 
     _validate() {

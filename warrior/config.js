@@ -170,6 +170,7 @@ export const POI = {
     BREACH: 'breach',
     MAW: 'maw',
     HUT: 'hut',
+    SCROLL: 'scroll',
     GARRISON_BUILD: 'garrison_build',
     GARRISON: 'garrison'
 };
@@ -191,6 +192,7 @@ export const POI_SYMBOLS = {
     [POI.BREACH]: '\u058D',  // ֍ swirl
     [POI.MAW]: '\u2738',     // ✸ pulsing star
     [POI.HUT]: '\u2302',     // ⌂ house
+    [POI.SCROLL]: '\u{1F4DC}', // 📜 scroll
     [POI.GARRISON_BUILD]: '\u{1F6A7}', // 🚧 construction sign
     [POI.GARRISON]: '\u265C'  // ♜ black rook
 };
@@ -202,6 +204,7 @@ export const POI_COLORS = {
     [POI.BREACH]: '#e040fb',
     [POI.MAW]: '#ff1744',
     [POI.HUT]: '#b0bec5',
+    [POI.SCROLL]: '#d8c690',
     [POI.GARRISON_BUILD]: '#ffb74d',
     [POI.GARRISON]: '#fff'
 };
@@ -724,7 +727,7 @@ export const SKILLS = {
     channel: {
         id: 'channel', name: 'Channel Aether', cost: 0, mpCost: 2, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
         desc: 'Burn HP for AE at 4:1, up to filling AE or half current HP. Min 1 AE — blood from a stone.',
-        shopPrice: 1, shopOnly: true,
+        scrollOnly: true,
         minLevel: 3
     },
     breach_pulse: {
@@ -846,7 +849,7 @@ export const SKILLS = {
     },
     respec: {
         id: 'respec', name: 'Retrain', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
-        shopPrice: 1000, shopOnly: true,
+        scrollOnly: true,
         desc: 'Refund all spent stat points and reallocate them. Requires clean hex, no enemies. Ends turn.', minLevel: 4
     },
     garrison: {
@@ -854,9 +857,10 @@ export const SKILLS = {
         shopPrice: 1000, goldCost: 1000, shopOnly: true,
         desc: 'Spend 1000g to commission a garrison on this hex. A haven or village must be in sight. Ends turn.', minLevel: 0
     },
-    // Granted only by sealing the Maw. Filtered out of all random/learn pools.
+    // Picked up only from the scroll the Maw leaves behind. Filtered out of all random/learn pools.
     return: {
         id: 'return', name: 'RETURN', cost: 4, mpCost: 0, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
+        scrollOnly: true,
         desc: 'End your journey and tally your final score. Requires a peaceful, unshattered hex.', minLevel: 0
     }
 };
