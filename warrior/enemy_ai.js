@@ -123,6 +123,7 @@ export class EnemyAI {
         const { player, em, world } = ctx;
         const dist = hexDistance(enemy.q, enemy.r, player.q, player.r);
         if (dist > aggro) return false;
+        this.soundAlarm(enemy, ctx);
         const prevKey = hexKey(enemy.q, enemy.r);
         em.moveWildlifeToward(enemy, player.q, player.r, occupied, player.q, player.r, world);
         if (this.enemyIsVisible(enemy, prevKey, ctx)) { await ctx.animDelay(80); ctx.render(); }
@@ -130,6 +131,37 @@ export class EnemyAI {
             ctx.dealDamageToPlayer(ctx.enemyMeleeAttack(enemy, def), def.name, false, { attacker: enemy });
             await ctx.animDelay(150); ctx.render();
         }
+        return true;
+    }
+
+    // Sound the alarm: lock the player's hex as this enemy's target and rouse
+    // every enemy within 2 (single hop) to the same hex. Roused enemies hunt
+    // the last-known spot even outside their own aggro range. Guardians ignore
+    // the target (they never call tryHuntTarget) but can still raise it.
+    soundAlarm(enemy, ctx) {
+        const { player, em } = ctx;
+        enemy.targetQ = player.q;
+        enemy.targetR = player.r;
+        for (const other of em.enemies) {
+            if (other === enemy) continue;
+            if (hexDistance(other.q, other.r, enemy.q, enemy.r) > 2) continue;
+            other.targetQ = player.q;
+            other.targetR = player.r;
+        }
+    }
+
+    // Hunt a target hex set by an alarm (or a swarm). March toward it via A*;
+    // once within 3 the trail goes cold and the target clears, so the enemy
+    // reverts to its idle behavior. Returns true if it acted.
+    tryHuntTarget(enemy, occupied, ctx) {
+        if (enemy.targetQ == null) return false;
+        const { em, world } = ctx;
+        if (hexDistance(enemy.q, enemy.r, enemy.targetQ, enemy.targetR) <= 3) {
+            enemy.targetQ = null;
+            enemy.targetR = null;
+            return false;
+        }
+        em.moveEnemyToward(enemy, enemy.targetQ, enemy.targetR, occupied, world);
         return true;
     }
 
@@ -157,6 +189,8 @@ export class WildlifeAI extends EnemyAI {
     async takeTurn(enemy, def, occupied, ctx) {
         const aggro = this.forestModifiedAggro(enemy, this.baseAggro(def, ctx), ctx);
         if (await this.tryAggroChase(enemy, def, aggro, occupied, ctx)) return;
+        const prevKey = hexKey(enemy.q, enemy.r);
+        if (this.tryHuntTarget(enemy, occupied, ctx)) { await this.animateMove(enemy, prevKey, ctx); return; }
         if (Rando.bool(0.3)) {
             const { em, player, world } = ctx;
             em.wanderWildlife(enemy, occupied, player.q, player.r, world);
@@ -176,6 +210,7 @@ export class MonsterAI extends EnemyAI {
 
         const { player, em, world } = ctx;
         const prevKey = hexKey(enemy.q, enemy.r);
+        if (this.tryHuntTarget(enemy, occupied, ctx)) { await this.animateMove(enemy, prevKey, ctx); return; }
         const settle = this.nearestSettlement(enemy.q, enemy.r, ctx);
 
         if (settle && settle.dist <= 2) {
@@ -269,15 +304,26 @@ export class ChaosAI extends EnemyAI {
             await this.tryTeleport(enemy, def, occupied, prevKey, ctx);
         }
 
-        const swarming = this.trySwarmMarch(enemy, def, occupied, ctx);
-
         // Ranged-capable chasers (Void Stalker): 50% prefer ranged, skip closing in
         const prefersRanged = def.rangedAttack && def.behavior === 'chase' && Rando.bool(0.5);
 
-        let moved = swarming;
+        // Aggro check comes first: a detected player rouses the swarm and
+        // overrides the swarm march. Guards camp their breach but still raise
+        // the alarm.
+        const isAggro = dist <= aggro;
+        if (isAggro) this.soundAlarm(enemy, ctx);
+
+        // Movement priority: aggro chase > hunt last-known target > swarm > wander.
+        // Aggro chase and a guard's camp logic both flow through moveEnemyStep;
+        // guards never hunt a roaming target or swarm.
+        const isGuard = def.behavior === 'guard';
         const speed = def.speed || 1;
-        for (let step = 0; step < speed && !swarming; step++) {
-            if (this.moveEnemyStep(enemy, def, dist, aggro, prefersRanged, occupied, ctx)) moved = true;
+        let moved = !isGuard && !isAggro &&
+            (this.tryHuntTarget(enemy, occupied, ctx) || this.trySwarmTrigger(enemy, def, occupied, ctx));
+        if (!moved) {
+            for (let step = 0; step < speed; step++) {
+                if (this.moveEnemyStep(enemy, def, dist, aggro, prefersRanged, occupied, ctx)) moved = true;
+            }
         }
         if (moved && this.enemyIsVisible(enemy, prevKey, ctx)) { await ctx.animDelay(80); ctx.render(); }
 
@@ -458,26 +504,11 @@ export class ChaosAI extends EnemyAI {
         return Rando.weighted(weighted);
     }
 
-    greedyMoveToward(enemy, tq, tr, occupied, ctx) {
-        const { em, player, world } = ctx;
-        const valid = em.validAdjacentMoves(enemy, occupied, false, player.q, player.r, world);
-        valid.sort((a, b) => hexDistance(a.q, a.r, tq, tr) - hexDistance(b.q, b.r, tq, tr));
-        em.moveEnemyToNearest(enemy, valid, occupied);
-    }
-
-    trySwarmMarch(enemy, def, occupied, ctx) {
-        if (def.behavior === 'boss' || def.behavior === 'guard') return false;
-        // Clear target if arrived
-        if (enemy.swarmTargetQ != null && hexDistance(enemy.q, enemy.r, enemy.swarmTargetQ, enemy.swarmTargetR) <= 3) {
-            enemy.swarmTargetQ = null;
-            enemy.swarmTargetR = null;
-        }
-        // Already marching toward a target
-        if (enemy.swarmTargetQ != null) {
-            this.greedyMoveToward(enemy, enemy.swarmTargetQ, enemy.swarmTargetR, occupied, ctx);
-            return true;
-        }
-        // Swarm trigger: 5+ chaos allies within 3
+    // Swarm trigger: when 5+ chaos allies cluster within 3, pick a settlement
+    // to march on and set it as the target. The march itself is handled by
+    // tryHuntTarget, which shares the targetQ/R field with the alarm.
+    trySwarmTrigger(enemy, def, occupied, ctx) {
+        if (def.behavior === 'boss') return false;
         const { em } = ctx;
         const nearbyAllies = em.enemies.filter(e =>
             e !== enemy &&
@@ -487,10 +518,9 @@ export class ChaosAI extends EnemyAI {
         if (nearbyAllies < 5) return false;
         const target = this.pickSwarmTarget(enemy, ctx);
         if (!target) return false;
-        enemy.swarmTargetQ = target.q;
-        enemy.swarmTargetR = target.r;
-        this.greedyMoveToward(enemy, target.q, target.r, occupied, ctx);
-        return true;
+        enemy.targetQ = target.q;
+        enemy.targetR = target.r;
+        return this.tryHuntTarget(enemy, occupied, ctx);
     }
 }
 
