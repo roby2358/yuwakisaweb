@@ -22,7 +22,7 @@
       code:
 '# fn factorial\n' +
 '* params\n' +
-'  * n i64\n' +
+'  * i64 n\n' +
 '* returns i64\n' +
 '* if\n' +
 '  * <= n `1`\n' +
@@ -65,7 +65,7 @@
       code:
 '# fn take\n' +
 '* params\n' +
-'  * s String\n' +
+'  * String s\n' +
 '* print s\n' +
 '\n' +
 '# main\n' +
@@ -99,11 +99,10 @@
     },
     {
       name: 'struct (fields)',
-      note: 'Accepted — build a Point, read its Copy fields with the `.` operator.',
+      note: 'Accepted — build a Point, read its Copy fields with the `.` operator. Fields share a type via `i64 x y`.',
       code:
 '# struct Point\n' +
-'* x i64\n' +
-'* y i64\n' +
+'* i64 x y\n' +
 '\n' +
 '# main\n' +
 '* let p\n' +
@@ -118,8 +117,8 @@
       note: 'REJECTED — moving the String field out of p leaves p.name moved; reading it again is use-after-move.',
       code:
 '# struct User\n' +
-'* name String\n' +
-'* age i64\n' +
+'* String name\n' +
+'* i64 age\n' +
 '\n' +
 '# main\n' +
 '* let u\n' +

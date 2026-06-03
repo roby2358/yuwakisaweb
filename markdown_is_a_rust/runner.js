@@ -8,6 +8,15 @@
   'use strict';
 
   function isLit(v) { return typeof v === 'string' && v.length >= 2 && v[0] === '`' && v[v.length - 1] === '`'; }
+  // A typed declaration is `Type name [name...]`; at runtime only the names
+  // matter. Skip the leading `&`/`&mut` chain and one base type, return the rest.
+  function declNames(node) {
+    var toks = [node.value].concat(node.children.map(function (c) { return c.value; }));
+    var i = 0;
+    while (toks[i] === '&' || toks[i] === '&mut') i++;
+    i++; // the base type token
+    return toks.slice(i);
+  }
   function litVal(v) {
     var s = v.slice(1, -1);
     if (/^-?\d+$/.test(s)) return parseInt(s, 10);
@@ -58,13 +67,15 @@
         return;
       }
       if (it.kind === 'struct') {
-        structs[it.name] = { order: it.bullets.map(function (b) { return b.value; }) };
+        var order = [];
+        it.bullets.forEach(function (b) { declNames(b).forEach(function (nm) { order.push(nm); }); });
+        structs[it.name] = { order: order };
         return;
       }
       if (it.kind !== 'fn') return;
       var params = [], body = [];
       it.bullets.forEach(function (b) {
-        if (b.value === 'params') b.children.forEach(function (p) { params.push(p.value); });
+        if (b.value === 'params') b.children.forEach(function (p) { declNames(p).forEach(function (nm) { params.push(nm); }); });
         else if (b.value === 'returns') { /* signature only */ }
         else body.push(b);
       });

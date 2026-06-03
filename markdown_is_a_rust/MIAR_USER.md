@@ -112,16 +112,18 @@ A type in a `params`, `returns`, field, or variant position is written as tokens
 ```markdown
 # fn add
 * params
-  * a i64
-  * b i64
+  * i64 a b
 * returns i64
 * +
   * a
   * b
 ```
 
-- `params` bullet: each sub-bullet is `name type`. Omit `params` for no
-  parameters.
+- `params` bullet: each sub-bullet is a **prefix** declaration `type name [name…]`
+  — the type comes first (like every other form), then one or more names. `i64 a
+  b` declares both `a` and `b` as `i64`; you may also split them across bullets
+  (`i64 a` then `i64 b`). Ref types work too: `& i64 r`, `&mut Vec v`. Omit
+  `params` for no parameters.
 - `returns` bullet: names the return type. Omit it to return `()`.
 - Remaining bullets are the body, evaluated in order. The function's value is its
   **last body expression**, unless an explicit `return` appears earlier.
@@ -135,11 +137,12 @@ Recursion is just a call to the same `fn`; provide a base case.
 
 ```markdown
 # struct Point
-* x i64
-* y i64
+* i64 x y
 ```
 
-- Each bullet is a field: `name type`.
+- Each bullet declares one or more fields of a type, prefix: `type name [name…]`.
+  `i64 x y` declares both `x` and `y` as `i64`; fields of different types go on
+  separate bullets (`String name` then `i64 age`).
 - **Construct** positionally, in declaration order: `Point `2` `3``.
 - **Read a field** with the `.` operator: `. p x` is `p.x`. The base must be a
   binding name; field access is one level deep.
@@ -247,7 +250,7 @@ Using a **move-type** binding by value (as a `let` source, a by-value argument, 
 ```markdown
 # fn take
 * params
-  * s String
+  * String s
 * print s
 
 # main
@@ -357,7 +360,7 @@ payload values), `no-main`, `duplicate-item`.
 ```markdown
 # fn factorial
 * params
-  * n i64
+  * i64 n
 * returns i64
 * if
   * <= n `1`
@@ -375,8 +378,7 @@ payload values), `no-main`, `duplicate-item`.
 ### Struct + field access
 ```markdown
 # struct Point
-* x i64
-* y i64
+* i64 x y
 
 # main
 * let p
@@ -427,7 +429,8 @@ payload values), `no-main`, `duplicate-item`.
       the head line. 2-space indent.
 - [ ] All literals are backtick-wrapped; names are bare.
 - [ ] There is exactly one `# main` (zero params).
-- [ ] `params` sub-bullets are `name type`; `returns` names the type.
+- [ ] `params` sub-bullets are `type name [name…]` (type first); `returns` names
+      the type.
 - [ ] Struct construction is **positional**; field reads use `. base field`.
 - [ ] Enum `match` covers every variant or has a `_` arm.
 - [ ] No use of a move-type value after it is moved/returned/matched-by-value.

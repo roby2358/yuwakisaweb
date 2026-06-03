@@ -47,6 +47,18 @@
     return words[0];
   }
 
+  // A typed declaration is prefix like the rest of the language: the type comes
+  // first (an optional `&`/`&mut` chain plus one base type), then one or more
+  // binding names. So `i64 x y` declares x and y as i64, and `& i64 r` declares
+  // r as `& i64`. Returns { type, names } from a declaration bullet.
+  function parseDecl(node) {
+    var toks = [node.value].concat(node.children.map(function (c) { return c.value; }));
+    var i = 0;
+    while (toks[i] === '&' || toks[i] === '&mut') i++;
+    i++; // the base type token
+    return { type: parseTypeTokens(toks.slice(0, i)), names: toks.slice(i) };
+  }
+
   function bulletText(node) {
     if (!node) return '';
     var head = node.value;
@@ -91,9 +103,13 @@
       if (it.kind !== 'struct') return;
       var def = { name: it.name, order: [], fields: {} };
       it.bullets.forEach(function (b) {
-        if (def.fields[b.value]) err('duplicate-item', b.line, 'duplicate field name `' + b.value + '`');
-        def.order.push(b.value);
-        def.fields[b.value] = { name: b.value, type: parseTypeTokens(b.children) };
+        var d = parseDecl(b);
+        if (d.names.length === 0) { err('parse', b.line, 'field declaration needs a type then one or more names (e.g. `i64 x`)', bulletText(b)); return; }
+        d.names.forEach(function (nm) {
+          if (def.fields[nm]) err('duplicate-item', b.line, 'duplicate field name `' + nm + '`');
+          def.order.push(nm);
+          def.fields[nm] = { name: nm, type: d.type };
+        });
       });
       structs[it.name] = def;
     });
@@ -110,7 +126,11 @@
       var params = [], returns = 'Unit', body = [];
       it.bullets.forEach(function (b) {
         if (b.value === 'params') {
-          b.children.forEach(function (p) { params.push({ name: p.value, type: parseTypeTokens(p.children) }); });
+          b.children.forEach(function (p) {
+            var d = parseDecl(p);
+            if (d.names.length === 0) err('parse', p.line, 'parameter declaration needs a type then one or more names (e.g. `i64 x`)', bulletText(p));
+            d.names.forEach(function (nm) { params.push({ name: nm, type: d.type }); });
+          });
         } else if (b.value === 'returns') {
           returns = parseTypeTokens(b.children);
         } else {
