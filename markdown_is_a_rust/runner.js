@@ -17,6 +17,10 @@
     return s;
   }
   function format(val) {
+    if (val && typeof val === 'object' && 'struct' in val) {
+      var fs = Object.keys(val.fields).map(function (k) { return k + ': ' + format(val.fields[k]); });
+      return val.struct + ' { ' + fs.join(', ') + ' }';
+    }
     if (val && typeof val === 'object' && 'tag' in val) {
       return val.payload === undefined ? val.tag : val.tag + '(' + format(val.payload) + ')';
     }
@@ -47,9 +51,14 @@
   function run(program, out) {
     var fns = {};
     var variants = {}; // VariantName -> { arity: 0 | 1 }
+    var structs = {};  // Name -> { order: [field...] }
     program.items.forEach(function (it) {
       if (it.kind === 'enum') {
         it.bullets.forEach(function (b) { variants[b.value] = { arity: b.children.length ? 1 : 0 }; });
+        return;
+      }
+      if (it.kind === 'struct') {
+        structs[it.name] = { order: it.bullets.map(function (b) { return b.value; }) };
         return;
       }
       if (it.kind !== 'fn') return;
@@ -84,10 +93,12 @@
       if (v === 'not') return !evalNode(c[0], env);
       if (v === 'if') return evalNode(c[0], env) ? evalNode(c[1], env) : (c[2] ? evalNode(c[2], env) : undefined);
       if (v === 'match') return doMatch(node, env);
+      if (v === '.') return evalNode(c[0], env).fields[c[1].value];
       if (v === 'vec') return c.map(function (x) { return evalNode(x, env); });
       if (v === 'push') { env[c[0].value].push(evalNode(c[1], env)); return undefined; }
       if (v === 'print') { out(format(evalNode(c[0], env))); return undefined; }
       if (variants[v]) return { tag: v, payload: variants[v].arity ? evalNode(c[0], env) : undefined };
+      if (structs[v]) return buildStruct(v, c, env);
       if (fns[v]) return callFn(fns[v], c.map(function (x) { return evalNode(x, env); }));
       if (c.length === 0) return env[v];
       return undefined;
@@ -103,6 +114,14 @@
       // sub-bullet), so there is at most one child here.
       env[name] = kids.length ? evalNode(kids[0], env) : undefined;
       return undefined;
+    }
+
+    // Build a struct value: positional field args in declaration order, tagged
+    // with the type name so format() can render `Name { f: v, ... }`.
+    function buildStruct(name, args, env) {
+      var fields = {};
+      structs[name].order.forEach(function (f, i) { fields[f] = evalNode(args[i], env); });
+      return { struct: name, fields: fields };
     }
 
     // Select the arm matching the scrutinee's tag (or `_`), bind any payload into

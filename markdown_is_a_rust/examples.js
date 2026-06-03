@@ -98,6 +98,38 @@
 '  * dangle\n'
     },
     {
+      name: 'struct (fields)',
+      note: 'Accepted — build a Point, read its Copy fields with the `.` operator.',
+      code:
+'# struct Point\n' +
+'* x i64\n' +
+'* y i64\n' +
+'\n' +
+'# main\n' +
+'* let p\n' +
+'  * Point `2` `3`\n' +
+'* print\n' +
+'  * +\n' +
+'    * . p x\n' +
+'    * . p y\n'
+    },
+    {
+      name: 'partial move',
+      note: 'REJECTED — moving the String field out of p leaves p.name moved; reading it again is use-after-move.',
+      code:
+'# struct User\n' +
+'* name String\n' +
+'* age i64\n' +
+'\n' +
+'# main\n' +
+'* let u\n' +
+'  * User `"ada"` `36`\n' +
+'* let n\n' +
+'  * . u name\n' +
+'* print\n' +
+'  * . u name\n'
+    },
+    {
       name: 'match (Option)',
       note: 'Accepted — an exhaustive match over Option binds the Some payload.',
       code:

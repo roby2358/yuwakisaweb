@@ -65,6 +65,7 @@
     var fns = {};
     var enums = {};      // Name -> { name, order: [variant...], variants: { V: {name, payload} } }
     var variants = {};   // VariantName -> { enum, payload }  (variant names are global in v1)
+    var structs = {};    // Name -> { name, order: [field...], fields: { f: {name, type} } }
     var seen = {};
     var hasMain = false;
 
@@ -83,12 +84,27 @@
       enums[it.name] = def;
     });
 
+    // Likewise collect struct definitions so constructors and field types are
+    // known before any fn body is checked, and before bindings of struct type
+    // are created (mkBinding gives each struct binding per-field sub-state).
+    program.items.forEach(function (it) {
+      if (it.kind !== 'struct') return;
+      var def = { name: it.name, order: [], fields: {} };
+      it.bullets.forEach(function (b) {
+        if (def.fields[b.value]) err('duplicate-item', b.line, 'duplicate field name `' + b.value + '`');
+        def.order.push(b.value);
+        def.fields[b.value] = { name: b.value, type: parseTypeTokens(b.children) };
+      });
+      structs[it.name] = def;
+    });
+
     program.items.forEach(function (it) {
       if (seen[it.name]) err('duplicate-item', it.line, 'duplicate item name `' + it.name + '`');
       seen[it.name] = true;
-      if (it.kind === 'enum') return; // handled above
+      if (it.kind === 'enum') return;   // handled above
+      if (it.kind === 'struct') return; // handled above
       if (it.kind !== 'fn') {
-        err('unsupported', it.line, '`' + it.kind + '` items are deferred in v1 core (only `fn` and `enum` are supported)');
+        err('unsupported', it.line, '`' + it.kind + '` items are deferred in v1 core (only `fn`, `struct`, and `enum` are supported)');
         return;
       }
       var params = [], returns = 'Unit', body = [];
@@ -136,11 +152,48 @@
     }
 
     function mkBinding(name, type, mutable, isLocal, line) {
-      return {
+      var b = {
         name: name, type: type, mutable: mutable, state: 'owned',
         shared: 0, mutBorrow: false, isLocal: isLocal, declLine: line,
         movedAt: 0, lastBorrowLine: 0
       };
+      // A struct binding owns its fields: each gets its own sub-binding so a field
+      // can be moved out (partial move) or borrowed disjointly. Field mutability
+      // follows the binding (Rust has no per-field `mut`).
+      var sd = structs[typeName(type)];
+      if (sd) {
+        b.fields = {};
+        sd.order.forEach(function (f) {
+          b.fields[f] = mkBinding(name + '.' + f, sd.fields[f].type, mutable, isLocal, line);
+        });
+      }
+      return b;
+    }
+
+    function anyField(b, pred) {
+      return !!b.fields && Object.keys(b.fields).some(function (f) { return pred(b.fields[f]); });
+    }
+    function fieldMutBorrowed(b) { return anyField(b, function (f) { return f.mutBorrow; }); }
+    function fieldShared(b)      { return anyField(b, function (f) { return f.shared > 0; }); }
+    function fieldMoved(b)       { return anyField(b, function (f) { return f.state === 'moved'; }); }
+
+    // Resolve a "place" — either a whole binding (atom) or a struct field
+    // (`. base field`) — to the sub-binding it names. Reports and returns null on
+    // an unknown name, a non-struct base, or an unknown field.
+    function resolvePlace(node, scope) {
+      if (node.value === '.') {
+        var base = node.children[0], fld = node.children[1];
+        if (!base || !fld) { err('parse', node.line, 'field access needs a base and a field name', bulletText(node)); return null; }
+        if (base.value === '.') { err('unsupported', node.line, 'v1 field access is one level deep', bulletText(node)); return null; }
+        var bb = lookup(scope, base.value);
+        if (!bb) { err('undeclared', node.line, 'use of undeclared name `' + base.value + '`', bulletText(node)); return null; }
+        if (!bb.fields) { err('type-mismatch', node.line, '`' + base.value + '` is not a struct; cannot access field `' + fld.value + '`', bulletText(node)); return null; }
+        if (!bb.fields[fld.value]) { err('undeclared', node.line, 'struct `' + typeName(bb.type) + '` has no field `' + fld.value + '`', bulletText(node)); return null; }
+        return { b: bb.fields[fld.value], parent: bb, label: bb.name + '.' + fld.value };
+      }
+      var b = lookup(scope, node.value);
+      if (!b) { err('undeclared', node.line, 'use of undeclared name `' + node.value + '`', bulletText(node)); return null; }
+      return { b: b, parent: null, label: b.name };
     }
 
     function checkReturnRef(exprNode, t, fn) {
@@ -189,10 +242,12 @@
       if (v === 'not') { if (node.children[0]) expectType(node.children[0], scope, 'bool'); return 'bool'; }
       if (v === 'if') return checkIf(node, scope);
       if (v === 'match') return checkMatch(node, scope);
+      if (v === '.') return checkField(node, scope, moving);
       if (v === 'vec') return nary(node, scope, 'i64', 'Vec');
       if (v === 'push') return checkPush(node, scope);
       if (v === 'print') { if (node.children[0]) checkExpr(node.children[0], scope, false); return 'Unit'; }
       if (variants[v]) return checkVariant(node, scope);
+      if (structs[v]) return checkConstruct(node, scope);
       if (fns[v]) return checkCall(node, scope);
       if (node.children.length === 0) return useBinding(node, scope, moving);
       err('undeclared', node.line, 'unknown operator or function `' + v + '`', bulletText(node));
@@ -207,8 +262,53 @@
         return b.type;
       }
       if (b.mutBorrow) err('borrow-conflict', node.line, 'cannot use `' + b.name + '` while it is mutably borrowed (borrowed at line ' + b.lastBorrowLine + ')', bulletText(node));
+      if (b.fields) {
+        if (fieldMutBorrowed(b)) err('borrow-conflict', node.line, 'cannot use `' + b.name + '` while one of its fields is mutably borrowed', bulletText(node));
+        if (moving && fieldMoved(b)) {
+          err('use-after-move', node.line, 'cannot move `' + b.name + '`: a field has already been moved out (partial move)', bulletText(node));
+          return b.type;
+        }
+        if (moving && fieldShared(b)) err('borrow-conflict', node.line, 'cannot move `' + b.name + '` while one of its fields is borrowed', bulletText(node));
+      }
       if (moving && !isCopy(b.type)) { b.state = 'moved'; b.movedAt = node.line; }
       return b.type;
+    }
+
+    // Field read / move-out, e.g. `. p x`. Moving out a move-type field is a
+    // partial move: that field becomes Moved, the other fields remain usable, and
+    // the struct can no longer be used by value (see useBinding).
+    function checkField(node, scope, moving) {
+      var place = resolvePlace(node, scope);
+      if (!place || !place.parent) return 'Unit';
+      var fb = place.b, parent = place.parent;
+      if (parent.state === 'moved') err('use-after-move', node.line, 'use of moved value `' + parent.name + '` (moved at line ' + parent.movedAt + ')', bulletText(node));
+      if (parent.mutBorrow) err('borrow-conflict', node.line, 'cannot access field `' + place.label + '` while `' + parent.name + '` is mutably borrowed (borrowed at line ' + parent.lastBorrowLine + ')', bulletText(node));
+      if (fb.state === 'moved') {
+        err('use-after-move', node.line, 'use of moved field `' + place.label + '` (moved at line ' + fb.movedAt + ')', bulletText(node));
+        return fb.type;
+      }
+      if (fb.mutBorrow) err('borrow-conflict', node.line, 'cannot use field `' + place.label + '` while it is mutably borrowed (borrowed at line ' + fb.lastBorrowLine + ')', bulletText(node));
+      if (moving && !isCopy(fb.type)) { fb.state = 'moved'; fb.movedAt = node.line; }
+      return fb.type;
+    }
+
+    // A struct constructor, e.g. `Point `1` `2``. Fields are positional, in
+    // declaration order; a move-type field value is moved into the struct.
+    function checkConstruct(node, scope) {
+      var def = structs[node.value], args = node.children;
+      if (args.length !== def.order.length) {
+        err('arity', node.line, '`' + node.value + '` expects ' + def.order.length + ' field value(s), got ' + args.length, bulletText(node));
+      }
+      def.order.forEach(function (f, i) {
+        var a = args[i];
+        if (!a) return;
+        var ft = def.fields[f].type;
+        var at = checkExpr(a, scope, !isCopy(ft));
+        if (typeName(at) !== typeName(ft)) {
+          err('type-mismatch', node.line, 'field `' + f + '` of `' + node.value + '` expects ' + typeName(ft) + ', found ' + typeName(at), bulletText(node));
+        }
+      });
+      return node.value;
     }
 
     // Every operand must be `argType`; the expression as a whole is `resultType`.
@@ -228,17 +328,28 @@
     function checkBorrow(node, scope) {
       var operand = node.children[0];
       if (!operand) { err('parse', node.line, 'borrow without an operand', bulletText(node)); return 'Unit'; }
-      var b = lookup(scope, operand.value);
-      if (!b) { err('undeclared', node.line, 'borrow of undeclared name `' + operand.value + '`', bulletText(node)); return 'Unit'; }
-      if (b.state === 'moved') err('use-after-move', node.line, 'borrow of moved value `' + b.name + '`', bulletText(node));
+      var place = resolvePlace(operand, scope);
+      if (!place) return 'Unit'; // resolvePlace already reported the error
+      var b = place.b, parent = place.parent, label = place.label;
+      if (b.state === 'moved') err('use-after-move', node.line, 'borrow of moved value `' + label + '`', bulletText(node));
+      if (parent) {
+        // Borrowing a field: the struct as a whole must be available.
+        if (parent.state === 'moved') err('use-after-move', node.line, 'borrow of field of moved value `' + parent.name + '`', bulletText(node));
+        if (parent.mutBorrow) err('borrow-conflict', node.line, 'cannot borrow field `' + label + '` while `' + parent.name + '` is mutably borrowed (borrowed at line ' + parent.lastBorrowLine + ')', bulletText(node));
+      } else if (b.fields) {
+        // Borrowing the whole struct conflicts with any live field borrow.
+        if (fieldMutBorrowed(b) || (node.value === '&mut' && fieldShared(b))) {
+          err('borrow-conflict', node.line, 'cannot borrow `' + b.name + '` while one of its fields is borrowed', bulletText(node));
+        }
+      }
       var isMut = node.value === '&mut';
       if (isMut) {
-        if (!b.mutable) err('mutate-immutable', node.line, 'cannot borrow `' + b.name + '` as mutable: not declared `mut`', bulletText(node));
-        if (b.shared > 0 || b.mutBorrow) err('borrow-conflict', node.line, 'cannot mutably borrow `' + b.name + '` while it is already borrowed (borrowed at line ' + b.lastBorrowLine + ')', bulletText(node));
+        if (!b.mutable) err('mutate-immutable', node.line, 'cannot borrow `' + label + '` as mutable: not declared `mut`', bulletText(node));
+        if (b.shared > 0 || b.mutBorrow) err('borrow-conflict', node.line, 'cannot mutably borrow `' + label + '` while it is already borrowed (borrowed at line ' + b.lastBorrowLine + ')', bulletText(node));
         b.mutBorrow = true;
         scope.loans.push({ of: b, kind: 'mut', line: node.line });
       } else {
-        if (b.mutBorrow) err('borrow-conflict', node.line, 'cannot borrow `' + b.name + '` as shared while it is mutably borrowed (borrowed at line ' + b.lastBorrowLine + ')', bulletText(node));
+        if (b.mutBorrow) err('borrow-conflict', node.line, 'cannot borrow `' + label + '` as shared while it is mutably borrowed (borrowed at line ' + b.lastBorrowLine + ')', bulletText(node));
         b.shared++;
         scope.loans.push({ of: b, kind: 'shared', line: node.line });
       }
