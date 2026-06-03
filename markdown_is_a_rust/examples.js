@@ -96,6 +96,40 @@
 '# main\n' +
 '* print\n' +
 '  * dangle\n'
+    },
+    {
+      name: 'match (Option)',
+      note: 'Accepted — an exhaustive match over Option binds the Some payload.',
+      code:
+'# enum Option\n' +
+'* Some\n' +
+'  * i64\n' +
+'* None\n' +
+'\n' +
+'# main\n' +
+'* let o\n' +
+'  * Some `7`\n' +
+'* match o\n' +
+'  * Some n\n' +
+'    * print n\n' +
+'  * None\n' +
+'    * print `0`\n'
+    },
+    {
+      name: 'non-exhaustive match',
+      note: 'REJECTED — the match omits None and has no wildcard arm.',
+      code:
+'# enum Option\n' +
+'* Some\n' +
+'  * i64\n' +
+'* None\n' +
+'\n' +
+'# main\n' +
+'* let o\n' +
+'  * Some `7`\n' +
+'* match o\n' +
+'  * Some n\n' +
+'    * print n\n'
     }
   ];
 

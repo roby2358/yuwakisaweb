@@ -63,14 +63,32 @@
     }
 
     var fns = {};
+    var enums = {};      // Name -> { name, order: [variant...], variants: { V: {name, payload} } }
+    var variants = {};   // VariantName -> { enum, payload }  (variant names are global in v1)
     var seen = {};
     var hasMain = false;
+
+    // First pass over enums so variant constructors are known before any fn body
+    // (which may construct them) is checked.
+    program.items.forEach(function (it) {
+      if (it.kind !== 'enum') return;
+      var def = { name: it.name, order: [], variants: {} };
+      it.bullets.forEach(function (b) {
+        var payload = b.children.length ? parseTypeTokens(b.children) : 'Unit';
+        def.order.push(b.value);
+        def.variants[b.value] = { name: b.value, payload: payload };
+        if (variants[b.value]) err('duplicate-item', b.line, 'duplicate variant name `' + b.value + '`');
+        variants[b.value] = { enum: it.name, payload: payload };
+      });
+      enums[it.name] = def;
+    });
 
     program.items.forEach(function (it) {
       if (seen[it.name]) err('duplicate-item', it.line, 'duplicate item name `' + it.name + '`');
       seen[it.name] = true;
+      if (it.kind === 'enum') return; // handled above
       if (it.kind !== 'fn') {
-        err('unsupported', it.line, '`' + it.kind + '` items are deferred in v1 core (only `fn` is supported)');
+        err('unsupported', it.line, '`' + it.kind + '` items are deferred in v1 core (only `fn` and `enum` are supported)');
         return;
       }
       var params = [], returns = 'Unit', body = [];
@@ -170,9 +188,11 @@
       if (v === 'and' || v === 'or') return nary(node, scope, 'bool', 'bool');
       if (v === 'not') { if (node.children[0]) expectType(node.children[0], scope, 'bool'); return 'bool'; }
       if (v === 'if') return checkIf(node, scope);
+      if (v === 'match') return checkMatch(node, scope);
       if (v === 'vec') return nary(node, scope, 'i64', 'Vec');
       if (v === 'push') return checkPush(node, scope);
       if (v === 'print') { if (node.children[0]) checkExpr(node.children[0], scope, false); return 'Unit'; }
+      if (variants[v]) return checkVariant(node, scope);
       if (fns[v]) return checkCall(node, scope);
       if (node.children.length === 0) return useBinding(node, scope, moving);
       err('undeclared', node.line, 'unknown operator or function `' + v + '`', bulletText(node));
@@ -249,6 +269,86 @@
       var t1 = cons ? checkExpr(cons, scope, false) : 'Unit';
       if (alt) checkExpr(alt, scope, false);
       return t1;
+    }
+
+    // A variant constructor, e.g. `Some `5`` or `None`. Produces its enum type.
+    function checkVariant(node, scope) {
+      var info = variants[node.value];
+      var hasPayload = info.payload !== 'Unit';
+      var args = node.children;
+      var want = hasPayload ? 1 : 0;
+      if (args.length !== want) {
+        err('arity', node.line, 'variant `' + node.value + '` expects ' + want + ' payload value(s), got ' + args.length, bulletText(node));
+      }
+      if (hasPayload && args[0]) {
+        var at = checkExpr(args[0], scope, !isCopy(info.payload));
+        if (typeName(at) !== typeName(info.payload)) {
+          err('type-mismatch', node.line, 'variant `' + node.value + '` payload expects ' + typeName(info.payload) + ', found ' + typeName(at), bulletText(node));
+        }
+      }
+      return info.enum;
+    }
+
+    // match scrutinee + arms. children[0] is the scrutinee; the rest are arms.
+    // An arm head is a variant name or `_`; a payload variant binds its first
+    // child (an atom) and the remaining children are the body, evaluated in order.
+    function checkMatch(node, scope) {
+      var scrut = node.children[0];
+      if (!scrut) { err('parse', node.line, '`match` without a scrutinee', bulletText(node)); return 'Unit'; }
+      // Typing the scrutinee by value moves a move-type binding; `& x` borrows it.
+      var st = checkExpr(scrut, scope, true);
+      var enumName = (st && st.ref) ? typeName(st.to) : typeName(st);
+      var def = enums[enumName];
+      if (!def) err('type-mismatch', node.line, '`match` scrutinee must be an enum, found ' + enumName, bulletText(scrut));
+
+      var arms = node.children.slice(1);
+      if (arms.length === 0) err('parse', node.line, '`match` has no arms', bulletText(node));
+
+      var covered = {}, wildcard = false, resultType = 'Unit', haveResult = false;
+      arms.forEach(function (arm) {
+        var armScope = newScope(scope);
+        var variant = null;
+        if (arm.value === '_') {
+          wildcard = true;
+        } else if (def && !def.variants[arm.value]) {
+          err('type-mismatch', arm.line, 'arm `' + arm.value + '` is not a variant of `' + enumName + '`', bulletText(arm));
+        } else if (def) {
+          if (covered[arm.value]) err('unreachable-arm', arm.line, 'duplicate arm for variant `' + arm.value + '`', bulletText(arm));
+          covered[arm.value] = true;
+          variant = def.variants[arm.value];
+        }
+        var bodyStart = bindArm(arm, variant, armScope);
+        var bodyType = checkArmBody(arm, bodyStart, armScope);
+        if (!haveResult) { resultType = bodyType; haveResult = true; }
+        releaseScope(armScope);
+      });
+
+      if (def && !wildcard) {
+        var missing = def.order.filter(function (vn) { return !covered[vn]; });
+        if (missing.length) err('non-exhaustive', node.line, 'non-exhaustive `match` on `' + enumName +
+          '`: missing variant(s) ' + missing.map(function (m) { return '`' + m + '`'; }).join(', '), bulletText(node));
+      }
+      return resultType;
+    }
+
+    // Bind a payload variant's single binder (its first child) into the arm scope.
+    // Returns the index where the arm body begins; the binder count is known from
+    // the variant, so it does not depend on guessing structure.
+    function bindArm(arm, variant, armScope) {
+      if (!variant || variant.payload === 'Unit') return 0;
+      var binder = arm.children[0];
+      if (!binder || binder.children.length > 0) {
+        err('arity', arm.line, 'variant `' + variant.name + '` binds one payload value', bulletText(arm));
+        return 0;
+      }
+      armScope.bindings[binder.value] = mkBinding(binder.value, variant.payload, false, true, arm.line);
+      return 1;
+    }
+
+    function checkArmBody(arm, bodyStart, armScope) {
+      var t = 'Unit';
+      for (var i = bodyStart; i < arm.children.length; i++) t = checkExpr(arm.children[i], armScope, false);
+      return t;
     }
 
     function checkCall(node, scope) {
