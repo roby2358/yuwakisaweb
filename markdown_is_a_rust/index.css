@@ -30,7 +30,6 @@ header {
   padding: 10px 16px;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
-  flex-wrap: wrap;
 }
 header h1 {
   font-size: 16px;
@@ -38,17 +37,35 @@ header h1 {
   color: var(--accent);
   letter-spacing: 0.5px;
   white-space: nowrap;
+  flex: 1;
 }
 header .sub { color: var(--muted); font-size: 12px; }
 
-#examples { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
+.sidebar {
+  width: 190px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+}
+#examples {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  overflow-y: auto;
+}
 button.ex {
   background: var(--panel-2);
   color: var(--fg);
   border: 1px solid var(--border);
   border-radius: 5px;
-  padding: 4px 9px;
+  padding: 6px 9px;
   font: 12px var(--mono);
+  text-align: left;
   cursor: pointer;
 }
 button.ex:hover { border-color: var(--accent); color: var(--accent); }
@@ -66,6 +83,12 @@ button.action {
 button.action.ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
 button.action:hover { filter: brightness(1.08); }
 
+.workspace {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
 main {
   flex: 1;
   display: grid;
@@ -73,6 +96,7 @@ main {
   gap: 1px;
   background: var(--border);
   min-height: 0;
+  min-width: 0;
 }
 
 .pane { display: flex; flex-direction: column; min-height: 0; background: var(--bg); }
@@ -133,5 +157,14 @@ ul.diags .src {
 }
 
 @media (max-width: 900px) {
+  .workspace { flex-direction: column; }
+  .sidebar {
+    width: auto;
+    max-height: 30%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  #examples { flex-direction: row; flex-wrap: wrap; }
+  button.ex { flex: 1 1 auto; }
   main { grid-template-columns: 1fr; }
 }

@@ -9,28 +9,34 @@
 <body>
   <header>
     <h1>MarkdownIsARust</h1>
-    <div id="examples"></div>
     <div class="actions">
       <button id="run" class="action">Run</button>
       <button id="clear" class="action ghost">Clear</button>
     </div>
   </header>
 
-  <main>
-    <section class="pane">
-      <div class="pane-title">Source — Markdown</div>
-      <textarea id="editor" spellcheck="false" autocomplete="off"></textarea>
-    </section>
+  <div class="workspace">
+    <aside class="sidebar">
+      <div class="pane-title">Examples</div>
+      <nav id="examples"></nav>
+    </aside>
 
-    <section class="pane right">
-      <div class="pane-title">Result — diagnostics or output</div>
-      <div id="results" class="pane-body"></div>
-      <div class="ast-wrap">
-        <div class="pane-title">AST</div>
-        <pre id="ast"></pre>
-      </div>
-    </section>
-  </main>
+    <main>
+      <section class="pane">
+        <div class="pane-title">Source — Markdown</div>
+        <textarea id="editor" spellcheck="false" autocomplete="off"></textarea>
+      </section>
+
+      <section class="pane right">
+        <div class="pane-title">Result — diagnostics or output</div>
+        <div id="results" class="pane-body"></div>
+        <div class="ast-wrap">
+          <div class="pane-title">AST</div>
+          <pre id="ast"></pre>
+        </div>
+      </section>
+    </main>
+  </div>
 
   <!-- Plain classic scripts, loaded in order; no bundler, no modules. -->
   <script src="parser.js"></script>
