@@ -223,6 +223,11 @@ const enemyAiCtx = {
     logCombat: (...a) => logCombat(...a),
     render: () => render(),
     animDelay: (ms) => animDelay(ms),
+    onScreen: (q, r) => {
+        const { x, y } = hexToScreen(q, r);
+        return x >= -HEX_SIZE * 2 && x <= canvas.width + HEX_SIZE * 2 &&
+               y >= -HEX_SIZE * 2 && y <= canvas.height + HEX_SIZE * 2;
+    },
     // round bookkeeping
     tickGarrisons: () => tickGarrisons(),
     advanceTurn: () => advanceTurn(),
@@ -428,12 +433,15 @@ function drawCounter(cx, cy, color, label, hpPct, labelColor, stats, sprite, spr
 function refreshVision() {
     const hasCompass = !!player.equipped('reveal_maw');
     const unraveler = em && em.enemies.find(e => e.type === ENEMY_TYPE.UNRAVELER);
-    // Compass reveals the Unraveler while it lives, otherwise the Maw
-    world.updateVision(player.q, player.r, player.vision(), hasCompass && !unraveler);
-    if (hasCompass && unraveler) {
-        for (const h of hexesInRange(unraveler.q, unraveler.r, 1)) {
-            const key = hexKey(h.q, h.r);
-            if (world.hexes.has(key)) { world.revealed.add(key); world.visible.add(key); }
+    // Compass reveals the Maw plus every chaos unit and its adjacent hexes
+    world.updateVision(player.q, player.r, player.vision(), hasCompass);
+    if (hasCompass && em) {
+        for (const enemy of em.enemies) {
+            if (!em.getDef(enemy.type)?.chaosSpawned) continue;
+            for (const h of hexesInRange(enemy.q, enemy.r, 1)) {
+                const key = hexKey(h.q, h.r);
+                if (world.hexes.has(key)) { world.revealed.add(key); world.visible.add(key); }
+            }
         }
     }
     // First-sight intro for the Unraveler
@@ -2023,7 +2031,7 @@ function itemStatLine(item) {
             mp_bonus: `+${item.mpBonus} MP`,
             opportunist: '25% gold on kill',
             ranger_defense: `+${item.rangerBonus} def on forest/hills`,
-            reveal_maw: 'Reveals Unraveler',
+            reveal_maw: 'Reveals chaos',
             revive: `+${item.reviveHp} HP +${item.reviveAether} AE/turn`,
             soul_harvest: `+${item.soulHarvestXP} XP/kill`,
             strider: 'Rough terrain 1 MP',

@@ -93,7 +93,11 @@ export class EnemyAI {
 
     enemyIsVisible(enemy, prevKey, ctx) {
         const world = ctx.world;
-        return world.visible.has(prevKey) || world.visible.has(hexKey(enemy.q, enemy.r));
+        const fogVisible = world.visible.has(prevKey) || world.visible.has(hexKey(enemy.q, enemy.r));
+        // Only animate moves the player can actually see on screen — fog-visible
+        // but off-screen units (e.g. revealed by the chaos compass) shouldn't
+        // each cost an animation frame.
+        return fogVisible && ctx.onScreen(enemy.q, enemy.r);
     }
 
     async animateMove(enemy, prevKey, ctx) {
