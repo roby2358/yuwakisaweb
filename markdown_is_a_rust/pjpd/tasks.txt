@@ -4,3 +4,10 @@ ID: z3-engine-gir5
 Created: 2026-06-02T20:52:25Z
 Updated: 2026-06-02T20:52:25Z
 Integrate the Z3 solver as the MIAR v2 constraint engine. Add a post-parse constraint-generation pass (over the resolved, typed AST) that lowers borrow/lifetime facts to Z3 via the builder API directly — NOT SMT-LIB text and NOT a round-trip through MIAS Markdown (the family's defining anti-pattern; reuse MIAS's builder layer if anything). This is new in v2: v1's lexical borrow checker is a hand-rolled state machine with no solver. Z3 earns its place only for NLL/Polonius-style region inference and refinement/bounds proofs. Map unsat/unsat-core back to source-text diagnostics. Note the cost: pulls in the Z3 WASM plus COOP/COEP cross-origin-isolation headers, breaking MIAR's zero-dependency / plain-script-tags property. See RUST.md and SPEC.md (Future Work).
+----
+Priority:   30
+Status: ToDo
+ID: wasm-backend-vshd
+Created: 2026-06-03T02:35:05Z
+Updated: 2026-06-03T02:35:05Z
+Compile the checked MIAR AST to WebAssembly (linear memory + static drops, no WasmGC, zero-dependency binary emission). See markdown_is_a_rust/COMPILE.md for the full feasibility analysis. Milestones: (1) Prerequisite refactor — extend check() to return per-expression types and a per-scope drop schedule (the ownership/scope state it currently computes and throws away). (2) Copy-only backend in a new opt-in compiler.js alongside runner.js: parse → check → compile → instantiate → run factorial in real WASM (i64/bool/fn/let/if/recursion, print via host import). (3) Heap + drops: bump allocator, Vec/String with drops at scope exit in reverse declaration order, print via ptr+len host import. (4) Aggregates: structs and enums, match via tag dispatch (br_table). The drop-insertion pass is the on-thesis core — it demonstrates memory safety without GC rather than asserting it. Keep the checker-is-the-product framing; the backend is additive.
