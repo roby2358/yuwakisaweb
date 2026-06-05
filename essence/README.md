@@ -31,8 +31,6 @@ Stopping criteria
 - number of iterations with no change
 
 Exploration
-- Divide the space into a quadtree of hyper-rectangles, as many as you have
-- space for
-- Each time you generate a random number, choose the hyper-rectangle with
-- the fewest sample points
+- Divide the space into a quadtree of hyper-rectangles, as many as you have space for
+- Each time you generate a random number, choose the hyper-rectangle with the fewest sample points
 - This distributes the exploration over the space
