@@ -125,8 +125,9 @@ main {
 .right { display: flex; flex-direction: column; min-height: 0; }
 .pane-body { flex: 1; overflow: auto; padding: 12px 14px; }
 
-.right .ast-wrap { border-top: 1px solid var(--border); display: flex; flex-direction: column; max-height: 38%; }
-#ast { overflow: auto; padding: 10px 14px; white-space: pre; color: var(--muted); font-size: 12px; margin: 0; }
+.right .rust-wrap { border-top: 1px solid var(--border); display: flex; flex-direction: column; max-height: 45%; }
+#rust { overflow: auto; padding: 10px 14px; white-space: pre; color: var(--fg); font-size: 12px; margin: 0; }
+#rust:empty::before { content: "(press Run to transpile)"; color: var(--muted); }
 
 .status { font-weight: 600; margin-bottom: 10px; }
 .status.ok { color: var(--ok); }

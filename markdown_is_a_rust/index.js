@@ -9,30 +9,7 @@
   var runBtn = document.getElementById('run');
   var clearBtn = document.getElementById('clear');
   var results = document.getElementById('results');
-  var astPanel = document.getElementById('ast');
-
-  function astText(program) {
-    return program.items.map(function (it) {
-      var head = '# ' + it.kind + (it.name ? ' ' + it.name : '');
-      var body = it.bullets.map(function (b) { return nodeText(b, 0); }).join('\n');
-      return body ? head + '\n' + body : head;
-    }).join('\n\n');
-  }
-  // Compact rendering: leading atom children ride on the head's line; the first
-  // child that has children of its own breaks out to a sub-bullet (the mirror of
-  // how the parser reads compact source — see parser.js).
-  function nodeText(node, depth) {
-    var pad = new Array(depth + 1).join('  ');
-    var inline = [];
-    var i = 0;
-    for (; i < node.children.length; i++) {
-      if (node.children[i].children.length > 0) break;
-      inline.push(node.children[i].value);
-    }
-    var line = pad + '* ' + node.value + (inline.length ? ' ' + inline.join(' ') : '');
-    var rest = node.children.slice(i).map(function (c) { return nodeText(c, depth + 1); });
-    return [line].concat(rest).join('\n');
-  }
+  var rustPanel = document.getElementById('rust');
 
   function render(html, cls) {
     results.className = 'pane-body ' + (cls || '');
@@ -49,10 +26,16 @@
       program = MIAR.parse(src);
     } catch (e) {
       render('<div class="status err">Parse error</div><pre>' + esc(e.message) + '</pre>', 'rejected');
-      astPanel.textContent = '';
+      rustPanel.textContent = '';
       return;
     }
-    astPanel.textContent = astText(program);
+    // Transpilation is purely syntactic, so it runs whether or not the checker
+    // accepts: a rejected program shows the Rust that `rustc` would reject too.
+    try {
+      rustPanel.textContent = MIAR.transpile(program);
+    } catch (e) {
+      rustPanel.textContent = '// transpile error: ' + e.message;
+    }
 
     var checked = MIAR.check(program);
     if (checked.diags.length) {
@@ -84,7 +67,7 @@
     editor.value = ex.code;
     render('<div class="muted">Loaded <strong>' + esc(ex.name) + '</strong>. ' +
       esc(ex.note) + '<br>Press Run (or Ctrl/Cmd+Enter).</div>', '');
-    astPanel.textContent = '';
+    rustPanel.textContent = '';
   }
 
   MIAR.EXAMPLES.forEach(function (ex, i) {
@@ -99,7 +82,7 @@
   runBtn.addEventListener('click', runProgram);
   clearBtn.addEventListener('click', function () {
     render('<div class="muted">Cleared.</div>', '');
-    astPanel.textContent = '';
+    rustPanel.textContent = '';
   });
   editor.addEventListener('keydown', function (e) {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); runProgram(); }
