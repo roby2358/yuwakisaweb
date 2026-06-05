@@ -17,22 +17,42 @@ npx serve .
 
 ### Module Dependency Graph
 ```
-index.js (top-level orchestrator: rendering, input, combat, UI, save/load)
+index.js (orchestrator: rendering, input, UI, save/load, combat math, dialogs)
   ├─ config.js       (constants, terrain, enemy/equipment/skill/POI defs; imports rando, origitems)
   ├─ hex.js          (axial hex math, BFS/Dijkstra, A*, draw helpers; imports HEX_SIZE)
   ├─ rando.js        (Rando: shuffle, choice, int, bellCurve, weighted, bool)
-  ├─ colortheory.js  (HSL/RGB conversion, color scheme generation)
   ├─ player.js       (Player class: stats, equipment, skills, inventory, toJSON/fromJSON)
   ├─ world.js        (GameWorld class: hex grid, POIs, fog, LOS; toJSON/fromJSON)
-  ├─ enemies.js      (EnemyManager class: enemy list, spawn, AI dispatch; toJSON/fromJSON)
+  ├─ enemies.js      (EnemyManager class: enemy list, spawn, defs; imports colortheory)
+  ├─ actions.js      (player Action classes + MP/aether cost helpers; see below)
+  ├─ enemy_ai.js     (enemy AI classes, maw-distance math, runEnemyPhase; see below)
   ├─ victory.js      (Victory class: score tracking and final breakdown)
   ├─ sound.js        (Sound class: WebAudio-synth combat sfx)
   └─ sprite_sheet.js (SpriteSheet class: fixed-grid PNG sheet with tinting)
 ```
 
+- `colortheory.js` is imported by `enemies.js` (for procedural creature tinting), not by `index.js`
 - `terrain.js` and `renderer.js` exist but are unused — legacy from the Realm project
 - `origitems.js` is an archive of hand-crafted magical items, imported only by `config.js`
 - All persistent classes implement `toJSON()` / static `fromJSON(data)` for save/load
+
+### Action / AI Extraction (the `ctx` injection pattern)
+
+`index.js` still owns all module-level game state and combat math, but the **player-action**
+and **enemy-AI** logic live in separate files that can't import `index.js` (circular). They
+receive everything they need through a plain dependency-injected context object built in
+`index.js`:
+
+- `actionCtx` (index.js ~164) — passed to `new MoveAction(actionCtx, ...).execute()` etc.
+  Exposes live state via getters (`get player()`, `get world()`, …) and binds index.js
+  callbacks (`dealDamageToEnemy`, `refreshVision`, `showDialog`, `setCombatAlerted`, …).
+  `actions.js` defines `Action` → `Strike`/`WeaponStrike`/`RangedStrike` and the concrete
+  `MoveAction`, `MeleeAction`, `RangedAction`, `MoveAndAttackAction`, `SkillAction`.
+- `enemyAiCtx` (index.js ~202) — passed to `runEnemyPhase(enemyAiCtx)`. `enemy_ai.js` defines
+  `EnemyAI` → `WildlifeAI`/`MonsterAI`/`RuinsGuardianAI`/`ChaosAI`, dispatched by `aiFor(behavior)`.
+
+When you add a callback or piece of state that actions/AI need, wire it into the relevant
+`ctx` object — don't reach back into `index.js` from those modules.
 
 ### Game State (index.js module-level variables)
 
@@ -41,13 +61,17 @@ index.js (top-level orchestrator: rendering, input, combat, UI, save/load)
 - `em`: `EnemyManager` — owns `enemies` array, `creatureDefs`, `nextId`
 - `victory`: `Victory` — score counters
 - `sound`: `Sound` — singleton, constructed at load
-- `phase`: `'player' | 'enemy' | 'animating' | 'dialog'` — gates input
+- `phase`: `'player' | 'enemy' | 'dialog'` — gates input (canvas clicks ignored unless `'player'`)
 - `selected`, `reachable` (Map<hexKey, cost>), `attackable` (Set<hexKey>) — recomputed on selection
 - `targeting`: `{skill, validHexes: Set}` or null — for skill/ranged target picking
 - `turn`, `gameOver`, `gameWon`, `gameGeneration` (incremented on new game to halt old loops)
-- `hoveredHex`, `panX/Y`, `panning` — UI/input state
-- `mawDistances` (Map<hexKey, cost>), `mawMaxDist` — cached BFS for proximity scaling
+- `combatAlerted`, `threatOverlay`, `showingWorldMap` — combat/overlay UI flags
+- `hoveredHex`, `panX/Y`, `panning`, `panStartX/Y`, `panOrigX/Y` — UI/input state
 - `endTurnResolve` — promise resolver used by the async enemy phase
+- `actionCtx`, `enemyAiCtx` — the injection objects described above
+
+Maw-proximity BFS (`mawDistances`/`mawMaxDist`) lives in `enemy_ai.js`, not index.js;
+recompute it via `computeMawDistances(world)` and read it via `mawProximityBonus`/`mawDistancePeak`.
 
 ### Coordinate System
 
@@ -55,14 +79,15 @@ Axial coordinates `(q, r)` with pointy-top hexes. Hex objects keyed by `"q,r"` s
 
 ### Hex Object Shape
 ```javascript
-{ q, r, col, row, elevation, terrain, poi, goldLooted, isEdge }
+{ q, r, col, row, elevation, isEdge, terrain, poi, goldDeposit, shatteredCount }
+// `crop` is added dynamically during spawn logic
 ```
 
 ### Turn Flow
 
-1. **Player phase**: select → move/attack/skill → auto-end on 0 MP or manual end
-2. **Enemy phase** (async, awaited via `endTurnResolve`): enemies act with `animDelay` between actions; `phase` transitions to `'animating'` during animation windows
-3. **Spawn phase**: breach spawning rolls → turn increment → MP reset (halved if engaged)
+1. **Player phase**: select → move/attack/skill via `Action` classes → auto-end on 0 MP or manual end
+2. **Enemy phase** (async, awaited via `endTurnResolve`): `runEnemyPhase(enemyAiCtx)` runs each enemy's AI with `animDelay` between actions
+3. **Spawn phase**: breach spawning rolls (`pickSpawnPack`) → turn increment → MP reset (halved if engaged)
 
 Canvas clicks are ignored when `phase !== 'player'`.
 
@@ -99,6 +124,8 @@ Canvas clicks are ignored when `phase !== 'player'`.
 
 - `SPEC.md` — Full game specification with functional requirements
 - `DYNAMICS.md` — Game design philosophy, key drivers, strategy analysis
+- `docs/` — `ASPIRATIONS.md`, `RUST_WASM.md` (forward-looking notes)
+- `md/` — design brainstorms: `MAGIC_ITEMS.md`, `PRIME_GOALS.md`, `QUEST_BRAINSTORM.md`
 
 ## Repo Layout Gotcha
 
