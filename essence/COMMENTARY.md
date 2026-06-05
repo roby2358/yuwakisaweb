@@ -319,6 +319,41 @@ remap chosen for the constraint is also the *right* one: it is linear and
 preserves the full gradient, unlike `max(0, cos)` (ReLU), which would discard the
 anti-aligned hemisphere and reintroduce a flat dead zone.)
 
+### In this visualization (the **Cosine** radio)
+
+The app implements this mode for real: the field-mode radio dispatches `f` to
+`fCosine`, which scores each cell by its cosine similarity (scaled to `[0, 1]`)
+to the **best-aligned maximum** — the max of the per-maximum cosines, each
+measured from the grid center. Taking the max means each cell aligns to the
+angularly-closest target, so every maximum owns a directional wedge rather than
+only `maxima[0]` mattering. Consequences to expect on screen, all the theory
+above made visible:
+
+- **The field is a fan of wedges, not a set of bumps.** Within a wedge `f` is
+  constant along every ray from the center (a smooth angular gradient, brightest
+  along that wedge's target direction); the wedges meet at angular ridges where
+  two maxima are equally aligned — a directional Voronoi partition.
+- **The population converges to a direction, bounded near center.** Plain cosine
+  would let survivors smear all the way out along the ray (the free magnitude
+  dimension scoring 1 everywhere along it) and fly off the display. `fCosine`
+  multiplies the score by a Gaussian radial envelope (`gaussian(size*2/3, r)`), so
+  distance from center is honestly penalized: the points settle into a cluster
+  near the center, offset toward the best-aligned maximum's direction, rather
+  than running away. With multiple wedges the herd can still stampede between
+  competing directions — the multimodal-on-the-circle analogue of the Cauchy
+  three-bump field.
+- This is the deliberate-`f`-constraint answer to "the one remaining gotcha":
+  rather than trim runaway stragglers after the fact, the field itself declares
+  that far-from-center is worse, so the search bounds the magnitude dimension for
+  the right reason instead of being clipped.
+
+(The field is radial by construction — cosine depends only on angle, never on
+distance from center — so it always looks like color shooting out of the center;
+the max just gives up to one bright spoke per maximum, separated by faint ridge
+lines. The wedge structure is only visible when the maxima differ in angle; it is
+clearest with **Move** on, which drifts the maxima and sweeps the spokes
+independently.)
+
 **Bottom line:** cosine similarity makes the *finding* problem easy (signal
 everywhere, and the averaging operator is ideal for it) but makes the *selecting*
 problem subtle (contrast decays as `1/√d`). The algorithm's character shifts from

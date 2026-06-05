@@ -12,7 +12,7 @@
 
   const distanceP = (p, q) => distance(p, q.x, q.y);
 
-  const f = (x, y) => {
+  const fCauchy = (x, y) => {
 //    const gamma = 0.0625;
     const gamma = 10;
     const threshold = 0.4;
@@ -30,6 +30,36 @@
 //    return Math.min(1, Math.pow(value, 1/3));
     return Math.min(1, value);
   }
+
+  // Cosine similarity to the best-aligned maximum, scaled to [0, 1] (see
+  // COMMENTARY). Each cell takes the max cosine over all maxima — i.e. it aligns
+  // to the angularly-closest target — so every maximum owns a directional wedge
+  // and drift/click on any of them moves the field.
+  const fCosine = (x, y) => {
+    const c = size / 2;
+    const [vx, vy] = [x - c, y - c];
+    const mv = Math.sqrt(vx * vx + vy * vy);
+    if (mv === 0) return 0.5;
+    const cosTo = (t) => {
+      const [tx, ty] = [t.x - c, t.y - c];
+      const mt = Math.sqrt(tx * tx + ty * ty);
+      return mt === 0 ? -1 : (vx * tx + vy * ty) / (mv * mt);
+    };
+    const best = maxima.reduce((m, t) => Math.max(m, cosTo(t)), -1);
+    // Radial envelope: plain cosine ignores distance from center, so points
+    // drift outward forever along the ray (the free magnitude dimension). Scale
+    // the score down with distance so that runaway is honestly worse, rather
+    // than trimming stragglers after the fact.
+    const reach = size * 2 / 3;
+    return (1 + best) / 2 * gaussian(reach, mv);
+  }
+
+  // Discriminator dispatch: the field-mode radio selects one entry, and every
+  // caller goes through f(), so the mode lives in exactly one place rather than
+  // scattering `if mode == ...` across renderField/plot/randomPoint/merge.
+  const fields = { cauchy: fCauchy, cosine: fCosine };
+  let activeField = fields.cauchy;
+  const f = (x, y) => activeField(x, y);
 
   function hsvToRgb(h, s, v) {
     const [r, g, b] = hsvToRgbArray(h, s, v);
@@ -147,6 +177,17 @@
     ctx.drawImage(field, 0, 0, size * scale, size * scale);
   }
 
+  // Cosine mode hides where the maxima actually sit (only their direction shows),
+  // so mark them. Dispatched off the mode like `fields` — no `if mode ==` in the
+  // render path; the cauchy entry is a no-op overlay.
+  function plotMaxima() {
+    ctx.fillStyle = 'white';
+    maxima.forEach(m => ctx.fillRect(Math.floor(m.x) * scale, Math.floor(m.y) * scale, scale, scale));
+  }
+  const noOverlay = () => {};
+  const overlays = { cauchy: noOverlay, cosine: plotMaxima };
+  let activeOverlay = overlays.cauchy;
+
   function merge(a, b) {
     const aa = a.score + Math.random() / 10;
     const bb = b.score + Math.random() / 10;
@@ -187,6 +228,7 @@
 
     plotField();
     plotPoints();
+    activeOverlay();
   }
 
   const escapeKey = 27;
@@ -208,9 +250,19 @@
     renderField();
   });
 
+  document.querySelectorAll('input[name="field"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      activeField = fields[radio.value];
+      activeOverlay = overlays[radio.value];
+      points.forEach(p => { p.score = f(p.x, p.y); });
+      renderField();
+    });
+  });
+
   renderField();
   plotField();
   plotPoints();
+  activeOverlay();
 
   const intervalId = setInterval(() => { cycle(ctx); }, 100);
 })();
