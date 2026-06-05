@@ -32,6 +32,11 @@
   }
 
   function hsvToRgb(h, s, v) {
+    const [r, g, b] = hsvToRgbArray(h, s, v);
+    return `rgb(${r}, ${g}, ${b})`;
+  }
+
+  function hsvToRgbArray(h, s, v) {
     const i = Math.floor(h * 6);
     const f = h * 6 - i;
     const p = v * (1 - s);
@@ -48,7 +53,7 @@
       case 5: [r, g, b] = [v, p, q]; break;
     }
 
-    return `rgb(${Math.floor(r * 255)}, ${Math.floor(g * 255)}, ${Math.floor(b * 255)})`;
+    return [Math.floor(r * 255), Math.floor(g * 255), Math.floor(b * 255)];
   }
 
   function getRandomInt(min, max) {
@@ -61,11 +66,32 @@
 
   function coord() {  return Math.floor(Math.random() * size); }
 
-  const maxima = [
-    { x: coord(), y: coord() },
-    { x: coord(), y: coord() },
-    { x: coord(), y: coord() }
-  ];
+  // Each maximum drifts toward a random destination at its own fixed rate; on
+  // arrival (within 1px) it picks a fresh destination and rate. See driftMaxima().
+  function newDestination(m) {
+    m.tx = Math.random() * size;
+    m.ty = Math.random() * size;
+    m.rate = 0.5 + Math.random() * 1.5;
+    return m;
+  }
+
+  function newMaximum() {
+    return newDestination({ x: coord(), y: coord() });
+  }
+
+  const maxima = [newMaximum(), newMaximum(), newMaximum()];
+
+  function driftMaxima() {
+    maxima.forEach(m => {
+      const dx = m.tx - m.x;
+      const dy = m.ty - m.y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d <= 1) { newDestination(m); return; }
+      const step = Math.min(m.rate, d);
+      m.x += (dx / d) * step;
+      m.y += (dy / d) * step;
+    });
+  }
 
   function randomPoint() {
     const x = coord();
@@ -79,12 +105,36 @@
 
   const canvas = document.getElementById('plot');
   const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+
+  const moveToggle = document.getElementById('move');
+
+  // The field f(x, y) only changes when `maxima` moves (on click), so it is
+  // rendered once into this offscreen canvas and blitted each frame rather than
+  // recomputed per cell. Call renderField() to refresh it after maxima change.
+  const field = document.createElement('canvas');
+  field.width = field.height = size;
+  const fieldCtx = field.getContext('2d');
+
+  function renderField() {
+    const img = fieldCtx.createImageData(size, size);
+    for (let x = 0; x < size; x++) {
+      for (let y = 0; y < size; y++) {
+        // Map the value to hue, where 0 is red and 240 is violet in HSV
+        const hue = (1 - f(x, y)) * (240 / 360);
+        const [r, g, b] = hsvToRgbArray(hue, 1, .3);
+        const i = (y * size + x) * 4;
+        img.data[i] = r;
+        img.data[i + 1] = g;
+        img.data[i + 2] = b;
+        img.data[i + 3] = 255;
+      }
+    }
+    fieldCtx.putImageData(img, 0, 0);
+  }
 
   function plot(intensity, x, y) {
-    // Map the value to hue, where 0 is red and 240 is violet in the HSV color model
-    const value = f(x, y);
-    const hue = (1 - value) * (240 / 360);
-//    const intensity = Math.floor(value * 255);
+    const hue = (1 - f(x, y)) * (240 / 360);
     ctx.fillStyle = hsvToRgb(hue, 1, intensity);
     ctx.fillRect(x * scale, y * scale, scale, scale);
   }
@@ -93,22 +143,13 @@
     points.forEach(p => plot(1, p.x, p.y));
   }
 
-  function plotAll() {
-    for (let x = 0; x < size ; x++) {
-      for (let y = 0; y < size ; y++) {
-        plot(.3, x, y);
-      }
-    }
-  }
-
-  function clear() {
-    ctx.fillStyle = `rgb(0,0,0)`;
-    ctx.fillRect(0, 0, size * scale, size * scale);
+  function plotField() {
+    ctx.drawImage(field, 0, 0, size * scale, size * scale);
   }
 
   function merge(a, b) {
-    const aa = a.score + Math.random();
-    const bb = b.score + Math.random();
+    const aa = a.score + Math.random() / 10;
+    const bb = b.score + Math.random() / 10;
     const sum = (aa + bb) == 0 ? 1 : aa + bb;
     const ab = aa / sum;
     const ba = bb / sum;
@@ -134,12 +175,17 @@
   }
 
   function cycle(ctx) {
+    if (moveToggle.checked) {
+      driftMaxima();
+      points.forEach(p => { p.score = f(p.x, p.y); });
+      renderField();
+    }
+
     const r = randomPoint();
     points = [...points, ...points.map(p => merge(p, r)), r];
     trim();
 
-    clear();
-    plotAll();
+    plotField();
     plotPoints();
   }
 
@@ -159,8 +205,11 @@
     maxima[maximaIndex].x = x;
     maxima[maximaIndex].y = y;
     points.forEach(p => { p.score = f(p.x, p.y); })
+    renderField();
   });
 
+  renderField();
+  plotField();
   plotPoints();
 
   const intervalId = setInterval(() => { cycle(ctx); }, 100);
