@@ -126,6 +126,11 @@ let hoveredHex = null;
 let threatOverlay = null;   // Map<string, number> or null — threat heatmap for Ground Weeps
 let showingWorldMap = false;
 let combatAlerted = false;  // set when player attacks; nearby enemies ignore forest stealth
+let scrollOnlySkills = new Set();  // skill ids locked behind map scrolls this run (chosen at game start)
+
+// A skill is unavailable from the normal learn pools (level-up, hut, skill_seek)
+// if it's flagged scrollOnly in config OR dynamically locked behind a scroll this run.
+function skillLockedToScroll(s) { return s.scrollOnly || scrollOnlySkills.has(s.id); }
 
 // Turn timing metrics (session-only, rolling window of last 1000 turns).
 const TURN_METRICS_CAP = 1000;
@@ -1213,7 +1218,8 @@ function saveGame() {
         world: world.toJSON(),
         enemies: em.toJSON(),
         equipment: ALL_EQUIPMENT,
-        playerSprite, enemySprites
+        playerSprite, enemySprites,
+        scrollOnlySkills: [...scrollOnlySkills]
     };
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
 }
@@ -1261,6 +1267,7 @@ function loadGame() {
     world = GameWorld.fromJSON(data.world);
     player = Player.fromJSON(data.player);
     em = EnemyManager.fromJSON(data.enemies);
+    scrollOnlySkills = new Set(data.scrollOnlySkills || []);
 
     // Restore or assign sprites (old saves won't have them)
     if (data.playerSprite && data.enemySprites) {
@@ -1304,6 +1311,7 @@ function initGame() {
     attackable = null;
     targeting = null;
     threatOverlay = null;
+    scrollOnlySkills = new Set();
 
     resetEquipment();
     world = new GameWorld();
@@ -1328,8 +1336,19 @@ function initGame() {
         let mawMax = 1;
         for (const c of mawDists.values()) if (c > mawMax) mawMax = c;
         const farThreshold = mawMax * 0.5;
-        world.placeScroll('respec', startHaven.q, startHaven.r,
-            h => (mawDists.get(hexKey(h.q, h.r)) ?? 0) > farThreshold);
+        const farPred = h => (mawDists.get(hexKey(h.q, h.r)) ?? 0) > farThreshold;
+        world.placeScroll('respec', startHaven.q, startHaven.r, farPred);
+
+        // Lock 10 random learnable skills behind scrolls hidden in the same far
+        // half (too far from the Maw to earn a proximity bonus). A skill is only
+        // marked scroll-only if its scroll actually found a home, so a placement
+        // failure can never make a skill permanently unobtainable.
+        const lockable = Object.values(SKILLS).filter(s =>
+            !s.scrollOnly && !s.shopOnly && s.id !== 'restore');
+        for (const s of Rando.shuffle([...lockable]).slice(0, 10)) {
+            if (world.placeScroll(s.id, startHaven.q, startHaven.r, farPred))
+                scrollOnlySkills.add(s.id);
+        }
     }
 
     player = new Player(startHaven.q, startHaven.r);
@@ -2209,7 +2228,7 @@ function showVillageDialog(poi) {
 function showHutDialog(poi) {
     // 10% chance the Wise Man's skill refreshes to something the player hasn't learned
     if (Rando.bool(0.10)) {
-        const unlearnedPool = Object.values(SKILLS).filter(s => s.id !== 'restore' && !s.shopOnly && !s.scrollOnly && !player.learnedSkills.has(s.id));
+        const unlearnedPool = Object.values(SKILLS).filter(s => s.id !== 'restore' && !s.shopOnly && !skillLockedToScroll(s) && !player.learnedSkills.has(s.id));
         if (unlearnedPool.length > 0) {
             poi.skill = Rando.choice(unlearnedPool).id;
         }
@@ -2539,7 +2558,7 @@ function showLevelUpDialog() {
 function showSkillChoiceDialog() {
     player.pendingSkillChoice = false;
     const available = Object.values(SKILLS).filter(s => !s.shopOnly &&
-        !s.scrollOnly &&
+        !skillLockedToScroll(s) &&
         s.minLevel <= player.level &&
         !player.learnedSkills.has(s.id)
     );
