@@ -20,17 +20,70 @@ import { Hex, bfsHexes, drawHexPath, findPath } from './hex.js';
 import { Rando } from './rando.js';
 import { ColorTheory } from './colortheory.js';
 
-const PLAYER_BOTCH_LINES = [
-    'You sink to one knee before… the cheese steward. The court gasps.',
-    'You whisper sweet nothings to a startled coat-check girl. Titters all around.',
-    'Wrong veil! A scandalised dowager swats you with her fan.',
-    'You bow deeply to the punch fountain. Someone applauds, unsure.'
+// ---- Botched-woo flavor ----
+// A botched woo is the game's prime comedy crack. Two pools combine: an exclamation (the
+// court's horrified delight, drawn for the player's scandal panel) and the saucy lesser
+// aristocrat you actually threw yourself at. The Sapphire Court has no commoners — every
+// blank veil hides a titled flirt — so the wrong target is always nobility, gendered to
+// match the Sovereign you were hunting (SOUGHT, picked at the intro). PG-13 ribald.
+const BOTCH_EXCLAMATIONS = [
+    'Zounds!', 'Not again!', 'It cannot be!', 'Oh, the mortification!',
+    'Heavens preserve us!', 'A scandal for the ages!', 'Gasps ripple to the rafters!',
+    'Perish the thought — too late!', 'By the Sapphire Throne!', 'Sweet simoor, no!',
+    'The whole court swoons!', 'Monocles drop into martinis!', 'Egad, the wrong veil!',
+    'Tittering breaks out in three languages!', 'Somewhere a dowager faints!',
+    'Disaster, darling — utter disaster!', 'The orchestra stumbles a note!',
+    'Oh, you absolute calamity!', 'The fan-flutter heard round the hall!',
+    'A thousand pardons will not cover this!'
 ];
-const RIVAL_BOTCH_LINES = [
-    'The Vicomte de Vavoom courts a coat rack with tremendous passion.',
-    'The Vicomte serenades the wrong guest. A monocle drops into a martini.',
-    'The Vicomte kisses a gloved hand — it belongs to a footman. Gasps.'
-];
+const SAUCY_ARISTOCRATS = {
+    M: [
+        'a baronet who has been winking at everyone all night',
+        'the notoriously over-perfumed Margrave of Lower Vant',
+        'a viscount three goblets into the spiced wine',
+        'a blushing young earl who quite forgets his own name',
+        'the Sapphire Court’s most enthusiastic bachelor',
+        'a lordling whose codpiece is, frankly, ambitious',
+        'the Marquess of Quivering Repute',
+        'a chevalier who returns the kiss with alarming gusto',
+        'a count famous for losing his trousers at galas',
+        'a dashing rake of no fixed estate',
+        'the youngest baron, still giddy from his first masque',
+        'a duke’s idle nephew — all hands and no title',
+        'a velvet-clad fop fanning himself faster than the ladies',
+        'the Knight of the Wandering Eye',
+        'a smouldering envoy from the dune-courts',
+        'a portly seneschal who takes it as a marriage proposal',
+        'a poet-prince who at once composes an ode to your blunder',
+        'the Vidame de Vexin, who has frankly been hoping for this',
+        'a moustachioed cavalier mid-flirtation with a statue',
+        'a giggling lord who faints clean into the topiary'
+    ],
+    F: [
+        'a baroness who has been fluttering her lashes all night',
+        'the notoriously scandalous Marchioness of Lower Vant',
+        'a viscountess three goblets into the spiced wine',
+        'a blushing young countess who quite forgets her own name',
+        'the Sapphire Court’s most pursued widow',
+        'a duchess whose neckline is, frankly, ambitious',
+        'the Marquise of Quivering Repute',
+        'a chevalière who returns the kiss with alarming gusto',
+        'a contessa famous for losing her slippers at galas',
+        'a notorious heartbreaker of no fixed estate',
+        'the youngest baroness, still giddy from her first masque',
+        'a duchess’s idle niece — all fan and no title',
+        'a silk-draped coquette fanning herself faster than the lords',
+        'the Lady of the Wandering Eye',
+        'a smouldering envoy from the dune-courts',
+        'a grand chatelaine who takes it as a marriage proposal',
+        'a poet-princess who at once composes an ode to your blunder',
+        'the Damoiselle de Vexin, who has frankly been hoping for this',
+        'a feathered cavalière mid-flirtation with a statue',
+        'a giggling lady who faints clean into the topiary'
+    ]
+};
+// The saucy aristocrat you mistook for the Sovereign — always of the gender you sought.
+function wrongAristocrat() { return Rando.choice(SAUCY_ARISTOCRATS[soughtGender]); }
 
 // ---- Reveler state machine ----
 // Every reveler wanders and blocks identically; the only thing that varies is what it
@@ -75,7 +128,8 @@ let gameOver = null;        // { won, title, sub } or null
 // ---- Input-layer state (see UI_CONTROLS.md) ----
 let phase = 'player';       // L1.1 map input acts only on the player's turn
 let selection = null;       // L1.2 { reachable, wooable, claimable } — each a Map<key, step|null>
-let overlay = null;         // L5 input-capturing layer: 'intro' | null
+let overlay = null;         // L5 input-capturing layer: 'intro' | 'scandal' | null
+let scandalMsg = null;      // { exclaim, body } shown by the 'scandal' overlay
 let hoveredHex = null;      // L1.3 hex under the cursor
 
 // ---- View state ----
@@ -310,8 +364,10 @@ function placeFigures() {
 }
 
 // Pool stays blue and Fountain white; ColorTheory paints the five walkable zones afresh
-// each night. The scheme comes back sorted by luminance, so darkest -> Alcove (shadow)
-// and brightest -> Ballroom (glamour) falls out for free. A lightened copy tints revelers.
+// each night, squeezed into a muted mid-value band so the floor reads as traversable and
+// the saturated counters pop against it (see squeezePalette). The squeeze keeps the
+// luminance sort, so darkest -> Alcove (shadow) and brightest -> Ballroom (glamour) still
+// falls out for free. Revelers tint off the un-squeezed scheme, so they stay vivid.
 function lighten([r, g, b], amount) {
     return [r + (1 - r) * amount, g + (1 - g) * amount, b + (1 - b) * amount];
 }
@@ -322,9 +378,10 @@ function generatePalette() {
         [ZONE.FOUNTAIN]: ZONE_COLORS[ZONE.FOUNTAIN]
     };
     const scheme = ColorTheory.randomScheme(Math.random);
+    const floor = ColorTheory.squeezePalette(scheme);   // muted, mid-value -> reads walkable
     const order = [ZONE.ALCOVE, ZONE.COLONNADE, ZONE.GARDEN, ZONE.PROMENADE, ZONE.BALLROOM];
-    order.forEach((zone, i) => { zoneColors[zone] = ColorTheory.rgbToHex(...scheme[i]); });
-    lightPalette = scheme.map(c => ColorTheory.rgbToHex(...lighten(c, 0.5)));
+    order.forEach((zone, i) => { zoneColors[zone] = ColorTheory.rgbToHex(...floor[i]); });
+    lightPalette = scheme.map(c => ColorTheory.rgbToHex(...lighten(c, 0.5)));   // revelers stay vivid
 }
 
 // 12 revelers: the first GOSSIP_COUNT carry a Gossip (each the secret of one impostor),
@@ -514,19 +571,26 @@ function wooFigure(key) {
     if (!figure) return;
     if (step) stepTo(step.q, step.r, selection.reachable.get(Hex.key(step.q, step.r)));
     deselect();
-    resolveWoo(figure, player, 'You', PLAYER_BOTCH_LINES, () => {
+    resolveWoo(figure, player, () => {
         const s = SOUGHT[soughtGender];
         say(`You found ${s.obj} — the Veiled Sovereign! The night is yours.`);
         setGameOver(true, 'WOOED!', `You reached ${s.obj} first. The court bows to the ${TITLE[playerGender]} who dared.`);
     }, () => {
-        if (player.scandal >= SCANDAL_CAP)
+        // Too much scandal is the end of the night; otherwise the blunder gets its own
+        // modal panel (exclamation + who you actually wooed) before the turn passes.
+        if (player.scandal >= SCANDAL_CAP) {
             setGameOver(false, 'THROWN OUT', 'The Veil-Wardens escort you to the gutter. Too much scandal.');
-        else endTurn();
+            return;
+        }
+        showScandal(Rando.choice(BOTCH_EXCLAMATIONS),
+            `You sink to one knee before… ${wrongAristocrat()}. The court gasps.`);
+        endTurn();
     });
 }
 
-// Shared woo resolution for both agents. `onWin`/`onBotchEnd` differ per agent.
-function resolveWoo(figure, agent, who, botchLines, onWin, onBotchEnd) {
+// Shared woo resolution for both agents. onWin / onBotch differ per agent: the player gets
+// the scandal panel, the rival a banner — so each supplies its own botch presenter.
+function resolveWoo(figure, agent, onWin, onBotch) {
     if (figure.isSovereign) {
         figure.wooedBy = (agent === player) ? 'player' : 'rival';
         onWin();
@@ -535,8 +599,7 @@ function resolveWoo(figure, agent, who, botchLines, onWin, onBotchEnd) {
     agent.scandal += Math.round(WOO_SCANDAL * ZONE_SCANDAL[hexes.get(Hex.key(agent.q, agent.r)).zone]);
     agent.known.add(figure.id);   // the rejected wooer learns who it wasn't — privately
     flounce(figure);
-    say(Rando.choice(botchLines));
-    onBotchEnd();
+    onBotch();
 }
 
 function setGameOver(won, title, sub) {
@@ -556,7 +619,7 @@ function endTurn() {
     if (gameOver) { render(); return; }
     turn++;
     if (turn > MAX_TURNS) {
-        setGameOver(false, 'DAWN', 'The simoor dies, the masks come off, and you never found them. Next year.');
+        setGameOver(false, 'DAWN', 'The simoor fades, the masks come off, and you never found them. Next year.');
         return;
     }
     player.poise = POISE;
@@ -758,13 +821,15 @@ function rivalWalkToward(plan) {
 function rivalAct(plan) {
     if (!isAdjacent(rival, plan.target)) return;   // didn't reach it this turn
     if (plan.kind === 'claim') { claimReveler(plan.target, rival); return; }
-    resolveWoo(plan.target, rival, 'The Vicomte', RIVAL_BOTCH_LINES, () => {
+    resolveWoo(plan.target, rival, () => {
         setGameOver(false, 'OUT-CHARMED', 'The Vicomte de Vavoom finds the Sovereign first. Insufferable.');
     }, () => {
         if (rival.scandal >= SCANDAL_CAP) {
             rival.out = true;
             say('The Vicomte de Vavoom is thrown out in disgrace! The field is yours.');
+            return;
         }
+        say(`The Vicomte de Vavoom flings himself at ${wrongAristocrat()}. ${Rando.choice(BOTCH_EXCLAMATIONS)}`);
     });
 }
 
@@ -1033,6 +1098,7 @@ canvas.addEventListener('contextmenu', e => e.preventDefault());
 document.getElementById('end-turn').addEventListener('click', primaryAction);
 document.getElementById('new-game').addEventListener('click', initGame);
 document.getElementById('begin-btn').addEventListener('click', dismissOverlay);
+document.getElementById('scandal-ok').addEventListener('click', dismissOverlay);
 
 // Gender toggles on the intro panel: one button stays active per axis.
 function setGender(axis, val) {
@@ -1065,6 +1131,13 @@ function showOverlay(name) {
     syncOverlayDom();
 }
 
+// Raise the scandal panel: an exclamation heading + the blunder it describes, dismissed
+// with OK (or Space/Enter/Esc/click, like any overlay).
+function showScandal(exclaim, body) {
+    scandalMsg = { exclaim, body };
+    showOverlay('scandal');
+}
+
 function dismissOverlay() {
     if (overlay === 'intro' && !genderChosen()) return;  // gate the night on the two choices
     overlay = null;
@@ -1074,6 +1147,11 @@ function dismissOverlay() {
 
 function syncOverlayDom() {
     document.getElementById('intro-panel').classList.toggle('hidden', overlay !== 'intro');
+    document.getElementById('scandal-panel').classList.toggle('hidden', overlay !== 'scandal');
+    if (overlay === 'scandal' && scandalMsg) {
+        document.getElementById('scandal-title').textContent = scandalMsg.exclaim;
+        document.getElementById('scandal-body').textContent = scandalMsg.body;
+    }
 }
 
 // ---- Start ----

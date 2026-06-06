@@ -75,7 +75,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
 #scandal-info { color: #e08a8a; }
 #suspect-info { color: #6cc0e0; }
 #hover-info { color: #c9b8e6; font-weight: normal; font-size: 14px; }
-#intro-panel {
+#intro-panel, #scandal-panel {
     position: fixed;
     top: 50%;
     left: 50%;
@@ -91,11 +91,11 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
     z-index: 20;
     max-width: 640px;
 }
-#intro-panel.hidden { display: none; }
-#intro-panel h2 { margin-bottom: 10px; font-size: 18px; color: #f0c850; }
-#intro-panel p { margin-bottom: 10px; line-height: 1.4; }
+#intro-panel.hidden, #scandal-panel.hidden { display: none; }
+#intro-panel h2, #scandal-panel h2 { margin-bottom: 10px; font-size: 18px; color: #f0c850; }
+#intro-panel p, #scandal-panel p { margin-bottom: 10px; line-height: 1.4; }
 #intro-panel b { color: #f0c850; }
-#intro-panel button {
+#intro-panel button, #scandal-panel button {
     background: #444;
     color: #eee;
     border: 1px solid #666;
@@ -105,7 +105,10 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
     font-family: monospace;
     font-size: 14px;
 }
-#intro-panel button:hover { background: #555; }
+#intro-panel button:hover, #scandal-panel button:hover { background: #555; }
+/* The scandal panel's exclamation reads as alarm, not court gold. */
+#scandal-panel h2 { color: #e08a8a; }
+#scandal-panel { max-width: 480px; }
 .gender-row {
     display: flex;
     align-items: center;

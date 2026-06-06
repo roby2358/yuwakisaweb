@@ -14,7 +14,7 @@ your insufferable rival does, while one wrong move turns the whole court against
 
 It is a **bawdy farce of mistaken identity and social nerve.** Not war. Not romance,
 exactly. The feeling is: *"I think that's them — but if I'm wrong in front of everyone,
-I will die."* Confidence and humiliation are one bad guess apart.
+I will perish."* Confidence and humiliation are one bad guess apart.
 
 Setting (fuel, not mechanics): **Simoor**, a sun-scorched jewel-world where the great
 psionic dynasties duel with seduction and secrets instead of fleets. Once a year the
@@ -38,7 +38,9 @@ This theme naturally activates three drivers; every mechanic weaves into them.
 2. **Scarcity of Agency** — the night is short (turn limit = dawn), Poise per turn is
    small, and you cannot both gather certainty *and* outrace the rival. You triage.
 3. **Comedy** — overlapping systems (wrong guesses, charmed guards keeling over,
-   the rival courting a coat rack) are tuned to produce retellable disasters.
+   the rival flinging himself at a giggling baronet) are tuned to produce retellable
+   disasters. The court is all nobility — there are no commoners to blame, only titled
+   flirts you mistook for royalty.
 
 Supporting: **Rival NPCs Need Constraints** (the Vicomte), **Loss Aversion** (the
 Scandal meter), **Near-Miss Architecture** (the Vicomte woos them one turn before you).
@@ -295,9 +297,11 @@ him out for the turn you need. Near-miss central.
   *outmaneuvered*, not just outraced.
 
 **Comedy cracks (left open on purpose):**
-- Wrong-woo flounce: *"You sink to one knee before… the cheese steward. The court gasps."*
+- Wrong-woo scandal panel: an exclamation (one of 20 — *"Zounds!"*, *"It cannot be!"*) over
+  the saucy lesser aristocrat you actually wooed (20 per gender, matched to the Sovereign
+  you sought): *"You sink to one knee before… the Marquess of Quivering Repute. The court gasps."*
 - Your charmed guard faints into a doorway and walls off your own escape.
-- The Vicomte wrong-woos a coat rack while you watch from across the room.
+- The Vicomte flings himself at a giggling baronet while you watch from across the room.
 - A figure slips into the Garden alone — is it the Sovereign being indiscreet, or a trap
   for your dignity?
 

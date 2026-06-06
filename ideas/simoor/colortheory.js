@@ -213,6 +213,36 @@ export class ColorTheory {
         return schemes[i](radial, randomFn);
     }
 
+    // --- Map palettes ---
+    // A walkable map reads as floor only when its colors recede. Two squeezes do that,
+    // both on the value/saturation axis (hue variety is kept, so the night still recolors
+    // the hall): cap saturation so the muted floor lets the saturated counters pop, and
+    // compress lightness into a narrow MID band so no walkable zone strays toward white or
+    // black, where the eye reads "edge / obstacle, don't step there." The scheme arrives
+    // full-saturation and spanning ~0.04..1.0 lightness; that wide spread is the very thing
+    // that makes a bright walkable zone look impassable. squeezePalette pulls it back in.
+    static MAP_SAT_CAP = 0.42;
+    static MAP_L_MIN = 0.28;
+    static MAP_L_MAX = 0.52;
+
+    static squeezeColor([r, g, b]) {
+        const [h, s, l] = ColorTheory.rgbToHsl(r, g, b);
+        const sCapped = Math.min(s, ColorTheory.MAP_SAT_CAP);
+        const lBand = ColorTheory.MAP_L_MIN + l * (ColorTheory.MAP_L_MAX - ColorTheory.MAP_L_MIN);
+        return ColorTheory.hslToRgb(h, sCapped, lBand);
+    }
+
+    // Squeeze any scheme into a walkable map palette, re-sorted darkest -> brightest so the
+    // caller can still map low luminance to shadowed zones and high to glamorous ones.
+    static squeezePalette(colors) {
+        return ColorTheory.sortPaletteByLuminance(colors.map(c => ColorTheory.squeezeColor(c)));
+    }
+
+    // "Hand me a map palette": a random scheme already squeezed to read as traversable floor.
+    static mapPalette(randomFn) {
+        return ColorTheory.squeezePalette(ColorTheory.randomScheme(randomFn));
+    }
+
     // --- Helpers ---
 
     static rgbToHex(r, g, b) {

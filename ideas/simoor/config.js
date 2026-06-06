@@ -76,7 +76,7 @@ export const COUNTER_SIZE = 28;
 // Pool (blue) and Fountain (white) are fixed; the other five are generated each night by
 // ColorTheory (see generatePalette in index.js) and these values are only fallbacks.
 export const ZONE_COLORS = {
-    [ZONE.POOL]: '#2a6fd0',
+    [ZONE.POOL]: '#06104a',
     [ZONE.PROMENADE]: '#8a5a66',
     [ZONE.COLONNADE]: '#6b5a8a',
     [ZONE.FOUNTAIN]: '#ffffff',
