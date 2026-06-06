@@ -16,6 +16,15 @@ const TERRAIN_COLORS = {
     [TERRAIN.GOLD]: '#d4a017',
     [TERRAIN.QUARRY]: '#9e8c6c',
 };
+const TERRAIN_NAMES = {
+    [TERRAIN.WATER]: 'Water',
+    [TERRAIN.PLAINS]: 'Plains',
+    [TERRAIN.HILLS]: 'Hills',
+    [TERRAIN.MOUNTAIN]: 'Mountain',
+    [TERRAIN.FOREST]: 'Forest',
+    [TERRAIN.GOLD]: 'Gold',
+    [TERRAIN.QUARRY]: 'Quarry',
+};
 const PLAYER_COLOR = '#daa520';
 const TARGET_COLOR = '#ff6600';
 let enemyColors = [];
@@ -25,11 +34,18 @@ let hexes = null;
 let player = null;
 let target = null;
 let enemies = [];
-let selected = false;
-let reachable = null;
 let turn = 1;
 let mp = PLAYER_MP;
 let gameWon = false;
+
+// ---- Input-layer state (see UI_CONTROLS.md) ----
+// A small stack of modal flags decides what any click/key means:
+//   overlay (top) → targeting → selection (bottom).
+let phase = 'player';      // L1.1 phase-gated input: map handlers act only on 'player'
+let selection = null;      // L1.2 { reachable: Map<key,cost>, attackable: Set<key> } or null
+let targeting = null;      // L4 modal targeting { what, validHexes: Set<key> } or null
+let overlay = null;        // L5 input-capturing layer: 'intro' | 'victory' | null
+let hoveredHex = null;     // L1.3 hex under the cursor, for the HUD readout
 
 // ---- View state ----
 let panX = 0, panY = 0;
@@ -190,10 +206,13 @@ function initGame() {
     spawnEnemies();
     turn = 1;
     mp = PLAYER_MP;
-    selected = false;
-    reachable = null;
+    phase = 'player';
+    selection = null;
+    targeting = null;
+    hoveredHex = null;
     gameWon = false;
     centerOn(player);
+    showOverlay('intro');
     resize();
 }
 
@@ -239,30 +258,36 @@ function centerOn(hex) {
     panY = canvas.height / 2 - p.y;
 }
 
-// ---- Game logic ----
+// ---- L1.2 Selection: compute legal sets up front; dispatch is then a pure lookup ----
 function selectPlayer() {
-    selected = true;
-    computeReachable();
+    selection = { reachable: computeReachable(), attackable: computeAttackable() };
 }
 
-function deselectPlayer() {
-    selected = false;
-    reachable = null;
+function deselect() {
+    selection = null;
 }
 
+// Cost-limited flood fill bounded by remaining MP; enemy hexes are walls.
 function computeReachable() {
-    if (mp <= 0) { reachable = new Map(); return; }
+    if (mp <= 0) return new Map();
     const enemyKeys = new Set(enemies.map(e => hexKey(e.q, e.r)));
-    reachable = bfsHexes(player, hexes, hex => {
+    const costs = bfsHexes(player, hexes, hex => {
         if (enemyKeys.has(hexKey(hex.q, hex.r))) return Infinity;
         return MOVEMENT_COST[hex.terrain] ?? Infinity;
     }, mp);
-    reachable.delete(hexKey(player.q, player.r));
+    costs.delete(hexKey(player.q, player.r));
+    return costs;
+}
+
+// L3 attackable set — extension point. No combat yet, so it is always empty. When
+// melee/ranged are added, return the strikeable hex keys here (e.g. enemies adjacent
+// to the unit or to any reachable hex for move-and-strike; in range + LOS for ranged).
+function computeAttackable() {
+    return new Set();
 }
 
 function movePlayer(q, r) {
-    const key = hexKey(q, r);
-    const cost = reachable.get(key);
+    const cost = selection?.reachable.get(hexKey(q, r));
     if (cost === undefined) return;
 
     player.q = q;
@@ -270,27 +295,77 @@ function movePlayer(q, r) {
     mp -= cost;
 
     if (q === target.q && r === target.r) {
-        gameWon = true;
-        deselectPlayer();
-        render();
+        winGame();
         return;
     }
 
+    // L1.4 after each action recompute the highlight sets; auto-end when MP is spent.
     if (mp > 0) {
-        computeReachable();
+        selectPlayer();
         render();
     } else {
         endTurn();
     }
 }
 
+function winGame() {
+    gameWon = true;
+    deselect();
+    showOverlay('victory');
+    render();
+}
+
 function endTurn() {
     if (gameWon) return;
-    deselectPlayer();
+    deselect();
+    // L1.1 enemy phase. It resolves instantly here, but the flag is the hook for an
+    // animated AI loop later (map handlers early-return while phase !== 'player').
+    phase = 'enemy';
     moveEnemies();
+    phase = 'player';
     turn++;
     mp = PLAYER_MP;
     render();
+}
+
+// ---- L2.1 One context-sensitive primary action (End Turn button + Space/Enter) ----
+function primaryAction() {
+    if (overlay || phase !== 'player') return;
+    const loc = locationAt(player);
+    if (loc) {
+        // openLocation(loc) — wire up when interactive locations (towns/ruins/…) exist
+    } else {
+        endTurn();
+    }
+}
+
+// L2.1 extension point: return an interactive location at this hex, or null.
+function locationAt(/* p */) { return null; }
+
+// ---- L4 Modal targeting (scaffold) ----
+// No abilities exist yet, so nothing enters this state. When skills/ranged are added,
+// an activator computes the legal targets up front and sets:
+//   targeting = { what, validHexes: new Set(keys) }
+// The click dispatch then routes a click on a valid hex to the action and anything
+// else (or Esc / right-click) to cancelTargeting().
+function cancelTargeting() {
+    targeting = null;
+}
+
+// ---- L5 Overlays: input-capturing layers checked before gameplay ----
+function showOverlay(name) {
+    overlay = name;
+    syncOverlayDom();
+}
+
+function dismissOverlay() {
+    overlay = null;
+    syncOverlayDom();
+    render();
+}
+
+function syncOverlayDom() {
+    document.getElementById('intro-panel').classList.toggle('hidden', overlay !== 'intro');
 }
 
 function moveEnemies() {
@@ -349,13 +424,20 @@ function render() {
         ctx.fillText('\u2605', x, y);
     }
 
-    // Reachable highlights
-    if (reachable) {
-        for (const [key] of reachable) {
+    // L1.2 highlight sets: movement tint (yellow) + attack tint (red, empty until combat)
+    if (selection) {
+        for (const key of selection.reachable.keys()) {
             const [q, r] = key.split(',').map(Number);
             const { x, y } = hexToScreen(q, r);
             drawHexPath(ctx, x, y, HEX_SIZE);
             ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+            ctx.fill();
+        }
+        for (const key of selection.attackable) {
+            const [q, r] = key.split(',').map(Number);
+            const { x, y } = hexToScreen(q, r);
+            drawHexPath(ctx, x, y, HEX_SIZE);
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.35)';
             ctx.fill();
         }
     }
@@ -370,7 +452,7 @@ function render() {
     if (player) {
         const { x, y } = hexToScreen(player.q, player.r);
         drawCounter(x, y, PLAYER_COLOR, 'P');
-        if (selected) {
+        if (selection) {
             const s = COUNTER_SIZE + 4;
             roundRect(ctx, x - s / 2, y - s / 2, s, s, 6);
             ctx.strokeStyle = '#fff';
@@ -379,8 +461,8 @@ function render() {
         }
     }
 
-    // Victory overlay
-    if (gameWon) {
+    // L5 victory overlay (canvas-drawn, input-capturing layer)
+    if (overlay === 'victory') {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = '#fff';
@@ -453,11 +535,18 @@ function drawCounter(cx, cy, color, label) {
 function updateHUD() {
     document.getElementById('turn-info').textContent = 'Turn ' + turn;
     document.getElementById('mp-info').textContent = 'MP: ' + mp + '/' + PLAYER_MP;
+    // L1.3 hovered-hex readout
+    const hoverEl = document.getElementById('hover-info');
+    if (!hoverEl) return;
+    const h = hoveredHex && hexes.get(hexKey(hoveredHex.q, hoveredHex.r));
+    hoverEl.textContent = h ? `${TERRAIN_NAMES[h.terrain] ?? '?'} (${hoveredHex.q},${hoveredHex.r})` : '';
 }
 
-// ---- Input handling ----
+// ---- Input handling (dispatch order mirrors UI_CONTROLS.md) ----
 canvas.addEventListener('mousedown', e => {
+    // Right button: cancel targeting if active (L2.2), else begin a camera pan (L1.3).
     if (e.button === 2) {
+        if (targeting) { cancelTargeting(); render(); return; }
         panning = true;
         panStartX = e.clientX;
         panStartY = e.clientY;
@@ -466,26 +555,40 @@ canvas.addEventListener('mousedown', e => {
         e.preventDefault();
         return;
     }
+    if (e.button !== 0) return;
 
-    if (e.button === 0 && !gameWon) {
-        const hex = screenToHex(e.clientX, e.clientY);
-        const key = hexKey(hex.q, hex.r);
+    if (overlay) { dismissOverlay(); return; }   // L5 overlay captures & consumes the click
+    if (gameWon) return;                         // game over: board is view-only
+    if (phase !== 'player') return;              // L1.1 map input is live only on the player's turn
 
-        if (selected) {
-            if (hex.q === player.q && hex.r === player.r) {
-                deselectPlayer();
-            } else if (reachable && reachable.has(key)) {
-                movePlayer(hex.q, hex.r);
-            } else {
-                deselectPlayer();
-            }
-        } else {
-            if (hex.q === player.q && hex.r === player.r) {
-                selectPlayer();
-            }
+    const hex = screenToHex(e.clientX, e.clientY);
+    const key = hexKey(hex.q, hex.r);
+
+    // L4 modal targeting: a valid hex commits the action, anything else cancels.
+    if (targeting) {
+        if (targeting.validHexes.has(key)) {
+            // commitTargeting(hex) — wire up when abilities exist
         }
+        cancelTargeting();
         render();
+        return;
     }
+
+    // L1.2 select, then act — the handler is a pure lookup against the cached sets.
+    if (!selection) {
+        if (hex.q === player.q && hex.r === player.r) selectPlayer();
+    } else if (hex.q === player.q && hex.r === player.r) {
+        deselect();
+    } else if (selection.attackable.has(key)) {
+        // attack(hex) — no combat yet
+        deselect();
+    } else if (selection.reachable.has(key)) {
+        movePlayer(hex.q, hex.r);
+        return;   // movePlayer has already re-rendered
+    } else {
+        deselect();
+    }
+    render();
 });
 
 canvas.addEventListener('mousemove', e => {
@@ -493,6 +596,14 @@ canvas.addEventListener('mousemove', e => {
         panX = panOrigX + (e.clientX - panStartX);
         panY = panOrigY + (e.clientY - panStartY);
         render();
+        return;
+    }
+    // L1.3 track the hovered hex for the HUD readout (decoupled from panning).
+    const hex = screenToHex(e.clientX, e.clientY);
+    const next = hexes.has(hexKey(hex.q, hex.r)) ? { q: hex.q, r: hex.r } : null;
+    if (next?.q !== hoveredHex?.q || next?.r !== hoveredHex?.r) {
+        hoveredHex = next;
+        updateHUD();
     }
 });
 
@@ -502,18 +613,30 @@ canvas.addEventListener('mouseup', e => {
 
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 
-document.getElementById('end-turn').addEventListener('click', endTurn);
-window.addEventListener('keydown', e => {
-    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); endTurn(); }
-});
-document.getElementById('new-game').addEventListener('click', () => {
-    initGame();
-    document.getElementById('intro-panel').classList.remove('hidden');
-});
+// L2.3 twin activators: HUD button and hotkey route through one shared function.
+document.getElementById('end-turn').addEventListener('click', primaryAction);
+document.getElementById('new-game').addEventListener('click', initGame);
+document.getElementById('begin-btn').addEventListener('click', dismissOverlay);
 
-const introPanel = document.getElementById('intro-panel');
-document.getElementById('begin-btn').addEventListener('click', () => {
-    introPanel.classList.add('hidden');
+window.addEventListener('keydown', e => {
+    // L5 an overlay swallows its dismissing key.
+    if (overlay && (e.key === ' ' || e.key === 'Enter' || e.key === 'Escape')) {
+        e.preventDefault();
+        dismissOverlay();
+        return;
+    }
+    // L2.2 Esc: peel back one modal layer, deepest first.
+    if (e.key === 'Escape') {
+        if (targeting) cancelTargeting();
+        else deselect();
+        render();
+        return;
+    }
+    // L2.1 primary action.
+    if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        primaryAction();
+    }
 });
 
 // ---- Start ----
