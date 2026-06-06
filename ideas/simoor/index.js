@@ -947,7 +947,7 @@ function drawFigure(f) {
     if (!onScreen(x, y)) return;
     // Until a Favor opens the court, every figure (impostors and the Sovereign alike)
     // wears a reveler's disguise and shows no `?` — indistinguishable from the crowd.
-    if (!sovereignRevealed) { drawCounter(x, y, f.disguise, ''); return; }
+    if (!sovereignRevealed) { drawCounter(x, y, f.disguise, ''); drawCenterGlyph(x, y, MASK_BADGE); return; }
     const known = player.known.has(f.id);   // you only see what you yourself have unmasked
     // Same stylized serif treatment as the reveler tokens (drawCenterGlyph): a blank
     // counter with the glyph laid on top, rather than drawCounter's plain monospace label.
@@ -955,8 +955,14 @@ function drawFigure(f) {
     drawCenterGlyph(x, y, known ? { glyph: '✕', color: '#cfcfd8' } : { glyph: '?', color: '#f5e9c8' });
 }
 
+// Every veiled blank wears the same bejewelled mask — a 💠 diamond — so the disguised crowd
+// reads as "a sea of identical masks". It's the default center glyph: a carry-state BADGE
+// overrides it, but a reveler with no badge (and every still-disguised figure) falls back
+// to the bare jewel. Note: as a color emoji it renders its own cyan and ignores the tint /
+// halo in drawCenterGlyph; `color` is kept only as a fallback for monochrome-emoji fonts.
+const MASK_BADGE = { glyph: '💠', color: '#d8cce0' };
 // BADGE dispatches the glyph drawn in the center of a reveler for each carry state. PLAIN
-// has no entry, so plain revelers (and the disguised Sovereign) show as bare counters.
+// has no entry, so plain revelers fall back to MASK_BADGE.
 const BADGE = {
     [REV.GOSSIP]: { glyph: 'G', color: INFORMANT_COLOR },
     [REV.GOSSIP_SPENT]: { glyph: 'G', color: '#3a3a44' },
@@ -975,8 +981,7 @@ function drawReveler(v) {
     const { x, y } = hexToScreen(v.q, v.r);
     if (!onScreen(x, y)) return;
     drawCounter(x, y, v.color, '');
-    const badge = badgeFor(v);
-    if (badge) drawCenterGlyph(x, y, badge);
+    drawCenterGlyph(x, y, badgeFor(v) ?? MASK_BADGE);
 }
 
 // The carried token, drawn large and centered on the counter with a dark halo so the
