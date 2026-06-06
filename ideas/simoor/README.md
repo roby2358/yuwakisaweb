@@ -30,7 +30,9 @@ Then open the served page.
   Sovereign** all look like identical blank counters — nobody is readable, no `?`s, no `G`s.
   Claiming a **Favor** is what *opens the court*.
 - Revelers **carry tokens**, drawn **centered** on the counter. Move beside a carrier
-  (**cyan ring**) and **click it** to claim:
+  (**cyan ring**) and **click it** to claim. **Claiming ends your turn** — like a woo, it's
+  a commitment that costs you the rest of the night's tempo, so it's a turn you didn't spend
+  closing on the Sovereign (and a turn the Vicomte gets to move):
   - **Favor (❀)** → your **invitation**. The **first one claimed by anyone** opens the
     court: the impostors and the Sovereign all turn to `?`, and the Gossips light up. (It
     helps the Vicomte too, so it's a real decision.)

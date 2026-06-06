@@ -65,8 +65,12 @@ Scandal meter), **Near-Miss Architecture** (the Vicomte woos them one turn befor
   not fixed tiles — approach a carrier (it blocks, so you stand adjacent) and claim it.
   A Gossip privately unmasks one impostor for you alone; it's then spent, so the rival who
   reaches it second gets nothing, and you never see which clues the Vicomte has claimed.
-  *(Information as currency; contested + asymmetric. Each carrier is a small state machine —
-  PLAIN / GOSSIP / FAVOR, claiming into a spent state — see the reveler crowd below.)*
+  **Claiming is a commitment — like a woo, it spends the rest of your Poise and ends the
+  turn.** Leaning in to charm a token off someone costs you the night's tempo, so each claim
+  is a turn you didn't spend closing on the Sovereign — and a turn the Vicomte gets to move.
+  *(Information as currency; contested + asymmetric — and now priced in tempo, not free.
+  Each carrier is a small state machine — PLAIN / GOSSIP / FAVOR, claiming into a spent
+  state — see the reveler crowd below.)*
 - **K4 — Woo (the commit):** end your move beside a masked figure and woo them; if it's
   the Sovereign you win, and if it isn't you take a humiliating Scandal hit while they
   flounce off. *(Near-miss + comedy + loss aversion.)*
@@ -100,8 +104,15 @@ it safe in the shadows keeps Scandal low but the Sovereign is never in the shado
   side-by-side dash rather than a converge-from-opposite-corners meet. He commits to the
   figure he believes is the Sovereign and races there. *Weaves the whole loop into a
   contest; creates near-misses; the shared start makes early blocking and racing legible.*
-- **The reveling crowd** — 12 revelers wander randomly and **block movement for everyone**
-  (you, the Vicomte, the figures). The floor's open lanes shift every turn, so a reveler
+- **The reveling crowd** — 12 revelers wander with a little inertia and **block movement
+  for everyone** (you, the Vicomte, the figures). Each holds a wandering *strategy* and
+  mostly keeps it; **25% of turns it re-rolls** into one of three equally-likely modes —
+  **hold position**, **drift toward another counter** (any piece on the board: you, the
+  Vicomte, a figure, another reveler), or **step to a random free neighbor**. A mode that
+  can't make a legal move this turn just holds. The "drift toward" mode gives the crowd
+  brief, readable currents — a little knot will trail a counter for a few turns before
+  scattering again — instead of pure white-noise jitter, while staying unpredictable enough
+  to never be a reliable wall. The floor's open lanes shift every turn, so a reveler
   drifting into the Vicomte's only path is a free roadblock. The crowd is also where the
   game's interactables *live*: each reveler is a small **state machine** — **4 carry a
   Gossip**, **4 carry a Favor**, **4 are plain** — and the disguised Sovereign hides among
@@ -155,11 +166,15 @@ These map onto the base game's optional input layers (L4 targeting, L5 overlays)
 // A masked figure: 5 impostors + 1 Sovereign. Until sovereignRevealed flips true ALL
 // figures render as blank `disguise`-tinted counters (no `?`), indistinguishable from
 // revelers; after it, impostors+Sovereign show as `?`. disguise is set for every figure.
-{ id, q, r, isSovereign: bool, wooedBy: null | 'player' | 'rival', disguise: hexColor }
+// strategy/target carry the hidden Sovereign's wandering while it drifts with the crowd.
+{ id, q, r, isSovereign: bool, wooedBy: null | 'player' | 'rival', disguise: hexColor,
+  strategy, target }
 
 // A reveler — wanders + blocks. State machine over what it carries (see REV/CLAIM):
 //   state: 'plain' | 'gossip' | 'gossip-spent' | 'favor' | 'favor-spent'
-{ q, r, color: hexColor, state, eliminates: figureId | null }  // eliminates set for gossips
+// strategy: 'still' | 'toward' | 'random' (re-rolled 25%/turn); target: the counter it
+// drifts toward while strategy === 'toward', else null.
+{ q, r, color: hexColor, state, eliminates: figureId | null, strategy, target }  // eliminates set for gossips
 
 // The two agents. `known` is PRIVATE per-agent unmasking knowledge.
 agent = { q, r, poise, scandal, known: Set<figureId>,
@@ -210,7 +225,8 @@ Both the player and the Vicomte share the same `computeApproach` / `claimReveler
 2. **CLAIM(revelerHex)** — approach an adjacent carrier and `claimReveler`, which runs the
    reveler state machine: GOSSIP → GOSSIP_SPENT (`agent.known.add(eliminates)`, private)
    or FAVOR → FAVOR_SPENT (first one sets `sovereignRevealed`). Dispatched on `state` via
-   the `CLAIM` table — no per-type branching.
+   the `CLAIM` table — no per-type branching. **A claim ends the player's turn** (Poise → 0,
+   then `endTurn`), the same commitment shape as WOO — so it is paid in tempo, not free.
 3. **WOO(figureHex)** — adjacent suspect → if `isSovereign`: WIN; else
    Scandal += BASE_WOO × zoneScandal, `agent.known.add(id)`, figure flounces, comedic line.
    (Only reachable once the court is open — pre-Favor `suspectFigures` is empty, so there

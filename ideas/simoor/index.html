@@ -8,14 +8,19 @@
 </head>
 <body>
     <canvas id="game"></canvas>
-    <div id="hud">
-        <span id="turn-info">Dawn in 16</span>
-        <span id="poise-info">Poise: 5/5</span>
-        <span id="scandal-info">Scandal: 0/10</span>
-        <span id="suspect-info">Suspects: ?</span>
-        <span id="hover-info"></span>
-        <button id="end-turn">Wait</button>
-        <button id="new-game">New Night</button>
+    <div id="controls">
+        <div id="title">The Night of the Simoor</div>
+        <div class="btn-row">
+            <button id="end-turn">Wait</button>
+            <button id="new-game">New Night</button>
+        </div>
+    </div>
+    <div id="status">
+        <div class="stat"><span class="label">Dawn in</span><span class="value" id="turn-info">16</span></div>
+        <div class="stat"><span class="label">Poise</span><span class="value" id="poise-info">5/5</span></div>
+        <div class="stat"><span class="label">Scandal</span><span class="value" id="scandal-info">0/10</span></div>
+        <div class="stat"><span class="label">Suspects</span><span class="value" id="suspect-info">?</span></div>
+        <div class="stat zone"><span class="label">Zone</span><span class="value" id="hover-info">&mdash;</span></div>
     </div>
     <div id="intro-panel">
         <h2>The Night of the Simoor</h2>

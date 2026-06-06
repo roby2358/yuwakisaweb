@@ -304,7 +304,8 @@ function placeFigures() {
     const sovereign = Rando.int(0, FIGURE_COUNT - 1);
     figures = spots.map((h, i) => ({
         id: i, q: h.q, r: h.r, isSovereign: i === sovereign, wooedBy: null,
-        disguise: Rando.choice(lightPalette)
+        disguise: Rando.choice(lightPalette),
+        strategy: 'random', target: null   // only the hidden Sovereign uses these (it wanders with the crowd)
     }));
 }
 
@@ -334,7 +335,8 @@ function placeRevelers() {
     const pool = passableHexes();
     const spots = pickSpread(pool, REVELER_COUNT, 1, [player, rival, ...figures]);
     revelers = spots.map((h, i) => {
-        const rev = { q: h.q, r: h.r, color: Rando.choice(lightPalette), state: REV.PLAIN, eliminates: null };
+        const rev = { q: h.q, r: h.r, color: Rando.choice(lightPalette), state: REV.PLAIN,
+            eliminates: null, strategy: 'random', target: null };
         if (i < GOSSIP_COUNT) { rev.state = REV.GOSSIP; rev.eliminates = impostors[i].id; }
         else if (i < GOSSIP_COUNT + FAVOR_COUNT) { rev.state = REV.FAVOR; }
         return rev;
@@ -478,14 +480,16 @@ function claimFavor(rev, agent) {
 }
 
 // Player action: approach an adjacent carrier (move if needed) and claim what it holds.
-// Claiming never ends the turn on its own.
+// A claim is a commitment — it spends the rest of your Poise and ends the turn, the same
+// shape as a woo. Leaning in to charm a token off someone costs you the night's tempo.
 function claimFromReveler(key) {
     const rev = revelerByKey(key);
     if (!rev) return;
     const step = selection.claimable.get(key);
     if (step) stepTo(step.q, step.r, selection.reachable.get(Hex.key(step.q, step.r)));
     claimReveler(rev, player);
-    if (player.poise > 0) { selectPlayer(); render(); } else endTurn();
+    player.poise = 0;
+    endTurn();
 }
 
 // ---- The Sovereign trap: approaching royalty without an invitation (a Favor) ----
@@ -596,20 +600,66 @@ function moveFigures() {
     }
 }
 
-// The ambient crowd: each reveler drifts to a random free neighbor. Blocks movement, so
-// the floor's open corridors shift every turn for the player and the Vicomte alike. While
-// disguised, the Sovereign wanders with the crowd so it's indistinguishable from a reveler.
+// The ambient crowd has a little inertia. Each reveler keeps a wandering `strategy`; most
+// turns it sticks with it, but 25% of turns it re-rolls (rerollStrategy) into one of three
+// equally-likely modes — hold position, drift toward some other counter, or step to a
+// random free neighbor. The modes are a dispatch table (REVELER_MOVE) keyed on `strategy`;
+// each returns a destination hex or null, and a null (including any move it can't legally
+// make this turn) means hold. Revelers block movement, so the open corridors shift each
+// turn. While disguised, the Sovereign wanders with the crowd, indistinguishable from it.
+const REVELER_RESTRATEGIZE = 0.25;
+
+const REVELER_MOVE = {
+    still: () => null,
+    toward: (v, occupied) => stepToward(v, occupied),
+    random: (v, occupied) => Rando.choice(freeNeighbors(v, occupied))
+};
+
+function rerollStrategy(v) {
+    const roll = Rando.int(0, 2);
+    if (roll === 0) { v.strategy = 'still'; v.target = null; }
+    else if (roll === 1) { v.strategy = 'toward'; v.target = Rando.choice(otherCounters(v)); }
+    else { v.strategy = 'random'; v.target = null; }
+}
+
+// Every other piece on the board a reveler could decide to drift toward.
+function otherCounters(v) {
+    const out = [player];
+    if (!rival.out) out.push(rival);
+    for (const f of figures) if (!f.wooedBy && f !== v) out.push(f);
+    for (const u of revelers) if (u !== v) out.push(u);
+    return out;
+}
+
+function freeNeighbors(v, occupied) {
+    return new Hex(v.q, v.r).neighbors().filter(n => {
+        const hex = hexes.get(n.key());
+        return hex && isPassable(hex) && !occupied.has(n.key());
+    });
+}
+
+// One greedy step toward the chosen counter: the free neighbor that strictly shortens the
+// distance. No such neighbor (boxed in, target gone) -> null, i.e. hold position.
+function stepToward(v, occupied) {
+    const target = v.target;
+    if (!target || target.wooedBy) return null;
+    const goal = new Hex(target.q, target.r);
+    let best = null, bestDist = new Hex(v.q, v.r).distance(goal);
+    for (const n of freeNeighbors(v, occupied)) {
+        const d = new Hex(n.q, n.r).distance(goal);
+        if (d < bestDist) { bestDist = d; best = n; }
+    }
+    return best;
+}
+
 function moveRevelers() {
     const occupied = crowdedKeys();
     const crowd = sovereignRevealed ? revelers : [...revelers, figures.find(f => f.isSovereign)];
     for (const v of crowd) {
-        const options = new Hex(v.q, v.r).neighbors().filter(n => {
-            const hex = hexes.get(n.key());
-            return hex && isPassable(hex) && !occupied.has(n.key());
-        });
-        if (options.length === 0) continue;
+        if (Rando.bool(REVELER_RESTRATEGIZE)) rerollStrategy(v);
+        const dest = REVELER_MOVE[v.strategy](v, occupied);
+        if (!dest) continue;
         occupied.delete(Hex.key(v.q, v.r));
-        const dest = Rando.choice(options);
         v.q = dest.q;
         v.r = dest.r;
         occupied.add(Hex.key(v.q, v.r));
@@ -908,14 +958,13 @@ function drawGameOver() {
 }
 
 function updateHUD() {
-    document.getElementById('turn-info').textContent = 'Dawn in ' + (MAX_TURNS - turn + 1);
-    document.getElementById('poise-info').textContent = 'Poise: ' + Math.max(0, player.poise) + '/' + POISE;
-    document.getElementById('scandal-info').textContent = 'Scandal: ' + player.scandal + '/' + SCANDAL_CAP;
+    document.getElementById('turn-info').textContent = MAX_TURNS - turn + 1;
+    document.getElementById('poise-info').textContent = Math.max(0, player.poise) + '/' + POISE;
+    document.getElementById('scandal-info').textContent = player.scandal + '/' + SCANDAL_CAP;
     document.getElementById('suspect-info').textContent =
-        'Suspects: ' + (sovereignRevealed ? suspectFigures(player).length : '?');
-    const hoverEl = document.getElementById('hover-info');
+        sovereignRevealed ? suspectFigures(player).length : '?';
     const h = hoveredHex && hexes.get(Hex.key(hoveredHex.q, hoveredHex.r));
-    hoverEl.textContent = h ? (ZONE_NAMES[h.zone] ?? '?') : '';
+    document.getElementById('hover-info').textContent = h ? (ZONE_NAMES[h.zone] ?? '—') : '—';
 }
 
 // ---- Input handling (dispatch order mirrors UI_CONTROLS.md) ----
