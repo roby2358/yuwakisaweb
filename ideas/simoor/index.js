@@ -85,6 +85,57 @@ const SAUCY_ARISTOCRATS = {
 // The saucy aristocrat you mistook for the Sovereign — always of the gender you sought.
 function wrongAristocrat() { return Rando.choice(SAUCY_ARISTOCRATS[soughtGender]); }
 
+// The triumphant "WOOED!" line — when you find the real Veiled Sovereign. Gendered to the
+// Sovereign you sought (soughtGender), and just as ribald as the blunders. PG-13.
+const WOOED_LINES = {
+    M: [
+        'You sweep the veil aside and the Sovereign himself blushes crimson — the court erupts.',
+        'He takes your hand, and three duchesses faint from sheer envy.',
+        'The masked lord melts at your bow — half the hall reaches for its smelling salts.',
+        'You found him, you charmer — and the orchestra strikes up something indecent.',
+        'The Veiled Sovereign lifts his mask and winks. The night, and quite a lot else, is yours.',
+        'He whispers something unrepeatable behind his fan; you simply grin.',
+        'You kneel, he laughs, and the whole Sapphire Court swoons as one.',
+        'The Sovereign abandons all dignity and kisses your glove. Scandalous. Magnificent.',
+        'He was hiding in plain sight, and now hides behind you. The gossips will dine out for a month.',
+        'You unmask the right lord at last — and he had been hoping it would be you.',
+        'The hall gasps as the Sovereign himself loosens his collar in your direction.',
+        'He drops his goblet, drops his guard, and rather drops himself into your arms.',
+        'You wooed the Veiled Sovereign and he forgot every line of protocol on the spot.',
+        'The masked lord goes weak at the knees — the Veil-Wardens politely look away.',
+        'He declares the masque a triumph and you its only worthy prize.',
+        'You found him first; the Vicomte de Vavoom is left clutching the wrong elbow.',
+        'The Sovereign tears off his mask, mutters “finally,” and the room dissolves into applause.',
+        'He fans himself, flustered, and announces the next dance is entirely yours.',
+        'You sweep him onto the floor; the dowagers clutch their pearls in delight.',
+        'The Veiled Sovereign is yours, and the desert wind itself seems to sigh approvingly.'
+    ],
+    F: [
+        'You sweep the veil aside and the Sovereign herself blushes crimson — the court erupts.',
+        'She takes your hand, and three dukes faint from sheer envy.',
+        'The masked lady melts at your bow — half the hall reaches for its smelling salts.',
+        'You found her, you charmer — and the orchestra strikes up something indecent.',
+        'The Veiled Sovereign lifts her mask and winks. The night, and quite a lot else, is yours.',
+        'She whispers something unrepeatable behind her fan; you simply grin.',
+        'You kneel, she laughs, and the whole Sapphire Court swoons as one.',
+        'The Sovereign abandons all dignity and kisses your glove. Scandalous. Magnificent.',
+        'She was hiding in plain sight, and now hides behind you. The gossips will dine out for a month.',
+        'You unmask the right lady at last — and she had been hoping it would be you.',
+        'The hall gasps as the Sovereign herself lets her fan slip in your direction.',
+        'She drops her goblet, drops her guard, and rather drops herself into your arms.',
+        'You wooed the Veiled Sovereign and she forgot every line of protocol on the spot.',
+        'The masked lady goes weak at the knees — the Veil-Wardens politely look away.',
+        'She declares the masque a triumph and you its only worthy prize.',
+        'You found her first; the Vicomte de Vavoom is left clutching the wrong elbow.',
+        'The Sovereign tears off her mask, mutters “finally,” and the room dissolves into applause.',
+        'She fans herself, flustered, and announces the next dance is entirely yours.',
+        'You sweep her onto the floor; the dowagers clutch their pearls in delight.',
+        'The Veiled Sovereign is yours, and the desert wind itself seems to sigh approvingly.'
+    ]
+};
+// The triumphant line for the Sovereign you actually sought.
+function wooedLine() { return Rando.choice(WOOED_LINES[soughtGender]); }
+
 // ---- Reveler state machine ----
 // Every reveler wanders and blocks identically; the only thing that varies is what it
 // carries. Claiming is the single transition. Claimability, the claim effect, and the
@@ -100,9 +151,8 @@ const REV = {
     FAVOR: 'favor', FAVOR_SPENT: 'favor-spent'
 };
 
-// Gender is pure flavor (it changes no mechanics): playerGender picks your honorific,
+// Gender is pure flavor (it changes no mechanics): playerGender is your own presentation,
 // soughtGender picks the Sovereign's pronouns and what the masked suspects look like.
-const TITLE = { M: 'Lord', F: 'Lady' };
 const SOUGHT = {
     M: { subj: 'he', obj: 'him', one: 'masked lord' },
     F: { subj: 'she', obj: 'her', one: 'veiled lady' }
@@ -574,7 +624,7 @@ function wooFigure(key) {
     resolveWoo(figure, player, () => {
         const s = SOUGHT[soughtGender];
         say(`You found ${s.obj} — the Veiled Sovereign! The night is yours.`);
-        setGameOver(true, 'WOOED!', `You reached ${s.obj} first. The court bows to the ${TITLE[playerGender]} who dared.`);
+        setGameOver(true, 'WOOED!', wooedLine());
     }, () => {
         // Too much scandal is the end of the night; otherwise the blunder gets its own
         // modal panel (exclamation + who you actually wooed) before the turn passes.
