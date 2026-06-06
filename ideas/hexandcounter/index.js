@@ -1,32 +1,13 @@
 // index.js — Hex & Counters game
 
-import { HEX_SIZE, TERRAIN, MOVEMENT_COST, PLAYER_MP, MAP_COLS, MAP_ROWS } from './config.js';
-import { hexToPixel, pixelToHex, hexKey, hexNeighbors, bfsHexes, drawHexPath } from './hex.js';
+import {
+    HEX_SIZE, TERRAIN, MOVEMENT_COST, PLAYER_MP, MAP_COLS, MAP_ROWS,
+    COUNTER_SIZE, TERRAIN_COLORS, TERRAIN_NAMES, PLAYER_COLOR, TARGET_COLOR
+} from './config.js';
+import { Hex, bfsHexes, drawHexPath } from './hex.js';
 import { Rando } from './rando.js';
 import { ColorTheory } from './colortheory.js';
 
-// ---- Display constants ----
-const COUNTER_SIZE = 28;
-const TERRAIN_COLORS = {
-    [TERRAIN.WATER]: '#2a6faa',
-    [TERRAIN.PLAINS]: '#7db344',
-    [TERRAIN.HILLS]: '#c4a44a',
-    [TERRAIN.MOUNTAIN]: '#7a7a7a',
-    [TERRAIN.FOREST]: '#2d6e2d',
-    [TERRAIN.GOLD]: '#d4a017',
-    [TERRAIN.QUARRY]: '#9e8c6c',
-};
-const TERRAIN_NAMES = {
-    [TERRAIN.WATER]: 'Water',
-    [TERRAIN.PLAINS]: 'Plains',
-    [TERRAIN.HILLS]: 'Hills',
-    [TERRAIN.MOUNTAIN]: 'Mountain',
-    [TERRAIN.FOREST]: 'Forest',
-    [TERRAIN.GOLD]: 'Gold',
-    [TERRAIN.QUARRY]: 'Quarry',
-};
-const PLAYER_COLOR = '#daa520';
-const TARGET_COLOR = '#ff6600';
 let enemyColors = [];
 
 // ---- Game state ----
@@ -66,12 +47,35 @@ window.addEventListener('resize', resize);
 
 // ---- Coordinate helpers ----
 function hexToScreen(q, r) {
-    const p = hexToPixel(q, r);
+    const p = new Hex(q, r).toPixel();
     return { x: p.x + panX, y: p.y + panY };
 }
 
 function screenToHex(sx, sy) {
-    return pixelToHex(sx - panX, sy - panY);
+    return Hex.fromPixel(sx - panX, sy - panY);
+}
+
+// ---- Terrain passability (single source of truth) ----
+// A hex is passable iff its terrain has a finite movement cost; water/mountain are
+// Infinity in MOVEMENT_COST. Enemy movement, spawning, and placement all route through
+// here so "what can occupy a hex" lives in one place, not in scattered terrain checks.
+function moveCost(hex) {
+    return MOVEMENT_COST[hex.terrain] ?? Infinity;
+}
+
+function isPassable(hex) {
+    return moveCost(hex) !== Infinity;
+}
+
+// All non-edge passable hexes, as a fresh array the caller may sort/filter.
+function passableHexes() {
+    const out = [];
+    for (const [, hex] of hexes) {
+        if (hex.isEdge) continue;
+        if (!isPassable(hex)) continue;
+        out.push(hex);
+    }
+    return out;
 }
 
 // ---- Heightmap generation (diamond-square) ----
@@ -128,7 +132,7 @@ function generateRectGrid() {
             const elevation = hm[gy * 129 + gx];
             const isEdge = row === 0 || row === MAP_ROWS - 1 || col === 0 || col === MAP_COLS - 1;
 
-            hexes.set(hexKey(q, r), {
+            hexes.set(Hex.key(q, r), {
                 q, r, col, row, elevation, isEdge,
                 terrain: null, resource: null,
                 units: [], controlled: false
@@ -176,12 +180,7 @@ function assignTerrain() {
 }
 
 function placePlayerAndTarget() {
-    const passable = [];
-    for (const [, hex] of hexes) {
-        if (hex.isEdge) continue;
-        if (hex.terrain === TERRAIN.WATER || hex.terrain === TERRAIN.MOUNTAIN) continue;
-        passable.push(hex);
-    }
+    const passable = passableHexes();
     // Sort by column position for true left/right
     passable.sort((a, b) => a.col - b.col);
 
@@ -218,29 +217,20 @@ function initGame() {
 
 function hasPath(from, to) {
     if (!from || !to) return false;
-    const costs = bfsHexes(from, hexes, hex => {
-        const c = MOVEMENT_COST[hex.terrain];
-        return c === undefined ? Infinity : c;
-    }, Infinity);
-    return costs.has(hexKey(to.q, to.r));
+    const costs = bfsHexes(from, hexes, moveCost, Infinity);
+    return costs.has(Hex.key(to.q, to.r));
 }
 
 function spawnEnemies() {
     const count = Rando.int(1, 6) + Rando.int(1, 6);
     enemies = [];
-    const occupied = new Set([hexKey(player.q, player.r), hexKey(target.q, target.r)]);
-    const candidates = [];
-    for (const [key, hex] of hexes) {
-        if (hex.isEdge) continue;
-        if (hex.terrain === TERRAIN.WATER || hex.terrain === TERRAIN.MOUNTAIN) continue;
-        if (occupied.has(key)) continue;
-        candidates.push(hex);
-    }
+    const occupied = new Set([Hex.key(player.q, player.r), Hex.key(target.q, target.r)]);
+    const candidates = passableHexes().filter(hex => !occupied.has(Hex.key(hex.q, hex.r)));
     Rando.shuffle(candidates);
     for (let i = 0; i < count && i < candidates.length; i++) {
         const h = candidates[i];
         enemies.push({ q: h.q, r: h.r });
-        occupied.add(hexKey(h.q, h.r));
+        occupied.add(Hex.key(h.q, h.r));
     }
 
     // Generate unique colors for each enemy using ColorTheory
@@ -253,7 +243,7 @@ function spawnEnemies() {
 }
 
 function centerOn(hex) {
-    const p = hexToPixel(hex.q, hex.r);
+    const p = new Hex(hex.q, hex.r).toPixel();
     panX = canvas.width / 2 - p.x;
     panY = canvas.height / 2 - p.y;
 }
@@ -270,12 +260,12 @@ function deselect() {
 // Cost-limited flood fill bounded by remaining MP; enemy hexes are walls.
 function computeReachable() {
     if (mp <= 0) return new Map();
-    const enemyKeys = new Set(enemies.map(e => hexKey(e.q, e.r)));
+    const enemyKeys = new Set(enemies.map(e => Hex.key(e.q, e.r)));
     const costs = bfsHexes(player, hexes, hex => {
-        if (enemyKeys.has(hexKey(hex.q, hex.r))) return Infinity;
-        return MOVEMENT_COST[hex.terrain] ?? Infinity;
+        if (enemyKeys.has(Hex.key(hex.q, hex.r))) return Infinity;
+        return moveCost(hex);
     }, mp);
-    costs.delete(hexKey(player.q, player.r));
+    costs.delete(Hex.key(player.q, player.r));
     return costs;
 }
 
@@ -287,7 +277,7 @@ function computeAttackable() {
 }
 
 function movePlayer(q, r) {
-    const cost = selection?.reachable.get(hexKey(q, r));
+    const cost = selection?.reachable.get(Hex.key(q, r));
     if (cost === undefined) return;
 
     player.q = q;
@@ -369,25 +359,25 @@ function syncOverlayDom() {
 }
 
 function moveEnemies() {
-    const occupied = new Set([hexKey(player.q, player.r)]);
-    for (const e of enemies) occupied.add(hexKey(e.q, e.r));
+    const occupied = new Set([Hex.key(player.q, player.r)]);
+    for (const e of enemies) occupied.add(Hex.key(e.q, e.r));
 
     for (const enemy of enemies) {
-        const neighbors = hexNeighbors(enemy.q, enemy.r);
+        const neighbors = new Hex(enemy.q, enemy.r).neighbors();
         const valid = neighbors.filter(n => {
-            const key = hexKey(n.q, n.r);
+            const key = n.key();
             const hex = hexes.get(key);
             if (!hex) return false;
-            if (hex.terrain === TERRAIN.WATER || hex.terrain === TERRAIN.MOUNTAIN) return false;
+            if (!isPassable(hex)) return false;
             if (occupied.has(key)) return false;
             return true;
         });
         if (valid.length > 0) {
-            occupied.delete(hexKey(enemy.q, enemy.r));
+            occupied.delete(Hex.key(enemy.q, enemy.r));
             const dest = Rando.choice(valid);
             enemy.q = dest.q;
             enemy.r = dest.r;
-            occupied.add(hexKey(enemy.q, enemy.r));
+            occupied.add(Hex.key(enemy.q, enemy.r));
         }
     }
 }
@@ -427,14 +417,14 @@ function render() {
     // L1.2 highlight sets: movement tint (yellow) + attack tint (red, empty until combat)
     if (selection) {
         for (const key of selection.reachable.keys()) {
-            const [q, r] = key.split(',').map(Number);
+            const { q, r } = Hex.fromKey(key);
             const { x, y } = hexToScreen(q, r);
             drawHexPath(ctx, x, y, HEX_SIZE);
             ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
             ctx.fill();
         }
         for (const key of selection.attackable) {
-            const [q, r] = key.split(',').map(Number);
+            const { q, r } = Hex.fromKey(key);
             const { x, y } = hexToScreen(q, r);
             drawHexPath(ctx, x, y, HEX_SIZE);
             ctx.fillStyle = 'rgba(255, 0, 0, 0.35)';
@@ -538,7 +528,7 @@ function updateHUD() {
     // L1.3 hovered-hex readout
     const hoverEl = document.getElementById('hover-info');
     if (!hoverEl) return;
-    const h = hoveredHex && hexes.get(hexKey(hoveredHex.q, hoveredHex.r));
+    const h = hoveredHex && hexes.get(Hex.key(hoveredHex.q, hoveredHex.r));
     hoverEl.textContent = h ? `${TERRAIN_NAMES[h.terrain] ?? '?'} (${hoveredHex.q},${hoveredHex.r})` : '';
 }
 
@@ -562,7 +552,7 @@ canvas.addEventListener('mousedown', e => {
     if (phase !== 'player') return;              // L1.1 map input is live only on the player's turn
 
     const hex = screenToHex(e.clientX, e.clientY);
-    const key = hexKey(hex.q, hex.r);
+    const key = Hex.key(hex.q, hex.r);
 
     // L4 modal targeting: a valid hex commits the action, anything else cancels.
     if (targeting) {
@@ -600,7 +590,7 @@ canvas.addEventListener('mousemove', e => {
     }
     // L1.3 track the hovered hex for the HUD readout (decoupled from panning).
     const hex = screenToHex(e.clientX, e.clientY);
-    const next = hexes.has(hexKey(hex.q, hex.r)) ? { q: hex.q, r: hex.r } : null;
+    const next = hexes.has(Hex.key(hex.q, hex.r)) ? { q: hex.q, r: hex.r } : null;
     if (next?.q !== hoveredHex?.q || next?.r !== hoveredHex?.r) {
         hoveredHex = next;
         updateHUD();

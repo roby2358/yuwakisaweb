@@ -1,77 +1,98 @@
 // Hex Grid Utilities
-// Using axial coordinates (q, r) with pointy-top hexes
+// Axial coordinates (q, r), pointy-top hexes.
 
 import { HEX_SIZE } from './config.js';
 
-// Convert axial to pixel coordinates
-export function hexToPixel(q, r) {
-    const x = HEX_SIZE * (Math.sqrt(3) * q + Math.sqrt(3) / 2 * r);
-    const y = HEX_SIZE * (3 / 2 * r);
-    return { x, y };
-}
+const SQRT3 = Math.sqrt(3);
 
-// Convert pixel to axial coordinates
-export function pixelToHex(x, y) {
-    const q = (Math.sqrt(3) / 3 * x - 1 / 3 * y) / HEX_SIZE;
-    const r = (2 / 3 * y) / HEX_SIZE;
-    return hexRound(q, r);
-}
+const NEIGHBOR_DIRS = [
+    { q: 1, r: 0 }, { q: 1, r: -1 }, { q: 0, r: -1 },
+    { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 }
+];
 
-// Round fractional hex coordinates to nearest hex
-export function hexRound(q, r) {
-    const s = -q - r;
-    let rq = Math.round(q);
-    let rr = Math.round(r);
-    let rs = Math.round(s);
-
-    const qDiff = Math.abs(rq - q);
-    const rDiff = Math.abs(rr - r);
-    const sDiff = Math.abs(rs - s);
-
-    if (qDiff > rDiff && qDiff > sDiff) {
-        rq = -rr - rs;
-    } else if (rDiff > sDiff) {
-        rr = -rq - rs;
+// A single axial hex coordinate. Pure value type: the coordinate math that used to be
+// free hex*(q, r) functions now lives here as methods, with factories for the inverse
+// directions (pixel → hex, key → hex). Methods return new Hex values rather than mutating.
+export class Hex {
+    constructor(q, r) {
+        this.q = q;
+        this.r = r;
     }
 
-    return { q: rq, r: rr };
-}
+    // Map/Set key for this coordinate.
+    key() {
+        return Hex.key(this.q, this.r);
+    }
 
-// Get the 6 neighboring hexes
-export function hexNeighbors(q, r) {
-    const directions = [
-        { q: 1, r: 0 }, { q: 1, r: -1 }, { q: 0, r: -1 },
-        { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 }
-    ];
-    return directions.map(d => ({ q: q + d.q, r: r + d.r }));
-}
+    // Pixel center of this hex (before any pan offset).
+    toPixel() {
+        const x = HEX_SIZE * (SQRT3 * this.q + SQRT3 / 2 * this.r);
+        const y = HEX_SIZE * (3 / 2 * this.r);
+        return { x, y };
+    }
 
-// Calculate distance between two hexes
-export function hexDistance(q1, r1, q2, r2) {
-    return (Math.abs(q1 - q2) + Math.abs(q1 + r1 - q2 - r2) + Math.abs(r1 - r2)) / 2;
-}
+    // The 6 adjacent hexes.
+    neighbors() {
+        return NEIGHBOR_DIRS.map(d => new Hex(this.q + d.q, this.r + d.r));
+    }
 
-// Get all hexes within a certain radius
-export function hexesInRange(q, r, radius) {
-    const results = [];
-    for (let dq = -radius; dq <= radius; dq++) {
-        for (let dr = Math.max(-radius, -dq - radius); dr <= Math.min(radius, -dq + radius); dr++) {
-            results.push({ q: q + dq, r: r + dr });
+    // Axial distance to another hex.
+    distance(other) {
+        return (Math.abs(this.q - other.q) +
+            Math.abs(this.q + this.r - other.q - other.r) +
+            Math.abs(this.r - other.r)) / 2;
+    }
+
+    // Every hex within `radius` steps (inclusive), including this one.
+    inRange(radius) {
+        const out = [];
+        for (let dq = -radius; dq <= radius; dq++) {
+            const lo = Math.max(-radius, -dq - radius);
+            const hi = Math.min(radius, -dq + radius);
+            for (let dr = lo; dr <= hi; dr++) out.push(new Hex(this.q + dq, this.r + dr));
         }
+        return out;
     }
-    return results;
+
+    // ---- factories / coordinate helpers ----
+
+    // Key for a loose (q, r) pair — for callers holding coordinate-bearing objects
+    // (rich terrain hexes, units) that are not themselves Hex instances.
+    static key(q, r) {
+        return `${q},${r}`;
+    }
+
+    static fromKey(key) {
+        const [q, r] = key.split(',').map(Number);
+        return new Hex(q, r);
+    }
+
+    // Round fractional axial coordinates to the nearest hex.
+    static round(q, r) {
+        const s = -q - r;
+        let rq = Math.round(q);
+        let rr = Math.round(r);
+        let rs = Math.round(s);
+
+        const qDiff = Math.abs(rq - q);
+        const rDiff = Math.abs(rr - r);
+        const sDiff = Math.abs(rs - s);
+
+        if (qDiff > rDiff && qDiff > sDiff) rq = -rr - rs;
+        else if (rDiff > sDiff) rr = -rq - rs;
+
+        return new Hex(rq, rr);
+    }
+
+    // Nearest hex to a pixel point (before pan offset).
+    static fromPixel(x, y) {
+        const q = (SQRT3 / 3 * x - 1 / 3 * y) / HEX_SIZE;
+        const r = (2 / 3 * y) / HEX_SIZE;
+        return Hex.round(q, r);
+    }
 }
 
-// Create a hex key for use in Maps/Sets
-export function hexKey(q, r) {
-    return `${q},${r}`;
-}
-
-// Parse a hex key back to coordinates
-export function parseHexKey(key) {
-    const [q, r] = key.split(',').map(Number);
-    return { q, r };
-}
+// ---- Pixel drawing (operates on screen coordinates, not axial) ----
 
 // Get corner points of a hex for drawing
 export function hexCorners(centerX, centerY, size) {
@@ -97,33 +118,9 @@ export function drawHexPath(ctx, centerX, centerY, size) {
     ctx.closePath();
 }
 
-// Find the key with lowest fScore in openSet
-function findLowestFScoreKey(openSet, fScore) {
-    let bestKey = null;
-    let lowestF = Infinity;
+// ---- Graph search over a hex Map ----
 
-    for (const [key, _] of openSet) {
-        const f = fScore.get(key) || Infinity;
-        if (f < lowestF) {
-            lowestF = f;
-            bestKey = key;
-        }
-    }
-    return bestKey;
-}
-
-// Reconstruct path from cameFrom map
-function reconstructPath(cameFrom, endKey) {
-    const path = [];
-    let key = endKey;
-    while (key) {
-        path.unshift(parseHexKey(key));
-        key = cameFrom.get(key);
-    }
-    return path;
-}
-
-// Cost-aware BFS (Dijkstra) for hex grids
+// Cost-aware BFS (Dijkstra) for hex grids.
 // Returns a Map of hexKey -> cost for all reachable hexes within maxCost.
 // - startHex: { q, r }
 // - hexes: Map of hexKey -> hex objects
@@ -131,8 +128,7 @@ function reconstructPath(cameFrom, endKey) {
 // - maxCost: stop exploring when cost exceeds this
 export function bfsHexes(startHex, hexes, movementCost, maxCost) {
     const costs = new Map();
-    const startKey = hexKey(startHex.q, startHex.r);
-    costs.set(startKey, 0);
+    costs.set(Hex.key(startHex.q, startHex.r), 0);
 
     // Priority queue as sorted array (fine for hex-grid BFS with small cost values)
     const queue = [{ hex: startHex, cost: 0 }];
@@ -140,8 +136,8 @@ export function bfsHexes(startHex, hexes, movementCost, maxCost) {
     while (queue.length > 0) {
         const { hex: current, cost: currentCost } = queue.shift();
 
-        for (const n of hexNeighbors(current.q, current.r)) {
-            const key = hexKey(n.q, n.r);
+        for (const n of new Hex(current.q, current.r).neighbors()) {
+            const key = n.key();
             const neighbor = hexes.get(key);
             if (!neighbor) continue;
 
@@ -164,8 +160,8 @@ export function bfsHexes(startHex, hexes, movementCost, maxCost) {
     return costs;
 }
 
-// Get all hexes reachable by a unit with given movement points
-// Returns a Map of hexKey -> cost (excluding the starting hex)
+// All hexes reachable by a unit with given movement points.
+// Returns a Map of hexKey -> cost (excluding the starting hex).
 export function getReachableHexes(startHex, hexes, movementPoints, terrainMovement) {
     const costs = bfsHexes(
         startHex,
@@ -173,28 +169,55 @@ export function getReachableHexes(startHex, hexes, movementPoints, terrainMoveme
         hex => terrainMovement[hex.terrain] ?? Infinity,
         movementPoints
     );
-    costs.delete(hexKey(startHex.q, startHex.r));
+    costs.delete(Hex.key(startHex.q, startHex.r));
     return costs;
+}
+
+// ---- A* pathfinding over a hex Map ----
+
+// Find the key with lowest fScore in openSet
+function findLowestFScoreKey(openSet, fScore) {
+    let bestKey = null;
+    let lowestF = Infinity;
+    for (const [key] of openSet) {
+        const f = fScore.get(key) || Infinity;
+        if (f < lowestF) {
+            lowestF = f;
+            bestKey = key;
+        }
+    }
+    return bestKey;
+}
+
+// Reconstruct path from cameFrom map
+function reconstructPath(cameFrom, endKey) {
+    const path = [];
+    let key = endKey;
+    while (key) {
+        path.unshift(Hex.fromKey(key));
+        key = cameFrom.get(key);
+    }
+    return path;
 }
 
 // A* pathfinding state container
 class PathfinderState {
     constructor(start, end) {
-        this.endKey = hexKey(end.q, end.r);
+        this.endKey = Hex.key(end.q, end.r);
         this.openSet = new Map();
         this.closedSet = new Set();
         this.cameFrom = new Map();
         this.gScore = new Map();
         this.fScore = new Map();
 
-        const startKey = hexKey(start.q, start.r);
+        const startKey = Hex.key(start.q, start.r);
         this.gScore.set(startKey, 0);
-        this.fScore.set(startKey, hexDistance(start.q, start.r, end.q, end.r));
+        this.fScore.set(startKey, new Hex(start.q, start.r).distance(end));
         this.openSet.set(startKey, start);
     }
 
     processNeighbor(neighbor, currentKey, end, isPassable, movementCost, maxCost) {
-        const neighborKey = hexKey(neighbor.q, neighbor.r);
+        const neighborKey = neighbor.key();
 
         if (this.closedSet.has(neighborKey)) return;
         if (!isPassable(neighbor.q, neighbor.r)) return;
@@ -210,15 +233,18 @@ class PathfinderState {
         if (isBetterPath) {
             this.cameFrom.set(neighborKey, currentKey);
             this.gScore.set(neighborKey, tentativeG);
-            this.fScore.set(neighborKey, tentativeG + hexDistance(neighbor.q, neighbor.r, end.q, end.r));
+            this.fScore.set(neighborKey, tentativeG + neighbor.distance(end));
             this.openSet.set(neighborKey, neighbor);
         }
     }
 }
 
-// A* pathfinding for hex grid
+// A* pathfinding for hex grid. Returns an array of Hex from start to end, or null.
+// - isPassable(q, r): whether the hex at (q, r) can be entered
+// - movementCost(q, r): cost to enter the hex at (q, r)
+// - maxCost: abandon paths whose accumulated cost exceeds this
 export function findPath(start, end, isPassable, movementCost, maxCost) {
-    if (hexKey(start.q, start.r) === hexKey(end.q, end.r)) return [start];
+    if (Hex.key(start.q, start.r) === Hex.key(end.q, end.r)) return [start];
     if (!isPassable(end.q, end.r)) return null;
 
     const state = new PathfinderState(start, end);
@@ -234,7 +260,7 @@ export function findPath(start, end, isPassable, movementCost, maxCost) {
         state.openSet.delete(currentKey);
         state.closedSet.add(currentKey);
 
-        for (const neighbor of hexNeighbors(current.q, current.r)) {
+        for (const neighbor of new Hex(current.q, current.r).neighbors()) {
             state.processNeighbor(neighbor, currentKey, end, isPassable, movementCost, maxCost);
         }
     }

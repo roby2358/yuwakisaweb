@@ -25,3 +25,29 @@ export const MOVEMENT_COST = {
 export const PLAYER_MP = 5;
 export const MAP_COLS = 60;
 export const MAP_ROWS = 40;
+
+// ---- Display constants ----
+export const COUNTER_SIZE = 28;
+
+export const TERRAIN_COLORS = {
+    [TERRAIN.WATER]: '#2a6faa',
+    [TERRAIN.PLAINS]: '#7db344',
+    [TERRAIN.HILLS]: '#c4a44a',
+    [TERRAIN.MOUNTAIN]: '#7a7a7a',
+    [TERRAIN.FOREST]: '#2d6e2d',
+    [TERRAIN.GOLD]: '#d4a017',
+    [TERRAIN.QUARRY]: '#9e8c6c',
+};
+
+export const TERRAIN_NAMES = {
+    [TERRAIN.WATER]: 'Water',
+    [TERRAIN.PLAINS]: 'Plains',
+    [TERRAIN.HILLS]: 'Hills',
+    [TERRAIN.MOUNTAIN]: 'Mountain',
+    [TERRAIN.FOREST]: 'Forest',
+    [TERRAIN.GOLD]: 'Gold',
+    [TERRAIN.QUARRY]: 'Quarry',
+};
+
+export const PLAYER_COLOR = '#daa520';
+export const TARGET_COLOR = '#ff6600';
