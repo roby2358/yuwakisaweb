@@ -49,8 +49,8 @@
       'Project scheduling (PERT): a bounded estimate of how long a task will take.',
     ],
     params: [
-      { key: 'alpha', label: 'α (shape 1)', min: 0.1, max: 10, step: 0.1, value: 2 },
-      { key: 'beta', label: 'β (shape 2)', min: 0.1, max: 10, step: 0.1, value: 2 },
+      { key: 'alpha', label: 'α (shape 1)', min: 0.1, max: 100, step: 0.1, value: 2 },
+      { key: 'beta', label: 'β (shape 2)', min: 0.1, max: 100, step: 0.1, value: 2 },
     ],
     support: () => ({ min: 0, max: 1 }),
     pdf: (x, p) => betaPdf(x, p.alpha, p.beta),
