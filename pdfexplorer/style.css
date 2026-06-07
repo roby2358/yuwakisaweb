@@ -1,0 +1,151 @@
+:root {
+  --bg: #2b2b2b;
+  --panel: #1f1f1f;
+  --text: #dddddd;
+  --muted: #999999;
+  --accent: #5fa8ff;
+  --border: #444444;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.dist-picker {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.dist-picker select {
+  margin-left: 0.5rem;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+}
+
+main {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 1px;
+  height: calc(100vh - 57px);
+  background: var(--border);
+}
+
+.plot {
+  background: var(--bg);
+  min-width: 0;
+}
+
+.sidebar {
+  background: var(--panel);
+  padding: 1rem 1.25rem;
+  overflow-y: auto;
+}
+
+.sidebar h2 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin: 0 0 0.75rem;
+}
+
+.sidebar h2:not(:first-child) {
+  margin-top: 1.75rem;
+}
+
+.dist-note {
+  margin: 0 0 1.1rem;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.dist-note strong {
+  color: var(--text);
+}
+
+.dist-applications {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.dist-applications li {
+  margin-bottom: 0.5rem;
+}
+
+.dist-applications li::marker {
+  color: var(--accent);
+}
+
+.control {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.35rem 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.control label {
+  grid-column: 1 / -1;
+  font-size: 0.85rem;
+}
+
+.control input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.control input[type="number"] {
+  width: 64px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.2rem 0.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.3rem 0;
+  font-size: 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.stat-name {
+  color: var(--muted);
+}
+
+.stat-value {
+  font-variant-numeric: tabular-nums;
+}

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PDF Explorer</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+  </head>
+  <body>
+    <header>
+      <h1>PDF Explorer</h1>
+      <label class="dist-picker">
+        Distribution
+        <select id="distribution"></select>
+      </label>
+    </header>
+
+    <main>
+      <section id="plot" class="plot"></section>
+
+      <aside class="sidebar">
+        <h2>Parameters</h2>
+        <div id="controls"></div>
+
+        <h2>Statistics</h2>
+        <div id="stats"></div>
+
+        <h2>Confidence</h2>
+        <div class="control">
+          <label for="confidence-slider">Confidence level (%)</label>
+          <input type="range" id="confidence-slider" min="1" max="99" step="1" value="95" />
+          <input type="number" id="confidence-number" min="1" max="99" step="1" value="95" />
+        </div>
+        <div id="confidence-interval"></div>
+
+        <h2>Intuition</h2>
+        <p id="dist-note" class="dist-note"></p>
+
+        <h2>Applications</h2>
+        <ul id="dist-applications" class="dist-applications"></ul>
+      </aside>
+    </main>
+
+    <script src="src/mathfns.js"></script>
+    <script src="src/distributions.js"></script>
+    <script src="src/app.js"></script>
+  </body>
+</html>
