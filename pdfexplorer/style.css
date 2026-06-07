@@ -35,17 +35,13 @@ header h1 {
 }
 
 .dist-picker {
-  font-size: 0.85rem;
-  color: var(--muted);
-}
-
-.dist-picker select {
-  margin-left: 0.5rem;
-  background: var(--panel);
+  width: 100%;
+  background: var(--bg);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 4px;
-  padding: 0.25rem 0.5rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.9rem;
 }
 
 main {

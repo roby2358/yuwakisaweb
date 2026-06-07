@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 
 import '../src/mathfns.js';
 
-const { logGamma, logBeta, regularizedIncompleteBeta, inverseCdf } = globalThis.PDF;
+const { logGamma, logBeta, regularizedIncompleteBeta, regularizedLowerGamma, inverseCdf } =
+  globalThis.PDF;
 
 const close = (actual, expected, eps = 1e-6) =>
   assert.ok(Math.abs(actual - expected) < eps, `${actual} ≈ ${expected}`);
@@ -37,6 +38,21 @@ test('I_x(2,2) closed form 3x² - 2x³', () => {
   const expected = (x) => 3 * x * x - 2 * x * x * x;
   close(regularizedIncompleteBeta(0.3, 2, 2), expected(0.3));
   close(regularizedIncompleteBeta(0.7, 2, 2), expected(0.7));
+});
+
+test('regularizedLowerGamma clamps at and below 0', () => {
+  assert.equal(regularizedLowerGamma(0, 2), 0);
+  assert.equal(regularizedLowerGamma(-1, 2), 0);
+});
+
+test('P(1, x) is the exponential CDF (= 1 − e^(−x))', () => {
+  // Crosses x = s + 1 here, exercising both the series and continued-fraction arms.
+  close(regularizedLowerGamma(0.5, 1), 1 - Math.exp(-0.5));
+  close(regularizedLowerGamma(3, 1), 1 - Math.exp(-3));
+});
+
+test('P(s, x) → 1 in the far tail', () => {
+  close(regularizedLowerGamma(60, 3), 1, 1e-9);
 });
 
 test('inverseCdf clamps probabilities at or beyond the tails', () => {

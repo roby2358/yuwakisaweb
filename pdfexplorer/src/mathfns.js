@@ -77,6 +77,50 @@
     return 1 - (front * betaContinuedFraction(b, a, 1 - x)) / b;
   }
 
+  // Series expansion of the lower incomplete gamma (Numerical Recipes gser),
+  // convergent and used where x < s + 1.
+  function lowerGammaSeries(s, x) {
+    let term = 1 / s;
+    let sum = term;
+    for (let n = 1; n <= 200; n++) {
+      term *= x / (s + n);
+      sum += term;
+      if (Math.abs(term) < Math.abs(sum) * 1e-15) break;
+    }
+    return sum * Math.exp(-x + s * Math.log(x) - logGamma(s));
+  }
+
+  // Continued fraction for the upper incomplete gamma (Numerical Recipes gcf),
+  // used where x >= s + 1.
+  function upperGammaContinuedFraction(s, x) {
+    const TINY = 1e-300;
+    let b = x + 1 - s;
+    let c = 1 / TINY;
+    let d = 1 / b;
+    let h = d;
+    for (let i = 1; i <= 200; i++) {
+      const an = -i * (i - s);
+      b += 2;
+      d = an * d + b;
+      if (Math.abs(d) < TINY) d = TINY;
+      c = b + an / c;
+      if (Math.abs(c) < TINY) c = TINY;
+      d = 1 / d;
+      const delta = d * c;
+      h *= delta;
+      if (Math.abs(delta - 1) < 1e-15) break;
+    }
+    return Math.exp(-x + s * Math.log(x) - logGamma(s)) * h;
+  }
+
+  // Regularized lower incomplete gamma P(s, x) — the gamma CDF building block.
+  function regularizedLowerGamma(x, s) {
+    if (x <= 0) return 0;
+    // Pick whichever expansion converges in this region.
+    if (x < s + 1) return lowerGammaSeries(s, x);
+    return 1 - upperGammaContinuedFraction(s, x);
+  }
+
   // Invert a monotonically increasing cdf on [lo, hi] by bisection: returns x
   // with cdf(x) ≈ p. Generic, so any distribution exposing a cdf and finite
   // support gets a quantile function for free.
@@ -97,5 +141,6 @@
   ns.logGamma = logGamma;
   ns.logBeta = logBeta;
   ns.regularizedIncompleteBeta = regularizedIncompleteBeta;
+  ns.regularizedLowerGamma = regularizedLowerGamma;
   ns.inverseCdf = inverseCdf;
 })((globalThis.PDF = globalThis.PDF || {}));
