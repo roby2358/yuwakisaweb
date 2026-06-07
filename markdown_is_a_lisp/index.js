@@ -327,7 +327,7 @@ const initApp = () => {
   const handleCompactToggle = () => {
     const compact = compactToggle.checked;
     const code = codeEditor.value;
-    const defs = parseMarkdown(code);
+    const { defs } = parseMarkdown(code);
     codeEditor.value = nodeToMarkdown(defs, 0, compact);
   };
 

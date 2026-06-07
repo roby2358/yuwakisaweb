@@ -6,60 +6,75 @@
 
 const node = (value, children) => ({ value, children: children || [] });
 
-const getIndentLevel = (line) => {
-  const match = line.match(/^(\s*)/);
-  if (!match) return 0;
-  return Math.floor(match[1].replace(/\t/g, '  ').length / 2);
+// Indentation: 1 level = 2 spaces; tabs expand to 2 spaces. Returns both the
+// rounded level and the raw space count so the caller can flag indentation
+// that isn't a clean multiple of 2 (rounding is a defined, reported behavior,
+// not a silent guess).
+const measureIndent = (line) => {
+  const spaces = line.match(/^(\s*)/)[1].replace(/\t/g, '  ').length;
+  return { level: Math.floor(spaces / 2), spaces };
 };
 
+/**
+ * Literal grammar (backtick-wrapped). Bare words are symbols.
+ *   `null` `true` `false`   → those values
+ *   `"..."` / `'...'`       → string (surrounding quotes stripped)
+ *   ``  (empty)             → empty string
+ *   `42` `-3.5`             → number, ONLY when it round-trips exactly
+ *                            (String(Number(v)) === v). This is deliberate:
+ *                            `1.0`, `1e3`, `+5`, `0x10` stay strings so that
+ *                            parse → render → parse is stable.
+ *   anything else           → string
+ * A backtick cannot appear inside a literal — there is no escape syntax.
+ */
 const parseToken = (token) => {
-  const literalMatch = token.match(/^`([^`]+)`$/);
-  if (literalMatch) {
-    let val = literalMatch[1];
-    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
-      return node({ string: val.slice(1, -1) });
-    }
-    if (val === 'null') return node(null);
-    if (val === 'true') return node(true);
-    if (val === 'false') return node(false);
-    const num = Number(val);
-    if (!isNaN(num) && isFinite(num) && val === String(num)) {
-      return node(num);
-    }
-    return node({ string: val });
+  const literalMatch = token.match(/^`([^`]*)`$/);
+  if (!literalMatch) return node(token);
+  const val = literalMatch[1];
+  if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+    return node({ string: val.slice(1, -1) });
   }
-  return node(token);
+  if (val === 'null') return node(null);
+  if (val === 'true') return node(true);
+  if (val === 'false') return node(false);
+  const num = Number(val);
+  if (val !== '' && !isNaN(num) && isFinite(num) && val === String(num)) return node(num);
+  return node({ string: val });
 };
 
+// Total: every branch advances `i`, so no input can hang. An opening backtick
+// with no closing partner is dropped (the stray char is skipped) and flagged
+// via `unterminated` so the caller can report it.
 const tokenize = (text) => {
   const tokens = [];
+  let unterminated = false;
   let i = 0;
   while (i < text.length) {
-    if (text[i] === ' ' || text[i] === '\t') { i++; continue; }
-    if (text[i] === '`') {
+    const c = text[i];
+    if (c === ' ' || c === '\t') { i++; continue; }
+    if (c === '`') {
       const end = text.indexOf('`', i + 1);
-      if (end !== -1) {
-        tokens.push(text.slice(i, end + 1));
-        i = end + 1;
-        continue;
-      }
+      if (end === -1) { unterminated = true; i++; continue; }
+      tokens.push(text.slice(i, end + 1));
+      i = end + 1;
+      continue;
     }
     let end = i;
     while (end < text.length && text[end] !== ' ' && text[end] !== '\t' && text[end] !== '`') end++;
     tokens.push(text.slice(i, end));
     i = end;
   }
-  return tokens;
+  return { tokens, unterminated };
 };
 
 const parseContent = (text) => {
-  text = text.trim().replace(/^[-*]\s+/, '');
-  const tokens = tokenize(text);
-  if (tokens.length === 0) return node('');
+  const stripped = text.trim().replace(/^[-*]\s+/, '');
+  const { tokens, unterminated } = tokenize(stripped);
+  const errors = unterminated ? ['unterminated backtick literal'] : [];
+  if (tokens.length === 0) return { node: node(''), errors };
   const head = parseToken(tokens[0]);
-  if (tokens.length === 1) return head;
-  head.children = tokens.slice(1).map(t => parseToken(t));
-  return head;
+  if (tokens.length > 1) head.children = tokens.slice(1).map(parseToken);
+  return { node: head, errors };
 };
 
 const findParentInStack = (stack, indent) => {
@@ -69,40 +84,54 @@ const findParentInStack = (stack, indent) => {
   return stack.length > 0 ? stack[stack.length - 1] : null;
 };
 
+// Returns { defs, diagnostics }. Nothing malformed is dropped silently —
+// every ignored or rounded line produces a diagnostic carrying its line number.
 const parseMarkdown = (input) => {
-  const lines = input.split('\n').filter(l => l.trim().length > 0);
+  const lines = input.split('\n');
   const defs = [];
+  const diagnostics = [];
   let currentDef = null;
   let stack = [];
 
-  for (const line of lines) {
+  lines.forEach((line, idx) => {
+    const lineNo = idx + 1;
     const trimLine = line.trim();
+    if (trimLine.length === 0) return;
 
     if (trimLine.startsWith('#')) {
-      const defName = trimLine.replace(/^#+\s*/, '').trim();
-      currentDef = { _isDef: true, name: defName, children: [] };
+      const name = trimLine.replace(/^#+\s*/, '').trim();
+      currentDef = { _isDef: true, name, children: [] };
       defs.push(currentDef);
       stack = [];
-      continue;
+      return;
     }
 
-    if (currentDef && (trimLine.startsWith('-') || trimLine.startsWith('*'))) {
-      const indent = getIndentLevel(line);
-      const parsed = parseContent(trimLine);
-      const n = node(parsed.value, parsed.children ? [...parsed.children] : []);
-      n._indent = indent;
-
-      const parent = findParentInStack(stack, indent);
-      if (parent) {
-        parent.children.push(n);
-      } else {
-        currentDef.children.push(n);
-      }
-      stack.push(n);
+    if (!/^[-*]\s/.test(trimLine)) {
+      diagnostics.push(`line ${lineNo}: not a "# heading" or "- bullet" — ignored: ${trimLine}`);
+      return;
     }
-  }
 
-  return defs;
+    if (!currentDef) {
+      diagnostics.push(`line ${lineNo}: bullet before any "# heading" — ignored: ${trimLine}`);
+      return;
+    }
+
+    const { level, spaces } = measureIndent(line);
+    if (spaces % 2 !== 0) {
+      diagnostics.push(`line ${lineNo}: indentation of ${spaces} space(s) is not a multiple of 2 — rounded down to level ${level}`);
+    }
+
+    const { node: parsed, errors } = parseContent(trimLine);
+    errors.forEach(e => diagnostics.push(`line ${lineNo}: ${e}`));
+
+    const n = node(parsed.value, parsed.children ? [...parsed.children] : []);
+    n._indent = level;
+    const parent = findParentInStack(stack, level);
+    (parent ? parent.children : currentDef.children).push(n);
+    stack.push(n);
+  });
+
+  return { defs, diagnostics };
 };
 
 /**
@@ -408,7 +437,7 @@ const setupStandardLibrary = (env, logFn) => {
   setVar(env, 'parse', (code) => {
     const src = typeof code.value === 'object' && 'string' in code.value
       ? code.value.string : String(code.value);
-    const defs = parseMarkdown(src);
+    const { defs } = parseMarkdown(src);
     return node('program', defs.map(d => node(d.name, d.children)));
   });
 };
@@ -447,7 +476,8 @@ const registerDefinition = (def, globalEnv) => {
 
 const runMarkdownIsALISP = (code, logFn) => {
   try {
-    const defs = parseMarkdown(code);
+    const { defs, diagnostics } = parseMarkdown(code);
+    diagnostics.forEach(d => logFn(`Warning: ${d}`));
     const globalEnv = createEnv(null);
 
     setupStandardLibrary(globalEnv, logFn);

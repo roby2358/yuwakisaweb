@@ -31,6 +31,13 @@ Open `index.html` directly in a browser (or use any static file server). No buil
 - Entry point is `# main`
 - Special forms: `if`, `lambda`, `quote`, `eval`
 
+### Parser grammar (specified, not vibes)
+
+- **Literals** are backtick-wrapped: `` `null` `` `` `true` `` `` `false` ``, `` `"..."` ``/`` `'...'` `` (quotes stripped), `` `` `` (empty string), and numbers. A number literal is recognized **only when it round-trips exactly** (`String(Number(v)) === v`), so `` `1.0` ``, `` `1e3` ``, `` `+5` ``, `` `0x10` `` deliberately stay strings to keep parse → render → parse stable. A backtick cannot appear inside a literal — there is no escape syntax.
+- **Indentation** rounds down to the nearest 2-space level. A leading-whitespace count that isn't a multiple of 2 still parses, but emits a diagnostic — rounding is a defined, reported behavior, not a silent guess.
+- **`parseMarkdown` returns `{ defs, diagnostics }`.** Nothing malformed is dropped silently: bullets before any `#` heading, non-heading/non-bullet lines, and unterminated backticks each produce a line-numbered diagnostic. `runMarkdownIsALISP` logs these as `Warning:` lines before execution.
+- **Tokenizer is total** — no input hangs it; an unterminated backtick drops the stray char and is reported.
+
 ## Key Design Decisions
 
 - All files use plain `<script>` tags (no ES modules, no bundler)
