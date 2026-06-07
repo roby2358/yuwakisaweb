@@ -83,12 +83,15 @@
     return { mean, mode, variance };
   }
 
-  // Gamma is unbounded above; plot/quantile out to mean + 8 standard deviations,
-  // which comfortably contains the 99% interval the confidence slider can ask for.
+  // Gamma is unbounded above, so plot/quantile out to a finite window of this
+  // many standard deviations past the mean — wide enough to contain the 99%
+  // interval the confidence slider can ask for.
+  const GAMMA_TAIL_SIGMAS = 8;
+
   function gammaSupport(p) {
     const { shape, scale } = p;
     const sd = Math.sqrt(shape) * scale;
-    return { min: 0, max: shape * scale + 8 * sd };
+    return { min: 0, max: shape * scale + GAMMA_TAIL_SIGMAS * sd };
   }
 
   const gamma = {
@@ -108,7 +111,7 @@
     ],
     params: [
       { key: 'shape', label: 'k (shape)', min: 0.5, max: 20, step: 0.1, value: 2 },
-      { key: 'scale', label: 'θ (scale)', min: 0.1, max: 5, step: 0.1, value: 1 },
+      { key: 'scale', label: 'θ (scale)', min: 0.1, max: 100, step: 0.1, value: 1 },
     ],
     support: gammaSupport,
     pdf: (x, p) => gammaPdf(x, p.shape, p.scale),

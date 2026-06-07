@@ -19,6 +19,7 @@
   const applicationsEl = document.getElementById('dist-applications');
   const controlsEl = document.getElementById('controls');
   const statsEl = document.getElementById('stats');
+  const percentilesEl = document.getElementById('percentiles');
   const intervalEl = document.getElementById('confidence-interval');
   const confSlider = document.getElementById('confidence-slider');
   const confNumber = document.getElementById('confidence-number');
@@ -138,17 +139,24 @@
     ]);
   }
 
-  // --- confidence ---------------------------------------------------------
+  // --- quantiles ----------------------------------------------------------
+  // Shared by the percentile table and the confidence interval below.
+
+  // x at which the cdf reaches probability p — its quantile (inverse cdf).
+  function quantile(dist, params, p) {
+    const { min, max } = dist.support(params);
+    return inverseCdf((x) => dist.cdf(x, params), p, min, max);
+  }
 
   // x-values bounding the interval between the lower and upper percentiles.
   function quantileBounds(dist, params, lowerP, upperP) {
-    const { min, max } = dist.support(params);
-    const cdf = (x) => dist.cdf(x, params);
     return {
-      low: inverseCdf(cdf, lowerP, min, max),
-      high: inverseCdf(cdf, upperP, min, max),
+      low: quantile(dist, params, lowerP),
+      high: quantile(dist, params, upperP),
     };
   }
+
+  // --- confidence ---------------------------------------------------------
 
   function renderConfidence() {
     const { dist, params } = currentState();
@@ -162,6 +170,24 @@
       [`Lower (${lowerPct}%)`, low],
       [`Upper (${upperPct}%)`, high],
     ]);
+  }
+
+  // --- percentiles --------------------------------------------------------
+
+  const PERCENTILES = [
+    ['p01', 0.01],
+    ['p10', 0.1],
+    ['Median', 0.5],
+    ['p90', 0.9],
+    ['p99', 0.99],
+  ];
+
+  function renderPercentiles() {
+    const { dist, params } = currentState();
+    renderRows(
+      percentilesEl,
+      PERCENTILES.map(([label, p]) => [label, quantile(dist, params, p)]),
+    );
   }
 
   // --- plot ---------------------------------------------------------------
@@ -219,6 +245,7 @@
       displayModeBar: false,
     });
     renderStats(dist.stats(params));
+    renderPercentiles();
     renderConfidence();
   }
 
