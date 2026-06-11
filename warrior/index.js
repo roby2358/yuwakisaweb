@@ -1869,14 +1869,13 @@ function updateSkillsPanel() {
     // Show learned but not equipped
     const equipped = new Set(player.skills.filter(Boolean));
     const unequipped = [...player.learnedSkills].filter(id => !equipped.has(id)).sort((a, b) => SKILLS[a].name.localeCompare(SKILLS[b].name));
-    const nearbyEnemy = phase === 'player' && !gameOver && em.enemies.some(e => hexDistance(player.q, player.r, e.q, e.r) <= 2);
-    const canInvokeFromPanel = phase === 'player' && !gameOver && !nearbyEnemy;
+    const canInvokeFromPanel = phase === 'player' && !gameOver;
     if (unequipped.length > 0) {
         html += '<div style="color:#888;margin-top:8px;margin-bottom:4px;font-size:11px">LEARNED (click to equip)</div>';
         for (const skillId of unequipped) {
             const skill = SKILLS[skillId];
             const isUsable = canInvokeFromPanel
-                && skill.usage !== SKILL_USAGE.ANYTIME
+                && skill.panelInvoke
                 && player.aether >= effectiveAetherCost(player, skill)
                 && !checkSkillUsage(skill);
             const nameStyle = isUsable ? 'cursor:pointer;color:#b388ff;border:1px solid #7c4dff;border-radius:3px;padding:1px 6px;background:rgba(124,77,255,0.15)' : '';

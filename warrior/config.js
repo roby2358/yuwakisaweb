@@ -680,7 +680,7 @@ export const SKILLS = {
     // ---- Combat skills (anytime) ----
     restore: {
         id: 'restore', name: 'Restore', cost: 0, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.NON_COMBAT,
-        desc: 'Restore shattered terrain and attempt to seal breaches. Gain 1 AE. Ends turn. Range: 1 + Lv/3.', minLevel: 0
+        desc: 'Restore shattered terrain and attempt to seal breaches. Gain 1 AE. Ends turn. Range: 1 + Lv/3.', panelInvoke: true, minLevel: 0
     },
     void_strike: {
         id: 'void_strike', name: 'Void Strike', cost: 1, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
@@ -727,7 +727,7 @@ export const SKILLS = {
     channel: {
         id: 'channel', name: 'Channel Aether', cost: 0, mpCost: 0, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
         desc: 'Burn HP for AE at 4:1, up to filling AE or half current HP. Min 1 AE — blood from a stone.',
-        scrollOnly: true,
+        scrollOnly: true, panelInvoke: true,
         minLevel: 3
     },
     breach_pulse: {
@@ -782,40 +782,40 @@ export const SKILLS = {
     },
     recall: {
         id: 'recall', name: 'Recall', cost: 5, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
-        desc: 'Teleport to nearest haven. Ends turn.', minLevel: 10
+        desc: 'Teleport to nearest haven. Ends turn.', panelInvoke: true, minLevel: 10
     },
     // ---- Non-combat skills ----
     aether_tap: {
         id: 'aether_tap', name: 'Aether Tap', cost: 0, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.PRISTINE,
-        range: 2, desc: 'Draw Aether from healthy land. +1 AE, plus +1 per 6 clean hexes within 2. Ends turn.', minLevel: 2
+        range: 2, desc: 'Draw Aether from healthy land. +1 AE, plus +1 per 6 clean hexes within 2. Ends turn.', panelInvoke: true, minLevel: 2
     },
     farsight: {
         id: 'farsight', name: 'Farsight', cost: 2, mpCost: 0, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.NON_COMBAT,
-        range: 12, desc: 'Reveal all hexes within 12.', minLevel: 2
+        range: 12, desc: 'Reveal all hexes within 12.', panelInvoke: true, minLevel: 2
     },
     prospect: {
         id: 'prospect', name: 'Prospect', cost: 1, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
-        revealRange: 8, desc: 'Reveal gold hexes within 8. 20% chance to discover a gold deposit.', minLevel: 4
+        revealRange: 8, desc: 'Reveal gold hexes within 8. 20% chance to discover a gold deposit.', panelInvoke: true, minLevel: 4
     },
     salvage: {
         id: 'salvage', name: 'Salvage', cost: 0, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.PRISTINE,
-        range: 1, desc: 'Restore adjacent shattered hexes and reveals gold. Ends turn.', minLevel: 4
+        range: 1, desc: 'Restore adjacent shattered hexes and reveals gold. Ends turn.', panelInvoke: true, minLevel: 4
     },
     skill_seek: {
         id: 'skill_seek', name: 'Skill Seek', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
-        desc: 'Meditate: 5% per level chance to learn a new skill.', minLevel: 6
+        desc: 'Meditate: 5% per level chance to learn a new skill.', panelInvoke: true, minLevel: 6
     },
     spirit_walk: {
         id: 'spirit_walk', name: 'Spirit Walk', cost: 3, target: SKILL_TARGET.TELEPORT_REVEALED, usage: SKILL_USAGE.NON_COMBAT,
-        range: 6, desc: 'Teleport to any revealed hex within 6. Ends turn.', minLevel: 6
+        range: 6, desc: 'Teleport to any revealed hex within 6. Ends turn.', panelInvoke: true, minLevel: 6
     },
     ground_weeps: {
         id: 'ground_weeps', name: 'Ground Weeps', cost: 4, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.NON_COMBAT,
-        desc: 'Show enemy threat heatmap over entire map. Press Space/click to dismiss.', minLevel: 8
+        desc: 'Show enemy threat heatmap over entire map. Press Space/click to dismiss.', panelInvoke: true, minLevel: 8
     },
     sanctuary: {
         id: 'sanctuary', name: 'Sanctuary', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
-        desc: 'Conjure a fleeting village and rest in it at once: heal half HP/AE, then end turn. Must be non-POI terrain.', minLevel: 8
+        desc: 'Conjure a fleeting village and rest in it at once: heal half HP/AE, then end turn. Must be non-POI terrain.', panelInvoke: true, minLevel: 8
     },
     // ---- Special combat skills ----
     loot: {
@@ -839,7 +839,7 @@ export const SKILLS = {
     },
     bountiful_harvest: {
         id: 'bountiful_harvest', name: 'Bountiful Harvest', cost: 4, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
-        range: 2, desc: 'Sprout crops (1-3g each) on all healthy hexes within 2. Ends turn.', minLevel: 4
+        range: 2, desc: 'Sprout crops (1-3g each) on all healthy hexes within 2. Ends turn.', panelInvoke: true, minLevel: 4
     },
     // ---- Shop-only skills (not in random skill pools) ----
     commune: {
