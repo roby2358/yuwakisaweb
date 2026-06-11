@@ -1199,16 +1199,13 @@ function executeRespec(action) {
 }
 
 function executeSanctuary(action) {
-    const { player, world, logCombat } = action.ctx;
-    const existingPoi = world.poiAt(player.q, player.r);
-    if (existingPoi) {
+    const { player, world } = action.ctx;
+    if (world.poiAt(player.q, player.r)) {
         return action.abortSkillWithRefund('Cannot sanctify — already a point of interest!');
     }
-    const pHex = world.getHex(player.q, player.r);
-    const tempVillage = { q: player.q, r: player.r, type: POI.VILLAGE, id: world.pois.length, temporary: true };
-    world.pois.push(tempVillage);
-    pHex.poi = POI.VILLAGE;
-    logCombat('Sanctuary! A temporary village appears.', 'log-heal');
+    // Conjure the village, rest, and end turn — all in one cast (handled in index.js
+    // so it can pop the dialog and reuse the village rest flow).
+    action.ctx.invokeSanctuary();
 }
 
 // ---- Special combat skills ----

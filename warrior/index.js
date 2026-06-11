@@ -193,6 +193,7 @@ const actionCtx = {
     showOnceDialog: (...a) => showOnceDialog(...a),
     showSkillChoiceDialog: () => showSkillChoiceDialog(),
     showLevelUpDialog: () => showLevelUpDialog(),
+    invokeSanctuary: () => invokeSanctuary(),
     // selection / movement
     deselectPlayer: () => deselectPlayer(),
     refreshSelectionAfterAction: () => refreshSelectionAfterAction(),
@@ -2200,29 +2201,30 @@ function trySpawnVillageCrop(poi) {
     hex.crop = Rando.choice(CROP_ICONS);
 }
 
+// Heal half max HP/AE and burn remaining MP — shared by village Rest and Sanctuary.
+function restHeal() {
+    const healAmt = Math.floor(player.maxHP() * 0.5);
+    player.hp = Math.min(player.maxHP(), player.hp + healAmt);
+    const aeAmt = Math.floor(player.maxAether() * 0.5);
+    player.aether = Math.min(player.maxAether(), player.aether + aeAmt);
+    player.mp = 0;
+    logCombat(`Rested: +${healAmt} HP, +${aeAmt} AE`, 'log-heal');
+}
+
 function showVillageDialog(poi) {
     trySpawnVillageCrop(poi);
-    const isTemp = poi.temporary;
-    showDialog(POI_SYMBOLS[POI.VILLAGE] + (isTemp ? ' Sanctuary' : ' Village'), '<p>A brief respite from the wilds.</p>', [
-        {
-            label: 'Rest', cls: 'primary', action: () => {
-                const healAmt = Math.floor(player.maxHP() * 0.5);
-                player.hp = Math.min(player.maxHP(), player.hp + healAmt);
-                const aeAmt = Math.floor(player.maxAether() * 0.5);
-                player.aether = Math.min(player.maxAether(), player.aether + aeAmt);
-                player.mp = 0;
-                logCombat(`Rested: +${healAmt} HP, +${aeAmt} AE`, 'log-heal');
-                // Remove temporary sanctuary after use
-                if (isTemp) {
-                    world.pois = world.pois.filter(p => p !== poi);
-                    const hex = world.getHex(poi.q, poi.r);
-                    if (hex) hex.poi = null;
-                    logCombat('The sanctuary fades.', 'log-info');
-                }
-            }
-        },
+    showDialog(POI_SYMBOLS[POI.VILLAGE] + ' Village', '<p>A brief respite from the wilds.</p>', [
+        { label: 'Rest', cls: 'primary', action: () => { restHeal(); } },
         { label: 'Leave' }
     ]);
+}
+
+// Sanctuary skill: rest in place in one cast — heal half HP/AE, roll the usual
+// crop chance, end turn (MP spent to 0). No dialog, no persistent POI.
+function invokeSanctuary() {
+    logCombat('Sanctuary! You rest in the wilds.', 'log-heal');
+    trySpawnVillageCrop({ q: player.q, r: player.r });
+    restHeal();
 }
 
 function showHutDialog(poi) {

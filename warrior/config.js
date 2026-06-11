@@ -815,7 +815,7 @@ export const SKILLS = {
     },
     sanctuary: {
         id: 'sanctuary', name: 'Sanctuary', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
-        desc: 'Current hex becomes a temporary village (one rest). Must be non-POI terrain.', minLevel: 8
+        desc: 'Conjure a fleeting village and rest in it at once: heal half HP/AE, then end turn. Must be non-POI terrain.', minLevel: 8
     },
     // ---- Special combat skills ----
     loot: {
