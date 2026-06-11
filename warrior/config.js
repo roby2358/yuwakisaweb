@@ -860,7 +860,7 @@ export const SKILLS = {
     // Picked up only from the scroll the Maw leaves behind. Filtered out of all random/learn pools.
     return: {
         id: 'return', name: 'RETURN', cost: 4, mpCost: 0, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
-        scrollOnly: true,
+        scrollOnly: true, panelInvoke: true,
         desc: 'End your journey and tally your final score. Requires a peaceful, unshattered hex.', minLevel: 0
     }
 };
