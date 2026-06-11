@@ -725,7 +725,7 @@ export const SKILLS = {
         minLevel: 4
     },
     channel: {
-        id: 'channel', name: 'Channel Aether', cost: 0, mpCost: 2, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
+        id: 'channel', name: 'Channel Aether', cost: 0, mpCost: 0, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
         desc: 'Burn HP for AE at 4:1, up to filling AE or half current HP. Min 1 AE — blood from a stone.',
         scrollOnly: true,
         minLevel: 3
