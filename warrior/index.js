@@ -341,6 +341,52 @@ function drawStarBurst(cx, cy) {
     ctx.stroke();
 }
 
+// --- Damage "bang" impact stars ------------------------------------------
+// One filled spiky star pops over a counter each time it takes damage, lasting
+// the length of the hit sfx. Position, rotation, and point count are slightly
+// randomized per hit; color is randomly red or yellow.
+const HIT_FLASH_MS = 100;            // matches the hit sfx (sound.js NOTE_DUR)
+const HIT_BANG_COLORS = ['#ff3b30', '#ffd60a'];
+let hitFlashes = [];
+
+function drawHitBang(cx, cy, color, rot, points) {
+    const outer = HEX_SIZE * 0.5, inner = HEX_SIZE * 0.2, N = points;
+    ctx.beginPath();
+    for (let i = 0; i < N * 2; i++) {
+        const a = rot + (i * Math.PI / N);
+        const rad = i % 2 === 0 ? outer : inner;
+        const x = cx + rad * Math.cos(a), y = cy + rad * Math.sin(a);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+}
+
+function spawnHitFlash(q, r) {
+    hitFlashes.push({
+        q, r,
+        expiry: performance.now() + HIT_FLASH_MS,
+        dx: Rando.float(-COUNTER_SIZE * 0.18, COUNTER_SIZE * 0.18),
+        dy: Rando.float(-COUNTER_SIZE * 0.18, COUNTER_SIZE * 0.18),
+        rot: Rando.float(0, Math.PI * 2),
+        points: Rando.int(6, 8),
+        color: Rando.choice(HIT_BANG_COLORS),
+    });
+    render();                        // show it now...
+    setTimeout(render, HIT_FLASH_MS + 16);  // ...and clear it after it expires
+}
+
+function drawHitFlashes() {
+    if (!hitFlashes.length) return;
+    const now = performance.now();
+    hitFlashes = hitFlashes.filter(f => f.expiry > now);
+    for (const f of hitFlashes) {
+        const { x, y } = hexToScreen(f.q, f.r);
+        drawHitBang(x + f.dx, y + f.dy, f.color, f.rot, f.points);
+    }
+}
+
 function attackIconForTargeting(t) {
     if (t.skill === '__ranged__') return drawCrosshair;
     if (t.skill === '__melee__') return drawSword;
@@ -505,6 +551,7 @@ function dealDamageToEnemy(enemy, damage, source, opts = {}) {
     victory.damageDealt += dealt;
     logCombat(`${source}: ${dealt} dmg to ${def.name}`, 'log-dmg');
     sound.hitEnemy();
+    spawnHitFlash(enemy.q, enemy.r);
     const stunned = rollPlayerStun(enemy, rolled, opts.stunBucket);
     const killed = enemy.hp <= 0;
     if (killed) killEnemy(enemy);
@@ -564,6 +611,7 @@ function dealDamageToPlayer(damage, source, isSkillDamage, opts = {}) {
     victory.damageTaken += dealt;
     logCombat(`${source}: ${dealt} dmg to you`, 'log-dmg');
     sound.hitPlayer();
+    spawnHitFlash(player.q, player.r);
     if (reflected > 0) {
         opts.attacker.hp -= reflected;
         logCombat(`Reflect: ${reflected} dmg to ${em.getDef(opts.attacker.type).name}`, 'log-dmg');
@@ -1568,6 +1616,9 @@ function render() {
             ctx.stroke();
         }
     }
+
+    // Damage bangs — over the counters that just took a hit
+    drawHitFlashes();
 
     // Attack-target icon overlays — drawn after enemies/player so sprites don't cover them
     drawAttackIcons();
