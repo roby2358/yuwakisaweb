@@ -1061,12 +1061,16 @@ function executeAetherTap(action) {
     let cleanCount = 0;
     for (const h of hexesInRange(player.q, player.r, action.skill.range)) {
         const hex = world.getHex(h.q, h.r);
-        if (!hex || !world.isPassable(hex)) continue;
-        if (UNSHATTERED_VERSION[hex.terrain] !== undefined) continue;
-        if (UNDISTRESSED_VERSION[hex.terrain] !== undefined) continue;
+        if (!hex) continue;
+        const isWaterOrMountain = hex.terrain === TERRAIN.WATER || hex.terrain === TERRAIN.MOUNTAIN;
+        if (!isWaterOrMountain) {
+            if (!world.isPassable(hex)) continue;
+            if (UNSHATTERED_VERSION[hex.terrain] !== undefined) continue;
+            if (UNDISTRESSED_VERSION[hex.terrain] !== undefined) continue;
+        }
         cleanCount++;
     }
-    const aeGain = 1 + Math.floor(cleanCount / 6);
+    const aeGain = 1 + Math.floor(cleanCount / 3);
     player.aether = Math.min(player.maxAether(), player.aether + aeGain);
     logCombat(`Aether Tap: +${aeGain} AE (${cleanCount} clean hexes)`, 'log-info');
 }

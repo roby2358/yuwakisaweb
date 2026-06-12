@@ -787,7 +787,7 @@ export const SKILLS = {
     // ---- Non-combat skills ----
     aether_tap: {
         id: 'aether_tap', name: 'Aether Tap', cost: 0, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.PRISTINE,
-        range: 2, desc: 'Draw Aether from healthy land. +1 AE, plus +1 per 6 clean hexes within 2. Ends turn.', panelInvoke: true, minLevel: 2
+        range: 2, desc: 'Draw Aether from healthy land, water, and mountains. +1 AE, plus +1 per 3 clean hexes within 2. Ends turn.', panelInvoke: true, minLevel: 2
     },
     farsight: {
         id: 'farsight', name: 'Farsight', cost: 2, mpCost: 0, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.NON_COMBAT,
