@@ -325,14 +325,16 @@ function drawSword(cx, cy) {
     ctx.stroke();
 }
 
-function drawHeptagon(cx, cy) {
-    const r = HEX_SIZE * 0.45, N = 7;
+function drawStarBurst(cx, cy) {
+    // 7-pointed star traced out-in-out-in around the perimeter (no crossing lines).
+    const outer = HEX_SIZE * 0.45, inner = HEX_SIZE * 0.2, N = 7;
     ctx.strokeStyle = ATTACK_ICON_STROKE;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    for (let i = 0; i < N; i++) {
-        const a = (i * 2 * Math.PI / N) - Math.PI / 2;
-        const x = cx + r * Math.cos(a), y = cy + r * Math.sin(a);
+    for (let i = 0; i < N * 2; i++) {
+        const a = (i * Math.PI / N) - Math.PI / 2;
+        const rad = i % 2 === 0 ? outer : inner;
+        const x = cx + rad * Math.cos(a), y = cy + rad * Math.sin(a);
         if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     }
     ctx.closePath();
@@ -346,7 +348,7 @@ function attackIconForTargeting(t) {
     if (!skill) return null;
     if (skill.target === SKILL_TARGET.MELEE) return drawSword;
     if (skill.target === SKILL_TARGET.RANGED) return drawCrosshair;
-    if (skill.target === SKILL_TARGET.RANGED_AOE) return drawHeptagon;
+    if (skill.target === SKILL_TARGET.RANGED_AOE) return drawStarBurst;
     return null;
 }
 
