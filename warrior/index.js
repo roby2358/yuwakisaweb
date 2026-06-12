@@ -325,22 +325,17 @@ function drawSword(cx, cy) {
     ctx.stroke();
 }
 
-function drawHeptagram(cx, cy) {
-    const r = HEX_SIZE * 0.45, N = 7, step = 3;
+function drawHeptagon(cx, cy) {
+    const r = HEX_SIZE * 0.45, N = 7;
     ctx.strokeStyle = ATTACK_ICON_STROKE;
     ctx.lineWidth = 1.5;
-    const pts = [];
+    ctx.beginPath();
     for (let i = 0; i < N; i++) {
         const a = (i * 2 * Math.PI / N) - Math.PI / 2;
-        pts.push({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) });
+        const x = cx + r * Math.cos(a), y = cy + r * Math.sin(a);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     }
-    ctx.beginPath();
-    ctx.moveTo(pts[0].x, pts[0].y);
-    let idx = 0;
-    for (let i = 0; i < N; i++) {
-        idx = (idx + step) % N;
-        ctx.lineTo(pts[idx].x, pts[idx].y);
-    }
+    ctx.closePath();
     ctx.stroke();
 }
 
@@ -351,7 +346,7 @@ function attackIconForTargeting(t) {
     if (!skill) return null;
     if (skill.target === SKILL_TARGET.MELEE) return drawSword;
     if (skill.target === SKILL_TARGET.RANGED) return drawCrosshair;
-    if (skill.target === SKILL_TARGET.RANGED_AOE) return drawHeptagram;
+    if (skill.target === SKILL_TARGET.RANGED_AOE) return drawHeptagon;
     return null;
 }
 
