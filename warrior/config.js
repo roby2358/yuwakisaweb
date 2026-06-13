@@ -687,7 +687,7 @@ export const SKILLS = {
         weaponClass: 'melee', desc: 'Melee attack: weapon + Might + Warding. No counter-attack.', minLevel: 1
     },
     phase_step: {
-        id: 'phase_step', name: 'Phase Step', cost: 2, mpCost: 0, target: SKILL_TARGET.TELEPORT, usage: SKILL_USAGE.ANYTIME,
+        id: 'phase_step', name: 'Phase Step', cost: 1, mpCost: 0, target: SKILL_TARGET.TELEPORT, usage: SKILL_USAGE.ANYTIME,
         range: 3, desc: 'Teleport to visible hex within 3.', minLevel: 2
     },
     water_skip: {
@@ -849,7 +849,7 @@ export const SKILLS = {
     },
     respec: {
         id: 'respec', name: 'Retrain', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
-        scrollOnly: true,
+        scrollOnly: true, panelInvoke: true,
         desc: 'Refund all spent stat points and reallocate them. Requires clean hex, no enemies. Ends turn.', minLevel: 4
     },
     garrison: {
