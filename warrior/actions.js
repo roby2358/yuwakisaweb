@@ -224,7 +224,7 @@ export class Action {
             closest.hp -= actualDmg;
             logCombat(`${skillName} chain: ${actualDmg} dmg to ${closestDef.name}`, 'log-dmg');
             sound.hitEnemy();
-            rollPlayerStun(closest, dmg, stunBucket);
+            rollPlayerStun(closest, dmg, stunBucket, 0);
             if (closest.hp <= 0) killEnemy(closest);
             curQ = closest.q; curR = closest.r;
         }
@@ -283,6 +283,7 @@ class Strike {
         const entries = [this.primaryEntry()];
         if (this.matched && !this.options.suppressWeaponMulti) this.appendWeaponAffixes(entries);
         if (this.options.skillChain) this.appendSkillChain(entries);
+        if (this.options.skillSweep) this.appendSweep(entries, this.options.skillSweep);
         return entries;
     }
 
@@ -302,6 +303,19 @@ class Strike {
     appendSkillChain(entries) {
         const sc = this.options.skillChain;
         this.appendChain(entries, sc.label, sc.bounceCount, sc.bounceRange, sc.perJumpBonus || 0);
+    }
+
+    // Sweep: strike up to `count` enemies ringing the player. Primary target is
+    // excluded by the neighbor lookup, so primary + count = count+1 total. Shared
+    // by the weapon `sweep` affix and the Sweep skill.
+    appendSweep(entries, count) {
+        const { player } = this.ctx;
+        let remaining = count;
+        for (const adj of this.neighborEnemiesOf(player.q, player.r)) {
+            if (remaining <= 0) break;
+            entries.push(this.secondaryEntry(adj, 'Sweep'));
+            remaining--;
+        }
     }
 
     // Override per subclass: returns primary-hit count from weapon affix.
@@ -333,6 +347,7 @@ class Strike {
     buildOpts(target) {
         const opts = { stunBucket: this.stunBucket, ...this.action.applyPreHitEffects(this.matched ? this.wep : null, target) };
         if (this.ignoreDefense()) opts.ignoreDefense = true;
+        if (this.options.skillStun) opts.stunBonus = this.options.skillStun;
         return opts;
     }
 
@@ -403,13 +418,7 @@ export class WeaponStrike extends Strike {
         } else if (this.wep.special === 'cleave') {
             for (const adj of this.neighborEnemies()) entries.push(this.secondaryEntry(adj, 'Cleave'));
         } else if (this.wep.special === 'sweep') {
-            const { player } = this.ctx;
-            let remaining = this.wep.sweepCount;
-            for (const adj of this.neighborEnemiesOf(player.q, player.r)) {
-                if (remaining <= 0) break;
-                entries.push(this.secondaryEntry(adj, 'Sweep'));
-                remaining--;
-            }
+            this.appendSweep(entries, this.wep.sweepCount);
         }
     }
 }
@@ -944,12 +953,26 @@ function executeChainLightning(action) {
     action.chainBounceRaw('Chain Lightning', dmg, action.targetQ, action.targetR, skill.chainCount, skill.chainRange, new Set([enemy]), 0, 'other');
 }
 
-function executeImmolate(action) {
+// Melee weapon skill: weapon + Might to the targeted enemy, carrying one
+// strike option (burn/shred/sweep/stun). Skills never provoke counters.
+function mightWeaponSkill(action, label, options) {
     const { player, em } = action.ctx;
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
     const dmg = matchedWeaponDamage(player, action.skill) + player.stats.might;
-    new WeaponStrike(action, dmg, 'Immolate', 'primary', { skillBurn: action.skill.burnDamage }).apply(enemy);
+    new WeaponStrike(action, dmg, label, 'primary', options).apply(enemy);
+}
+
+function executeImmolate(action) {
+    mightWeaponSkill(action, 'Immolate', { skillBurn: action.skill.burnDamage });
+}
+
+function executeSweep(action) {
+    mightWeaponSkill(action, 'Sweep', { skillSweep: action.skill.sweepCount });
+}
+
+function executeStunBlow(action) {
+    mightWeaponSkill(action, 'Stun', { skillStun: action.skill.stunBonus });
 }
 
 function executeMendingLight(action) {
@@ -979,11 +1002,7 @@ function executeGravityWell(action) {
 }
 
 function executeSunderingBlow(action) {
-    const { player, em } = action.ctx;
-    const enemy = em.enemyAt(action.targetQ, action.targetR);
-    if (!enemy) return;
-    const dmg = matchedWeaponDamage(player, action.skill) + player.stats.might;
-    new WeaponStrike(action, dmg, 'Shredding Blow', 'primary', { skillShred: action.skill.shredAmount }).apply(enemy);
+    mightWeaponSkill(action, 'Shredding Blow', { skillShred: action.skill.shredAmount });
 }
 
 function executeMeteor(action) {
@@ -1337,6 +1356,8 @@ const SKILL_HANDLERS = {
     breach_pulse: executeBreachPulse,
     chain_lightning: executeChainLightning,
     immolate: executeImmolate,
+    sweep: executeSweep,
+    stun_blow: executeStunBlow,
     mending_light: executeMendingLight,
     gravity_well: executeGravityWell,
     sundering_blow: executeSunderingBlow,

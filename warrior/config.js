@@ -686,6 +686,14 @@ export const SKILLS = {
         id: 'void_strike', name: 'Void Strike', cost: 1, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
         weaponClass: 'melee', desc: 'Melee attack: weapon + Might + Warding. No counter-attack.', minLevel: 1
     },
+    sweep: {
+        id: 'sweep', name: 'Sweep', cost: 3, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
+        weaponClass: 'melee', sweepCount: 3, desc: 'Melee: weapon + Might to the target, then up to 3 more enemies adjacent to you (4 total). No counter.', minLevel: 2
+    },
+    stun_blow: {
+        id: 'stun_blow', name: 'Stun', cost: 3, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
+        weaponClass: 'melee', stunBonus: 50, desc: 'Melee: weapon + Might. +50% stun chance. No counter.', minLevel: 2
+    },
     phase_step: {
         id: 'phase_step', name: 'Phase Step', cost: 1, mpCost: 0, target: SKILL_TARGET.TELEPORT, usage: SKILL_USAGE.ANYTIME,
         range: 3, desc: 'Teleport to visible hex within 3.', minLevel: 2

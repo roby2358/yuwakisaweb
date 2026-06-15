@@ -552,7 +552,7 @@ function dealDamageToEnemy(enemy, damage, source, opts = {}) {
     logCombat(`${source}: ${dealt} dmg to ${def.name}`, 'log-dmg');
     sound.hitEnemy();
     spawnHitFlash(enemy.q, enemy.r);
-    const stunned = rollPlayerStun(enemy, rolled, opts.stunBucket);
+    const stunned = rollPlayerStun(enemy, rolled, opts.stunBucket, opts.stunBonus || 0);
     const killed = enemy.hp <= 0;
     if (killed) killEnemy(enemy);
     return { dealt, killed, stunned };
@@ -561,8 +561,9 @@ function dealDamageToEnemy(enemy, damage, source, opts = {}) {
 // One stun roll per enemy per player turn (enemy.stunRolledThisTurn gates this).
 // bucket: 'primary' = melee/Might-coded (damage/40 + melee weapon stun affix),
 //         'other'   = ranged/Reflex/Warding (damage/60, no weapon bonus).
+// bonusPct: flat skill-driven addition to the chance (e.g. Stun skill = +50).
 // Falsy bucket = no stun roll. Cap 90%. Dead enemies skip.
-function rollPlayerStun(enemy, rolledDmg, bucket) {
+function rollPlayerStun(enemy, rolledDmg, bucket, bonusPct) {
     if (!bucket || !enemy || enemy.hp <= 0 || enemy.stunRolledThisTurn) return false;
     enemy.stunRolledThisTurn = true;
     const divisor = bucket === 'primary' ? STUN_DIVISOR_PRIMARY : STUN_DIVISOR_OTHER;
@@ -571,6 +572,7 @@ function rollPlayerStun(enemy, rolledDmg, bucket) {
         const wep = player.weapon();
         if (wep && wep.special === 'stun') pct += wep.stunBonus;
     }
+    pct += bonusPct;
     pct = Math.min(pct, MAX_STUN_CHANCE);
     if (Math.random() * 100 < pct) {
         enemy.stunnedNextTurn = true;
