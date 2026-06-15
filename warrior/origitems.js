@@ -1,6 +1,11 @@
-// Original hand-crafted magical items — kept for posterity.
-// Not imported anywhere; purely an archive.
+// Original hand-crafted magical items.
+//
+// Kept sentimentally — these were the game's first hand-built gear, retired
+// from play but never deleted. No longer imported or registered (see the
+// commented-out wiring in config.js); preserved here in full as the archive
+// of where the loot table began.
 
+/*
 export const ORIG_WEAPONS = [
     { id: 'void_cleaver', name: 'Void Cleaver', type: 'melee', damage: 7, range: 0, special: 'chaos_bonus', price: 40, tier: 1, magical: true },
     { id: 'starforged_sword', name: 'Starforged Sword', type: 'melee', damage: 10, range: 0, special: null, price: 100, tier: 2, magical: true },
@@ -86,3 +91,4 @@ export const ORIG_ARTIFACTS = [
     { id: 'windrunner_boots', name: 'Windrunner Boots', special: 'mp_bonus', mpBonus: 3, price: 80, tier: 3, magical: true },
     { id: 'arrow_ward', name: 'Arrow Ward', special: 'ranged_immune', price: 45, tier: 2, magical: true },
 ];
+*/

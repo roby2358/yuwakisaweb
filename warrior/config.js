@@ -1,6 +1,7 @@
 // config.js — Game constants and data definitions
 import { Rando } from './rando.js';
-import { ORIG_WEAPONS, ORIG_ARMORS, ORIG_ARTIFACTS } from './origitems.js';
+// Legacy hand-crafted items retired from play — kept sentimentally in origitems.js.
+// import { ORIG_WEAPONS, ORIG_ARMORS, ORIG_ARTIFACTS } from './origitems.js';
 
 export const HEX_SIZE = 24;
 
@@ -298,10 +299,10 @@ export function resetEquipment() {
     for (const key of Object.keys(ALL_EQUIPMENT)) delete ALL_EQUIPMENT[key];
     for (const w of WEAPONS) ALL_EQUIPMENT[w.id] = { ...w, slot: EQUIP_SLOT.WEAPON };
     for (const a of ARMORS) ALL_EQUIPMENT[a.id] = { ...a, slot: EQUIP_SLOT.ARMOR };
-    // Legacy magical items so old saved games still work
-    for (const w of ORIG_WEAPONS) if (w.magical) ALL_EQUIPMENT[w.id] = { ...w, slot: EQUIP_SLOT.WEAPON };
-    for (const a of ORIG_ARMORS) if (a.magical) ALL_EQUIPMENT[a.id] = { ...a, slot: EQUIP_SLOT.ARMOR };
-    for (const a of ORIG_ARTIFACTS) ALL_EQUIPMENT[a.id] = { ...a, slot: EQUIP_SLOT.ARTIFACT };
+    // Legacy hand-crafted items — retired from play, kept sentimentally in origitems.js.
+    // for (const w of ORIG_WEAPONS) if (w.magical) ALL_EQUIPMENT[w.id] = { ...w, slot: EQUIP_SLOT.WEAPON };
+    // for (const a of ORIG_ARMORS) if (a.magical) ALL_EQUIPMENT[a.id] = { ...a, slot: EQUIP_SLOT.ARMOR };
+    // for (const a of ORIG_ARTIFACTS) ALL_EQUIPMENT[a.id] = { ...a, slot: EQUIP_SLOT.ARTIFACT };
 }
 resetEquipment();
 
