@@ -46,25 +46,25 @@ export class Player {
         return ALL_EQUIPMENT[id];
     }
 
+    // Every non-empty equipment slot as a concrete list, so callers can filter,
+    // find, and reduce over the player's gear functionally.
+    equippedItems() {
+        return ['weapon', 'armor', 'artifact'].map(slot => this[slot]()).filter(Boolean);
+    }
+
+    // First equipped item carrying `special`, or null. Use for on/off abilities
+    // where a second copy adds nothing.
     equipped(special) {
-        for (const slot of ['weapon', 'armor', 'artifact']) {
-            const item = this[slot]();
-            if (item && item.special === special) return item;
-        }
-        return null;
+        return this.equippedItems().find(item => item.special === special) || null;
     }
 
     // Sum a numeric field across every equipped item carrying `special`. Unlike
     // equipped(), which stops at the first match, this lets duplicate passives
-    // (the same bonus on both armor and artifact) stack their magnitudes. Use
-    // equipped() for on/off abilities, sumEquipped() for numeric bonuses.
+    // (the same bonus on both armor and artifact) stack their magnitudes.
     sumEquipped(special, field) {
-        let total = 0;
-        for (const slot of ['weapon', 'armor', 'artifact']) {
-            const item = this[slot]();
-            if (item && item.special === special) total += item[field];
-        }
-        return total;
+        return this.equippedItems()
+            .filter(item => item.special === special)
+            .reduce((total, item) => total + item[field], 0);
     }
 
     effectiveVigor() {
