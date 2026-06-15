@@ -221,3 +221,18 @@ Raise the Commune skill's aether cost to 20+ so it can only be cast late in the 
 Implementation: bump Commune's cost in the SKILLS table in config.js. With max aether scaling off warding plus +3 AE items being common, a 20+ cost means the player needs a strong warding investment and at least one aether-bonus item to even cast it once — naturally gating it past the early game without any explicit level lock.
 
 Pairs with combo-skill-56hq's aether-cost repass: same calibration framework (3 AE = break-even, ≥5 AE = finisher tier). Commune sits in its own "ritual / lore-gate" tier above the nukes.
+----
+Priority:   35
+Status: Done
+ID: savemigrate-ikfh
+Created: 2026-05-31T08:02:56Z
+Updated: 2026-06-15T04:24:56Z
+Remove all save-game migration logic. There are no outstanding old saves in the wild that need migrating, so the scattered backfill/upgrade branches can simply be deleted (no consolidation or version-stamping needed — the current per-class fromJSON structure is fine, it just shouldn't carry migration code anymore).
+
+Migrations to remove:
+- player.js Player.fromJSON: garrison-charter -> garrison skill migration (the `data.hasGarrisonCharter` block); null hp/aether backfill (`if (p.hp == null) ...`, `if (p.aether == null) ...`). Keep the legitimate transient-field resets (movedThisTurn, hexesMovedThisTurn, phaseStepUsedThisTurn) and the seenDialogs default — those are not migrations.
+- enemies.js EnemyManager.fromJSON: re-derive creatureDef.behavior from attack; re-derive creatureDef.tier from the type key for pre-tiered saves.
+- world.js GameWorld.fromJSON: the breach/maw -> impassable BREACH/MAW terrain backfill loop for pre-impassable saves (added with bug-k3sj).
+- index.js load path: equipment registry restore and sprite restore/assign branches that exist only to patch old saves lacking them (keep whatever the current save format legitimately produces).
+
+After removal, sanity-check that a freshly created + saved + loaded game round-trips cleanly (new saves contain all fields, so nothing should depend on the deleted branches). Per-class fromJSON stays as plain deserialization.

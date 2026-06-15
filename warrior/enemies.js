@@ -316,12 +316,6 @@ export class EnemyManager {
         em.enemies = data.enemies;
         em.creatureDefs = data.creatureDefs;
         em.nextId = data.nextId;
-        // Re-derive behavior from attack so saves predating the tiered behavior model migrate forward.
-        // Re-derive tier from type key for saves predating level-weighted spawning.
-        for (const [type, def] of Object.entries(em.creatureDefs)) {
-            def.behavior = wildlifeBehaviorFor(def.attack);
-            if (def.tier === undefined) def.tier = parseInt(type.slice('creature_'.length), 10);
-        }
         return em;
     }
 

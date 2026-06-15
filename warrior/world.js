@@ -308,16 +308,6 @@ export class GameWorld {
         w.revealed = new Set(data.revealed);
         w.visible = new Set();
         w.breachesClosed = data.breachesClosed;
-        // Migrate pre-impassable saves: breach/maw POIs whose hex still carries
-        // ordinary terrain. Open rifts become impassable BREACH/MAW; sealed ones
-        // are already hills (closeBreach handles that going forward).
-        for (const poi of w.pois) {
-            if (poi.closed) continue;
-            const hex = w.getHex(poi.q, poi.r);
-            if (!hex) continue;
-            if (poi.type === POI.BREACH && hex.terrain !== TERRAIN.BREACH) hex.terrain = TERRAIN.BREACH;
-            if (poi.type === POI.MAW && hex.terrain !== TERRAIN.MAW) hex.terrain = TERRAIN.MAW;
-        }
         return w;
     }
 }

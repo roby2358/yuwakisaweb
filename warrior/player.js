@@ -180,19 +180,10 @@ export class Player {
         const p = new Player(data.q, data.r);
         Object.assign(p, data);
         p.learnedSkills = new Set(data.learnedSkills);
-        p.seenDialogs = new Set(data.seenDialogs || []);
+        p.seenDialogs = new Set(data.seenDialogs);
         p.movedThisTurn = false;
         p.hexesMovedThisTurn = 0;
         p.phaseStepUsedThisTurn = false;
-        if (p.hp == null) p.hp = p.maxHP();
-        if (p.aether == null) p.aether = p.maxAether();
-        // Migrate: pre-skill garrison charter → garrison skill
-        if (data.hasGarrisonCharter && !p.learnedSkills.has('garrison')) {
-            p.learnedSkills.add('garrison');
-            const emptySlot = p.skills.indexOf(null);
-            if (emptySlot >= 0) p.skills[emptySlot] = 'garrison';
-            delete p.hasGarrisonCharter;
-        }
         return p;
     }
 }

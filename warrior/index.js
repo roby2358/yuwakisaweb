@@ -1299,31 +1299,19 @@ function loadGame() {
     targeting = null;
     threatOverlay = null;
 
-    // Restore equipment registry
+    // Restore equipment registry (runtime-generated magic items must be re-registered)
     resetEquipment();
-    if (data.equipment) {
-        for (const [id, item] of Object.entries(data.equipment)) {
-            if (item && item.special === 'recoil') {
-                item.special = 'channel';
-                if (item.recoilBonus !== undefined) { item.channelBonus = item.recoilBonus; delete item.recoilBonus; }
-                if (item.recoilDamage !== undefined) { item.channelDamage = item.recoilDamage; delete item.recoilDamage; }
-            }
-            ALL_EQUIPMENT[id] = item;
-        }
+    for (const [id, item] of Object.entries(data.equipment)) {
+        ALL_EQUIPMENT[id] = item;
     }
 
     world = GameWorld.fromJSON(data.world);
     player = Player.fromJSON(data.player);
     em = EnemyManager.fromJSON(data.enemies);
-    scrollOnlySkills = new Set(data.scrollOnlySkills || []);
+    scrollOnlySkills = new Set(data.scrollOnlySkills);
 
-    // Restore or assign sprites (old saves won't have them)
-    if (data.playerSprite && data.enemySprites) {
-        playerSprite = data.playerSprite;
-        enemySprites = data.enemySprites;
-    } else {
-        assignSprites();
-    }
+    playerSprite = data.playerSprite;
+    enemySprites = data.enemySprites;
 
     computeMawDistances(world);
     refreshVision();
