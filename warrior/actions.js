@@ -355,17 +355,19 @@ class Strike {
         this.applyEntry(this.secondaryEntry(target, label));
     }
 
-    // Helper: enemies adjacent to primary, excluding primary itself. Used by
-    // cleave / sweep (melee) and splash (ranged).
-    neighborEnemies() {
+    // Helper: enemies adjacent to a hex, excluding the primary target. Used by
+    // cleave / splash (around the target) and sweep (around the player).
+    neighborEnemiesOf(q, r) {
         const { em } = this.ctx;
         const result = [];
-        for (const n of hexNeighbors(this.primary.q, this.primary.r)) {
+        for (const n of hexNeighbors(q, r)) {
             const adj = em.enemies.find(e => e.q === n.q && e.r === n.r && e !== this.primary);
             if (adj) result.push(adj);
         }
         return result;
     }
+
+    neighborEnemies() { return this.neighborEnemiesOf(this.primary.q, this.primary.r); }
 
     // Helper: trace and append a chain bounce sequence. Each bounce becomes
     // its own entry with optional per-jump damage bonus (reverberate).
@@ -401,8 +403,9 @@ export class WeaponStrike extends Strike {
         } else if (this.wep.special === 'cleave') {
             for (const adj of this.neighborEnemies()) entries.push(this.secondaryEntry(adj, 'Cleave'));
         } else if (this.wep.special === 'sweep') {
+            const { player } = this.ctx;
             let remaining = this.wep.sweepCount;
-            for (const adj of this.neighborEnemies()) {
+            for (const adj of this.neighborEnemiesOf(player.q, player.r)) {
                 if (remaining <= 0) break;
                 entries.push(this.secondaryEntry(adj, 'Sweep'));
                 remaining--;

@@ -2068,7 +2068,7 @@ function itemStatLine(item) {
             sniper: `+${item.sniperBonus} at max range`,
             splash: `Splash ${item.splashDamage}`,
             stun: `+${item.stunBonus}% stun`,
-            sweep: `Sweep ${item.sweepCount} adjacent`,
+            sweep: `Sweep ${item.sweepCount} adjacent to you`,
             // Armor effects
             burning_aura: `Burn adjacent ${item.burnAuraDamage}/turn`,
             counter_deflect: `-${item.counterDeflect}% counter-attack dmg`,
