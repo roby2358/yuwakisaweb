@@ -410,9 +410,9 @@ export class WeaponStrike extends Strike {
 
     appendWeaponAffixes(entries) {
         if (this.wep.special === 'chain') {
-            this.appendChain(entries, 'Chain', this.wep.chainCount || 1, 2, 0);
+            this.appendChain(entries, 'Chain', this.wep.chainCount, 2, 0);
         } else if (this.wep.special === 'reverberate') {
-            this.appendChain(entries, 'Reverberate', this.wep.chainCount || 1, 2, this.wep.chainBonus || 0);
+            this.appendChain(entries, 'Reverberate', this.wep.chainCount, 2, this.wep.chainBonus);
         } else if (this.wep.special === 'cleave') {
             for (const adj of this.neighborEnemies()) entries.push(this.secondaryEntry(adj, 'Cleave'));
         } else if (this.wep.special === 'sweep') {
@@ -450,9 +450,9 @@ export class RangedStrike extends Strike {
 
     appendWeaponAffixes(entries) {
         if (this.wep.special === 'chain') {
-            this.appendChain(entries, 'Chain', this.wep.chainCount || 1, 2, 0);
+            this.appendChain(entries, 'Chain', this.wep.chainCount, 2, 0);
         } else if (this.wep.special === 'reverberate') {
-            this.appendChain(entries, 'Reverberate', this.wep.chainCount || 1, 2, this.wep.chainBonus || 0);
+            this.appendChain(entries, 'Reverberate', this.wep.chainCount, 2, this.wep.chainBonus);
         } else if (this.wep.special === 'splash') {
             for (const adj of this.neighborEnemies()) entries.push(this.secondaryEntry(adj, 'Splash'));
         } else if (this.wep.special === 'piercing') {
@@ -599,7 +599,7 @@ export class MoveAndAttackAction extends Action {
         const blink = player.equipped('blink_ring');
         if (blink) {
             const dist = hexDistance(player.q, player.r, this.enemyQ, this.enemyR);
-            if (dist > 1 && dist <= (blink.blinkRange || 4)) {
+            if (dist > 1 && dist <= blink.blinkRange) {
                 const adj = hexNeighbors(this.enemyQ, this.enemyR).filter(n => {
                     const h = world.getHex(n.q, n.r);
                     if (!h || !world.isPassable(h)) return false;

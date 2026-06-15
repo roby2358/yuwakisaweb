@@ -624,7 +624,7 @@ function dealDamageToPlayer(damage, source, isSkillDamage, opts = {}) {
     if (opts.attacker && !opts.isRanged && opts.attacker.hp > 0) {
         const thornsItem = player.equipped('thorns');
         if (thornsItem) {
-            const thornDmg = thornsItem.thornsDamage || Math.round(dealt * (thornsItem.thornsPercent || 50) / 100);
+            const thornDmg = Math.round(dealt * thornsItem.thornsPercent / 100);
             opts.attacker.hp -= thornDmg;
             logCombat(`Thorns: ${thornDmg} dmg to ${em.getDef(opts.attacker.type).name}`, 'log-dmg');
             sound.hitEnemy();
@@ -1098,7 +1098,7 @@ function computeMeleeAttackable(enemyKeys) {
     }
     const blinkItem = player.equipped('blink_ring');
     if (blinkItem) {
-        const blinkRange = blinkItem.blinkRange || 4;
+        const blinkRange = blinkItem.blinkRange;
         for (const enemy of em.enemies) {
             const dist = hexDistance(player.q, player.r, enemy.q, enemy.r);
             if (dist <= blinkRange && dist > 1) {
@@ -2044,12 +2044,12 @@ function itemStatLine(item) {
         const specials = {
             // Weapon effects
             armor_pierce: `Pierce ${item.pierceAmount} def`,
-            aether_siphon: `+${item.siphonAmount || 1} AE/hit`,
+            aether_siphon: `+${item.siphonAmount} AE/hit`,
             burn: `Burn ${item.burnDamage}/turn`,
-            chain: `Chain ${item.chainCount || item.chainDamage}`,
-            chaos_bonus: `+${item.chaosBonus || 2} vs chaos`,
+            chain: `Chain ${item.chainCount}`,
+            chaos_bonus: `+${item.chaosBonus} vs chaos`,
             counter_mastery: 'Counter-attack on enemy melee',
-            defense_shred: `-${item.shredAmount || 1} def/hit`,
+            defense_shred: `-${item.shredAmount} def/hit`,
             double_strike: 'Double strike',
             triple_strike: 'Triple strike',
             ignore_defense: 'Ignore def',
@@ -2060,7 +2060,7 @@ function itemStatLine(item) {
                 : `+${item.chargeBonus} if moved`,
             channel: `+${item.channelBonus} dmg, ${item.channelDamage} self-dmg`,
             reverberate: `Chain ${item.chainCount} +${item.chainBonus}/jump`,
-            riposte: `+${item.riposteDamage || 1} counter-atk`,
+            riposte: `+${item.riposteDamage} counter-atk`,
             // Ranged weapon effects
             double_shot: 'Double shot',
             triple_shot: 'Triple shot',
@@ -2078,15 +2078,15 @@ function itemStatLine(item) {
             heal_on_kill: `+${item.healOnKill} HP/kill`,
             high_def_mp_penalty: `+${item.defBonus} def -${item.mpPenalty} MP`,
             last_stand: `+${item.lastStandBonus} def <50% HP`,
-            momentum: `+${item.momentumBonus || 1} def/hex moved`,
+            momentum: `+${item.momentumBonus} def/hex moved`,
             ranged_defense: `+${item.rangedDefenseBonus} def vs ranged`,
             ranged_immune: 'Ranged immune',
-            thorns: `${item.thornsPercent || item.thornsDamage || '?'}% reflect`,
+            thorns: `${item.thornsPercent}% reflect`,
             wall_of_steel: `+${item.wallBonus} melee if stationary`,
             // Passive effects
             aether_bonus: `+${item.aetherBonus} max AE`,
             aether_discount: `-${item.aetherDiscount} AE skill cost`,
-            aether_regen: `+${item.aetherRegen || 1} AE/turn`,
+            aether_regen: `+${item.aetherRegen} AE/turn`,
             aether_signet: `+${item.aetherSignetDamage} dmg when AE full (costs ${item.aetherSignetCost} AE)`,
             blink_ring: `Blink ${item.blinkRange} hex melee +${item.blinkBonus}`,
             breach_jewel: `+${item.breachBonus} might near breach`,

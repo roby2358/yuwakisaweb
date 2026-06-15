@@ -73,14 +73,14 @@ export class Player {
 
     defense(terrainType) {
         const arm = this.armor();
-        let def = arm ? (arm.defense || 0) : 0;
+        let def = arm ? arm.defense : 0;
         def += Math.floor(this.effectiveVigor() / 3);
         def += Math.floor(this.stats.might / 5);
         def += TERRAIN_DEFENSE_BONUS[terrainType] || 0;
         const lastStand = this.equipped('last_stand');
         if (lastStand && this.hp <= this.maxHP() / 2) def += lastStand.lastStandBonus;
         const momDef = this.equipped('momentum');
-        if (momDef) def += this.hexesMovedThisTurn * (momDef.momentumBonus || 1);
+        if (momDef) def += this.hexesMovedThisTurn * momDef.momentumBonus;
         if (RANGER_TERRAIN.includes(terrainType)) def += this.sumEquipped('ranger_defense', 'rangerBonus');
         if (isChaosTerrain(terrainType)) {
             def += this.sumEquipped('chaos_defense', 'chaosDefenseBonus');
@@ -114,7 +114,7 @@ export class Player {
     }
 
     _chaosBonus(wep, isChaosEnemy) {
-        return (wep && wep.special === 'chaos_bonus' && isChaosEnemy) ? (wep.chaosBonus || 2) : 0;
+        return (wep && wep.special === 'chaos_bonus' && isChaosEnemy) ? wep.chaosBonus : 0;
     }
 
     meleeDamage(isChaosEnemy) {
@@ -125,7 +125,7 @@ export class Player {
             if (wep.chargeBonus) dmg += wep.chargeBonus;
             if (wep.chargeMultiplier) dmg *= wep.chargeMultiplier;
         }
-        if (wep && wep.special === 'channel') dmg += (wep.channelBonus || 0);
+        if (wep && wep.special === 'channel') dmg += wep.channelBonus;
         const wallItem = this.equipped('wall_of_steel') || this.equipped('wall_crown');
         if (wallItem && !this.movedThisTurn) dmg += (wallItem.wallBonus || wallItem.wallCrownBonus);
         return dmg;
@@ -137,7 +137,7 @@ export class Player {
         if (wep && wep.special === 'sniper' && dist !== undefined && dist >= wep.range) {
             dmg += wep.sniperBonus;
         }
-        if (wep && wep.special === 'channel') dmg += (wep.channelBonus || 0);
+        if (wep && wep.special === 'channel') dmg += wep.channelBonus;
         return dmg;
     }
 
