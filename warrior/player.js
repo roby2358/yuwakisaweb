@@ -54,13 +54,21 @@ export class Player {
         return null;
     }
 
-    effectiveVigor() {
-        let v = this.stats.vigor;
+    // Sum a numeric field across every equipped item carrying `special`. Unlike
+    // equipped(), which stops at the first match, this lets duplicate passives
+    // (the same bonus on both armor and artifact) stack their magnitudes. Use
+    // equipped() for on/off abilities, sumEquipped() for numeric bonuses.
+    sumEquipped(special, field) {
+        let total = 0;
         for (const slot of ['weapon', 'armor', 'artifact']) {
             const item = this[slot]();
-            if (item && item.special === 'vigor_bonus') v += item.vigorBonus;
+            if (item && item.special === special) total += item[field];
         }
-        return v;
+        return total;
+    }
+
+    effectiveVigor() {
+        return this.stats.vigor + this.sumEquipped('vigor_bonus', 'vigorBonus');
     }
 
     defense(terrainType) {
@@ -73,36 +81,26 @@ export class Player {
         if (lastStand && this.hp <= this.maxHP() / 2) def += lastStand.lastStandBonus;
         const momDef = this.equipped('momentum');
         if (momDef) def += this.hexesMovedThisTurn * (momDef.momentumBonus || 1);
-        const ranger = this.equipped('ranger_defense');
-        if (ranger && RANGER_TERRAIN.includes(terrainType)) def += ranger.rangerBonus;
-        const chaosDef = this.equipped('chaos_defense');
-        if (chaosDef && isChaosTerrain(terrainType)) def += chaosDef.chaosDefenseBonus;
-        const chaosAtt = this.equipped('chaos_attune');
-        if (chaosAtt && isChaosTerrain(terrainType)) def += chaosAtt.chaosAttuneDef;
+        if (RANGER_TERRAIN.includes(terrainType)) def += this.sumEquipped('ranger_defense', 'rangerBonus');
+        if (isChaosTerrain(terrainType)) {
+            def += this.sumEquipped('chaos_defense', 'chaosDefenseBonus');
+            def += this.sumEquipped('chaos_attune', 'chaosAttuneDef');
+        }
         return def;
     }
 
     maxHP() {
-        let hp = maxHP(this.effectiveVigor());
-        const hpItem = this.equipped('hp_bonus');
-        if (hpItem) hp += hpItem.hpBonus;
-        return hp;
+        return maxHP(this.effectiveVigor()) + this.sumEquipped('hp_bonus', 'hpBonus');
     }
 
     maxAether() {
-        let ae = maxAether(this.stats.warding);
-        const aeItem = this.equipped('aether_bonus');
-        if (aeItem) ae += aeItem.aetherBonus;
-        const aeArmor = this.equipped('armor_aether_bonus');
-        if (aeArmor) ae += aeArmor.aetherBonus;
-        return ae;
+        return maxAether(this.stats.warding)
+            + this.sumEquipped('aether_bonus', 'aetherBonus')
+            + this.sumEquipped('armor_aether_bonus', 'aetherBonus');
     }
 
     vision() {
-        let v = BASE_VISION;
-        const visItem = this.equipped('vision_bonus');
-        if (visItem) v += visItem.visionBonus;
-        return v;
+        return BASE_VISION + this.sumEquipped('vision_bonus', 'visionBonus');
     }
 
     maxMP() {
@@ -111,8 +109,7 @@ export class Player {
         if (mpPen) m -= mpPen.mpPenalty;
         const highDef = this.equipped('high_def_mp_penalty');
         if (highDef) m -= highDef.mpPenalty;
-        const mpItem = this.equipped('mp_bonus');
-        if (mpItem) m += mpItem.mpBonus;
+        m += this.sumEquipped('mp_bonus', 'mpBonus');
         return Math.max(1, m);
     }
 

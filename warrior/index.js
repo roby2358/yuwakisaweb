@@ -695,10 +695,10 @@ function killEnemy(enemy, opts = {}) {
     }
     gainXP(def.xp);
     // Soul Harvest: bonus XP on kill
-    const soulH = player.equipped('soul_harvest');
-    if (soulH) {
-        gainXP(soulH.soulHarvestXP);
-        logCombat(`Soul Harvest: +${soulH.soulHarvestXP} XP`, 'log-xp');
+    const soulXP = player.sumEquipped('soul_harvest', 'soulHarvestXP');
+    if (soulXP) {
+        gainXP(soulXP);
+        logCombat(`Soul Harvest: +${soulXP} XP`, 'log-xp');
     }
     // Opportunist: chance for bonus gold on kill
     if (player.equipped('opportunist') && Rando.bool(0.25)) {

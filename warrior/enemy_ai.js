@@ -564,11 +564,8 @@ function regenPlayerAtPhaseStart(ctx) {
     const { player, logCombat } = ctx;
     player.hp = Math.min(player.maxHP(), player.hp + 1);
 
-    const healItem = player.equipped('heal') || player.equipped('regen') || player.equipped('armor_regen');
-    if (healItem) {
-        const amt = healItem.healPerTurn || healItem.regenAmount || 1;
-        player.hp = Math.min(player.maxHP(), player.hp + amt);
-    }
+    const healAmt = player.sumEquipped('heal', 'healPerTurn');
+    if (healAmt) player.hp = Math.min(player.maxHP(), player.hp + healAmt);
     const reviveItem = player.equipped('revive');
     if (reviveItem) {
         player.hp = Math.min(player.maxHP(), player.hp + reviveItem.reviveHp);
@@ -579,11 +576,8 @@ function regenPlayerAtPhaseStart(ctx) {
         player.hp = Math.min(player.maxHP(), player.hp + regenCombo.regenAmount);
         player.aether = Math.min(player.maxAether(), player.aether + 1);
     }
-    const aeRegenItem = player.equipped('aether_regen') || player.equipped('aether_regen_small') || player.equipped('aether_regen_large');
-    if (aeRegenItem) {
-        const aeAmt = aeRegenItem.aetherRegen || (aeRegenItem.special === 'aether_regen_large' ? 3 : 1);
-        player.aether = Math.min(player.maxAether(), player.aether + aeAmt);
-    }
+    const aeAmt = player.sumEquipped('aether_regen', 'aetherRegen');
+    if (aeAmt) player.aether = Math.min(player.maxAether(), player.aether + aeAmt);
     const chaosCirclet = player.equipped('chaos_circlet');
     if (chaosCirclet && isChaosTerrain(ctx.playerTerrain())) {
         player.aether = Math.min(player.maxAether(), player.aether + 1);

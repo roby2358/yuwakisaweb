@@ -72,8 +72,7 @@ export function skillMpLabel(skill) {
 }
 
 export function effectiveAetherCost(player, skill) {
-    const disc = player.equipped('aether_discount');
-    const cost = skill.cost - (disc ? disc.aetherDiscount : 0);
+    const cost = skill.cost - player.sumEquipped('aether_discount', 'aetherDiscount');
     return Math.max(0, cost);
 }
 
@@ -126,10 +125,10 @@ export class Action {
     applyEquipmentBonusDamage(baseDmg) {
         const { player, world, logCombat, playerTerrain } = this.ctx;
         let dmg = baseDmg;
-        const breach = player.equipped('breach_jewel');
-        if (breach) {
+        const breachBonus = player.sumEquipped('breach_jewel', 'breachBonus');
+        if (breachBonus) {
             const near = world.pois.some(p => (p.type === POI.BREACH || p.type === POI.MAW) && hexDistance(player.q, player.r, p.q, p.r) <= 3);
-            if (near) { dmg += breach.breachBonus; logCombat(`Breach Jewel: +${breach.breachBonus} might!`, 'log-info'); }
+            if (near) { dmg += breachBonus; logCombat(`Breach Jewel: +${breachBonus} might!`, 'log-info'); }
         }
         const signet = player.equipped('aether_signet');
         if (signet && player.aether >= player.maxAether()) {
@@ -137,8 +136,7 @@ export class Action {
             player.aether -= signet.aetherSignetCost;
             logCombat(`Aether Signet: +${signet.aetherSignetDamage} dmg!`, 'log-info');
         }
-        const attune = player.equipped('chaos_attune');
-        if (attune && isChaosTerrain(playerTerrain())) dmg += attune.chaosAttuneMight;
+        if (isChaosTerrain(playerTerrain())) dmg += player.sumEquipped('chaos_attune', 'chaosAttuneMight');
         return dmg;
     }
 
