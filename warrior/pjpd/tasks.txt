@@ -1,8 +1,8 @@
-Priority:   47
+Priority:   55
 Status: ToDo
 ID: combo-skill-56hq
 Created: 2026-04-27T05:55:51Z
-Updated: 2026-04-27T06:00:27Z
+Updated: 2026-06-15T03:12:27Z
 Break the "dump everything into warding" dominant strategy by reshaping the skill roster around two tiers, AND repassing aether costs at the same time.
 
 Today the power trio (cosmic bolt, starfall, meteor) all scale ~3× warding, which double-dips with warding's role as the aether pool — at warding=27 each cast hits 81, dwarfing melee, and the aether costs are low enough to spam them.
@@ -26,37 +26,11 @@ Pairs with land-hp-4mfy: Land Health items reward non-warding builds, and this f
 
 Tradeoff: don't nerf in isolation. Tune so a balanced-stat caster lands near today's pure-warding output, and a pure-warding 27 build still has the burst nukes but can't sustain them. Update SKILLS damage formulas + aether costs in config.js (or wherever skill resolution lives in index.js); retest end-game encounters.
 ----
-Priority:   45
-Status: ToDo
-ID: xp-sink-wwg4
-Created: 2026-04-12T20:28:57Z
-Updated: 2026-04-26T08:30:22Z
-Add a use for XP after reaching max level 10. Possible idea: spend accumulated XP to heal/restore chaos-corrupted hexes, giving endgame players something meaningful to do with excess XP.
-----
-Priority:   40
-Status: ToDo
-ID: land-hp-4mfy
-Created: 2026-04-19T02:40:01Z
-Updated: 2026-04-27T06:33:07Z
-Land Health mechanic that rewards cleaning up chaos (shattered/distressed) hexes and offsets a ramped-up Maw bonus. Track total chaos-hex count vs. cleaned count as a world-level "Land Health" ratio (0..1). Pair with warrior-69ti so the endgame Maw bonus is genuinely nastier unless the player has invested in restoration — rush the Maw weak, or sanitize first and fight it stronger.
-
-Player-side bonus delivered via 3 magic items, each tied to a physical archetype (mutually exclusive build choice, not stacking buffs). Deliberately no caster/warding item — pure-warding mages opt themselves out of the Land Health reward system.
-
-  1. Tank — Shield: boosts defense, vigor, and might
-  2. Archer — Void cannon: boosts reflex and vigor
-  3. Fighter — Cloak (or banner/warhorn/etc., name TBD): boosts might and vigor
-
-Item bonus scales with Land Health (cleaner world → bigger bonus). Item only activates / scales from level 6+ so it's a mid/late-game payoff, not an early-run crutch.
-
-Note on caster builds: this isn't anti-mage, it's anti-monomaniacal-warding. Once combo-skill-56hq lands, hybrid casters who put points into reflex (cosmic bolt scales warding × 2 + reflex) or might (combat combos) ALSO benefit from these items — picking up the Archer or Fighter item makes their secondary stat hit harder. The build that gets shut out is the pure cosmic-bolt-and-starfall-your-way-to-the-Maw warding dump. Good luck to them.
-
-Details TBD: exact stat numbers per item, scaling curve (linear vs. tiered), whether the item is granted/found/bought, whether the choice is one-shot or swappable, final names/flavor for the fighter item. Requires: chaos hex accounting in world.js, Land Health calc readable from player.defense()/meleeDamage()/etc., the 3 items added to ALL_EQUIPMENT with new specials, optional HUD Land Health indicator, and tuning so Maw scaling stays beatable without full cleanup.
-----
-Priority:   40
+Priority:   50
 Status: ToDo
 ID: ranged-enm-ue9z
 Created: 2026-04-27T06:48:49Z
-Updated: 2026-04-27T06:48:49Z
+Updated: 2026-06-15T03:12:28Z
 Add more ranged enemies and put a visual marker on the enemy token so the player can tell at a glance which counters are ranged threats.
 
 (1) Roster expansion — current ranged enemy lineup is sparse. Add ranged variants across the tier curve so ranged threat shows up in early, mid, and late game, not just one or two creature types. Suggested directions, mapping to existing creature themes:
@@ -77,11 +51,51 @@ Tactical justification: ranged enemies meaningfully change approach planning —
 
 Tuning: don't overpopulate ranged on a single map — they're a counter to slow players and can feel oppressive in clusters. Aim for ~20-30% of spawns being ranged at the appropriate tier, not 50%+.
 ----
+Priority:   47
+Status: ToDo
+ID: skill-lvl-fkd5
+Created: 2026-05-24T02:30:50Z
+Updated: 2026-06-15T03:12:30Z
+Skill levels: learning a skill multiple times levels it up and increases its power. Design how each skill scales per level (damage, range, AOE radius, duration, AE cost reduction, etc.), how level is stored on the player's skill entry, how the shop/level-up flow offers re-learning, and how the skill panel displays current level + next-level preview.
+----
+Priority:   45
+Status: ToDo
+ID: revive-zqkr
+Created: 2026-05-24T02:35:50Z
+Updated: 2026-06-15T03:12:31Z
+Earned revival mechanism: give the player one second-chance per run, but only if they've earned it — e.g. consumable dropped by a rare enemy, purchased at a haven for a steep gold cost, granted by closing N breaches, or rewarded for a quest. Keep hardcore feel by making it a meaningful resource decision, not a default safety net. Decide: one-shot consumable in inventory? Auto-trigger on lethal hit vs. activatable? Revive HP/AE/MP state? Penalty (lost gold, drained Aether, etc.)? Compatibility with existing 'revive' artifact affix.
+----
+Priority:   43
+Status: ToDo
+ID: land-hp-4mfy
+Created: 2026-04-19T02:40:01Z
+Updated: 2026-06-15T03:12:31Z
+Land Health mechanic that rewards cleaning up chaos (shattered/distressed) hexes and offsets a ramped-up Maw bonus. Track total chaos-hex count vs. cleaned count as a world-level "Land Health" ratio (0..1). Pair with warrior-69ti so the endgame Maw bonus is genuinely nastier unless the player has invested in restoration — rush the Maw weak, or sanitize first and fight it stronger.
+
+Player-side bonus delivered via 3 magic items, each tied to a physical archetype (mutually exclusive build choice, not stacking buffs). Deliberately no caster/warding item — pure-warding mages opt themselves out of the Land Health reward system.
+
+  1. Tank — Shield: boosts defense, vigor, and might
+  2. Archer — Void cannon: boosts reflex and vigor
+  3. Fighter — Cloak (or banner/warhorn/etc., name TBD): boosts might and vigor
+
+Item bonus scales with Land Health (cleaner world → bigger bonus). Item only activates / scales from level 6+ so it's a mid/late-game payoff, not an early-run crutch.
+
+Note on caster builds: this isn't anti-mage, it's anti-monomaniacal-warding. Once combo-skill-56hq lands, hybrid casters who put points into reflex (cosmic bolt scales warding × 2 + reflex) or might (combat combos) ALSO benefit from these items — picking up the Archer or Fighter item makes their secondary stat hit harder. The build that gets shut out is the pure cosmic-bolt-and-starfall-your-way-to-the-Maw warding dump. Good luck to them.
+
+Details TBD: exact stat numbers per item, scaling curve (linear vs. tiered), whether the item is granted/found/bought, whether the choice is one-shot or swappable, final names/flavor for the fighter item. Requires: chaos hex accounting in world.js, Land Health calc readable from player.defense()/meleeDamage()/etc., the 3 items added to ALL_EQUIPMENT with new specials, optional HUD Land Health indicator, and tuning so Maw scaling stays beatable without full cleanup.
+----
 Priority:   40
+Status: ToDo
+ID: xp-sink-wwg4
+Created: 2026-04-12T20:28:57Z
+Updated: 2026-06-15T03:12:32Z
+Add a use for XP after reaching max level 10. Possible idea: spend accumulated XP to heal/restore chaos-corrupted hexes, giving endgame players something meaningful to do with excess XP.
+----
+Priority:   35
 Status: ToDo
 ID: savemigrate-ikfh
 Created: 2026-05-31T08:02:56Z
-Updated: 2026-05-31T23:38:56Z
+Updated: 2026-06-15T03:12:33Z
 Remove all save-game migration logic. There are no outstanding old saves in the wild that need migrating, so the scattered backfill/upgrade branches can simply be deleted (no consolidation or version-stamping needed — the current per-class fromJSON structure is fine, it just shouldn't carry migration code anymore).
 
 Migrations to remove:
@@ -123,11 +137,11 @@ Design feel: every run gets weird, unique tools. Pairs with the broader design p
 
 Details TBD: probability of random vs. standard, the bonus-effect pool, formula tuning, name generation pool, save format change for random skills.
 ----
-Priority:   30
+Priority:   28
 Status: ToDo
 ID: map-deco-hk27
 Created: 2026-04-27T06:45:15Z
-Updated: 2026-04-27T06:45:15Z
+Updated: 2026-06-15T03:12:33Z
 Dress up the hex map with per-terrain visual character. The current green/brown/yellow/gray/blue palette is good — clean and readable — but flat. Add subtle decorative accents so each terrain feels like a place, not a colored cell.
 
 Two approaches (probably both):
@@ -151,38 +165,3 @@ ID: medals-h92a
 Created: 2026-04-27T00:29:25Z
 Updated: 2026-04-27T00:31:09Z
 Run-end medals + villager testimonials + Unraveler jeers. (1) Medals: extend the Victory final-screen breakdown with thematic badges based on existing counters — e.g. Pacifist (≤20 enemiesDefeated), Cartographer (≥80% map revealed), Pyrrhic (≥10 nearDeathMoments), Restorer (≥50 hexesRestored), Treasurer (≥1000 goldCollected), Maw-Slayer (breachesSealed ≥1), Builder (≥3 garrisonsCompleted). One pass over existing Victory counters; no new tracking needed. (2) Testimonials from villagers: short flavor lines on the end screen "spoken" by havens/villages the player visited, conditional on what they did there (restored nearby terrain, built a garrison, slew an apex predator, accepted a bounty). Warm, grateful tone — extends the existing settlement-gratitude voice. (3) Jeers from the Unraveler: taunting counterparts on what the player failed to do or shied from — breaches left unsealed, corrupted hexes ignored, settlements never visited, weapons hoarded but unused, an ending reached without the Unraveler fully vanquished. Voice consistent with the existing host-jump / vanquished narrative. Pulls testimonials and jeers from separate pools keyed by event tags accumulated during the run. Likely v2 polish — file behind the gold-sink and land-health work.
-----
-Priority:   50
-Status: ToDo
-ID: stacking-eckg
-Created: 2026-05-24T02:30:02Z
-Updated: 2026-05-24T02:30:02Z
-armor and artifact effects don't stack — player.equipped(special) returns the first match across weapon/armor/artifact and stops, so e.g. two pieces with the same passive only apply once. Decide stacking policy per effect and update equipped() or callers accordingly.
-----
-Priority:   50
-Status: ToDo
-ID: skill-lvl-fkd5
-Created: 2026-05-24T02:30:50Z
-Updated: 2026-05-24T02:30:50Z
-Skill levels: learning a skill multiple times levels it up and increases its power. Design how each skill scales per level (damage, range, AOE radius, duration, AE cost reduction, etc.), how level is stored on the player's skill entry, how the shop/level-up flow offers re-learning, and how the skill panel displays current level + next-level preview.
-----
-Priority:   50
-Status: ToDo
-ID: revive-zqkr
-Created: 2026-05-24T02:35:50Z
-Updated: 2026-05-24T02:35:50Z
-Earned revival mechanism: give the player one second-chance per run, but only if they've earned it — e.g. consumable dropped by a rare enemy, purchased at a haven for a steep gold cost, granted by closing N breaches, or rewarded for a quest. Keep hardcore feel by making it a meaningful resource decision, not a default safety net. Decide: one-shot consumable in inventory? Auto-trigger on lethal hit vs. activatable? Revive HP/AE/MP state? Penalty (lost gold, drained Aether, etc.)? Compatibility with existing 'revive' artifact affix.
-----
-Priority:   50
-Status: ToDo
-ID: defshred-nqya
-Created: 2026-05-24T06:38:39Z
-Updated: 2026-05-24T06:38:39Z
-Bug: -2 defense effect only applies -1. defense_shred at shredAmount=2 (config.js:414, 457) appears to reduce enemy defense by only 1. Investigate the apply path: actions.js:140-142 adds wep.shredAmount to enemy.defReduction, index.js:360 subtracts defReduction in enemyDefense. Check whether shredAmount is being read correctly off the rolled magical item (might be losing the field during rollMagicItem spread) or whether the cap/clamp is wrong. Compare to Sundering Blow path (actions.js:812) which uses skill.shredAmount.
-----
-Priority:   50
-Status: ToDo
-ID: loot-chain-3xgk
-Created: 2026-05-24T16:12:57Z
-Updated: 2026-05-24T16:12:57Z
-Loot skill combines with chain/cleave/sweep weapon affixes to loot multiple adjacent enemies. Current executeLoot (actions.js:1063) steals gold from one target only. Design as preAttack + postAttack actions on the Loot skill: primary loot on the target, then on a chain weapon, loot adjacent enemies up to chainCount; on cleave, loot all neighbors; on sweep, loot up to sweepCount neighbors. Per-target gold roll uses the looted enemy's attack stat as the cap (same formula as primary).

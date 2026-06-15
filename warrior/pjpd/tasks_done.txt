@@ -80,10 +80,31 @@ Final gold score is gold/10 (in Warrior — when computing the player's end-of-g
 ----
 Priority:   50
 Status: Done
+ID: stacking-eckg
+Created: 2026-05-24T02:30:02Z
+Updated: 2026-06-15T02:59:31Z
+armor and artifact effects don't stack — player.equipped(special) returns the first match across weapon/armor/artifact and stops, so e.g. two pieces with the same passive only apply once. Decide stacking policy per effect and update equipped() or callers accordingly.
+----
+Priority:   50
+Status: Done
+ID: defshred-nqya
+Created: 2026-05-24T06:38:39Z
+Updated: 2026-06-15T01:54:03Z
+Bug: -2 defense effect only applies -1. defense_shred at shredAmount=2 (config.js:414, 457) appears to reduce enemy defense by only 1. Investigate the apply path: actions.js:140-142 adds wep.shredAmount to enemy.defReduction, index.js:360 subtracts defReduction in enemyDefense. Check whether shredAmount is being read correctly off the rolled magical item (might be losing the field during rollMagicItem spread) or whether the cap/clamp is wrong. Compare to Sundering Blow path (actions.js:812) which uses skill.shredAmount.
+----
+Priority:   50
+Status: Done
 ID: warrior-qjct
 Created: 2026-04-27T00:35:03Z
 Updated: 2026-05-09T18:41:28Z
 Add a "Reflect" respec skill purchasable at a haven for 1000 gold. Functions as a gold sink (pairs with gold-sink-e4ya) and gives the player a way to rebuild their skill loadout late-run. The skill represents the warrior reflecting on their training: using Reflect returns all spent skill points to the pool so the player can re-allocate. Implementation: add Reflect to SKILLS in config.js, add a "Buy Reflect (1000g)" option to the haven dialog when the player has the gold and hasn't already learned it; deduct gold and add to player.learnedSkills on purchase. When activated, refund all learnedSkills (other than Restore and Reflect itself) back into an available-points pool the player can re-spend from the Skills panel. Decide whether Reflect itself is consumed on use or stays available.
+----
+Priority:   48
+Status: Done
+ID: loot-chain-3xgk
+Created: 2026-05-24T16:12:57Z
+Updated: 2026-06-15T03:29:28Z
+Loot skill combines with chain/cleave/sweep weapon affixes to loot multiple adjacent enemies. Current executeLoot (actions.js:1063) steals gold from one target only. Design as preAttack + postAttack actions on the Loot skill: primary loot on the target, then on a chain weapon, loot adjacent enemies up to chainCount; on cleave, loot all neighbors; on sweep, loot up to sweepCount neighbors. Per-target gold roll uses the looted enemy's attack stat as the cap (same formula as primary).
 ----
 Priority:   46
 Status: Done
