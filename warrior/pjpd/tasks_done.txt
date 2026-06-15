@@ -59,6 +59,34 @@ Quick fix; small config edit + maybe a one-line check in the sell flow.
 ----
 Priority:   55
 Status: Done
+ID: combo-skill-56hq
+Created: 2026-04-27T05:55:51Z
+Updated: 2026-06-15T03:35:42Z
+Break the "dump everything into warding" dominant strategy by reshaping the skill roster around two tiers, AND repassing aether costs at the same time.
+
+Today the power trio (cosmic bolt, starfall, meteor) all scale ~3× warding, which double-dips with warding's role as the aether pool — at warding=27 each cast hits 81, dwarfing melee, and the aether costs are low enough to spam them.
+
+Two-tier fix:
+
+(1) Add new combo skills — scale on warding + a second stat, cheaper aether. These become the bread-and-butter rotation, and each is best for a different stat investment so optimizing one stat no longer optimizes everything.
+  - Cosmic bolt → combo: warding × 2 + reflex (precision burst, single-target king)
+  - Add new combat-flavored combos: warding + might (raw force), warding + vigor (sustain/heal-on-hit)
+  - Combo skills cost ~2-4 AE so they're sustainable
+
+(2) Keep meteor and starfall as pure-warding nukes, but make them expensive — "saved up for this" moments, not per-turn rotation. Warding pool still funds them; scarcity not formula does the balancing.
+  - Starfall — keep ~3× warding AoE (the ruin-popper stays brutal), aether cost ~6
+  - Meteor — keep 3× warding AoE, aether cost ~5
+
+Aether-cost calibration: +3 AE magic items are common, so 3 AE is effectively the "break even" cost (an item refund covers it). Anything cheap enough to spam should be ≤3 AE; anything that's supposed to be a finisher should be ≥5 AE so an item proc doesn't fully refund it.
+
+Audit the rest of SKILLS for any other pure-warding scalers and either give them a thematic second stat (combat → might, precision → reflex, healing/sustain → vigor) or move them to the expensive-nuke tier.
+
+Pairs with land-hp-4mfy: Land Health items reward non-warding builds, and this fix makes those builds actually competitive instead of strictly worse. Also pairs with might-def-pmtb (melee survivability buff).
+
+Tradeoff: don't nerf in isolation. Tune so a balanced-stat caster lands near today's pure-warding output, and a pure-warding 27 build still has the burst nukes but can't sustain them. Update SKILLS damage formulas + aether costs in config.js (or wherever skill resolution lives in index.js); retest end-game encounters.
+----
+Priority:   55
+Status: Done
 ID: gold-sink-e4ya
 Created: 2026-03-31T01:38:16Z
 Updated: 2026-05-09T18:55:15Z
