@@ -204,6 +204,44 @@ export class Action {
         return closest;
     }
 
+    // --- Multi-target affix traversal (shared by damage strikes and Loot) ---
+
+    // Ordered enemies a bounce affix reaches: hop from `primary` to the nearest
+    // not-yet-seen enemy within `bounceRange`, up to `bounceCount` hops.
+    chainTargets(primary, bounceCount, bounceRange) {
+        const seen = new Set([primary]);
+        const targets = [];
+        let q = primary.q, r = primary.r;
+        for (let i = 0; i < bounceCount; i++) {
+            const next = this.nearestUnhit(q, r, bounceRange, seen);
+            if (!next) break;
+            seen.add(next);
+            targets.push(next);
+            q = next.q; r = next.r;
+        }
+        return targets;
+    }
+
+    // Enemies on hexes adjacent to (q, r), excluding `exclude`.
+    adjacentEnemies(q, r, exclude) {
+        const { em } = this.ctx;
+        const result = [];
+        for (const n of hexNeighbors(q, r)) {
+            const adj = em.enemies.find(e => e.q === n.q && e.r === n.r && e !== exclude);
+            if (adj) result.push(adj);
+        }
+        return result;
+    }
+
+    // The extra enemies a melee multi-target affix reaches from `primary`.
+    // One targeting dispatch shared by WeaponStrike (damage) and Loot (theft).
+    meleeAffixTargets(weapon, primary) {
+        if (weapon.special === 'chain' || weapon.special === 'reverberate') return this.chainTargets(primary, weapon.chainCount, 2);
+        if (weapon.special === 'cleave') return this.adjacentEnemies(primary.q, primary.r, primary);
+        if (weapon.special === 'sweep') return this.adjacentEnemies(this.ctx.player.q, this.ctx.player.r, primary).slice(0, weapon.sweepCount);
+        return [];
+    }
+
     // Bounce damage hex-to-hex with raw (no bellCurve) damage minus flat
     // defense. Per-jump bonus stacks each hop. Used by Chain Lightning, where
     // the skill's primary roll already happened. Weapon chain/reverberate now
@@ -371,13 +409,7 @@ class Strike {
     // Helper: enemies adjacent to a hex, excluding the primary target. Used by
     // cleave / splash (around the target) and sweep (around the player).
     neighborEnemiesOf(q, r) {
-        const { em } = this.ctx;
-        const result = [];
-        for (const n of hexNeighbors(q, r)) {
-            const adj = em.enemies.find(e => e.q === n.q && e.r === n.r && e !== this.primary);
-            if (adj) result.push(adj);
-        }
-        return result;
+        return this.action.adjacentEnemies(q, r, this.primary);
     }
 
     neighborEnemies() { return this.neighborEnemiesOf(this.primary.q, this.primary.r); }
@@ -385,18 +417,16 @@ class Strike {
     // Helper: trace and append a chain bounce sequence. Each bounce becomes
     // its own entry with optional per-jump damage bonus (reverberate).
     appendChain(entries, label, bounceCount, bounceRange, perJumpBonus) {
-        const seen = new Set([this.primary]);
-        let curQ = this.primary.q, curR = this.primary.r, dmg = this.dmg;
-        for (let i = 0; i < bounceCount; i++) {
+        let dmg = this.dmg;
+        for (const target of this.action.chainTargets(this.primary, bounceCount, bounceRange)) {
             dmg += perJumpBonus;
-            const closest = this.action.nearestUnhit(curQ, curR, bounceRange, seen);
-            if (!closest) break;
-            seen.add(closest);
-            entries.push({ target: closest, hitCount: 1, label: `${label} bounce`, dmg });
-            curQ = closest.q; curR = closest.r;
+            entries.push({ target, hitCount: 1, label: `${label} bounce`, dmg });
         }
     }
 }
+
+// Per-affix label for the secondary entries a melee multi-target affix spawns.
+const MELEE_AFFIX_LABEL = { chain: 'Chain bounce', reverberate: 'Reverberate bounce', cleave: 'Cleave', sweep: 'Sweep' };
 
 // Melee weapon strike: chain/reverberate, cleave/sweep, double/triple_strike.
 export class WeaponStrike extends Strike {
@@ -409,14 +439,12 @@ export class WeaponStrike extends Strike {
     }
 
     appendWeaponAffixes(entries) {
-        if (this.wep.special === 'chain') {
-            this.appendChain(entries, 'Chain', this.wep.chainCount, 2, 0);
-        } else if (this.wep.special === 'reverberate') {
-            this.appendChain(entries, 'Reverberate', this.wep.chainCount, 2, this.wep.chainBonus);
-        } else if (this.wep.special === 'cleave') {
-            for (const adj of this.neighborEnemies()) entries.push(this.secondaryEntry(adj, 'Cleave'));
-        } else if (this.wep.special === 'sweep') {
-            this.appendSweep(entries, this.wep.sweepCount);
+        const label = MELEE_AFFIX_LABEL[this.wep.special];
+        const perJump = this.wep.special === 'reverberate' ? this.wep.chainBonus : 0;
+        let dmg = this.dmg;
+        for (const target of this.action.meleeAffixTargets(this.wep, this.primary)) {
+            dmg += perJump;
+            entries.push({ target, hitCount: 1, label, dmg });
         }
     }
 }
@@ -1238,12 +1266,18 @@ function executeLoot(action) {
     const { player, em, victory, logCombat } = action.ctx;
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
-    const def = em.getDef(enemy.type);
-    const might = def ? def.attack : 0;
-    const goldStolen = Rando.int(0, might);
-    player.gold += goldStolen;
-    victory.goldCollected += goldStolen;
-    logCombat(`Looted ${goldStolen}g!`, 'log-gold');
+    // Chain/cleave/sweep weapon affixes extend the grab to nearby enemies,
+    // each robbed for up to its own might (same roll as the primary target).
+    const targets = [enemy, ...action.meleeAffixTargets(player.weapon(), enemy)];
+    let total = 0;
+    for (const target of targets) {
+        const goldStolen = Rando.int(0, em.getDef(target.type).attack);
+        player.gold += goldStolen;
+        victory.goldCollected += goldStolen;
+        total += goldStolen;
+    }
+    const suffix = targets.length > 1 ? ` from ${targets.length} enemies` : '';
+    logCombat(`Looted ${total}g${suffix}!`, 'log-gold');
 }
 
 function executeHavensLight(action) {
