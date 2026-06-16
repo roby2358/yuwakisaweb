@@ -19,6 +19,10 @@ export class Player {
         this.gold = 0;
         this.equipment = { weapon: 'rusty_blade', armor: 'worn_leather', artifact: null };
         this.learnedSkills = new Set(['restore']);
+        // Trained/usable skills (the Train panel's left column). Skills not in
+        // this set are benched: learned but unavailable until trained at a
+        // Magicsmith. Seeded with restore so a fresh game can still heal.
+        this.activeSkills = new Set(['restore']);
         this.skills = ['restore', null, null, null, null];
         this.inventory = ['stick_bow'];
         this.statPoints = 0;
@@ -169,6 +173,7 @@ export class Player {
             xp: this.xp, level: this.level, gold: this.gold,
             equipment: this.equipment,
             learnedSkills: [...this.learnedSkills],
+            activeSkills: [...this.activeSkills],
             skills: this.skills, inventory: this.inventory,
             statPoints: this.statPoints, pendingSkillChoice: this.pendingSkillChoice,
             mp: this.mp, warpShieldTurns: this.warpShieldTurns, reflectTurns: this.reflectTurns,
@@ -180,6 +185,8 @@ export class Player {
         const p = new Player(data.q, data.r);
         Object.assign(p, data);
         p.learnedSkills = new Set(data.learnedSkills);
+        // Older saves predate training — treat every learned skill as active.
+        p.activeSkills = new Set(data.activeSkills ?? data.learnedSkills);
         p.seenDialogs = new Set(data.seenDialogs);
         p.movedThisTurn = false;
         p.hexesMovedThisTurn = 0;

@@ -1190,7 +1190,7 @@ function showBreachLootDialog() {
 function openPoiDialog(poi) {
     if (poi.type === POI.HAVEN) showHavenDialog(poi);
     else if (poi.type === POI.VILLAGE) showVillageDialog(poi);
-    else if (poi.type === POI.HUT) showHutDialog(poi);
+    else if (poi.type === POI.HUT) showHutDialog(poi, true);
     else if (poi.type === POI.RUIN) tryRuinInteraction(poi);
     else if (poi.type === POI.SCROLL) pickUpScroll(poi);
 }
@@ -1887,6 +1887,27 @@ function updateCharPanel() {
     });
 }
 
+// Auto-equip a freshly learned skill, but only if it's trained (active). New
+// skills are benched by default, so this is a no-op until the player trains them.
+function autoEquipIfActive(skillId) {
+    if (!player.activeSkills.has(skillId)) return;
+    const emptySlot = player.skills.indexOf(null);
+    if (emptySlot >= 0) player.skills[emptySlot] = skillId;
+}
+
+// Bench (active=false) or train (active=true) a learned skill. Benching also
+// clears it from any hotbar slot, since benched skills can't be equipped.
+function setSkillActive(skillId, active) {
+    if (active) {
+        player.activeSkills.add(skillId);
+    } else {
+        player.activeSkills.delete(skillId);
+        for (let i = 0; i < player.skills.length; i++) {
+            if (player.skills[i] === skillId) player.skills[i] = null;
+        }
+    }
+}
+
 function updateSkillsPanel() {
     const list = document.getElementById('skills-list');
     let html = '';
@@ -1904,9 +1925,12 @@ function updateSkillsPanel() {
             html += `<div class="skill-entry"><span style="color:#555">Slot ${i + 1}: Empty</span></div>`;
         }
     }
-    // Show learned but not equipped
+    // Show learned, trained (active), but not equipped
     const equipped = new Set(player.skills.filter(Boolean));
-    const unequipped = [...player.learnedSkills].filter(id => !equipped.has(id)).sort((a, b) => SKILLS[a].name.localeCompare(SKILLS[b].name));
+    const byName = (a, b) => SKILLS[a].name.localeCompare(SKILLS[b].name);
+    const learnedUnequipped = [...player.learnedSkills].filter(id => !equipped.has(id));
+    const unequipped = learnedUnequipped.filter(id => player.activeSkills.has(id)).sort(byName);
+    const benched = learnedUnequipped.filter(id => !player.activeSkills.has(id)).sort(byName);
     const canInvokeFromPanel = phase === 'player' && !gameOver;
     if (unequipped.length > 0) {
         html += '<div style="color:#888;margin-top:8px;margin-bottom:4px;font-size:11px">LEARNED (click to equip)</div>';
@@ -1921,6 +1945,17 @@ function updateSkillsPanel() {
             html += `<div class="skill-entry" style="cursor:pointer" data-equip="${skillId}">
                 <div><span class="s-name" ${isUsable ? `data-use="${skillId}" style="${nameStyle}"` : `style="${dim}"`}>${skill.name}</span> <span class="s-cost" style="${dim}">(${skillCostLabel(skill, player)})</span></div>
                 <div class="s-desc" style="${dim}">${skill.desc}</div>
+            </div>`;
+        }
+    }
+    // Benched skills: learned but not trained — grayed and unavailable
+    if (benched.length > 0) {
+        html += '<div style="color:#888;margin-top:8px;margin-bottom:4px;font-size:11px">Latent</div>';
+        for (const skillId of benched) {
+            const skill = SKILLS[skillId];
+            html += `<div class="skill-entry" style="opacity:0.4">
+                <div><span class="s-name">${skill.name}</span> <span class="s-cost">(${skillCostLabel(skill, player)})</span></div>
+                <div class="s-desc">${skill.desc}</div>
             </div>`;
         }
     }
@@ -2134,13 +2169,13 @@ function togglePanel(id) {
 // DIALOGS
 // ================================================================
 
-function showDialog(title, bodyHtml, buttons, { verticalButtons = false } = {}) {
+function showDialog(title, bodyHtml, buttons) {
     changePhase('dialog');
     const overlay = document.getElementById('dialog-overlay');
     document.getElementById('dialog-title').textContent = title;
     document.getElementById('dialog-body').innerHTML = bodyHtml;
     const btnContainer = document.getElementById('dialog-buttons');
-    btnContainer.classList.toggle('vertical', verticalButtons);
+    btnContainer.classList.remove('vertical');
     btnContainer.innerHTML = '';
     for (const { label, cls, action } of buttons) {
         const btn = document.createElement('button');
@@ -2157,6 +2192,12 @@ function showDialog(title, bodyHtml, buttons, { verticalButtons = false } = {}) 
         btnContainer.appendChild(btn);
     }
     overlay.classList.remove('hidden');
+}
+
+// Same as showDialog, but stacks the buttons vertically (settlement menus).
+function showVerticalDialog(title, bodyHtml, buttons) {
+    showDialog(title, bodyHtml, buttons);
+    document.getElementById('dialog-buttons').classList.add('vertical');
 }
 
 function showOnceDialog(key, title, bodyHtml, buttons) {
@@ -2210,7 +2251,7 @@ function offerSettlementReward(originHexes) {
 }
 
 function showHavenDialog(poi) {
-    showDialog(POI_SYMBOLS[POI.HAVEN] + ' Haven', '<p>A place of safety amid the chaos.</p>', [
+    showVerticalDialog(POI_SYMBOLS[POI.HAVEN] + ' Haven', '<p>A place of safety amid the chaos.</p>', [
         {
             label: 'Rest', cls: 'primary', action: () => {
                 player.hp = player.maxHP();
@@ -2219,9 +2260,11 @@ function showHavenDialog(poi) {
                 logCombat('Fully rested.', 'log-heal');
             }
         },
-        { label: 'Shop', action: () => showShopDialog(poi) },
+        { label: 'Weaponsmith', action: () => showShopDialog(poi, 'weapon') },
+        { label: 'Magicsmith', action: () => showShopDialog(poi, 'magic') },
+        { label: 'Train', action: () => showTrainDialog(() => showHavenDialog(poi)) },
         { label: 'Leave' }
-    ], { verticalButtons: true });
+    ]);
 }
 
 // CROP_ICONS lives in config.js (used by bountiful_harvest in actions.js)
@@ -2251,10 +2294,10 @@ function restHeal() {
 
 function showVillageDialog(poi) {
     trySpawnVillageCrop(poi);
-    showDialog(POI_SYMBOLS[POI.VILLAGE] + ' Village', '<p>A brief respite from the wilds.</p>', [
+    showVerticalDialog(POI_SYMBOLS[POI.VILLAGE] + ' Village', '<p>A brief respite from the wilds.</p>', [
         { label: 'Rest', cls: 'primary', action: () => { restHeal(); } },
         { label: 'Leave' }
-    ], { verticalButtons: true });
+    ]);
 }
 
 // Sanctuary skill: rest in place in one cast — heal half HP/AE, roll the usual
@@ -2265,9 +2308,10 @@ function invokeSanctuary() {
     restHeal();
 }
 
-function showHutDialog(poi) {
+function showHutDialog(poi, reroll) {
+    const trainBtn = { label: 'Train', action: () => showTrainDialog(() => showHutDialog(poi, false)) };
     // 10% chance the Wise Man's skill refreshes to something the player hasn't learned
-    if (Rando.bool(0.10)) {
+    if (reroll && Rando.bool(0.10)) {
         const unlearnedPool = Object.values(SKILLS).filter(s => s.id !== 'restore' && !s.shopOnly && !skillLockedToScroll(s) && !player.learnedSkills.has(s.id));
         if (unlearnedPool.length > 0) {
             poi.skill = Rando.choice(unlearnedPool).id;
@@ -2280,22 +2324,22 @@ function showHutDialog(poi) {
     if (player.learnedSkills.has(poi.skill)) {
         showDialog(POI_SYMBOLS[POI.HUT] + " Wise Man's Hut",
             `<p>An old sage peers at you.</p><p style="color:#a1887f">"I have nothing to teach you at this time."</p>`,
-            [{ label: 'Leave', action: () => { player.mp = 0; } }]);
+            [trainBtn, { label: 'Leave', action: () => { player.mp = 0; } }]);
     } else {
         showDialog(POI_SYMBOLS[POI.HUT] + " Wise Man's Hut",
             `<p>The sage's eyes light up.</p><p style="color:#b388ff">"I can teach you <b>${skillName}</b>."</p><p class="s-cost">(${skillCostLabel(skill, player)})</p><p class="s-desc">${skill.desc}</p>`,
             [{
                 label: 'Learn', cls: 'primary', action: () => {
                     player.learnedSkills.add(poi.skill);
-                    const emptySlot = player.skills.indexOf(null);
-                    if (emptySlot >= 0) player.skills[emptySlot] = poi.skill;
+                    autoEquipIfActive(poi.skill);
                     player.mp = 0;
                     logCombat(`The Wise Man teaches ${skillName}!`, 'log-info');
                     updateSkillBar();
                     updateSkillsPanel();
                 }
             },
-            { label: 'Decline', action: () => { player.mp = 0; } }]);
+            trainBtn,
+            { label: 'Leave', action: () => { player.mp = 0; } }]);
     }
 }
 
@@ -2308,8 +2352,9 @@ function pickUpScroll(poi) {
 
     if (!player.learnedSkills.has(poi.skill)) {
         player.learnedSkills.add(poi.skill);
-        const emptySlot = player.skills.indexOf(null);
-        if (emptySlot >= 0) player.skills[emptySlot] = poi.skill;
+        // Scroll skills come pre-attuned — they start trained (active), not benched.
+        player.activeSkills.add(poi.skill);
+        autoEquipIfActive(poi.skill);
     }
     logCombat(`You unfurl a scroll and learn ${skill.name}!`, 'log-info');
     updateSkillBar();
@@ -2326,7 +2371,16 @@ function pickUpScroll(poi) {
         [{ label: 'Continue', cls: 'btn-primary' }]);
 }
 
-function showShopDialog(poi) {
+// Haven shops are split into two smiths. Each shows a different slice of the
+// same shopItems list (by magical/non-magical); skills are arcane knowledge so
+// they live with the Magicsmith. The Sell section is identical in both.
+const SMITHS = {
+    weapon: { title: 'Weaponsmith', buyFilter: equip => !equip.magical, showSkills: false },
+    magic:  { title: 'Magicsmith',  buyFilter: equip => equip.magical,   showSkills: true },
+};
+
+function showShopDialog(poi, kind) {
+    const smith = SMITHS[kind];
     if (Rando.bool(0.03)) {
         const newItem = rollMagicItem();
         poi.shopItems.push(newItem);
@@ -2338,6 +2392,7 @@ function showShopDialog(poi) {
         const equip = ALL_EQUIPMENT[item.id];
         if (!equip) continue;
         if (owned.has(item.id)) continue;
+        if (!smith.buyFilter(equip)) continue;
         const nameColor = equip.magical ? '#e040fb' : '#ccc';
         const shopPrice = item.price;
         bodyHtml += `<div class="shop-item">
@@ -2346,8 +2401,10 @@ function showShopDialog(poi) {
         </div>`;
     }
 
-    // Shop-only skills, listed after items
-    const skillsForSale = Object.values(SKILLS).filter(s => s.shopOnly && !player.learnedSkills.has(s.id));
+    // Shop-only skills (Magicsmith only), listed after items
+    const skillsForSale = smith.showSkills
+        ? Object.values(SKILLS).filter(s => s.shopOnly && !player.learnedSkills.has(s.id))
+        : [];
     if (skillsForSale.length > 0) {
         bodyHtml += '<div style="margin-top:12px;border-top:1px solid #333;padding-top:8px"><strong>Skills:</strong></div>';
         for (const skill of skillsForSale) {
@@ -2382,7 +2439,7 @@ function showShopDialog(poi) {
         }
     }
 
-    showDialog(POI_SYMBOLS[POI.HAVEN] + ' Shop', bodyHtml, [{ label: 'Done', action: () => { player.mp = 0; } }]);
+    showDialog(POI_SYMBOLS[POI.HAVEN] + ' ' + smith.title, bodyHtml, [{ label: 'Done', action: () => { player.mp = 0; } }]);
 
     // Wire up buy/sell buttons
     const body = document.getElementById('dialog-body');
@@ -2393,11 +2450,10 @@ function showShopDialog(poi) {
             if (player.gold < price) return;
             player.gold -= price;
             player.learnedSkills.add(skillId);
-            const emptySlot = player.skills.indexOf(null);
-            if (emptySlot >= 0) player.skills[emptySlot] = skillId;
+            autoEquipIfActive(skillId);
             logCombat(`Learned ${SKILLS[skillId].name}`, 'log-gold');
             refreshOpenPanels();
-            showShopDialog(poi);
+            showShopDialog(poi, kind);
         });
     });
     body.querySelectorAll('button[data-id]').forEach(btn => {
@@ -2409,7 +2465,7 @@ function showShopDialog(poi) {
                 player.inventory.push(id);
                 logCombat(`Bought ${ALL_EQUIPMENT[id].name}`, 'log-gold');
                 refreshOpenPanels();
-                showShopDialog(poi); // refresh
+                showShopDialog(poi, kind); // refresh
             }
         });
     });
@@ -2467,6 +2523,39 @@ function showShopDialog(poi) {
             refreshOpenPanels();
         });
     });
+}
+
+// Train panel (Magicsmith): a dual-list of learned skills. Left column = trained
+// (usable), right column = benched (unavailable). Each row holds the skill in one
+// column with an arrow pointing to the empty side; clicking it moves the skill.
+function showTrainDialog(onBack) {
+    const learned = [...player.learnedSkills].sort((a, b) => SKILLS[a].name.localeCompare(SKILLS[b].name));
+    let body = '<p style="color:#aaa;font-size:12px">Trained skills (left) are usable. Benched skills (right) are unavailable until trained.</p>';
+    body += '<div class="train-grid">';
+    body += '<div class="train-head">Trained</div><div class="train-head"></div><div class="train-head">Benched</div>';
+    for (const id of learned) {
+        const active = player.activeSkills.has(id);
+        const name = SKILLS[id].name;
+        const arrow = active
+            ? `<button class="train-arrow" data-bench="${id}" title="Bench">&gt;</button>`
+            : `<button class="train-arrow" data-train="${id}" title="Train">&lt;</button>`;
+        body += `<div class="train-cell">${active ? name : ''}</div>`;
+        body += `<div class="train-mid">${arrow}</div>`;
+        body += `<div class="train-cell">${active ? '' : name}</div>`;
+    }
+    body += '</div>';
+    showDialog(POI_SYMBOLS[POI.HAVEN] + ' Train', body, [
+        { label: 'Back', action: onBack }
+    ]);
+    const root = document.getElementById('dialog-body');
+    const move = (skillId, active) => {
+        setSkillActive(skillId, active);
+        refreshOpenPanels();
+        updateSkillBar();
+        showTrainDialog(onBack);
+    };
+    root.querySelectorAll('[data-train]').forEach(btn => btn.addEventListener('click', () => move(btn.dataset.train, true)));
+    root.querySelectorAll('[data-bench]').forEach(btn => btn.addEventListener('click', () => move(btn.dataset.bench, false)));
 }
 
 function ruinEnemiesNearby(poi) {
@@ -2622,9 +2711,7 @@ function showSkillChoiceDialog() {
         el.addEventListener('click', () => {
             const skillId = el.dataset.skill;
             player.learnedSkills.add(skillId);
-            // Auto-equip into first empty slot if available
-            const emptySlot = player.skills.indexOf(null);
-            if (emptySlot >= 0) player.skills[emptySlot] = skillId;
+            autoEquipIfActive(skillId);
             document.getElementById('dialog-overlay').classList.add('hidden');
             changePhase('player');
             logCombat(`Learned ${SKILLS[skillId].name}!`, 'log-info');
