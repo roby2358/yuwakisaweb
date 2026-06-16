@@ -2303,11 +2303,20 @@ function showHavenDialog(poi) {
 
 // CROP_ICONS lives in config.js (used by bountiful_harvest in actions.js)
 
-// On a kill, roll (maxSP - sp)/100 to drop a skill gem on a passable hex near the
-// fallen enemy — never on the kill hex, under the player, an existing gem, or a
-// POI. Prefer adjacent; widen out to 5 hexes only when nothing closer is free.
+// Gem-drop chance as a Beta(2,2) hump over SP progress (sp/maxSP): low up front,
+// peaking at the midpoint, tapering back to zero near the cap. 4·t·(1-t) is the
+// unit-height Beta(2,2) shape; GEM_DROP_PEAK_CHANCE scales its midpoint height.
+const GEM_DROP_PEAK_CHANCE = 0.25;
+function skillGemDropChance() {
+    const t = player.sp / player.maxSP;
+    return GEM_DROP_PEAK_CHANCE * 4 * t * (1 - t);
+}
+
+// On a kill, roll skillGemDropChance() to drop a skill gem on a passable hex near
+// the fallen enemy — never on the kill hex, under the player, an existing gem, or
+// a POI. Prefer adjacent; widen out to 5 hexes only when nothing closer is free.
 function trySpawnSkillGem(q, r) {
-    if (!Rando.bool((player.maxSP - player.sp) / 100)) return;
+    if (!Rando.bool(skillGemDropChance())) return;
     const valid = hexesInRange(q, r, 5).filter(n => {
         const h = world.getHex(n.q, n.r);
         return h && world.isPassable(h) && !h.poi && !h.skillGem
