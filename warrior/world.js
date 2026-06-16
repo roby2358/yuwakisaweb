@@ -4,6 +4,9 @@ import { TERRAIN, MAP_COLS, MAP_ROWS, MOVEMENT_COST, POI, WEAPONS, ARMORS, ARTIF
 import { hexKey, hexNeighbors, hexDistance, hexesInRange, bfsHexes } from './hex.js';
 import { Rando } from './rando.js';
 
+// Skill gems scattered at world-gen across the far (no Maw-bonus) half of the map.
+const SKILL_GEM_COUNT = 10;
+
 export class GameWorld {
     constructor() {
         this.hexes = null;
@@ -21,6 +24,7 @@ export class GameWorld {
             this._placePOIs();
             attempts++;
         } while (attempts < 20 && !this._validate());
+        this._placeSkillGems(SKILL_GEM_COUNT);
     }
 
     getHex(q, r) {
@@ -139,7 +143,7 @@ export class GameWorld {
                 const isEdge = row === 0 || row === MAP_ROWS - 1 || col === 0 || col === MAP_COLS - 1;
                 map.set(hexKey(q, r), {
                     q, r, col, row, elevation, isEdge,
-                    terrain: null, poi: null, goldDeposit: 0, shatteredCount: 0
+                    terrain: null, poi: null, goldDeposit: 0, shatteredCount: 0, skillGem: false
                 });
             }
         }
@@ -223,6 +227,24 @@ export class GameWorld {
         // can never close them and they waste an encounter slot.
         place(POI.BREACH, Rando.int(6, 8), false, this.mawDistanceMap());
         place(POI.HUT, Rando.int(8, 12), false);
+    }
+
+    // Scatter `count` skill gems on passable, unoccupied hexes in the far half of
+    // the map — the region with no Maw bonus. "Far half" mirrors mawProximityBonus:
+    // a hex qualifies when its Maw-distance is beyond half the maximum. Restricting
+    // to hexes reachable from the Maw keeps gems on the main landmass.
+    _placeSkillGems(count) {
+        const mawDist = this.mawDistanceMap();
+        if (!mawDist) return;
+        const maxDist = Math.max(...mawDist.values());
+        const threshold = maxDist * 0.5;
+        const pool = this.passableHexes().filter(h => {
+            if (h.poi || h.goldDeposit > 0) return false;
+            const d = mawDist.get(hexKey(h.q, h.r));
+            return d !== undefined && d > threshold;
+        });
+        Rando.shuffle(pool);
+        for (let i = 0; i < count && i < pool.length; i++) pool[i].skillGem = true;
     }
 
     _generateShopItems() {

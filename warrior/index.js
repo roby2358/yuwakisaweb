@@ -708,6 +708,9 @@ function killEnemy(enemy, opts = {}) {
         logCombat(`Opportunist: +${bonusGold}g`, 'log-gold');
     }
 
+    // Skill gem drop: likelier the further SP sits below its ceiling.
+    trySpawnSkillGem(enemy.q, enemy.r);
+
     // Settlement bounty: felling a monster or ruins-guardian near a haven/village rewards the player
     if (def.behavior === 'monster' || def.behavior === 'ruins-guardian') {
         offerSettlementReward([{ q: enemy.q, r: enemy.r }]);
@@ -1150,6 +1153,14 @@ function checkHexEntry() {
         hex.crop = false;
     }
 
+    // Skill gem pickup
+    if (hex.skillGem) {
+        hex.skillGem = false;
+        const gained = player.gainSP(1);
+        logCombat(gained > 0 ? '+1 SP (skill gem)' : 'Skill gem absorbed (SP already maxed).', 'log-info');
+        refreshOpenPanels();
+    }
+
     const enteredPoi = world.poiAt(player.q, player.r);
     if (enteredPoi) openPoiDialog(enteredPoi);
 }
@@ -1468,6 +1479,14 @@ function render() {
             ctx.font = 'bold ' + Math.floor(HEX_SIZE * 1.2) + 'px monospace';
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText(hex.crop || '\u{1FA99}', x, y);
+        }
+
+        // Skill gem indicator
+        if (hex.skillGem) {
+            ctx.fillStyle = '#4dd0e1';
+            ctx.font = 'bold ' + Math.floor(HEX_SIZE * 1.1) + 'px monospace';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('\u{1F48E}', x, y);
         }
 
         // POI symbols
@@ -1838,6 +1857,7 @@ function updateCharPanel() {
         }
         html += '</div>';
     }
+    html += `<div class="stat-row"><span>SP: ${player.sp} / ${player.maxSP}</span></div>`;
     panel.innerHTML = html;
 
     // Derived
@@ -2250,7 +2270,21 @@ function offerSettlementReward(originHexes) {
     return false;
 }
 
+// First time the player reaches a given haven or hut, award +1 SP. Keyed on the
+// POI id via seenDialogs so re-opening the menu (e.g. Back from Train) never
+// double-grants.
+function grantVisitSP(poi) {
+    const key = 'sp:' + poi.id;
+    if (player.seenDialogs.has(key)) return;
+    player.seenDialogs.add(key);
+    if (player.gainSP(1) > 0) {
+        logCombat('+1 SP', 'log-info');
+        refreshOpenPanels();
+    }
+}
+
 function showHavenDialog(poi) {
+    grantVisitSP(poi);
     showVerticalDialog(POI_SYMBOLS[POI.HAVEN] + ' Haven', '<p>A place of safety amid the chaos.</p>', [
         {
             label: 'Rest', cls: 'primary', action: () => {
@@ -2268,6 +2302,25 @@ function showHavenDialog(poi) {
 }
 
 // CROP_ICONS lives in config.js (used by bountiful_harvest in actions.js)
+
+// On a kill, roll (maxSP - sp)/100 to drop a skill gem on a passable hex near the
+// fallen enemy — never on the kill hex, under the player, an existing gem, or a
+// POI. Prefer adjacent; widen out to 5 hexes only when nothing closer is free.
+function trySpawnSkillGem(q, r) {
+    if (!Rando.bool((player.maxSP - player.sp) / 100)) return;
+    const valid = hexesInRange(q, r, 5).filter(n => {
+        const h = world.getHex(n.q, n.r);
+        return h && world.isPassable(h) && !h.poi && !h.skillGem
+            && !(n.q === player.q && n.r === player.r)
+            && !(n.q === q && n.r === r);
+    });
+    if (valid.length === 0) return;
+    const scored = valid.map(n => ({ n, dist: hexDistance(q, r, n.q, n.r) }));
+    const nearest = Math.min(...scored.map(s => s.dist));
+    const spot = Rando.choice(scored.filter(s => s.dist === nearest)).n;
+    world.getHex(spot.q, spot.r).skillGem = true;
+    logCombat('A skill gem glints nearby!', 'log-info');
+}
 
 function trySpawnVillageCrop(poi) {
     if (!Rando.bool(0.25)) return;
@@ -2309,6 +2362,7 @@ function invokeSanctuary() {
 }
 
 function showHutDialog(poi, reroll) {
+    grantVisitSP(poi);
     const trainBtn = { label: 'Train', action: () => showTrainDialog(() => showHutDialog(poi, false)) };
     // 10% chance the Wise Man's skill refreshes to something the player hasn't learned
     if (reroll && Rando.bool(0.10)) {
@@ -2352,9 +2406,12 @@ function pickUpScroll(poi) {
 
     if (!player.learnedSkills.has(poi.skill)) {
         player.learnedSkills.add(poi.skill);
-        // Scroll skills come pre-attuned — they start trained (active), not benched.
-        player.activeSkills.add(poi.skill);
-        autoEquipIfActive(poi.skill);
+        // Scroll skills come pre-attuned — they start trained (active) when an SP
+        // slot is free, otherwise Latent until trained at a Magicsmith.
+        if (player.freeSP() > 0) {
+            player.activeSkills.add(poi.skill);
+            autoEquipIfActive(poi.skill);
+        }
     }
     logCombat(`You unfurl a scroll and learn ${skill.name}!`, 'log-info');
     updateSkillBar();
@@ -2530,15 +2587,20 @@ function showShopDialog(poi, kind) {
 // column with an arrow pointing to the empty side; clicking it moves the skill.
 function showTrainDialog(onBack) {
     const learned = [...player.learnedSkills].sort((a, b) => SKILLS[a].name.localeCompare(SKILLS[b].name));
+    const free = player.freeSP();
     let body = '<p style="color:#aaa;font-size:12px">Trained skills (left) are usable. Benched skills (right) are unavailable until trained.</p>';
+    body += `<p style="color:${free > 0 ? '#b388ff' : '#888'};font-size:13px">SP available: ${free} of ${player.sp}</p>`;
     body += '<div class="train-grid">';
     body += '<div class="train-head">Trained</div><div class="train-head"></div><div class="train-head">Benched</div>';
     for (const id of learned) {
         const active = player.activeSkills.has(id);
         const name = SKILLS[id].name;
+        // Can't train a new skill with no free SP — leave a dimmed, dead arrow.
         const arrow = active
             ? `<button class="train-arrow" data-bench="${id}" title="Bench">&gt;</button>`
-            : `<button class="train-arrow" data-train="${id}" title="Train">&lt;</button>`;
+            : (free > 0
+                ? `<button class="train-arrow" data-train="${id}" title="Train">&lt;</button>`
+                : `<span class="train-arrow" style="opacity:0.3;cursor:default" title="No free SP">&lt;</span>`);
         body += `<div class="train-cell">${active ? name : ''}</div>`;
         body += `<div class="train-mid">${arrow}</div>`;
         body += `<div class="train-cell">${active ? '' : name}</div>`;
@@ -2549,6 +2611,7 @@ function showTrainDialog(onBack) {
     ]);
     const root = document.getElementById('dialog-body');
     const move = (skillId, active) => {
+        if (active && player.freeSP() <= 0) return;
         setSkillActive(skillId, active);
         refreshOpenPanels();
         updateSkillBar();

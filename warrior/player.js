@@ -24,6 +24,11 @@ export class Player {
         // Magicsmith. Seeded with restore so a fresh game can still heal.
         this.activeSkills = new Set(['restore']);
         this.skills = ['restore', null, null, null, null];
+        // Skill points: the room to keep skills active. The active-skill count can
+        // never exceed sp, and sp itself is capped at maxSP. Gained from visiting
+        // havens/huts and from skill gems.
+        this.sp = 3;
+        this.maxSP = 50;
         this.inventory = ['stick_bow'];
         this.statPoints = 0;
         this.pendingSkillChoice = false;
@@ -166,6 +171,18 @@ export class Player {
         return enemies.some(e => hexDistance(this.q, this.r, e.q, e.r) === 1);
     }
 
+    // SP not yet committed to an active skill — the room to train another.
+    freeSP() {
+        return this.sp - this.activeSkills.size;
+    }
+
+    // Add SP up to the maxSP ceiling; returns how much was actually gained.
+    gainSP(amount) {
+        const before = this.sp;
+        this.sp = Math.min(this.maxSP, this.sp + amount);
+        return this.sp - before;
+    }
+
     toJSON() {
         return {
             q: this.q, r: this.r,
@@ -174,7 +191,8 @@ export class Player {
             equipment: this.equipment,
             learnedSkills: [...this.learnedSkills],
             activeSkills: [...this.activeSkills],
-            skills: this.skills, inventory: this.inventory,
+            skills: this.skills, sp: this.sp, maxSP: this.maxSP,
+            inventory: this.inventory,
             statPoints: this.statPoints, pendingSkillChoice: this.pendingSkillChoice,
             mp: this.mp, warpShieldTurns: this.warpShieldTurns, reflectTurns: this.reflectTurns,
             seenDialogs: [...this.seenDialogs]
@@ -185,8 +203,7 @@ export class Player {
         const p = new Player(data.q, data.r);
         Object.assign(p, data);
         p.learnedSkills = new Set(data.learnedSkills);
-        // Older saves predate training — treat every learned skill as active.
-        p.activeSkills = new Set(data.activeSkills ?? data.learnedSkills);
+        p.activeSkills = new Set(data.activeSkills);
         p.seenDialogs = new Set(data.seenDialogs);
         p.movedThisTurn = false;
         p.hexesMovedThisTurn = 0;
