@@ -685,109 +685,118 @@ export const SKILLS = {
     },
     void_strike: {
         id: 'void_strike', name: 'Void Strike', cost: 1, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
-        weaponClass: 'melee', desc: 'Melee attack: weapon + Might + Warding. No counter-attack.', minLevel: 1
+        weaponClass: 'melee', scales: ['effectStrength'], tiers: [[5], [6], [8], [9], [10]],
+        desc: 'Melee: (weapon + Might + Warding) scaled by rank. No counter-attack.', minLevel: 1
     },
     sweep: {
         id: 'sweep', name: 'Sweep', cost: 3, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
-        weaponClass: 'melee', sweepCount: 3, desc: 'Melee: weapon + Might to the target, then up to 3 more enemies adjacent to you (4 total). No counter.', minLevel: 2
+        weaponClass: 'melee', scales: ['hitCount'], tiers: [[3], [3], [4], [4], [5]],
+        desc: 'Melee: weapon + Might to the target, then up to 3 more enemies adjacent to you (4 total). No counter.', minLevel: 2
     },
     stun_blow: {
         id: 'stun_blow', name: 'Stun', cost: 3, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
-        weaponClass: 'melee', stunBonus: 50, desc: 'Melee: weapon + Might. +50% stun chance. No counter.', minLevel: 2
+        weaponClass: 'melee', scales: ['effectStrength'], tiers: [[50], [60], [70], [85], [100]],
+        desc: 'Melee: weapon + Might. +50% stun chance. No counter.', minLevel: 2
     },
     phase_step: {
         id: 'phase_step', name: 'Phase Step', cost: 1, mpCost: 0, target: SKILL_TARGET.TELEPORT, usage: SKILL_USAGE.ANYTIME,
-        range: 3, desc: 'Teleport to visible hex within 3.', minLevel: 2
+        scales: ['range'], tiers: [[3], [3], [4], [4], [5]], desc: 'Teleport to visible hex within 3.', minLevel: 2
     },
     water_skip: {
         id: 'water_skip', name: 'Water Skip', cost: 3, mpCost: 1, target: SKILL_TARGET.WATER_SKIP, usage: SKILL_USAGE.ANYTIME,
-        range: 4, desc: 'Skip to a water hex within 4. From water, may skip to water or land.', minLevel: 2
+        scales: ['range'], tiers: [[4], [4], [5], [5], [6]], desc: 'Skip to a water hex within 4. From water, may skip to water or land.', minLevel: 2
     },
     mountain_skip: {
         id: 'mountain_skip', name: 'Mountain Skip', cost: 3, mpCost: 1, target: SKILL_TARGET.MOUNTAIN_SKIP, usage: SKILL_USAGE.ANYTIME,
-        range: 4, desc: 'Skip to a mountain hex within 4. From mountain, may skip to mountain or land.', minLevel: 2
+        scales: ['range'], tiers: [[4], [4], [5], [5], [6]], desc: 'Skip to a mountain hex within 4. From mountain, may skip to mountain or land.', minLevel: 2
     },
     cosmic_bolt: {
         id: 'cosmic_bolt', name: 'Cosmic Bolt', cost: 3, target: SKILL_TARGET.RANGED, usage: SKILL_USAGE.ANYTIME,
-        range: 4, baseDamage: 8, desc: 'Ranged: 8 + Warding damage.', minLevel: 2
+        scales: ['baseDamage', 'range'], tiers: [[8, 4], [10, 4], [12, 5], [14, 5], [16, 6]], desc: 'Ranged: 8 + Warding damage.', minLevel: 2
     },
     shockwave: {
         id: 'shockwave', name: 'Shockwave', cost: 2, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
-        range: 2, baseDamage: 4, desc: 'AoE: 4 + Might to enemies within 2. Pushes each 1 hex away.', minLevel: 2
+        scales: ['baseDamage', 'range'], tiers: [[4, 2], [6, 2], [8, 2], [10, 3], [12, 3]], desc: 'AoE: 4 + Might to enemies within 2. Pushes each 1 hex away.', minLevel: 2
     },
     siphon_strike: {
         id: 'siphon_strike', name: 'Siphon Strike', cost: 2, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
-        weaponClass: 'melee', desc: 'Melee: weapon + Might. Heal HP equal to damage dealt. No counter.', minLevel: 2
+        weaponClass: 'melee', scales: ['effectStrength'], tiers: [[5], [6], [8], [9], [10]],
+        desc: 'Melee: (weapon + Might) scaled by rank. Heal HP equal to damage dealt. No counter.', minLevel: 2
     },
     piercing_shot: {
         id: 'piercing_shot', name: 'Penetrating Shot', cost: 2, target: SKILL_TARGET.RANGED, usage: SKILL_USAGE.ANYTIME,
-        weaponClass: 'ranged', range: 4, baseDamage: 6, desc: 'Ranged: 6 + Reflex. Ignores defense.', minLevel: 2
+        weaponClass: 'ranged', range: 4, scales: ['baseDamage'], tiers: [[6], [8], [10], [12], [14]], desc: 'Ranged: 6 + Reflex. Ignores defense.', minLevel: 2
     },
     warp_shield: {
         id: 'warp_shield', name: 'Warp Shield', cost: 5, mpCost: 1, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
-        duration: 1, desc: 'Block all damage from enemies for one turn.', minLevel: 4
+        duration: 1, scales: ['effectStrength'], tiers: [[5], [6], [8], [9], [10]],
+        desc: 'Chance (rising with rank) to block all enemy damage for one turn.', minLevel: 4
     },
     reflect: {
         id: 'reflect', name: 'Reflect', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
-        duration: 1, takePercent: 10, reflectPercent: 90, successPercent: 90,
-        desc: 'Ends turn. Next enemy turn (melee only): 90% chance to take 10% (min 1) and reflect 90% (min 1); 10% chance the reflect fails and you eat full damage.',
+        duration: 1, takePercent: 10, reflectPercent: 90, scales: ['effectStrength'], tiers: [[4], [5], [7], [8], [9]],
+        desc: 'Ends turn. Next enemy turn (melee only): a chance (rising with rank) to take 10% (min 1) and reflect 90% (min 1); otherwise you eat full damage.',
         minLevel: 4
     },
     channel: {
         id: 'channel', name: 'Channel Aether', cost: 0, mpCost: 0, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
-        desc: 'Burn HP for AE at 4:1, up to filling AE or half current HP. Min 1 AE — blood from a stone.',
+        scales: ['effectStrength'], tiers: [[4], [4], [3], [3], [2]],
+        desc: 'Burn HP for AE (ratio improves with rank), up to filling AE or half current HP. Min 1 AE — blood from a stone.',
         scrollOnly: true, panelInvoke: true,
         minLevel: 3
     },
     breach_pulse: {
         id: 'breach_pulse', name: 'Breach Pulse', cost: 3, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
-        range: 2, baseDamage: 5, desc: 'AoE: 5 + Warding to enemies within 2.', minLevel: 4
+        scales: ['baseDamage', 'range'], tiers: [[5, 2], [7, 2], [9, 2], [11, 3], [13, 3]], desc: 'AoE: 5 + Warding to enemies within 2.', minLevel: 4
     },
     chain_lightning: {
         id: 'chain_lightning', name: 'Chain Lightning', cost: 3, target: SKILL_TARGET.RANGED, usage: SKILL_USAGE.ANYTIME,
-        range: 3, baseDamage: 6, chainCount: 2, chainRange: 2,
+        range: 3, scales: ['baseDamage', 'hitCount', 'effectStrength'], tiers: [[6, 2, 2], [8, 2, 2], [10, 3, 2], [12, 3, 3], [14, 4, 3]],
         desc: 'Ranged: 6 + Warding. Chains to 2 nearby enemies for full dmg.', minLevel: 4
     },
     immolate: {
         id: 'immolate', name: 'Immolate', cost: 1, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
-        weaponClass: 'melee', burnDamage: 6, desc: 'Melee: weapon + Might. Target burns for 6 next turn. No counter.', minLevel: 4
+        weaponClass: 'melee', scales: ['effectStrength'], tiers: [[6], [8], [10], [12], [14]], desc: 'Melee: weapon + Might. Target burns for 6 next turn. No counter.', minLevel: 4
     },
     mending_light: {
         id: 'mending_light', name: 'Mending Light', cost: 2, mpCost: 1, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
-        baseHeal: 10, desc: 'Heal 10 + Vigor*3 HP. Costs 1 MP.', minLevel: 6
+        scales: ['effectStrength'], tiers: [[10], [14], [18], [22], [26]], desc: 'Heal 10 + Vigor*3 HP. Costs 1 MP.', minLevel: 6
     },
     gravity_well: {
         id: 'gravity_well', name: 'Gravity Well', cost: 3, mpCost: 1, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
-        range: 5, desc: 'Pull enemies within 5 one hex closer.', minLevel: 6
+        scales: ['range'], tiers: [[5], [5], [6], [6], [7]], desc: 'Pull enemies within 5 one hex closer.', minLevel: 6
     },
     sundering_blow: {
         id: 'sundering_blow', name: 'Shredding Blow', cost: 2, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
-        weaponClass: 'melee', shredAmount: 3, desc: 'Melee: weapon + Might. Permanently shred 3 enemy def. No counter.', minLevel: 6
+        weaponClass: 'melee', scales: ['effectStrength'], tiers: [[3], [4], [5], [6], [7]], desc: 'Melee: weapon + Might. Permanently shred 3 enemy def. No counter.', minLevel: 6
     },
     meteor: {
         id: 'meteor', name: 'Meteor', cost: 4, target: SKILL_TARGET.RANGED_AOE, usage: SKILL_USAGE.ANYTIME,
-        range: 4, aoeRange: 1, baseDamage: 8, desc: 'Target hex: 8 + Warding to all enemies within 1.', minLevel: 6
+        scales: ['baseDamage', 'range', 'effectStrength'], tiers: [[8, 4, 1], [10, 4, 1], [12, 5, 1], [14, 5, 2], [16, 6, 2]], desc: 'Target hex: 8 + Warding to all enemies within 1.', minLevel: 6
     },
     dimensional_rend: {
         id: 'dimensional_rend', name: 'Dimensional Rend', cost: 4, hpCost: 10, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
-        weaponClass: 'melee', desc: 'Melee: weapon damage * 3. Costs 10 HP. Must be adjacent.', minLevel: 8
+        weaponClass: 'melee', scales: ['effectStrength'], tiers: [[20], [28], [35], [43], [50]],
+        desc: 'Melee: weapon damage scaled by rank (2x–5x). Costs 10 HP. Must be adjacent.', minLevel: 8
     },
     execute: {
         id: 'execute', name: 'Execute', cost: 3, target: SKILL_TARGET.MELEE_EXECUTE, usage: SKILL_USAGE.ANYTIME,
-        weaponClass: 'melee', desc: 'Melee: weapon*2 + Might*2. Only targets enemies below 50% HP.', minLevel: 8
+        weaponClass: 'melee', scales: ['effectStrength'], tiers: [[20], [28], [35], [43], [50]],
+        desc: 'Melee: (weapon + Might) scaled by rank (2x–5x). Only targets enemies below 50% HP.', minLevel: 8
     },
     ricochet: {
         id: 'ricochet', name: 'Ricochet', cost: 3, target: SKILL_TARGET.RANGED, usage: SKILL_USAGE.ANYTIME,
-        weaponClass: 'ranged', range: 4, baseDamage: 5, bounceCount: 2, bounceRange: 2,
+        weaponClass: 'ranged', range: 4, baseDamage: 5,
+        scales: ['effectStrength', 'hitCount'], tiers: [[3, 2], [3, 3], [4, 3], [4, 4], [5, 5]],
         desc: 'Ranged: 5 + Reflex. Bounces to 2 more enemies within 2.', minLevel: 8
     },
     starfall: {
         id: 'starfall', name: 'Starfall', cost: 5, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
-        range: 3, baseDamage: 15, desc: 'AoE: 15 + Warding*2 to enemies within 3.', minLevel: 10
+        scales: ['baseDamage', 'range'], tiers: [[15, 3], [18, 3], [21, 3], [24, 4], [28, 4]], desc: 'AoE: 15 + Warding*2 to enemies within 3.', minLevel: 10
     },
     void_salvo: {
         id: 'void_salvo', name: 'Void Salvo', cost: 4, target: SKILL_TARGET.RANGED, usage: SKILL_USAGE.ANYTIME,
-        weaponClass: 'ranged', range: 3, baseDamage: 5, shotCount: 3, desc: 'Fire 3 shots: each deals 5 + Reflex.', minLevel: 10
+        weaponClass: 'ranged', range: 3, scales: ['baseDamage', 'hitCount'], tiers: [[5, 3], [6, 3], [7, 4], [8, 4], [10, 5]], desc: 'Fire 3 shots: each deals 5 + Reflex.', minLevel: 10
     },
     recall: {
         id: 'recall', name: 'Recall', cost: 5, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
@@ -796,27 +805,28 @@ export const SKILLS = {
     // ---- Non-combat skills ----
     aether_tap: {
         id: 'aether_tap', name: 'Aether Tap', cost: 0, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.PRISTINE,
-        range: 2, desc: 'Draw Aether from healthy land, water, and mountains. +1 AE, plus +1 per 3 clean hexes within 2. Ends turn.', panelInvoke: true, minLevel: 2
+        scales: ['range'], tiers: [[2], [2], [3], [3], [4]], desc: 'Draw Aether from healthy land, water, and mountains. +1 AE, plus +1 per 3 clean hexes within 2. Ends turn.', panelInvoke: true, minLevel: 2
     },
     farsight: {
         id: 'farsight', name: 'Farsight', cost: 2, mpCost: 0, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.NON_COMBAT,
-        range: 12, desc: 'Reveal all hexes within 12.', panelInvoke: true, minLevel: 2
+        scales: ['range'], tiers: [[12], [14], [16], [18], [20]], desc: 'Reveal all hexes within 12.', panelInvoke: true, minLevel: 2
     },
     prospect: {
         id: 'prospect', name: 'Prospect', cost: 1, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
-        revealRange: 8, desc: 'Reveal gold hexes within 8. 20% chance to discover a gold deposit.', panelInvoke: true, minLevel: 4
+        scales: ['range'], tiers: [[8], [9], [10], [11], [12]], desc: 'Reveal gold hexes within 8. 20% chance to discover a gold deposit.', panelInvoke: true, minLevel: 4
     },
     salvage: {
         id: 'salvage', name: 'Salvage', cost: 0, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.PRISTINE,
-        range: 1, desc: 'Restore adjacent shattered hexes and reveals gold. Ends turn.', panelInvoke: true, minLevel: 4
+        scales: ['range'], tiers: [[1], [1], [2], [2], [3]], desc: 'Restore adjacent shattered hexes and reveals gold. Ends turn.', panelInvoke: true, minLevel: 4
     },
     skill_seek: {
         id: 'skill_seek', name: 'Skill Seek', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
-        desc: 'Meditate: 5% per level chance to learn a new skill.', panelInvoke: true, minLevel: 6
+        scales: ['effectStrength'], tiers: [[5], [9], [13], [16], [20]],
+        desc: 'Meditate: a chance (5%–20% by rank) to learn a new skill.', panelInvoke: true, minLevel: 6
     },
     spirit_walk: {
         id: 'spirit_walk', name: 'Spirit Walk', cost: 3, target: SKILL_TARGET.TELEPORT_REVEALED, usage: SKILL_USAGE.NON_COMBAT,
-        range: 6, desc: 'Teleport to any revealed hex within 6. Ends turn.', panelInvoke: true, minLevel: 6
+        scales: ['range'], tiers: [[6], [7], [8], [9], [10]], desc: 'Teleport to any revealed hex within 6. Ends turn.', panelInvoke: true, minLevel: 6
     },
     ground_weeps: {
         id: 'ground_weeps', name: 'Ground Weeps', cost: 4, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.NON_COMBAT,
@@ -824,37 +834,39 @@ export const SKILLS = {
     },
     sanctuary: {
         id: 'sanctuary', name: 'Sanctuary', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
-        desc: 'Conjure a fleeting village and rest in it at once: heal half HP/AE, then end turn. Must be non-POI terrain.', panelInvoke: true, minLevel: 8
+        scales: ['effectStrength'], tiers: [[4], [4], [3], [3], [2]],
+        desc: 'Conjure a fleeting village and rest at once: heal a fraction of HP/AE (¼–½ by rank), then end turn. Must be non-POI terrain.', panelInvoke: true, minLevel: 8
     },
     // ---- Special combat skills ----
     loot: {
         id: 'loot', name: 'Loot', cost: 0, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
-        desc: "Take 0 to enemy's might in gold from adjacent enemy instead of dealing damage. Ends turn.", minLevel: 2
+        scales: ['effectStrength'], tiers: [[8], [14], [19], [25], [30]],
+        desc: "Take gold (scaled by rank) from an adjacent enemy instead of dealing damage. Ends turn.", minLevel: 2
     },
     havens_light: {
         id: 'havens_light', name: "Haven's Light", cost: 3, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
-        range: 3, baseDamage: 20, desc: "AoE: 20 + Warding dmg within 3. Only usable at haven or village.", minLevel: 6
+        scales: ['baseDamage', 'range'], tiers: [[20, 3], [24, 3], [28, 3], [32, 4], [36, 4]], desc: "AoE: 20 + Warding dmg within 3. Only usable at haven or village.", minLevel: 6
     },
     // ---- Peaceful skills ----
     aether_blast: {
         id: 'aether_blast', name: 'Aether Blast', cost: 2, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
-        range: 2, baseDamage: 3, aetherPerHit: 3,
+        aetherPerHit: 3, scales: ['baseDamage', 'range'], tiers: [[3, 2], [4, 2], [5, 2], [6, 3], [7, 3]],
         desc: 'AoE: 3 + Warding/2 dmg to enemies within 2. Gain +3 AE per enemy hit. Ends turn.', minLevel: 4
     },
     lifedrain_blast: {
         id: 'lifedrain_blast', name: 'Lifedrain Blast', cost: 2, mpCost: 2, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
-        range: 2, baseDamage: 3, hpPerHit: 2,
+        hpPerHit: 2, scales: ['baseDamage', 'range'], tiers: [[3, 2], [4, 2], [5, 2], [6, 3], [7, 3]],
         desc: 'AoE: 3 + Vigor dmg to enemies within 2. Gain +2 HP per enemy hit.', minLevel: 4
     },
     bountiful_harvest: {
         id: 'bountiful_harvest', name: 'Bountiful Harvest', cost: 4, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
-        range: 2, desc: 'Sprout crops (1-3g each) on all healthy hexes within 2. Ends turn.', panelInvoke: true, minLevel: 4
+        scales: ['range'], tiers: [[2], [2], [3], [3], [4]], desc: 'Sprout crops (1-3g each) on all healthy hexes within 2. Ends turn.', panelInvoke: true, minLevel: 4
     },
     // ---- Shop-only skills (not in random skill pools) ----
     commune: {
         id: 'commune', name: 'Commune', cost: 2, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
-        shopPrice: 2000, shopOnly: true,
-        desc: 'Reveal all POI locations on the map. Ends turn.', minLevel: 4
+        shopPrice: 2000, shopOnly: true, scales: ['range'], tiers: [[38], [66], [94], [122], [150]],
+        desc: 'Reveal POI locations within range (¼-map to full map by rank). Ends turn.', minLevel: 4
     },
     respec: {
         id: 'respec', name: 'Retrain', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
@@ -876,3 +888,20 @@ export const SKILLS = {
 
 // Levels at which skill choices are offered
 export const SKILL_UNLOCK_LEVELS = [2, 4, 6, 8, 10];
+
+// A tiered skill carries `scales` (the axis field names) and `tiers` (one tuple
+// per rank, 1..SKILL_MAX_RANK). Rank R reads tiers[R-1], whose values are zipped
+// onto the named axes. "Just do it" skills carry neither and never scale.
+export const SKILL_MAX_RANK = 5;
+
+// Resolve a skill def to its concrete effect at `rank`. Untiered skills return
+// unchanged (same object, identity preserved). Tiered skills overlay this rank's
+// tuple onto the named axes, leaving all unscaled fields (cost, range fallbacks,
+// aetherPerHit, …) to pass through from the base def.
+export function effectiveSkill(skill, rank) {
+    if (!skill || !skill.tiers) return skill;
+    const tuple = skill.tiers[rank - 1];
+    const scaled = {};
+    skill.scales.forEach((axis, i) => { scaled[axis] = tuple[i]; });
+    return { ...skill, ...scaled };
+}

@@ -29,6 +29,10 @@ export class Player {
         // havens/huts and from skill gems.
         this.sp = 3;
         this.maxSP = 50;
+        // Per-skill rank (1..SKILL_MAX_RANK) for tiered skills. Absent = rank 1.
+        // Skill advancement (spending SP to raise ranks) is not wired yet, so this
+        // stays empty for now and every tiered skill resolves at rank 1.
+        this.skillRanks = {};
         this.inventory = ['stick_bow'];
         this.statPoints = 0;
         this.pendingSkillChoice = false;
@@ -176,6 +180,13 @@ export class Player {
         return this.sp - this.activeSkills.size;
     }
 
+    // Current rank of a skill, the single source of truth for "what level is this
+    // skill." Floors at 1: a skill with no stored rank is at its base tier.
+    rankOf(skillId) {
+        const rank = this.skillRanks[skillId];
+        return rank === undefined ? 1 : rank;
+    }
+
     // Add SP up to the maxSP ceiling; returns how much was actually gained.
     gainSP(amount) {
         const before = this.sp;
@@ -192,6 +203,7 @@ export class Player {
             learnedSkills: [...this.learnedSkills],
             activeSkills: [...this.activeSkills],
             skills: this.skills, sp: this.sp, maxSP: this.maxSP,
+            skillRanks: this.skillRanks,
             inventory: this.inventory,
             statPoints: this.statPoints, pendingSkillChoice: this.pendingSkillChoice,
             mp: this.mp, warpShieldTurns: this.warpShieldTurns, reflectTurns: this.reflectTurns,

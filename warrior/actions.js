@@ -21,7 +21,7 @@
 
 import {
     POI, ENEMY_TYPE, TERRAIN, STARTING_STATS, CROP_ICONS,
-    SKILLS, UNSHATTERED_VERSION, UNDISTRESSED_VERSION, DISTRESSED_VERSION,
+    SKILLS, effectiveSkill, UNSHATTERED_VERSION, UNDISTRESSED_VERSION, DISTRESSED_VERSION,
     isChaosTerrain, weaponIsRanged
 } from './config.js';
 import { hexKey, hexNeighbors, hexDistance, hexesInRange } from './hex.js';
@@ -711,7 +711,9 @@ export class SkillAction extends Action {
     constructor(ctx, skillId, targetQ, targetR) {
         super(ctx);
         this.skillId = skillId;
-        this.skill = SKILLS[skillId];
+        // Resolve to this skill's current tier so every handler reads scaled
+        // values (damage, range, counts) through action.skill transparently.
+        this.skill = effectiveSkill(SKILLS[skillId], ctx.player.rankOf(skillId));
         this.targetQ = targetQ;
         this.targetR = targetR;
     }
@@ -863,7 +865,8 @@ function executeVoidStrike(action) {
     const { player, em } = action.ctx;
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
-    const dmg = matchedWeaponDamage(player, action.skill) + player.stats.might + player.stats.warding;
+    const base = matchedWeaponDamage(player, action.skill) + player.stats.might + player.stats.warding;
+    const dmg = Math.round(base * action.skill.effectStrength / 5);
     new WeaponStrike(action, dmg, 'Void Strike', 'primary').apply(enemy);
 }
 
@@ -921,7 +924,8 @@ function executeSiphonStrike(action) {
     const { player, em, logCombat } = action.ctx;
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
-    const dmg = matchedWeaponDamage(player, action.skill) + player.stats.might;
+    const base = matchedWeaponDamage(player, action.skill) + player.stats.might;
+    const dmg = Math.round(base * action.skill.effectStrength / 10);
     const strike = new WeaponStrike(action, dmg, 'Siphon Strike', 'primary');
     strike.apply(enemy);
     if (strike.totalDealt > 0) {
@@ -957,8 +961,9 @@ function executeChannel(action) {
         logCombat('Channel Aether: already at max AE.', 'log-info');
         return;
     }
-    const hpLost = Math.min(aeDeficit * 4, Math.floor(player.hp / 2));
-    const aeGain = Math.max(1, Math.floor(hpLost / 4));
+    const ratio = action.skill.effectStrength;
+    const hpLost = Math.min(aeDeficit * ratio, Math.floor(player.hp / 2));
+    const aeGain = Math.max(1, Math.floor(hpLost / ratio));
     player.hp -= hpLost;
     player.aether = Math.min(player.maxAether(), player.aether + aeGain);
     logCombat(`Channel Aether: -${hpLost} HP, +${aeGain} AE`, 'log-info');
@@ -976,7 +981,7 @@ function executeChainLightning(action) {
     const skill = action.skill;
     const dmg = skill.baseDamage + player.stats.warding;
     dealDamageToEnemy(enemy, dmg, 'Chain Lightning', { stunBucket: 'other' });
-    action.chainBounceRaw('Chain Lightning', dmg, action.targetQ, action.targetR, skill.chainCount, skill.chainRange, new Set([enemy]), 0, 'other');
+    action.chainBounceRaw('Chain Lightning', dmg, action.targetQ, action.targetR, skill.hitCount, skill.effectStrength, new Set([enemy]), 0, 'other');
 }
 
 // Melee weapon skill: weapon + Might to the targeted enemy, carrying one
@@ -990,20 +995,20 @@ function mightWeaponSkill(action, label, options) {
 }
 
 function executeImmolate(action) {
-    mightWeaponSkill(action, 'Immolate', { skillBurn: action.skill.burnDamage });
+    mightWeaponSkill(action, 'Immolate', { skillBurn: action.skill.effectStrength });
 }
 
 function executeSweep(action) {
-    mightWeaponSkill(action, 'Sweep', { skillSweep: action.skill.sweepCount });
+    mightWeaponSkill(action, 'Sweep', { skillSweep: action.skill.hitCount });
 }
 
 function executeStunBlow(action) {
-    mightWeaponSkill(action, 'Stun', { skillStun: action.skill.stunBonus });
+    mightWeaponSkill(action, 'Stun', { skillStun: action.skill.effectStrength });
 }
 
 function executeMendingLight(action) {
     const { player, logCombat } = action.ctx;
-    const heal = action.skill.baseHeal + player.stats.vigor * 3;
+    const heal = action.skill.effectStrength + player.stats.vigor * 3;
     player.hp = Math.min(player.maxHP(), player.hp + heal);
     logCombat(`Healed ${heal} HP`, 'log-heal');
 }
@@ -1028,13 +1033,13 @@ function executeGravityWell(action) {
 }
 
 function executeSunderingBlow(action) {
-    mightWeaponSkill(action, 'Shredding Blow', { skillShred: action.skill.shredAmount });
+    mightWeaponSkill(action, 'Shredding Blow', { skillShred: action.skill.effectStrength });
 }
 
 function executeMeteor(action) {
     const { player, logCombat } = action.ctx;
     const dmg = action.skill.baseDamage + player.stats.warding;
-    action.applyAoeDamageAt('Meteor', dmg, action.targetQ, action.targetR, action.skill.aoeRange, 'other');
+    action.applyAoeDamageAt('Meteor', dmg, action.targetQ, action.targetR, action.skill.effectStrength, 'other');
     logCombat('Meteor!', 'log-info');
 }
 
@@ -1050,14 +1055,16 @@ function executeDimensionalRend(action) {
         logCombat('Health too low — the rift fizzles.', 'log-info');
         return;
     }
-    new WeaponStrike(action, matchedWeaponDamage(player, action.skill) * 3, 'Dimensional Rend', 'other').apply(enemy);
+    const dmg = Math.round(matchedWeaponDamage(player, action.skill) * action.skill.effectStrength / 10);
+    new WeaponStrike(action, dmg, 'Dimensional Rend', 'other').apply(enemy);
 }
 
 function executeExecute(action) {
     const { player, em } = action.ctx;
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
-    const dmg = matchedWeaponDamage(player, action.skill) * 2 + player.stats.might * 2;
+    const base = matchedWeaponDamage(player, action.skill) + player.stats.might;
+    const dmg = Math.round(base * action.skill.effectStrength / 10);
     new WeaponStrike(action, dmg, 'Execute', 'primary').apply(enemy);
 }
 
@@ -1069,7 +1076,7 @@ function executeRicochet(action) {
     const dmg = skill.baseDamage + player.stats.reflex;
     new RangedStrike(action, dmg, 'Ricochet', 'other', {
         suppressWeaponMulti: true,
-        skillChain: { label: 'Ricochet', bounceCount: skill.bounceCount, bounceRange: skill.bounceRange }
+        skillChain: { label: 'Ricochet', bounceCount: skill.hitCount, bounceRange: skill.effectStrength }
     }).apply(enemy);
 }
 
@@ -1083,7 +1090,7 @@ function executeVoidSalvo(action) {
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
     const dmg = action.skill.baseDamage + player.stats.reflex;
-    new RangedStrike(action, dmg, 'Salvo', 'other', { hitCount: action.skill.shotCount, suppressWeaponMulti: true }).apply(enemy);
+    new RangedStrike(action, dmg, 'Salvo', 'other', { hitCount: action.skill.hitCount, suppressWeaponMulti: true }).apply(enemy);
 }
 
 function executeRecall(action) {
@@ -1139,7 +1146,7 @@ function executeFarsight(action) {
 function executeProspect(action) {
     const { player, world, logCombat } = action.ctx;
     let revealed = 0;
-    for (const h of hexesInRange(player.q, player.r, action.skill.revealRange)) {
+    for (const h of hexesInRange(player.q, player.r, action.skill.range)) {
         const hex = world.getHex(h.q, h.r);
         if (hex && hex.goldDeposit > 0) {
             const key = hexKey(h.q, h.r);
@@ -1163,9 +1170,11 @@ function executeProspect(action) {
 }
 
 function executeCommune(action) {
-    const { world, logCombat } = action.ctx;
+    const { player, world, logCombat } = action.ctx;
+    const range = action.skill.range;
     let poiCount = 0;
     for (const poi of world.pois) {
+        if (hexDistance(player.q, player.r, poi.q, poi.r) > range) continue;
         const key = hexKey(poi.q, poi.r);
         if (!world.revealed.has(key)) poiCount++;
         world.revealed.add(key);
@@ -1194,7 +1203,7 @@ function executeSalvage(action) {
 
 function executeSkillSeek(action) {
     const { player, logCombat, showSkillChoiceDialog } = action.ctx;
-    const chance = player.level * 0.05;
+    const chance = action.skill.effectStrength / 100;
     if (Rando.bool(chance)) {
         logCombat('Insight! A new skill reveals itself!', 'log-info');
         player.pendingSkillChoice = true;
@@ -1269,9 +1278,10 @@ function executeLoot(action) {
     // Chain/cleave/sweep weapon affixes extend the grab to nearby enemies,
     // each robbed for up to its own might (same roll as the primary target).
     const targets = [enemy, ...action.meleeAffixTargets(player.weapon(), enemy)];
+    const mult = action.skill.effectStrength / 10;
     let total = 0;
     for (const target of targets) {
-        const goldStolen = Rando.int(0, em.getDef(target.type).attack);
+        const goldStolen = Rando.int(0, Math.floor(em.getDef(target.type).attack * mult));
         player.gold += goldStolen;
         victory.goldCollected += goldStolen;
         total += goldStolen;

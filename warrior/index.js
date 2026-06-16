@@ -32,7 +32,7 @@ import {
     EQUIP_SLOT, WEAPONS, ARMORS, ARTIFACTS, ALL_EQUIPMENT, NON_MAGICAL_ITEMS, CROP_ICONS,
     rollMagicItem, resetEquipment,
     isChaosTerrain, SELL_PRICE_RATIO,
-    SKILL_TARGET, SKILL_USAGE, SKILLS, SKILL_UNLOCK_LEVELS,
+    SKILL_TARGET, SKILL_USAGE, SKILLS, effectiveSkill, SKILL_UNLOCK_LEVELS,
     SHATTERED_VERSION, UNSHATTERED_VERSION, DISTRESSED_VERSION, UNDISTRESSED_VERSION,
     weaponIsRanged
 } from './config.js';
@@ -588,8 +588,12 @@ function dealDamageToPlayer(damage, source, isSkillDamage, opts = {}) {
         return { dealt: 0, avoided: true };
     }
     if (player.warpShieldTurns > 0) {
-        logCombat('Warp Shield absorbed the hit!', 'log-info');
-        return { dealt: 0, avoided: true };
+        const ws = effectiveSkill(SKILLS.warp_shield, player.rankOf('warp_shield'));
+        if (Rando.bool(ws.effectStrength / 10)) {
+            logCombat('Warp Shield absorbed the hit!', 'log-info');
+            return { dealt: 0, avoided: true };
+        }
+        logCombat('Warp Shield flickers — the hit lands.', 'log-info');
     }
     if (Math.random() * 100 < player.dodge()) {
         logCombat('Dodged!', 'log-info');
@@ -601,8 +605,8 @@ function dealDamageToPlayer(damage, source, isSkillDamage, opts = {}) {
     let dealt = Math.max(1, rolled - def);
     let reflected = 0;
     if (player.reflectTurns > 0 && opts.attacker && !opts.isRanged) {
-        const r = SKILLS.reflect;
-        if (Rando.bool(r.successPercent / 100)) {
+        const r = effectiveSkill(SKILLS.reflect, player.rankOf('reflect'));
+        if (Rando.bool(r.effectStrength / 10)) {
             reflected = Math.max(1, Math.round(dealt * r.reflectPercent / 100));
             dealt = Math.max(1, Math.round(dealt * r.takePercent / 100));
         } else {
@@ -903,7 +907,8 @@ function effectiveSkillRange(skill) {
 }
 
 function getSkillTargets(skillId) {
-    const skill = SKILLS[skillId];
+    // Resolve to the current tier so targeting ranges track the skill's level.
+    const skill = effectiveSkill(SKILLS[skillId], player.rankOf(skillId));
     if (!skill) return new Set();
     // Haven's Light: only targetable at haven or village
     if (skillId === 'havens_light') {
@@ -2345,10 +2350,10 @@ function trySpawnVillageCrop(poi) {
 }
 
 // Heal half max HP/AE and burn remaining MP — shared by village Rest and Sanctuary.
-function restHeal() {
-    const healAmt = Math.floor(player.maxHP() * 0.5);
+function restHeal(fraction) {
+    const healAmt = Math.floor(player.maxHP() * fraction);
     player.hp = Math.min(player.maxHP(), player.hp + healAmt);
-    const aeAmt = Math.floor(player.maxAether() * 0.5);
+    const aeAmt = Math.floor(player.maxAether() * fraction);
     player.aether = Math.min(player.maxAether(), player.aether + aeAmt);
     player.mp = 0;
     logCombat(`Rested: +${healAmt} HP, +${aeAmt} AE`, 'log-heal');
@@ -2357,7 +2362,7 @@ function restHeal() {
 function showVillageDialog(poi) {
     trySpawnVillageCrop(poi);
     showVerticalDialog(POI_SYMBOLS[POI.VILLAGE] + ' Village', '<p>A brief respite from the wilds.</p>', [
-        { label: 'Rest', cls: 'primary', action: () => { restHeal(); } },
+        { label: 'Rest', cls: 'primary', action: () => { restHeal(0.5); } },
         { label: 'Leave' }
     ]);
 }
@@ -2367,7 +2372,8 @@ function showVillageDialog(poi) {
 function invokeSanctuary() {
     logCombat('Sanctuary! You rest in the wilds.', 'log-heal');
     trySpawnVillageCrop({ q: player.q, r: player.r });
-    restHeal();
+    const sanct = effectiveSkill(SKILLS.sanctuary, player.rankOf('sanctuary'));
+    restHeal(1 / sanct.effectStrength);
 }
 
 function showHutDialog(poi, reroll) {
