@@ -20,7 +20,7 @@ export class Player {
         this.equipment = { weapon: 'rusty_blade', armor: 'worn_leather', artifact: null };
         this.learnedSkills = new Set(['restore']);
         // Trained/usable skills (the Train panel's left column). Skills not in
-        // this set are benched: learned but unavailable until trained at a
+        // this set are latent: learned but unavailable until trained at a
         // Magicsmith. Seeded with restore so a fresh game can still heal.
         this.activeSkills = new Set(['restore']);
         this.skills = ['restore', null, null, null, null];
@@ -175,9 +175,18 @@ export class Player {
         return enemies.some(e => hexDistance(this.q, this.r, e.q, e.r) === 1);
     }
 
-    // SP not yet committed to an active skill — the room to train another.
+    // Total SP an active skill at `rank` consumes. Each step costs one more than
+    // the last (+1 to activate, then +2, +3, +4, +5), so rank R is the Rth
+    // triangular number: 1, 3, 6, 10, 15.
+    rankSPCost(rank) {
+        return rank * (rank + 1) / 2;
+    }
+
+    // SP not yet committed — the room to train or level up another skill.
     freeSP() {
-        return this.sp - this.activeSkills.size;
+        let used = 0;
+        for (const id of this.activeSkills) used += this.rankSPCost(this.rankOf(id));
+        return this.sp - used;
     }
 
     // Current rank of a skill, the single source of truth for "what level is this

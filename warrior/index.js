@@ -32,7 +32,7 @@ import {
     EQUIP_SLOT, WEAPONS, ARMORS, ARTIFACTS, ALL_EQUIPMENT, NON_MAGICAL_ITEMS, CROP_ICONS,
     rollMagicItem, resetEquipment,
     isChaosTerrain, SELL_PRICE_RATIO,
-    SKILL_TARGET, SKILL_USAGE, SKILLS, effectiveSkill, SKILL_UNLOCK_LEVELS,
+    SKILL_TARGET, SKILL_USAGE, SKILLS, effectiveSkill, SKILL_MAX_RANK, SKILL_UNLOCK_LEVELS,
     SHATTERED_VERSION, UNSHATTERED_VERSION, DISTRESSED_VERSION, UNDISTRESSED_VERSION,
     weaponIsRanged
 } from './config.js';
@@ -1491,7 +1491,7 @@ function render() {
             ctx.fillStyle = '#4dd0e1';
             ctx.font = 'bold ' + Math.floor(HEX_SIZE * 1.1) + 'px monospace';
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText('\u{1F48E}', x, y);
+            ctx.fillText('✦', x, y);
         }
 
         // POI symbols
@@ -1913,20 +1913,22 @@ function updateCharPanel() {
 }
 
 // Auto-equip a freshly learned skill, but only if it's trained (active). New
-// skills are benched by default, so this is a no-op until the player trains them.
+// skills are latent by default, so this is a no-op until the player trains them.
 function autoEquipIfActive(skillId) {
     if (!player.activeSkills.has(skillId)) return;
     const emptySlot = player.skills.indexOf(null);
     if (emptySlot >= 0) player.skills[emptySlot] = skillId;
 }
 
-// Bench (active=false) or train (active=true) a learned skill. Benching also
-// clears it from any hotbar slot, since benched skills can't be equipped.
+// Make latent (active=false) or train (active=true) a learned skill. Going
+// latent also clears it from any hotbar slot, since latent skills can't be equipped.
 function setSkillActive(skillId, active) {
     if (active) {
         player.activeSkills.add(skillId);
+        player.skillRanks[skillId] = 1;
     } else {
         player.activeSkills.delete(skillId);
+        delete player.skillRanks[skillId];
         for (let i = 0; i < player.skills.length; i++) {
             if (player.skills[i] === skillId) player.skills[i] = null;
         }
@@ -1955,7 +1957,7 @@ function updateSkillsPanel() {
     const byName = (a, b) => SKILLS[a].name.localeCompare(SKILLS[b].name);
     const learnedUnequipped = [...player.learnedSkills].filter(id => !equipped.has(id));
     const unequipped = learnedUnequipped.filter(id => player.activeSkills.has(id)).sort(byName);
-    const benched = learnedUnequipped.filter(id => !player.activeSkills.has(id)).sort(byName);
+    const latent = learnedUnequipped.filter(id => !player.activeSkills.has(id)).sort(byName);
     const canInvokeFromPanel = phase === 'player' && !gameOver;
     if (unequipped.length > 0) {
         html += '<div style="color:#888;margin-top:8px;margin-bottom:4px;font-size:11px">LEARNED (click to equip)</div>';
@@ -1973,10 +1975,10 @@ function updateSkillsPanel() {
             </div>`;
         }
     }
-    // Benched skills: learned but not trained — grayed and unavailable
-    if (benched.length > 0) {
+    // Latent skills: learned but not trained — grayed and unavailable
+    if (latent.length > 0) {
         html += '<div style="color:#888;margin-top:8px;margin-bottom:4px;font-size:11px">Latent</div>';
-        for (const skillId of benched) {
+        for (const skillId of latent) {
             const skill = SKILLS[skillId];
             html += `<div class="skill-entry" style="opacity:0.4">
                 <div><span class="s-name">${skill.name}</span> <span class="s-cost">(${skillCostLabel(skill, player)})</span></div>
@@ -2197,6 +2199,7 @@ function togglePanel(id) {
 function showDialog(title, bodyHtml, buttons) {
     changePhase('dialog');
     const overlay = document.getElementById('dialog-overlay');
+    document.getElementById('dialog-box').classList.remove('dialog-wide');
     document.getElementById('dialog-title').textContent = title;
     document.getElementById('dialog-body').innerHTML = bodyHtml;
     const btnContainer = document.getElementById('dialog-buttons');
@@ -2424,7 +2427,7 @@ function pickUpScroll(poi) {
         // Scroll skills come pre-attuned — they start trained (active) when an SP
         // slot is free, otherwise Latent until trained at a Magicsmith.
         if (player.freeSP() > 0) {
-            player.activeSkills.add(poi.skill);
+            setSkillActive(poi.skill, true);
             autoEquipIfActive(poi.skill);
         }
     }
@@ -2597,43 +2600,161 @@ function showShopDialog(poi, kind) {
     });
 }
 
-// Train panel (Magicsmith): a dual-list of learned skills. Left column = trained
-// (usable), right column = benched (unavailable). Each row holds the skill in one
-// column with an arrow pointing to the empty side; clicking it moves the skill.
+// ---- Train panel (Magicsmith) helpers ----
+// Per-skill rendering of the effectStrength axis into a player-facing value.
+// effectStrength means something different per skill (a multiplier numerator, a
+// percent, a divisor, a secondary range), so the trickiness is centralized here
+// in one lookup keyed by skill id — baseDamage/range/hitCount are universal.
+const EFFECT_STRENGTH_DISPLAY = {
+    void_strike:      es => `Dmg ×${(es / 5).toFixed(1)}`,
+    siphon_strike:    es => `Dmg ×${(es / 10).toFixed(1)}`,
+    dimensional_rend: es => `Dmg ×${(es / 10).toFixed(1)}`,
+    execute:          es => `Dmg ×${(es / 10).toFixed(1)}`,
+    stun_blow:        es => `+${es}% stun`,
+    warp_shield:      es => `Block ${es * 10}%`,
+    reflect:          es => `Reflect ${es * 10}% chance`,
+    channel:          es => `${es}:1 HP→AE`,
+    chain_lightning:  es => `Chain reach ${es}`,
+    immolate:         es => `Burn ${es}/turn`,
+    mending_light:    es => `Heal ${es}+Vig×3`,
+    sundering_blow:   es => `Shred ${es} def`,
+    meteor:           es => `Blast radius ${es}`,
+    ricochet:         es => `Bounce reach ${es}`,
+    aether_tap:       es => `1 AE / ${es} hex`,
+    skill_seek:       es => `Learn ${es}%`,
+    sanctuary:        es => `Heal 1/${es}`,
+    loot:             es => `Gold ×${(es / 10).toFixed(1)}`,
+};
+
+// One-line summary of a skill's effect at its current rank — only the current
+// level's values, never the whole 1..5 ladder. null for untiered ("do it") skills.
+function skillEffectSummary(skillId) {
+    const def = SKILLS[skillId];
+    if (!def.tiers) return null;
+    const eff = effectiveSkill(def, player.rankOf(skillId));
+    return def.scales.map(axis => {
+        if (axis === 'baseDamage') return `Dmg ${eff.baseDamage}`;
+        if (axis === 'range') return `Range ${eff.range}`;
+        if (axis === 'hitCount') return `Hits ${eff.hitCount}`;
+        return EFFECT_STRENGTH_DISPLAY[skillId](eff.effectStrength);
+    }).join(' · ');
+}
+
+// A skill's rank as an insignia, not a number: 1–3 small stars, a single big
+// star at 4, and a big star flanked by flourishes at 5 (left one mirrored).
+function rankInsignia(rank) {
+    if (rank >= SKILL_MAX_RANK) return '<span class="rank-fl rank-fl-l">❧</span><span class="rank-lg">★</span><span class="rank-fl">❧</span>';
+    if (rank === 4) return '<span class="rank-lg">★</span>';
+    return `<span class="rank-sm">${'★'.repeat(Math.max(1, rank))}</span>`;
+}
+
+// The box below the train list: the last-touched skill's name, state, and its
+// current-level values.
+function trainInfoHtml(skillId) {
+    if (!skillId || !player.learnedSkills.has(skillId)) {
+        return '<span class="ti-hint">Click a skill to train it or level it up.</span>';
+    }
+    const def = SKILLS[skillId];
+    const active = player.activeSkills.has(skillId);
+    const state = !active ? 'latent' : (def.tiers ? rankInsignia(player.rankOf(skillId)) : 'trained');
+    const summary = skillEffectSummary(skillId);
+    const vals = summary ? `<div class="ti-vals">${summary}</div>` : '<div class="ti-hint">No level scaling.</div>';
+    return `<div><span class="ti-name">${def.name}</span> <span style="color:#888">${state}</span></div>${vals}`;
+}
+
+let lastTrainSkill = null;
+
+// Train panel: learned skills as a dual list — trained (left, usable) vs latent
+// (right). ← trains or levels up a skill (rising SP cost); → levels it down or
+// makes it latent. The info box previews whatever row was last clicked.
 function showTrainDialog(onBack) {
     const learned = [...player.learnedSkills].sort((a, b) => SKILLS[a].name.localeCompare(SKILLS[b].name));
     const free = player.freeSP();
-    let body = '<p style="color:#aaa;font-size:12px">Trained skills (left) are usable. Benched skills (right) are unavailable until trained.</p>';
+    let body = '<p style="color:#aaa;font-size:12px">Click ← to train and level up (rising cost +1, +2, +3, +4, +5; max 5). Click → to level down, or make latent at level 1.</p>';
     body += `<p style="color:${free > 0 ? '#b388ff' : '#888'};font-size:13px">SP available: ${free} of ${player.sp}</p>`;
-    body += '<div class="train-grid">';
-    body += '<div class="train-head">Trained</div><div class="train-head"></div><div class="train-head">Benched</div>';
+    body += '<div class="train-scroll">';
+    body += '<div class="train-row train-head-row"><div class="train-side">Trained</div><div class="train-mid"></div><div class="train-side right">Latent</div></div>';
     for (const id of learned) {
+        const def = SKILLS[id];
         const active = player.activeSkills.has(id);
-        const name = SKILLS[id].name;
-        // Can't train a new skill with no free SP — leave a dimmed, dead arrow.
-        const arrow = active
-            ? `<button class="train-arrow" data-bench="${id}" title="Bench">&gt;</button>`
-            : (free > 0
-                ? `<button class="train-arrow" data-train="${id}" title="Train">&lt;</button>`
-                : `<span class="train-arrow" style="opacity:0.3;cursor:default" title="No free SP">&lt;</span>`);
-        body += `<div class="train-cell">${active ? name : ''}</div>`;
-        body += `<div class="train-mid">${arrow}</div>`;
-        body += `<div class="train-cell">${active ? '' : name}</div>`;
+        const rank = player.rankOf(id);
+        const tiered = !!def.tiers;
+        const lvl = (active && tiered) ? ' ' + rankInsignia(rank) : '';
+        // ‹ advances: trains a latent skill, or levels up an active tiered one.
+        // Dead (dimmed) at max rank, on untiered active skills, or with no free SP.
+        // Each step costs the target rank (+1, +2, +3, +4, +5); activating costs 1.
+        const advanceCost = active ? rank + 1 : 1;
+        let canAdvance, advTitle;
+        if (!active) {
+            canAdvance = free >= 1;
+            advTitle = canAdvance ? 'Train (1 SP)' : 'Need 1 SP';
+        } else if (!tiered) {
+            canAdvance = false;
+            advTitle = 'No levels';
+        } else if (rank >= SKILL_MAX_RANK) {
+            canAdvance = false;
+            advTitle = 'Max level';
+        } else {
+            canAdvance = free >= advanceCost;
+            advTitle = canAdvance ? `Level up (${advanceCost} SP)` : `Need ${advanceCost} SP`;
+        }
+        const advance = canAdvance
+            ? `<button class="train-arrow" data-advance="${id}" title="${advTitle}">←</button>`
+            : `<span class="train-arrow" style="opacity:0.3;cursor:default" title="${advTitle}">←</span>`;
+        // → steps the rank down, dropping to latent from level 1.
+        const reduceBtn = active ? `<button class="train-arrow" data-reduce="${id}" title="${rank > 1 ? 'Level down' : 'Make latent'}">→</button>` : '';
+        body += `<div class="train-row" data-row="${id}">`
+            + `<div class="train-side">${active ? def.name + lvl : ''}</div>`
+            + `<div class="train-mid">${advance}${reduceBtn}</div>`
+            + `<div class="train-side right">${active ? '' : def.name}</div>`
+            + '</div>';
     }
     body += '</div>';
+    body += `<div class="train-info">${trainInfoHtml(lastTrainSkill)}</div>`;
     showDialog(POI_SYMBOLS[POI.HAVEN] + ' Train', body, [
-        { label: 'Back', action: onBack }
+        { label: 'Leave', action: onBack }
     ]);
+    document.getElementById('dialog-box').classList.add('dialog-wide');
     const root = document.getElementById('dialog-body');
-    const move = (skillId, active) => {
-        if (active && player.freeSP() <= 0) return;
-        setSkillActive(skillId, active);
+    // Rebuilding the dialog recreates the scroll container, so preserve its
+    // position or the list jumps to the top on every level change.
+    const rerender = () => {
+        const prev = root.querySelector('.train-scroll');
+        const top = prev ? prev.scrollTop : 0;
         refreshOpenPanels();
         updateSkillBar();
         showTrainDialog(onBack);
+        const next = root.querySelector('.train-scroll');
+        if (next) next.scrollTop = top;
     };
-    root.querySelectorAll('[data-train]').forEach(btn => btn.addEventListener('click', () => move(btn.dataset.train, true)));
-    root.querySelectorAll('[data-bench]').forEach(btn => btn.addEventListener('click', () => move(btn.dataset.bench, false)));
+    const advance = (id) => {
+        const active = player.activeSkills.has(id);
+        if (active && (!SKILLS[id].tiers || player.rankOf(id) >= SKILL_MAX_RANK)) return;
+        const targetRank = active ? player.rankOf(id) + 1 : 1;
+        if (player.freeSP() < targetRank) return;  // step cost = target rank
+        if (active) player.skillRanks[id] = targetRank;
+        else setSkillActive(id, true);
+        lastTrainSkill = id;
+        rerender();
+    };
+    const reduceRank = (id) => {
+        if (!player.activeSkills.has(id)) return;
+        if (player.rankOf(id) > 1) {
+            player.skillRanks[id] = player.rankOf(id) - 1;
+        } else {
+            setSkillActive(id, false);
+        }
+        lastTrainSkill = id;
+        rerender();
+    };
+    // Arrows level the skill (and re-render); clicking the row itself only
+    // previews the skill in the info box, so stop arrow clicks from bubbling.
+    root.querySelectorAll('[data-advance]').forEach(btn => btn.addEventListener('click', (e) => { e.stopPropagation(); advance(btn.dataset.advance); }));
+    root.querySelectorAll('[data-reduce]').forEach(btn => btn.addEventListener('click', (e) => { e.stopPropagation(); reduceRank(btn.dataset.reduce); }));
+    root.querySelectorAll('[data-row]').forEach(rowEl => rowEl.addEventListener('click', () => {
+        lastTrainSkill = rowEl.dataset.row;
+        root.querySelector('.train-info').innerHTML = trainInfoHtml(lastTrainSkill);
+    }));
 }
 
 function ruinEnemiesNearby(poi) {

@@ -1125,7 +1125,7 @@ function executeAetherTap(action) {
         }
         cleanCount++;
     }
-    const aeGain = 1 + Math.floor(cleanCount / 3);
+    const aeGain = Math.ceil(cleanCount / action.skill.effectStrength);
     player.aether = Math.min(player.maxAether(), player.aether + aeGain);
     logCombat(`Aether Tap: +${aeGain} AE (${cleanCount} clean hexes)`, 'log-info');
 }

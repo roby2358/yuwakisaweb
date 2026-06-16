@@ -700,7 +700,7 @@ export const SKILLS = {
     },
     phase_step: {
         id: 'phase_step', name: 'Phase Step', cost: 1, mpCost: 0, target: SKILL_TARGET.TELEPORT, usage: SKILL_USAGE.ANYTIME,
-        scales: ['range'], tiers: [[3], [3], [4], [4], [5]], desc: 'Teleport to visible hex within 3.', minLevel: 2
+        scales: ['range'], tiers: [[2], [3], [4], [5], [6]], desc: 'Teleport to visible hex within 2.', minLevel: 2
     },
     water_skip: {
         id: 'water_skip', name: 'Water Skip', cost: 3, mpCost: 1, target: SKILL_TARGET.WATER_SKIP, usage: SKILL_USAGE.ANYTIME,
@@ -805,7 +805,8 @@ export const SKILLS = {
     // ---- Non-combat skills ----
     aether_tap: {
         id: 'aether_tap', name: 'Aether Tap', cost: 0, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.PRISTINE,
-        scales: ['range'], tiers: [[2], [2], [3], [3], [4]], desc: 'Draw Aether from healthy land, water, and mountains. +1 AE, plus +1 per 3 clean hexes within 2. Ends turn.', panelInvoke: true, minLevel: 2
+        scales: ['range', 'effectStrength'], tiers: [[1, 2], [2, 3], [3, 4], [4, 4], [5, 5]],
+        desc: 'Draw Aether from clean land, water, and mountains in range — more clean hexes, more AE. Ends turn.', panelInvoke: true, minLevel: 2
     },
     farsight: {
         id: 'farsight', name: 'Farsight', cost: 2, mpCost: 0, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.NON_COMBAT,
@@ -826,7 +827,7 @@ export const SKILLS = {
     },
     spirit_walk: {
         id: 'spirit_walk', name: 'Spirit Walk', cost: 3, target: SKILL_TARGET.TELEPORT_REVEALED, usage: SKILL_USAGE.NON_COMBAT,
-        scales: ['range'], tiers: [[6], [7], [8], [9], [10]], desc: 'Teleport to any revealed hex within 6. Ends turn.', panelInvoke: true, minLevel: 6
+        scales: ['range'], tiers: [[6], [8], [10], [12], [14]], desc: 'Teleport to any revealed hex within 6. Ends turn.', panelInvoke: true, minLevel: 6
     },
     ground_weeps: {
         id: 'ground_weeps', name: 'Ground Weeps', cost: 4, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.NON_COMBAT,
