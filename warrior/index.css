@@ -113,6 +113,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
 #dialog-title { font-size: 18px; font-weight: bold; margin-bottom: 12px; color: #fff; }
 #dialog-body { margin-bottom: 16px; text-align: left; max-height: 60vh; overflow-y: auto; }
 #dialog-buttons { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+#dialog-buttons.vertical { flex-direction: column; align-items: stretch; }
 #dialog-buttons button {
     background: #333; color: #ddd; border: 1px solid #555;
     padding: 6px 18px; border-radius: 4px; cursor: pointer; font: 13px monospace;

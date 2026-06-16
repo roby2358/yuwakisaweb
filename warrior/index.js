@@ -2134,12 +2134,13 @@ function togglePanel(id) {
 // DIALOGS
 // ================================================================
 
-function showDialog(title, bodyHtml, buttons) {
+function showDialog(title, bodyHtml, buttons, { verticalButtons = false } = {}) {
     changePhase('dialog');
     const overlay = document.getElementById('dialog-overlay');
     document.getElementById('dialog-title').textContent = title;
     document.getElementById('dialog-body').innerHTML = bodyHtml;
     const btnContainer = document.getElementById('dialog-buttons');
+    btnContainer.classList.toggle('vertical', verticalButtons);
     btnContainer.innerHTML = '';
     for (const { label, cls, action } of buttons) {
         const btn = document.createElement('button');
@@ -2220,7 +2221,7 @@ function showHavenDialog(poi) {
         },
         { label: 'Shop', action: () => showShopDialog(poi) },
         { label: 'Leave' }
-    ]);
+    ], { verticalButtons: true });
 }
 
 // CROP_ICONS lives in config.js (used by bountiful_harvest in actions.js)
@@ -2253,7 +2254,7 @@ function showVillageDialog(poi) {
     showDialog(POI_SYMBOLS[POI.VILLAGE] + ' Village', '<p>A brief respite from the wilds.</p>', [
         { label: 'Rest', cls: 'primary', action: () => { restHeal(); } },
         { label: 'Leave' }
-    ]);
+    ], { verticalButtons: true });
 }
 
 // Sanctuary skill: rest in place in one cast — heal half HP/AE, roll the usual
