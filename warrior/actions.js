@@ -1047,7 +1047,7 @@ function executeDimensionalRend(action) {
     const { player, em, logCombat } = action.ctx;
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
-    const hpCost = action.skill.hpCost;
+    const hpCost = action.skill.effectStrength - 4;
     const tooLow = player.hp <= hpCost;
     player.hp -= hpCost;
     logCombat(`Dimensional Rend tears at you: -${hpCost} HP`, 'log-dmg');
@@ -1055,7 +1055,7 @@ function executeDimensionalRend(action) {
         logCombat('Health too low — the rift fizzles.', 'log-info');
         return;
     }
-    const dmg = Math.round(matchedWeaponDamage(player, action.skill) * action.skill.effectStrength / 10);
+    const dmg = Math.round(matchedWeaponDamage(player, action.skill) * action.skill.effectStrength / 5) + player.stats.vigor;
     new WeaponStrike(action, dmg, 'Dimensional Rend', 'other').apply(enemy);
 }
 

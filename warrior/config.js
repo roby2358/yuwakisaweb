@@ -775,9 +775,9 @@ export const SKILLS = {
         scales: ['baseDamage', 'range', 'effectStrength'], tiers: [[8, 4, 1], [10, 4, 1], [12, 5, 1], [14, 5, 2], [16, 6, 2]], desc: 'Strike a target hex and all enemies in its blast; scales with Warding.', minLevel: 6
     },
     dimensional_rend: {
-        id: 'dimensional_rend', name: 'Dimensional Rend', cost: 4, hpCost: 10, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
-        weaponClass: 'melee', scales: ['effectStrength'], tiers: [[20], [28], [35], [43], [50]],
-        desc: 'Melee: weapon damage. Costs 10 HP. Must be adjacent.', minLevel: 8
+        id: 'dimensional_rend', name: 'Dimensional Rend', cost: 4, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
+        weaponClass: 'melee', scales: ['effectStrength'], tiers: [[5], [8], [10], [12], [15]],
+        desc: 'Melee: weapon + Vigor, drawn from your own HP. No counter.', minLevel: 8
     },
     execute: {
         id: 'execute', name: 'Execute', cost: 3, target: SKILL_TARGET.MELEE_EXECUTE, usage: SKILL_USAGE.ANYTIME,
