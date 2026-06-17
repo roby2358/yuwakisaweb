@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signal City</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <canvas id="game"></canvas>
+
+    <div id="hud-top">
+        <span id="turn-info">Turn 1</span>
+        <span id="mastermind-info">Mastermind: hidden</span>
+        <span id="fallen-info">Fallen 0/4</span>
+        <button id="end-turn">End Turn</button>
+        <button id="new-game">New Game</button>
+    </div>
+
+    <div id="hud-side">
+        <div class="panel-title">ROSTER</div>
+        <div id="roster"></div>
+        <div id="selected-info" class="selected-info">Click a hero to select.</div>
+    </div>
+
+    <div id="intro-panel">
+        <h1>SIGNAL CITY</h1>
+        <p>Four heroes. Twelve alarms. One Mastermind in the dark.</p>
+        <p>Click a hero, click a hex to move. Step on a Crisis to resolve it.
+        Stand <em>adjacent</em> to a Crisis to soften its Doom tick at end of turn.
+        Defeat all 3 Lieutenants to reveal the Mastermind &mdash; then bring enough heroes
+        to land the punch before Doom reaches zero.</p>
+        <p class="hint">Right-click + drag to pan &bull; Space to End Turn &bull; Esc to deselect</p>
+        <button id="begin-btn">Begin</button>
+    </div>
+
+    <script type="module" src="index.js"></script>
+</body>
+</html>
