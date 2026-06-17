@@ -46,7 +46,7 @@ import { Sound } from './sound.js';
 import { SpriteSheet } from './sprite_sheet.js';
 import {
     MoveAction, RangedAction, MoveAndAttackAction, SkillAction,
-    weaponMpCost, skillCostLabel, effectiveAetherCost
+    weaponMpCost, skillCostLabel, effectiveAetherCost, skillWeaponMatches
 } from './actions.js';
 import {
     runEnemyPhase as runEnemyPhaseImpl,
@@ -1947,6 +1947,7 @@ function updateSkillsPanel() {
             html += `<div class="skill-entry" style="cursor:pointer;border-left:2px solid #7c4dff;padding-left:6px" data-unequip="${i}">
                 <div><span class="s-name">${skill.name}</span> <span class="s-cost">(${skillCostLabel(skill, player)})</span> <span style="color:#555">[${i + 1}]</span></div>
                 <div class="s-desc">${skill.desc}</div>
+                ${powerLine(skillId)}
             </div>`;
         } else {
             html += `<div class="skill-entry"><span style="color:#555">Slot ${i + 1}: Empty</span></div>`;
@@ -1972,6 +1973,7 @@ function updateSkillsPanel() {
             html += `<div class="skill-entry" style="cursor:pointer" data-equip="${skillId}">
                 <div><span class="s-name" ${isUsable ? `data-use="${skillId}" style="${nameStyle}"` : `style="${dim}"`}>${skill.name}</span> <span class="s-cost" style="${dim}">(${skillCostLabel(skill, player)})</span></div>
                 <div class="s-desc" style="${dim}">${skill.desc}</div>
+                ${powerLine(skillId, dim)}
             </div>`;
         }
     }
@@ -1983,6 +1985,7 @@ function updateSkillsPanel() {
             html += `<div class="skill-entry" style="opacity:0.4">
                 <div><span class="s-name">${skill.name}</span> <span class="s-cost">(${skillCostLabel(skill, player)})</span></div>
                 <div class="s-desc">${skill.desc}</div>
+                ${powerLine(skillId)}
             </div>`;
         }
     }
@@ -2304,7 +2307,7 @@ function showHavenDialog(poi) {
         },
         { label: 'Weaponsmith', action: () => showShopDialog(poi, 'weapon') },
         { label: 'Magicsmith', action: () => showShopDialog(poi, 'magic') },
-        { label: 'Train', action: () => showTrainDialog(() => showHavenDialog(poi)) },
+        { label: 'Train', action: () => showTrainDialog() },
         { label: 'Leave' }
     ]);
 }
@@ -2381,7 +2384,7 @@ function invokeSanctuary() {
 
 function showHutDialog(poi, reroll) {
     grantVisitSP(poi);
-    const trainBtn = { label: 'Train', action: () => showTrainDialog(() => showHutDialog(poi, false)) };
+    const trainBtn = { label: 'Train', action: () => showTrainDialog() };
     // 10% chance the Wise Man's skill refreshes to something the player hasn't learned
     if (reroll && Rando.bool(0.10)) {
         const unlearnedPool = Object.values(SKILLS).filter(s => s.id !== 'restore' && !s.shopOnly && !skillLockedToScroll(s) && !player.learnedSkills.has(s.id));
@@ -2600,44 +2603,92 @@ function showShopDialog(poi, kind) {
     });
 }
 
-// ---- Train panel (Magicsmith) helpers ----
-// Per-skill rendering of the effectStrength axis into a player-facing value.
-// effectStrength means something different per skill (a multiplier numerator, a
-// percent, a divisor, a secondary range), so the trickiness is centralized here
-// in one lookup keyed by skill id — baseDamage/range/hitCount are universal.
+// ---- Skill summaries (shared by the Skills overlay and the Train panel) ----
+// One model, so the two panels can't drift apart from each other or from the
+// real formulas. Each SKILL_POWER entry mirrors the damage math in its
+// actions.js execute*(): given the rank-resolved skill `e`, the player's `stats`,
+// and `w` (matched weapon damage, 1 when the held weapon's class doesn't match),
+// it returns the expected output of a SINGLE hit on ONE target plus a terse
+// `factors` string. AoE radius, multi-hit, chains and riders are shown only as
+// factors text — never folded into the score. If you change a formula in
+// actions.js, update the matching entry here.
+const SKILL_POWER = {
+    // Flat: base damage + a stat. (`+War/2` floors, matching the executor.)
+    cosmic_bolt:     (e, s) => ({ score: e.baseDamage + s.warding,           factors: `${e.baseDamage}+War` }),
+    shockwave:       (e, s) => ({ score: e.baseDamage + s.might,             factors: `${e.baseDamage}+Mgt · AoE ${e.range} · push` }),
+    piercing_shot:   (e, s) => ({ score: e.baseDamage + s.reflex,            factors: `${e.baseDamage}+Ref · ignores def` }),
+    breach_pulse:    (e, s) => ({ score: e.baseDamage + s.warding,           factors: `${e.baseDamage}+War · AoE ${e.range}` }),
+    chain_lightning: (e, s) => ({ score: e.baseDamage + s.warding,           factors: `${e.baseDamage}+War · chains ${e.hitCount}` }),
+    meteor:          (e, s) => ({ score: e.baseDamage + s.warding,           factors: `${e.baseDamage}+War · blast r${e.effectStrength}` }),
+    starfall:        (e, s) => ({ score: e.baseDamage + s.warding * 2,       factors: `${e.baseDamage}+War×2 · AoE ${e.range}` }),
+    void_salvo:      (e, s) => ({ score: e.baseDamage + s.reflex,            factors: `${e.baseDamage}+Ref · ${e.hitCount} shots` }),
+    ricochet:        (e, s) => ({ score: e.baseDamage + s.reflex,            factors: `${e.baseDamage}+Ref · bounces ${e.hitCount}` }),
+    lifedrain_blast: (e, s) => ({ score: e.baseDamage + s.vigor,             factors: `${e.baseDamage}+Vig · AoE ${e.range} · +${e.hpPerHit}HP/hit` }),
+    aether_blast:    (e, s) => ({ score: e.baseDamage + Math.floor(s.warding / 2), factors: `${e.baseDamage}+War/2 · AoE ${e.range} · +${e.aetherPerHit}AE/hit` }),
+    havens_light:    (e, s) => ({ score: e.baseDamage + s.warding,           factors: `${e.baseDamage}+War · AoE ${e.range}` }),
+    // Weapon-scaling melee. `wpn` is the matched weapon's damage.
+    void_strike:     (e, s, w) => ({ score: Math.round((w + s.might + s.warding) * e.effectStrength / 5),  factors: `(wpn+Mgt+War)×${(e.effectStrength / 5).toFixed(1)}` }),
+    siphon_strike:   (e, s, w) => ({ score: Math.round((w + s.might) * e.effectStrength / 10),             factors: `(wpn+Mgt)×${(e.effectStrength / 10).toFixed(1)} · heals` }),
+    execute:         (e, s, w) => ({ score: Math.round((w + s.might) * e.effectStrength / 10),             factors: `(wpn+Mgt)×${(e.effectStrength / 10).toFixed(1)} · <50% HP` }),
+    dimensional_rend:(e, s, w) => ({ score: Math.round(w * e.effectStrength / 10),                         factors: `wpn×${(e.effectStrength / 10).toFixed(1)} · −10 HP` }),
+    sweep:           (e, s, w) => ({ score: w + s.might, factors: `wpn+Mgt · +${e.hitCount} adjacent` }),
+    stun_blow:       (e, s, w) => ({ score: w + s.might, factors: `wpn+Mgt · +${e.effectStrength}% stun` }),
+    immolate:        (e, s, w) => ({ score: w + s.might, factors: `wpn+Mgt · burn ${e.effectStrength}` }),
+    sundering_blow:  (e, s, w) => ({ score: w + s.might, factors: `wpn+Mgt · shred ${e.effectStrength} def` }),
+    // Heal.
+    mending_light:   (e, s) => ({ score: e.effectStrength + s.vigor * 3, factors: `${e.effectStrength}+Vig×3 heal` }),
+    // Untiered, but range scales with character level (see executeRestore).
+    restore:         () => ({ score: null, factors: `Range ${1 + Math.floor(player.level / 3)}` }),
+};
+
+// Per-skill rendering of the effectStrength axis for utility skills that aren't
+// in SKILL_POWER (no damage/heal score). effectStrength means something different
+// per skill, so the trickiness is centralized here keyed by skill id.
 const EFFECT_STRENGTH_DISPLAY = {
-    void_strike:      es => `Dmg ×${(es / 5).toFixed(1)}`,
-    siphon_strike:    es => `Dmg ×${(es / 10).toFixed(1)}`,
-    dimensional_rend: es => `Dmg ×${(es / 10).toFixed(1)}`,
-    execute:          es => `Dmg ×${(es / 10).toFixed(1)}`,
-    stun_blow:        es => `+${es}% stun`,
     warp_shield:      es => `Block ${es * 10}%`,
     reflect:          es => `Reflect ${es * 10}% chance`,
     channel:          es => `${es}:1 HP→AE`,
-    chain_lightning:  es => `Chain reach ${es}`,
-    immolate:         es => `Burn ${es}/turn`,
-    mending_light:    es => `Heal ${es}+Vig×3`,
-    sundering_blow:   es => `Shred ${es} def`,
-    meteor:           es => `Blast radius ${es}`,
-    ricochet:         es => `Bounce reach ${es}`,
     aether_tap:       es => `1 AE / ${es} hex`,
     skill_seek:       es => `Learn ${es}%`,
     sanctuary:        es => `Heal 1/${es}`,
     loot:             es => `Gold ×${(es / 10).toFixed(1)}`,
 };
 
-// One-line summary of a skill's effect at its current rank — only the current
-// level's values, never the whole 1..5 ladder. null for untiered ("do it") skills.
-function skillEffectSummary(skillId) {
+// Unified summary of a skill at its current rank with current stats: an optional
+// power score (expected damage/heal of one hit on one target) plus a terse list
+// of the factors that drive it. null for untiered ("just do it") skills.
+function skillSummary(skillId) {
     const def = SKILLS[skillId];
-    if (!def.tiers) return null;
     const eff = effectiveSkill(def, player.rankOf(skillId));
-    return def.scales.map(axis => {
+    const power = SKILL_POWER[skillId];
+    if (power) {
+        const w = skillWeaponMatches(player, def) ? player.weapon().damage : 1;
+        return power(eff, player.stats, w);
+    }
+    if (!def.tiers) return null;
+    const factors = def.scales.map(axis => {
         if (axis === 'baseDamage') return `Dmg ${eff.baseDamage}`;
         if (axis === 'range') return `Range ${eff.range}`;
         if (axis === 'hitCount') return `Hits ${eff.hitCount}`;
-        return EFFECT_STRENGTH_DISPLAY[skillId](eff.effectStrength);
-    }).join(' · ');
+        return EFFECT_STRENGTH_DISPLAY[skillId] ? EFFECT_STRENGTH_DISPLAY[skillId](eff.effectStrength) : '';
+    }).filter(Boolean).join(' · ');
+    return { score: null, factors };
+}
+
+// The summary as a one-line HTML fragment, shared by both panels. Empty string
+// for untiered skills (their prose desc carries everything).
+function skillSummaryHtml(skillId) {
+    const sum = skillSummary(skillId);
+    if (!sum || !sum.factors) return '';
+    const score = sum.score != null ? `<span class="s-pow">⚔ ${sum.score}</span> ` : '';
+    return `${score}<span class="s-fac">${sum.factors}</span>`;
+}
+
+// Skills-overlay row: the shared summary as a styled line, or nothing for
+// untiered skills. `dim` carries the row's dimming style, if any.
+function powerLine(skillId, dim = '') {
+    const html = skillSummaryHtml(skillId);
+    return html ? `<div class="s-power" style="${dim}">${html}</div>` : '';
 }
 
 // A skill's rank as an insignia, not a number: 1–3 small stars, a single big
@@ -2648,8 +2699,8 @@ function rankInsignia(rank) {
     return `<span class="rank-sm">${'★'.repeat(Math.max(1, rank))}</span>`;
 }
 
-// The box below the train list: the last-touched skill's name, state, and its
-// current-level values.
+// The box below the train list: the last-touched skill's name, state, prose
+// description, and current-rank values — the same content the Skills overlay shows.
 function trainInfoHtml(skillId) {
     if (!skillId || !player.learnedSkills.has(skillId)) {
         return '<span class="ti-hint">Click a skill to train it or level it up.</span>';
@@ -2657,9 +2708,10 @@ function trainInfoHtml(skillId) {
     const def = SKILLS[skillId];
     const active = player.activeSkills.has(skillId);
     const state = !active ? 'latent' : (def.tiers ? rankInsignia(player.rankOf(skillId)) : 'trained');
-    const summary = skillEffectSummary(skillId);
-    const vals = summary ? `<div class="ti-vals">${summary}</div>` : '<div class="ti-hint">No level scaling.</div>';
-    return `<div><span class="ti-name">${def.name}</span> <span style="color:#888">${state}</span></div>${vals}`;
+    const summary = skillSummaryHtml(skillId);
+    const vals = summary ? `<div class="ti-vals">${summary}</div>` : '';
+    return `<div><span class="ti-name">${def.name}</span> <span style="color:#888">${state}</span></div>`
+        + `<div class="ti-desc">${def.desc}</div>${vals}`;
 }
 
 let lastTrainSkill = null;
@@ -2667,7 +2719,7 @@ let lastTrainSkill = null;
 // Train panel: learned skills as a dual list — latent (left) vs trained (right,
 // usable). → trains or levels up a skill (rising SP cost); ← levels it down or
 // makes it latent. The info box previews whatever row was last clicked.
-function showTrainDialog(onBack) {
+function showTrainDialog() {
     const learned = [...player.learnedSkills].sort((a, b) => SKILLS[a].name.localeCompare(SKILLS[b].name));
     const free = player.freeSP();
     let body = '<p style="color:#aaa;font-size:12px">Click → to train and level up (rising cost +1, +2, +3, +4, +5; max 5). Click ← to level down, or make latent at level 1.</p>';
@@ -2712,7 +2764,7 @@ function showTrainDialog(onBack) {
     body += '</div>';
     body += `<div class="train-info">${trainInfoHtml(lastTrainSkill)}</div>`;
     showDialog(POI_SYMBOLS[POI.HAVEN] + ' Train', body, [
-        { label: 'Leave', action: onBack }
+        { label: 'Done', action: () => { player.mp = 0; } }
     ]);
     document.getElementById('dialog-box').classList.add('dialog-wide');
     const root = document.getElementById('dialog-body');
@@ -2723,7 +2775,7 @@ function showTrainDialog(onBack) {
         const top = prev ? prev.scrollTop : 0;
         refreshOpenPanels();
         updateSkillBar();
-        showTrainDialog(onBack);
+        showTrainDialog();
         const next = root.querySelector('.train-scroll');
         if (next) next.scrollTop = top;
     };

@@ -98,6 +98,11 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
 .skill-entry .s-name { color: #b388ff; }
 .skill-entry .s-cost { color: #888; }
 .skill-entry .s-desc { color: #aaa; font-size: 11px; }
+.skill-entry .s-power { font-size: 11px; margin-top: 2px; }
+.s-power .s-pow { color: #ffd700; font-weight: bold; }
+.s-power .s-fac { color: #9fb4c8; }
+.train-info .ti-vals .s-pow { color: #ffd700; font-weight: bold; }
+.train-info .ti-vals .s-fac { color: #9fb4c8; }
 
 /* ---- Dialog ---- */
 #dialog-overlay {
@@ -180,6 +185,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
     background: rgba(124,77,255,0.08); font: 12px/1.5 monospace;
 }
 .train-info .ti-name { color: #b388ff; font-weight: bold; }
+.train-info .ti-desc { color: #aaa; font-size: 11px; margin-top: 2px; }
 .train-info .ti-vals { color: #ddd; margin-top: 2px; }
 .train-info .ti-hint { color: #777; }
 
