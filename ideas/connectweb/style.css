@@ -1,0 +1,114 @@
+:root {
+  --bg: #0e1116;
+  --panel: #161b22;
+  --line: #4ea1ff;
+  --dot: #ffd166;
+  --text: #c9d1d9;
+  --accent: #2ea043;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 12px 20px;
+  background: var(--panel);
+  border-bottom: 1px solid #21262d;
+}
+
+h1 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  user-select: none;
+}
+
+label.checkbox { gap: 6px; }
+
+.methods {
+  display: flex;
+  gap: 14px;
+  margin: 0;
+  padding: 4px 12px;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+}
+.methods label.radio {
+  gap: 5px;
+  font-size: 14px;
+  cursor: pointer;
+}
+input[type="radio"] { accent-color: var(--line); }
+
+input[type="range"] { accent-color: var(--line); }
+input[type="checkbox"] { accent-color: var(--accent); }
+
+#baseVal { font-variant-numeric: tabular-nums; min-width: 3ch; text-align: right; }
+
+button {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+button:hover { filter: brightness(1.1); }
+button:active { filter: brightness(0.95); }
+
+main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow: auto;
+}
+
+#canvas {
+  display: block;
+  background: #0a0d12;
+  border: 1px solid #21262d;
+  border-radius: 8px;
+}
+
+footer {
+  padding: 8px 20px;
+  background: var(--panel);
+  border-top: 1px solid #21262d;
+  font-size: 13px;
+  color: #8b949e;
+  font-variant-numeric: tabular-nums;
+}

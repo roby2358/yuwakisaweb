@@ -1,0 +1,1 @@
+Random dots fill the canvas, no closer than n pixels to each other. Draw a line from every dot to every other dot. If two lines intersect, remove the longer one.

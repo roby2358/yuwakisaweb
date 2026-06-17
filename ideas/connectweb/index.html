@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connect Web</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Connect Web</h1>
+    <div class="controls">
+      <label>
+        Base spacing
+        <input type="range" id="base" min="25" max="120" value="50" step="5">
+        <span id="baseVal">50</span>px
+      </label>
+      <fieldset class="methods">
+        <label class="radio"><input type="radio" name="method" value="elimination" checked> Elimination</label>
+        <label class="radio"><input type="radio" name="method" value="delaunay"> Delaunay</label>
+        <label class="radio"><input type="radio" name="method" value="voronoi"> Voronoi</label>
+        <label class="radio"><input type="radio" name="method" value="noise"> Value noise</label>
+        <label class="radio"><input type="radio" name="method" value="gradient"> Gradient noise</label>
+      </fieldset>
+      <label class="checkbox">
+        <input type="checkbox" id="showDots" checked> Show dots
+      </label>
+      <button id="regen">Regenerate</button>
+    </div>
+  </header>
+
+  <main>
+    <canvas id="canvas"></canvas>
+  </main>
+
+  <footer id="stats"></footer>
+
+  <script src="geometry.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
