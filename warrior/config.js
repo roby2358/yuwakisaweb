@@ -760,7 +760,7 @@ export const SKILLS = {
     },
     mending_light: {
         id: 'mending_light', name: 'Mending Light', cost: 2, mpCost: 1, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
-        scales: ['effectStrength'], tiers: [[10], [14], [18], [22], [26]], desc: 'Heal yourself; scales with Vigor. Costs 1 MP.', minLevel: 6
+        scales: ['effectStrength'], tiers: [[10], [14], [18], [22], [26]], desc: 'Heal yourself; scales with Vigor. Costs 1 MP.', minLevel: 2
     },
     gravity_well: {
         id: 'gravity_well', name: 'Gravity Well', cost: 3, mpCost: 1, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
@@ -775,7 +775,7 @@ export const SKILLS = {
         scales: ['baseDamage', 'range', 'effectStrength'], tiers: [[8, 4, 1], [10, 4, 1], [12, 5, 1], [14, 5, 2], [16, 6, 2]], desc: 'Strike a target hex and all enemies in its blast; scales with Warding.', minLevel: 6
     },
     dimensional_rend: {
-        id: 'dimensional_rend', name: 'Dimensional Rend', cost: 4, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
+        id: 'dimensional_rend', name: 'Dimensional Rend', cost: 0, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
         weaponClass: 'melee', scales: ['effectStrength'], tiers: [[5], [8], [10], [12], [15]],
         desc: 'Melee: weapon + Vigor, drawn from your own HP. No counter.', minLevel: 8
     },
