@@ -331,16 +331,22 @@ const ARCHETYPES_GENERAL = [
     'Navigator', 'Operator', 'Pilot', 'Replicant', 'Starpilot',
     'Technomancer', 'Wanderer', 'Witch', 'Wraith', 'Xenarch'
 ];
-const MELEE_ITEMS = [
-    'Axe', 'Blade', 'Cleaver', 'Edge', 'Mace', 'Pick', 'Spear', 'Spike',
-    'Sword', 'Thorn', 'Glaive', 'Slipblade', 'Flail', 'Scythe', 'Fist',
-    'Ripper', 'Shard', 'Vane'
+// Common nouns are listed three times so they roll roughly three times as often as the rest.
+const COMMON_MELEE = [
+    'Axe', 'Blade', 'Edge', 'Mace', 'Spear', 'Sword', 'Glaive', 'Slipblade', 'Ripper'
 ];
-const RANGED_ITEMS = [
-    'Bolt', 'Bow', 'Cannon', 'Caster', 'Lance', 'Launcher', 'Longbow',
-    'Repeater', 'Rifle', 'Rod', 'Sling', 'Arbalest', 'Crossbow', 'Javelin', 'Handcannon',
-    'Wand', 'Accelerator', 'Emitter', 'Coilgun'
+const OTHER_MELEE = [
+    'Cleaver', 'Pick', 'Spike', 'Thorn', 'Flail', 'Scythe', 'Fist', 'Shard', 'Vane'
 ];
+const MELEE_ITEMS = [...COMMON_MELEE, ...COMMON_MELEE, ...COMMON_MELEE, ...OTHER_MELEE];
+
+const COMMON_RANGED = [
+    'Bolt', 'Bow', 'Cannon', 'Launcher', 'Longbow', 'Rifle', 'Crossbow', 'Handcannon', 'Wand', 'Coilgun'
+];
+const OTHER_RANGED = [
+    'Caster', 'Lance', 'Repeater', 'Rod', 'Sling', 'Arbalest', 'Javelin', 'Accelerator', 'Emitter'
+];
+const RANGED_ITEMS = [...COMMON_RANGED, ...COMMON_RANGED, ...COMMON_RANGED, ...OTHER_RANGED];
 const ARMOR_ITEMS = [
     'Aegis', 'Cloak', 'Cuirass', 'Hide', 'Mail', 'Plate', 'Robe', 'Shield',
     'Tunic', 'Vest', 'Weave', 'Mantle', 'Carapace', 'Hauberk', 'Wrap', 'Cowl', 'Baldric'
