@@ -2693,11 +2693,13 @@ function powerLine(skillId, dim = '') {
     return html ? `<div class="s-power" style="${dim}">${html}</div>` : '';
 }
 
-// A skill's rank as an insignia, not a number: 1–3 small stars, a single big
-// star at 4, and a big star flanked by flourishes at 5 (left one mirrored).
+// A skill's rank as an insignia, not a number: 1–2 small stars, a single big
+// star at 3, a big star flanked by flower punctuation at 4, and a big star
+// flanked by floral hearts at 5 (left one mirrored).
 function rankInsignia(rank) {
     if (rank >= SKILL_MAX_RANK) return '<span class="rank-fl rank-fl-l">❧</span><span class="rank-lg">★</span><span class="rank-fl">❧</span>';
-    if (rank === 4) return '<span class="rank-lg">★</span>';
+    if (rank === 4) return '<span class="rank-fl">⁕</span><span class="rank-lg">★</span><span class="rank-fl">⁕</span>';
+    if (rank === 3) return '<span class="rank-lg">★</span>';
     return `<span class="rank-sm">${'★'.repeat(Math.max(1, rank))}</span>`;
 }
 
