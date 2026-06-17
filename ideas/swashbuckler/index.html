@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar Corsair</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <canvas id="game"></canvas>
+    <div id="hud">
+        <span id="turn-info">Turn 1</span>
+        <span id="hp-info">Hull: 4/4</span>
+        <span id="dub-info">Doubloons: 0</span>
+        <span id="loot-info">Loot: 0/3</span>
+        <span id="mp-info">MP: 5/5</span>
+        <span id="msg-info"></span>
+        <button id="end-turn">End Turn</button>
+        <button id="new-game">New Game</button>
+    </div>
+    <div id="intro-panel">
+        <h2>Solar Corsair</h2>
+        <p>You are a swashbuckling pirate captain adrift in a contested star sector. Loot <b>3 derelict hulks</b> ($), then escape through the <b>wormhole</b> (&#9673;) on the far side of the sector.</p>
+        <ul>
+            <li><b>Imperial Freighters (F)</b> drift the lanes. Board one for 1 hull (86% success): 3-7 doubloons on a clean take.</li>
+            <li><b>Dreadnoughts (D)</b> hunt you across the sector. Boarding one costs 1 hull and is a coin flip — but pays 10 doubloons and removes the threat.</li>
+            <li><b>Nebulae</b> conceal your ship from the Dreadnought — it loses your trail and drifts.</li>
+            <li><b>Asteroid fields</b> and nebulae are slow but the Dreadnought cannot pursue through stars or void rifts.</li>
+            <li><b>Trade Stations (T)</b> repair 1 hull for 2 doubloons when you stop on them.</li>
+        </ul>
+        <p>Right-click drag to pan. Click your ship to plot a course.</p>
+        <button id="begin-btn">Set Sail</button>
+    </div>
+    <script type="module" src="index.js"></script>
+</body>
+</html>
