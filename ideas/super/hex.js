@@ -1,0 +1,134 @@
+// Hex Grid Utilities
+// Using axial coordinates (q, r) with pointy-top hexes
+
+import { HEX_SIZE } from './config.js';
+
+// Convert axial to pixel coordinates
+export function hexToPixel(q, r) {
+    const x = HEX_SIZE * (Math.sqrt(3) * q + Math.sqrt(3) / 2 * r);
+    const y = HEX_SIZE * (3 / 2 * r);
+    return { x, y };
+}
+
+// Convert pixel to axial coordinates
+export function pixelToHex(x, y) {
+    const q = (Math.sqrt(3) / 3 * x - 1 / 3 * y) / HEX_SIZE;
+    const r = (2 / 3 * y) / HEX_SIZE;
+    return hexRound(q, r);
+}
+
+// Round fractional hex coordinates to nearest hex
+export function hexRound(q, r) {
+    const s = -q - r;
+    let rq = Math.round(q);
+    let rr = Math.round(r);
+    let rs = Math.round(s);
+
+    const qDiff = Math.abs(rq - q);
+    const rDiff = Math.abs(rr - r);
+    const sDiff = Math.abs(rs - s);
+
+    if (qDiff > rDiff && qDiff > sDiff) {
+        rq = -rr - rs;
+    } else if (rDiff > sDiff) {
+        rr = -rq - rs;
+    }
+
+    return { q: rq, r: rr };
+}
+
+// Get the 6 neighboring hexes
+export function hexNeighbors(q, r) {
+    const directions = [
+        { q: 1, r: 0 }, { q: 1, r: -1 }, { q: 0, r: -1 },
+        { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 }
+    ];
+    return directions.map(d => ({ q: q + d.q, r: r + d.r }));
+}
+
+// Calculate distance between two hexes
+export function hexDistance(q1, r1, q2, r2) {
+    return (Math.abs(q1 - q2) + Math.abs(q1 + r1 - q2 - r2) + Math.abs(r1 - r2)) / 2;
+}
+
+// Get all hexes within a certain radius
+export function hexesInRange(q, r, radius) {
+    const results = [];
+    for (let dq = -radius; dq <= radius; dq++) {
+        for (let dr = Math.max(-radius, -dq - radius); dr <= Math.min(radius, -dq + radius); dr++) {
+            results.push({ q: q + dq, r: r + dr });
+        }
+    }
+    return results;
+}
+
+// Create a hex key for use in Maps/Sets
+export function hexKey(q, r) {
+    return `${q},${r}`;
+}
+
+// Get corner points of a hex for drawing
+export function hexCorners(centerX, centerY, size) {
+    const corners = [];
+    for (let i = 0; i < 6; i++) {
+        const angle = Math.PI / 180 * (60 * i - 30);
+        corners.push({
+            x: centerX + size * Math.cos(angle),
+            y: centerY + size * Math.sin(angle)
+        });
+    }
+    return corners;
+}
+
+// Draw a hex path on canvas context
+export function drawHexPath(ctx, centerX, centerY, size) {
+    const corners = hexCorners(centerX, centerY, size);
+    ctx.beginPath();
+    ctx.moveTo(corners[0].x, corners[0].y);
+    for (let i = 1; i < 6; i++) {
+        ctx.lineTo(corners[i].x, corners[i].y);
+    }
+    ctx.closePath();
+}
+
+// Cost-aware BFS (Dijkstra) for hex grids
+// Returns a Map of hexKey -> cost for all reachable hexes within maxCost.
+// - startHex: { q, r }
+// - hexes: Map of hexKey -> hex objects
+// - movementCost(hex): returns cost to enter hex, or Infinity if impassable
+// - maxCost: stop exploring when cost exceeds this
+export function bfsHexes(startHex, hexes, movementCost, maxCost) {
+    const costs = new Map();
+    const startKey = hexKey(startHex.q, startHex.r);
+    costs.set(startKey, 0);
+
+    // Priority queue as sorted array (fine for hex-grid BFS with small cost values)
+    const queue = [{ hex: startHex, cost: 0 }];
+
+    while (queue.length > 0) {
+        const { hex: current, cost: currentCost } = queue.shift();
+
+        for (const n of hexNeighbors(current.q, current.r)) {
+            const key = hexKey(n.q, n.r);
+            const neighbor = hexes.get(key);
+            if (!neighbor) continue;
+
+            const cost = movementCost(neighbor);
+            if (cost === Infinity) continue;
+
+            const totalCost = currentCost + cost;
+            if (totalCost > maxCost) continue;
+
+            if (!costs.has(key) || totalCost < costs.get(key)) {
+                costs.set(key, totalCost);
+                // Insert sorted by cost for correct Dijkstra ordering
+                const idx = queue.findIndex(e => e.cost > totalCost);
+                if (idx === -1) queue.push({ hex: neighbor, cost: totalCost });
+                else queue.splice(idx, 0, { hex: neighbor, cost: totalCost });
+            }
+        }
+    }
+
+    return costs;
+}
+

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Super</title>
+<link rel="stylesheet" href="index.css">
+</head>
+<body>
+<div id="app">
+    <header id="topbar">
+        <div class="hero-box">
+            <span id="heroName">—</span>
+            <span class="stat">HP <b id="hpVal">0</b>/<span id="hpMax">0</span></span>
+            <span class="stat">AP <b id="apVal">0</b>/<span id="apMax">0</span></span>
+            <span class="stat" id="statusVal"></span>
+        </div>
+        <div class="turn-box">
+            <span id="turnPhase">Player Phase</span>
+            <span id="missionName"></span>
+        </div>
+    </header>
+
+    <main id="stage">
+        <canvas id="mapCanvas" width="960" height="720"></canvas>
+        <aside id="side">
+            <section id="powerPanel">
+                <h3>Powers</h3>
+                <ul id="powerList"></ul>
+            </section>
+            <section id="targetPanel">
+                <h3>Target</h3>
+                <div id="targetInfo">Click the map to inspect.</div>
+            </section>
+        </aside>
+    </main>
+
+    <section id="logPanel">
+        <div id="logContent"></div>
+    </section>
+
+    <footer id="bottombar">
+        <button id="endTurnBtn">End Turn</button>
+        <button id="sheetBtn">Character Sheet</button>
+        <button id="goalsBtn">Map Goals</button>
+        <button id="newCampaignBtn">New Campaign</button>
+    </footer>
+
+    <div id="modal" class="hidden">
+        <div id="modalInner">
+            <button id="modalClose">×</button>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+</div>
+<script type="module" src="./index.js"></script>
+</body>
+</html>
