@@ -2664,23 +2664,23 @@ function trainInfoHtml(skillId) {
 
 let lastTrainSkill = null;
 
-// Train panel: learned skills as a dual list — trained (left, usable) vs latent
-// (right). ← trains or levels up a skill (rising SP cost); → levels it down or
+// Train panel: learned skills as a dual list — latent (left) vs trained (right,
+// usable). → trains or levels up a skill (rising SP cost); ← levels it down or
 // makes it latent. The info box previews whatever row was last clicked.
 function showTrainDialog(onBack) {
     const learned = [...player.learnedSkills].sort((a, b) => SKILLS[a].name.localeCompare(SKILLS[b].name));
     const free = player.freeSP();
-    let body = '<p style="color:#aaa;font-size:12px">Click ← to train and level up (rising cost +1, +2, +3, +4, +5; max 5). Click → to level down, or make latent at level 1.</p>';
+    let body = '<p style="color:#aaa;font-size:12px">Click → to train and level up (rising cost +1, +2, +3, +4, +5; max 5). Click ← to level down, or make latent at level 1.</p>';
     body += `<p style="color:${free > 0 ? '#b388ff' : '#888'};font-size:13px">SP available: ${free} of ${player.sp}</p>`;
     body += '<div class="train-scroll">';
-    body += '<div class="train-row train-head-row"><div class="train-side">Trained</div><div class="train-mid"></div><div class="train-side right">Latent</div></div>';
+    body += '<div class="train-row train-head-row"><div class="train-side">Latent</div><div class="train-mid"></div><div class="train-side right">Trained</div></div>';
     for (const id of learned) {
         const def = SKILLS[id];
         const active = player.activeSkills.has(id);
         const rank = player.rankOf(id);
         const tiered = !!def.tiers;
         const lvl = (active && tiered) ? ' ' + rankInsignia(rank) : '';
-        // ‹ advances: trains a latent skill, or levels up an active tiered one.
+        // → advances: trains a latent skill, or levels up an active tiered one.
         // Dead (dimmed) at max rank, on untiered active skills, or with no free SP.
         // Each step costs the target rank (+1, +2, +3, +4, +5); activating costs 1.
         const advanceCost = active ? rank + 1 : 1;
@@ -2699,14 +2699,14 @@ function showTrainDialog(onBack) {
             advTitle = canAdvance ? `Level up (${advanceCost} SP)` : `Need ${advanceCost} SP`;
         }
         const advance = canAdvance
-            ? `<button class="train-arrow" data-advance="${id}" title="${advTitle}">←</button>`
-            : `<span class="train-arrow" style="opacity:0.3;cursor:default" title="${advTitle}">←</span>`;
-        // → steps the rank down, dropping to latent from level 1.
-        const reduceBtn = active ? `<button class="train-arrow" data-reduce="${id}" title="${rank > 1 ? 'Level down' : 'Make latent'}">→</button>` : '';
+            ? `<button class="train-arrow" data-advance="${id}" title="${advTitle}">→</button>`
+            : `<span class="train-arrow" style="opacity:0.3;cursor:default" title="${advTitle}">→</span>`;
+        // ← steps the rank down, dropping to latent from level 1.
+        const reduceBtn = active ? `<button class="train-arrow" data-reduce="${id}" title="${rank > 1 ? 'Level down' : 'Make latent'}">←</button>` : '';
         body += `<div class="train-row" data-row="${id}">`
-            + `<div class="train-side">${active ? def.name + lvl : ''}</div>`
-            + `<div class="train-mid">${advance}${reduceBtn}</div>`
-            + `<div class="train-side right">${active ? '' : def.name}</div>`
+            + `<div class="train-side">${active ? '' : def.name}</div>`
+            + `<div class="train-mid">${reduceBtn}${advance}</div>`
+            + `<div class="train-side right">${active ? def.name + lvl : ''}</div>`
             + '</div>';
     }
     body += '</div>';
