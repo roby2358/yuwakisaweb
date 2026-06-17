@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Embergrade</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <canvas id="game"></canvas>
+    <div id="hud">
+        <span id="turn-info">Day 1 / 15</span>
+        <span id="mp-info">MP: 5</span>
+        <span id="village-info">Villages: 5</span>
+        <span id="fire-info">Fires: 0</span>
+        <button id="mode-move" class="active">Move</button>
+        <button id="mode-dig">Dig (2)</button>
+        <button id="mode-douse">Douse (3)</button>
+        <button id="end-turn">End Day</button>
+        <button id="new-game">New Game</button>
+    </div>
+    <div id="intro-panel">
+        <p><strong>EMBERGRADE</strong></p>
+        <p>A wildfire is spreading across the island. Command three firefighters and save every village for 15 days.</p>
+        <p style="text-align:left">
+            <strong>Click</strong> a firefighter to select.<br>
+            <strong>Move</strong>: click a yellow hex.<br>
+            <strong>Dig</strong> (2 MP): turn the firefighter's hex into a firebreak — fire cannot cross it.<br>
+            <strong>Douse</strong> (3 MP): extinguish flames on the firefighter's hex and all six neighbors.<br>
+            <strong>End Day</strong> to let the fire spread.
+        </p>
+        <p>Lose if any village burns. Win by surviving 15 days.</p>
+        <button id="begin-btn">Begin</button>
+    </div>
+    <script type="module" src="index.js"></script>
+</body>
+</html>
