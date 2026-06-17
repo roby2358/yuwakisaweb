@@ -1263,8 +1263,16 @@ function executeRespec(action) {
     player.statPoints += refund;
     player.hp = Math.min(player.hp, player.maxHP());
     player.aether = Math.min(player.aether, player.maxAether());
-    logCombat(`Retrain: ${refund} stat points refunded.`, 'log-info');
+    logCombat(`Renew: ${refund} stat points refunded.`, 'log-info');
     setTimeout(() => showLevelUpDialog(), 100);
+}
+
+// Open the Train panel anywhere, mirroring the haven training flow. The dialog's
+// own Done button ends the turn (player.mp = 0), so this skips the automatic MP
+// spend by returning false — the AE cost was already paid in SkillAction.execute.
+function executeRetrain(action) {
+    setTimeout(() => action.ctx.showTrainDialog(), 100);
+    return false;
 }
 
 function executeSanctuary(action) {
@@ -1428,6 +1436,7 @@ const SKILL_HANDLERS = {
     spirit_walk: executeSpiritWalk,
     ground_weeps: executeGroundWeeps,
     respec: executeRespec,
+    retrain: executeRetrain,
     sanctuary: executeSanctuary,
     loot: executeLoot,
     havens_light: executeHavensLight,

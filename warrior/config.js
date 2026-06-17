@@ -880,9 +880,14 @@ export const SKILLS = {
         desc: 'Reveal POI locations within range.', minLevel: 4
     },
     respec: {
-        id: 'respec', name: 'Retrain', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
+        id: 'respec', name: 'Renew', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
         scrollOnly: true, panelInvoke: true,
         desc: 'Refund all spent stat points and reallocate them. Requires clean hex, no enemies.', minLevel: 4
+    },
+    retrain: {
+        id: 'retrain', name: 'Retrain', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
+        scrollOnly: true, panelInvoke: true,
+        desc: 'Open the Train panel to reallocate your skill points. Requires clean hex, no enemies.', minLevel: 4
     },
     garrison: {
         id: 'garrison', name: 'Commission Garrison', cost: 0, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,

@@ -194,6 +194,7 @@ const actionCtx = {
     showSkillChoiceDialog: () => showSkillChoiceDialog(),
     showLevelUpDialog: () => showLevelUpDialog(),
     invokeSanctuary: () => invokeSanctuary(),
+    showTrainDialog: () => showTrainDialog(),
     // selection / movement
     deselectPlayer: () => deselectPlayer(),
     refreshSelectionAfterAction: () => refreshSelectionAfterAction(),
@@ -1381,9 +1382,9 @@ function initGame() {
     });
     const startHaven = settlements[0] || world.pois[0];
 
-    // Drop the two map scrolls now that the start is known. Channel Aether sits
-    // within 11 hexes of the start; Retrain hides in the half too far from the
-    // Maw to earn a proximity bonus. Both must be reachable on foot from start.
+    // Drop the map scrolls now that the start is known. Channel Aether sits
+    // within 11 hexes of the start; Renew and Retrain hide in the half too far
+    // from the Maw to earn a proximity bonus. All must be reachable on foot.
     world.placeScroll('channel', startHaven.q, startHaven.r,
         h => hexDistance(h.q, h.r, startHaven.q, startHaven.r) <= 11);
     if (mawDists) {
@@ -1392,6 +1393,7 @@ function initGame() {
         const farThreshold = mawMax * 0.5;
         const farPred = h => (mawDists.get(hexKey(h.q, h.r)) ?? 0) > farThreshold;
         world.placeScroll('respec', startHaven.q, startHaven.r, farPred);
+        world.placeScroll('retrain', startHaven.q, startHaven.r, farPred);
 
         // Lock 10 random learnable skills behind scrolls hidden in the same far
         // half (too far from the Maw to earn a proximity bonus). A skill is only
@@ -1502,7 +1504,7 @@ function render() {
             if (poi) {
                 const symbol = POI_SYMBOLS[poi.type] || '?';
                 let color = POI_COLORS[poi.type] || '#fff';
-                if (poi.type === POI.BREACH && poi.closed) color = '#555';
+                if ((poi.type === POI.BREACH || poi.type === POI.MAW) && poi.closed) color = '#555';
                 if (poi.type === POI.RUIN) color = poi.ruinState === 'explored' ? '#000' : '#fff';
                 ctx.fillStyle = color;
                 ctx.font = 'bold ' + Math.floor(HEX_SIZE * 1.2) + 'px monospace';
@@ -1708,7 +1710,7 @@ function renderWorldMap() {
         const { x: mx, y: my } = mini(poi.q, poi.r);
         const symbol = POI_SYMBOLS[poi.type] || '?';
         let color = POI_COLORS[poi.type] || '#fff';
-        if (poi.type === POI.BREACH && poi.closed) color = '#555';
+        if ((poi.type === POI.BREACH || poi.type === POI.MAW) && poi.closed) color = '#555';
         if (poi.type === POI.RUIN) color = poi.ruinState === 'explored' ? '#000' : '#fff';
         ctx.fillStyle = color;
         ctx.fillText(symbol, mx, my);
@@ -2179,6 +2181,15 @@ function itemStatLine(item) {
     return parts.join(' | ');
 }
 
+// The shop's inspect pane: a fuller readout of one item than its terse row —
+// name, slot, and full effect list — shown when a shop row is clicked.
+function shopItemDetailHtml(item) {
+    const nameColor = item.magical ? '#e040fb' : '#ccc';
+    return `<span class="si-name" style="color:${nameColor}">${item.name}</span>`
+        + ` <span style="color:#888">(${item.slot})</span>`
+        + `<div class="si-stats">${itemStatLine(item)}</div>`;
+}
+
 function closeAllPanels() {
     document.getElementById('char-panel').classList.add('hidden');
     document.getElementById('skills-panel').classList.add('hidden');
@@ -2467,6 +2478,7 @@ function showShopDialog(poi, kind) {
         logCombat(`A new ${newItem.name} has appeared in the shop!`, 'log-info');
     }
     let bodyHtml = `<div style="margin-bottom:8px;color:#ffc107" data-gold-display>Your gold: ${player.gold}</div>`;
+    bodyHtml += '<div class="shop-scroll">';
     const owned = new Set([...Object.values(player.equipment).filter(Boolean), ...player.inventory]);
     for (const item of poi.shopItems) {
         const equip = ALL_EQUIPMENT[item.id];
@@ -2475,7 +2487,7 @@ function showShopDialog(poi, kind) {
         if (!smith.buyFilter(equip)) continue;
         const nameColor = equip.magical ? '#e040fb' : '#ccc';
         const shopPrice = item.price;
-        bodyHtml += `<div class="shop-item">
+        bodyHtml += `<div class="shop-item" data-detail="${item.id}">
             <div><span style="color:${nameColor}">${item.name}</span><br><span style="color:#aaa;font-size:11px">${itemStatLine(equip)}</span></div>
             <button data-id="${item.id}" data-price="${shopPrice}" ${player.gold < shopPrice ? 'disabled' : ''}>Buy ${shopPrice}g</button>
         </div>`;
@@ -2512,17 +2524,30 @@ function showShopDialog(poi, kind) {
             if (!item) continue;
             const sp = sellPrice(item);
             const sellColor = item.magical ? '#b388ff' : '#ccc';
-            bodyHtml += `<div class="shop-item">
+            bodyHtml += `<div class="shop-item" data-detail="${id}">
                 <div style="color:${sellColor}">${item.name}</div>
                 <button data-sell="${id}" data-sell-idx="${i}" data-price="${sp}">Sell ${sp}g</button>
             </div>`;
         }
     }
 
+    bodyHtml += '</div>'; // .shop-scroll
+    bodyHtml += '<div class="shop-info" data-shop-info><span class="si-hint">Click an item to inspect it.</span></div>';
+
     showDialog(POI_SYMBOLS[POI.HAVEN] + ' ' + smith.title, bodyHtml, [{ label: 'Done', action: () => { player.mp = 0; } }]);
 
     // Wire up buy/sell buttons
     const body = document.getElementById('dialog-body');
+
+    // Clicking a row (anywhere but its buy/sell button) inspects the item below.
+    const infoPane = body.querySelector('[data-shop-info]');
+    body.querySelectorAll('.shop-item[data-detail]').forEach(row => {
+        row.addEventListener('click', (e) => {
+            if (e.target.closest('button')) return;
+            const item = ALL_EQUIPMENT[row.dataset.detail];
+            if (item && infoPane) infoPane.innerHTML = shopItemDetailHtml(item);
+        });
+    });
     body.querySelectorAll('button[data-buy-skill]').forEach(btn => {
         btn.addEventListener('click', () => {
             const skillId = btn.dataset.buySkill;
