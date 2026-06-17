@@ -837,6 +837,7 @@ function gainXP(amount) {
 // themselves don't call this — they trust the caller has filtered.
 function checkSkillUsage(skill) {
     if (skill.id === 'phase_step' && player.phaseStepUsedThisTurn) return 'Phase Step already used this turn!';
+    if (skill.id === 'sprint' && player.sprintUsedThisTurn) return 'Sprint already used this turn!';
     const usage = skill.usage || SKILL_USAGE.ANYTIME;
     if (usage === SKILL_USAGE.ANYTIME) return null;
     const nearbyEnemy = em.enemies.some(e => hexDistance(player.q, player.r, e.q, e.r) <= 2);
@@ -1240,6 +1241,7 @@ function advanceTurn() {
     player.movedThisTurn = false;
     player.hexesMovedThisTurn = 0;
     player.phaseStepUsedThisTurn = false;
+    player.sprintUsedThisTurn = false;
     for (const e of em.enemies) e.stunRolledThisTurn = false;
 }
 
@@ -3287,6 +3289,7 @@ function activateSkill(skillId) {
 
     if (skill.target === SKILL_TARGET.SELF || skill.target === SKILL_TARGET.AOE_SELF) {
         executeSkill(skillId, player.q, player.r);
+        if (selected) computeReachable();
         render();
         updateSkillBar();
         updateSkillsPanel();

@@ -716,6 +716,10 @@ export const SKILLS = {
         id: 'mountain_skip', name: 'Mountain Skip', cost: 3, mpCost: 1, target: SKILL_TARGET.MOUNTAIN_SKIP, usage: SKILL_USAGE.ANYTIME,
         scales: ['range'], tiers: [[4], [4], [5], [5], [6]], desc: 'Skip to a nearby mountain hex. From mountain, may skip to mountain or land.', minLevel: 2
     },
+    sprint: {
+        id: 'sprint', name: 'Sprint', cost: 2, mpCost: 0, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
+        scales: ['effectStrength'], tiers: [[1], [2], [4], [6], [8]], desc: 'Gain bonus MP this turn. Once per turn.', minLevel: 2
+    },
     cosmic_bolt: {
         id: 'cosmic_bolt', name: 'Cosmic Bolt', cost: 3, target: SKILL_TARGET.RANGED, usage: SKILL_USAGE.ANYTIME,
         scales: ['baseDamage', 'range'], tiers: [[8, 4], [10, 4], [12, 5], [14, 5], [16, 6]], desc: 'Ranged bolt; damage scales with Warding.', minLevel: 2

@@ -1013,6 +1013,14 @@ function executeMendingLight(action) {
     logCombat(`Healed ${heal} HP`, 'log-heal');
 }
 
+function executeSprint(action) {
+    const { player, logCombat } = action.ctx;
+    const bonus = action.skill.effectStrength;
+    player.mp += bonus;
+    player.sprintUsedThisTurn = true;
+    logCombat(`Sprint: +${bonus} MP`, 'log-info');
+}
+
 function executeGravityWell(action) {
     const { player, world, em, logCombat } = action.ctx;
     for (const h of hexesInRange(player.q, player.r, action.skill.range)) {
@@ -1401,6 +1409,7 @@ const SKILL_HANDLERS = {
     sweep: executeSweep,
     stun_blow: executeStunBlow,
     mending_light: executeMendingLight,
+    sprint: executeSprint,
     gravity_well: executeGravityWell,
     sundering_blow: executeSunderingBlow,
     meteor: executeMeteor,

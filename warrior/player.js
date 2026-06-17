@@ -42,6 +42,7 @@ export class Player {
         this.movedThisTurn = false;
         this.hexesMovedThisTurn = 0;
         this.phaseStepUsedThisTurn = false;
+        this.sprintUsedThisTurn = false;
         this.seenDialogs = new Set();
     }
 
@@ -229,6 +230,7 @@ export class Player {
         p.movedThisTurn = false;
         p.hexesMovedThisTurn = 0;
         p.phaseStepUsedThisTurn = false;
+        p.sprintUsedThisTurn = false;
         return p;
     }
 }
