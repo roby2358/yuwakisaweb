@@ -2672,6 +2672,7 @@ const SKILL_POWER = {
 // in SKILL_POWER (no damage/heal score). effectStrength means something different
 // per skill, so the trickiness is centralized here keyed by skill id.
 const EFFECT_STRENGTH_DISPLAY = {
+    sprint:           es => `+${es} MP`,
     warp_shield:      es => `Block ${es * 10}%`,
     reflect:          es => `Reflect ${es * 10}% chance`,
     channel:          es => `${es}:1 HP→AE`,
