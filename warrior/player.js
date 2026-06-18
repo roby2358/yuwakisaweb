@@ -27,7 +27,7 @@ export class Player {
         // Skill points: the room to keep skills active. The active-skill count can
         // never exceed sp, and sp itself is capped at maxSP. Gained from visiting
         // havens/huts and from skill gems.
-        this.sp = 3;
+        this.sp = 5;
         this.maxSP = 50;
         // Per-skill rank (1..SKILL_MAX_RANK) for tiered skills. Absent = rank 1.
         // Skill advancement (spending SP to raise ranks) is not wired yet, so this
