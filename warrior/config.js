@@ -844,7 +844,7 @@ export const SKILLS = {
         desc: 'Show enemy threat heatmap over entire map. Press Space/click to dismiss.', panelInvoke: true, minLevel: 8
     },
     sanctuary: {
-        id: 'sanctuary', name: 'Sanctuary', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
+        id: 'sanctuary', name: 'Sanctuary', cost: 0, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
         scales: ['effectStrength'], tiers: [[4], [4], [3], [3], [2]],
         desc: 'Conjure a fleeting village and rest at once: heal a fraction of HP/AE. Must be non-POI terrain.', panelInvoke: true, minLevel: 8
     },
