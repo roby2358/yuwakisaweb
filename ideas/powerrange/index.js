@@ -110,14 +110,27 @@ function onScreen(x, y) {
 function render() {
     ctx.fillStyle = '#111';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    drawTerrain();
+    const control = computeControl();   // Map<hexKey, faction> — every hex a side dominates+supplies
+    drawTerrain(control);
     drawHighlights();
+    drawControlOutlines(control);
     drawUnits();
     if (overlay === 'gameover') drawGameOver();
     updateHUD();
 }
 
-function drawTerrain() {
+// Snapshot of who controls each hex right now (live as units move). controllerOf() returns null
+// fast for the open map — only fire-contested hexes pay for the supply-path BFS — so this is cheap.
+function computeControl() {
+    const control = new Map();
+    for (const [key, hex] of game.hexes) {
+        const owner = game.controllerOf(hex);
+        if (owner) control.set(key, owner);
+    }
+    return control;
+}
+
+function drawTerrain(control) {
     for (const [, hex] of game.hexes) {
         const { x, y } = hexToScreen(hex.q, hex.r);
         if (!onScreen(x, y)) continue;
@@ -127,15 +140,17 @@ function drawTerrain() {
         ctx.strokeStyle = '#00000044';
         ctx.lineWidth = 1;
         ctx.stroke();
-        decorateHex(hex, x, y);
+        decorateHex(hex, x, y, control);
     }
 }
 
-function decorateHex(hex, x, y) {
-    const resource = hex.terrain === TERRAIN.GOLD || hex.terrain === TERRAIN.QUARRY;
-    if (resource) {
-        const owner = game.controllerOf(hex);   // live, so it updates as units move
-        if (owner) drawControlBorder(x, y, owner);
+function decorateHex(hex, x, y, control) {
+    const owner = control.get(Hex.key(hex.q, hex.r));
+    if (owner) {
+        // Tint marks the controlled area; the region perimeter is drawn later by drawControlOutlines.
+        drawHexPath(ctx, x, y, HEX_SIZE);
+        ctx.fillStyle = CONTROL_TINT[owner];
+        ctx.fill();
     }
     if (hex.terrain === TERRAIN.GOLD) glyph('$', x, y, '#5a3d00', 14);
     else if (hex.terrain === TERRAIN.QUARRY) glyph('⛏', x, y, '#3a3320', 13);
@@ -147,20 +162,40 @@ function decorateHex(hex, x, y) {
     }
 }
 
-// Faction control marker for resource hexes: a tint plus a faction-colored border backed by
-// a black halo, so it stays legible even when the faction color matches the terrain (gold).
-function drawControlBorder(x, y, owner) {
-    drawHexPath(ctx, x, y, HEX_SIZE);
-    ctx.fillStyle = owner === PLAYER ? 'rgba(255, 240, 160, 0.30)' : 'rgba(220, 70, 60, 0.28)';
-    ctx.fill();
-    drawHexPath(ctx, x, y, HEX_SIZE - 2);
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 5;
-    ctx.stroke();
-    drawHexPath(ctx, x, y, HEX_SIZE - 2);
-    ctx.strokeStyle = owner === PLAYER ? '#ffffff' : FACTION_COLORS[owner];
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
+// Faction → control colors: a faint area tint and the region-perimeter line.
+const CONTROL_TINT = { [PLAYER]: 'rgba(90, 150, 255, 0.16)', [ENEMY]: 'rgba(220, 70, 60, 0.16)' };
+const CONTROL_LINE = { [PLAYER]: '#3a8dff', [ENEMY]: '#ff443a' };
+
+// Edge e (corner e → corner e+1) of a pointy-top hex faces this NEIGHBOR_DIRS direction.
+const EDGE_DIR = [0, 5, 4, 3, 2, 1];
+
+// Trace each control region's perimeter only: for every controlled hex, stroke an edge solely
+// when the hex across it has a different controller. Shared (interior) edges are skipped, so what
+// remains is the outline of each blob — blue around the player's, red around the enemy's. A black
+// underlay keeps the line legible over any terrain.
+function drawControlOutlines(control) {
+    ctx.lineCap = 'round';
+    for (const [key, owner] of control) {
+        const { q, r } = Hex.fromKey(key);
+        const { x, y } = hexToScreen(q, r);
+        if (!onScreen(x, y)) continue;
+        const corners = hexCorners(x, y, HEX_SIZE);
+        for (let e = 0; e < 6; e++) {
+            const d = NEIGHBOR_DIRS[EDGE_DIR[e]];
+            if (control.get(Hex.key(q + d.q, r + d.r)) === owner) continue;   // interior edge
+            const a = corners[e], b = corners[(e + 1) % 6];
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 4.5;
+            ctx.stroke();
+            ctx.strokeStyle = CONTROL_LINE[owner];
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+        }
+    }
+    ctx.lineCap = 'butt';
 }
 
 function glyph(text, x, y, color, size) {
