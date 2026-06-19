@@ -129,6 +129,7 @@ class Game {
     //   3. SUPPLY — a corridor of passable, non-enemy-occupied hexes links it to that Foundry.
     // The power winner takes the hex; if it lacks supply, no one collects it (it goes neutral).
     controllerOf(hex) {
+        if (!this.isPassable(hex)) return null;   // water/mountain are nobody's — impassable, no sight, no control
         const net = this.netPower(hex, FACTION.PLAYER);
         if (net === 0) return null;   // tie or no guns trained on it → contested/neutral
         const owner = net > 0 ? FACTION.PLAYER : FACTION.ENEMY;
