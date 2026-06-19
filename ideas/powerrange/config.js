@@ -165,6 +165,7 @@ const FACTION_COLORS = {
 const START_TREASURY = 120;
 const FOUNDRY_INCOME = 6;     // per turn while the Foundry stands
 const GOLD_INCOME = 12;       // per controlled, unburned gold hex
+const ENEMY_STIPEND = 30;    // temporary AI handicap: flat per-turn bonus so it stops going broke (TODO: fix AI)
 const QUARRY_DISCOUNT = 0.10; // build discount per controlled quarry
 const QUARRY_DISCOUNT_CAP = 0.30;
 const BUILD_RADIUS = 2;       // build within this many hexes of the Foundry

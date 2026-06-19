@@ -28,6 +28,7 @@ class Game {
             [FACTION.PLAYER]: new Faction(FACTION.PLAYER),
             [FACTION.ENEMY]: new Faction(FACTION.ENEMY)
         };
+        this.controlCache = null;   // Map<hexKey, faction>, lazily computed; null = stale
         this.placeStartForces();
         this.beginTurn(FACTION.PLAYER);
     }
@@ -49,6 +50,7 @@ class Game {
     spawn(archetypeKey, owner, q, r) {
         const u = Unit.create(archetypeKey, owner, q, r, this.nextId++);
         this.units.push(u);
+        this.invalidateControl();
         return u;
     }
 
@@ -122,68 +124,82 @@ class Game {
         if (!beset) unit.capturingBy = null;
     }
 
-    // ---- Economy: who owns a resource hex ----
-    // A resource belongs to a faction only when all three hold (DYNAMICS §7):
-    //   1. RANGE  — at least one of its units can fire on the hex (so it has positive firepower),
+    // ---- Economy: who owns each hex ----
+    // A hex belongs to a faction only when all three hold (DYNAMICS §7):
+    //   1. RANGE  — at least one of its guns can fire on the hex (so it has positive firepower),
     //   2. POWER  — its firepower on the hex out-totals the enemy's (net contest is positive),
     //   3. SUPPLY — a corridor of passable, non-enemy-occupied hexes links it to that Foundry.
-    // The power winner takes the hex; if it lacks supply, no one collects it (it goes neutral).
+    // Control is computed for the whole board at once (computeControl) and cached: every query
+    // reads the same snapshot, recomputed only after a unit moves, spawns, dies, or changes hands.
     controllerOf(hex) {
-        if (!this.isPassable(hex)) return null;   // water/mountain are nobody's — impassable, no sight, no control
-        const net = this.netPower(hex, FACTION.PLAYER);
-        if (net === 0) return null;   // tie or no guns trained on it → contested/neutral
-        const owner = net > 0 ? FACTION.PLAYER : FACTION.ENEMY;
-        return this.hasSupplyPath(hex, owner) ? owner : null;
+        return this.control().get(Hex.key(hex.q, hex.r)) ?? null;
     }
 
-    // A faction's firepower advantage over a hex: its own guns trained on the hex minus the
-    // enemy's. >0 means the faction dominates the hex by fire; <0 means the enemy does.
-    netPower(hex, owner) {
-        return this.rangePower(hex, owner) - this.rangePower(hex, this.enemyOf(owner));
+    // The cached control snapshot, recomputed on demand when units have changed since last time.
+    control() {
+        if (!this.controlCache) this.controlCache = this.computeControl();
+        return this.controlCache;
     }
 
-    // Total firepower a faction trains on a hex: the power of every ground-holding unit that
-    // could shoot it (within effective range and, unless it fires indirect, line of sight).
-    rangePower(hex, owner) {
-        const c = new Hex(hex.q, hex.r);
-        let sum = 0;
+    // Drop the cache; next control() rebuilds it. Called wherever the unit roster/positions change.
+    invalidateControl() { this.controlCache = null; }
+
+    // Whole-board control in one pass. Push firepower from each gun onto the hexes it covers
+    // (cheap: only touches hexes in range, never the empty map), then flood supply outward from
+    // each Foundry through the hexes that faction out-guns. A hex is controlled iff its owner both
+    // out-guns it (net > 0) and the flood reached it. Returns Map<hexKey, faction>.
+    computeControl() {
+        const power = { [FACTION.PLAYER]: new Map(), [FACTION.ENEMY]: new Map() };
         for (const u of this.units) {
-            if (u.owner !== owner || !u.holdsGround() || !u.canFire()) continue;
+            if (!u.holdsGround() || !u.canFire()) continue;
             const from = new Hex(u.q, u.r);
-            if (from.distance(c) > u.effectiveRange(this.hex(u.q, u.r).terrain)) continue;
-            if (!u.firesIndirect() && !lineOfSight(u, hex, this.hexes)) continue;
-            sum += u.power;
+            const range = u.effectiveRange(this.hex(u.q, u.r).terrain);
+            const acc = power[u.owner];
+            for (const cell of from.inRange(range)) {
+                const h = this.hex(cell.q, cell.r);
+                if (!h || !this.isPassable(h)) continue;
+                if (!u.firesIndirect() && !lineOfSight(u, h, this.hexes)) continue;
+                const key = Hex.key(cell.q, cell.r);
+                acc.set(key, (acc.get(key) ?? 0) + u.power);
+            }
         }
-        return sum;
+        const net = (key, owner) =>
+            (power[owner].get(key) ?? 0) - (power[this.enemyOf(owner)].get(key) ?? 0);
+        const control = new Map();
+        for (const owner of [FACTION.PLAYER, FACTION.ENEMY]) {
+            for (const key of this.suppliedHexes(owner, net)) control.set(key, owner);
+        }
+        return control;
     }
 
-    // True if a corridor of fire-dominated hexes links the resource back to the Foundry. Every
-    // step must be a passable hex this faction out-guns (netPower > 0) and that no enemy unit
-    // stands on — so the enemy severs supply by out-powering OR blocking a single link, even far
-    // from the resource. The Foundry hex is the root and always closes the path. BFS over adjacency.
-    hasSupplyPath(hex, owner) {
+    // Flood from a faction's Foundry through every passable, non-enemy-occupied hex it out-guns.
+    // The set returned is exactly the hexes it dominates by fire AND can carry supply to — the
+    // enemy severs control by out-powering OR standing on a single link. `net(key, owner)` is the
+    // O(1) firepower-difference lookup built in computeControl. Returns a Set of hex keys.
+    suppliedHexes(owner, net) {
         const foundry = this.foundryOf(owner);
-        if (!foundry) return false;
-        const goal = Hex.key(foundry.q, foundry.r);
-        const blocked = new Set(this.factionUnits(this.enemyOf(owner)).map(u => Hex.key(u.q, u.r)));
-        const seen = new Set([Hex.key(hex.q, hex.r)]);
-        const queue = [new Hex(hex.q, hex.r)];
+        if (!foundry) return new Set();
+        const enemyAt = new Set(this.factionUnits(this.enemyOf(owner)).map(u => Hex.key(u.q, u.r)));
+        const rootKey = Hex.key(foundry.q, foundry.r);
+        const controlled = new Set();
+        if (net(rootKey, owner) > 0) controlled.add(rootKey);   // the Foundry hex, if its own guns hold it
+        const seen = new Set([rootKey]);
+        const queue = [new Hex(foundry.q, foundry.r)];          // the Foundry roots the corridor unconditionally
         while (queue.length > 0) {
             const cur = queue.shift();
-            if (Hex.key(cur.q, cur.r) === goal) return true;
             for (const n of cur.neighbors()) {
                 const key = Hex.key(n.q, n.r);
                 if (seen.has(key)) continue;
                 seen.add(key);
-                if (key === goal) return true;                 // the Foundry hex itself, the root
-                if (blocked.has(key)) continue;                // enemy unit severs the corridor
                 const h = this.hex(n.q, n.r);
-                if (!h || !this.isPassable(h)) continue;       // water/mountain can't carry supply
-                if (this.netPower(h, owner) <= 0) continue;    // a link the enemy out-guns is cut
-                queue.push(new Hex(n.q, n.r));
+                if (!h || !this.isPassable(h)) continue;        // water/mountain can't carry supply
+                if (net(key, owner) <= 0) continue;             // a link the enemy out-guns is cut
+                controlled.add(key);                            // dominated and reachable → controlled
+                if (enemyAt.has(key)) continue;                 // but an enemy unit on it severs supply onward
+                queue.push(n);
             }
         }
-        return false;
+        return controlled;
     }
 
     controlledQuarries(owner) {
@@ -201,6 +217,7 @@ class Game {
     runIncome(owner) {
         const fac = this.factions[owner];
         let income = this.foundryOf(owner) ? FOUNDRY_INCOME : 0;
+        if (owner === FACTION.ENEMY) income += ENEMY_STIPEND;   // temporary handicap; remove once the AI earns its keep
         for (const [, h] of this.hexes) {
             if (h.terrain !== TERRAIN.GOLD || h.onFire > 0) continue;
             h.controlledBy = this.controllerOf(h);
@@ -250,6 +267,7 @@ class Game {
         unit.r = r;
         unit.mpLeft -= cost;
         unit.capturingBy = null;   // moving abandons any siege in progress on this unit
+        this.invalidateControl();
         return true;
     }
 
@@ -340,6 +358,7 @@ class Game {
             target.capturingBy = null;
             target.disabled = true;        // can't act on its new side until next turn
             target.mpLeft = 0;
+            this.invalidateControl();      // the captured gun now projects for its new owner
             this.note(`Shield Knight captures the ${target.name}!`);
             this.checkVictory();
             return { captured: true };
@@ -359,6 +378,15 @@ class Game {
 
     buildCost(owner, archetypeKey) {
         return Math.round(ARCHETYPES[archetypeKey].cost * (1 - this.buildDiscount(owner)));
+    }
+
+    // One-click build: drop the unit on the nearest open hex by the Foundry.
+    buildNearest(owner, archetypeKey) {
+        const f = this.foundryOf(owner);
+        if (!f) return null;
+        const spot = this.openNear(f, BUILD_RADIUS)[0];
+        if (!spot) return null;
+        return this.build(owner, archetypeKey, spot.q, spot.r);
     }
 
     build(owner, archetypeKey, q, r) {
@@ -393,6 +421,7 @@ class Game {
     removeUnit(unit) {
         const i = this.units.indexOf(unit);
         if (i >= 0) this.units.splice(i, 1);
+        this.invalidateControl();
     }
 
     checkVictory() {

@@ -1,6 +1,6 @@
 // index.js — PowerRange view + input. The model lives in game.js; this file renders it and
 // translates clicks/keys into Game commands. Input dispatch follows the baseline layering
-// (UI_CONTROLS.md): overlay → targeting (build placement) → selection → pan/hover.
+// (UI_CONTROLS.md): overlay → selection → pan/hover. (Building is one click, no placement step.)
 // Classic script: loaded last; depends on config.js, hex.js, game.js, ai.js.
 
 const PLAYER = FACTION.PLAYER;
@@ -9,7 +9,6 @@ const ENEMY = FACTION.ENEMY;
 // ---- State ----
 let game = new Game();
 let selection = null;   // { unit, reachable:Map, fireable:Set, siegeable:Set }
-let targeting = null;   // { archetype, validHexes:Set } — build placement
 let overlay = 'intro';  // 'intro' | 'gameover' | null
 let hoveredHex = null;
 
@@ -43,7 +42,6 @@ function centerOn(unit) {
 
 // ---- Selection ----
 function selectUnit(unit) {
-    targeting = null;
     selection = {
         unit,
         reachable: game.reachable(unit),
@@ -63,13 +61,12 @@ function refreshSelection() {
 
 function deselect() { selection = null; }
 
-// ---- Build placement (the targeting modal) ----
-function enterBuild(archetypeKey) {
+// ---- Build (one click: lands on the nearest open hex by the Foundry) ----
+function buildUnit(archetypeKey) {
     if (game.factions[PLAYER].treasury < game.buildCost(PLAYER, archetypeKey)) return;
-    selection = null;
-    targeting = { archetype: archetypeKey, validHexes: game.buildHexes(PLAYER) };
+    deselect();
+    game.buildNearest(PLAYER, archetypeKey);
 }
-function cancelTargeting() { targeting = null; }
 
 // ---- Round resolution ----
 function endPlayerTurn() {
@@ -82,7 +79,6 @@ function endPlayerTurn() {
     game.turn++;
     if (!game.winner) game.beginTurn(PLAYER);
     deselect();
-    cancelTargeting();
     syncWinner();
     render();
 }
@@ -94,7 +90,6 @@ function syncWinner() {
 function newGame() {
     game = new Game();
     selection = null;
-    targeting = null;
     overlay = 'intro';
     centerOn(game.foundryOf(PLAYER));
     syncIntroDom();
@@ -110,24 +105,13 @@ function onScreen(x, y) {
 function render() {
     ctx.fillStyle = '#111';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    const control = computeControl();   // Map<hexKey, faction> — every hex a side dominates+supplies
+    const control = game.control();   // cached Map<hexKey, faction>; rebuilt only when units change
     drawTerrain(control);
     drawHighlights();
     drawControlOutlines(control);
     drawUnits();
     if (overlay === 'gameover') drawGameOver();
     updateHUD();
-}
-
-// Snapshot of who controls each hex right now (live as units move). controllerOf() returns null
-// fast for the open map — only fire-contested hexes pay for the supply-path BFS — so this is cheap.
-function computeControl() {
-    const control = new Map();
-    for (const [key, hex] of game.hexes) {
-        const owner = game.controllerOf(hex);
-        if (owner) control.set(key, owner);
-    }
-    return control;
 }
 
 function drawTerrain(control) {
@@ -218,10 +202,6 @@ function tintHexes(keys, color) {
 }
 
 function drawHighlights() {
-    if (targeting) {
-        tintHexes(targeting.validHexes, 'rgba(80, 220, 120, 0.4)');
-        return;
-    }
     if (!selection) return;
     tintHexes(selection.reachable.keys(), 'rgba(255, 255, 0, 0.28)');
     tintHexes(selection.fireable, 'rgba(255, 40, 40, 0.34)');
@@ -377,8 +357,10 @@ function updateHUD() {
 
 function countControlled(terrain, owner) {
     let n = 0;
-    for (const [, h] of game.hexes) {
-        if (h.terrain === terrain && game.controllerOf(h) === owner) n++;
+    for (const [key, who] of game.control()) {
+        if (who !== owner) continue;
+        const { q, r } = Hex.fromKey(key);
+        if (game.hex(q, r).terrain === terrain) n++;
     }
     return n;
 }
@@ -444,7 +426,7 @@ function buildBar() {
         btn.dataset.key = key;
         btn.innerHTML = `<span class="name">${a.label} ${a.name}</span>` +
             `<span class="cost"></span><span class="stats">${buildStats(a)}</span>`;
-        btn.addEventListener('click', () => { enterBuild(key); render(); });
+        btn.addEventListener('click', () => { buildUnit(key); render(); });
         list.appendChild(btn);
         return btn;
     });
@@ -459,7 +441,6 @@ function updateBuildBar() {
         const cost = game.buildCost(PLAYER, key);
         btn.querySelector('.cost').textContent = 'cr ' + cost;
         btn.disabled = treasury < cost;
-        btn.classList.toggle('active', targeting?.archetype === key);
     }
 }
 
@@ -470,7 +451,6 @@ function syncIntroDom() {
 // ---- Input ----
 canvas.addEventListener('mousedown', e => {
     if (e.button === 2) {
-        if (targeting) { cancelTargeting(); render(); return; }
         panning = true;
         panStartX = e.clientX; panStartY = e.clientY;
         panOrigX = panX; panOrigY = panY;
@@ -484,13 +464,6 @@ canvas.addEventListener('mousedown', e => {
 
     const hex = screenToHex(e.clientX, e.clientY);
     const key = Hex.key(hex.q, hex.r);
-
-    if (targeting) {
-        if (targeting.validHexes.has(key)) game.build(PLAYER, targeting.archetype, hex.q, hex.r);
-        cancelTargeting();
-        render();
-        return;
-    }
 
     handleBoardClick(hex, key);
     render();
@@ -551,8 +524,7 @@ window.addEventListener('keydown', e => {
     }
     if (overlay === 'gameover') return;
     if (e.key === 'Escape') {
-        if (targeting) cancelTargeting();
-        else deselect();
+        deselect();
         render();
         return;
     }
