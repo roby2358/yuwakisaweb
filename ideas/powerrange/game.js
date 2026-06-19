@@ -103,12 +103,13 @@ class Game {
     }
 
     // An Engineer that spent its whole turn idle (didn't move or act) digs in as a Field
-    // Shield: immobile, but with a strong, fully-refreshing shield. A permanent conversion.
+    // Shield: a strong, fully-refreshing shield. It keeps 1 MP so it can break itself down
+    // and crawl away — moving reverts it to a plain Engineer (see unfortify).
     maybeFortify(u) {
         if (!u.isEngineer() || u.fortified) return;
         if (u.hasFired || u.mpLeft !== u.mp) return;   // must have stayed completely still
         u.fortified = true;
-        u.mp = 0;
+        u.mp = 1;                      // just enough to tear down the shield and roll one hex
         u.mpLeft = 0;
         u.shieldType = SHIELD.PHASE;   // absorbs all damage types, refreshes each turn
         u.shield = FIELD_SHIELD;
@@ -116,6 +117,20 @@ class Game {
         u.name = 'Field Shield';
         u.label = 'F';
         this.note('Engineer fortifies into a Field Shield');
+    }
+
+    // Moving a Field Shield breaks it down: the shield comes apart and it is a plain Engineer
+    // again, having spent this turn's step on the teardown.
+    unfortify(u) {
+        const a = ARCHETYPES.ENGINEER;
+        u.fortified = false;
+        u.mp = a.mp;
+        u.shieldType = a.shieldType;
+        u.shield = a.shield;
+        u.shieldLeft = a.shield;
+        u.name = a.name;
+        u.label = a.label;
+        this.note('Field Shield breaks down into an Engineer');
     }
 
     refreshShield(unit) {
@@ -144,6 +159,7 @@ class Game {
         let player = false, enemy = false;
         const c = new Hex(hex.q, hex.r);
         for (const u of this.units) {
+            if (!u.holdsGround()) continue;   // Knights are too aloof to claim a hex
             if (new Hex(u.q, u.r).distance(c) > CONTROL_RADIUS) continue;
             if (u.owner === FACTION.PLAYER) player = true; else enemy = true;
         }
@@ -215,6 +231,7 @@ class Game {
         unit.r = r;
         unit.mpLeft -= cost;
         unit.capturingBy = null;   // moving abandons any siege in progress on this unit
+        if (unit.fortified) this.unfortify(unit);   // a Field Shield that rolls reverts to an Engineer
         return true;
     }
 
@@ -245,7 +262,7 @@ class Game {
     fire(unit, q, r) {
         if (!this.fireTargets(unit).has(Hex.key(q, r))) return null;
         const dist = new Hex(unit.q, unit.r).distance(new Hex(q, r));
-        const cost = unit.power * dist;
+        const cost = Math.ceil(unit.power * dist / 10);   // ammo: a tenth of power×range, rounded up
         const fac = this.factions[unit.owner];
         if (fac.treasury < cost) return null;   // can't afford the ammunition
         fac.treasury -= cost;
@@ -280,6 +297,7 @@ class Game {
             if (u.owner === unit.owner) continue;
             if (!(u.isPlatform() || u.isFoundry())) continue;
             if (here.distance(new Hex(u.q, u.r)) !== 1) continue;
+            if (!unit.breachesShields() && u.shieldLeft > 0) continue;   // Engineer needs shields down first
             if (this.isEscorted(u)) continue;   // a friendly defender screens it from siege
             out.add(Hex.key(u.q, u.r));
         }

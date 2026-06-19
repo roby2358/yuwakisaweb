@@ -52,6 +52,14 @@ class Unit {
     // Can perform the disable/capture siege action (Engineers and Knights).
     canSiege() { return this.siege; }
 
+    // Can board a target whose shields are still up. Only the Knight's phase shield carries it
+    // through live fire; the unarmored Engineer must wait until the shield is beaten down first.
+    breachesShields() { return this.isKnight(); }
+
+    // Whether standing on/near a resource hex claims it for this faction. Knights are aristocrats
+    // — they won't be bothered holding ground, so they project no control over gold or quarries.
+    holdsGround() { return !this.isKnight(); }
+
     // Firing range, including the high-ground bonus when standing on hills.
     effectiveRange(homeTerrain) {
         return this.range + (homeTerrain === TERRAIN.HILLS ? HILL_RANGE_BONUS : 0);

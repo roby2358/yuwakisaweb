@@ -131,16 +131,20 @@ A **siege** unit adjacent to an enemy platform/Foundry can **Disable** it (immed
 offline this turn) and, if still adjacent and the target is *unescorted* through the enemy's
 next turn, **Capture** it (it switches sides). Capture is the windfall — intentionally rare
 (see escort rule, §8). Two units carry this one capability at opposite ends of the price
-ladder:
+ladder, divided by one rule: **only the Knight can board a target whose shields are still
+up.** The Engineer must wait until the target's shield has been beaten down to zero by fire
+before it can disable it — so the cheap saboteur only finishes what the cannons started.
 
 - **Template B — Engineer.** Cheap, fast, **no shield**, tiny `hp`. The disposable saboteur
-  that does the disable/capture grunt work — but dies on the approach to any defended target,
-  so it needs cover, a clear lane, or an escort to arrive alive. Generates no income.
+  that does the disable/capture grunt work — but only against a target whose shield is already
+  down, and it dies on the approach to any defended target, so it needs cover, a clear lane,
+  or an escort to arrive alive. Generates no income.
   **Fortify:** an Engineer that spends a whole turn idle (full MP, no action) digs in as a
-  **Field Shield** — permanently immobile, but with a strong, all-absorbing, self-refreshing
-  shield. A cheap unit that overstays becomes a defensive emplacement (and a stout escort,
-  since adjacency still screens platforms from siege). *Serves: terrain-as-language, loss
-  aversion — idle units aren't wasted, they harden the line.*
+  **Field Shield** — a strong, all-absorbing, self-refreshing shield. It keeps **1 MP**: enough
+  to tear the shield back down and crawl one hex, which reverts it to a plain Engineer. A cheap
+  unit that overstays becomes a defensive emplacement (and a stout escort, since adjacency still
+  screens platforms from siege) — but it can pull up stakes and relocate when the line shifts.
+  *Serves: terrain-as-language, loss aversion — idle units aren't wasted, they harden the line.*
 - **Template C — Shield Knight.** The elite commando and **most expensive unit on the board**.
   Same siege capability, but its **phase shield** — an energy-type pool absorbing *all* damage
   types, refreshing fully each turn — lets it *survive* the walk through the kill zone that
@@ -165,14 +169,17 @@ Guardianship + Landmarks as Anchors.*
 One currency, the **Treasury**, touched at three scales every turn:
 
 - **Macro — Income.** Each controlled resource hex (gold = credits, quarry = build discount)
-  adds to income. A hex is *controlled* if you have a unit on or adjacent to it and the enemy
-  does not. Hexes **on fire** or **suppressed** (shelled this turn) pay nothing. *Stick vs
+  adds to income. A hex is *controlled* if you have a **ground-holding** unit on or adjacent to
+  it and the enemy does not. Shield Knights are aristocrats — too aloof to garrison ground — so
+  a knight beside a gold or quarry hex claims nothing; only platforms, engineers, and the Foundry
+  hold territory. Hexes **on fire** or **suppressed** (shelled this turn) pay nothing. *Stick vs
   carrot: you can deny income by shelling, but only earn it by standing there.*
 - **Meso — Build & Upkeep.** Units are bought at the Foundry by allocating credits across
   the priced dimensions (§4). Every unit charges **upkeep** each turn — a fraction of its
   build cost. An idle plasma siege bleeds you; you must *use* expensive assets or disband
   them. This is the anti-turtle pressure, baked into the system, not bolted on.
-- **Micro — Ammunition.** Every shot costs `ammoCost ≈ power × rangeFired`. Firing the
+- **Micro — Ammunition.** Every shot costs `ammoCost = ceil(power × rangeFired / 10)` — a
+  tenth of the brute figure, rounded up, so ammo is a real but never debilitating drain. Firing the
   super-cannon is itself an economic decision; you cannot spam it. Lasers (energy, cheap/shot)
   and railguns (cheap rounds) are the sustainable workhorses; plasma is a costed-out finisher.
 

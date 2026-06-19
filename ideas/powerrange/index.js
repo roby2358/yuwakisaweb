@@ -217,9 +217,9 @@ function drawUnit(u, cx, cy) {
     drawCounter(cx, cy, color, u.label, s);
 
     const ink = contrastText(color);
-    // Stats across the bottom of the counter: power / range / remaining MP (skip the Foundry).
+    // Stats across the bottom of the counter: power range remaining-MP (skip the Foundry).
     if (!u.isFoundry()) {
-        glyph(`${u.power}/${u.range}/${u.mpLeft}`, cx, cy + s * 0.30, ink, Math.round(s * 0.24));
+        glyph(`${u.power} ${u.range} ${u.mpLeft}`, cx, cy + s * 0.30, ink, Math.round(s * 0.24));
     }
     // White dot at the base of the letter: this unit can still move this turn.
     if (u.owner === PLAYER && u.mpLeft > 0 && !u.disabled) {
@@ -232,13 +232,19 @@ function drawUnit(u, cx, cy) {
         ctx.stroke();
     }
 
-    // Shield ring (cyan) drawn ON TOP of the counter; strength shown by alpha.
+    // Shield ring (cyan) drawn ON TOP of the counter. Strength is shown not by dimming but by
+    // how much of the ring remains: a full shield is a closed circle; as it depletes the arc's
+    // leading edge retreats counter-clockwise, opening a widening gap.
     if (u.shieldLeft > 0) {
+        const frac = Math.max(0, Math.min(1, u.shieldLeft / u.shield));
+        const start = -Math.PI / 2;                 // top of the counter
         ctx.beginPath();
-        ctx.arc(cx, cy, s * 0.62, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(90, 220, 235, ${0.4 + 0.5 * (u.shieldLeft / u.shield)})`;
-        ctx.lineWidth = 2.5;
+        ctx.arc(cx, cy, s * 0.62, start, start + frac * Math.PI * 2);
+        ctx.strokeStyle = 'rgba(90, 220, 235, 0.95)';
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
         ctx.stroke();
+        ctx.lineCap = 'butt';
     }
 
     // HP bar under the counter.
