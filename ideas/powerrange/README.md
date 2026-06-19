@@ -4,8 +4,8 @@ A hex-and-counter game of warfare between warring city-states — that is secret
 **economics simulation**. Warfare has evolved into an arms race of massive cannon platforms
 (plasma, laser, kinetic, incendiary) whose only counter is shields (physical, energy). The
 twin dimensions that decide everything are **power** and **range**. Into the stalemate come
-the **shield knights**: cheap, fast, man-mobile units that walk through the kill zone under a
-regenerating shield to disable and capture machines worth ten times their cost.
+the **shield knights**: fast, man-mobile units that walk through the kill zone under a
+regenerating shield to disable and capture machines worth far more than themselves.
 
 You don't win battles — you win balance sheets. Every shot, shield, and idle machine is a
 line item drawn from one Treasury. Bankrupt the enemy or take their Foundry.
@@ -20,10 +20,11 @@ See [DYNAMICS.md](DYNAMICS.md) for the full design and rules.
   one budget can't max all four. Range is priced super-linearly — area is expensive.
 - **Damage/shield matchup.** Kinetic, laser, plasma, and incendiary each beat or bounce off
   physical vs energy shields differently, so a cheap monoculture army is exploitable.
-- **Occupy to earn, shell to deny.** Firepower suppresses enemy income; only bodies on the
-  ground collect it — so you must advance into harm's way.
-- **The shield-knight gambit.** The titular asymmetric counter: cheap, fast, all-absorbing
-  one-shot shield. Reach an enemy platform and disable it; hold it and capture it.
+- **Dominate by fire, keep it supplied.** A resource is yours when your guns out-power the
+  enemy's over it *and* a clear corridor links it back to your Foundry. No worker units sitting
+  on tiles — push your cannons' reach over the gold, and don't let the enemy cut the line behind.
+- **The shield-knight gambit.** The titular asymmetric counter: an elite, fast unit under an
+  all-absorbing, regenerating shield. Reach an enemy platform and disable it; hold it and capture it.
 
 ## Win / Lose
 

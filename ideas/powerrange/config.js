@@ -56,7 +56,6 @@ const TERRAIN_NAMES = {
 const LOS_BLOCKERS = new Set([TERRAIN.MOUNTAIN, TERRAIN.FOREST]);
 const FOREST_COVER = 2;   // power subtracted from shots landing in forest
 const HILL_RANGE_BONUS = 1;
-const FIELD_SHIELD = 12;  // an idle Engineer fortifies into this (immobile, refreshing) shield
 
 // ---- Damage & shield types ----
 const DAMAGE = {
@@ -95,7 +94,6 @@ const SHIELD_REFRESH = {
 // ---- Unit kinds (capabilities, not stat buckets) ----
 const KIND = {
     PLATFORM: 'PLATFORM',
-    ENGINEER: 'ENGINEER',
     KNIGHT: 'KNIGHT',
     FOUNDRY: 'FOUNDRY'
 };
@@ -130,19 +128,11 @@ const ARCHETYPES = {
     BOMBARD: {
         // Indirect artillery: the only weapon that lobs over mountains/forests (ignores LOS).
         // Kinetic arc cracks energy shields but is weak vs physical — the Laser's mirror.
-        // Longest reach on the board, but light rear armor makes it knight/engineer bait.
+        // Longest reach on the board, but light rear armor makes it knight bait.
         kind: KIND.PLATFORM, label: 'B', name: 'Bombard',
         power: 5, range: 8, mp: 2, hp: 8,
         damage: DAMAGE.KINETIC, shieldType: SHIELD.PHYSICAL, shield: 4,
         cost: 50, upkeep: 5, ignites: false, siege: false, indirect: true
-    },
-    ENGINEER: {
-        // Cheap, fragile saboteur: does the disable/capture grunt work, but no shield, so it
-        // dies on the approach to a defended target — needs cover or an escort to get there.
-        kind: KIND.ENGINEER, label: 'E', name: 'Engineer',
-        power: 1, range: 1, mp: 4, hp: 3,
-        damage: DAMAGE.KINETIC, shieldType: SHIELD.NONE, shield: 0,
-        cost: 6, upkeep: 1, ignites: false, siege: true, indirect: false
     },
     KNIGHT: {
         // Elite commando: the only unit whose phase shield survives a walk through the kill
@@ -161,7 +151,7 @@ const ARCHETYPES = {
 };
 
 // Order of the player's build palette.
-const BUILD_MENU = ['RAILGUN', 'LASER', 'PLASMA', 'INCENDIARY', 'BOMBARD', 'ENGINEER', 'KNIGHT'];
+const BUILD_MENU = ['RAILGUN', 'LASER', 'PLASMA', 'INCENDIARY', 'BOMBARD', 'KNIGHT'];
 
 // ---- Factions ----
 const FACTION = { PLAYER: 'PLAYER', ENEMY: 'ENEMY' };
@@ -178,7 +168,6 @@ const GOLD_INCOME = 12;       // per controlled, unburned gold hex
 const QUARRY_DISCOUNT = 0.10; // build discount per controlled quarry
 const QUARRY_DISCOUNT_CAP = 0.30;
 const BUILD_RADIUS = 2;       // build within this many hexes of the Foundry
-const CONTROL_RADIUS = 1;     // a unit controls hexes within this radius
 const BANKRUPT_LIMIT = 3;     // consecutive bankrupt turns → economic collapse
 
 // ---- Fire / terrain denial ----

@@ -36,33 +36,29 @@ class Unit {
             indirect: a.indirect,
             hasFired: false,
             disabled: false,
-            fortified: false,   // an Engineer that dug in as an immobile Field Shield
             capturingBy: null   // owner currently sieging this unit, or null
         });
     }
 
     isFoundry() { return this.kind === KIND.FOUNDRY; }
     isKnight() { return this.kind === KIND.KNIGHT; }
-    isEngineer() { return this.kind === KIND.ENGINEER; }
     isPlatform() { return this.kind === KIND.PLATFORM; }
     alive() { return this.hp > 0; }
 
     // A weapon that can shoot at all (the Foundry cannot).
     canFire() { return this.range > 0 && this.power > 0; }
 
-    // Can perform the disable/capture siege action (Engineers and Knights).
+    // Can perform the disable/capture siege action (the Knight).
     canSiege() { return this.siege; }
 
     // Lobs over terrain — fire ignores line of sight (the Bombard's exclusive exception).
     firesIndirect() { return this.indirect; }
 
-    // Can board a target whose shields are still up. Only the Knight's phase shield carries it
-    // through live fire; the unarmored Engineer must wait until the shield is beaten down first.
-    breachesShields() { return this.isKnight(); }
-
-    // Whether standing on/near a resource hex claims it for this faction. Knights are aristocrats
-    // — they won't be bothered holding ground, so they project no control over gold or quarries.
-    holdsGround() { return !this.isKnight(); }
+    // Whether this unit's firepower projects resource control and supply. Only precision
+    // direct-fire platforms (Railgun, Laser, Plasma) hold ground. Knights are aloof aristocrats;
+    // Bombards (indirect) and Incendiaries (area denial) are too blunt to garrison territory —
+    // they can shell a hex but not own it or carry a supply line through it.
+    holdsGround() { return this.isPlatform() && !this.indirect && !this.ignites; }
 
     // Firing range, including the high-ground bonus when standing on hills.
     effectiveRange(homeTerrain) {

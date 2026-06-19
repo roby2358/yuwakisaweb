@@ -70,7 +70,7 @@ class Game {
         this.spawn('FOUNDRY', owner, foundryHex.q, foundryHex.r);
         const open = this.openNear(foundryHex, BUILD_RADIUS);
         if (open[0]) this.spawn('RAILGUN', owner, open[0].q, open[0].r);
-        if (open[1]) this.spawn('ENGINEER', owner, open[1].q, open[1].r);
+        if (open[1]) this.spawn('LASER', owner, open[1].q, open[1].r);
     }
 
     // Empty passable hexes within `radius` of a center, nearest first.
@@ -98,39 +98,7 @@ class Game {
     endTurn(owner) {
         for (const u of this.factionUnits(owner)) {
             u.disabled = false;
-            this.maybeFortify(u);
         }
-    }
-
-    // An Engineer that spent its whole turn idle (didn't move or act) digs in as a Field
-    // Shield: a strong, fully-refreshing shield. It keeps 1 MP so it can break itself down
-    // and crawl away — moving reverts it to a plain Engineer (see unfortify).
-    maybeFortify(u) {
-        if (!u.isEngineer() || u.fortified) return;
-        if (u.hasFired || u.mpLeft !== u.mp) return;   // must have stayed completely still
-        u.fortified = true;
-        u.mp = 1;                      // just enough to tear down the shield and roll one hex
-        u.mpLeft = 0;
-        u.shieldType = SHIELD.PHASE;   // absorbs all damage types, refreshes each turn
-        u.shield = FIELD_SHIELD;
-        u.shieldLeft = FIELD_SHIELD;
-        u.name = 'Field Shield';
-        u.label = 'F';
-        this.note('Engineer fortifies into a Field Shield');
-    }
-
-    // Moving a Field Shield breaks it down: the shield comes apart and it is a plain Engineer
-    // again, having spent this turn's step on the teardown.
-    unfortify(u) {
-        const a = ARCHETYPES.ENGINEER;
-        u.fortified = false;
-        u.mp = a.mp;
-        u.shieldType = a.shieldType;
-        u.shield = a.shield;
-        u.shieldLeft = a.shield;
-        u.name = a.name;
-        u.label = a.label;
-        this.note('Field Shield breaks down into an Engineer');
     }
 
     refreshShield(unit) {
@@ -154,17 +122,67 @@ class Game {
         if (!beset) unit.capturingBy = null;
     }
 
-    // ---- Economy ----
+    // ---- Economy: who owns a resource hex ----
+    // A resource belongs to a faction only when all three hold (DYNAMICS §7):
+    //   1. RANGE  — at least one of its units can fire on the hex (so it has positive firepower),
+    //   2. POWER  — its firepower on the hex out-totals the enemy's (net contest is positive),
+    //   3. SUPPLY — a corridor of passable, non-enemy-occupied hexes links it to that Foundry.
+    // The power winner takes the hex; if it lacks supply, no one collects it (it goes neutral).
     controllerOf(hex) {
-        let player = false, enemy = false;
+        const net = this.netPower(hex, FACTION.PLAYER);
+        if (net === 0) return null;   // tie or no guns trained on it → contested/neutral
+        const owner = net > 0 ? FACTION.PLAYER : FACTION.ENEMY;
+        return this.hasSupplyPath(hex, owner) ? owner : null;
+    }
+
+    // A faction's firepower advantage over a hex: its own guns trained on the hex minus the
+    // enemy's. >0 means the faction dominates the hex by fire; <0 means the enemy does.
+    netPower(hex, owner) {
+        return this.rangePower(hex, owner) - this.rangePower(hex, this.enemyOf(owner));
+    }
+
+    // Total firepower a faction trains on a hex: the power of every ground-holding unit that
+    // could shoot it (within effective range and, unless it fires indirect, line of sight).
+    rangePower(hex, owner) {
         const c = new Hex(hex.q, hex.r);
+        let sum = 0;
         for (const u of this.units) {
-            if (!u.holdsGround()) continue;   // Knights are too aloof to claim a hex
-            if (new Hex(u.q, u.r).distance(c) > CONTROL_RADIUS) continue;
-            if (u.owner === FACTION.PLAYER) player = true; else enemy = true;
+            if (u.owner !== owner || !u.holdsGround() || !u.canFire()) continue;
+            const from = new Hex(u.q, u.r);
+            if (from.distance(c) > u.effectiveRange(this.hex(u.q, u.r).terrain)) continue;
+            if (!u.firesIndirect() && !lineOfSight(u, hex, this.hexes)) continue;
+            sum += u.power;
         }
-        if (player === enemy) return null;   // both or neither → contested/neutral
-        return player ? FACTION.PLAYER : FACTION.ENEMY;
+        return sum;
+    }
+
+    // True if a corridor of fire-dominated hexes links the resource back to the Foundry. Every
+    // step must be a passable hex this faction out-guns (netPower > 0) and that no enemy unit
+    // stands on — so the enemy severs supply by out-powering OR blocking a single link, even far
+    // from the resource. The Foundry hex is the root and always closes the path. BFS over adjacency.
+    hasSupplyPath(hex, owner) {
+        const foundry = this.foundryOf(owner);
+        if (!foundry) return false;
+        const goal = Hex.key(foundry.q, foundry.r);
+        const blocked = new Set(this.factionUnits(this.enemyOf(owner)).map(u => Hex.key(u.q, u.r)));
+        const seen = new Set([Hex.key(hex.q, hex.r)]);
+        const queue = [new Hex(hex.q, hex.r)];
+        while (queue.length > 0) {
+            const cur = queue.shift();
+            if (Hex.key(cur.q, cur.r) === goal) return true;
+            for (const n of cur.neighbors()) {
+                const key = Hex.key(n.q, n.r);
+                if (seen.has(key)) continue;
+                seen.add(key);
+                if (key === goal) return true;                 // the Foundry hex itself, the root
+                if (blocked.has(key)) continue;                // enemy unit severs the corridor
+                const h = this.hex(n.q, n.r);
+                if (!h || !this.isPassable(h)) continue;       // water/mountain can't carry supply
+                if (this.netPower(h, owner) <= 0) continue;    // a link the enemy out-guns is cut
+                queue.push(new Hex(n.q, n.r));
+            }
+        }
+        return false;
     }
 
     controlledQuarries(owner) {
@@ -231,7 +249,6 @@ class Game {
         unit.r = r;
         unit.mpLeft -= cost;
         unit.capturingBy = null;   // moving abandons any siege in progress on this unit
-        if (unit.fortified) this.unfortify(unit);   // a Field Shield that rolls reverts to an Engineer
         return true;
     }
 
@@ -297,7 +314,6 @@ class Game {
             if (u.owner === unit.owner) continue;
             if (!(u.isPlatform() || u.isFoundry())) continue;
             if (here.distance(new Hex(u.q, u.r)) !== 1) continue;
-            if (!unit.breachesShields() && u.shieldLeft > 0) continue;   // Engineer needs shields down first
             if (this.isEscorted(u)) continue;   // a friendly defender screens it from siege
             out.add(Hex.key(u.q, u.r));
         }

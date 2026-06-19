@@ -126,36 +126,24 @@ parameter sets:
 Platforms move M = 2 (enough to reposition the firing line); "mobile artillery" is the same
 template with M bought up further at premium cost.
 
-### The siege action (Engineer & Knight)
+### The siege action (Shield Knight)
 A **siege** unit adjacent to an enemy platform/Foundry can **Disable** it (immediate —
 offline this turn) and, if still adjacent and the target is *unescorted* through the enemy's
 next turn, **Capture** it (it switches sides). Capture is the windfall — intentionally rare
-(see escort rule, §8). Two units carry this one capability at opposite ends of the price
-ladder, divided by one rule: **only the Knight can board a target whose shields are still
-up.** The Engineer must wait until the target's shield has been beaten down to zero by fire
-before it can disable it — so the cheap saboteur only finishes what the cannons started.
+(see escort rule, §8). Exactly one unit carries this capability: the **Shield Knight**.
 
-- **Template B — Engineer.** Cheap, fast, **no shield**, tiny `hp`. The disposable saboteur
-  that does the disable/capture grunt work — but only against a target whose shield is already
-  down, and it dies on the approach to any defended target, so it needs cover, a clear lane,
-  or an escort to arrive alive. Generates no income.
-  **Fortify:** an Engineer that spends a whole turn idle (full MP, no action) digs in as a
-  **Field Shield** — a strong, all-absorbing, self-refreshing shield. It keeps **1 MP**: enough
-  to tear the shield back down and crawl one hex, which reverts it to a plain Engineer. A cheap
-  unit that overstays becomes a defensive emplacement (and a stout escort, since adjacency still
-  screens platforms from siege) — but it can pull up stakes and relocate when the line shifts.
-  *Serves: terrain-as-language, loss aversion — idle units aren't wasted, they harden the line.*
-- **Template C — Shield Knight.** The elite commando and **most expensive unit on the board**.
-  Same siege capability, but its **phase shield** — an energy-type pool absorbing *all* damage
-  types, refreshing fully each turn — lets it *survive* the walk through the kill zone that
-  kills an Engineer. You pay top price for survivability, not for the sabotage itself. Small
-  pool: two platforms firing the same turn still deplete it and drop the knight (focus-fire
-  counter).
+- **Template B — Shield Knight.** The elite commando and **most expensive unit on the board**.
+  Its **phase shield** — an energy-type pool absorbing *all* damage types, refreshing fully
+  each turn — lets it *survive* the walk through the kill zone to reach a defended platform.
+  You pay top price for survivability, not for the sabotage itself. Small pool: two platforms
+  firing the same turn still deplete it and drop the knight (focus-fire counter). The knight is
+  an aristocrat — it projects **no resource control** (§7), so it is a pure raider, never a
+  garrison.
 
 *Driver: Accumulation & Windfall + Roles Through Mechanical Exceptions + Scarcity of Agency.*
-Splitting the role makes the price ladder a real decision: spend 6 on a saboteur that might
-not make it, or 75 on one that will. Both break the same two core rules — neutralize an asset
-by proximity, and (the knight) ignore damage type — which is the arbitrage the theme promises.
+The capture breaks the two core rules — neutralize an asset by proximity, and ignore damage
+type — which is the arbitrage the theme promises. At 75 credits it is a deliberate gamble: a
+single deep strike that pays off as a windfall or dies in the open.
 
 ### The **Foundry** (landmark)
 Immobile, one per city-state. Generates base income, builds new units within a small radius,
@@ -169,11 +157,25 @@ Guardianship + Landmarks as Anchors.*
 One currency, the **Treasury**, touched at three scales every turn:
 
 - **Macro — Income.** Each controlled resource hex (gold = credits, quarry = build discount)
-  adds to income. A hex is *controlled* if you have a **ground-holding** unit on or adjacent to
-  it and the enemy does not. Shield Knights are aristocrats — too aloof to garrison ground — so
-  a knight beside a gold or quarry hex claims nothing; only platforms, engineers, and the Foundry
-  hold territory. Hexes **on fire** or **suppressed** (shelled this turn) pay nothing. *Stick vs
-  carrot: you can deny income by shelling, but only earn it by standing there.*
+  adds to income. You don't *garrison* a resource — you **dominate it by fire and keep it
+  supplied**. A resource is yours when all three hold:
+  1. **Range** — at least one of your units can fire on the hex (it's under your guns).
+  2. **Power** — your total firepower trained on the hex out-totals the enemy's. Coverage is a
+     tug-of-war: a Laser (P3) holds a gold hex until an enemy Plasma (P10) rolls into range and
+     the contest flips. Only precision **direct-fire** platforms — Railgun, Laser, Plasma —
+     count toward control. **Knights** (aloof aristocrats), **Bombards** (indirect), and
+     **Incendiaries** (area denial) project **no control**: they can shell a hex to deny it,
+     but never own it or carry a supply line through it.
+  3. **Supply** — a corridor of **fire-dominated** hexes links the resource back to your
+     Foundry: every step is a passable hex you out-gun (net power > 0) with no enemy unit on it.
+     The enemy **severs supply** by out-powering *any single link* — even one far from the
+     resource — or by parking a unit across it. A Laser held to the Foundry by one covered hex
+     drops the instant an enemy Plasma rolls into range and flips that hex negative. When supply
+     is cut the resource goes neutral — no one collects it — even if you still out-gun the spot.
+  Hexes **on fire** or **suppressed** (shelled this turn) pay nothing. *No worker-bee units
+  scrambling for tiles: territory is decided by where the cannons can reach and whether the
+  line behind them still holds. Stick vs carrot — deny income by out-gunning or by cutting the
+  supply line, not by sitting on the square.*
 - **Meso — Build & Upkeep.** Units are bought at the Foundry by allocating credits across
   the priced dimensions (§4). Every unit charges **upkeep** each turn — a fraction of its
   build cost. An idle plasma siege bleeds you; you must *use* expensive assets or disband
@@ -211,7 +213,7 @@ fire(attacker, targetHex):
 **Move OR shoot, never both.** These are big, lumbering platforms — the only things that
 survive the battlefield — and they must *stop, charge, and fire* or *keep rolling*. A unit
 that has moved at all this turn cannot fire; a unit that fires forfeits its movement. (Siege
-is exempt — knights and engineers still move-then-pry; that's their role.)
+is exempt — the knight still moves-then-pries; that's its role.)
 
 Knight gambit:
 
@@ -370,8 +372,7 @@ Starting numbers, to be felt out in play — large swings before fine numbers.
 - Railgun: P6 R3 M2 cost 30 upkeep 3 ammo ceil(P×dist/10). Laser: P3 R6 M2 cost 35 upkeep 3.
   Plasma: P10 R3 M2 cost 60 upkeep 6. Incendiary: P2 R3 M2 cost 25 upkeep 2.
   Bombard: P5 R8 M2 hp8 cost 50 upkeep 5 physical-shield 4 (indirect, ignores LOS).
-- Engineer: P1 R1 M4 hp 3 no shield, cost 6 upkeep 1 (cheap saboteur, can siege).
-- Shield knight: P2 R1 M5 hp 6 phase-shield 8 cost 75 upkeep 7 (priciest unit; can siege).
+- Shield knight: P2 R1 M5 hp 6 phase-shield 8 cost 75 upkeep 7 (priciest unit; the only sieger).
 - Physical shield: 6 absorb, repair 1 credit/point. Energy shield: 8 absorb, free refresh.
 - Bankruptcy: 3 consecutive turns of forced disband with zero units → collapse loss.
 
@@ -394,8 +395,9 @@ breaks).*
 - **What balances it:** ammo is the shared `ceil(power × dist / 10)`, so a max-range (R8)
   shot is only ceil(40/10) = 4 credits — ammo is *not* the brake. The real costs are the
   50-credit build price, move-OR-shoot (it must halt to fire), and light Physical-4 armor:
-  a vulnerable rear piece that knights/engineers pry open and that nothing out-ranges. Reach
-  is the reward; fragility is the price.
+  a vulnerable rear piece that knights pry open and that nothing out-ranges. It also **projects
+  no resource control** (§7) — pure offense, it can shell the gold but never hold or supply it.
+  Reach is the reward; fragility is the price.
 - **Wiring:** in `BUILD_MENU` (build button auto-appears) and the AI's affordable-build list
   in `ai.js`.
 
