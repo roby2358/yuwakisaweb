@@ -363,19 +363,57 @@ function unitText(u) {
         `  PWR ${u.power} ${u.damage}  RNG ${u.range}  MP ${u.mpLeft}/${u.mp}${dis}${fired}`;
 }
 
+// One-line stat block for a build-menu entry: combat numbers, armor, damage type, upkeep.
+function buildStats(a) {
+    const shield = a.shield > 0 ? `${shortShield(a.shieldType)} ${a.shield}` : 'no shield';
+    const ind = a.indirect ? ' · indirect' : '';
+    return `P${a.power} R${a.range} M${a.mp} HP${a.hp} · ${shield} · ${a.damage.toLowerCase()} · up ${a.upkeep}${ind}`;
+}
+
+function shortShield(type) {
+    if (type === SHIELD.PHYSICAL) return 'Phys';
+    if (type === SHIELD.ENERGY) return 'Energy';
+    if (type === SHIELD.PHASE) return 'Phase';
+    return 'None';
+}
+
+// Two independent header controls for the build panel: one flips its dock side (left/right),
+// one flips its visibility (collapse/expand). Each button's glyph + tooltip previews the NEXT
+// click, so the controls are self-describing.
+function wirePanelToggle() {
+    const panel = document.getElementById('build-panel');
+    bindPanelButton('build-side', () => panel.classList.toggle('left'),
+        nowLeft => nowLeft ? ['→', 'Move build panel right'] : ['←', 'Move build panel left']);
+    bindPanelButton('build-collapse', () => panel.classList.toggle('collapsed'),
+        nowCollapsed => nowCollapsed ? ['+', 'Expand build panel'] : ['–', 'Collapse build panel']);
+}
+
+// Wire one toggle button: `act` flips the class and returns its new on/off state; `preview`
+// maps that state to the [glyph, title] for the NEXT click. Sets the resting label too.
+function bindPanelButton(id, act, preview) {
+    const btn = document.getElementById(id);
+    btn.addEventListener('click', () => {
+        const [glyph, title] = preview(act());
+        btn.innerHTML = glyph;
+        btn.title = title;
+    });
+}
+
 let buildButtons = null;
 function buildBar() {
-    const bar = document.getElementById('build-bar');
-    bar.innerHTML = '';
+    const list = document.getElementById('build-list');
+    list.innerHTML = '';
     buildButtons = BUILD_MENU.map(key => {
         const a = ARCHETYPES[key];
         const btn = document.createElement('button');
         btn.dataset.key = key;
-        btn.innerHTML = `${a.label} ${a.name}<br><span class="cost"></span>`;
+        btn.innerHTML = `<span class="name">${a.label} ${a.name}</span>` +
+            `<span class="cost"></span><span class="stats">${buildStats(a)}</span>`;
         btn.addEventListener('click', () => { enterBuild(key); render(); });
-        bar.appendChild(btn);
+        list.appendChild(btn);
         return btn;
     });
+    wirePanelToggle();
 }
 
 function updateBuildBar() {

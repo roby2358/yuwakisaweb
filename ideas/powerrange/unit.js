@@ -33,6 +33,7 @@ class Unit {
             cost: a.cost,
             ignites: a.ignites,
             siege: a.siege,
+            indirect: a.indirect,
             hasFired: false,
             disabled: false,
             fortified: false,   // an Engineer that dug in as an immobile Field Shield
@@ -51,6 +52,9 @@ class Unit {
 
     // Can perform the disable/capture siege action (Engineers and Knights).
     canSiege() { return this.siege; }
+
+    // Lobs over terrain — fire ignores line of sight (the Bombard's exclusive exception).
+    firesIndirect() { return this.indirect; }
 
     // Can board a target whose shields are still up. Only the Knight's phase shield carries it
     // through live fire; the unarmored Engineer must wait until the shield is beaten down first.

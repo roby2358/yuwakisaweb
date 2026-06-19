@@ -107,25 +107,34 @@ const ARCHETYPES = {
         kind: KIND.PLATFORM, label: 'R', name: 'Railgun',
         power: 6, range: 3, mp: 2, hp: 10,
         damage: DAMAGE.KINETIC, shieldType: SHIELD.PHYSICAL, shield: 6,
-        cost: 30, upkeep: 3, ignites: false, siege: false
+        cost: 30, upkeep: 3, ignites: false, siege: false, indirect: false
     },
     LASER: {
         kind: KIND.PLATFORM, label: 'L', name: 'Laser',
         power: 3, range: 6, mp: 2, hp: 8,
         damage: DAMAGE.LASER, shieldType: SHIELD.ENERGY, shield: 8,
-        cost: 35, upkeep: 3, ignites: false, siege: false
+        cost: 35, upkeep: 3, ignites: false, siege: false, indirect: false
     },
     PLASMA: {
         kind: KIND.PLATFORM, label: 'P', name: 'Plasma Siege',
         power: 10, range: 3, mp: 2, hp: 12,
         damage: DAMAGE.PLASMA, shieldType: SHIELD.ENERGY, shield: 8,
-        cost: 60, upkeep: 6, ignites: false, siege: false
+        cost: 60, upkeep: 6, ignites: false, siege: false, indirect: false
     },
     INCENDIARY: {
         kind: KIND.PLATFORM, label: 'I', name: 'Incendiary',
         power: 2, range: 3, mp: 2, hp: 8,
         damage: DAMAGE.INCENDIARY, shieldType: SHIELD.PHYSICAL, shield: 6,
-        cost: 25, upkeep: 2, ignites: true, siege: false
+        cost: 25, upkeep: 2, ignites: true, siege: false, indirect: false
+    },
+    BOMBARD: {
+        // Indirect artillery: the only weapon that lobs over mountains/forests (ignores LOS).
+        // Kinetic arc cracks energy shields but is weak vs physical — the Laser's mirror.
+        // Longest reach on the board, but light rear armor makes it knight/engineer bait.
+        kind: KIND.PLATFORM, label: 'B', name: 'Bombard',
+        power: 5, range: 8, mp: 2, hp: 8,
+        damage: DAMAGE.KINETIC, shieldType: SHIELD.PHYSICAL, shield: 4,
+        cost: 50, upkeep: 5, ignites: false, siege: false, indirect: true
     },
     ENGINEER: {
         // Cheap, fragile saboteur: does the disable/capture grunt work, but no shield, so it
@@ -133,7 +142,7 @@ const ARCHETYPES = {
         kind: KIND.ENGINEER, label: 'E', name: 'Engineer',
         power: 1, range: 1, mp: 4, hp: 3,
         damage: DAMAGE.KINETIC, shieldType: SHIELD.NONE, shield: 0,
-        cost: 6, upkeep: 1, ignites: false, siege: true
+        cost: 6, upkeep: 1, ignites: false, siege: true, indirect: false
     },
     KNIGHT: {
         // Elite commando: the only unit whose phase shield survives a walk through the kill
@@ -141,18 +150,18 @@ const ARCHETYPES = {
         kind: KIND.KNIGHT, label: 'K', name: 'Shield Knight',
         power: 2, range: 1, mp: 5, hp: 6,
         damage: DAMAGE.KINETIC, shieldType: SHIELD.PHASE, shield: 8,
-        cost: 75, upkeep: 7, ignites: false, siege: true
+        cost: 75, upkeep: 7, ignites: false, siege: true, indirect: false
     },
     FOUNDRY: {
         kind: KIND.FOUNDRY, label: '⌂', name: 'Foundry',
         power: 0, range: 0, mp: 0, hp: 30,
         damage: DAMAGE.KINETIC, shieldType: SHIELD.PHYSICAL, shield: 10,
-        cost: 0, upkeep: 0, ignites: false, siege: false
+        cost: 0, upkeep: 0, ignites: false, siege: false, indirect: false
     }
 };
 
 // Order of the player's build palette.
-const BUILD_MENU = ['RAILGUN', 'LASER', 'PLASMA', 'INCENDIARY', 'ENGINEER', 'KNIGHT'];
+const BUILD_MENU = ['RAILGUN', 'LASER', 'PLASMA', 'INCENDIARY', 'BOMBARD', 'ENGINEER', 'KNIGHT'];
 
 // ---- Factions ----
 const FACTION = { PLAYER: 'PLAYER', ENEMY: 'ENEMY' };

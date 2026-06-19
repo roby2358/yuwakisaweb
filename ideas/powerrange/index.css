@@ -65,17 +65,56 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
 }
 #message:empty { display: none; }
 
-#build-bar {
+#build-panel {
     position: fixed;
-    bottom: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 8px;
+    top: 10px;
+    right: 10px;
+    width: 220px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 6px;
+    font-family: monospace;
     z-index: 10;
     user-select: none;
 }
-#build-bar button {
+/* Docked left: drop below the HUD / unit-info that live in the top-left corner. */
+#build-panel.left {
+    left: 10px;
+    right: auto;
+    top: 92px;
+}
+#build-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #eee;
+    font-weight: bold;
+    font-size: 14px;
+    padding: 8px 12px;
+}
+.build-ctrls { display: flex; gap: 6px; }
+.build-ctrls button {
+    background: #444;
+    color: #eee;
+    border: 1px solid #666;
+    width: 22px;
+    height: 22px;
+    line-height: 1;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 12px;
+}
+.build-ctrls button:hover { background: #555; }
+
+#build-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0 8px 8px;
+}
+#build-panel.collapsed #build-list { display: none; }
+
+#build-list button {
     background: #333;
     color: #eee;
     border: 1px solid #666;
@@ -84,13 +123,15 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
     cursor: pointer;
     font-family: monospace;
     font-size: 12px;
-    text-align: center;
-    line-height: 1.4;
+    text-align: left;
+    line-height: 1.5;
 }
-#build-bar button:hover:not(:disabled) { background: #4a4a4a; }
-#build-bar button:disabled { opacity: 0.4; cursor: not-allowed; }
-#build-bar button.active { border-color: #f0c14b; background: #5a4a1a; }
-#build-bar button .cost { color: #f0c14b; }
+#build-list button:hover:not(:disabled) { background: #4a4a4a; }
+#build-list button:disabled { opacity: 0.4; cursor: not-allowed; }
+#build-list button.active { border-color: #f0c14b; background: #5a4a1a; }
+#build-list button .name { font-weight: bold; }
+#build-list button .cost { float: right; color: #f0c14b; }
+#build-list button .stats { display: block; color: #aaa; font-size: 11px; }
 
 #intro-panel {
     position: fixed;

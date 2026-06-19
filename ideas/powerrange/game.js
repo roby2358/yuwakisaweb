@@ -250,7 +250,7 @@ class Game {
             const h = this.hex(cell.q, cell.r);
             if (!h || h === home) continue;
             if (origin.distance(cell) < 1) continue;
-            if (!lineOfSight(unit, h, this.hexes)) continue;
+            if (!unit.firesIndirect() && !lineOfSight(unit, h, this.hexes)) continue;   // Bombard lobs over blockers
             const occupant = this.unitAt(cell.q, cell.r);
             const enemyThere = occupant && occupant.owner !== unit.owner;
             const burnable = unit.ignites && h.terrain === TERRAIN.GOLD;   // deny the gold

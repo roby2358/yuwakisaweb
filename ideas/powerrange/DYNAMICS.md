@@ -367,8 +367,9 @@ Starting numbers, to be felt out in play — large swings before fine numbers.
   so each gold hex is a real prize worth contesting. Two Foundries at opposite ends.
 - Starting Treasury: 120. Foundry base income: 6/turn. Gold hex: 12/turn. Quarry: build
   discount (10%/quarry, cap 30%).
-- Railgun: P6 R3 M2 cost 30 upkeep 3 ammo P×dist. Laser: P3 R6 M2 cost 35 upkeep 3.
+- Railgun: P6 R3 M2 cost 30 upkeep 3 ammo ceil(P×dist/10). Laser: P3 R6 M2 cost 35 upkeep 3.
   Plasma: P10 R3 M2 cost 60 upkeep 6. Incendiary: P2 R3 M2 cost 25 upkeep 2.
+  Bombard: P5 R8 M2 hp8 cost 50 upkeep 5 physical-shield 4 (indirect, ignores LOS).
 - Engineer: P1 R1 M4 hp 3 no shield, cost 6 upkeep 1 (cheap saboteur, can siege).
 - Shield knight: P2 R1 M5 hp 6 phase-shield 8 cost 75 upkeep 7 (priciest unit; can siege).
 - Physical shield: 6 absorb, repair 1 credit/point. Energy shield: 8 absorb, free refresh.
@@ -376,27 +377,27 @@ Starting numbers, to be felt out in play — large swings before fine numbers.
 
 ---
 
-## 14b. Planned — Not Yet Implemented
+## 14b. Bombard — indirect artillery (implemented)
 
-### Bombard (new platform — indirect artillery)
-Extreme-range siege piece that lobs over terrain. **Not built yet** — codebase is at the
-move-OR-shoot checkpoint. Spec to implement next:
+Extreme-range siege piece that lobs over terrain. *Driver: Readable Consequences (range/LOS
+made literal) + Roles Through Mechanical Exceptions (indirect fire is a rule nothing else
+breaks).*
 
 - **Stats:** kind PLATFORM, label `B`, name "Bombard". P5 R8 M2 hp8. Damage **Kinetic**
   (ballistic arc → cracks energy shields, weak vs physical — complements the Laser, which
   needs LOS and beats physical). Shield: Physical 4 (light rear armor). Cost 50, upkeep 5.
-- **New mechanical exception — `indirect`: ignores line of sight.** It can fire over
-  mountains/forests at any target in range. Implement as an `indirect` capability flag on the
-  archetype (same dispatch pattern as `siege`/`ignites`); in `fireTargets`, skip the
-  `lineOfSight` check when `unit.indirect`. Add `indirect` to *every* archetype (no defaults),
-  copy it in `Unit.create`, and only Bombard sets it true.
-- **Self-balancing range:** ammo cost stays `power × distance`, so a max-range (R8) shot costs
-  5×8 = **40 credits** — you can't spam it from safety; creep it forward or pay through the
-  nose. Move-OR-shoot still applies (it must halt to fire). Light armor + the longest range
-  make it a vulnerable rear piece that knights/engineers pry and that nothing out-ranges.
-- **Wiring:** add `BOMBARD` to `BUILD_MENU` (build button auto-appears) and to the AI's
-  affordable-build list in `ai.js`. *Driver: Readable Consequences (range/LOS made literal) +
-  Roles Through Mechanical Exceptions (indirect fire is a rule nothing else breaks).*
+- **Mechanical exception — `indirect`: ignores line of sight.** It fires over
+  mountains/forests at any target in range. Lives as an `indirect` capability flag on every
+  archetype (same dispatch pattern as `siege`/`ignites`, no defaults), surfaced as
+  `Unit.firesIndirect()`; `fireTargets` skips the `lineOfSight` check when it returns true.
+  Only the Bombard sets it.
+- **What balances it:** ammo is the shared `ceil(power × dist / 10)`, so a max-range (R8)
+  shot is only ceil(40/10) = 4 credits — ammo is *not* the brake. The real costs are the
+  50-credit build price, move-OR-shoot (it must halt to fire), and light Physical-4 armor:
+  a vulnerable rear piece that knights/engineers pry open and that nothing out-ranges. Reach
+  is the reward; fragility is the price.
+- **Wiring:** in `BUILD_MENU` (build button auto-appears) and the AI's affordable-build list
+  in `ai.js`.
 
 ---
 

@@ -18,7 +18,16 @@
     </div>
     <div id="unit-info"></div>
     <div id="message"></div>
-    <div id="build-bar"></div>
+    <div id="build-panel">
+        <div id="build-head">
+            <span>Build</span>
+            <span class="build-ctrls">
+                <button id="build-side" title="Move build panel left">&#x2190;</button>
+                <button id="build-collapse" title="Collapse build panel">&#x2013;</button>
+            </span>
+        </div>
+        <div id="build-list"></div>
+    </div>
     <div id="intro-panel">
         <h2>PowerRange</h2>
         <p>You command a city-state (gold). Cannon platforms rule the open field; the only
@@ -29,7 +38,7 @@
         <p>Keep a unit beside a platform to <b>escort</b> it &mdash; an escorted machine
         can't be sieged. Knights crack only <i>undefended</i> ones.</p>
         <p class="dim">Click a unit to select &middot; yellow = move, red = fire, cyan =
-        siege &middot; build from the bar &middot; right-drag to pan &middot; Space ends turn.</p>
+        siege &middot; build from the right panel &middot; right-drag to pan &middot; Space ends turn.</p>
         <button id="begin-btn">Begin</button>
     </div>
     <!-- Classic scripts (no ES modules) so the page runs from a file:// double-click.

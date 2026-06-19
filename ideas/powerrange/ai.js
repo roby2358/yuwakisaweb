@@ -33,9 +33,10 @@ function aiBuildPhase(game) {
 // an elite knight only when flush, else the workhorse railgun.
 function aiChooseBuild(game) {
     const t = game.factions[AI_ME].treasury;
-    const affordable = ['RAILGUN', 'LASER', 'PLASMA', 'INCENDIARY', 'ENGINEER', 'KNIGHT']
+    const affordable = ['RAILGUN', 'LASER', 'PLASMA', 'INCENDIARY', 'BOMBARD', 'ENGINEER', 'KNIGHT']
         .filter(k => game.buildCost(AI_ME, k) <= t);
     if (affordable.length === 0) return null;
+    if (t > game.buildCost(AI_ME, 'BOMBARD') && Rando.bool(0.2) && affordable.includes('BOMBARD')) return 'BOMBARD';
     if (t > game.buildCost(AI_ME, 'PLASMA') && Rando.bool(0.25)) return 'PLASMA';
     if (Rando.bool(0.3) && affordable.includes('ENGINEER')) return 'ENGINEER';
     if (t > game.buildCost(AI_ME, 'KNIGHT') + 60 && Rando.bool(0.25) && affordable.includes('KNIGHT')) return 'KNIGHT';
