@@ -3359,7 +3359,10 @@ function activateSkill(skillId) {
 
     if (skill.target === SKILL_TARGET.SELF || skill.target === SKILL_TARGET.AOE_SELF) {
         executeSkill(skillId, player.q, player.r);
-        if (selected) computeReachable();
+        // Sprint grants extra MP — open the move/attack display so the player
+        // can immediately spend it, same as clicking the player counter.
+        if (skillId === 'sprint') selectPlayer();
+        else if (selected) computeReachable();
         render();
         updateSkillBar();
         updateSkillsPanel();
