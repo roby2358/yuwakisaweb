@@ -4,8 +4,9 @@ import { TERRAIN, MAP_COLS, MAP_ROWS, MOVEMENT_COST, POI, WEAPONS, ARMORS, ARTIF
 import { hexKey, hexNeighbors, hexDistance, hexesInRange, bfsHexes } from './hex.js';
 import { Rando } from './rando.js';
 
-// Skill gems scattered at world-gen across the far (no Maw-bonus) half of the map.
-const SKILL_GEM_COUNT = 10;
+const SPECIAL_TERRAINS = new Set([
+    TERRAIN.SPECIAL_PLAINS, TERRAIN.SPECIAL_FOREST, TERRAIN.SPECIAL_HILLS
+]);
 
 export class GameWorld {
     constructor() {
@@ -24,7 +25,7 @@ export class GameWorld {
             this._placePOIs();
             attempts++;
         } while (attempts < 20 && !this._validate());
-        this._placeSkillGems(SKILL_GEM_COUNT);
+        this._placePrizes();
     }
 
     getHex(q, r) {
@@ -169,13 +170,29 @@ export class GameWorld {
         Rando.shuffle(plains);
         let idx = 0;
         const forestCount = Math.round(n * 0.10);
-        const goldCount = Math.max(3, Math.round(n * 0.01));
         for (let i = 0; i < forestCount && idx < plains.length; i++, idx++) plains[idx].terrain = TERRAIN.FOREST;
-        for (let i = 0; i < goldCount && idx < plains.length; i++, idx++) { plains[idx].terrain = TERRAIN.GOLD; plains[idx].goldDeposit = Rando.int(10, 20); }
         const hills = inner.filter(h => h.terrain === TERRAIN.HILLS);
         Rando.shuffle(hills);
         const quarryCount = Math.max(2, Math.round(n * 0.02));
         for (let i = 0; i < quarryCount && i < hills.length; i++) hills[i].terrain = TERRAIN.QUARRY;
+        this._placeSpecialHexes(inner, n);
+    }
+
+    // Prize hexes: lighter-tinted "special" versions of plains / forest / hills.
+    // ~1% of the map, split across the three terrains. The prize each one holds
+    // is rolled later in _placePrizes, once POIs have claimed their hexes.
+    _placeSpecialHexes(inner, n) {
+        const kinds = [
+            [TERRAIN.PLAINS, TERRAIN.SPECIAL_PLAINS],
+            [TERRAIN.FOREST, TERRAIN.SPECIAL_FOREST],
+            [TERRAIN.HILLS, TERRAIN.SPECIAL_HILLS],
+        ];
+        const perKind = Math.max(1, Math.round(n * 0.01 / kinds.length));
+        for (const [base, special] of kinds) {
+            const pool = inner.filter(h => h.terrain === base);
+            Rando.shuffle(pool);
+            for (let i = 0; i < perKind && i < pool.length; i++) pool[i].terrain = special;
+        }
     }
 
     _placePOIs() {
@@ -229,22 +246,28 @@ export class GameWorld {
         place(POI.HUT, Rando.int(8, 12), false);
     }
 
-    // Scatter `count` skill gems on passable, unoccupied hexes in the far half of
-    // the map — the region with no Maw bonus. "Far half" mirrors mawProximityBonus:
-    // a hex qualifies when its Maw-distance is beyond half the maximum. Restricting
-    // to hexes reachable from the Maw keeps gems on the main landmass.
-    _placeSkillGems(count) {
-        const mawDist = this.mawDistanceMap();
-        if (!mawDist) return;
-        const maxDist = Math.max(...mawDist.values());
-        const threshold = maxDist * 0.5;
-        const pool = this.passableHexes().filter(h => {
-            if (h.poi || h.goldDeposit > 0) return false;
-            const d = mawDist.get(hexKey(h.q, h.r));
-            return d !== undefined && d > threshold;
+    // Every prize hex (special terrain, not claimed by a POI) holds one reward,
+    // chosen by weight: gold is the common find, skill gems uncommon, scrolls rare.
+    // Each placer stamps whichever marker that reward's pickup path already reads —
+    // goldDeposit, skillGem, or a SCROLL poi — so checkHexEntry needs no new cases.
+    _placePrizes() {
+        const skillPool = Object.values(SKILLS).filter(s =>
+            s.id !== 'restore' && !s.shopOnly && !s.scrollOnly);
+        const prizes = [
+            { weight: 7, item: h => { h.goldDeposit = Rando.int(10, 20); } },
+            { weight: 2, item: h => { h.skillGem = true; } },
+            { weight: 1, item: h => this._placeScrollPrize(h, skillPool) },
+        ];
+        const hexes = this.passableHexes().filter(h => !h.poi && SPECIAL_TERRAINS.has(h.terrain));
+        for (const hex of hexes) Rando.weighted(prizes)(hex);
+    }
+
+    _placeScrollPrize(hex, skillPool) {
+        hex.poi = POI.SCROLL;
+        this.pois.push({
+            q: hex.q, r: hex.r, type: POI.SCROLL,
+            id: this.pois.length, skill: Rando.choice(skillPool).id
         });
-        Rando.shuffle(pool);
-        for (let i = 0; i < count && i < pool.length; i++) pool[i].skillGem = true;
     }
 
     _generateShopItems() {
@@ -279,19 +302,41 @@ export class GameWorld {
         return this.reachableFrom(maw.q, maw.r);
     }
 
-    // Drop a single scroll POI carrying `skillId` on a random hex that is
-    // passable, unoccupied, reachable from (originQ, originR), and accepted by
-    // pred(hex). Returns the new poi, or null if nowhere qualifies.
-    placeScroll(skillId, originQ, originR, pred) {
+    // Hexes that are passable, unoccupied, reachable from (originQ, originR),
+    // and accepted by pred(hex) — the raw candidate set for any scroll placement.
+    _scrollCandidates(originQ, originR, pred) {
         const reachable = this.reachableFrom(originQ, originR);
-        const pool = this.passableHexes().filter(h =>
+        return this.passableHexes().filter(h =>
             !h.poi && reachable.has(hexKey(h.q, h.r)) && pred(h));
-        if (pool.length === 0) return null;
-        const hex = Rando.choice(pool);
+    }
+
+    _makeScroll(skillId, hex) {
         hex.poi = POI.SCROLL;
         const poi = { q: hex.q, r: hex.r, type: POI.SCROLL, id: this.pois.length, skill: skillId };
         this.pois.push(poi);
         return poi;
+    }
+
+    // World-gen story scroll: prefers plains — converting the chosen one to
+    // SPECIAL_PLAINS so the scroll rides a "special" hex like every other prize —
+    // and only falls back to other terrain when no plains qualifies. Null if
+    // nowhere fits.
+    placeScroll(skillId, originQ, originR, pred) {
+        const candidates = this._scrollCandidates(originQ, originR, pred);
+        const plains = candidates.filter(h => h.terrain === TERRAIN.PLAINS);
+        const pool = plains.length > 0 ? plains : candidates;
+        if (pool.length === 0) return null;
+        const hex = Rando.choice(pool);
+        if (hex.terrain === TERRAIN.PLAINS) hex.terrain = TERRAIN.SPECIAL_PLAINS;
+        return this._makeScroll(skillId, hex);
+    }
+
+    // In-game drop (e.g. the Maw's RETURN scroll): lands on any passable hex —
+    // hills, forest, whatever — and leaves the terrain unchanged. Null if nowhere fits.
+    dropScroll(skillId, originQ, originR, pred) {
+        const candidates = this._scrollCandidates(originQ, originR, pred);
+        if (candidates.length === 0) return null;
+        return this._makeScroll(skillId, Rando.choice(candidates));
     }
 
     _validate() {

@@ -87,23 +87,35 @@ const TERRAIN_COLORS = {
     [TERRAIN.HILLS]: '#c4a44a',
     [TERRAIN.MOUNTAIN]: '#7a7a7a',
     [TERRAIN.FOREST]: '#2d6e2d',
-    [TERRAIN.GOLD]: '#d4a017',
     [TERRAIN.QUARRY]: '#9e8c6c',
+    // Prize hexes — noticeably lighter tints of plains / forest / hills.
+    [TERRAIN.SPECIAL_PLAINS]: '#95d23f',
+    [TERRAIN.SPECIAL_FOREST]: '#58aa3e',
+    [TERRAIN.SPECIAL_HILLS]: '#dec474',
     [TERRAIN.SHATTERED_PLAINS]: '#5a3020',
     [TERRAIN.SHATTERED_HILLS]: '#6e3e1e',
     [TERRAIN.SHATTERED_FOREST]: '#321a12',
-    [TERRAIN.SHATTERED_GOLD]: '#7a4018',
     [TERRAIN.SHATTERED_QUARRY]: '#4e2c24',
     [TERRAIN.DISTRESSED_PLAINS]: '#8a9a6a',
     [TERRAIN.DISTRESSED_HILLS]: '#9a8a5a',
     [TERRAIN.DISTRESSED_FOREST]: '#5a7a3a',
-    [TERRAIN.DISTRESSED_GOLD]: '#a89a5a',
     [TERRAIN.DISTRESSED_QUARRY]: '#7a7a6a',
     [TERRAIN.RUINS]: '#c8c8c8',
     [TERRAIN.BREACH]: '#3a1040',
     [TERRAIN.MAW]: '#400810',
 };
 const PLAYER_COLOR = '#daa520';
+
+// A "special" hex hides its reward — gold, a skill gem, or a scroll — behind a
+// single sparkle, so you can't tell what you're getting until you step on it.
+const SPECIAL_TERRAINS = new Set([
+    TERRAIN.SPECIAL_PLAINS, TERRAIN.SPECIAL_FOREST, TERRAIN.SPECIAL_HILLS
+]);
+const PRIZE_GLYPH = '✨'; // ✨
+function specialPrizeHex(hex) {
+    return SPECIAL_TERRAINS.has(hex.terrain)
+        && (hex.goldDeposit > 0 || hex.skillGem || hex.poi === POI.SCROLL);
+}
 
 // ---- Game state ----
 let world = null;           // GameWorld instance
@@ -1189,7 +1201,7 @@ function closeBreach(poi) {
 // The scroll is NOT revealed — the player seals from within 3 hexes, so it will
 // usually be in sight, but must be sought out and stepped on to be claimed.
 function sealMaw(maw) {
-    world.placeScroll('return', maw.q, maw.r, h => hexDistance(h.q, h.r, maw.q, maw.r) <= 3);
+    world.dropScroll('return', maw.q, maw.r, h => hexDistance(h.q, h.r, maw.q, maw.r) <= 3);
     logCombat('The Maw is sealed. A scroll smolders in the quieted ground nearby.', 'log-info');
     showDialog('The Maw is Sealed',
         '<p>You have closed the Maw. The world breathes again.</p>' +
@@ -1482,34 +1494,41 @@ function render() {
             ctx.fill();
         }
 
-        // Gold / crop indicator
-        if (hex.goldDeposit > 0) {
-            ctx.fillStyle = hex.crop ? '#66bb6a' : '#ffd700';
-            ctx.font = 'bold ' + Math.floor(HEX_SIZE * 1.2) + 'px monospace';
+        if (specialPrizeHex(hex)) {
+            // Mystery prize — a little sparkle in the wild, reward concealed until claimed.
+            ctx.font = 'bold ' + Math.floor(HEX_SIZE * 0.6) + 'px monospace';
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText(hex.crop || '\u{1FA99}', x, y);
-        }
-
-        // Skill gem indicator
-        if (hex.skillGem) {
-            ctx.fillStyle = '#4dd0e1';
-            ctx.font = 'bold ' + Math.floor(HEX_SIZE * 1.1) + 'px monospace';
-            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText('✦', x, y);
-        }
-
-        // POI symbols
-        if (hex.poi) {
-            const poi = world.poiAt(hex.q, hex.r);
-            if (poi) {
-                const symbol = POI_SYMBOLS[poi.type] || '?';
-                let color = POI_COLORS[poi.type] || '#fff';
-                if ((poi.type === POI.BREACH || poi.type === POI.MAW) && poi.closed) color = '#555';
-                if (poi.type === POI.RUIN) color = poi.ruinState === 'explored' ? '#000' : '#fff';
-                ctx.fillStyle = color;
+            ctx.fillText(PRIZE_GLYPH, x, y);
+        } else {
+            // Gold / crop indicator
+            if (hex.goldDeposit > 0) {
+                ctx.fillStyle = hex.crop ? '#66bb6a' : '#ffd700';
                 ctx.font = 'bold ' + Math.floor(HEX_SIZE * 1.2) + 'px monospace';
                 ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillText(symbol, x, y);
+                ctx.fillText(hex.crop || '\u{1FA99}', x, y);
+            }
+
+            // Skill gem indicator
+            if (hex.skillGem) {
+                ctx.fillStyle = '#4dd0e1';
+                ctx.font = 'bold ' + Math.floor(HEX_SIZE * 1.1) + 'px monospace';
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText('✦', x, y);
+            }
+
+            // POI symbols
+            if (hex.poi) {
+                const poi = world.poiAt(hex.q, hex.r);
+                if (poi) {
+                    const symbol = POI_SYMBOLS[poi.type] || '?';
+                    let color = POI_COLORS[poi.type] || '#fff';
+                    if ((poi.type === POI.BREACH || poi.type === POI.MAW) && poi.closed) color = '#555';
+                    if (poi.type === POI.RUIN) color = poi.ruinState === 'explored' ? '#000' : '#fff';
+                    ctx.fillStyle = color;
+                    ctx.font = 'bold ' + Math.floor(HEX_SIZE * 1.2) + 'px monospace';
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.fillText(symbol, x, y);
+                }
             }
         }
     }
@@ -1708,6 +1727,11 @@ function renderWorldMap() {
     for (const poi of world.pois) {
         if (!world.revealed.has(hexKey(poi.q, poi.r))) continue;
         const { x: mx, y: my } = mini(poi.q, poi.r);
+        const poiHex = world.getHex(poi.q, poi.r);
+        if (poiHex && specialPrizeHex(poiHex)) {
+            ctx.fillText(PRIZE_GLYPH, mx, my);
+            continue;
+        }
         const symbol = POI_SYMBOLS[poi.type] || '?';
         let color = POI_COLORS[poi.type] || '#fff';
         if ((poi.type === POI.BREACH || poi.type === POI.MAW) && poi.closed) color = '#555';
