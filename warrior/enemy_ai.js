@@ -323,7 +323,7 @@ export class ChaosAI extends EnemyAI {
         const isGuard = def.behavior === 'guard';
         const speed = def.speed || 1;
         let moved = !isGuard && !isAggro &&
-            (this.tryHuntTarget(enemy, occupied, ctx) || this.trySwarmTrigger(enemy, def, occupied, ctx));
+            (this.tryHuntTarget(enemy, occupied, ctx) || this.trySwarmTrigger(enemy, occupied, ctx));
         if (!moved) {
             for (let step = 0; step < speed; step++) {
                 if (this.moveEnemyStep(enemy, def, dist, aggro, prefersRanged, occupied, ctx)) moved = true;
@@ -510,9 +510,9 @@ export class ChaosAI extends EnemyAI {
 
     // Swarm trigger: when 5+ chaos allies cluster within 3, pick a settlement
     // to march on and set it as the target. The march itself is handled by
-    // tryHuntTarget, which shares the targetQ/R field with the alarm.
-    trySwarmTrigger(enemy, def, occupied, ctx) {
-        if (def.behavior === 'boss') return false;
+    // tryHuntTarget, which shares the targetQ/R field with the alarm. The
+    // Unraveler swarms too — it marches at the head of its spawn.
+    trySwarmTrigger(enemy, occupied, ctx) {
         const { em } = ctx;
         const nearbyAllies = em.enemies.filter(e =>
             e !== enemy &&

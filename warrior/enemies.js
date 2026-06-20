@@ -322,11 +322,14 @@ export class EnemyManager {
     getNextStepToward(enemy, tq, tr, occupied, world) {
         const isPassable = (q, r) => {
             if (!world.isPassable(world.getHex(q, r))) return false;
+            // The explicit goal is always reachable as a destination — a swarm marching
+            // on a settlement must be able to path to it even though settlement hexes are
+            // otherwise impassable. Intermediate settlements still block, so units never
+            // route through a sanctuary.
+            if (q === tq && r === tr) return true;
             const poi = world.poiAt(q, r);
             if (poi && (poi.type === POI.HAVEN || poi.type === POI.VILLAGE || poi.type === POI.GARRISON || poi.type === POI.GARRISON_BUILD)) return false;
-            const key = hexKey(q, r);
-            if (q === tq && r === tr) return true;
-            return !occupied.has(key);
+            return !occupied.has(hexKey(q, r));
         };
         const movementCost = (q, r) => {
             const hex = world.getHex(q, r);
