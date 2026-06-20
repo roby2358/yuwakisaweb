@@ -2190,22 +2190,41 @@ function shopItemDetailHtml(item) {
         + `<div class="si-stats">${itemStatLine(item)}</div>`;
 }
 
+// Side panels keyed by id → the function that refreshes their contents.
+const SIDE_PANELS = {
+    'char-panel': updateCharPanel,
+    'skills-panel': updateSkillsPanel,
+    'inv-panel': updateInvPanel,
+};
+let activePanel = 'char-panel';  // last panel selected via C/S/I — what the collapse button re-opens
+
 function closeAllPanels() {
-    document.getElementById('char-panel').classList.add('hidden');
-    document.getElementById('skills-panel').classList.add('hidden');
-    document.getElementById('inv-panel').classList.add('hidden');
+    Object.keys(SIDE_PANELS).forEach(id => document.getElementById(id).classList.add('hidden'));
+    updateCollapseBtn();
 }
 
-function togglePanel(id) {
-    const panel = document.getElementById(id);
-    const wasHidden = panel.classList.contains('hidden');
+function anyPanelOpen() {
+    return Object.keys(SIDE_PANELS).some(id => !document.getElementById(id).classList.contains('hidden'));
+}
+
+function updateCollapseBtn() {
+    const btn = document.getElementById('btn-collapse');
+    if (btn) btn.textContent = anyPanelOpen() ? '✕' : '☰';
+}
+
+// Select a panel: always show it (never toggles off) — pressing S then S stays on Skills.
+function showPanel(id) {
+    activePanel = id;
     closeAllPanels();
-    if (wasHidden) {
-        panel.classList.remove('hidden');
-        if (id === 'char-panel') updateCharPanel();
-        if (id === 'skills-panel') updateSkillsPanel();
-        if (id === 'inv-panel') updateInvPanel();
-    }
+    document.getElementById(id).classList.remove('hidden');
+    SIDE_PANELS[id]();
+    updateCollapseBtn();
+}
+
+// The ☰ / ✕ button is the only hide/show control.
+function toggleCollapse() {
+    if (anyPanelOpen()) closeAllPanels();
+    else showPanel(activePanel);
 }
 
 // ================================================================
@@ -3161,17 +3180,11 @@ document.getElementById('new-game').addEventListener('click', () => {
 
 document.getElementById('endgame-newgame').addEventListener('click', initGame);
 
-document.getElementById('btn-char').addEventListener('click', () => togglePanel('char-panel'));
-document.getElementById('btn-skills').addEventListener('click', () => togglePanel('skills-panel'));
-document.getElementById('btn-inv').addEventListener('click', () => togglePanel('inv-panel'));
+document.getElementById('btn-char').addEventListener('click', () => showPanel('char-panel'));
+document.getElementById('btn-skills').addEventListener('click', () => showPanel('skills-panel'));
+document.getElementById('btn-inv').addEventListener('click', () => showPanel('inv-panel'));
 document.getElementById('btn-map').addEventListener('click', toggleWorldMap);
-
-// Close buttons on panels
-document.querySelectorAll('.panel-close').forEach(btn => {
-    btn.addEventListener('click', () => {
-        btn.closest('.side-panel').classList.add('hidden');
-    });
-});
+document.getElementById('btn-collapse').addEventListener('click', toggleCollapse);
 
 // Skill bar clicks
 document.querySelectorAll('.skill-slot[data-slot]').forEach(slot => {
@@ -3214,11 +3227,11 @@ window.addEventListener('keydown', e => {
         if (targeting) { targeting = null; render(); updateSkillBar(); }
         else { deselectPlayer(); closeAllPanels(); render(); }
     } else if (e.key === 'c' || e.key === 'C') {
-        togglePanel('char-panel');
+        showPanel('char-panel');
     } else if (e.key === 's' || e.key === 'S') {
-        togglePanel('skills-panel');
+        showPanel('skills-panel');
     } else if (e.key === 'i' || e.key === 'I') {
-        togglePanel('inv-panel');
+        showPanel('inv-panel');
     } else if (e.key >= '1' && e.key <= String(SKILL_SLOTS)) {
         activateSkillSlot(parseInt(e.key) - 1);
     } else if (e.key === 'r' || e.key === 'R') {
