@@ -46,13 +46,15 @@ export function skillMpCost(skill) {
 
 // True when the held weapon's type matches a weapon-flow skill's class, so the
 // skill flows through it (affixes, range, MP floor). Neutral skills (no
-// weaponClass) and type mismatches never match — those act as-is.
+// weaponClass), 'direct' skills (fire from nothing — no weapon leveraged), and
+// type mismatches never match — those act as-is.
 export function skillWeaponMatches(player, skill) {
     const cls = skill.weaponClass;
-    if (!cls) return false;
     const wep = player.weapon();
     if (!wep) return false;
-    return cls === 'ranged' ? weaponIsRanged(wep) : !weaponIsRanged(wep);
+    if (cls === 'ranged') return weaponIsRanged(wep);
+    if (cls === 'melee') return !weaponIsRanged(wep);
+    return false;
 }
 
 // Weapon-flow skills pay max(skill MP, weapon MP) when a matching weapon is

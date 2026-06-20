@@ -2752,8 +2752,12 @@ function skillSummary(skillId) {
 function skillSummaryHtml(skillId) {
     const sum = skillSummary(skillId);
     if (!sum || !sum.factors) return '';
+    // Weapon class, marked at the end of the line: bow for ranged-weapon skills,
+    // dagger for melee-weapon skills, comet for "direct" skills that fire from
+    // nothing (no weapon leveraged), whatever stat they scale with.
+    const glyph = { ranged: ' 🏹', melee: ' 🗡️', direct: ' ☄️' }[SKILLS[skillId].weaponClass] || '';
     const score = sum.score != null ? `<span class="s-pow">⚔ ${sum.score}</span> ` : '';
-    return `${score}<span class="s-fac">${sum.factors}</span>`;
+    return `${score}<span class="s-fac">${sum.factors}</span>${glyph}`;
 }
 
 // Skills-overlay row: the shared summary as a styled line, or nothing for

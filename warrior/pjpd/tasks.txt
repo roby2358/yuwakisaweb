@@ -1,3 +1,31 @@
+Priority:   55
+Status: ToDo
+ID: vigor-school-t5sp
+Created: 2026-06-20T15:28:55Z
+Updated: 2026-06-20T15:51:59Z
+Add a Vigor skill school — the "HP-as-mana" school. Vigor is the fourth stat with no offensive identity (currently just an HP sponge). Give "health monsters" oomph by making HP a resource you spend and convert, not just a buffer you hoard.
+
+TWO-AXIS MODEL (the key framing; weapon-leverage and source-of-power are SEPARATE questions):
+- Axis 1 — weapon class (the end-of-line glyph, the `weaponClass` field): does the skill layer the equipped weapon's affix/damage? melee 🗡️ / ranged 🏹 / direct ☄️ ("fires from nothing," no weapon leveraged).
+- Axis 2 — school / resource (cost line + factors text): where the power comes from and what it costs — Might/Reflex/Warding/Vigor, paid in MP/AE/HP. The scaling stat already shows in factors ("+Vig" etc.); resource cost shows in the cost line.
+- They compose freely: a skill can be weaponClass 'melee' (🗡️) AND cost HP / scale Vigor. That's exactly how a Vigor skill that flows through a weapon is expressed.
+
+NO new glyph (decided): do NOT add a heart or any "source of power" glyph. The scaling stat is already named in the factors text, and source-of-power isn't single-valued (e.g. void_strike = weapon+Might+Warding) so one icon can't represent it. Vigor-ness is conveyed by HP cost (cost line) + "+Vig" (factors). [Deferred idea, NOT now: color the factor stat tokens — Mgt red / Ref green / War purple / Vig crimson — for at-a-glance build scanning; handles multi-stat skills with no new symbols.]
+
+CONCEPT / power budget: each school has a signature resource — weapon skills spend MP, warding spends AE, Vigor spends HP. Vigor is a resource/amplifier school layered over your weapon: Might/Reflex/Warding answer "where does damage come from," Vigor answers "what will you pay to amplify it / how do you survive." Cross-pollinates with Might (bruiser builds: Might weapon + Vigor) — explicitly desired. No artificial HP-spend cap: the hostile board (Unraveller, 45-Might roamers) is the governor — dumping your whole bar into one hit is a real, usually-suicidal, occasionally-run-saving option (windfall/comedy). Glass cannons already do poorly here, so giving the survival stat offense rehabilitates a forced tax into a real build.
+
+DESIGN PRINCIPLE — brute force = restrained variety: option count scales inversely with bluntness. Melee has many riders (cleave/stun/burn/shred/execute), ranged has projectile geometry (penetrate/ricochet/volley), warding has area/chains. Vigor's quadrant is DISPLACEMENT & IMPACT and does NO tricks — no penetrate, ricochet, shred, or burn (those belong to other schools). Keep it to ~5 blunt, highly-readable skills.
+
+SKILLS:
+- Buildup strike (keystone) — SAME-TURN: spend HP for bonus damage flowing through the equipped weapon (weapon + Vigor, paid in HP); weaponClass = whatever weapon is held. This is dimensional_rend generalized/promoted — dimensional_rend is already this exact template (weapon + Vigor drawn from HP), so build on it. Deferred-charge/wind-up idea was REJECTED: same-turn is more readable, needs no state, truer to brute force.
+- Warp Shield — convert from AE cost to HP cost ("rechannel life force into a ward"); HP-fueled chance to block all damage for a turn. weaponClass 'direct'. Defensive pole of the HP economy.
+- Overwhelm — guaranteed stagger/stun paid in HP (reliability, NOT a chance — the brute version of stun_blow). Brute force is deterministic.
+- 2-hex Knockback — single big shove (vs shockwave's 1-hex AoE nudge); the drama/board-control verb (knock enemies into maws / off positioning / into each other).
+- Lifedrain AoE — adopt existing lifedrain_blast (Vigor AoE + heal per hit) as the refill that closes the HP loop.
+- (Maybe) Lay Bare — channel HP to strip a % of target's defense, deterministic, hefty all-in HP cost. CAVEAT: %-def-strip is "shred," which is melee's verb (sundering_blow) and collides with Vigor's no-tricks identity. If added, model as a Might/Vigor CROSSOVER: weaponClass 'melee' (layers the weapon) + HP cost — "sundering_blow's all-in big brother." Don't bolt on a fail-chance; the hefty HP cost vs the lethal board is the gamble. Decide whether it's worth the slight identity dilution before adding.
+
+SCALING: both HP cost AND skill effect increase with skill level/rank (more invested = bigger spend = bigger payoff).
+----
 Priority:   50
 Status: ToDo
 ID: ranged-enm-ue9z
@@ -22,13 +50,6 @@ Whichever option, keep it readable in fog (revealed-but-not-visible state) and a
 Tactical justification: ranged enemies meaningfully change approach planning — the player decides whether to close, take cover behind terrain (forest/hill defense bonuses already exist), or out-range them. Without a visual marker the player has to memorize creature types or hover everything, which is tedious. The marker is small UX work for a clear gameplay payoff.
 
 Tuning: don't overpopulate ranged on a single map — they're a counter to slow players and can feel oppressive in clusters. Aim for ~20-30% of spawns being ranged at the appropriate tier, not 50%+.
-----
-Priority:   47
-Status: ToDo
-ID: skill-lvl-fkd5
-Created: 2026-05-24T02:30:50Z
-Updated: 2026-06-15T03:12:30Z
-Skill levels: learning a skill multiple times levels it up and increases its power. Design how each skill scales per level (damage, range, AOE radius, duration, AE cost reduction, etc.), how level is stored on the player's skill entry, how the shop/level-up flow offers re-learning, and how the skill panel displays current level + next-level preview.
 ----
 Priority:   45
 Status: ToDo
@@ -62,13 +83,6 @@ ID: xp-sink-wwg4
 Created: 2026-04-12T20:28:57Z
 Updated: 2026-06-15T03:12:32Z
 Add a use for XP after reaching max level 10. Possible idea: spend accumulated XP to heal/restore chaos-corrupted hexes, giving endgame players something meaningful to do with excess XP.
-----
-Priority:   32
-Status: ToDo
-ID: skill-arc-8bz5
-Created: 2026-04-19T02:38:32Z
-Updated: 2026-04-26T08:30:23Z
-Add a Skills archive tier so skills fall into three buckets: (1) HUD-equipped (the 4 slots in player.skills), (2) Learned-but-unequipped (swappable from the Skills panel), (3) Archived (learned but tucked away — shown in a collapsed/separate section, not offered for equip by default). Add `player.archivedSkills` (Set) alongside learnedSkills, a button in updateSkillsPanel() to archive/unarchive a learned skill, and persist it in toJSON/fromJSON. Archived skills should not appear in the default unequipped swap list but remain retrievable. Useful when the player accumulates skills they'll never slot (e.g. off-build casters on a melee run) and the swap list gets cluttered.
 ----
 Priority:   30
 Status: ToDo

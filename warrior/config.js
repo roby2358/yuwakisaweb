@@ -722,11 +722,11 @@ export const SKILLS = {
     },
     cosmic_bolt: {
         id: 'cosmic_bolt', name: 'Cosmic Bolt', cost: 3, target: SKILL_TARGET.RANGED, usage: SKILL_USAGE.ANYTIME,
-        scales: ['baseDamage', 'range'], tiers: [[8, 4], [10, 4], [12, 5], [14, 5], [16, 6]], desc: 'Ranged bolt; damage scales with Warding.', minLevel: 2
+        weaponClass: 'direct', scales: ['baseDamage', 'range'], tiers: [[8, 4], [10, 4], [12, 5], [14, 5], [16, 6]], desc: 'Ranged bolt; damage scales with Warding.', minLevel: 2
     },
     shockwave: {
         id: 'shockwave', name: 'Shockwave', cost: 2, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
-        scales: ['baseDamage', 'range'], tiers: [[4, 2], [6, 2], [8, 2], [10, 3], [12, 3]], desc: 'AoE around you; scales with Might and pushes each enemy back a hex.', minLevel: 2
+        weaponClass: 'direct', scales: ['baseDamage', 'range'], tiers: [[4, 2], [6, 2], [8, 2], [10, 3], [12, 3]], desc: 'AoE around you; scales with Might and pushes each enemy back a hex.', minLevel: 2
     },
     siphon_strike: {
         id: 'siphon_strike', name: 'Siphon Strike', cost: 2, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
@@ -757,11 +757,11 @@ export const SKILLS = {
     },
     breach_pulse: {
         id: 'breach_pulse', name: 'Breach Pulse', cost: 3, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
-        scales: ['baseDamage', 'range'], tiers: [[5, 2], [7, 2], [9, 2], [11, 3], [13, 3]], desc: 'AoE around you; scales with Warding.', minLevel: 4
+        weaponClass: 'direct', scales: ['baseDamage', 'range'], tiers: [[5, 2], [7, 2], [9, 2], [11, 3], [13, 3]], desc: 'AoE around you; scales with Warding.', minLevel: 4
     },
     chain_lightning: {
         id: 'chain_lightning', name: 'Chain Lightning', cost: 3, target: SKILL_TARGET.RANGED, usage: SKILL_USAGE.ANYTIME,
-        range: 3, scales: ['baseDamage', 'hitCount', 'effectStrength'], tiers: [[6, 2, 2], [8, 2, 2], [10, 3, 2], [12, 3, 3], [14, 4, 3]],
+        weaponClass: 'direct', range: 3, scales: ['baseDamage', 'hitCount', 'effectStrength'], tiers: [[6, 2, 2], [8, 2, 2], [10, 3, 2], [12, 3, 3], [14, 4, 3]],
         desc: 'Ranged bolt; chains to nearby enemies for full damage. Scales with Warding.', minLevel: 4
     },
     immolate: {
@@ -782,7 +782,7 @@ export const SKILLS = {
     },
     meteor: {
         id: 'meteor', name: 'Meteor', cost: 4, target: SKILL_TARGET.RANGED_AOE, usage: SKILL_USAGE.ANYTIME,
-        scales: ['baseDamage', 'range', 'effectStrength'], tiers: [[8, 4, 1], [10, 4, 1], [12, 5, 1], [14, 5, 2], [16, 6, 2]], desc: 'Strike a target hex and all enemies in its blast; scales with Warding.', minLevel: 6
+        weaponClass: 'direct', scales: ['baseDamage', 'range', 'effectStrength'], tiers: [[8, 4, 1], [10, 4, 1], [12, 5, 1], [14, 5, 2], [16, 6, 2]], desc: 'Strike a target hex and all enemies in its blast; scales with Warding.', minLevel: 6
     },
     dimensional_rend: {
         id: 'dimensional_rend', name: 'Dimensional Rend', cost: 0, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
@@ -802,7 +802,7 @@ export const SKILLS = {
     },
     starfall: {
         id: 'starfall', name: 'Starfall', cost: 5, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
-        scales: ['baseDamage', 'range'], tiers: [[15, 3], [18, 3], [21, 3], [24, 4], [28, 4]], desc: 'Wide AoE around you; scales heavily with Warding.', minLevel: 10
+        weaponClass: 'direct', scales: ['baseDamage', 'range'], tiers: [[15, 3], [18, 3], [21, 3], [24, 4], [28, 4]], desc: 'Wide AoE around you; scales heavily with Warding.', minLevel: 10
     },
     void_salvo: {
         id: 'void_salvo', name: 'Void Salvo', cost: 4, target: SKILL_TARGET.RANGED, usage: SKILL_USAGE.ANYTIME,
@@ -856,12 +856,12 @@ export const SKILLS = {
     },
     havens_light: {
         id: 'havens_light', name: "Haven's Light", cost: 3, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
-        scales: ['baseDamage', 'range'], tiers: [[20, 3], [24, 3], [28, 3], [32, 4], [36, 4]], desc: "Powerful AoE around you. Only usable at a haven or village.", minLevel: 6
+        weaponClass: 'direct', scales: ['baseDamage', 'range'], tiers: [[20, 3], [24, 3], [28, 3], [32, 4], [36, 4]], desc: "Powerful AoE around you. Only usable at a haven or village.", minLevel: 6
     },
     // ---- Peaceful skills ----
     aether_blast: {
         id: 'aether_blast', name: 'Aether Blast', cost: 2, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
-        aetherPerHit: 3, scales: ['baseDamage', 'range'], tiers: [[3, 2], [4, 2], [5, 2], [6, 3], [7, 3]],
+        weaponClass: 'direct', aetherPerHit: 3, scales: ['baseDamage', 'range'], tiers: [[3, 2], [4, 2], [5, 2], [6, 3], [7, 3]],
         desc: 'AoE around you; gain AE per enemy hit.', minLevel: 4
     },
     lifedrain_blast: {

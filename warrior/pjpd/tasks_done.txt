@@ -134,6 +134,13 @@ Created: 2026-05-24T16:12:57Z
 Updated: 2026-06-15T03:29:28Z
 Loot skill combines with chain/cleave/sweep weapon affixes to loot multiple adjacent enemies. Current executeLoot (actions.js:1063) steals gold from one target only. Design as preAttack + postAttack actions on the Loot skill: primary loot on the target, then on a chain weapon, loot adjacent enemies up to chainCount; on cleave, loot all neighbors; on sweep, loot up to sweepCount neighbors. Per-target gold roll uses the looted enemy's attack stat as the cap (same formula as primary).
 ----
+Priority:   47
+Status: Done
+ID: skill-lvl-fkd5
+Created: 2026-05-24T02:30:50Z
+Updated: 2026-06-20T06:47:42Z
+Skill levels: learning a skill multiple times levels it up and increases its power. Design how each skill scales per level (damage, range, AOE radius, duration, AE cost reduction, etc.), how level is stored on the player's skill entry, how the shop/level-up flow offers re-learning, and how the skill panel displays current level + next-level preview.
+----
 Priority:   46
 Status: Done
 ID: might-def-pmtb
@@ -236,3 +243,10 @@ Migrations to remove:
 - index.js load path: equipment registry restore and sprite restore/assign branches that exist only to patch old saves lacking them (keep whatever the current save format legitimately produces).
 
 After removal, sanity-check that a freshly created + saved + loaded game round-trips cleanly (new saves contain all fields, so nothing should depend on the deleted branches). Per-class fromJSON stays as plain deserialization.
+----
+Priority:   32
+Status: Done
+ID: skill-arc-8bz5
+Created: 2026-04-19T02:38:32Z
+Updated: 2026-06-20T06:48:10Z
+Add a Skills archive tier so skills fall into three buckets: (1) HUD-equipped (the 4 slots in player.skills), (2) Learned-but-unequipped (swappable from the Skills panel), (3) Archived (learned but tucked away — shown in a collapsed/separate section, not offered for equip by default). Add `player.archivedSkills` (Set) alongside learnedSkills, a button in updateSkillsPanel() to archive/unarchive a learned skill, and persist it in toJSON/fromJSON. Archived skills should not appear in the default unequipped swap list but remain retrievable. Useful when the player accumulates skills they'll never slot (e.g. off-build casters on a melee run) and the swap list gets cluttered.
