@@ -290,6 +290,38 @@ $(document).ready(function() {
         showMessage('Translated IPA to approximate English.', 'success');
     };
 
+    const handleVerses = () => {
+        const text = $('#generated-text').val();
+        if (!text.trim()) {
+            showMessage('No text to versify. Generate some text first.', 'error');
+            return;
+        }
+
+        const maxLength = parseInt($('#verses-length').val(), 10) || 32;
+        const words = text.replace(/\s+/g, ' ').trim().split(' ');
+
+        const lines = [];
+        let current = '';
+        for (const word of words) {
+            if (current === '') {
+                current = word;
+            } else if (current.length + 1 + word.length > maxLength) {
+                lines.push(current);
+                current = word;
+            } else {
+                current += ' ' + word;
+            }
+        }
+        if (current !== '') lines.push(current);
+
+        const versed = lines
+            .map((line, i) => (i > 0 && i % 4 === 0) ? '\n' + line : line)
+            .join('\n');
+
+        $('#generated-text').val(versed);
+        showMessage('Broke text into verses.', 'success');
+    };
+
     const handleSpeak = () => {
         const text = $('#generated-text').val();
         if (!text.trim()) {
@@ -310,7 +342,12 @@ $(document).ready(function() {
     $('#clear-btn').on('click', clearGenerated);
     $('#generate-btn').on('click', handleGenerate);
     $('#translate-btn').on('click', handleTranslate);
+    $('#verses-btn').on('click', handleVerses);
     $('#speak-btn').on('click', handleSpeak);
+
+    // Keep verses length input and slider in sync
+    $('#verses-length-slider').on('input', () => $('#verses-length').val($('#verses-length-slider').val()));
+    $('#verses-length').on('input', () => $('#verses-length-slider').val($('#verses-length').val()));
 
     // Autoscroll for textareas
     const autoscroll = (event) => { event.target.scrollTop = event.target.scrollHeight; };

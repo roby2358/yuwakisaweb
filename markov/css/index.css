@@ -151,6 +151,12 @@ body {
     border-color: var(--color-primary);
 }
 
+.length-slider {
+    flex: 1;
+    min-width: 80px;
+    accent-color: var(--color-primary);
+}
+
 .action-button {
     background: var(--color-primary);
     color: white;
