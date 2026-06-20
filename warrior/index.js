@@ -2485,8 +2485,8 @@ function pickUpScroll(poi) {
 // same shopItems list (by magical/non-magical); skills are arcane knowledge so
 // they live with the Magicsmith. The Sell section is identical in both.
 const SMITHS = {
-    weapon: { title: 'Weaponsmith', buyFilter: equip => !equip.magical, showSkills: false },
-    magic:  { title: 'Magicsmith',  buyFilter: equip => equip.magical,   showSkills: true },
+    weapon: { title: 'Weaponsmith', itemFilter: equip => !equip.magical, showSkills: false, sellAll: true },
+    magic:  { title: 'Magicsmith',  itemFilter: equip => equip.magical,   showSkills: true,  sellAll: false },
 };
 
 function showShopDialog(poi, kind) {
@@ -2503,7 +2503,7 @@ function showShopDialog(poi, kind) {
         const equip = ALL_EQUIPMENT[item.id];
         if (!equip) continue;
         if (owned.has(item.id)) continue;
-        if (!smith.buyFilter(equip)) continue;
+        if (!smith.itemFilter(equip)) continue;
         const nameColor = equip.magical ? '#e040fb' : '#ccc';
         const shopPrice = item.price;
         bodyHtml += `<div class="shop-item" data-detail="${item.id}">
@@ -2526,21 +2526,22 @@ function showShopDialog(poi, kind) {
         }
     }
 
-    // Sell section
-    if (player.inventory.length > 0) {
-        const nonMagicInInventory = player.inventory.filter(id => { const it = ALL_EQUIPMENT[id]; return it && !it.magical; });
-        const nonMagicTotal = nonMagicInInventory.reduce((sum, id) => sum + sellPrice(ALL_EQUIPMENT[id]), 0);
+    // Sell section — each smith only buys back the kind of gear it deals in.
+    const sellable = player.inventory.filter(id => { const it = ALL_EQUIPMENT[id]; return it && smith.itemFilter(it); });
+    if (sellable.length > 0) {
         bodyHtml += '<div style="margin-top:12px;border-top:1px solid #333;padding-top:8px"><strong>Sell:</strong></div>';
-        if (nonMagicInInventory.length > 0) {
+        if (smith.sellAll) {
+            const sellAllTotal = sellable.reduce((sum, id) => sum + sellPrice(ALL_EQUIPMENT[id]), 0);
             bodyHtml += `<div class="shop-item">
                 <div style="color:#aaa">All non-magic items</div>
-                <button data-sell-all-nm data-price="${nonMagicTotal}">Sell all ${nonMagicTotal}g</button>
+                <button data-sell-all-nm data-price="${sellAllTotal}">Sell all ${sellAllTotal}g</button>
             </div>`;
         }
         for (let i = 0; i < player.inventory.length; i++) {
             const id = player.inventory[i];
             const item = ALL_EQUIPMENT[id];
             if (!item) continue;
+            if (!smith.itemFilter(item)) continue;
             const sp = sellPrice(item);
             const sellColor = item.magical ? '#b388ff' : '#ccc';
             bodyHtml += `<div class="shop-item" data-detail="${id}">
@@ -2600,17 +2601,17 @@ function showShopDialog(poi, kind) {
             const sold = [];
             for (let i = player.inventory.length - 1; i >= 0; i--) {
                 const it = ALL_EQUIPMENT[player.inventory[i]];
-                if (it && !it.magical) {
+                if (it && smith.itemFilter(it)) {
                     sold.push(it.name);
                     player.inventory.splice(i, 1);
                 }
             }
             player.gold += total;
             logCombat(`Sold ${sold.length} items for ${total}g`, 'log-gold');
-            // Remove non-magic sell rows and the sell-all button itself
+            // Remove the sold rows and the sell-all button itself
             body.querySelectorAll('button[data-sell]').forEach(b => {
                 const it = ALL_EQUIPMENT[b.dataset.sell];
-                if (it && !it.magical) b.closest('.shop-item').remove();
+                if (it && smith.itemFilter(it)) b.closest('.shop-item').remove();
             });
             sellAllBtn.closest('.shop-item').remove();
             // Reindex remaining sell buttons
