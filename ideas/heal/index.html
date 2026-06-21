@@ -3,22 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hex &amp; Counters</title>
+    <title>Healer</title>
     <link rel="stylesheet" href="index.css">
 </head>
 <body>
     <canvas id="game"></canvas>
     <div id="hud">
         <span id="turn-info">Turn 1</span>
-        <span id="mp-info">MP: 5/5</span>
+        <span id="hp-info">HP: 30/30</span>
+        <span id="aether-info">Aether: 12/12</span>
+        <span id="rep-info">Rep: 0</span>
+        <span id="party-info">Party: 4/4</span>
         <span id="hover-info"></span>
         <button id="end-turn">End Turn</button>
         <button id="new-game">New Game</button>
     </div>
+    <div id="skill-bar"></div>
     <div id="intro-panel">
-        <p>Victory condition: Move your counter (P) to the target. Good luck!</p>
+        <p><strong>Healer.</strong> You are the medic for a party you cannot command. They march
+        toward the treasure on their own; you keep them alive. Click yourself to move, click a skill
+        then a wounded ally to cast it, and Space ends your turn. Keep them breathing — your
+        reputation is the only thanks you'll get.</p>
         <button id="begin-btn">Begin</button>
     </div>
-    <script type="module" src="index.js"></script>
+    <!-- Plain script includes (no ES modules) so index.html runs from a double-click.
+         Order matters: each file's globals must be defined before a later file uses them. -->
+    <script src="config.js"></script>
+    <script src="rando.js"></script>
+    <script src="colortheory.js"></script>
+    <script src="hex.js"></script>
+    <script src="content.js"></script>
+    <script src="mechanics.js"></script>
+    <script src="ai.js"></script>
+    <script src="index.js"></script>
 </body>
 </html>

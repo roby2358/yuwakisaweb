@@ -45,6 +45,39 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
     max-width: 340px;
 }
 #intro-panel.hidden { display: none; }
+
+/* Skill bar — one button per unlocked skill (see content.SKILLS) */
+#skill-bar {
+    position: fixed;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 8px 12px;
+    border-radius: 6px;
+    z-index: 10;
+    user-select: none;
+}
+#skill-bar button {
+    background: #333;
+    color: #eee;
+    border: 1px solid #666;
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    text-align: center;
+    min-width: 56px;
+}
+#skill-bar button .cost { display: block; color: #7fb6e6; font-size: 11px; }
+#skill-bar button:hover:not(:disabled) { background: #444; }
+#skill-bar button:disabled { opacity: 0.4; cursor: default; }
+#skill-bar button.active { background: #5a4; border-color: #8d6; color: #fff; }
+#skill-bar:empty { display: none; }
 #intro-panel p { margin-bottom: 16px; line-height: 1.5; }
 #intro-panel button {
     background: #444;

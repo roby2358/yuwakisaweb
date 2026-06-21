@@ -15,12 +15,21 @@ installations) so they don't leak into new games.
 
 ## Running / Developing
 
-No build or install step. Serve over HTTP so ES6 module imports resolve:
+No build, install, or server step. Scripts are plain `<script>` includes (not ES modules),
+so `index.html` runs by double-clicking it (over `file://`). A static server still works if
+you prefer one:
 ```bash
 npx serve .
 # or
 python -m http.server 8000
 ```
+
+> **No ES modules — double-click to run.** To keep `index.html` runnable over `file://`
+> (browsers block ES module `import` there via CORS), every `.js` file is a classic script
+> that exposes globals, wired up by ordered `<script>` tags in `index.html` (load order:
+> `config → rando → colortheory → hex → content → mechanics → ai → index`). When adding a
+> file, add a `<script>` tag in dependency order; do **not** reintroduce `import`/`export`
+> or `type="module"`.
 
 ## Architecture
 
@@ -101,6 +110,10 @@ turn. Movement auto-ends the turn when MP hits 0.
 
 ## Conventions
 
-- Pure client-side ES6 modules — no Node/npm, no build step, no bundler, no tests.
+- Pure client-side JS loaded via ordered `<script>` tags (no ES modules, so `index.html`
+  runs from `file://`) — no Node/npm, no build step, no bundler.
+- **No unit tests.** This is a playtest-driven prototype; iteration speed wins over
+  coverage. Verify changes by running the game in a browser, not by writing tests — even
+  though general coding guidance insists on them, this project intentionally opts out.
 - Color values are 0–1 floats except when converting to `#rrggbb` strings for canvas.
 - Terrain types come from the `TERRAIN` constant in `config.js`; movement from `MOVEMENT_COST`.

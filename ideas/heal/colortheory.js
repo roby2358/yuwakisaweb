@@ -14,7 +14,7 @@
 //   const [r, g, b] = ColorTheory.hslToRgb(h, s, l);
 //   const hex = ColorTheory.rgbToHex(r, g, b);
 
-export class ColorTheory {
+class ColorTheory {
     // --- ColorWheel ---
 
     static mod1(a) {
