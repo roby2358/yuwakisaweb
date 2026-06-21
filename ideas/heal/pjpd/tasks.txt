@@ -1,0 +1,6 @@
+Priority:   40
+Status: ToDo
+ID: tgt-signal-g84i
+Created: 2026-06-21T23:27:15Z
+Updated: 2026-06-21T23:27:15Z
+Visual signalling of enemy targeting (heal game). Show which party member each enemy is committed to attacking. Currently disabled: full-map lines from every enemy to its target were too cluttered and become a "cobweb" with many enemies. Explore two forms: (a) proximity-gated telegraph lines, drawn only when the enemy is within ~2 hexes of its target; (b) a "heat" border/glow around the targeted ally's counter (and/or the threatening enemy's counter) instead of lines. Goal: a readable pre-ward cue that doesn't clutter the map and scales to mass enemies. The enemy.target commitment already exists in code — this is rendering only. Context: ideas/heal DYNAMICS.md "Telegraphed targets" note and the removed drawTelegraphs() in index.js.

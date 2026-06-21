@@ -115,6 +115,12 @@ leader biases toward focusing the killer. *Serves Revenge: the grief has a face 
 healer can pour buffs into the vengeance.* *Constraint, per "Enemy Identity": no anonymous swarm
 deaths — you always know who did it.*
 
+> **Status — telegraph lines disabled (v1).** Drawing a line from every enemy to its target spanned
+> the whole map and would become a red cobweb with a large enemy roster. The lines are currently not
+> rendered. Idea to restore later: only draw the telegraph when the enemy is within ~2 hexes of its
+> target — declutters the board *and* sharpens the cue to mean "imminent" rather than "eventually".
+> The `enemy.target` commitment itself still exists; only its rendering changed.
+
 ### Status effects as one uniform system — *Readable Consequences (clean mental model)*
 Heals-over-time, shields, buffs, poisons, and hexes are all entries in a unit's `statuses[]` array
 `{ type, magnitude, turnsLeft, source }`. One tick loop resolves all of them each turn. This is what

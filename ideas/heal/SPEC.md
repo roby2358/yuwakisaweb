@@ -27,7 +27,7 @@ current session.
 |     - terrain hexes (flat color)                            |
 |     - healer counter (player)                               |
 |     - party-member counters (AI)                            |
-|     - enemy counters (AI) with target telegraph lines       |
+|     - enemy counters (AI) — target telegraph deferred (v1)  |
 |     - reachable/range highlights when something is selected  |
 |                                                             |
 +-------------------------------------------------------------+
@@ -164,7 +164,9 @@ rendered as DOM overlays on top of the canvas.
   consume its cost.
 - Clicking a party member or enemy MUST display that unit's status (health, active effects, and —
   for AI units — current intent/target) without granting control over it.
-- The application MUST visually telegraph each enemy's committed target.
+- The application SHOULD visually telegraph each enemy's committed target. (Deferred in v1:
+  full-map target lines were too cluttered; a proximity-gated cue — shown only when the enemy is
+  within ~2 hexes — is the intended future form. See DYNAMICS.md.)
 - Space or Enter MUST end the current turn.
 - Right-click drag MUST pan the map and MUST NOT open the browser context menu.
 - The application MUST surface every meaningful mechanic at the moment of decision through highlights,

@@ -678,7 +678,6 @@ function render() {
     drawLandmarks();
     drawSelection();
     drawTargeting();
-    drawTelegraphs();
 
     for (const enemy of enemies) drawUnit(enemy);
     for (const member of party) { if (!member.gone) drawUnit(member); }
@@ -754,29 +753,6 @@ function drawTargeting() {
         ctx.lineWidth = 3;
         ctx.stroke();
     }
-}
-
-// Thin lines from each enemy to the hero it has committed to (DYNAMICS: telegraphed targets).
-function drawTelegraphs() {
-    for (const enemy of enemies) {
-        const target = enemyTargetForDisplay(enemy);
-        if (!target) continue;
-        const a = hexToScreen(enemy.q, enemy.r);
-        const b = hexToScreen(target.q, target.r);
-        if (!onScreen(a.x, a.y) && !onScreen(b.x, b.y)) continue;
-        ctx.strokeStyle = 'rgba(220, 60, 60, 0.35)';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(a.x, a.y);
-        ctx.lineTo(b.x, b.y);
-        ctx.stroke();
-    }
-}
-
-// Read-only target lookup for rendering — does not mutate enemy.targetId.
-function enemyTargetForDisplay(enemy) {
-    const living = party.filter(p => p.alive && !p.gone);
-    return living.find(p => p.id === enemy.targetId) ?? nearest(enemy, living) ?? (living.length === 0 ? healer : null);
 }
 
 function drawCombatFlash() {
