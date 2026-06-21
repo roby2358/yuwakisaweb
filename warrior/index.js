@@ -1945,7 +1945,9 @@ function updateCharPanel() {
 function learnSkill(skillId, { active = false } = {}) {
     if (player.learnedSkills.has(skillId)) return false;
     player.learnedSkills.add(skillId);
-    if (active && player.freeSP() > 0) setSkillActive(skillId, true);
+    // freeAttune skills (RETURN, Channel Aether) cost no SP, so they come active
+    // the moment they're learned — no Magicsmith trip, no SP slot needed.
+    if (SKILLS[skillId].freeAttune || (active && player.freeSP() > 0)) setSkillActive(skillId, true);
     autoEquipIfActive(skillId);
     updateSkillBar();
     updateSkillsPanel();
@@ -2832,7 +2834,9 @@ let lastTrainSkill = null;
 // usable). → trains or levels up a skill (rising SP cost); ← levels it down or
 // makes it latent. The info box previews whatever row was last clicked.
 function showTrainDialog() {
-    const learned = [...player.learnedSkills].sort((a, b) => SKILLS[a].name.localeCompare(SKILLS[b].name));
+    // freeAttune skills are always-on and cost no SP, so they have no place in the
+    // Train (SP allocation) list — keep them out so they can't be made latent.
+    const learned = [...player.learnedSkills].filter(id => !SKILLS[id].freeAttune).sort((a, b) => SKILLS[a].name.localeCompare(SKILLS[b].name));
     const free = player.freeSP();
     let body = '<p style="color:#aaa;font-size:12px">Click → to train and level up (rising cost +1, +2, +3, +4, +5; max 5). Click ← to level down, or make latent at level 1.</p>';
     body += `<p style="color:${free > 0 ? '#b388ff' : '#888'};font-size:13px">SP available: ${free} of ${player.sp}</p>`;

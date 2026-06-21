@@ -3,7 +3,7 @@ import {
     maxHP, maxAether, PLAYER_MP, BASE_VISION,
     EQUIP_SLOT, ALL_EQUIPMENT,
     TERRAIN_DEFENSE_BONUS, TERRAIN_RANGE_BONUS,
-    RANGER_TERRAIN, isChaosTerrain, POI_RANGE_BONUS, weaponIsRanged
+    RANGER_TERRAIN, isChaosTerrain, POI_RANGE_BONUS, weaponIsRanged, SKILLS
 } from './config.js';
 import { hexDistance } from './hex.js';
 
@@ -183,10 +183,18 @@ export class Player {
         return rank * (rank + 1) / 2;
     }
 
+    // SP committed to keeping a skill active at its current rank. freeAttune skills
+    // (RETURN, Channel Aether) are always-on utilities that cost nothing — they
+    // never draw down the SP budget.
+    skillSPCost(id) {
+        if (SKILLS[id]?.freeAttune) return 0;
+        return this.rankSPCost(this.rankOf(id));
+    }
+
     // SP not yet committed — the room to train or level up another skill.
     freeSP() {
         let used = 0;
-        for (const id of this.activeSkills) used += this.rankSPCost(this.rankOf(id));
+        for (const id of this.activeSkills) used += this.skillSPCost(id);
         return this.sp - used;
     }
 
