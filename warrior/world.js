@@ -1,6 +1,6 @@
 // world.js — GameWorld: hex grid, POIs, fog of war
 
-import { TERRAIN, MAP_COLS, MAP_ROWS, MOVEMENT_COST, POI, WEAPONS, ARMORS, ARTIFACTS, NON_MAGICAL_ITEMS, SKILLS, rollMagicItem } from './config.js';
+import { TERRAIN, MAP_COLS, MAP_ROWS, MOVEMENT_COST, POI, WEAPONS, ARMORS, ARTIFACTS, NON_MAGICAL_ITEMS, rollMagicItem } from './config.js';
 import { hexKey, hexNeighbors, hexDistance, hexesInRange, bfsHexes } from './hex.js';
 import { Rando } from './rando.js';
 
@@ -224,12 +224,8 @@ export class GameWorld {
                 if (type === POI.RUIN) { poi.ruinState = 'new'; hex.terrain = TERRAIN.RUINS; }
                 if (type === POI.BREACH) { poi.closed = false; poi.guardianId = null; hex.terrain = TERRAIN.BREACH; }
                 if (type === POI.MAW) { poi.closed = false; poi.guardianId = null; hex.terrain = TERRAIN.MAW; }
-                if (type === POI.HUT) {
-                    // Assign a random skill (excluding restore which everyone starts
-                    // with, plus shop-only and scroll-only skills which are placed elsewhere)
-                    const skillPool = Object.values(SKILLS).filter(s => s.id !== 'restore' && !s.shopOnly && !s.scrollOnly);
-                    poi.skill = Rando.choice(skillPool).id;
-                }
+                // HUT skills are assigned later by SkillLibrary.deal (a non-binding
+                // pool skill), so the world doesn't pick one here.
                 self.pois.push(poi);
                 placed++;
             }
@@ -251,23 +247,18 @@ export class GameWorld {
     // Each placer stamps whichever marker that reward's pickup path already reads —
     // goldDeposit, skillGem, or a SCROLL poi — so checkHexEntry needs no new cases.
     _placePrizes() {
-        const skillPool = Object.values(SKILLS).filter(s =>
-            s.id !== 'restore' && !s.shopOnly && !s.scrollOnly);
         const prizes = [
             { weight: 7, item: h => { h.goldDeposit = Rando.int(10, 20); } },
             { weight: 2, item: h => { h.skillGem = true; } },
-            { weight: 1, item: h => this._placeScrollPrize(h, skillPool) },
+            { weight: 1, item: h => this._placeScrollPrize(h) },
         ];
         const hexes = this.passableHexes().filter(h => !h.poi && SPECIAL_TERRAINS.has(h.terrain));
         for (const hex of hexes) Rando.weighted(prizes)(hex);
     }
 
-    _placeScrollPrize(hex, skillPool) {
-        hex.poi = POI.SCROLL;
-        this.pois.push({
-            q: hex.q, r: hex.r, type: POI.SCROLL,
-            id: this.pois.length, skill: Rando.choice(skillPool).id
-        });
+    // Prize scrolls are placed empty; SkillLibrary.deal assigns each a distinct skill.
+    _placeScrollPrize(hex) {
+        this._makeScroll(null, hex);
     }
 
     _generateShopItems() {

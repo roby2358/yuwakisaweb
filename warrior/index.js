@@ -40,6 +40,7 @@ import { hexToPixel, pixelToHex, hexKey, parseHexKey, hexNeighbors, hexDistance,
 import { Rando } from './rando.js';
 import { Player } from './player.js';
 import { GameWorld } from './world.js';
+import { SkillLibrary } from './skilllibrary.js';
 import { EnemyManager, NUM_CREATURE_TIERS, spawnTierWeights } from './enemies.js';
 import { Victory } from './victory.js';
 import { Sound } from './sound.js';
@@ -138,11 +139,7 @@ let hoveredHex = null;
 let threatOverlay = null;   // Map<string, number> or null — threat heatmap for Ground Weeps
 let showingWorldMap = false;
 let combatAlerted = false;  // set when player attacks; nearby enemies ignore forest stealth
-let scrollOnlySkills = new Set();  // skill ids locked behind map scrolls this run (chosen at game start)
-
-// A skill is unavailable from the normal learn pools (level-up, hut, skill_seek)
-// if it's flagged scrollOnly in config OR dynamically locked behind a scroll this run.
-function skillLockedToScroll(s) { return s.scrollOnly || scrollOnlySkills.has(s.id); }
+let skillLibrary = new SkillLibrary();  // authority for skill discovery/partition this run
 
 // Turn timing metrics (session-only, rolling window of last 1000 turns).
 const TURN_METRICS_CAP = 1000;
@@ -1175,8 +1172,8 @@ function checkHexEntry() {
     // Skill gem pickup
     if (hex.skillGem) {
         hex.skillGem = false;
-        const gained = player.gainSP(1);
-        logCombat(gained > 0 ? '+1 SP (skill gem)' : 'Skill gem absorbed (SP already maxed).', 'log-info');
+        const c = grantConsolation();
+        logCombat(c.kind === 'sp' ? '+1 SP (skill gem)' : 'The skill gem dissolves into experience.', 'log-info');
         refreshOpenPanels();
     }
 
@@ -1220,7 +1217,7 @@ function showBreachLootDialog() {
 function openPoiDialog(poi) {
     if (poi.type === POI.HAVEN) showHavenDialog(poi);
     else if (poi.type === POI.VILLAGE) showVillageDialog(poi);
-    else if (poi.type === POI.HUT) showHutDialog(poi, true);
+    else if (poi.type === POI.HUT) showHutDialog(poi);
     else if (poi.type === POI.RUIN) tryRuinInteraction(poi);
     else if (poi.type === POI.SCROLL) pickUpScroll(poi);
 }
@@ -1298,7 +1295,7 @@ function saveGame() {
         enemies: em.toJSON(),
         equipment: ALL_EQUIPMENT,
         playerSprite, enemySprites,
-        scrollOnlySkills: [...scrollOnlySkills]
+        skillLibrary: skillLibrary.toJSON()
     };
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
 }
@@ -1339,7 +1336,7 @@ function loadGame() {
     world = GameWorld.fromJSON(data.world);
     player = Player.fromJSON(data.player);
     em = EnemyManager.fromJSON(data.enemies);
-    scrollOnlySkills = new Set(data.scrollOnlySkills);
+    skillLibrary = SkillLibrary.fromJSON(data.skillLibrary);
 
     playerSprite = data.playerSprite;
     enemySprites = data.enemySprites;
@@ -1378,7 +1375,6 @@ function initGame() {
     attackable = null;
     targeting = null;
     threatOverlay = null;
-    scrollOnlySkills = new Set();
 
     resetEquipment();
     world = new GameWorld();
@@ -1397,6 +1393,8 @@ function initGame() {
     // Drop the map scrolls now that the start is known. Channel Aether sits
     // within 11 hexes of the start; Renew and Retrain hide in the half too far
     // from the Maw to earn a proximity bonus. All must be reachable on foot.
+    // The fixed utility scrolls carry their own skill; the 10 story scrolls are
+    // placed empty (poi.skill === null) and the SkillLibrary deals them skills.
     world.placeScroll('channel', startHaven.q, startHaven.r,
         h => hexDistance(h.q, h.r, startHaven.q, startHaven.r) <= 11);
     if (mawDists) {
@@ -1406,20 +1404,20 @@ function initGame() {
         const farPred = h => (mawDists.get(hexKey(h.q, h.r)) ?? 0) > farThreshold;
         world.placeScroll('respec', startHaven.q, startHaven.r, farPred);
         world.placeScroll('retrain', startHaven.q, startHaven.r, farPred);
-
-        // Lock 10 random learnable skills behind scrolls hidden in the same far
-        // half (too far from the Maw to earn a proximity bonus). A skill is only
-        // marked scroll-only if its scroll actually found a home, so a placement
-        // failure can never make a skill permanently unobtainable.
-        const lockable = Object.values(SKILLS).filter(s =>
-            !s.scrollOnly && !s.shopOnly && s.id !== 'restore');
-        for (const s of Rando.shuffle([...lockable]).slice(0, 10)) {
-            if (world.placeScroll(s.id, startHaven.q, startHaven.r, farPred))
-                scrollOnlySkills.add(s.id);
-        }
+        for (let i = 0; i < 10; i++)
+            world.placeScroll(null, startHaven.q, startHaven.r, farPred);
     }
 
     player = new Player(startHaven.q, startHaven.r);
+
+    // Partition every learnable skill across the discovery channels. Story and
+    // prize scrolls (the SCROLL POIs still awaiting a skill) each claim a distinct
+    // skill out of the shared pool; the Wise Men get non-binding pool skills.
+    skillLibrary = new SkillLibrary();
+    const unfilledScrolls = world.pois.filter(p => p.type === POI.SCROLL && !p.skill);
+    const huts = world.pois.filter(p => p.type === POI.HUT);
+    skillLibrary.deal(unfilledScrolls, huts, player.learnedSkills);
+
     refreshVision();
     computeMawDistances(world);
     em = new EnemyManager();
@@ -1940,6 +1938,38 @@ function updateCharPanel() {
     });
 }
 
+// The single path every discovery channel uses to grant a skill. Returns false
+// if the player already has it (a no-op the caller can fall back from). Scroll
+// skills come pre-attuned (active) when an SP slot is free; every other channel
+// grants the skill latent, to be trained later at a Magicsmith.
+function learnSkill(skillId, { active = false } = {}) {
+    if (player.learnedSkills.has(skillId)) return false;
+    player.learnedSkills.add(skillId);
+    if (active && player.freeSP() > 0) setSkillActive(skillId, true);
+    autoEquipIfActive(skillId);
+    updateSkillBar();
+    updateSkillsPanel();
+    return true;
+}
+
+// The consolation cascade for any reward the player can't fully use — a skill
+// they already know, an overflow scroll, a skill gem at the SP cap: give a Skill
+// Point, or, when SP is already maxed, XP instead. (At level 10 that XP currently
+// goes nowhere; revisit per pjpd.) Returns { kind: 'sp' | 'xp', amount } so callers
+// can flavor the message; the XP branch logs its own "+N XP" via gainXP.
+const CONSOLATION_XP = 10;
+function grantConsolation() {
+    let result;
+    if (player.gainSP(1) > 0) {
+        result = { kind: 'sp', amount: 1 };
+    } else {
+        gainXP(CONSOLATION_XP);
+        result = { kind: 'xp', amount: CONSOLATION_XP };
+    }
+    updateHUD();
+    return result;
+}
+
 // Auto-equip a freshly learned skill, but only if it's trained (active). New
 // skills are latent by default, so this is a no-op until the player trains them.
 function autoEquipIfActive(skillId) {
@@ -2438,61 +2468,66 @@ function invokeSanctuary() {
     restHeal(1 / sanct.effectStrength);
 }
 
-function showHutDialog(poi, reroll) {
+function showHutDialog(poi) {
     grantVisitSP(poi);
     const trainBtn = { label: 'Train', action: () => showTrainDialog() };
-    // 10% chance the Wise Man's skill refreshes to something the player hasn't learned
-    if (reroll && Rando.bool(0.10)) {
-        const unlearnedPool = Object.values(SKILLS).filter(s => s.id !== 'restore' && !s.shopOnly && !skillLockedToScroll(s) && !player.learnedSkills.has(s.id));
-        if (unlearnedPool.length > 0) {
-            poi.skill = Rando.choice(unlearnedPool).id;
-        }
+
+    // The hut's assigned skill is non-binding — it stays in the shared pool, so
+    // the player may already have learned it elsewhere. When it's no use (known
+    // or never assigned), a 5% chance the sage digs up a fresh untaken skill of
+    // any level. That find becomes the hut's new standing assignment, so if the
+    // player Leaves and returns it's waiting for them (no fresh roll needed).
+    let teachId = poi.skill;
+    if (!teachId || player.learnedSkills.has(teachId)) {
+        teachId = Rando.bool(0.05) ? skillLibrary.rerollHutSkill(player.learnedSkills) : null;
+        if (teachId) poi.skill = teachId;
     }
 
-    const skill = SKILLS[poi.skill];
-    const skillName = skill ? skill.name : 'unknown art';
-
-    if (player.learnedSkills.has(poi.skill)) {
+    if (!teachId) {
         showDialog(POI_SYMBOLS[POI.HUT] + " Wise Man's Hut",
             `<p>An old sage peers at you.</p><p style="color:#a1887f">"I have nothing to teach you at this time."</p>`,
             [trainBtn, { label: 'Leave', action: () => { player.mp = 0; } }]);
-    } else {
-        showDialog(POI_SYMBOLS[POI.HUT] + " Wise Man's Hut",
-            `<p>The sage's eyes light up.</p><p style="color:#b388ff">"I can teach you <b>${skillName}</b>."</p><p class="s-cost">(${skillCostLabel(skill, player)})</p><p class="s-desc">${skill.desc}</p>`,
-            [{
-                label: 'Learn', cls: 'primary', action: () => {
-                    player.learnedSkills.add(poi.skill);
-                    autoEquipIfActive(poi.skill);
-                    player.mp = 0;
-                    logCombat(`The Wise Man teaches ${skillName}!`, 'log-info');
-                    updateSkillBar();
-                    updateSkillsPanel();
-                }
-            },
-            trainBtn,
-            { label: 'Leave', action: () => { player.mp = 0; } }]);
+        return;
     }
+
+    const skill = SKILLS[teachId];
+    showDialog(POI_SYMBOLS[POI.HUT] + " Wise Man's Hut",
+        `<p>The sage's eyes light up.</p><p style="color:#b388ff">"I can teach you <b>${skill.name}</b>."</p><p class="s-cost">(${skillCostLabel(skill, player)})</p><p class="s-desc">${skill.desc}</p>`,
+        [{
+            label: 'Learn', cls: 'primary', action: () => {
+                learnSkill(teachId);
+                player.mp = 0;
+                logCombat(`The Wise Man teaches ${skill.name}!`, 'log-info');
+            }
+        },
+        trainBtn,
+        { label: 'Leave', action: () => { player.mp = 0; } }]);
 }
 
-// Stepping onto a scroll claims its skill and consumes the scroll.
+// Stepping onto a scroll claims its skill and consumes the scroll. A scroll with
+// no skill (supply ran out at game start) or one whose skill the player already
+// has crystallizes into a Skill Point instead — absorbed if the player is capped.
 function pickUpScroll(poi) {
-    const skill = SKILLS[poi.skill];
     world.pois = world.pois.filter(p => p !== poi);
     const hex = world.getHex(poi.q, poi.r);
     if (hex) hex.poi = null;
 
-    if (!player.learnedSkills.has(poi.skill)) {
-        player.learnedSkills.add(poi.skill);
-        // Scroll skills come pre-attuned — they start trained (active) when an SP
-        // slot is free, otherwise Latent until trained at a Magicsmith.
-        if (player.freeSP() > 0) {
-            setSkillActive(poi.skill, true);
-            autoEquipIfActive(poi.skill);
-        }
+    const skill = poi.skill ? SKILLS[poi.skill] : null;
+    if (!skill || !learnSkill(poi.skill, { active: true })) {
+        const c = grantConsolation();
+        logCombat(`You unfurl a scroll; its lore ${c.kind === 'sp'
+            ? 'crystallizes into a Skill Point.'
+            : 'dissolves into experience.'}`, 'log-info');
+        showDialog('\u{1F4DC} Ancient Scroll',
+            `<p>You unfurl an ancient scroll, but it holds no art new to you.</p>` +
+            `<p style="color:#aaa;font-size:12px">${c.kind === 'sp'
+                ? 'Its lingering knowledge condenses into a Skill Point.'
+                : `Your Skill Points are already at their peak, so it dissolves into ${c.amount} XP instead.`}</p>`,
+            [{ label: 'Continue', cls: 'btn-primary' }]);
+        return;
     }
+
     logCombat(`You unfurl a scroll and learn ${skill.name}!`, 'log-info');
-    updateSkillBar();
-    updateSkillsPanel();
 
     const intro = poi.skill === 'return'
         ? 'You unfurl the scroll the sealed Maw left behind. The way home opens to you. Walk the land as long as you wish; invoke RETURN to tally your journey.'
@@ -2538,7 +2573,7 @@ function showShopDialog(poi, kind) {
 
     // Shop-only skills (Magicsmith only), listed after items
     const skillsForSale = smith.showSkills
-        ? Object.values(SKILLS).filter(s => s.shopOnly && !player.learnedSkills.has(s.id))
+        ? skillLibrary.shopSkills(player.learnedSkills)
         : [];
     if (skillsForSale.length > 0) {
         bodyHtml += '<div style="margin-top:12px;border-top:1px solid #333;padding-top:8px"><strong>Skills:</strong></div>';
@@ -2598,8 +2633,7 @@ function showShopDialog(poi, kind) {
             const price = parseInt(btn.dataset.price);
             if (player.gold < price) return;
             player.gold -= price;
-            player.learnedSkills.add(skillId);
-            autoEquipIfActive(skillId);
+            learnSkill(skillId);
             logCombat(`Learned ${SKILLS[skillId].name}`, 'log-gold');
             refreshOpenPanels();
             showShopDialog(poi, kind);
@@ -3015,12 +3049,16 @@ function showLevelUpDialog() {
 
 function showSkillChoiceDialog() {
     player.pendingSkillChoice = false;
-    const available = Object.values(SKILLS).filter(s => !s.shopOnly &&
-        !skillLockedToScroll(s) &&
-        s.minLevel <= player.level &&
-        !player.learnedSkills.has(s.id)
-    );
-    if (available.length === 0) return;
+    const available = skillLibrary.poolSkills(player.learnedSkills, player.level);
+    if (available.length === 0) {
+        // Nothing left to learn at this level — the insight condenses into a Skill
+        // Point, or XP once Skill Points are maxed.
+        const c = grantConsolation();
+        logCombat(c.kind === 'sp'
+            ? 'No new arts within reach — the insight becomes a Skill Point.'
+            : 'No new arts within reach — the insight dissolves into experience.', 'log-info');
+        return;
+    }
     Rando.shuffle(available);
     const offered = available.slice(0, 3);
 
@@ -3039,12 +3077,10 @@ function showSkillChoiceDialog() {
     document.getElementById('dialog-body').querySelectorAll('.skill-choice').forEach(el => {
         el.addEventListener('click', () => {
             const skillId = el.dataset.skill;
-            player.learnedSkills.add(skillId);
-            autoEquipIfActive(skillId);
+            learnSkill(skillId);
             document.getElementById('dialog-overlay').classList.add('hidden');
             changePhase('player');
             logCombat(`Learned ${SKILLS[skillId].name}!`, 'log-info');
-            updateSkillBar();
             render();
             updateHUD();
         });
