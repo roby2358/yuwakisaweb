@@ -1388,7 +1388,15 @@ function initGame() {
         const db = mawDists?.get(hexKey(b.q, b.r)) ?? -Infinity;
         return db - da;
     });
-    const startHaven = settlements[0] || world.pois[0];
+    // Never start on a hills hex — the rough start is too hard to survive. Take
+    // the next-farthest settlement until one sits on non-hills terrain. Covers
+    // every hills variant so the rule still holds if start conditions change.
+    const START_HILLS = new Set([
+        TERRAIN.HILLS, TERRAIN.SPECIAL_HILLS,
+        TERRAIN.SHATTERED_HILLS, TERRAIN.DISTRESSED_HILLS,
+    ]);
+    const startHaven = settlements.find(s => !START_HILLS.has(world.getHex(s.q, s.r)?.terrain))
+        || settlements[0] || world.pois[0];
 
     // Drop the map scrolls now that the start is known. Channel Aether sits
     // within 11 hexes of the start; Renew and Retrain hide in the half too far
@@ -2457,6 +2465,7 @@ function showVillageDialog(poi) {
     trySpawnVillageCrop(poi);
     showVerticalDialog(POI_SYMBOLS[POI.VILLAGE] + ' Village', '<p>A brief respite from the wilds.</p>', [
         { label: 'Rest', cls: 'primary', action: () => { restHeal(0.5); } },
+        { label: 'Weaponsmith', action: () => showShopDialog(poi, 'weapon') },
         { label: 'Leave' }
     ]);
 }
@@ -2615,7 +2624,7 @@ function showShopDialog(poi, kind) {
     bodyHtml += '</div>'; // .shop-scroll
     bodyHtml += '<div class="shop-info" data-shop-info><span class="si-hint">Click an item to inspect it.</span></div>';
 
-    showDialog(POI_SYMBOLS[POI.HAVEN] + ' ' + smith.title, bodyHtml, [{ label: 'Done', action: () => { player.mp = 0; } }]);
+    showDialog((POI_SYMBOLS[poi.type] || POI_SYMBOLS[POI.HAVEN]) + ' ' + smith.title, bodyHtml, [{ label: 'Done', action: () => { player.mp = 0; } }]);
 
     // Wire up buy/sell buttons
     const body = document.getElementById('dialog-body');

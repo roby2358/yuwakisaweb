@@ -221,6 +221,8 @@ export class GameWorld {
                 hex.poi = type;
                 const poi = { q: hex.q, r: hex.r, type, id: self.pois.length };
                 if (type === POI.HAVEN) poi.shopItems = self._generateShopItems();
+                // Villages have only a weaponsmith, so stock non-magical gear alone.
+                if (type === POI.VILLAGE) poi.shopItems = self._generateWeaponShopItems();
                 if (type === POI.RUIN) { poi.ruinState = 'new'; hex.terrain = TERRAIN.RUINS; }
                 if (type === POI.BREACH) { poi.closed = false; poi.guardianId = null; hex.terrain = TERRAIN.BREACH; }
                 if (type === POI.MAW) { poi.closed = false; poi.guardianId = null; hex.terrain = TERRAIN.MAW; }
@@ -274,6 +276,13 @@ export class GameWorld {
         ];
         Rando.shuffle(items);
         return items;
+    }
+
+    // Village weaponsmiths deal only in mundane gear — no magical items.
+    _generateWeaponShopItems() {
+        const nonMagicalPool = [...NON_MAGICAL_ITEMS];
+        Rando.shuffle(nonMagicalPool);
+        return nonMagicalPool.slice(0, Rando.int(2, 3));
     }
 
 
