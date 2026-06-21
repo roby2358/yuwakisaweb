@@ -24,7 +24,7 @@ import {
     SKILLS, effectiveSkill, UNSHATTERED_VERSION, UNDISTRESSED_VERSION, DISTRESSED_VERSION,
     isChaosTerrain, weaponIsRanged
 } from './config.js';
-import { hexKey, hexNeighbors, hexDistance, hexesInRange } from './hex.js';
+import { hexKey, hexNeighbors, hexDistance, hexesInRange, hexToPixel } from './hex.js';
 import { Rando } from './rando.js';
 
 // ================================================================
@@ -1107,13 +1107,31 @@ function executeRecall(action) {
     const { player, world, refreshVision, centerOn, logCombat } = action.ctx;
     const havens = world.havens();
     if (havens.length === 0) return action.abortSkillWithRefund('No havens exist!');
-    let nearest = havens[0], nearestDist = Infinity;
-    for (const h of havens) {
-        const d = hexDistance(player.q, player.r, h.q, h.r);
-        if (d < nearestDist) { nearestDist = d; nearest = h; }
+    // Stable cycle order: clockwise around the havens' centroid, so repeated Recalls
+    // from a haven walk the whole ring in visual order. Screen y points down, so an
+    // ascending atan2 is clockwise on screen. The set never changes mid-run, making
+    // the order consistent across casts.
+    const pts = havens.map(h => ({ h, ...hexToPixel(h.q, h.r) }));
+    const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
+    const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
+    const cycle = pts
+        .sort((a, b) => Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx))
+        .map(p => p.h);
+    const onIdx = cycle.findIndex(h => h.q === player.q && h.r === player.r);
+    let dest;
+    if (onIdx >= 0) {
+        // Already standing on a haven — advance to the next one in the cycle.
+        dest = cycle[(onIdx + 1) % cycle.length];
+    } else {
+        // Otherwise teleport to the nearest haven.
+        let nearestDist = Infinity;
+        for (const h of cycle) {
+            const d = hexDistance(player.q, player.r, h.q, h.r);
+            if (d < nearestDist) { nearestDist = d; dest = h; }
+        }
     }
-    player.q = nearest.q;
-    player.r = nearest.r;
+    player.q = dest.q;
+    player.r = dest.r;
     refreshVision();
     centerOn({ q: player.q, r: player.r });
     logCombat(`Recall! Teleported to haven.`, 'log-info');
