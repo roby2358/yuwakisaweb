@@ -47,7 +47,7 @@ const ENEMY_MAX = 8;
 const GROUP_MIN = 1;           // enemies spawn as warbands of this many...
 const GROUP_MAX = 4;           // ...up to this many, clustered around a center hex
 const GROUP_RADIUS = 2;        // a warband's footprint: hexes within this range of its center
-const AGGRO_RANGE = 12;        // a warband holds its ground until a hero comes within this many
+const AGGRO_RANGE = 8;         // a warband holds its ground until a hero comes within this many
                                // hexes; once provoked it commits and pursues to the end
                                // (also the radius of the danger heat map below)
 const DANGER_WEIGHT = 0.05;    // how hard the leader skirts danger: each point of accumulated
