@@ -121,3 +121,17 @@ const ATTACK_EFFECTS = {
 function enemyAttack(enemy, target) {
     ATTACK_EFFECTS[enemy.damageType](target, enemy.damage);
 }
+
+// A free "attack of opportunity": when a unit breaks out of a hostile's zone of control, that
+// hostile gets one unanswered strike on it. Dispatched by the striker's kind — an enemy uses its
+// damageType attack, a party member its melee damage. The healer has no offense and is absent
+// from the table, so it walls enemies (ZOC) but never lands a disengagement strike.
+const OPPORTUNITY_STRIKE = {
+    enemy: (attacker, victim) => enemyAttack(attacker, victim),
+    party: (attacker, victim) => applyDamage(victim, effectiveDamage(attacker)),
+};
+
+function opportunityStrike(attacker, victim) {
+    const strike = OPPORTUNITY_STRIKE[attacker.kind];
+    if (strike) strike(attacker, victim);
+}

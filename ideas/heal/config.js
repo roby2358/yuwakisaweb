@@ -35,6 +35,8 @@ const AETHER_REGEN = 3;        // Aether recovered at the start of each player t
 const PARTY_MP = 4;            // movement budget per party member per turn
 const LEADER_LEASH = 5;        // leader will not advance past this distance from the healer
 const PARTY_ENGAGE_RANGE = 3;  // party members divert to fight an enemy within this range
+const ZOC_PENALTY = 3;         // movement cost multiplier for entering a hex next to a hostile unit
+                               // (zone of control) — symmetric, so a front line walls off the squishies
 const REVIVE_WINDOW = 3;       // turns a downed hero survives before permanent death
 
 // ---- Enemies ----

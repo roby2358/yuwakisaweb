@@ -52,12 +52,16 @@ class Movement {
         if (path && path.length >= 2) {
             let spent = 0;
             for (let i = 1; i < path.length; i++) {
+                if (spent >= budget) break;            // out of movement
                 const next = path[i];
-                const cost = ctx.moveCost(next.q, next.r);
-                if (spent + cost > budget) break;
                 if (ctx.occupied(next.key())) break;   // a unit blocks the path — fall to sidestep
+                // Zone of control: a hex next to a hostile unit costs ZOC_PENALTY times as much.
+                // A unit with any budget left always gets one step (so it can reach contact and
+                // attack), but the inflated cost zeroes its movement there — it can't grind on
+                // past the front line in a single turn. Symmetric: applies to whoever is moving.
+                const zoc = ctx.zoc(next.q, next.r) ? ZOC_PENALTY : 1;
                 pos = { q: next.q, r: next.r };
-                spent += cost;
+                spent += ctx.moveCost(next.q, next.r) * zoc;
                 if (pos.q === goal.q && pos.r === goal.r) break;
             }
         }

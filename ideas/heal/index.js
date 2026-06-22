@@ -484,9 +484,11 @@ function deselect() {
 function computeReachable() {
     if (healer.mp <= 0) return new Map();
     const blocked = occupancyExcluding(healer);
+    const foeZoc = zocKeysFor(enemies);   // the healer is walled off by enemies too (symmetric ZOC)
     const costs = bfsHexes(healer, hexes, hex => {
-        if (blocked.has(Hex.key(hex.q, hex.r))) return Infinity;
-        return moveCost(hex);
+        const key = Hex.key(hex.q, hex.r);
+        if (blocked.has(key)) return Infinity;
+        return moveCost(hex) * (foeZoc.has(key) ? ZOC_PENALTY : 1);
     }, healer.mp);
     costs.delete(Hex.key(healer.q, healer.r));
     return costs;
@@ -495,9 +497,12 @@ function computeReachable() {
 function moveHealer(q, r) {
     const cost = selection?.reachable.get(Hex.key(q, r));
     if (cost === undefined) return;
+    const fromQ = healer.q, fromR = healer.r;
     healer.q = q;
     healer.r = r;
     healer.mp -= cost;
+    disengagementStrikes(healer, fromQ, fromR);   // stepping out of an enemy's reach provokes it
+    if (!healer.alive) { defeat('The healer has fallen.'); return; }
     if (healer.mp > 0) selectHealer();
     else deselect();
     render();
@@ -547,12 +552,25 @@ function startPlayerTurn() {
     render();
 }
 
-// AI context: closures over live terrain + a mutable occupancy set passed in.
-function aiCtx(live) {
+// Zone-of-control hexes for a set of units: every hex adjacent to a living unit. Entering one
+// costs ZOC_PENALTY times normal (see Movement.walkToward / computeReachable). The frontline's
+// bodies thus wall off a band, not just their own hexes.
+function zocKeysFor(units) {
+    const keys = new Set();
+    for (const u of units) {
+        if (!u.alive || u.gone) continue;
+        for (const n of new Hex(u.q, u.r).neighbors()) keys.add(n.key());
+    }
+    return keys;
+}
+
+// AI context: closures over live terrain + a mutable occupancy set + the hostile zone of control.
+function aiCtx(live, zoc) {
     return {
         terrainPassable: (q, r) => { const h = hexes.get(Hex.key(q, r)); return !!h && isPassable(h); },
         moveCost: (q, r) => { const h = hexes.get(Hex.key(q, r)); return h ? moveCost(h) : Infinity; },
-        occupied: key => live.has(key)
+        occupied: key => live.has(key),
+        zoc: (q, r) => zoc.has(Hex.key(q, r))
     };
 }
 
@@ -565,15 +583,41 @@ function moveUnit(unit, dest, live) {
     live.add(Hex.key(unit.q, unit.r));
 }
 
+// Living hostile units adjacent to (q, r) from `mover`'s point of view. A mover's foes are the
+// other faction; the healer counts as a friend of the party for this purpose.
+function adjacentHostiles(mover, q, r) {
+    const foes = mover.kind === 'enemy' ? [...party, healer] : enemies;
+    const here = new Hex(q, r);
+    return foes.filter(f => f.alive && !f.gone && here.distance(f) === 1);
+}
+
+// Attacks of opportunity: every hostile the mover was adjacent to at (fromQ, fromR) but is no
+// longer adjacent to after its move gets one free strike. Sliding from one of a hostile's ZOC
+// hexes to another keeps you adjacent — no strike; only fully breaking away provokes. Strikes
+// stack, so tearing free of three engagements at once is usually fatal. Stops early once the
+// mover drops.
+function disengagementStrikes(mover, fromQ, fromR) {
+    const after = new Set(adjacentHostiles(mover, mover.q, mover.r));
+    for (const h of adjacentHostiles(mover, fromQ, fromR)) {
+        if (after.has(h)) continue;
+        opportunityStrike(h, mover);
+        if (!mover.alive) return;
+    }
+}
+
 async function runPartyPhase() {
     const leader = PartyAI.leader();
     const order = [...party].sort((a, b) => (a === leader ? 0 : 1) - (b === leader ? 0 : 1));
     const live = boardKeySet();
+    const foeZoc = zocKeysFor(enemies);   // enemies don't move this phase, so their ZOC is fixed
 
     for (const member of order) {
         if (member.gone || !member.alive) continue;
-        const dest = Movement.walkToward(member, PartyAI.goal(member), PartyAI.budget(member), aiCtx(live));
+        const fromQ = member.q, fromR = member.r;
+        const dest = Movement.walkToward(member, PartyAI.goal(member), PartyAI.budget(member), aiCtx(live, foeZoc));
         moveUnit(member, dest, live);
+        disengagementStrikes(member, fromQ, fromR);   // enemies it tore free of get free swings
+        if (!member.alive) { render(); await sleep(110); continue; }
 
         const here = new Hex(member.q, member.r);
         const foe = nearest(member, enemies.filter(e => here.distance(e) <= member.attackRange));
@@ -609,12 +653,17 @@ function handleObjective(member) {
 
 async function runEnemyPhase() {
     const live = boardKeySet();
+    // The party and the healer wall enemies off; they hold still this phase, so their ZOC is fixed.
+    const foeZoc = zocKeysFor([...party, healer]);
 
     for (const enemy of [...enemies]) {
         if (!enemy.alive) continue;
         const target = EnemyAI.target(enemy);
-        const dest = Movement.walkToward(enemy, target, EnemyAI.budget(enemy), aiCtx(live));
+        const fromQ = enemy.q, fromR = enemy.r;
+        const dest = Movement.walkToward(enemy, target, EnemyAI.budget(enemy), aiCtx(live, foeZoc));
         moveUnit(enemy, dest, live);
+        disengagementStrikes(enemy, fromQ, fromR);    // frontliners it tore free of get free swings
+        if (!enemy.alive) { removeEnemy(enemy, live); render(); await sleep(110); continue; }
 
         const inReach = new Hex(enemy.q, enemy.r).distance(target) <= enemy.attackRange;
         if (inReach) {
