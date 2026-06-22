@@ -34,14 +34,14 @@ const ENEMY_CLASSES = [
 // group skill (applies its effect to allies within radius of the target). `tier` gates
 // the skill behind reputation. Order here is the skill-bar order.
 const SKILLS = [
-    { id: 'mend',    name: 'Mend',    template: 'heal',    tier: 1, aetherCost: 2, range: 4, aoeRadius: 0, magnitude: 8,  duration: 0, cooldown: 0 },
-    { id: 'aegis',   name: 'Aegis',   template: 'ward',    tier: 1, aetherCost: 3, range: 4, aoeRadius: 0, magnitude: 10, duration: 3, cooldown: 0 },
-    { id: 'purify',  name: 'Purify',  template: 'cleanse', tier: 1, aetherCost: 2, range: 4, aoeRadius: 0, magnitude: 0,  duration: 0, cooldown: 0 },
-    { id: 'renewal', name: 'Renewal', template: 'regen',   tier: 2, aetherCost: 3, range: 4, aoeRadius: 0, magnitude: 4,  duration: 4, cooldown: 0 },
-    { id: 'hymn',    name: 'Hymn',    template: 'heal',    tier: 2, aetherCost: 5, range: 3, aoeRadius: 2, magnitude: 6,  duration: 0, cooldown: 1 },
-    { id: 'dispel',  name: 'Dispel',  template: 'dispel',  tier: 2, aetherCost: 2, range: 4, aoeRadius: 0, magnitude: 0,  duration: 0, cooldown: 0 },
-    { id: 'bless',   name: 'Bless',   template: 'buff',    tier: 3, aetherCost: 3, range: 4, aoeRadius: 0, magnitude: 4,  duration: 3, cooldown: 1 },
-    { id: 'raise',   name: 'Raise',   template: 'revive',  tier: 3, aetherCost: 6, range: 2, aoeRadius: 0, magnitude: 10, duration: 0, cooldown: 3 },
+    { id: 'mend',    name: 'Mend',    template: 'heal',    tier: 1, aetherCost: 2, range: 4, aoeRadius: 0, magnitude: 8,  duration: 0, cooldown: 0, description: 'Restore health to one ally.' },
+    { id: 'aegis',   name: 'Aegis',   template: 'ward',    tier: 1, aetherCost: 3, range: 4, aoeRadius: 0, magnitude: 10, duration: 3, cooldown: 0, description: 'Shield that absorbs incoming damage.' },
+    { id: 'purify',  name: 'Purify',  template: 'cleanse', tier: 1, aetherCost: 2, range: 4, aoeRadius: 0, magnitude: 0,  duration: 0, cooldown: 0, description: 'Cleanse poison from an ally.' },
+    { id: 'renewal', name: 'Renewal', template: 'regen',   tier: 2, aetherCost: 3, range: 4, aoeRadius: 0, magnitude: 4,  duration: 4, cooldown: 0, description: 'Heal an ally a little each turn.' },
+    { id: 'hymn',    name: 'Hymn',    template: 'heal',    tier: 2, aetherCost: 5, range: 3, aoeRadius: 2, magnitude: 6,  duration: 0, cooldown: 1, description: 'Heal all nearby allies at once.' },
+    { id: 'dispel',  name: 'Dispel',  template: 'dispel',  tier: 2, aetherCost: 2, range: 4, aoeRadius: 0, magnitude: 0,  duration: 0, cooldown: 0, description: 'Strip a weakening curse from an ally.' },
+    { id: 'bless',   name: 'Bless',   template: 'buff',    tier: 3, aetherCost: 3, range: 4, aoeRadius: 0, magnitude: 4,  duration: 3, cooldown: 1, description: "Boost an ally's attack damage." },
+    { id: 'raise',   name: 'Raise',   template: 'revive',  tier: 3, aetherCost: 6, range: 2, aoeRadius: 0, magnitude: 10, duration: 0, cooldown: 3, description: 'Revive a downed ally back into the fight.' },
 ];
 
 // Status-dot colors for the renderer.

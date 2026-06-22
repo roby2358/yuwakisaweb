@@ -46,19 +46,32 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
 }
 #intro-panel.hidden { display: none; }
 
-/* Skill bar — one button per unlocked skill (see content.SKILLS) */
+/* Spells — vertical left-hand panel, one button per unlocked skill (see content.SKILLS) */
 #skill-bar {
     position: fixed;
-    bottom: 10px;
-    left: 50%;
-    transform: translateX(-50%);
+    top: 60px;
     display: flex;
-    gap: 8px;
+    flex-direction: column;
+    gap: 6px;
     background: rgba(0, 0, 0, 0.7);
-    padding: 8px 12px;
+    padding: 10px;
     border-radius: 6px;
     z-index: 10;
     user-select: none;
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+}
+#skill-bar.side-left  { left: 10px; right: auto; }
+#skill-bar.side-right { right: 10px; left: auto; }
+
+/* Dock toggle row at the top of the panel */
+#skill-bar .spell-header { display: flex; gap: 6px; margin-bottom: 2px; }
+#skill-bar .spell-header button {
+    width: auto;
+    flex: 1;
+    text-align: center;
+    font-size: 15px;
+    padding: 2px 0;
 }
 #skill-bar button {
     background: #333;
@@ -68,12 +81,14 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
     border-radius: 4px;
     cursor: pointer;
     font-family: monospace;
-    font-size: 12px;
-    line-height: 1.4;
-    text-align: center;
-    min-width: 56px;
+    font-size: 13px;
+    text-align: left;
+    line-height: 1.3;
+    width: 200px;
 }
-#skill-bar button .cost { display: block; color: #7fb6e6; font-size: 11px; }
+#skill-bar button .name { display: block; font-weight: bold; }
+#skill-bar button .cost { float: right; color: #7fb6e6; font-weight: normal; }
+#skill-bar button .desc { display: block; margin-top: 3px; color: #aaa; font-size: 11px; white-space: normal; }
 #skill-bar button:hover:not(:disabled) { background: #444; }
 #skill-bar button:disabled { opacity: 0.4; cursor: default; }
 #skill-bar button.active { background: #5a4; border-color: #8d6; color: #fff; }

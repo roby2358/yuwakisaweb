@@ -38,6 +38,8 @@ let endMessage = '';              // subtitle for the victory/defeat overlay
 let hoveredHex = null;
 let combatFlash = null;           // transient { q, r } marking a hit, for the enemy phase
 
+let spellSide = 'left';           // which screen edge the spell panel docks to: 'left' | 'right'
+
 // ---- View state ----
 let panX = 0, panY = 0;
 let panning = false;
@@ -395,7 +397,11 @@ function skillUsable(skill) {
 function refreshSkillBar() {
     const bar = document.getElementById('skill-bar');
     bar.innerHTML = '';
+    bar.classList.toggle('side-right', spellSide === 'right');
+    bar.classList.toggle('side-left', spellSide !== 'right');
     if (overlay || phase !== 'player' || !healer) return;
+
+    bar.appendChild(buildSpellHeader());
 
     const tier = currentTier();
     for (const skill of SKILLS) {
@@ -403,12 +409,36 @@ function refreshSkillBar() {
         const cd = healer.cooldowns[skill.id];
         const sub = cd > 0 ? `CD ${cd}` : `${skill.aetherCost}A`;
         const btn = document.createElement('button');
-        btn.innerHTML = `${skill.name}<span class="cost">${sub}</span>`;
+        btn.innerHTML = `<span class="name">${skill.name}<span class="cost">${sub}</span></span>` +
+            `<span class="desc">${skill.description}</span>`;
         btn.disabled = !skillUsable(skill);
         if (activeSkill && activeSkill.id === skill.id) btn.classList.add('active');
         btn.addEventListener('click', () => onSkillButton(skill));
         bar.appendChild(btn);
     }
+}
+
+// Header with the dock toggle: ← docks the panel left, → docks it right.
+function buildSpellHeader() {
+    const header = document.createElement('div');
+    header.className = 'spell-header';
+    header.appendChild(flipButton('←', 'left'));
+    header.appendChild(flipButton('→', 'right'));
+    return header;
+}
+
+function flipButton(glyph, side) {
+    const btn = document.createElement('button');
+    btn.className = 'flip';
+    btn.textContent = glyph;
+    btn.disabled = spellSide === side;
+    btn.addEventListener('click', () => setSpellSide(side));
+    return btn;
+}
+
+function setSpellSide(side) {
+    spellSide = side;
+    refreshSkillBar();
 }
 
 function onSkillButton(skill) {
