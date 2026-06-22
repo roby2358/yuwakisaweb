@@ -1,0 +1,11 @@
+Score:   60
+ID: skilltree-t3i2
+Created: 2026-06-22T04:21:56Z
+Updated: 2026-06-22T04:21:56Z
+Healer skill tree / progression system. The healer earns points (via reputation tiers?) to invest in branches that reshape its support role rather than just scaling numbers. Branches should map onto the existing template/dispatch systems (heal, ward, regen, cleanse, dispel, buff, revive, plus passives like armor/aether-regen) so each node is a parameter set over a template, not bespoke code. Tie unlocks to the existing reputation-tier gating in content.SKILLS. Keep the "you don't command the party, you keep it alive" theme: nodes should deepen guardianship/loss-aversion, not add party-command abilities. See the tank-healer idea for one emergent archetype the tree should support.
+----
+Score:   50
+ID: tankhealer-wdrk
+Created: 2026-06-22T04:22:05Z
+Updated: 2026-06-22T04:22:05Z
+Tank Healer archetype — a skill-tree build that stacks the healer's armor (and maybe a self-ward passive) so it becomes the party's meat shield. This needs almost no new combat code: PartyAI.kiteGoal already ranks shields by toughness = armor*ARMOR_WEIGHT + hp and tucks ranged units behind the toughest, with the healer as the existing fallback. Enough armor on the healer makes it win that ranking, so the squishy backline (archers) automatically forms up behind the medic — emergent comedy, formation inverts with zero special-casing. Twist on the theme: you can't order the party to protect you, but you can become the thing worth protecting behind. Belongs as a branch under skilltree (skilltree-t3i2). Knobs: armor-raising nodes, self-ward passive (wards already absorb before HP in applyDamage), maybe a heal-on-being-hit node.

@@ -565,25 +565,13 @@ function moveUnit(unit, dest, live) {
     live.add(Hex.key(unit.q, unit.r));
 }
 
-// The leader heads for the objective but won't outrun the healer (the leash); followers
-// gather to the leader (or the healer if the leader is down).
-function partyGoal(member) {
-    if (member.role === 'leader') {
-        if (new Hex(member.q, member.r).distance(healer) > LEADER_LEASH) return { q: healer.q, r: healer.r };
-        return objectiveHex;
-    }
-    const leader = party.find(p => p.role === 'leader' && p.alive && !p.gone);
-    const anchor = leader ?? healer;
-    return { q: anchor.q, r: anchor.r };
-}
-
 async function runPartyPhase() {
     const order = [...party].sort((a, b) => (a.role === 'leader' ? 0 : 1) - (b.role === 'leader' ? 0 : 1));
     const live = boardKeySet();
 
     for (const member of order) {
         if (member.gone || !member.alive) continue;
-        const dest = walkToward(member, partyGoal(member), PARTY_MP, aiCtx(live));
+        const dest = Movement.walkToward(member, PartyAI.goal(member), PartyAI.budget(member), aiCtx(live));
         moveUnit(member, dest, live);
 
         const here = new Hex(member.q, member.r);
@@ -618,25 +606,13 @@ function handleObjective(member) {
     }
 }
 
-// Each enemy commits to a target party member (telegraphed); only re-picks when its
-// target is no longer a valid, living hero. Falls to the healer when the party is down.
-function enemyTarget(enemy) {
-    const living = party.filter(p => p.alive && !p.gone);
-    let target = living.find(p => p.id === enemy.targetId);
-    if (!target) {
-        target = nearest(enemy, living);
-        enemy.targetId = target ? target.id : null;
-    }
-    return target ?? healer;
-}
-
 async function runEnemyPhase() {
     const live = boardKeySet();
 
     for (const enemy of [...enemies]) {
         if (!enemy.alive) continue;
-        const target = enemyTarget(enemy);
-        const dest = walkToward(enemy, target, enemy.speed, aiCtx(live));
+        const target = EnemyAI.target(enemy);
+        const dest = Movement.walkToward(enemy, target, EnemyAI.budget(enemy), aiCtx(live));
         moveUnit(enemy, dest, live);
 
         const inReach = new Hex(enemy.q, enemy.r).distance(target) <= enemy.attackRange;

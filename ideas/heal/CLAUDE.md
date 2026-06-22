@@ -27,7 +27,8 @@ python -m http.server 8000
 > **No ES modules — double-click to run.** To keep `index.html` runnable over `file://`
 > (browsers block ES module `import` there via CORS), every `.js` file is a classic script
 > that exposes globals, wired up by ordered `<script>` tags in `index.html` (load order:
-> `config → rando → colortheory → hex → content → mechanics → ai → index`). When adding a
+> `config → rando → colortheory → hex → content → mechanics → ai/movement → ai/partyai →
+> ai/enemyai → index`). When adding a
 > file, add a `<script>` tag in dependency order; do **not** reintroduce `import`/`export`
 > or `type="module"`.
 

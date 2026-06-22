@@ -12,7 +12,7 @@
 const PARTY_CLASSES = [
     { cls: 'warden', name: 'Warden', role: 'leader',   label: 'W', maxHp: 26, armor: 3, damage: 5, attackRange: 1 },
     { cls: 'blade',  name: 'Blade',  role: 'follower', label: 'B', maxHp: 16, armor: 0, damage: 8, attackRange: 1 },
-    { cls: 'archer', name: 'Archer', role: 'follower', label: 'A', maxHp: 14, armor: 0, damage: 6, attackRange: 3 },
+    { cls: 'archer', name: 'Archer', role: 'follower', label: 'A', maxHp: 14, armor: 0, damage: 6, attackRange: 6 },
     { cls: 'hunter', name: 'Hunter', role: 'follower', label: 'H', maxHp: 18, armor: 1, damage: 6, attackRange: 1 },
 ];
 
@@ -23,7 +23,7 @@ const PARTY_CLASSES = [
 // per-game ColorTheory scheme assigned at spawn, not from this table.
 const ENEMY_CLASSES = [
     { cls: 'grunt',  name: 'Grunt',  label: 'g', baseHp: 10, baseDamage: 4, damageType: 'melee',  attackRange: 1, weight: 5 },
-    { cls: 'brute',  name: 'Brute',  label: 'B', baseHp: 22, baseDamage: 9, damageType: 'burst',  attackRange: 1, weight: 2 },
+    { cls: 'brute',  name: 'Brute',  label: 'b', baseHp: 22, baseDamage: 9, damageType: 'burst',  attackRange: 1, weight: 2 },
     { cls: 'rotter', name: 'Rotter', label: 'r', baseHp: 12, baseDamage: 3, damageType: 'dot',    attackRange: 1, weight: 2 },
     { cls: 'hexer',  name: 'Hexer',  label: 'h', baseHp: 10, baseDamage: 3, damageType: 'debuff', attackRange: 1, weight: 2 },
     { cls: 'caster', name: 'Caster', label: 'c', baseHp: 9,  baseDamage: 5, damageType: 'magic',  attackRange: 3, weight: 2 },
