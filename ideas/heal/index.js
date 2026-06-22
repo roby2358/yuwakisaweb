@@ -37,6 +37,7 @@ let overlay = null;               // L5 'intro' | 'victory' | 'defeat' | null
 let endMessage = '';              // subtitle for the victory/defeat overlay
 let hoveredHex = null;
 let combatFlash = null;           // transient { q, r } marking a hit, for the enemy phase
+let showDanger = false;           // nav-bar toggle: paint the enemy danger heat map
 
 let spellSide = 'left';           // which screen edge the spell panel docks to: 'left' | 'right'
 
@@ -182,15 +183,22 @@ function assignTerrain() {
 }
 
 // Home on the left, treasure on the right — a real journey out and back (DYNAMICS:
-// "Home Bases Give the Map Emotional Weight").
+// "Home Bases Give the Map Emotional Weight"). Both sit EDGE_MARGIN hexes in from the
+// border so the party lands on a clear entrance beach, not buried in the interior.
 function placeLandmarks() {
     const passable = passableHexes();
-    passable.sort((a, b) => a.col - b.col);
-    const slice = Math.max(5, Math.floor(passable.length * 0.03));
-    const home = Rando.choice(passable.slice(0, slice));
-    const treasure = Rando.choice(passable.slice(-slice));
+    const home = landmarkNearColumn(passable, EDGE_MARGIN);
+    const treasure = landmarkNearColumn(passable, MAP_COLS - 1 - EDGE_MARGIN);
     homeHex = { q: home.q, r: home.r };
     treasureHex = { q: treasure.q, r: treasure.r };
+}
+
+// The passable hex nearest a target column — pulls home/treasure to a fixed margin in
+// from the edge. Ties (same column distance, different rows) break randomly for variety.
+function landmarkNearColumn(passable, targetCol) {
+    const best = Math.min(...passable.map(h => Math.abs(h.col - targetCol)));
+    const band = passable.filter(h => Math.abs(h.col - targetCol) === best);
+    return Rando.choice(band);
 }
 
 function hasPath(from, to) {
@@ -272,17 +280,34 @@ function setupUnits() {
     });
 }
 
+// Enemies arrive as warbands, not a scatter: pick center hexes far from home, then cluster
+// 1-4 enemies on and around each until the wave's total is met.
 function spawnEnemies() {
     enemies = [];
     const count = Rando.int(ENEMY_MIN, ENEMY_MAX);
     const occupied = boardKeySet();
     const home = new Hex(homeHex.q, homeHex.r);
-    const candidates = passableHexes().filter(h =>
+    const centers = passableHexes().filter(h =>
         !occupied.has(Hex.key(h.q, h.r)) && home.distance(h) > 8);
-    Rando.shuffle(candidates);
-    for (let i = 0; i < count && i < candidates.length; i++) {
-        const h = candidates[i];
-        enemies.push(makeEnemy(pickEnemyClass(), 1, h.q, h.r));
+    Rando.shuffle(centers);
+    let ci = 0;
+    while (enemies.length < count && ci < centers.length) {
+        const size = Math.min(Rando.int(GROUP_MIN, GROUP_MAX), count - enemies.length);
+        spawnGroup(centers[ci++], size, 1, occupied);
+    }
+}
+
+// Spawn `size` enemies of the given tier on a center hex and the nearest free passable
+// hexes around it. Mutates `occupied` so warbands don't overlap.
+function spawnGroup(center, size, tier, occupied) {
+    const origin = new Hex(center.q, center.r);
+    const spots = passableHexes()
+        .filter(h => !occupied.has(Hex.key(h.q, h.r)) && origin.distance(h) <= GROUP_RADIUS)
+        .sort((a, b) => origin.distance(a) - origin.distance(b));
+    for (let i = 0; i < size && i < spots.length; i++) {
+        const h = spots[i];
+        occupied.add(Hex.key(h.q, h.r));
+        enemies.push(makeEnemy(pickEnemyClass(), tier, h.q, h.r));
     }
 }
 
@@ -564,13 +589,54 @@ function zocKeysFor(units) {
     return keys;
 }
 
-// AI context: closures over live terrain + a mutable occupancy set + the hostile zone of control.
+// How threatening an enemy's presence is, stamped onto the danger map. Offense is the
+// natural measure — it's what a hex near this enemy will cost you. One place to retune.
+function enemyStrength(enemy) {
+    return enemy.damage;
+}
+
+// Flat danger heat map: every hex within AGGRO_RANGE of a living enemy accumulates that
+// enemy's strength (no falloff — a warband stamps a uniform plateau, and overlapping
+// warbands sum into hotter crossfire zones). The leader's pathing pays this on top of
+// terrain, so it routes around a warband's footprint instead of wading through it.
+function buildDangerMap() {
+    const map = new Map();
+    for (const e of enemies) {
+        if (!e.alive) continue;
+        const strength = enemyStrength(e);
+        for (const c of new Hex(e.q, e.r).inRange(AGGRO_RANGE)) {
+            const key = Hex.key(c.q, c.r);
+            if (!hexes.has(key)) continue;
+            map.set(key, (map.get(key) || 0) + strength);
+        }
+    }
+    return map;
+}
+
+// AI context: closures over live terrain + a mutable occupancy set + the hostile zone of
+// control. `moveCost` is what a step actually spends from the budget; `planCost` is what the
+// A* route planner minimizes. They're identical here — terrain only — so the planner and the
+// walk agree. dangerAwareCtx swaps in a planCost that also pays danger, bending the route.
 function aiCtx(live, zoc) {
+    const terrain = (q, r) => { const h = hexes.get(Hex.key(q, r)); return h ? moveCost(h) : Infinity; };
     return {
         terrainPassable: (q, r) => { const h = hexes.get(Hex.key(q, r)); return !!h && isPassable(h); },
-        moveCost: (q, r) => { const h = hexes.get(Hex.key(q, r)); return h ? moveCost(h) : Infinity; },
+        moveCost: terrain,
+        planCost: terrain,
         occupied: key => live.has(key),
         zoc: (q, r) => zoc.has(Hex.key(q, r))
+    };
+}
+
+// A planning view that biases routes away from danger WITHOUT slowing the unit down: the A*
+// planner pays terrain + DANGER_WEIGHT · heat, but the walk still spends only `moveCost`
+// (terrain × ZOC) from the budget. So the leader picks a safer-shaped path yet moves at full
+// speed. Danger is additive, never Infinity — it bends the route but never forbids a hex, so
+// when the only way to the treasure runs through a warband the leader still commits.
+function dangerAwareCtx(base, danger) {
+    return {
+        ...base,
+        planCost: (q, r) => base.moveCost(q, r) + DANGER_WEIGHT * (danger.get(Hex.key(q, r)) || 0)
     };
 }
 
@@ -610,11 +676,17 @@ async function runPartyPhase() {
     const order = [...party].sort((a, b) => (a === leader ? 0 : 1) - (b === leader ? 0 : 1));
     const live = boardKeySet();
     const foeZoc = zocKeysFor(enemies);   // enemies don't move this phase, so their ZOC is fixed
+    const danger = buildDangerMap();      // ...and so is the danger heat for the whole phase
 
     for (const member of order) {
         if (member.gone || !member.alive) continue;
         const fromQ = member.q, fromR = member.r;
-        const dest = Movement.walkToward(member, PartyAI.goal(member), PartyAI.budget(member), aiCtx(live, foeZoc));
+        const goal = PartyAI.goal(member);
+        // Only the objective-bound route skirts danger; a member already diverting to fight a
+        // threat (goal is the foe's hex, not objectiveHex) charges in regardless.
+        const ctx = aiCtx(live, foeZoc);
+        const planning = goal === objectiveHex ? dangerAwareCtx(ctx, danger) : ctx;
+        const dest = Movement.walkToward(member, goal, PartyAI.budget(member), planning);
         moveUnit(member, dest, live);
         disengagementStrikes(member, fromQ, fromR);   // enemies it tore free of get free swings
         if (!member.alive) { render(); await sleep(110); continue; }
@@ -659,6 +731,7 @@ async function runEnemyPhase() {
     for (const enemy of [...enemies]) {
         if (!enemy.alive) continue;
         const target = EnemyAI.target(enemy);
+        if (!target) continue;                         // dormant: no hero within aggro range
         const fromQ = enemy.q, fromR = enemy.r;
         const dest = Movement.walkToward(enemy, target, EnemyAI.budget(enemy), aiCtx(live, foeZoc));
         moveUnit(enemy, dest, live);
@@ -731,6 +804,7 @@ function render() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     drawTerrain();
+    drawDanger();
     drawLandmarks();
     drawSelection();
     drawTargeting();
@@ -759,6 +833,25 @@ function drawTerrain() {
         ctx.strokeStyle = '#00000044';
         ctx.lineWidth = 1;
         ctx.stroke();
+    }
+}
+
+// Danger heat overlay (nav-bar toggle). Rebuilt fresh each paint so it reflects where the
+// enemies are *now*, then normalized to the current hottest hex so the gradient stays
+// readable whatever the absolute strengths are: deeper red = more accumulated threat.
+function drawDanger() {
+    if (!showDanger) return;
+    const danger = buildDangerMap();
+    let max = 0;
+    for (const v of danger.values()) if (v > max) max = v;
+    if (max === 0) return;
+    for (const [key, strength] of danger) {
+        const { q, r } = Hex.fromKey(key);
+        const { x, y } = hexToScreen(q, r);
+        if (!onScreen(x, y)) continue;
+        drawHexPath(ctx, x, y, HEX_SIZE);
+        ctx.fillStyle = `rgba(220, 40, 40, ${0.12 + 0.45 * (strength / max)})`;
+        ctx.fill();
     }
 }
 
@@ -1014,7 +1107,14 @@ canvas.addEventListener('contextmenu', e => e.preventDefault());
 
 document.getElementById('end-turn').addEventListener('click', primaryAction);
 document.getElementById('new-game').addEventListener('click', initGame);
+document.getElementById('toggle-danger').addEventListener('click', toggleDanger);
 document.getElementById('begin-btn').addEventListener('click', dismissOverlay);
+
+function toggleDanger() {
+    showDanger = !showDanger;
+    document.getElementById('toggle-danger').classList.toggle('active', showDanger);
+    render();
+}
 
 window.addEventListener('keydown', e => {
     if (overlay === 'intro' && (e.key === ' ' || e.key === 'Enter' || e.key === 'Escape')) {

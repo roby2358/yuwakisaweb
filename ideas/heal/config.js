@@ -25,6 +25,8 @@ const MOVEMENT_COST = {
 const PLAYER_MP = 5;
 const MAP_COLS = 60;
 const MAP_ROWS = 40;
+const EDGE_MARGIN = 2;         // home/treasure (and the party with them) sit this many hexes
+                               // in from the map's water border — a clear entrance/exit beach
 
 // ---- Healer (the player unit) ----
 const HEALER_MAX_HP = 30;
@@ -42,6 +44,15 @@ const REVIVE_WINDOW = 3;       // turns a downed hero survives before permanent 
 // ---- Enemies ----
 const ENEMY_MIN = 5;           // initial wave size (inclusive range)
 const ENEMY_MAX = 8;
+const GROUP_MIN = 1;           // enemies spawn as warbands of this many...
+const GROUP_MAX = 4;           // ...up to this many, clustered around a center hex
+const GROUP_RADIUS = 2;        // a warband's footprint: hexes within this range of its center
+const AGGRO_RANGE = 12;        // a warband holds its ground until a hero comes within this many
+                               // hexes; once provoked it commits and pursues to the end
+                               // (also the radius of the danger heat map below)
+const DANGER_WEIGHT = 0.05;    // how hard the leader skirts danger: each point of accumulated
+                               // enemy strength on a hex adds this much to its planning cost.
+                               // The knob — halve/double while watching the leader's route bend
 const REINFORCE_CHANCE = 0.25; // per-turn chance to spawn one reinforcement
 
 // ---- Reputation ----

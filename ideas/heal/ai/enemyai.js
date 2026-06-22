@@ -6,16 +6,21 @@
 // target is in reach. Reads live game globals (`party`, `healer`); no per-enemy strategy
 // state beyond `enemy.targetId` and `enemy.speed`, so the methods are static.
 class EnemyAI {
-    // Each enemy commits to a target party member (telegraphed); only re-picks when its
-    // target is no longer a valid, living hero. Falls to the healer when the party is down.
+    // Each enemy commits to a target party member (telegraphed) and pursues to the end. An
+    // un-committed enemy stays dormant until a hero comes within AGGRO_RANGE — so distant
+    // warbands hold their turf instead of all rushing at once. Returns null when nothing is
+    // close enough to provoke it (the enemy phase then leaves it standing). Falls to the
+    // healer only when the party is down.
     static target(enemy) {
         const living = party.filter(p => p.alive && !p.gone);
-        let target = living.find(p => p.id === enemy.targetId);
-        if (!target) {
-            target = nearest(enemy, living);
-            enemy.targetId = target ? target.id : null;
-        }
-        return target ?? healer;
+        const committed = living.find(p => p.id === enemy.targetId);
+        if (committed) return committed;
+
+        const prey = nearest(enemy, living) ?? (healer.alive ? healer : null);
+        if (!prey) return null;
+        if (new Hex(enemy.q, enemy.r).distance(prey) > AGGRO_RANGE) return null;
+        enemy.targetId = prey.id;
+        return prey;
     }
 
     // Movement speed is rolled per enemy at spawn (DYNAMICS: varied speeds), so it is the

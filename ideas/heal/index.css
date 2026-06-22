@@ -5,6 +5,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
     position: fixed;
     top: 10px;
     left: 10px;
+    right: 10px;
     display: flex;
     gap: 12px;
     align-items: center;
@@ -28,6 +29,9 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
     font-size: 13px;
 }
 #hud button:hover { background: #555; }
+#toggle-danger { margin-left: auto; }
+#toggle-danger.active { background: #a52828; border-color: #dc2828; }
+#toggle-danger.active:hover { background: #c43030; }
 #intro-panel {
     position: fixed;
     top: 50%;

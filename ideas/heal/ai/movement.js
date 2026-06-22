@@ -7,7 +7,9 @@
 // where does this unit end up this turn?".
 //
 // `ctx` is a plain bag of closures over live state (built by index.js `aiCtx`):
-//   { terrainPassable(q, r), moveCost(q, r), occupied(key) }
+//   { terrainPassable(q, r), moveCost(q, r), planCost(q, r), occupied(key), zoc(q, r) }
+// `moveCost` is spent from the budget per step; `planCost` is what the A* planner minimizes
+// (terrain alone, or terrain + danger for a danger-aware ctx) — they may differ on purpose.
 // `occupied` reflects other units' current hexes; the caller updates it between units so a
 // unit never lands where another already stands.
 class Movement {
@@ -46,7 +48,9 @@ class Movement {
             if (q === goal.q && r === goal.r) return true;
             return !ctx.occupied(Hex.key(q, r));
         };
-        const path = findPath(unit, goal, passable, ctx.moveCost, Infinity);
+        // Plan with planCost (terrain, plus danger for a danger-aware ctx) so the route can
+        // bend around hazards; the walk below still spends moveCost (terrain × ZOC) from budget.
+        const path = findPath(unit, goal, passable, ctx.planCost, Infinity);
         let pos = { q: unit.q, r: unit.r };
 
         if (path && path.length >= 2) {
