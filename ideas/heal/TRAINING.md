@@ -1,8 +1,9 @@
 # TRAINING.md
 
-A recommendation for learned AI in Hex & Counters, scoped to a small **12×12 arena
-with two teams of 4**. This is the tractable testbed, not the full 60×40 game — see
-*Sim-to-real* under Risks for why that distinction matters.
+A recommendation for learned AI in Hex & Counters, scoped to a **24×24 training vignette**:
+the unit being trained sits at the center, its allies form up around it, and a single enemy
+warband spawns one aggro-range (8 hexes) out. This is the tractable testbed, not the full
+60×40 game — see *Sim-to-real* under Risks for why that distinction matters.
 
 This is a design recommendation, not a spec. It answers *what to build and in what order*,
 and *why this shape over the obvious one*.
@@ -19,8 +20,10 @@ and *why this shape over the obvious one*.
   self-play, integration) at ~dozens of weights before you risk a net.
 - **Don't** reach for PPO/autodiff. Use **gradient-free Evolution Strategies** — pure JS,
   ~150 lines, no Python, no build step, runs as `node train.js`. Matches the project ethos.
-- The hard, valuable prerequisite is a **headless rules core** (`step(state, actions)` with
-  no canvas/DOM). Everything else depends on it; it's also independently worth having.
+- The gating prerequisite — a **headless rules core** with no canvas/DOM — **now largely
+  exists**: the `GameState` / `GameEngine` split (see CLAUDE.md) makes `engine.resolveTurn()` a
+  synchronous, UI-free step. Training mainly needs an entry point that applies *chosen intents*
+  instead of the built-in AI.
 
 ---
 
@@ -43,36 +46,50 @@ Three forces drive every decision below:
 
 ## The arena environment
 
-A self-contained training scenario, deliberately smaller and faster than the real map.
+A self-contained training vignette, deliberately smaller and faster than the real map, built
+around the **one unit being trained** (the *focal unit*).
 
-- **Board:** 12×12 hex arena, same axial/pointy-top model and `Hex` math as the game. Outer
+- **Board:** 24×24 hex arena, same axial/pointy-top model and `Hex` math as the game. Outer
   ring is impassable wall. Interior terrain randomized per episode (plains/hills/forest/mountain
-  mix) so policies generalize instead of memorizing one map.
-- **Teams:** 4 units per side, spawned clustered on opposite edges. Mixed classes drawn from
-  the real roster (melee/tank, archer, and the enemy classes). Self-play: both sides run the
-  policy under training.
-- **Episode:** alternating team turns, reusing the real movement + combat resolution. Ends when
-  one team is eliminated or at a **turn cap (~40)**. The cap prevents stalemates from running
-  forever and is the main lever against passive turtling.
-- **Reset:** new random terrain, spawns, and class composition each episode — variance is what
-  forces a robust policy rather than an opening-book.
+  mix) so policies generalize instead of memorizing one map. The board is large enough that a
+  centered unit and a warband one aggro-range out both sit well clear of the walls.
+- **Layout:** the focal unit spawns at the **center**; its **allies form up around it** (the
+  party — ~4 units including the focal one); a single **enemy warband** (1–4, per the game's
+  group sizes) spawns at distance `AGGRO_RANGE` (8) in a **random direction**. Distance 8 puts
+  the encounter right on the aggro threshold — the warband wakes and commits as the episode
+  opens, so the focal unit must position *now*, not wander to find a fight.
+- **Episode:** alternating turns, reusing the real movement + combat resolution. Ends when the
+  warband is cleared, the focal unit's party is wiped, or a **turn cap (~40)** hits (the lever
+  against stalemates / passive turtling).
+- **Reset:** new random terrain, a new warband bearing / size / composition, and a new ally
+  composition each episode — that variance, plus rotating *which role is the focal unit*, is
+  what forces a robust policy rather than an opening-book for one fixed picture.
 
-Episodes on a 12×12 board are cheap (tens of units, dozens of turns, no rendering). That cheapness
-is exactly what makes gradient-free training viable — sample-inefficiency stops mattering when a
-million episodes is minutes, not days.
+Who controls the others? Train **one role at a time**: the focal unit runs the policy under
+training while its allies and the warband run the current hand-coded AI (or frozen past
+champions — that's where self-play re-enters, below). Rotate the focal role across runs so
+every class gets trained in its own vignette. Episodes on a 24×24 board with a handful of units
+are cheap (dozens of turns, no rendering) — that cheapness is what makes gradient-free training
+viable: sample-inefficiency stops mattering when a million episodes is minutes, not days.
 
 ---
 
 ## Observation (per unit, egocentric)
 
 Each unit sees the world from *its own* hex, so one policy generalizes across board positions
-and across the 4 interchangeable units in a team.
+and across the interchangeable units of a given role.
 
 - **Local window:** a radius-3 disk (37 hexes) centered on the unit, as a few feature planes:
   terrain move-cost, ally presence, enemy presence, enemy threat (damage), danger heat
   (reuse `buildDangerMap`).
 - **Self scalars:** HP fraction, armor, MP/budget, attack range.
 - **Bearings:** relative distance + direction to nearest enemy, nearest ally, and the objective.
+
+Note the warband starts a full aggro-range (8) out — *beyond* a radius-3 window — so at the
+opening of an episode the focal unit perceives it through the nearest-enemy **bearing** scalars
+and the **danger heat** plane, not the local patch. That's by design (it must learn to react to
+a threat it can't yet see in detail); widen the window toward the aggro radius only if those
+coarse signals prove insufficient.
 
 Flattened, that's roughly a **60–120 element vector** — small enough for a tiny net and for ES.
 Keep it egocentric and *relative*; never feed absolute (q, r) or the policy overfits to map
@@ -119,7 +136,7 @@ in range, and be promoted to a second small head later if it matters.)
   parameters. Softmax-sample while training (exploration), argmax in the live game. Forward pass is
   three loops of multiply-accumulate — pure JS, no library.
 - **Parameter sharing:** one policy per **role** (e.g. melee / ranged / enemy), shared across the
-  4 units of that role. Faster learning, and it matches the real game where units of a class are
+  units of that role. Faster learning, and it matches the real game where units of a class are
   interchangeable.
 
 Trained weights export as a plain JSON array and load via a normal `<script>`/`fetch` — no build.
@@ -139,9 +156,11 @@ Gradient-free, so there is no autodiff to implement and nothing to port to Pytho
 
 Self-play stability:
 
-- Keep a **champion pool** (a handful of past-best policies) and sample opponents from it, not just
-  the current best. This is lightweight **league play** — it stops the two sides from chasing each
-  other in circles (rock-paper-scissors cycling) and produces robust rather than brittle policies.
+- Start with **scripted others** (the hand-coded AI drives allies and the warband) so the focal
+  policy has a fixed target to climb against. Then, to harden it, replace those scripts with
+  **frozen past champions** drawn from a **champion pool** rather than always the latest — this
+  lightweight **league play** stops policies chasing each other in circles (rock-paper-scissors
+  cycling) and produces robust rather than brittle behavior.
 - ES is **embarrassingly parallel**: each population member is an independent batch of episodes.
   Web Workers in-browser, or just multiple node processes. No shared state during rollout.
 
@@ -150,7 +169,8 @@ Sketch of one ES generation (pseudocode, not final):
 ```
 for gen in generations:
     pop = mean + sigma * gaussian(N, dim)          # antithetic: also use -gaussian
-    fitness[i] = avg over K episodes of rollout(pop[i] vs sampled champion)
+    # focal unit runs pop[i]; allies + warband run scripted AI or a sampled champion
+    fitness[i] = avg over K episodes of rollout(focal=pop[i], others=opponent)
     mean += lr * weighted_sum(rank_normalize(fitness), perturbations)
     if best(pop) beats current champion: add to champion pool
 ```
@@ -159,16 +179,15 @@ for gen in generations:
 
 ## Reward
 
-Terminal outcome dominates; shaping only nudges. Per **team** (win/loss) with light per-unit
-shaping for credit assignment.
+Terminal outcome dominates; shaping only nudges. Scored from the **focal unit's** side (it and
+its allies), with light per-unit shaping for credit assignment.
 
-- **Terminal:** large + for wiping the enemy team / surviving to the cap with more units; large −
-  for being wiped. The objective (reach/return treasure) adds a terminal bonus on the party side.
-- **Shaping (small):** + damage dealt, + enemy kills, − damage taken, − own deaths. Just enough to
-  give signal before the sparse terminal reward arrives.
-- **Anti-turtle:** the turn cap plus a small per-turn time penalty on the side that *should* be
-  pushing (the party). Without it, "stand still and win on the cap" is a real degenerate policy —
-  verify it isn't being learned (see Risks).
+- **Terminal:** large + for clearing the warband with the focal unit (ideally its allies too)
+  still standing; large − if the focal unit or its party is wiped.
+- **Shaping (small):** + damage dealt, + enemy kills, − damage taken, − allies lost. Just enough
+  to give signal before the sparse terminal reward arrives.
+- **Anti-turtle:** the turn cap plus a small per-turn time penalty, so "kite forever and survive
+  on the cap" isn't a winning policy — verify it isn't being learned (see Risks).
 
 Keep shaping coefficients small relative to the terminal reward. Heavy shaping is the classic way
 to learn a policy that maximizes the proxy (poke-and-retreat for chip damage) instead of winning.
@@ -192,15 +211,15 @@ The payoff of the intent-level design: integration is a drop-in.
 
 ## Risks & caveats
 
-- **Sim-to-real gap.** A policy trained on a 12×12 4v4 arena is deployed on a 60×40 map with
-  warband-scale dynamics, a leash, a non-combatant healer, and an objective rush. Egocentric +
-  relative observations and intent-level actions are *chosen specifically* to narrow this gap, but
-  expect to retrain with scenarios closer to the real game (bigger boards, uneven team sizes,
-  objective pressure) before it transfers. Treat the arena as a **bring-up environment**, not the
+- **Sim-to-real gap.** A policy trained on a 24×24 single-warband vignette is deployed on a 60×40
+  map with *multiple* warbands, a leash, a non-combatant healer, and an objective rush. Egocentric
+  + relative observations and intent-level actions are *chosen specifically* to narrow this gap, but
+  expect to retrain with scenarios closer to the real game (bigger boards, several warbands at once,
+  objective pressure) before it transfers. Treat the vignette as a **bring-up environment**, not the
   final curriculum.
 - **The healer is out of scope here.** It's a long-horizon support role (sparse reward: did the
-  party survive?), it's the *player's* unit, and it doesn't fit a 4v4 combat arena. Tackle it only
-  after combat policies work, as its own problem.
+  party survive?), it's the *player's* unit, and it doesn't fit a single-warband combat vignette.
+  Tackle it only after combat policies work, as its own problem.
 - **Self-play cycling.** Without the champion pool, policies oscillate and "improvement" is illusory.
   Always evaluate against a *fixed* benchmark (the current hand-coded AI) to measure real progress.
 - **Reward hacking.** Watch for poke-and-retreat (shaping too heavy) and cap-stalling (no time
@@ -212,10 +231,13 @@ The payoff of the intent-level design: integration is a drop-in.
 
 ## Build plan
 
-0. **Headless core.** Extract a pure rules engine from `index.js`: `step(state, actions) → state,
-   events`, no canvas/DOM. Prerequisite for everything; independently valuable (scriptable, testable).
-1. **Arena env.** 12×12 random-terrain scenario, 4v4 spawns, turn cap, reset. Run random-vs-random
-   to confirm episodes terminate and rewards compute.
+0. **Headless core.** *Largely done* — the `GameState` / `GameEngine` split already gives a
+   UI-free rules core: `engine.resolveTurn()` mutates state and returns event frames with no
+   canvas/DOM. What's left for training is a `step`-style entry that applies *chosen intents* for
+   the focal unit instead of running the built-in AI.
+1. **Vignette env.** 24×24 random-terrain scenario: focal unit centered, allies around it, one
+   warband at aggro range in a random direction; turn cap; reset. Run scripted-vs-scripted to
+   confirm episodes terminate and rewards compute.
 2. **Intent action space.** Define the ~8 intents and their goal-hex resolution, wired through the
    existing `Movement`. Verify a hand-set intent policy plays sensibly.
 3. **Linear policy + CEM.** Smallest end-to-end loop. Goal: beat random, then approach the hand-coded

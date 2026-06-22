@@ -1,45 +1,32 @@
-// index.js — Healer. The player is the medic of an AI-driven party (see DYNAMICS.md).
+// index.js — Healer. The UI layer: canvas rendering, input, and the animated turn playback.
 //
-// This file owns mutable game state, the animated phased turn loop, rendering, and input.
-// The rules engine lives in mechanics.js, the movement primitive in ai.js, and all content
-// (party/enemy classes, skills) in content.js. Comments cite the UI control layers
-// (L1.x …) the input model implements; see UI_CONTROLS.md.
-
+// All game state and rules live in GameState / GameEngine; this file owns only the view
+// (pan, hover), the input-modal stack (selection/targeting/overlay), and the canvas. It holds
+// one engine, calls its methods in response to input, and reconstructs the animated turn by
+// replaying the frames resolveTurn() returns. Comments cite the UI control layers (L1.x …);
+// see UI_CONTROLS.md.
+//
 // No ES modules — every script is a plain <script> include so index.html runs from a
-// double-click (file://). The globals below come from the earlier-loaded scripts, in
-// load order: config.js, rando.js, colortheory.js, hex.js, content.js, mechanics.js,
-// ai.js. Keep that order in index.html when adding files.
+// double-click (file://). Load order (see index.html): config, rando, colortheory, hex,
+// content, mechanics, gamestate, ai/movement, ai/partyai, ai/enemyai, gameengine, index.
 
-// ---- Game state ----
-let hexes = null;
-let healer = null;
-let party = [];
-let enemies = [];
-let homeHex = null;
-let treasureHex = null;
-let objectiveHex = null;          // where the party is currently headed (treasure → home)
-let treasureCollected = false;
-let turn = 1;
-let reputation = 0;
-let nextId = 1;
-
-let partyScheme = null;           // ColorTheory palettes for counter colors
-let enemyScheme = null;
-let enemyColorIdx = 0;
+const engine = new GameEngine();
 
 // ---- Input-layer state (see UI_CONTROLS.md) ----
-let phase = 'player';             // L1.1 'player' | 'party' | 'enemy'; map input is live only on 'player'
-let resolving = false;            // true while the animated party/enemy phases run
+let resolving = false;            // true while the animated turn plays back; map input is dead then
 let selection = null;             // L1.2 { reachable: Map<key,cost> } for healer movement, or null
 let targeting = null;             // L4 { skill, validKeys: Set<key> } while aiming a skill, or null
 let activeSkill = null;           // the skill whose targeting is active
 let overlay = null;               // L5 'intro' | 'victory' | 'defeat' | null
 let endMessage = '';              // subtitle for the victory/defeat overlay
 let hoveredHex = null;
-let combatFlash = null;           // transient { q, r } marking a hit, for the enemy phase
+let combatFlash = null;           // transient { q, r } marking a hit, set per playback frame
 let showDanger = false;           // nav-bar toggle: paint the enemy danger heat map
-
 let spellSide = 'left';           // which screen edge the spell panel docks to: 'left' | 'right'
+
+// During turn playback, render() draws this captured frame instead of the live state, so the
+// already-resolved turn animates step by step. Null on the player's turn → render live.
+let renderView = null;
 
 // ---- View state ----
 let panX = 0, panY = 0;
@@ -70,277 +57,9 @@ function screenToHex(sx, sy) {
     return Hex.fromPixel(sx - panX, sy - panY);
 }
 
-// ---- Terrain passability (single source of truth) ----
-function moveCost(hex) {
-    return MOVEMENT_COST[hex.terrain] ?? Infinity;
-}
-
-function isPassable(hex) {
-    return moveCost(hex) !== Infinity;
-}
-
-function passableHexes() {
-    const out = [];
-    for (const [, hex] of hexes) {
-        if (hex.isEdge) continue;
-        if (!isPassable(hex)) continue;
-        out.push(hex);
-    }
-    return out;
-}
-
-// ---- Heightmap generation (diamond-square) ----
-function diamondSquare(size, roughness) {
-    const grid = new Float64Array(size * size);
-    const get = (x, y) => grid[y * size + x];
-    const set = (x, y, v) => { grid[y * size + x] = v; };
-
-    set(0, 0, Math.random());
-    set(size - 1, 0, Math.random());
-    set(0, size - 1, Math.random());
-    set(size - 1, size - 1, Math.random());
-
-    let step = size - 1;
-    let scale = roughness;
-    while (step > 1) {
-        const half = step / 2;
-        for (let y = half; y < size - 1; y += step)
-            for (let x = half; x < size - 1; x += step)
-                set(x, y, (get(x - half, y - half) + get(x + half, y - half) +
-                    get(x - half, y + half) + get(x + half, y + half)) / 4 +
-                    (Math.random() - 0.5) * scale);
-        for (let y = 0; y < size; y += half)
-            for (let x = (y + half) % step; x < size; x += step) {
-                let sum = 0, cnt = 0;
-                if (x >= half) { sum += get(x - half, y); cnt++; }
-                if (x + half < size) { sum += get(x + half, y); cnt++; }
-                if (y >= half) { sum += get(x, y - half); cnt++; }
-                if (y + half < size) { sum += get(x, y + half); cnt++; }
-                set(x, y, sum / cnt + (Math.random() - 0.5) * scale);
-            }
-        step = half;
-        scale *= roughness;
-    }
-
-    let min = Infinity, max = -Infinity;
-    for (let i = 0; i < grid.length; i++) { min = Math.min(min, grid[i]); max = Math.max(max, grid[i]); }
-    for (let i = 0; i < grid.length; i++) grid[i] = (grid[i] - min) / (max - min) * 100;
-    return grid;
-}
-
-// ---- Map generation ----
-function generateRectGrid() {
-    const grid = new Map();
-    const hm = diamondSquare(129, 0.55);
-
-    for (let row = 0; row < MAP_ROWS; row++) {
-        const qOffset = -Math.floor(row / 2);
-        for (let col = 0; col < MAP_COLS; col++) {
-            const q = col + qOffset;
-            const r = row;
-            const gx = Math.round(col / (MAP_COLS - 1) * 128);
-            const gy = Math.round(row / (MAP_ROWS - 1) * 128);
-            const elevation = hm[gy * 129 + gx];
-            const isEdge = row === 0 || row === MAP_ROWS - 1 || col === 0 || col === MAP_COLS - 1;
-            grid.set(Hex.key(q, r), { q, r, col, row, elevation, isEdge, terrain: null });
-        }
-    }
-    return grid;
-}
-
-function assignTerrain() {
-    const inner = [];
-    for (const [, hex] of hexes) {
-        if (hex.isEdge) { hex.terrain = TERRAIN.WATER; continue; }
-        inner.push(hex);
-    }
-    inner.sort((a, b) => a.elevation - b.elevation);
-    const n = inner.length;
-
-    for (let i = 0; i < n; i++) {
-        const pct = i / n;
-        if (pct < 0.25) inner[i].terrain = TERRAIN.WATER;
-        else if (pct < 0.85) inner[i].terrain = TERRAIN.PLAINS;
-        else if (pct < 0.95) inner[i].terrain = TERRAIN.HILLS;
-        else inner[i].terrain = TERRAIN.MOUNTAIN;
-    }
-
-    const plains = inner.filter(h => h.terrain === TERRAIN.PLAINS);
-    Rando.shuffle(plains);
-    const forestCount = Math.round(n * 0.10);
-    const goldCount = Math.max(3, Math.round(n * 0.01));
-    let idx = 0;
-    for (let i = 0; i < forestCount && idx < plains.length; i++, idx++)
-        plains[idx].terrain = TERRAIN.FOREST;
-    for (let i = 0; i < goldCount && idx < plains.length; i++, idx++)
-        plains[idx].terrain = TERRAIN.GOLD;
-
-    const hills = inner.filter(h => h.terrain === TERRAIN.HILLS);
-    Rando.shuffle(hills);
-    const quarryCount = Math.max(2, Math.round(n * 0.02));
-    for (let i = 0; i < quarryCount && i < hills.length; i++)
-        hills[i].terrain = TERRAIN.QUARRY;
-}
-
-// Home on the left, treasure on the right — a real journey out and back (DYNAMICS:
-// "Home Bases Give the Map Emotional Weight"). Both sit EDGE_MARGIN hexes in from the
-// border so the party lands on a clear entrance beach, not buried in the interior.
-function placeLandmarks() {
-    const passable = passableHexes();
-    const home = landmarkNearColumn(passable, EDGE_MARGIN);
-    const treasure = landmarkNearColumn(passable, MAP_COLS - 1 - EDGE_MARGIN);
-    homeHex = { q: home.q, r: home.r };
-    treasureHex = { q: treasure.q, r: treasure.r };
-}
-
-// The passable hex nearest a target column — pulls home/treasure to a fixed margin in
-// from the edge. Ties (same column distance, different rows) break randomly for variety.
-function landmarkNearColumn(passable, targetCol) {
-    const best = Math.min(...passable.map(h => Math.abs(h.col - targetCol)));
-    const band = passable.filter(h => Math.abs(h.col - targetCol) === best);
-    return Rando.choice(band);
-}
-
-function hasPath(from, to) {
-    if (!from || !to) return false;
-    const costs = bfsHexes(from, hexes, moveCost, Infinity);
-    return costs.has(Hex.key(to.q, to.r));
-}
-
-// ---- Unit factories ----
-function makeHealer(q, r) {
-    const cooldowns = {};
-    for (const s of SKILLS) cooldowns[s.id] = 0;
-    return {
-        id: nextId++, kind: 'healer', cls: 'healer', name: 'Healer', label: 'H', color: PLAYER_COLOR,
-        q, r, hp: HEALER_MAX_HP, maxHp: HEALER_MAX_HP, armor: 0, damage: 0, attackRange: 0,
-        statuses: [], alive: true, gone: false,
-        mp: PLAYER_MP, aether: HEALER_MAX_AETHER, maxAether: HEALER_MAX_AETHER,
-        aetherRegen: AETHER_REGEN, cooldowns
-    };
-}
-
-function makePartyMember(def, q, r, color) {
-    return {
-        id: nextId++, kind: 'party', cls: def.cls, name: def.name, label: def.label,
-        color, q, r, hp: def.maxHp, maxHp: def.maxHp, armor: def.armor, damage: def.damage,
-        attackRange: def.attackRange, statuses: [], alive: true, downedTurns: 0, gone: false
-    };
-}
-
-function rollSpeed() {
-    const roll = Rando.int(1, 6);
-    return roll <= 3 ? 2 : roll <= 5 ? 3 : 4;   // most slow, some fast, rare very fast
-}
-
-function makeEnemy(def, tier, q, r) {
-    const color = ColorTheory.rgbToHex(...enemyScheme[enemyColorIdx++ % enemyScheme.length]);
-    return {
-        id: nextId++, kind: 'enemy', cls: def.cls, name: def.name, label: def.label, color,
-        q, r, hp: Math.round(def.baseHp * tier), maxHp: Math.round(def.baseHp * tier),
-        damage: Math.round(def.baseDamage * tier), armor: 0, attackRange: def.attackRange,
-        damageType: def.damageType, speed: rollSpeed(), tier,
-        statuses: [], alive: true, targetId: null
-    };
-}
-
-function pickEnemyClass() {
-    return Rando.weighted(ENEMY_CLASSES.map(c => ({ item: c, weight: c.weight })));
-}
-
-// Tougher tiers appear as reputation rises (DYNAMICS: "Escalation tied to progress").
-function rollTier() {
-    const t = currentTier();
-    if (t >= 3) return Rando.bool(0.5) ? 2 : 1;
-    if (t >= 2) return Rando.bool(0.3) ? 2 : 1;
-    return 1;
-}
-
-// ---- Setup ----
-function setupUnits() {
-    partyScheme = ColorTheory.randomScheme(() => Math.random());
-    enemyScheme = ColorTheory.randomScheme(() => Math.random());
-    enemyColorIdx = 0;
-
-    healer = makeHealer(homeHex.q, homeHex.r);
-    party = [];
-
-    const origin = new Hex(healer.q, healer.r);
-    const taken = new Set([Hex.key(healer.q, healer.r), Hex.key(treasureHex.q, treasureHex.r)]);
-    const spots = passableHexes().sort((a, b) => origin.distance(a) - origin.distance(b));
-
-    let si = 0;
-    PARTY_CLASSES.forEach((def, i) => {
-        while (si < spots.length && taken.has(Hex.key(spots[si].q, spots[si].r))) si++;
-        const spot = spots[si] ?? spots[0];
-        taken.add(Hex.key(spot.q, spot.r));
-        si++;
-        const color = ColorTheory.rgbToHex(...partyScheme[i % partyScheme.length]);
-        party.push(makePartyMember(def, spot.q, spot.r, color));
-    });
-}
-
-// Enemies arrive as warbands, not a scatter: pick center hexes far from home, then cluster
-// 1-4 enemies on and around each until the wave's total is met.
-function spawnEnemies() {
-    enemies = [];
-    const count = Rando.int(ENEMY_MIN, ENEMY_MAX);
-    const occupied = boardKeySet();
-    const home = new Hex(homeHex.q, homeHex.r);
-    const centers = passableHexes().filter(h =>
-        !occupied.has(Hex.key(h.q, h.r)) && home.distance(h) > 8);
-    Rando.shuffle(centers);
-    let ci = 0;
-    while (enemies.length < count && ci < centers.length) {
-        const size = Math.min(Rando.int(GROUP_MIN, GROUP_MAX), count - enemies.length);
-        spawnGroup(centers[ci++], size, 1, occupied);
-    }
-}
-
-// Spawn `size` enemies of the given tier on a center hex and the nearest free passable
-// hexes around it. Mutates `occupied` so warbands don't overlap.
-function spawnGroup(center, size, tier, occupied) {
-    const origin = new Hex(center.q, center.r);
-    const spots = passableHexes()
-        .filter(h => !occupied.has(Hex.key(h.q, h.r)) && origin.distance(h) <= GROUP_RADIUS)
-        .sort((a, b) => origin.distance(a) - origin.distance(b));
-    for (let i = 0; i < size && i < spots.length; i++) {
-        const h = spots[i];
-        occupied.add(Hex.key(h.q, h.r));
-        enemies.push(makeEnemy(pickEnemyClass(), tier, h.q, h.r));
-    }
-}
-
-// Low-probability per-turn pressure that converges on the party's destination.
-function spawnReinforcement() {
-    const occupied = boardKeySet();
-    const obj = new Hex(objectiveHex.q, objectiveHex.r);
-    const candidates = passableHexes().filter(h => {
-        const d = obj.distance(h);
-        return !occupied.has(Hex.key(h.q, h.r)) && d >= 3 && d <= 7;
-    });
-    if (candidates.length === 0) return;
-    const h = Rando.choice(candidates);
-    enemies.push(makeEnemy(pickEnemyClass(), rollTier(), h.q, h.r));
-}
-
+// ---- New game ----
 function initGame() {
-    let attempts = 0;
-    do {
-        hexes = generateRectGrid();
-        assignTerrain();
-        placeLandmarks();
-        attempts++;
-    } while (!hasPath(homeHex, treasureHex) && attempts < 20);
-
-    setupUnits();
-    spawnEnemies();
-
-    turn = 1;
-    reputation = 0;
-    treasureCollected = false;
-    objectiveHex = treasureHex;
-    phase = 'player';
+    engine.newGame();
     resolving = false;
     selection = null;
     targeting = null;
@@ -348,11 +67,8 @@ function initGame() {
     overlay = null;
     hoveredHex = null;
     combatFlash = null;
-
-    healer.mp = PLAYER_MP;
-    healer.aether = HEALER_MAX_AETHER;
-
-    centerOn(healer);
+    renderView = null;
+    centerOn(engine.state.healer);
     showOverlay('intro');
     refreshSkillBar();
     resize();
@@ -364,71 +80,18 @@ function centerOn(hex) {
     panY = canvas.height / 2 - p.y;
 }
 
-// ---- Unit queries ----
-function boardUnits() {
-    return [healer, ...party.filter(p => !p.gone), ...enemies];
-}
-
-function boardKeySet() {
-    const s = new Set();
-    for (const u of boardUnits()) s.add(Hex.key(u.q, u.r));
-    return s;
-}
-
-function occupancyExcluding(unit) {
-    const s = new Set();
-    for (const u of boardUnits()) {
-        if (u === unit) continue;
-        s.add(Hex.key(u.q, u.r));
-    }
-    return s;
-}
-
-function unitAt(q, r) {
-    return boardUnits().find(u => u.q === q && u.r === r) ?? null;
-}
-
-// Friendly units the healer can target: itself plus party members still on the board
-// (downed bodies included, so Raise can reach them).
-function allies() {
-    return [healer, ...party.filter(p => !p.gone)];
-}
-
-function nearest(from, list) {
-    const origin = new Hex(from.q, from.r);
-    let best = null;
-    let bestDist = Infinity;
-    for (const u of list) {
-        const d = origin.distance(u);
-        if (d < bestDist) { bestDist = d; best = u; }
-    }
-    return best;
-}
-
-// ---- Reputation / skill tiers ----
-function currentTier() {
-    if (reputation >= TIER3_REP) return 3;
-    if (reputation >= TIER2_REP) return 2;
-    return 1;
-}
-
-function skillUsable(skill) {
-    if (healer.cooldowns[skill.id] > 0) return false;
-    if (healer.aether < skill.aetherCost) return false;
-    return validSkillTargets(skill, allies(), healer).length > 0;
-}
-
 // ---- Skill bar (DOM) ----
 function refreshSkillBar() {
     const bar = document.getElementById('skill-bar');
     bar.innerHTML = '';
     bar.classList.toggle('side-right', spellSide === 'right');
     bar.classList.toggle('side-left', spellSide !== 'right');
-    if (overlay || phase !== 'player' || !healer) return;
+    if (overlay || resolving || !engine.state.healer) return;
 
     bar.appendChild(buildSpellHeader());
 
-    const tier = currentTier();
+    const tier = engine.state.currentTier();
+    const healer = engine.state.healer;
     for (const skill of SKILLS) {
         if (skill.tier > tier) continue;
         const cd = healer.cooldowns[skill.id];
@@ -436,7 +99,7 @@ function refreshSkillBar() {
         const btn = document.createElement('button');
         btn.innerHTML = `<span class="name">${skill.name}<span class="cost">${sub}</span></span>` +
             `<span class="desc">${skill.description}</span>`;
-        btn.disabled = !skillUsable(skill);
+        btn.disabled = !engine.skillUsable(skill);
         if (activeSkill && activeSkill.id === skill.id) btn.classList.add('active');
         btn.addEventListener('click', () => onSkillButton(skill));
         bar.appendChild(btn);
@@ -467,11 +130,11 @@ function setSpellSide(side) {
 }
 
 function onSkillButton(skill) {
-    if (!skillUsable(skill)) return;
+    if (!engine.skillUsable(skill)) return;
     if (activeSkill && activeSkill.id === skill.id) { cancelTargeting(); render(); return; }
     deselect();
     activeSkill = skill;
-    const targets = validSkillTargets(skill, allies(), healer);
+    const targets = engine.validSkillTargets(skill);
     targeting = { skill, validKeys: new Set(targets.map(u => Hex.key(u.q, u.r))) };
     refreshSkillBar();
     render();
@@ -480,11 +143,7 @@ function onSkillButton(skill) {
 function castAt(hex) {
     const key = Hex.key(hex.q, hex.r);
     if (!targeting || !targeting.validKeys.has(key)) { cancelTargeting(); render(); return; }
-    const skill = targeting.skill;
-    const targetUnit = unitAt(hex.q, hex.r);
-    applySkill(skill, targetUnit, allies());
-    healer.aether -= skill.aetherCost;
-    healer.cooldowns[skill.id] = skill.cooldown;
+    engine.castSkill(targeting.skill, hex);
     cancelTargeting();
     render();
 }
@@ -498,285 +157,54 @@ function cancelTargeting() {
 // ---- L1.2 Healer selection & movement ----
 function selectHealer() {
     cancelTargeting();
-    selection = { reachable: computeReachable() };
+    selection = { reachable: engine.computeReachable() };
 }
 
 function deselect() {
     selection = null;
 }
 
-// Cost-limited flood fill bounded by remaining MP; every other unit is a wall.
-function computeReachable() {
-    if (healer.mp <= 0) return new Map();
-    const blocked = occupancyExcluding(healer);
-    const foeZoc = zocKeysFor(enemies);   // the healer is walled off by enemies too (symmetric ZOC)
-    const costs = bfsHexes(healer, hexes, hex => {
-        const key = Hex.key(hex.q, hex.r);
-        if (blocked.has(key)) return Infinity;
-        return moveCost(hex) * (foeZoc.has(key) ? ZOC_PENALTY : 1);
-    }, healer.mp);
-    costs.delete(Hex.key(healer.q, healer.r));
-    return costs;
-}
-
 function moveHealer(q, r) {
-    const cost = selection?.reachable.get(Hex.key(q, r));
-    if (cost === undefined) return;
-    const fromQ = healer.q, fromR = healer.r;
-    healer.q = q;
-    healer.r = r;
-    healer.mp -= cost;
-    disengagementStrikes(healer, fromQ, fromR);   // stepping out of an enemy's reach provokes it
-    if (!healer.alive) { defeat('The healer has fallen.'); return; }
-    if (healer.mp > 0) selectHealer();
+    const res = engine.moveHealer(q, r);
+    if (!res.moved) return;
+    if (engine.state.outcome) { showEndOverlay(); return; }
+    if (engine.state.healer.mp > 0) selectHealer();
     else deselect();
     render();
 }
 
-// ---- Turn loop (animated, phased) ----
+// ---- Turn loop (animated playback of resolveTurn's frames) ----
 function primaryAction() {
-    if (overlay || resolving || phase !== 'player') return;
+    if (overlay || resolving) return;
     endTurn();
 }
 
 async function endTurn() {
-    if (resolving || overlay || phase !== 'player') return;
+    if (resolving || overlay) return;
     resolving = true;
     deselect();
     cancelTargeting();
+    refreshSkillBar();
 
-    phase = 'party';
-    await runPartyPhase();
+    const frames = engine.resolveTurn();
+    for (const f of frames) {
+        renderView = f.snapshot;
+        combatFlash = f.flash;
+        render();
+        await sleep(110);
+    }
+    renderView = null;
+    combatFlash = null;
 
-    if (!overlay) {
-        phase = 'enemy';
-        await runEnemyPhase();
-    }
-    if (!overlay) {
-        resolutionTick();
-    }
-    if (!overlay) {
-        if (Rando.bool(REINFORCE_CHANCE)) spawnReinforcement();
-        turn++;
-        startPlayerTurn();
-    }
     resolving = false;
-}
-
-function startPlayerTurn() {
-    phase = 'player';
-    healer.mp = PLAYER_MP;
-    healer.aether = Math.min(healer.maxAether, healer.aether + healer.aetherRegen);
-    for (const id of Object.keys(healer.cooldowns)) {
-        if (healer.cooldowns[id] > 0) healer.cooldowns[id] -= 1;
-    }
-    selection = null;
-    targeting = null;
-    activeSkill = null;
+    if (engine.state.outcome) { showEndOverlay(); return; }
     refreshSkillBar();
     render();
 }
 
-// Zone-of-control hexes for a set of units: every hex adjacent to a living unit. Entering one
-// costs ZOC_PENALTY times normal (see Movement.walkToward / computeReachable). The frontline's
-// bodies thus wall off a band, not just their own hexes.
-function zocKeysFor(units) {
-    const keys = new Set();
-    for (const u of units) {
-        if (!u.alive || u.gone) continue;
-        for (const n of new Hex(u.q, u.r).neighbors()) keys.add(n.key());
-    }
-    return keys;
-}
-
-// How threatening an enemy's presence is, stamped onto the danger map. Offense is the
-// natural measure — it's what a hex near this enemy will cost you. One place to retune.
-function enemyStrength(enemy) {
-    return enemy.damage;
-}
-
-// Flat danger heat map: every hex within AGGRO_RANGE of a living enemy accumulates that
-// enemy's strength (no falloff — a warband stamps a uniform plateau, and overlapping
-// warbands sum into hotter crossfire zones). The leader's pathing pays this on top of
-// terrain, so it routes around a warband's footprint instead of wading through it.
-function buildDangerMap() {
-    const map = new Map();
-    for (const e of enemies) {
-        if (!e.alive) continue;
-        const strength = enemyStrength(e);
-        for (const c of new Hex(e.q, e.r).inRange(AGGRO_RANGE)) {
-            const key = Hex.key(c.q, c.r);
-            if (!hexes.has(key)) continue;
-            map.set(key, (map.get(key) || 0) + strength);
-        }
-    }
-    return map;
-}
-
-// AI context: closures over live terrain + a mutable occupancy set + the hostile zone of
-// control. `moveCost` is what a step actually spends from the budget; `planCost` is what the
-// A* route planner minimizes. They're identical here — terrain only — so the planner and the
-// walk agree. dangerAwareCtx swaps in a planCost that also pays danger, bending the route.
-function aiCtx(live, zoc) {
-    const terrain = (q, r) => { const h = hexes.get(Hex.key(q, r)); return h ? moveCost(h) : Infinity; };
-    return {
-        terrainPassable: (q, r) => { const h = hexes.get(Hex.key(q, r)); return !!h && isPassable(h); },
-        moveCost: terrain,
-        planCost: terrain,
-        occupied: key => live.has(key),
-        zoc: (q, r) => zoc.has(Hex.key(q, r))
-    };
-}
-
-// A planning view that biases routes away from danger WITHOUT slowing the unit down: the A*
-// planner pays terrain + DANGER_WEIGHT · heat, but the walk still spends only `moveCost`
-// (terrain × ZOC) from the budget. So the leader picks a safer-shaped path yet moves at full
-// speed. Danger is additive, never Infinity — it bends the route but never forbids a hex, so
-// when the only way to the treasure runs through a warband the leader still commits.
-function dangerAwareCtx(base, danger) {
-    return {
-        ...base,
-        planCost: (q, r) => base.moveCost(q, r) + DANGER_WEIGHT * (danger.get(Hex.key(q, r)) || 0)
-    };
-}
-
-// Relocate a unit to dest, keeping the live occupancy set in sync so the next mover
-// sees the new position. Shared by both AI phases.
-function moveUnit(unit, dest, live) {
-    live.delete(Hex.key(unit.q, unit.r));
-    unit.q = dest.q;
-    unit.r = dest.r;
-    live.add(Hex.key(unit.q, unit.r));
-}
-
-// Living hostile units adjacent to (q, r) from `mover`'s point of view. A mover's foes are the
-// other faction; the healer counts as a friend of the party for this purpose.
-function adjacentHostiles(mover, q, r) {
-    const foes = mover.kind === 'enemy' ? [...party, healer] : enemies;
-    const here = new Hex(q, r);
-    return foes.filter(f => f.alive && !f.gone && here.distance(f) === 1);
-}
-
-// Attacks of opportunity: every hostile the mover was adjacent to at (fromQ, fromR) but is no
-// longer adjacent to after its move gets one free strike. Sliding from one of a hostile's ZOC
-// hexes to another keeps you adjacent — no strike; only fully breaking away provokes. Strikes
-// stack, so tearing free of three engagements at once is usually fatal. Stops early once the
-// mover drops.
-function disengagementStrikes(mover, fromQ, fromR) {
-    const after = new Set(adjacentHostiles(mover, mover.q, mover.r));
-    for (const h of adjacentHostiles(mover, fromQ, fromR)) {
-        if (after.has(h)) continue;
-        opportunityStrike(h, mover);
-        if (!mover.alive) return;
-    }
-}
-
-async function runPartyPhase() {
-    const leader = PartyAI.leader();
-    const order = [...party].sort((a, b) => (a === leader ? 0 : 1) - (b === leader ? 0 : 1));
-    const live = boardKeySet();
-    const foeZoc = zocKeysFor(enemies);   // enemies don't move this phase, so their ZOC is fixed
-    const danger = buildDangerMap();      // ...and so is the danger heat for the whole phase
-
-    for (const member of order) {
-        if (member.gone || !member.alive) continue;
-        const fromQ = member.q, fromR = member.r;
-        const goal = PartyAI.goal(member);
-        // Only the objective-bound route skirts danger; a member already diverting to fight a
-        // threat (goal is the foe's hex, not objectiveHex) charges in regardless.
-        const ctx = aiCtx(live, foeZoc);
-        const planning = goal === objectiveHex ? dangerAwareCtx(ctx, danger) : ctx;
-        const dest = Movement.walkToward(member, goal, PartyAI.budget(member), planning);
-        moveUnit(member, dest, live);
-        disengagementStrikes(member, fromQ, fromR);   // enemies it tore free of get free swings
-        if (!member.alive) { render(); await sleep(110); continue; }
-
-        const here = new Hex(member.q, member.r);
-        const foe = nearest(member, enemies.filter(e => here.distance(e) <= member.attackRange));
-        if (foe) {
-            applyDamage(foe, effectiveDamage(member));
-            if (!foe.alive) removeEnemy(foe, live);
-        }
-
-        handleObjective(member);
-        render();
-        await sleep(110);
-        if (overlay) return;
-    }
-}
-
-function removeEnemy(enemy, live) {
-    enemies = enemies.filter(e => e !== enemy);
-    live.delete(Hex.key(enemy.q, enemy.r));
-    reputation += REP_PER_KILL;
-}
-
-function handleObjective(member) {
-    if (!treasureCollected && member.q === treasureHex.q && member.r === treasureHex.r) {
-        treasureCollected = true;
-        reputation += REP_TREASURE;
-        objectiveHex = homeHex;
-        return;
-    }
-    if (treasureCollected && member.q === homeHex.q && member.r === homeHex.r) {
-        victory();
-    }
-}
-
-async function runEnemyPhase() {
-    const live = boardKeySet();
-    // The party and the healer wall enemies off; they hold still this phase, so their ZOC is fixed.
-    const foeZoc = zocKeysFor([...party, healer]);
-
-    for (const enemy of [...enemies]) {
-        if (!enemy.alive) continue;
-        const target = EnemyAI.target(enemy);
-        if (!target) continue;                         // dormant: no hero within aggro range
-        const fromQ = enemy.q, fromR = enemy.r;
-        const dest = Movement.walkToward(enemy, target, EnemyAI.budget(enemy), aiCtx(live, foeZoc));
-        moveUnit(enemy, dest, live);
-        disengagementStrikes(enemy, fromQ, fromR);    // frontliners it tore free of get free swings
-        if (!enemy.alive) { removeEnemy(enemy, live); render(); await sleep(110); continue; }
-
-        const inReach = new Hex(enemy.q, enemy.r).distance(target) <= enemy.attackRange;
-        if (inReach) {
-            enemyAttack(enemy, target);
-            combatFlash = { q: target.q, r: target.r };
-        }
-        render();
-        await sleep(110);
-        combatFlash = null;
-
-        if (!healer.alive) { defeat('The healer has fallen.'); return; }
-    }
-}
-
-// Resolution tick: status effects, downed heroes aging toward permanent death, defeat check.
-function resolutionTick() {
-    for (const u of allies()) tickStatuses(u);
-    for (const e of enemies) tickStatuses(e);
-
-    if (!healer.alive) { defeat('The healer has fallen.'); return; }
-
-    for (const member of party) {
-        if (member.gone || member.alive) continue;
-        member.downedTurns += 1;
-        if (member.downedTurns > REVIVE_WINDOW) member.gone = true;
-    }
-
-    if (party.every(p => p.gone)) defeat('The party has perished.');
-}
-
-function victory() {
-    reputation += REP_RETURN;
-    endMessage = `Returned home with the treasure. Reputation ${reputation} in ${turn} turns.`;
-    showOverlay('victory');
-    render();
-}
-
-function defeat(reason) {
-    endMessage = `${reason} Final reputation ${reputation}.`;
-    showOverlay('defeat');
+function showEndOverlay() {
+    endMessage = engine.state.outcomeMessage;
+    showOverlay(engine.state.outcome);
     render();
 }
 
@@ -799,19 +227,22 @@ function syncOverlayDom() {
 }
 
 // ---- Rendering ----
+// Draw from the playback frame during a resolving turn, otherwise from a live snapshot. Either
+// way `view` is a plain { units, treasureCollected, objectiveHex } picture; selection/targeting
+// overlays come from UI state and only show on the player's turn (cleared before playback).
 function render() {
+    const view = renderView ?? engine.snapshot();
+
     ctx.fillStyle = '#111';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     drawTerrain();
     drawDanger();
-    drawLandmarks();
+    drawLandmarks(view);
     drawSelection();
     drawTargeting();
 
-    for (const enemy of enemies) drawUnit(enemy);
-    for (const member of party) { if (!member.gone) drawUnit(member); }
-    if (healer) drawUnit(healer);
+    for (const unit of view.units) drawUnit(unit);
 
     drawCombatFlash();
     drawEndOverlay();
@@ -824,7 +255,7 @@ function onScreen(x, y) {
 }
 
 function drawTerrain() {
-    for (const [, hex] of hexes) {
+    for (const [, hex] of engine.state.hexes) {
         const { x, y } = hexToScreen(hex.q, hex.r);
         if (!onScreen(x, y)) continue;
         drawHexPath(ctx, x, y, HEX_SIZE);
@@ -836,12 +267,12 @@ function drawTerrain() {
     }
 }
 
-// Danger heat overlay (nav-bar toggle). Rebuilt fresh each paint so it reflects where the
-// enemies are *now*, then normalized to the current hottest hex so the gradient stays
-// readable whatever the absolute strengths are: deeper red = more accumulated threat.
+// Danger heat overlay (nav-bar toggle). Rebuilt fresh each paint, then normalized to the
+// current hottest hex so the gradient stays readable whatever the absolute strengths are:
+// deeper red = more accumulated threat.
 function drawDanger() {
     if (!showDanger) return;
-    const danger = buildDangerMap();
+    const danger = engine.buildDangerMap();
     let max = 0;
     for (const v of danger.values()) if (v > max) max = v;
     if (max === 0) return;
@@ -855,11 +286,11 @@ function drawDanger() {
     }
 }
 
-function drawLandmarks() {
-    if (!treasureCollected) drawLandmark(treasureHex, TARGET_COLOR, '★');
-    drawLandmark(homeHex, HOME_COLOR, '⌂');
-    if (objectiveHex) {
-        const { x, y } = hexToScreen(objectiveHex.q, objectiveHex.r);
+function drawLandmarks(view) {
+    if (!view.treasureCollected) drawLandmark(engine.state.treasureHex, TARGET_COLOR, '★');
+    drawLandmark(engine.state.homeHex, HOME_COLOR, '⌂');
+    if (view.objectiveHex) {
+        const { x, y } = hexToScreen(view.objectiveHex.q, view.objectiveHex.r);
         drawHexPath(ctx, x, y, HEX_SIZE);
         ctx.strokeStyle = '#ffffffaa';
         ctx.lineWidth = 2;
@@ -932,7 +363,7 @@ function drawUnit(unit) {
     drawHpBar(x, y, unit.hp / unit.maxHp);
     drawStatusDots(x, y, unit);
 
-    if (unit === healer && selection) {
+    if (unit.kind === 'healer' && selection) {
         const s = COUNTER_SIZE + 4;
         roundRect(ctx, x - s / 2, y - s / 2, s, s, 6);
         ctx.strokeStyle = '#fff';
@@ -1033,16 +464,17 @@ function drawCounter(cx, cy, color, label) {
 }
 
 function updateHUD() {
-    if (!healer) return;
-    document.getElementById('turn-info').textContent = 'Turn ' + turn;
-    document.getElementById('hp-info').textContent = `HP: ${healer.hp}/${healer.maxHp}`;
-    document.getElementById('aether-info').textContent = `Aether: ${healer.aether}/${healer.maxAether}`;
-    document.getElementById('rep-info').textContent = `Rep: ${reputation}`;
-    const living = party.filter(p => p.alive).length;
-    document.getElementById('party-info').textContent = `Party: ${living}/${party.length}`;
+    const st = engine.state;
+    if (!st.healer) return;
+    document.getElementById('turn-info').textContent = 'Turn ' + st.turn;
+    document.getElementById('hp-info').textContent = `HP: ${st.healer.hp}/${st.healer.maxHp}`;
+    document.getElementById('aether-info').textContent = `Aether: ${st.healer.aether}/${st.healer.maxAether}`;
+    document.getElementById('rep-info').textContent = `Rep: ${st.reputation}`;
+    const living = st.party.filter(p => p.alive).length;
+    document.getElementById('party-info').textContent = `Party: ${living}/${st.party.length}`;
 
     const hoverEl = document.getElementById('hover-info');
-    const h = hoveredHex && hexes.get(Hex.key(hoveredHex.q, hoveredHex.r));
+    const h = hoveredHex && st.hexAt(hoveredHex.q, hoveredHex.r);
     hoverEl.textContent = h ? `${TERRAIN_NAMES[h.terrain] ?? '?'} (${hoveredHex.q},${hoveredHex.r})` : '';
 }
 
@@ -1062,15 +494,16 @@ canvas.addEventListener('mousedown', e => {
 
     if (overlay === 'intro') { dismissOverlay(); return; }   // L5 intro consumes the click
     if (overlay) return;                                     // victory/defeat: use New Game
-    if (resolving || phase !== 'player') return;             // L1.1 input is live only on the player's turn
+    if (resolving) return;                                   // L1.1 input is dead during playback
 
     const hex = screenToHex(e.clientX, e.clientY);
-    if (!hexes.has(Hex.key(hex.q, hex.r))) return;
+    if (!engine.state.hexAt(hex.q, hex.r)) return;
 
     // L4 modal targeting takes priority: a valid hex casts, anything else cancels.
     if (targeting) { castAt(hex); return; }
 
     // L1.2 healer select → move (pure lookup against the cached reachable set).
+    const healer = engine.state.healer;
     if (!selection) {
         if (hex.q === healer.q && hex.r === healer.r) selectHealer();
     } else if (hex.q === healer.q && hex.r === healer.r) {
@@ -1092,7 +525,7 @@ canvas.addEventListener('mousemove', e => {
         return;
     }
     const hex = screenToHex(e.clientX, e.clientY);
-    const next = hexes.has(Hex.key(hex.q, hex.r)) ? { q: hex.q, r: hex.r } : null;
+    const next = engine.state.hexAt(hex.q, hex.r) ? { q: hex.q, r: hex.r } : null;
     if (next?.q !== hoveredHex?.q || next?.r !== hoveredHex?.r) {
         hoveredHex = next;
         updateHUD();
