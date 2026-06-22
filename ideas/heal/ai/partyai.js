@@ -20,26 +20,35 @@ class PartyAI {
         return unit.armor * PartyAI.ARMOR_WEIGHT + unit.hp;
     }
 
+    // The leader is whoever is toughest *right now*, not a fixed class. Recomputed every
+    // turn, so if the Warden falls the next-sturdiest member takes point automatically — and
+    // an all-archer party still has a leader (the one with the most left in the tank). The
+    // leader is the only one pathing to the objective; everyone else forms up around it.
+    static leader() {
+        const living = party.filter(p => p.alive && !p.gone);
+        if (!living.length) return null;
+        return living.reduce((a, b) => PartyAI.toughness(b) > PartyAI.toughness(a) ? b : a);
+    }
+
     // Threats first: a member diverts to the nearest enemy within engage range and fights
     // it rather than running past. Ranged units use a larger reach so they react before a
-    // foe closes. Only when nothing is near does it pursue the objective (leader) or its
-    // formation slot (followers).
+    // foe closes. Only when nothing is near does the leader pursue the objective and everyone
+    // else pursue their formation slot around the leader.
     static goal(member) {
         const here = new Hex(member.q, member.r);
         const reach = Math.max(PARTY_ENGAGE_RANGE, member.attackRange + 1);
         const threats = enemies.filter(e => here.distance(e) <= reach);
         if (threats.length) return PartyAI.engageGoal(member, threats);
-        if (member.role === 'leader') return objectiveHex;
-        const leader = party.find(p => p.role === 'leader' && p.alive && !p.gone);
-        const anchor = leader ?? healer;
-        return PartyAI.formationSlot(member, anchor);
+        const leader = PartyAI.leader();
+        if (member === leader) return objectiveHex;
+        return PartyAI.formationSlot(member, leader ?? healer);
     }
 
     // The leash slows the leader as it gets ahead of the healer instead of yanking it back:
     // budget shrinks to zero at the leash radius, so a stationary healer makes the leader
     // creep to the edge and hold (no oscillation). Followers always move at full speed.
     static budget(member) {
-        if (member.role !== 'leader') return PARTY_MP;
+        if (member !== PartyAI.leader()) return PARTY_MP;
         const lead = LEADER_LEASH - new Hex(member.q, member.r).distance(healer);
         return Math.max(0, Math.min(PARTY_MP, lead));
     }
@@ -84,7 +93,8 @@ class PartyAI {
     }
 
     static formationSlot(member, anchor) {
-        const followers = party.filter(p => p.role === 'follower');
+        const leader = PartyAI.leader();
+        const followers = party.filter(p => p !== leader);
         const dir = PartyAI.FORMATION_DIRS[followers.indexOf(member) % PartyAI.FORMATION_DIRS.length];
         const cell = new Hex(anchor.q, anchor.r).neighbors()[dir];
         const h = hexes.get(Hex.key(cell.q, cell.r));

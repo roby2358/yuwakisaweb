@@ -5,15 +5,16 @@
 // template / damageType); this file is pure data the rules engine and renderer read.
 
 // ---- Party classes ----
-// One leader (Warden) the others follow; followers vary by role. `attackRange` lets the
-// Archer strike from afar — a mechanical exception, not a stat delta. Counter colors are
-// NOT defined here: they come from a per-game ColorTheory scheme assigned at spawn
-// (see index.js), so the class is read from the `label`, the palette from ColorTheory.
+// No fixed leader — PartyAI ranks the party by toughness each turn and the sturdiest takes
+// point (see ai/partyai.js). `attackRange` lets the Archer strike from afar — a mechanical
+// exception, not a stat delta. Counter colors are NOT defined here: they come from a
+// per-game ColorTheory scheme assigned at spawn (see index.js), so the class is read from
+// the `label`, the palette from ColorTheory.
 const PARTY_CLASSES = [
-    { cls: 'warden', name: 'Warden', role: 'leader',   label: 'W', maxHp: 26, armor: 3, damage: 5, attackRange: 1 },
-    { cls: 'blade',  name: 'Blade',  role: 'follower', label: 'B', maxHp: 16, armor: 0, damage: 8, attackRange: 1 },
-    { cls: 'archer', name: 'Archer', role: 'follower', label: 'A', maxHp: 14, armor: 0, damage: 6, attackRange: 6 },
-    { cls: 'hunter', name: 'Hunter', role: 'follower', label: 'H', maxHp: 18, armor: 1, damage: 6, attackRange: 1 },
+    { cls: 'warden', name: 'Warden', label: 'W', maxHp: 26, armor: 3, damage: 5, attackRange: 1 },
+    { cls: 'blade',  name: 'Blade',  label: 'B', maxHp: 16, armor: 0, damage: 8, attackRange: 1 },
+    { cls: 'archer', name: 'Archer', label: 'A', maxHp: 14, armor: 0, damage: 6, attackRange: 6 },
+    { cls: 'hunter', name: 'Hunter', label: 'H', maxHp: 18, armor: 1, damage: 6, attackRange: 1 },
 ];
 
 // ---- Enemy classes ----

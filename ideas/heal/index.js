@@ -214,7 +214,7 @@ function makeHealer(q, r) {
 
 function makePartyMember(def, q, r, color) {
     return {
-        id: nextId++, kind: 'party', cls: def.cls, name: def.name, role: def.role, label: def.label,
+        id: nextId++, kind: 'party', cls: def.cls, name: def.name, label: def.label,
         color, q, r, hp: def.maxHp, maxHp: def.maxHp, armor: def.armor, damage: def.damage,
         attackRange: def.attackRange, statuses: [], alive: true, downedTurns: 0, gone: false
     };
@@ -566,7 +566,8 @@ function moveUnit(unit, dest, live) {
 }
 
 async function runPartyPhase() {
-    const order = [...party].sort((a, b) => (a.role === 'leader' ? 0 : 1) - (b.role === 'leader' ? 0 : 1));
+    const leader = PartyAI.leader();
+    const order = [...party].sort((a, b) => (a === leader ? 0 : 1) - (b === leader ? 0 : 1));
     const live = boardKeySet();
 
     for (const member of order) {
