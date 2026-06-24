@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thrive</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <canvas id="game"></canvas>
+
+    <!-- Lower-left status / info box, anchored over the canvas -->
+    <div id="statusbox">
+        <div id="status-terrain"></div>
+        <div id="status-detail"></div>
+    </div>
+
+    <!-- Right-side HUD panel -->
+    <aside id="hud">
+        <div class="hud-title">THRIVE</div>
+        <div class="hud-sub" id="hud-day">Day 1</div>
+
+        <div class="hud-group" id="hud-vitals">
+            <div class="hud-row"><span>HP</span><span id="hud-hp">100 / 100</span></div>
+            <div class="hud-bar"><div id="hud-hp-bar" class="hud-bar-fill hp"></div></div>
+            <div class="hud-row"><span>Stamina</span><span id="hud-sta">12 / 12</span></div>
+            <div class="hud-bar"><div id="hud-sta-bar" class="hud-bar-fill sta"></div></div>
+            <div class="hud-row"><span>Rations</span><span id="hud-rations">4</span></div>
+        </div>
+
+        <div class="hud-group" id="hud-economy">
+            <div class="hud-row"><span>Carried</span><span id="hud-carry">0 c</span></div>
+            <div class="hud-row"><span>Banked</span><span id="hud-bank">0 c</span></div>
+            <div class="hud-row"><span>Notoriety</span><span id="hud-notor">0</span></div>
+            <div class="hud-row"><span>Resbed</span><span id="hud-resbed">none</span></div>
+        </div>
+
+        <div class="hud-group" id="hud-pack">
+            <div class="hud-row"><span>Scrap</span><span id="hud-inv-scrap">0</span></div>
+            <div class="hud-row"><span>Hide</span><span id="hud-inv-hide">0</span></div>
+            <div class="hud-row"><span>Meat</span><span id="hud-inv-meat">0</span></div>
+        </div>
+
+        <div class="hud-group" id="hud-ticket">
+            <div class="hud-row"><span>Ticket</span><span id="hud-ticket-amt">0 / 1000</span></div>
+            <div class="hud-bar"><div id="hud-ticket-bar" class="hud-bar-fill ticket"></div></div>
+        </div>
+
+        <div class="hud-actions">
+            <button id="end-turn">End Turn</button>
+            <button id="new-game">New Game</button>
+        </div>
+        <div class="hud-help">Click P to select · click to move · G gather · R rest · H medkit · Space ends turn · right-drag pans</div>
+    </aside>
+
+    <!-- Centered overlays (intro / result / hub services). Populated by JS. -->
+    <div id="overlay-panel" class="hidden"></div>
+
+    <!-- Plain script includes (load order matters): config → rando → hex → colortheory → game.
+         No ES modules, so index.html runs by double-clicking from the filesystem. -->
+    <script src="config.js"></script>
+    <script src="rando.js"></script>
+    <script src="hex.js"></script>
+    <script src="colortheory.js"></script>
+    <script src="index.js"></script>
+</body>
+</html>
