@@ -145,9 +145,12 @@ possible.
 - **Scavenging** (Scavenge skill)
   - The player MUST be able to work a salvage node only while standing on the node's hex (by
     clicking that hex / the player counter on it after selecting), not from an adjacent hex.
-  - Working a node MUST yield salvage goods scaled by node richness and Scavenge skill, grant
-    Scavenge XP, reduce the node's richness, and add a small amount of Notoriety.
-  - A node whose richness reaches zero MUST become depleted and yield nothing further.
+  - Working a node MUST resolve as a single richness-weighted roll: with probability
+    `richness/10` the dig yields salvage goods (scaled by richness and Scavenge skill, granting
+    Scavenge XP and a small amount of Notoriety); otherwise the dig turns up nothing and the
+    node's richness drops by one. A successful yield MUST NOT reduce richness.
+  - A node whose richness reaches zero MUST be removed (picked clean), and a fresh node MUST be
+    spawned on a random open hex with richness derived from its distance to town plus jitter.
 - **Hunting** (Hunt skill)
   - The player MUST be able to attack adjacent fauna with the equipped melee weapon (see
     Combat).
@@ -397,8 +400,8 @@ possible.
 - **Insufficient credits** — Buying, securing/recharging the Resbed, training, paying amends, or
   buying the ticket MUST be unavailable (disabled) when the player cannot afford it, with a
   status message rather than a thrown error.
-- **Depleted node** — Working a depleted node MUST yield nothing and MUST surface a clear
-  message rather than failing silently.
+- **Depleted node** — A node thinned to zero richness MUST collapse and be replaced by a fresh
+  node elsewhere, with a clear message rather than failing silently.
 - **No rations on field rest** — MUST resolve as starvation HP loss with a clear message, not an
   error.
 - **Death with no charge** — MUST cleanly transition to the permadeath end screen, preserving

@@ -192,10 +192,7 @@ function placeNodesAndFauna() {
     const nodeCount = 16;
     for (let i = 0; i < nodeCount && i < open.length; i++) {
         const h = open[i];
-        const d = distFromHub(h);
-        // distance sets a baseline; ±2 jitter spreads it, clamped to 1–5
-        const richness = Math.max(1, Math.min(5, 1 + Math.floor(d / 5) + Rando.int(-2, 2)));
-        nodes.push({ q: h.q, r: h.r, richness });
+        nodes.push({ q: h.q, r: h.r, richness: rollRichness(h) });
     }
 
     enemies = [];
@@ -217,6 +214,24 @@ function makeEnemy(hex, kind) {
 }
 function faunaCap() {
     return 5 + Math.floor((player ? player.notoriety : 0) / 20);
+}
+
+// Salvage richness scales with distance from town, plus ±2 jitter, clamped 1–5.
+function rollRichness(hex) {
+    const d = distFromHub(hex);
+    return Math.max(1, Math.min(5, 1 + Math.floor(d / 5) + Rando.int(-2, 2)));
+}
+
+// Drop a fresh salvage field on a random open hex (not town, not an existing node).
+function spawnFreshNode() {
+    const taken = new Set(nodes.map(n => keyOf(n.q, n.r)));
+    const open = passableHexes().filter(h =>
+        !(h.q === hub.q && h.r === hub.r) && !taken.has(keyOf(h.q, h.r)));
+    if (!open.length) return null;
+    const h = Rando.choice(open);
+    const node = { q: h.q, r: h.r, richness: rollRichness(h) };
+    nodes.push(node);
+    return node;
 }
 
 function hubReachesNodes() {
@@ -346,9 +361,18 @@ function workNode(node) {
     if (node.richness <= 0) { log('This salvage is picked clean.'); return; }
     if (player.stamina < TUNE.workStamina) { log('Too exhausted to dig — rest (R) or head home.'); return; }
     player.stamina -= TUNE.workStamina;
-    // Each dig is a gamble: richer beds pay out more often (richness/10 chance).
+    // Each dig is a coin-flip weighted by richness: richer beds pay out more often
+    // (richness/10 chance to score), and the same odds the other way diminish the bed.
+    // So richness 5 → 5/10 to salvage, 5/10 to thin to 4.
     if (!Rando.bool(node.richness / 10)) {
-        log('Dug, but turned up nothing this time.');
+        node.richness -= 1;
+        if (node.richness <= 0) {
+            nodes = nodes.filter(n => n !== node);   // picked clean — field collapses
+            const fresh = spawnFreshNode();          // a new bed surfaces elsewhere
+            log(`Dug deep, but the field is spent${fresh ? ' — word spreads of fresh salvage elsewhere.' : '.'}`);
+        } else {
+            log(`Dug, but turned up nothing — the bed thins to richness ${node.richness}.`);
+        }
         selectPlayer();
         render();
         return;
@@ -356,9 +380,8 @@ function workNode(node) {
     const qty = Math.max(1, Math.round(node.richness * (1 + lvl('scavenge') * 0.15) * Rando.float(0.6, 1.2)));
     player.inventory.scrap += qty;
     gainXp('scavenge', qty);
-    node.richness -= 1;                      // a strike depletes the bed; misses leave it be
     player.notoriety = clampNotor(player.notoriety + TUNE.grudgeScavenge);
-    log(`Salvaged ${qty} scrap${node.richness <= 0 ? ' — field is now spent.' : '.'}`);
+    log(`Salvaged ${qty} scrap.`);
     selectPlayer();
     render();
 }
@@ -660,11 +683,10 @@ function render() {
     for (const n of nodes) {
         const { x, y } = hexToScreen(n.q, n.r);
         if (offscreen(x, y)) continue;
-        const spent = n.richness <= 0;
         ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2);
-        ctx.fillStyle = spent ? '#555' : '#cfa84a'; ctx.fill();
+        ctx.fillStyle = '#cfa84a'; ctx.fill();
         ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke();
-        if (!spent) glyph(String(n.richness), x, y, '#000', 11);
+        glyph(String(n.richness), x, y, '#000', 11);
     }
 
     // Loot caches
