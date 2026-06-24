@@ -56,6 +56,50 @@ body { font-family: monospace; color: var(--ink); }
 .hud-title { font-size: 20px; font-weight: bold; letter-spacing: 3px; color: var(--accent); }
 .hud-sub { color: var(--ink-dim); margin-top: -8px; }
 
+/* ---- HUD nav bar (Status / Skills) ---- */
+.hud-nav {
+    display: flex;
+    gap: 6px;
+    border-top: 1px solid var(--panel-edge);
+    padding-top: 10px;
+}
+.hud-nav button {
+    flex: 1;
+    padding: 5px 0;
+    font-size: 12px;
+    background: transparent;
+    border-color: var(--panel-edge);
+    color: var(--ink-dim);
+}
+.hud-nav button.active { color: var(--accent); border-color: var(--accent); }
+
+/* ---- Swappable panel region ---- */
+.hud-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.hud-view { display: flex; flex-direction: column; gap: 12px; }
+.hud-view.hidden { display: none; }
+
+/* ---- Skills panel ---- */
+#hud-skills { gap: 9px; }
+.skill-row {
+    border-top: 1px solid #2a2a30;
+    padding-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.skill-row:first-child { border-top: none; padding-top: 0; }
+.skill-head { display: flex; justify-content: space-between; }
+.skill-lv { color: var(--accent); }
+.skill-blurb { color: var(--ink-dim); font-size: 11px; }
+.hud-bar-fill.xp { background: var(--accent); }
+
 .hud-group {
     border-top: 1px solid var(--panel-edge);
     padding-top: 10px;

@@ -20,30 +20,45 @@
         <div class="hud-title">THRIVE</div>
         <div class="hud-sub" id="hud-day">Day 1</div>
 
-        <div class="hud-group" id="hud-vitals">
-            <div class="hud-row"><span>HP</span><span id="hud-hp">100 / 100</span></div>
-            <div class="hud-bar"><div id="hud-hp-bar" class="hud-bar-fill hp"></div></div>
-            <div class="hud-row"><span>Stamina</span><span id="hud-sta">12 / 12</span></div>
-            <div class="hud-bar"><div id="hud-sta-bar" class="hud-bar-fill sta"></div></div>
-            <div class="hud-row"><span>Rations</span><span id="hud-rations">4</span></div>
-        </div>
+        <nav class="hud-nav">
+            <button data-tab="status" class="active">Status</button>
+            <button data-tab="skills">Skills</button>
+        </nav>
 
-        <div class="hud-group" id="hud-economy">
-            <div class="hud-row"><span>Carried</span><span id="hud-carry">0 c</span></div>
-            <div class="hud-row"><span>Banked</span><span id="hud-bank">0 c</span></div>
-            <div class="hud-row"><span>Notoriety</span><span id="hud-notor">0</span></div>
-            <div class="hud-row"><span>Resbed</span><span id="hud-resbed">none</span></div>
-        </div>
+        <div class="hud-body">
+            <!-- Status view: vitals, economy, pack, ticket -->
+            <div class="hud-view" id="view-status">
+                <div class="hud-group" id="hud-vitals">
+                    <div class="hud-row"><span>HP</span><span id="hud-hp">100 / 100</span></div>
+                    <div class="hud-bar"><div id="hud-hp-bar" class="hud-bar-fill hp"></div></div>
+                    <div class="hud-row"><span>Stamina</span><span id="hud-sta">12 / 12</span></div>
+                    <div class="hud-bar"><div id="hud-sta-bar" class="hud-bar-fill sta"></div></div>
+                    <div class="hud-row"><span>Rations</span><span id="hud-rations">4</span></div>
+                </div>
 
-        <div class="hud-group" id="hud-pack">
-            <div class="hud-row"><span>Scrap</span><span id="hud-inv-scrap">0</span></div>
-            <div class="hud-row"><span>Hide</span><span id="hud-inv-hide">0</span></div>
-            <div class="hud-row"><span>Meat</span><span id="hud-inv-meat">0</span></div>
-        </div>
+                <div class="hud-group" id="hud-economy">
+                    <div class="hud-row"><span>Carried</span><span id="hud-carry">0 c</span></div>
+                    <div class="hud-row"><span>Banked</span><span id="hud-bank">0 c</span></div>
+                    <div class="hud-row"><span>Notoriety</span><span id="hud-notor">0</span></div>
+                    <div class="hud-row"><span>Resbed</span><span id="hud-resbed">none</span></div>
+                </div>
 
-        <div class="hud-group" id="hud-ticket">
-            <div class="hud-row"><span>Ticket</span><span id="hud-ticket-amt">0 / 1000</span></div>
-            <div class="hud-bar"><div id="hud-ticket-bar" class="hud-bar-fill ticket"></div></div>
+                <div class="hud-group" id="hud-pack">
+                    <div class="hud-row"><span>Scrap</span><span id="hud-inv-scrap">0</span></div>
+                    <div class="hud-row"><span>Hide</span><span id="hud-inv-hide">0</span></div>
+                    <div class="hud-row"><span>Meat</span><span id="hud-inv-meat">0</span></div>
+                </div>
+
+                <div class="hud-group" id="hud-ticket">
+                    <div class="hud-row"><span>Ticket</span><span id="hud-ticket-amt">0 / 1000</span></div>
+                    <div class="hud-bar"><div id="hud-ticket-bar" class="hud-bar-fill ticket"></div></div>
+                </div>
+            </div>
+
+            <!-- Skills view: populated by renderSkills() -->
+            <div class="hud-view hidden" id="view-skills">
+                <div class="hud-group" id="hud-skills"></div>
+            </div>
         </div>
 
         <div class="hud-actions">

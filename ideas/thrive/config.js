@@ -91,6 +91,18 @@ const TUNE = {
     medkitHeal: 40,
 };
 
+// Skill metadata for the HUD Skills panel: display label (insertion order = display order)
+// plus a one-line effect blurb. The mechanical effects live in index.js's derived stats.
+const SKILL_INFO = {
+    scavenge:  { label: 'Scavenge',  blurb: '+15% salvage yield / lvl' },
+    hunt:      { label: 'Hunt',      blurb: '+2 melee damage / lvl' },
+    foraging:  { label: 'Foraging',  blurb: 'better ration scrounge at rest' },
+    barter:    { label: 'Barter',    blurb: '+10% sell price / lvl' },
+    toughness: { label: 'Toughness', blurb: '+15 max HP / lvl' },
+    endurance: { label: 'Endurance', blurb: '+2 max stamina / lvl' },
+    firstaid:  { label: 'First Aid', blurb: 'cheaper heals · faster mending' },
+};
+
 // Goods produced by the wastes and sold at the Market. baseValue anchors the price walk.
 const GOODS = {
     scrap: { label: 'Scrap', baseValue: 25 },

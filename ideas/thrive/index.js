@@ -21,6 +21,7 @@ let phase = 'player';
 let selection = null;      // { reachable: Map<key,cost>, attackable: Set<key>, workable: Set<key> }
 let overlay = null;        // 'intro' | 'hub' | 'win' | 'dead' | 'stranded' | null
 let hubTab = 'menu';
+let hudPanel = 'status';    // right-HUD nav: 'status' | 'skills'
 let hoveredHex = null;
 let lastMsg = '';
 let flashes = [];          // transient combat markers: { q, r, color }
@@ -92,6 +93,12 @@ function spendTown(amount) {
     const fromCarried = Math.min(player.creditsCarried, amount);
     player.creditsCarried -= fromCarried;
     player.creditsBanked -= amount - fromCarried;
+}
+
+// All player HP loss flows through here so enduring punishment trains Toughness.
+function hurt(amount) {
+    player.hp -= amount;
+    gainXp('toughness', amount);
 }
 
 function gainXp(name, amount) {
@@ -349,7 +356,7 @@ function movePlayer(q, r) {
     player.stamina = Math.max(0, player.stamina - cost);
     player.q = q; player.r = r;
     if (shortfall > 0) {
-        player.hp -= shortfall * TUNE.exhaustHpPerPoint;
+        hurt(shortfall * TUNE.exhaustHpPerPoint);
         log('Exhausted — that step cost blood.');
         flash(q, r, '#c5524a');
         if (player.hp <= 0) { handleDeath(); return; }
@@ -403,7 +410,7 @@ function attackEnemy(enemy) {
     flash(enemy.q, enemy.r, '#ffffff');
     if (enemy.hp <= 0) { killEnemy(enemy); selectPlayer(); render(); return; }
     const back = Math.max(1, fa.dmg - armorReduce());
-    player.hp -= back;
+    hurt(back);
     flash(player.q, player.r, '#c5524a');
     log(`Struck the ${fa.label} for ${dmg}; it bit back for ${back}.`);
     if (player.hp <= 0) { handleDeath(); return; }
@@ -426,6 +433,7 @@ function useMedkit() {
     if (player.hp >= maxHp()) { log('Already at full health.'); return; }
     player.medkits--;
     player.hp = Math.min(maxHp(), player.hp + TUNE.medkitHeal);
+    gainXp('firstaid', 5);   // patching yourself up teaches field medicine
     log('Used a medkit.');
     render();
 }
@@ -450,6 +458,7 @@ function fieldRest() {
     if (player.rations > 0) {
         player.rations--;
         player.stamina = Math.min(maxStamina(), player.stamina + TUNE.fieldRestStaminaGain);
+        gainXp('foraging', 3);   // every rest in the wild sharpens scrounging
         fieldRests++;
         const nightfall = fieldRests >= TUNE.fieldRestsPerDay;
         if (Rando.bool(forageChance())) {
@@ -465,7 +474,7 @@ function fieldRest() {
         ecologyPhase();
         return;
     }
-    player.hp -= TUNE.starveHp;
+    hurt(TUNE.starveHp);
     log('No rations — hunger gnaws. You lose health.');
     if (player.hp <= 0) { handleDeath(); return; }
     deselect();
@@ -567,7 +576,7 @@ function moveEnemies() {
 function enemyAttack(enemy) {
     const fa = FAUNA[enemy.kind];
     const dmg = Math.max(1, fa.dmg - armorReduce());
-    player.hp -= dmg;
+    hurt(dmg);
     flash(player.q, player.r, '#c5524a');
     log(`A ${fa.label} mauls you for ${dmg}.`);
     if (player.hp <= 0) handleDeath();
@@ -620,6 +629,7 @@ function endDay() {
 // but the grudges against you don't ease — that only happens back in town.
 function campNight() {
     player.hp = Math.min(maxHp(), player.hp + restHeal());
+    gainXp('endurance', 5);   // a night braving the open wastes builds stamina
     advanceDay();
     log(`Day ${day} dawns cold. You slept rough — no roof, but the wounds knit a little.`);
     render();
@@ -801,6 +811,35 @@ function updateHUD() {
     setText('hud-resbed', resbed.secured ? `${resbed.charges} charge${resbed.charges === 1 ? '' : 's'}` : 'none');
     setText('hud-ticket-amt', `${player.creditsBanked} / ${TUNE.ticketPrice}`);
     setBar('hud-ticket-bar', player.creditsBanked / TUNE.ticketPrice);
+    if (hudPanel === 'skills') renderSkills();
+}
+
+// ---- HUD nav: swap the middle region between Status and Skills ----
+function setHudPanel(tab) {
+    hudPanel = tab;
+    document.querySelectorAll('.hud-nav button').forEach(b =>
+        b.classList.toggle('active', b.dataset.tab === tab));
+    document.getElementById('view-status').classList.toggle('hidden', tab !== 'status');
+    document.getElementById('view-skills').classList.toggle('hidden', tab !== 'skills');
+    updateHUD();
+}
+
+// Each skill: name, level, a one-line effect blurb, and an XP-to-next-level bar.
+function renderSkills() {
+    const el = document.getElementById('hud-skills');
+    if (!el || !player) return;
+    let html = '';
+    for (const name in SKILL_INFO) {
+        const sk = player.skills[name];
+        const info = SKILL_INFO[name];
+        const frac = sk.xp / xpThreshold(sk.level);
+        html += `<div class="skill-row">
+            <div class="skill-head"><span>${info.label}</span><span class="skill-lv">Lv ${sk.level}</span></div>
+            <div class="skill-blurb">${info.blurb}</div>
+            <div class="hud-bar"><div class="hud-bar-fill xp" style="width:${Math.round(frac * 100)}%"></div></div>
+        </div>`;
+    }
+    el.innerHTML = html;
 }
 
 function entityDesc(q, r) {
@@ -1024,6 +1063,11 @@ canvas.addEventListener('mousemove', e => {
 
 canvas.addEventListener('mouseup', e => { if (e.button === 2) panning = false; });
 canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+document.querySelector('.hud-nav').addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (btn && btn.dataset.tab) setHudPanel(btn.dataset.tab);
+});
 
 document.getElementById('end-turn').addEventListener('click', primaryAction);
 document.getElementById('new-game').addEventListener('click', () => { overlay = null; loot = []; initGame(); });
