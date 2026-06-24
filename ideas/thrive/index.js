@@ -77,6 +77,8 @@ const weaponDmg = () => WEAPONS[player.weapon].dmg;
 const armorReduce = () => ARMORS[player.armor].reduce;
 const sellPrice = good => Math.round(prices[good] * (1 + lvl('barter') * 0.1));
 const healCost = () => Math.max(0, Math.ceil((maxHp() - player.hp) * 0.5 * (1 - lvl('firstaid') * 0.1)));
+// A night's rest mends a fraction of your wounds: (firstaid + 1) × 5% of HP lost.
+const restHeal = () => (maxHp() - player.hp) * (lvl('firstaid') + 1) * 0.05;
 const xpThreshold = level => 15 + level * 15;
 
 // In town you're safe, so every service spends from your whole purse — carried first,
@@ -361,18 +363,9 @@ function workNode(node) {
     if (node.richness <= 0) { log('This salvage is picked clean.'); return; }
     if (player.stamina < TUNE.workStamina) { log('Too exhausted to dig — rest (R) or head home.'); return; }
     player.stamina -= TUNE.workStamina;
-    // Each dig is a coin-flip weighted by richness: richer beds pay out more often
-    // (richness/10 chance to score), and the same odds the other way diminish the bed.
-    // So richness 5 → 5/10 to salvage, 5/10 to thin to 4.
+    // Finding salvage is a richness/10 roll; a fruitless dig leaves the bed untouched.
     if (!Rando.bool(node.richness / 10)) {
-        node.richness -= 1;
-        if (node.richness <= 0) {
-            nodes = nodes.filter(n => n !== node);   // picked clean — field collapses
-            const fresh = spawnFreshNode();          // a new bed surfaces elsewhere
-            log(`Dug deep, but the field is spent${fresh ? ' — word spreads of fresh salvage elsewhere.' : '.'}`);
-        } else {
-            log(`Dug, but turned up nothing — the bed thins to richness ${node.richness}.`);
-        }
+        log('Dug, but turned up nothing this time.');
         selectPlayer();
         render();
         return;
@@ -381,7 +374,19 @@ function workNode(node) {
     player.inventory.scrap += qty;
     gainXp('scavenge', qty);
     player.notoriety = clampNotor(player.notoriety + TUNE.grudgeScavenge);
-    log(`Salvaged ${qty} scrap.`);
+    // Only a successful dig can thin the bed — same richness/10 odds again.
+    if (Rando.bool(node.richness / 10)) {
+        node.richness -= 1;
+        if (node.richness <= 0) {
+            nodes = nodes.filter(n => n !== node);   // picked clean — field collapses
+            const fresh = spawnFreshNode();          // a new bed surfaces elsewhere
+            log(`Salvaged ${qty} scrap — the field is now spent${fresh ? '; word spreads of fresh salvage elsewhere.' : '.'}`);
+        } else {
+            log(`Salvaged ${qty} scrap — the bed thins to richness ${node.richness}.`);
+        }
+    } else {
+        log(`Salvaged ${qty} scrap.`);
+    }
     selectPlayer();
     render();
 }
@@ -593,7 +598,7 @@ function advanceDay() {
 function endDay() {
     if (totalFunds() < TUNE.upkeep) { endGame('stranded'); return; }
     spendTown(TUNE.upkeep);
-    player.hp = Math.min(maxHp(), player.hp + lvl('firstaid') * 5);
+    player.hp = Math.min(maxHp(), player.hp + restHeal());
     player.notoriety = clampNotor(player.notoriety - TUNE.notorietyDecay);
     advanceDay();
     log(`Day ${day} dawns. Upkeep took ${TUNE.upkeep} c.`);
@@ -601,11 +606,12 @@ function endDay() {
     render();
 }
 
-// Sleeping rough in the wastes: no lodging fee, but no wound care and no easing
-// of the grudges against you — that only happens back in town.
+// Sleeping rough in the wastes: no lodging fee, and wounds still mend overnight,
+// but the grudges against you don't ease — that only happens back in town.
 function campNight() {
+    player.hp = Math.min(maxHp(), player.hp + restHeal());
     advanceDay();
-    log(`Day ${day} dawns cold. You slept rough — no roof, no relief.`);
+    log(`Day ${day} dawns cold. You slept rough — no roof, but the wounds knit a little.`);
     render();
 }
 

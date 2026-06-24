@@ -145,10 +145,11 @@ possible.
 - **Scavenging** (Scavenge skill)
   - The player MUST be able to work a salvage node only while standing on the node's hex (by
     clicking that hex / the player counter on it after selecting), not from an adjacent hex.
-  - Working a node MUST resolve as a single richness-weighted roll: with probability
-    `richness/10` the dig yields salvage goods (scaled by richness and Scavenge skill, granting
-    Scavenge XP and a small amount of Notoriety); otherwise the dig turns up nothing and the
-    node's richness drops by one. A successful yield MUST NOT reduce richness.
+  - Working a node MUST first roll `richness/10` to find salvage. A failed roll yields nothing
+    and MUST leave richness unchanged. On a successful find, the dig yields salvage goods
+    (scaled by richness and Scavenge skill, granting Scavenge XP and a small amount of
+    Notoriety), and MUST then roll `richness/10` a second time to determine depletion: only on
+    that second success does the node's richness drop by one.
   - A node whose richness reaches zero MUST be removed (picked clean), and a fresh node MUST be
     spawned on a random open hex with richness derived from its distance to town plus jitter.
 - **Hunting** (Hunt skill)
@@ -244,7 +245,7 @@ possible.
   - Toughness MUST raise the player's maximum HP.
   - Endurance MUST raise the player's maximum stamina.
   - Foraging MUST give a chance to recover a ration when resting in the field.
-  - First Aid MUST heal a little extra on hub rest and MUST lower the Infirmary heal cost.
+  - First Aid MUST increase overnight rest healing and MUST lower the Infirmary heal cost.
 - **Equipment** — The player MUST start with a basic melee weapon. The player SHOULD be able to
   buy at least one better melee weapon and one armor item at the Market. Gear tiers, durability,
   and crafting are deferred to later slices.
@@ -257,10 +258,14 @@ possible.
 - Ending a turn MUST be available via the End Turn button and via Space/Enter.
 - Enemy death and player death MUST resolve as visible events during the ecology phase, not as
   silent end-of-turn checks.
-- A **day** MUST end only when the player rests at the hub (Rest service). On day end the
-  application MUST, in order: deduct upkeep from combined funds (carried first), restore stamina
-  to full, decay Notoriety, increment the day counter, and refresh market prices.
-- If combined funds cannot cover upkeep at day end, the application MUST trigger the stranded
+- A **day** ends either by resting at the hub (Rest service) or by camping in the wastes. On a
+  **hub rest** the application MUST, in order: deduct upkeep from combined funds (carried first),
+  heal a fraction of lost HP, decay Notoriety, restore stamina to full, increment the day
+  counter, and refresh market prices.
+- A **camp night** in the field MUST charge no upkeep and MUST NOT decay Notoriety, but MUST
+  heal the same fraction of lost HP as a hub rest — so long field trips remain survivable.
+- **Overnight rest healing** MUST restore `(lost HP) × (First Aid + 1) × 5%`, capped at max HP.
+- If combined funds cannot cover upkeep at hub rest, the application MUST trigger the stranded
   loss (game over).
 
 ### Win / Loss
