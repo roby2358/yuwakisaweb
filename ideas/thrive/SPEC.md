@@ -244,7 +244,8 @@ possible.
   paying to train at the Infirmary; in Slice 1 they MUST NOT level through use. Their effects:
   - Toughness MUST raise the player's maximum HP.
   - Endurance MUST raise the player's maximum stamina.
-  - Foraging MUST give a chance to recover a ration when resting in the field.
+  - Foraging MUST give a chance to recover a ration when resting in the field, on a curve
+    that is 0% at level 0, 80% at level 10, and asymptotically approaches but never reaches 100%.
   - First Aid MUST increase overnight rest healing and MUST lower the Infirmary heal cost.
 - **Equipment** — The player MUST start with a basic melee weapon. The player SHOULD be able to
   buy at least one better melee weapon and one armor item at the Market. Gear tiers, durability,

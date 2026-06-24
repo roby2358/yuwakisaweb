@@ -79,6 +79,9 @@ const sellPrice = good => Math.round(prices[good] * (1 + lvl('barter') * 0.1));
 const healCost = () => Math.max(0, Math.ceil((maxHp() - player.hp) * 0.5 * (1 - lvl('firstaid') * 0.1)));
 // A night's rest mends a fraction of your wounds: (firstaid + 1) × 5% of HP lost.
 const restHeal = () => (maxHp() - player.hp) * (lvl('firstaid') + 1) * 0.05;
+// Chance a field rest scrounges back its ration: 0% at lvl 0, 80% at lvl 10,
+// then creeping ever closer to — but never reaching — 100%.
+const forageChance = () => 1 - Math.exp(-0.16 * lvl('foraging'));
 const xpThreshold = level => 15 + level * 15;
 
 // In town you're safe, so every service spends from your whole purse — carried first,
@@ -442,7 +445,7 @@ function fieldRest() {
         player.stamina = Math.min(maxStamina(), player.stamina + TUNE.fieldRestStaminaGain);
         fieldRests++;
         const nightfall = fieldRests >= TUNE.fieldRestsPerDay;
-        if (Rando.bool(lvl('foraging') * 0.2)) {
+        if (Rando.bool(forageChance())) {
             player.rations = Math.min(TUNE.rationsMax, player.rations + 1);
             log('You rest and forage up a ration.');
         } else {
