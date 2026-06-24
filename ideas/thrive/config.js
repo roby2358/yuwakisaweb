@@ -63,7 +63,7 @@ const TUNE = {
     rationsMax: 12,
     startCredits: 30,
 
-    ticketPrice: 1000,
+    ticketPrice: 10000,
     upkeep: 8,
 
     resbedSecureCost: 120,      // includes the first charge
