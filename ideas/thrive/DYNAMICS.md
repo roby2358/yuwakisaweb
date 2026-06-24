@@ -240,6 +240,9 @@ genuinely cannot do everything before you must run for home.
 - **Rations** (field) are carried and consumed by resting/eating; out of rations → stamina can't
   recover and **HP drains**. Foraging skill lets you live off the land. One field consumable
   instead of separate food/water/fuel (Simplify Until It Hurts).
+- **Butchering meat** — rest in the field with no rations but **meat** in your pack and you
+  butcher one carcass into a clutch of rations (8–10), then rest off the fresh stock. Meat is
+  thus both a Market good *and* an emergency larder: the hunt feeds you when scavenging can't.
 - **Upkeep** (hub) is the daily settle-up when you rest at Last Ditch — a bunk, clean air, water —
   paid from your funds (carried first, then the Locker; in town all your money spends freely). It
   is the **steady attrition** the ticket fund must outrun: roughly flat, so a pure-quiet grind

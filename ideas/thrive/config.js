@@ -83,6 +83,9 @@ const TUNE = {
     starveHp: 8,                // HP lost resting with no rations
     exhaustHpPerPoint: 5,       // HP per point of stamina shortfall on an exhausted step
 
+    meatToRationsMin: 8,        // butchering one meat when out of rations yields this many...
+    meatToRationsMax: 10,       // ...up to this many rations
+
     foodCost: 6,                // Market: one ration
     medkitCost: 25,
     medkitHeal: 40,

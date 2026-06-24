@@ -132,8 +132,11 @@ When the player is at the hub, a SERVICES panel overlays the canvas center:
 - The player MUST be able to **rest in the field** (bound to the R key): resting MUST consume one
   ration, restore a portion of stamina, and trigger an ecology phase (advancing enemies) — i.e.,
   resting in the wastes is never free of danger.
-- If the player rests in the field with zero rations, stamina MUST NOT recover and the player
-  MUST take HP damage (starvation).
+- If the player rests in the field with zero rations but is carrying meat, the rest MUST first
+  butcher one meat into a clutch of rations (a random count within a configured min–max, capped
+  at the ration maximum), then proceed as a normal ration-fed rest.
+- If the player rests in the field with zero rations and no meat, stamina MUST NOT recover and the
+  player MUST take HP damage (starvation).
 - The player MUST be able to **use a medkit** in the field (bound to the H key) to restore HP,
   consuming one carried medkit.
 

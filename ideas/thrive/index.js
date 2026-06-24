@@ -440,6 +440,13 @@ function gather() {
 
 function fieldRest() {
     if (atHub() || overlay) return;
+    // Out of rations but carrying meat? Butcher one carcass into a clutch of rations.
+    if (player.rations <= 0 && player.inventory.meat > 0) {
+        player.inventory.meat--;
+        const yield_ = Rando.int(TUNE.meatToRationsMin, TUNE.meatToRationsMax);
+        player.rations = Math.min(TUNE.rationsMax, player.rations + yield_);
+        log(`You butcher a carcass into ${yield_} rations.`);
+    }
     if (player.rations > 0) {
         player.rations--;
         player.stamina = Math.min(maxStamina(), player.stamina + TUNE.fieldRestStaminaGain);
