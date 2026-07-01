@@ -1,0 +1,55 @@
+Priority:   50
+Status: ToDo
+ID: endturn-ad4b
+Created: 2026-07-01T10:05:06Z
+Updated: 2026-07-01T10:06:44Z
+Reclaimer: a counter's turn ends when EITHER it takes an action OR it exhausts its full movement. Rule: done = (acted || mp === 0). Examples: move 1 hex then cleanse/fire/build → turn ends (action taken, even with mp left); move all hexes with no action → turn ends (movement exhausted); move only partway without acting → NOT done, can still move more or act. Reflect this everywhere "still has a turn": the silver active-dot shows only when (!acted && mp > 0); and auto-deselect / skip a done counter when cycling units so the player isn't nudged to keep poking a spent one.
+----
+Priority:   50
+Status: ToDo
+ID: chaos-8cxj
+Created: 2026-07-01T10:13:49Z
+Updated: 2026-07-01T10:13:49Z
+Reclaimer (design + feature): rethink the initial "chaos" of a new game, and add chaos pods that must be manually cleared. (1) Revisit how a game starts — right now seedCorruption lays a thin corruption front around the pocket plus 5 fixed breeder nests; reconsider whether that's the right opening tension (too flat? too passive? not enough to DO early?). (2) Add "chaos pods": discrete placed objects scattered in the world that the player must MANUALLY clear with a unit action (like clearing a node, or a dedicated Clear action) — not something purifiers/passive cleansing remove. Decide their role: are pods the source of corruption spread / mini-spawners / blockers that gate expansion until cleared? How do they relate to the existing breeder nests and the corruption field (replace, layer on, or seed the initial chaos)? Update DYNAMICS.md as the design settles. Capture the intent: give the early game concrete, hand-cleared objectives that shape the initial chaos instead of a uniform corruption wash.
+----
+Priority:   48
+Status: ToDo
+ID: uneven-quus
+Created: 2026-07-01T10:14:35Z
+Updated: 2026-07-01T10:14:35Z
+Reclaimer: rethink how chaos (corruption) spawns/seeds so it's much more UNEVEN across the map — clumpy dense pockets and near-clean stretches, not a uniform distance-from-Lander gradient. Use noise/clustering to lay corruption in patches of varying intensity and cluster nests/pods within the heavy zones, so each game's threat landscape is lumpy and distinct and there are natural clean corridors to find and exploit. Goal: exploration and route choice matter, and the opening reads as an organic mess rather than an even wash. Pairs with chaos-8cxj (initial-chaos rethink + manually-cleared chaos pods).
+----
+Priority:   45
+Status: ToDo
+ID: turret-d6d8
+Created: 2026-07-01T10:04:15Z
+Updated: 2026-07-01T10:04:15Z
+Reclaimer: render turrets (and other structures) as full counter pieces, not small marker squares. In gameui.js `drawStructure` currently draws a reduced/plain counter — make turrets read as proper counters like units/aliens (rounded-square counter with the 2px depth lines + glyph), so they look like placed pieces rather than markers.
+----
+Priority:   45
+Status: ToDo
+ID: savegame-9yr5
+Created: 2026-07-01T10:07:22Z
+Updated: 2026-07-01T10:07:22Z
+Reclaimer: persist the game to browser localStorage. Add GameState.toJSON/fromJSON that serializes the whole model — hexes Map (as array of entries), units, aliens, lander, materials/rations/frozen/relics, turn, and the controlled/revealed Sets (as arrays). Auto-save after each player action / end of turn under a fixed key (e.g. 'reclaimer.save'); on page load, restore from it if present, else start a fresh game. New Game clears the save. Prototype stance (per project convention): no save-migration/back-compat — if a stored save fails to parse or looks incompatible, just discard it and start fresh.
+----
+Priority:   45
+Status: ToDo
+ID: colonist-kvsd
+Created: 2026-07-01T10:07:48Z
+Updated: 2026-07-01T10:07:48Z
+Reclaimer: give colonists fire range 2 (up from the current melee range 1). Change RECLAIMER.colonist.weaponRange 1 → 2 in config.js so colonists can shoot back at short range and contribute more to base defense while the captain roams. Keep colonist dmg at 1.
+----
+Priority:   45
+Status: ToDo
+ID: landzone-9mcu
+Created: 2026-07-01T10:08:52Z
+Updated: 2026-07-01T10:09:21Z
+Reclaimer: guarantee the landing zone is workable terrain. In gameengine.js map gen (after placeLanderAndCaptain, before ensureStarterDeposits), force every hex within radius 2 of the Lander to be PLAINS or HILLS — convert any WATER or MOUNTAIN in that radius to plains (keep existing plains/forest/hills). This prevents the start from being hemmed in by impassable water/mountain so you can move/build and control can spread out of the pocket. Keep it consistent with ensureStarterDeposits (which already seeds a nearby minerals hill + biomass plains within dist 2-3).
+----
+Priority:   45
+Status: ToDo
+ID: roam-z8eu
+Created: 2026-07-01T10:10:28Z
+Updated: 2026-07-01T10:10:28Z
+Reclaimer: monsters should roam, not relentlessly charge the Lander. Today alienHop/nearestTarget always A*-paths each alien to the nearest colony asset (unit > structure > Lander), so the whole swarm homes on the base. Add wander/roam behavior: an alien only locks on and pursues when a colony asset is within an aggro range (a few hexes); otherwise it roams — step to a random adjacent passable hex (bias toward open plains / away from just retracing). This makes the swarm read like an ecology (drifting, occasionally stumbling onto you) rather than a homing missile, per the "Ecology over Choreography" design note. Keep nests spawning them; just change out-of-range behavior from beeline-to-Lander to roaming. Decide the aggro radius (try ~4-5) and the roam step (random neighbor, avoid water/mountain/occupied).
