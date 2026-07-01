@@ -140,7 +140,7 @@ class GameUI {
         if (this.state.isLander(hex.q, hex.r)) { this.openLanderPanel(); return; }
 
         const unit = this.state.colonyUnitAt(hex.q, hex.r);
-        if (unit) { this.selectUnit(unit); return; }
+        if (unit) { if (unit === this.selected) this.deselect(); else this.selectUnit(unit); return; }
 
         if (this.selected && this.selection) {
             if (this.selection.fire.has(key)) { this.doFire(key); return; }

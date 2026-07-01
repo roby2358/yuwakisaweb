@@ -292,12 +292,13 @@ trace (below). These are *starting points to be wrong about*, not balance.
 | Breeder nodes at start | **5** | seeded near edges/corners — the push-out targets |
 | Lander clean pocket | radius **1** | corruption at the doorstep — Cleanse is usable turn 1 |
 | Lander hp | **30** | the heartbeat — big enough to survive the early swarm while you build |
-| Sight radius | **6** | every unit + the Lander reveal fog r6; fog shows darkened terrain, hides items/blight/enemies |
+| Sight radius | **6** | every unit + the Lander reveal fog r6; **mountains block line of sight**; fog shows darkened terrain, hides items/blight/enemies |
+| Corrupted move | base **+1** | entering any corrupted hex costs a flat +1 MP regardless of level (blight slows you) |
 
 ### Units
 | Unit | hp | mp | weapon | exception |
 |---|---|---|---|---|
-| Captain | 10 | 5 | range 4, dmg 3 | ranged; respawns at Lander (5 rations, 2-turn delay) |
+| Captain | 10 | 5 | range 3, dmg 3 | ranged; respawns at Lander (5 rations, 2-turn delay) |
 | Colonist | 6 | 4 | melee dmg 1 | the economy's hands |
 | Soldier | 8 | 4 | range 2, dmg 2 | carries a blaster |
 | Engineer | 6 | 4 | — | cleanses **2** levels/action |
@@ -326,7 +327,7 @@ off before they fire. Orthogonal to type — you can get a ranged swarmling or a
 | Cleanse (any level) | **free** — costs the unit's one action for the turn |
 | Awaken colonist | 6 rations |
 | Farm / Extractor / Beacon | 4 / 5 / 6 materials |
-| Purifier / Turret / Wall | 6 / 6 / 3 materials |  (Turret: **range 4, dmg 4**, hp 12) |
+| Purifier / Turret / Wall | 6 / 6 / 3 materials |  (Purifier: −1 corruption **r6**, no LOS · Turret: **range 4, dmg 4**, hp 12) |
 | Influence radius | Lander **6**, Beacon **6** — measured as BFS steps through *clean* hexes (corruption walls control off) |
 
 ### Escalation engine (the one curve everything reads from)

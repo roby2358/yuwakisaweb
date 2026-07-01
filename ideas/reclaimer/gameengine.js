@@ -213,11 +213,27 @@ class GameEngine {
     reveal() {
         const s = this.state, R = RECLAIMER.sightRadius;
         const mark = (q, r) => {
-            for (const h of new Hex(q, r).inRange(R)) if (s.inBounds(h.q, h.r)) s.revealed.add(h.key());
+            for (const h of new Hex(q, r).inRange(R)) {
+                if (!s.inBounds(h.q, h.r)) continue;
+                if (this.losClear(q, r, h.q, h.r)) s.revealed.add(h.key());
+            }
         };
         mark(s.lander.q, s.lander.r);
         for (const u of s.units) mark(u.q, u.r);
         for (const k of s.controlled) s.revealed.add(k); // your territory is always visible
+    }
+
+    // Line of sight from (sq,sr) to (tq,tr). Mountains block it; endpoints are excluded so the
+    // peak itself is still seen. Cube-lerp the hex line and check the hexes in between.
+    losClear(sq, sr, tq, tr) {
+        const a = new Hex(sq, sr), b = new Hex(tq, tr);
+        const N = a.distance(b);
+        for (let i = 1; i < N; i++) {
+            const p = Hex.round(a.q + (b.q - a.q) * (i / N), a.r + (b.r - a.r) * (i / N));
+            const cell = this.state.hex(p.q, p.r);
+            if (cell && cell.terrain === TERRAIN.MOUNTAIN) return false;
+        }
+        return true;
     }
 
     // ============================================================== economy
@@ -241,7 +257,7 @@ class GameEngine {
         if (hex.structure && hex.structure.type === 'wall') return Infinity;
         if (s.isLander(hex.q, hex.r)) return Infinity;
         if (s.alienAt(hex.q, hex.r) || s.colonyUnitAt(hex.q, hex.r)) return Infinity;
-        return MOVEMENT_COST[hex.terrain] + hex.corruption;
+        return MOVEMENT_COST[hex.terrain] + (hex.corruption > 0 ? 1 : 0); // blight slows you a flat +1
     }
 
     reachable(unit) {
