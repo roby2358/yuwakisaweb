@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reclaimer</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <canvas id="game"></canvas>
+
+    <!-- top status bar -->
+    <div id="topbar">
+        <span id="materials">⛏ 0</span>
+        <span id="rations">🍞 0</span>
+        <span id="turn">Turn 1</span>
+        <span class="meter" title="Threat"><label>Threat</label><span class="track"><span id="threat-bar" class="fill"></span></span></span>
+        <span id="colonists">Colonists 0/0</span>
+        <span id="breeders">Breeders 0/0</span>
+        <span class="meter" title="Lander"><label>Lander</label><span class="track"><span id="lander-hp" class="fill"></span></span></span>
+        <button id="end-turn">End Turn ⏎</button>
+        <button id="new-game">New Game</button>
+    </div>
+
+    <!-- hover readout -->
+    <div id="hover-info"></div>
+
+    <!-- legend (toggle with L) -->
+    <div id="legend">
+        <div class="lrow"><span class="sw" style="background:#87693e"></span>Terrain (plains/forest/hills)</div>
+        <div class="lrow"><span class="sw" style="background:#8f2196"></span>Corruption — Cleanse (C)</div>
+        <div class="lrow"><span class="sw sw-ctrl"></span>Your territory — build here</div>
+        <div class="lrow"><span class="sw" style="background:#e8483c;color:#fff">s</span>Aliens — Fire (R)</div>
+        <div class="lrow"><span class="sw sw-node"></span>Nest — destroy all to win</div>
+        <div class="lrow"><span class="sw" style="background:#e8e8f2;color:#000">M</span>Minerals → Extractor</div>
+        <div class="lrow"><span class="sw" style="background:#a7f078;color:#000">B</span>Biomass → Farm</div>
+        <div class="lrow"><span class="sw" style="background:#ffd24a;color:#000">★</span>Relic — Gather (G)</div>
+        <div class="lrow"><span class="sw" style="background:#f2b825;color:#000">@</span>You &nbsp;<span class="sw" style="background:#cdd7e0;color:#000">#</span>Lander — protect it</div>
+        <div class="lrow lkey">L: hide legend · M: map · Space: end turn</div>
+    </div>
+
+    <!-- bottom selected-unit action bar -->
+    <div id="bottombar">
+        <div id="selected-info"></div>
+        <div id="action-bar"></div>
+        <div id="log"></div>
+    </div>
+
+    <!-- floating panels -->
+    <div id="build-palette" class="panel hidden"></div>
+    <div id="lander-panel" class="panel hidden"></div>
+
+    <!-- full-screen overlay (intro / game over) -->
+    <div id="overlay" class="hidden">
+        <div id="overlay-box">
+            <div id="overlay-text"></div>
+            <button id="overlay-btn">Land</button>
+        </div>
+    </div>
+
+    <!-- NOTE! Double-click index.html to run — plain <script> includes, NOT ES modules.
+         Load order matters: constants → utils → hex → state → engine → ui. -->
+    <script src="config.js"></script>
+    <script src="rando.js"></script>
+    <script src="colortheory.js"></script>
+    <script src="hex.js"></script>
+    <script src="gamestate.js"></script>
+    <script src="gameengine.js"></script>
+    <script src="gameui.js"></script>
+</body>
+</html>

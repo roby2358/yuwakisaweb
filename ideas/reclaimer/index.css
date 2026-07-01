@@ -1,0 +1,102 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a10; }
+#game { display: block; cursor: default; }
+
+body { font-family: monospace; color: #e8e8ee; }
+
+/* ---- top status bar ---- */
+#topbar {
+    position: fixed; top: 8px; left: 8px; right: 8px;
+    display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
+    background: rgba(0,0,0,0.72); padding: 8px 14px; border-radius: 6px;
+    font-size: 14px; z-index: 10; user-select: none;
+}
+#topbar span { white-space: nowrap; }
+#materials { color: #cbb56a; }
+#rations { color: #9be36b; }
+.meter { display: inline-flex; align-items: center; gap: 6px; }
+.meter label { font-size: 11px; opacity: 0.7; }
+.meter .track {
+    display: inline-block; width: 90px; height: 9px; border-radius: 4px;
+    background: #2a2a33; overflow: hidden; vertical-align: middle;
+}
+.fill { display: block; height: 100%; width: 0; }
+#threat-bar { background: linear-gradient(90deg,#b04,#e26); }
+#lander-hp { background: linear-gradient(90deg,#38f,#6af); }
+
+#topbar button {
+    margin-left: auto; background: #33404d; color: #e8e8ee; border: 1px solid #557;
+    padding: 5px 12px; border-radius: 4px; cursor: pointer; font-family: monospace; font-size: 13px;
+}
+#topbar button + button { margin-left: 8px; }
+#topbar button:hover { background: #44515e; }
+
+/* ---- hover readout ---- */
+#hover-info {
+    position: fixed; left: 12px; bottom: 96px; z-index: 9;
+    background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 4px;
+    font-size: 12px; color: #bcd; pointer-events: none;
+}
+
+/* ---- legend ---- */
+#legend {
+    position: fixed; top: 54px; right: 8px; z-index: 9;
+    background: rgba(0,0,0,0.72); padding: 8px 10px; border-radius: 6px;
+    font-size: 11px; color: #cdd; user-select: none; line-height: 1.7;
+}
+#legend .lrow { display: flex; align-items: center; white-space: nowrap; }
+#legend .sw {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 15px; height: 15px; border-radius: 3px; margin-right: 7px;
+    font-size: 10px; font-weight: bold; font-family: monospace; flex: 0 0 auto;
+    border: 1px solid rgba(0,0,0,0.5);
+}
+#legend .sw-ctrl { background: rgba(205,210,218,0.18); border: 2px solid #cdd2da; }
+#legend .sw-node { background: #8f2196; border: 2px solid #ff5027; border-radius: 50%; }
+#legend .lkey { margin-top: 5px; color: #889; font-size: 10px; }
+
+/* ---- bottom action bar ---- */
+#bottombar {
+    position: fixed; left: 8px; right: 8px; bottom: 8px; z-index: 10;
+    background: rgba(0,0,0,0.72); padding: 8px 14px; border-radius: 6px;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap; user-select: none;
+}
+#selected-info { font-size: 13px; color: #dfe; min-width: 220px; }
+#action-bar { display: flex; gap: 8px; }
+#log { margin-left: auto; font-size: 12px; color: #9aa; font-style: italic; }
+
+button.verb {
+    background: #2c3a2c; color: #dfe; border: 1px solid #4a6a4a;
+    padding: 5px 10px; border-radius: 4px; cursor: pointer; font-family: monospace; font-size: 13px;
+}
+button.verb:hover { background: #3a4e3a; }
+button.verb.off { opacity: 0.38; cursor: default; }
+button.verb.armed { background: #6a5a20; border-color: #cb3; color: #ffe; }
+
+/* ---- floating panels ---- */
+.panel {
+    position: fixed; left: 50%; bottom: 72px; transform: translateX(-50%); z-index: 12;
+    background: rgba(10,12,18,0.94); border: 1px solid #556; border-radius: 8px;
+    padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; min-width: 260px;
+}
+.panel .palette-title { font-size: 13px; color: #bcd; margin-bottom: 4px; }
+.panel .panel-line { font-size: 12px; color: #9ab; margin-bottom: 4px; }
+.hidden { display: none !important; }
+
+/* ---- overlay ---- */
+#overlay {
+    position: fixed; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center;
+    background: rgba(4,4,10,0.82);
+}
+#overlay-box {
+    background: rgba(14,16,24,0.96); border: 1px solid #667; border-radius: 10px;
+    padding: 28px 34px; max-width: 520px; text-align: center;
+}
+#overlay-text h1 { font-size: 26px; letter-spacing: 3px; margin-bottom: 14px; color: #cbb56a; }
+#overlay-text p { font-size: 14px; line-height: 1.55; margin-bottom: 12px; color: #cdd; }
+#overlay-text b { color: #9be36b; }
+#overlay-btn {
+    margin-top: 8px; background: #33404d; color: #e8e8ee; border: 1px solid #668;
+    padding: 8px 28px; border-radius: 5px; cursor: pointer; font-family: monospace; font-size: 15px;
+}
+#overlay-btn:hover { background: #44515e; }
