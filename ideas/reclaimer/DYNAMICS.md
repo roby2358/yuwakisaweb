@@ -322,7 +322,7 @@ trace (below). These are *starting points to be wrong about*, not balance.
 | Awaken colonist | 6 rations |
 | Farm / Extractor / Beacon | 4 / 5 / 6 materials |
 | Purifier / Turret / Wall | 6 / 6 / 3 materials |  (Turret: **range 4, dmg 4**, hp 12) |
-| Influence radius | Lander **3**, Beacon **2** |
+| Influence radius | Lander **6**, Beacon **6** — measured as BFS steps through *clean* hexes (corruption walls control off) |
 
 ### Escalation engine (the one curve everything reads from)
 ```

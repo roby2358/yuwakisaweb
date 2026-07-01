@@ -180,31 +180,32 @@ class GameEngine {
     }
 
     // ============================================================ control/fog
-    // Control = clean land contiguous with the Lander, within influence of Lander/Beacons.
+    // Control radiates from the Lander and Beacons, but only along un-corrupted ground: a
+    // bounded BFS out from each source, `radius` steps, refusing to cross corrupted hexes.
+    // So the frontier follows what you've actually cleansed — the blight walls control off.
     computeControl() {
         const s = this.state;
         const clean = (q, r) => s.isLand(q, r) && s.hex(q, r).corruption === 0;
-        // flood the contiguous clean region containing the Lander
-        const region = new Set();
-        const stack = [[s.lander.q, s.lander.r]];
-        region.add(Hex.key(s.lander.q, s.lander.r));
-        while (stack.length) {
-            const [q, r] = stack.pop();
-            for (const n of new Hex(q, r).neighbors()) {
-                const k = n.key();
-                if (region.has(k)) continue;
-                if (clean(n.q, n.r)) { region.add(k); stack.push([n.q, n.r]); }
-            }
-        }
-        // influence sources
         const sources = [{ q: s.lander.q, r: s.lander.r, radius: RECLAIMER.landerInfluence }];
         for (const h of s.hexes.values()) {
             if (h.structure && h.structure.type === 'beacon') sources.push({ q: h.q, r: h.r, radius: STRUCTURES.beacon.radius });
         }
-        const controlled = new Set([Hex.key(s.lander.q, s.lander.r)]);
-        for (const k of region) {
-            const h = Hex.fromKey(k);
-            if (sources.some(src => new Hex(src.q, src.r).distance(h) <= src.radius)) controlled.add(k);
+        const controlled = new Set();
+        for (const src of sources) {
+            const seen = new Set([Hex.key(src.q, src.r)]);
+            const queue = [{ q: src.q, r: src.r, d: 0 }];
+            controlled.add(Hex.key(src.q, src.r)); // the source hex itself is always yours
+            while (queue.length) {
+                const cur = queue.shift();
+                if (cur.d >= src.radius) continue;
+                for (const n of new Hex(cur.q, cur.r).neighbors()) {
+                    const k = n.key();
+                    if (seen.has(k) || !clean(n.q, n.r)) continue; // only extend through clean hexes
+                    seen.add(k);
+                    controlled.add(k);
+                    queue.push({ q: n.q, r: n.r, d: cur.d + 1 });
+                }
+            }
         }
         s.controlled = controlled;
     }

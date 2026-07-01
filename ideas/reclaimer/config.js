@@ -49,7 +49,7 @@ const STRUCTURES = {
     farm:      { name: 'Farm',      hotkey: '1', cost: 4, template: 'producer', res: 'rations',   yield: 2, needs: DEPOSIT.BIOMASS,  hp: 8,  glyph: 'F' },
     extractor: { name: 'Extractor', hotkey: '2', cost: 5, template: 'producer', res: 'materials', yield: 2, needs: DEPOSIT.MINERALS, hp: 8,  glyph: 'E' },
     purifier:  { name: 'Purifier',  hotkey: '3', cost: 6, template: 'aura',     effect: 'purify', radius: 2, hp: 10, glyph: 'P' },
-    beacon:    { name: 'Beacon',    hotkey: '4', cost: 6, template: 'aura',     effect: 'influence', radius: 3, hp: 10, glyph: 'B' },
+    beacon:    { name: 'Beacon',    hotkey: '4', cost: 6, template: 'aura',     effect: 'influence', radius: 6, hp: 10, glyph: 'B' },
     turret:    { name: 'Turret',    hotkey: '5', cost: 6, template: 'defender', range: 4, dmg: 4, hp: 12, glyph: 'T' },
     wall:      { name: 'Wall',      hotkey: '6', cost: 3, template: 'wall',     hp: 24, glyph: 'W' },
 };
@@ -61,7 +61,7 @@ const RECLAIMER = {
     frozenColonists: 8,
     breederNodes: 5,
     landerHp: 30,
-    landerInfluence: 3,      // control/build radius projected by the Lander
+    landerInfluence: 6,      // control/build radius (BFS steps through clean hexes) from the Lander
     pocketRadius: 1,         // clean starting pocket (corruption at the doorstep)
     corruptionMax: 3,
     breederHp: 6,
@@ -122,8 +122,8 @@ const COLORS = {
     cleanse:    'rgba(110,230,120,0.50)',  // restore = green
     build:      'rgba(90,150,250,0.50)',   // build spots
     gather:     'rgba(240,170,60,0.50)',
-    controlEdge:'#cdd2da',                 // YOUR territory — silver, distinct from green terrain
-    controlFill:'rgba(205,210,218,0.12)',
+    controlEdge:'#54555c',                 // YOUR territory — dark-gray lining
+    controlFill:'rgba(120,124,132,0.10)',
     corruption: ['rgba(150,45,190,0.52)', 'rgba(148,36,178,0.67)', 'rgba(150,26,165,0.84)'], // the blight (violet)
     node:       '#ff5027',                 // a nest — warm red "destroy this"
     fog:        'rgba(6,6,12,0.74)',
