@@ -462,13 +462,17 @@ class GameUI {
 
     drawDeposit(h, p) {
         const ctx = this.ctx;
-        const color = h.deposit === DEPOSIT.MINERALS ? '#e8e8f2' : h.deposit === DEPOSIT.BIOMASS ? '#a7f078' : '#ffd24a';
-        ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(0,0,0,0.75)'; ctx.fillStyle = color;
-        if (h.deposit === DEPOSIT.RELIC) { this.star(p.x, p.y, 7, 3.4); ctx.stroke(); }
-        else {
-            ctx.beginPath(); ctx.arc(p.x, p.y, 5.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-            ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.font = 'bold 8px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText(h.deposit === DEPOSIT.MINERALS ? 'M' : 'B', p.x, p.y + 0.5);
+        if (h.deposit === DEPOSIT.MINERALS) {          // silver diamond
+            const r = 6;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y - r); ctx.lineTo(p.x + r, p.y); ctx.lineTo(p.x, p.y + r); ctx.lineTo(p.x - r, p.y); ctx.closePath();
+            ctx.fillStyle = '#d6dae2'; ctx.fill();
+            ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.stroke();
+        } else if (h.deposit === DEPOSIT.BIOMASS) {    // green dot, no border
+            ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, Math.PI * 2); ctx.fillStyle = '#7ad84e'; ctx.fill();
+        } else {                                       // relic — gold star
+            ctx.fillStyle = '#ffd24a'; ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+            this.star(p.x, p.y, 7, 3.4); ctx.stroke();
         }
     }
 

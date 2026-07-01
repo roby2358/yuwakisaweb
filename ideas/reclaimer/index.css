@@ -52,6 +52,8 @@ body { font-family: monospace; color: #e8e8ee; }
     border: 1px solid rgba(0,0,0,0.5);
 }
 #legend .sw-ctrl { background: rgba(140,200,85,0.16); border: 2px solid #8cc855; }
+#legend .sw-min { background: #d6dae2; border: none; transform: rotate(45deg); width: 12px; height: 12px; }
+#legend .sw-bio { background: #7ad84e; border: none; border-radius: 50%; }
 #legend .sw-node { background: #8f2196; border: 2px solid #ff5027; border-radius: 50%; }
 #legend .lkey { margin-top: 5px; color: #889; font-size: 10px; }
 
