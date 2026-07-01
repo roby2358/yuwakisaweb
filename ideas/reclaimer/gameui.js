@@ -267,6 +267,7 @@ class GameUI {
         const ev = this.engine.enemyStep();
         // visuals for this step
         if (ev.type === 'defense') for (const f of ev.flashes) this.addBeam(f.from, f.to, '#7fd0ff', 400);
+        if (ev.type === 'hop' && (ev.action === 'attack' || ev.action === 'kill')) this.addBeam(ev.from, ev.at, '#ff6a3c', 300);
         if (ev.type === 'hop' && ev.action === 'kill') this.addBeam(ev.at, ev.at, '#ff2020', 400);
         this.render();
         this.updateHud();
@@ -430,6 +431,12 @@ class GameUI {
 
     drawAlien(a) {
         const p = this.hexToScreen(a.q, a.r);
+        // ranged skirmishers get an orange "reach" ring so you can tell them apart at a glance
+        if (a.attackRange > 1) {
+            const ctx = this.ctx;
+            ctx.beginPath(); ctx.arc(p.x, p.y, COUNTER_SIZE / 2 + 3, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(255,120,60,0.9)'; ctx.lineWidth = 1.5; ctx.stroke();
+        }
         this.drawCounter(p, COUNTER_SIZE - 2, ALIEN_COLORS[a.kind] || '#c33', RECLAIMER.aliens[a.kind].glyph, '#fff');
         this.drawHpBar(p, COUNTER_SIZE - 2, a.hp / a.maxHp, '#ff8a7a');
     }

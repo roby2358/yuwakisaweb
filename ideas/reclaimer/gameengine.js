@@ -545,10 +545,14 @@ class GameEngine {
             ]);
             const def = RECLAIMER.aliens[type];
             const speedRoll = Rando.int(1, 6);
+            const baseSpeed = speedRoll <= 3 ? 1 : (speedRoll <= 5 ? 2 : 3);
+            // ~half the swarm are ranged skirmishers: attack from 3 hexes, but move at half pace.
+            const ranged = Rando.bool(0.5);
             const a = {
                 id: s.nextId++, kind: type, faction: 'alien', q: spot.q, r: spot.r,
                 hp: def.hp + hpBonus, maxHp: def.hp + hpBonus, dmg: def.dmg,
-                speed: speedRoll <= 3 ? 1 : (speedRoll <= 5 ? 2 : 3),
+                attackRange: ranged ? 3 : 1,
+                speed: ranged ? Math.max(1, Math.floor(baseSpeed / 2)) : baseSpeed,
             };
             s.aliens.push(a);
             spawned.push(a);
@@ -586,7 +590,7 @@ class GameEngine {
             return { alien: a, action: 'spit', at: { q: target.q, r: target.r } };
         }
 
-        if (target.dist <= 1) return this.alienAttack(a, target);
+        if (target.dist <= a.attackRange) return this.alienAttack(a, target);
 
         const goalKey = Hex.key(target.q, target.r);
         const passable = (q, r) => {
@@ -609,6 +613,7 @@ class GameEngine {
 
     alienAttack(a, target) {
         const s = this.state;
+        const from = { q: a.q, r: a.r };
         if (target.kind === 'unit') {
             target.ref.hp -= a.dmg;
             if (target.ref.hp <= 0) {
@@ -616,19 +621,19 @@ class GameEngine {
                 this.removeUnit(killed);
                 if (killed.kind === 'captain') s.captainRespawnAt = s.turn + RECLAIMER.respawnDelay;
                 s.log = `A ${a.kind} killed your ${killed.kind}!`;
-                return { alien: a, action: 'kill', at: { q: killed.q, r: killed.r }, died: true };
+                return { alien: a, action: 'kill', from, at: { q: killed.q, r: killed.r }, died: true };
             }
-            return { alien: a, action: 'attack', at: { q: target.q, r: target.r } };
+            return { alien: a, action: 'attack', from, at: { q: target.q, r: target.r } };
         }
         if (target.kind === 'structure') {
             target.ref.structure.hp -= a.dmg;
             if (target.ref.structure.hp <= 0) { target.ref.structure = null; this.computeControl(); s.log = `A ${a.kind} wrecked a structure!`; }
-            return { alien: a, action: 'attack', at: { q: target.q, r: target.r } };
+            return { alien: a, action: 'attack', from, at: { q: target.q, r: target.r } };
         }
         // lander
         s.lander.hp -= a.dmg;
         if (s.lander.hp <= 0) { s.lander.hp = 0; s.gameOver = 'lose'; s.log = 'The Lander has fallen. The colony is lost.'; }
-        return { alien: a, action: 'attack', at: { q: target.q, r: target.r } };
+        return { alien: a, action: 'attack', from, at: { q: target.q, r: target.r } };
     }
 
     maybeRespawnCaptain() {

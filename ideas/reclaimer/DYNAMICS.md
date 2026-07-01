@@ -306,6 +306,11 @@ trace (below). These are *starting points to be wrong about*, not balance.
 | Mauler | 6+⌊T/22⌋ | slow (1) | dmg 3 | targets structures/Lander |
 | Spitter | 3+⌊T/22⌋ | 1 | +1 corruption r2 | re-seeds the blight |
 
+*Every spawn also rolls **Melee** (attack range 1, rolled speed) or **Ranged** (~50%: attack
+range **3** but **half speed**). Ranged skirmishers snipe units/structures/Lander from 3 hexes
+and wear an orange reach-ring; Turrets (range 4) outrange them, so a turret line can pick them
+off before they fire. Orthogonal to type — you can get a ranged swarmling or a melee mauler.*
+
 ### Economy (per turn)
 - **Base recycler (Lander): +2 rations, +2 materials, flat** — keeps you alive turn 1 with no
   structures. *(This is the "trickle" M1 refers to; area gives you build slots and deposits,
