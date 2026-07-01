@@ -1,6 +1,35 @@
 // gameui.js — GameUI: canvas rendering, input (the modal-flag stack from UI_CONTROLS),
 // the HUD/action-bar/panels, and the animation loop that paces the enemy phase.
 
+// One descriptor per action verb. Targeting set, enabled test, tint, arming and execution all
+// key off this single table, so a new verb is one entry here rather than edits smeared across
+// armVerb / executeTargeting / verbColor / the action bar / the hotkey handler.
+const VERBS = {
+    fire:    { label: 'Fire',    hotkey: 'R', color: COLORS.attack,
+               hint: 'No alien or nest within blaster range.',
+               targets: (e, u) => e.fireTargets(u),
+               enabled: (e, u) => e.fireTargets(u).size > 0,
+               arm: (ui) => ui.armVerb('fire'),
+               perform: (e, ui, key) => ui.fireAt(key) },
+    cleanse: { label: 'Cleanse', hotkey: 'C', color: COLORS.cleanse,
+               hint: 'Move a unit next to violet corruption, then Cleanse (free).',
+               targets: (e, u) => e.cleanseTargets(u),
+               enabled: (e, u) => e.cleanseTargets(u).size > 0,
+               arm: (ui) => ui.armVerb('cleanse'),
+               perform: (e, ui, key) => e.performCleanse(ui.selected, key) },
+    build:   { label: 'Build',   hotkey: 'B', color: COLORS.build,
+               enabled: (e, u) => e.canAct(u),
+               arm: (ui) => ui.toggleBuildPalette(),
+               perform: (e, ui, key) => e.performBuild(ui.selected, ui.targeting.structKey, key) },
+    gather:  { label: 'Gather',  hotkey: 'G', color: COLORS.gather,
+               hint: 'Stand next to a gold-star relic or a damaged structure to Gather.',
+               targets: (e, u) => e.gatherTargets(u),
+               enabled: (e, u) => e.gatherTargets(u).size > 0,
+               arm: (ui) => ui.armVerb('gather'),
+               perform: (e, ui, key) => e.performGather(ui.selected, key) },
+};
+const ACTION_BAR = ['fire', 'cleanse', 'build', 'gather'];
+
 class GameUI {
     constructor(engine, state, canvas) {
         this.engine = engine;
@@ -134,10 +163,8 @@ class GameUI {
             if (entry) { this.chooseStructure(entry); return; }
         }
         if (!this.selected) return;
-        if (k === 'r') this.armVerb('fire');
-        else if (k === 'c') this.armVerb('cleanse');
-        else if (k === 'g') this.armVerb('gather');
-        else if (k === 'b') this.toggleBuildPalette();
+        const verb = Object.values(VERBS).find(d => d.hotkey.toLowerCase() === k);
+        if (verb) verb.arm(this);
     }
 
     escape() {
@@ -175,9 +202,14 @@ class GameUI {
         this.refresh();
     }
 
-    doFire(key) {
+    // fire the mutation + beam only (shared by the direct red-hex click and the targeting path)
+    fireAt(key) {
         const beam = this.engine.performFire(this.selected, key);
-        if (beam) this.addBeam(beam.from, beam.to, '#ff5a3c');
+        if (beam) this.addBeam(beam.from, beam.to, '#ff5a3c', 160);
+    }
+
+    doFire(key) {
+        this.fireAt(key);
         this.refreshSelection();
         this.refresh();
     }
@@ -186,16 +218,8 @@ class GameUI {
         const u = this.selected;
         if (!u) return;
         if (!this.engine.canAct(u)) { this.flashLog(`Your ${u.kind} has already acted this turn.`); return; }
-        let valid;
-        if (verb === 'fire') valid = this.engine.fireTargets(u);
-        else if (verb === 'cleanse') valid = this.engine.cleanseTargets(u);
-        else if (verb === 'gather') valid = this.engine.gatherTargets(u);
-        if (!valid || valid.size === 0) {
-            const hint = verb === 'cleanse' ? 'Move a unit next to violet corruption, then Cleanse (free).'
-                : verb === 'gather' ? 'Stand next to a gold-star relic or a damaged structure to Gather.'
-                : 'No alien or nest within blaster range.';
-            this.flashLog(hint); return;
-        }
+        const valid = VERBS[verb].targets(this.engine, u);
+        if (!valid || valid.size === 0) { this.flashLog(VERBS[verb].hint); return; }
         this.buildPalette = false;
         this.targeting = { verb, valid };
         this.refresh();
@@ -219,11 +243,7 @@ class GameUI {
     cancelTargeting() { this.targeting = null; this.refresh(); }
 
     executeTargeting(key) {
-        const t = this.targeting;
-        if (t.verb === 'fire') { this.doFire(key); this.targeting = null; return; }
-        if (t.verb === 'cleanse') this.engine.performCleanse(this.selected, key);
-        else if (t.verb === 'gather') this.engine.performGather(this.selected, key);
-        else if (t.verb === 'build') this.engine.performBuild(this.selected, t.structKey, key);
+        VERBS[this.targeting.verb].perform(this.engine, this, key);
         this.targeting = null;
         this.refreshSelection();
         this.refresh();
@@ -271,7 +291,7 @@ class GameUI {
     showGameOver() { this.overlay = 'gameover'; this.refresh(); }
 
     // --------------------------------------------------------- effects
-    addBeam(from, to, color, ms = 160) {
+    addBeam(from, to, color, ms) {
         this.beams.push({ from, to, color, until: Date.now() + ms });
         setTimeout(() => this.render(), ms + 20);
     }
@@ -310,7 +330,7 @@ class GameUI {
             this.drawHex(h, p);
         }
         // highlight sets
-        if (this.targeting) this.drawSet(this.targeting.valid, this.verbColor(this.targeting.verb));
+        if (this.targeting) this.drawSet(this.targeting.valid, VERBS[this.targeting.verb].color);
         else if (this.buildPalette && this.selected) this.drawSet(this.engine.buildableGround(this.selected), COLORS.build);
         else if (this.selection) {
             this.drawSet(this.selection.reachable, COLORS.reachable);
@@ -369,14 +389,9 @@ class GameUI {
         }
     }
 
-    verbColor(verb) {
-        return verb === 'cleanse' ? COLORS.cleanse : verb === 'build' ? COLORS.build
-            : verb === 'gather' ? COLORS.gather : COLORS.attack;
-    }
-
     strokeHex(p, color, w) { const ctx = this.ctx; drawHexPath(ctx, p.x, p.y, HEX_SIZE); ctx.strokeStyle = color; ctx.lineWidth = w; ctx.stroke(); }
 
-    drawCounter(p, size, fill, glyph, glyphColor = '#111') {
+    drawCounter(p, size, fill, glyph, glyphColor) {
         const ctx = this.ctx, half = size / 2, x = p.x - half, y = p.y - half, r = 5;
         ctx.beginPath();
         ctx.moveTo(x + r, y);
@@ -402,7 +417,7 @@ class GameUI {
     drawUnit(u) {
         const p = this.hexToScreen(u.q, u.r);
         const glyph = u.kind === 'captain' ? '@' : 'c';
-        this.drawCounter(p, COUNTER_SIZE, u.kind === 'captain' ? CAPTAIN_COLOR : COLONIST_COLOR, glyph);
+        this.drawCounter(p, COUNTER_SIZE, u.kind === 'captain' ? CAPTAIN_COLOR : COLONIST_COLOR, glyph, '#111');
         this.drawHpBar(p, COUNTER_SIZE, u.hp / u.maxHp, '#4caf50');
         // silver dot = still has its action this turn. Cleared by acting (fire/cleanse/build/
         // gather), NOT by moving. A groggy just-woken colonist spawns 'acted', so shows none.
@@ -529,17 +544,13 @@ class GameUI {
         const act = this.engine.canAct(u) ? 'action ready' : 'acted ✓';
         e.selected.textContent = `▸ ${name}  hp ${u.hp}/${u.maxHp}  mp ${u.mp}  ${act}` + (u.weapon ? `  blaster r${u.weapon.range}/d${u.weapon.dmg}` : '');
         e.actionBar.innerHTML = '';
-        const verbs = [
-            { key: 'R', label: 'Fire', on: this.engine.fireTargets(u).size > 0, fn: () => this.armVerb('fire') },
-            { key: 'C', label: 'Cleanse', on: this.engine.cleanseTargets(u).size > 0, fn: () => this.armVerb('cleanse') },
-            { key: 'B', label: 'Build', on: this.engine.canAct(u), fn: () => this.toggleBuildPalette() },
-            { key: 'G', label: 'Gather', on: this.engine.gatherTargets(u).size > 0, fn: () => this.armVerb('gather') },
-        ];
-        for (const v of verbs) {
+        for (const v of ACTION_BAR) {
+            const d = VERBS[v];
+            const on = d.enabled(this.engine, u);
             const b = document.createElement('button');
-            b.textContent = `[${v.key}] ${v.label}`;
-            b.className = 'verb' + (v.on ? '' : ' off') + (this.targeting && this.targeting.verb === v.label.toLowerCase() ? ' armed' : '');
-            if (v.on) b.addEventListener('click', v.fn); else b.disabled = true;
+            b.textContent = `[${d.hotkey}] ${d.label}`;
+            b.className = 'verb' + (on ? '' : ' off') + (this.targeting && this.targeting.verb === v ? ' armed' : '');
+            if (on) b.addEventListener('click', () => d.arm(this)); else b.disabled = true;
             e.actionBar.appendChild(b);
         }
     }
