@@ -101,6 +101,19 @@ Language (the blight *is* the level design).*
 Double-edged / shared obstacle (Asymmetry): corruption **hurts your units but heals aliens**
 that stand in it, so the same terrain is your hazard and their fortress.
 
+**Seeding — an already-fallen planet.** There is no starting corruption ring. After the 5 fixed
+nests are placed (level 3, scarring neighbors to level 2), every other open land hex has a
+**1-in-6 chance** to start at level 1 or 2 — a scattered, uneven field covering ~20% of the
+world. Only the Lander's immediate pocket (radius `pocketRadius`) stays clean, giving the
+captain a foothold. The frontier isn't a tidy front you cleanse outward; it's a patchwork you
+carve a home out of.
+
+**The land fights back.** Each spread tick, a corrupted hex first rolls to spread (~5% + threat);
+if that fails, it has a flat **3% chance to recede by one level on its own** (`recoverBase`). A
+live nest never recedes — that floor holds until its Breeder is killed. This is a gentle
+background restoration: it means the wilds slowly heal where the aliens aren't pressing, so
+cleansing and Purifiers are working *with* the planet, not against a purely one-way tide.
+
 ### M3 — Cleansing (the restore verb)
 **A unit spends its one action for the turn to lower an adjacent hex's corruption by one (no
 material cost); a hex brought to 0 while contiguous with your control and within influence

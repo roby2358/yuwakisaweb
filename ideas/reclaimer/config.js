@@ -92,9 +92,10 @@ const RECLAIMER = {
     spawnDivisor: 160,      // spawn chance per node = clamp(T / spawnDivisor, min, max)
     spawnMin: 0.04,
     spawnMax: 0.45,
-    spreadBase: 0.10,
-    spreadPerThreat: 1 / 200,
-    spreadMax: 0.50,
+    spreadBase: 0.05,
+    spreadPerThreat: 1 / 400,
+    spreadMax: 0.25,
+    recoverBase: 0.03,      // land fights back: chance a source hex self-heals when it fails to spread
     alienHpPerThreat: 22,   // +1 alien hp per this much threat
     maxAliens: 30,
 

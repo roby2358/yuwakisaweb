@@ -127,6 +127,8 @@ class GameUI {
     onLeftClick(sx, sy) {
         if (this.animating) return;
         if (this.overlay) { this.dismissOverlay(); return; }
+        // a click on the map while a panel is open only closes it — never a map action
+        if (this.buildPalette || this.landerPanel) { this.buildPalette = false; this.landerPanel = false; this.refresh(); return; }
         const hex = this.screenToHex(sx, sy);
         const key = hex.key();
 
@@ -594,6 +596,10 @@ class GameUI {
             if (can) b.addEventListener('click', () => this.chooseStructure(sk)); else b.disabled = true;
             e.appendChild(b);
         }
+        const close = document.createElement('button');
+        close.className = 'verb'; close.textContent = 'Close';
+        close.addEventListener('click', () => { this.buildPalette = false; this.refresh(); });
+        e.appendChild(close);
     }
 
     updateLanderPanel() {

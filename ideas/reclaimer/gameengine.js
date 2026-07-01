@@ -134,17 +134,10 @@ class GameEngine {
         });
     }
 
-    // Corruption gradient outward from the Lander, plus far-flung breeder nodes.
+    // Fixed breeder nests plus a planet already overrun: a scattered field of ambient blight.
     seedCorruption() {
         const s = this.state, L = s.lander;
         const lh = new Hex(L.q, L.r);
-        // Most of the world starts as clean wilderness; a thin corruption FRONT hugs the
-        // pocket so cleansing matters from turn 1, and the nests below add local gradients.
-        for (const h of s.hexes.values()) {
-            if (!s.isLand(h.q, h.r)) continue;
-            const d = lh.distance(new Hex(h.q, h.r));
-            h.corruption = (d >= 2 && d <= 4) ? 1 : 0;
-        }
         // place breeder nodes far from the Lander, spread apart
         const candidates = [...s.hexes.values()].filter(h =>
             s.isLand(h.q, h.r) && lh.distance(new Hex(h.q, h.r)) >= 8);
@@ -158,6 +151,14 @@ class GameEngine {
                 nodes.push(h);
                 for (const nb of this.landNeighbors(h.q, h.r)) nb.corruption = Math.max(nb.corruption, 2);
             }
+        }
+        // The planet has already fallen: after the nests are placed, scatter ambient blight
+        // across the wilds — each open land hex has a 1-in-6 chance to be level 1 or 2. The
+        // Lander's pocket stays clean so the captain has a foothold; nests keep their gradient.
+        for (const h of s.hexes.values()) {
+            if (!s.isLand(h.q, h.r) || h.corruption > 0 || h.breederHp > 0) continue;
+            if (lh.distance(new Hex(h.q, h.r)) <= RECLAIMER.pocketRadius) continue;
+            if (Rando.int(1, 6) === 1) h.corruption = Rando.int(1, 2);
         }
     }
 
@@ -527,11 +528,16 @@ class GameEngine {
         // stays a bounded, targetable goal. Escalation comes from the threat curve, not new nests.
         const sources = [...s.hexes.values()].filter(h => h.corruption > 0);
         for (const src of sources) {
-            if (!Rando.bool(p)) continue;
-            const cap = src.breederHp > 0 ? R.corruptionMax : R.corruptionMax - 1;
-            const nbrs = this.landNeighbors(src.q, src.r).filter(h => h.corruption < cap);
-            const t = Rando.choice(nbrs);
-            if (t) t.corruption += 1;
+            if (Rando.bool(p)) {
+                const cap = src.breederHp > 0 ? R.corruptionMax : R.corruptionMax - 1;
+                const nbrs = this.landNeighbors(src.q, src.r).filter(h => h.corruption < cap);
+                const t = Rando.choice(nbrs);
+                if (t) t.corruption += 1;
+                continue;
+            }
+            // the land fights back: a source that fails to spread may recede on its own.
+            // Never a live nest — that floor holds until the Breeder is killed.
+            if (src.breederHp <= 0 && Rando.bool(R.recoverBase)) src.corruption -= 1;
         }
         // purifiers push back (never below a live node's floor)
         for (const h of s.hexes.values()) {
