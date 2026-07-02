@@ -219,7 +219,7 @@ $.yuwakisa.OpenRouterChatApi = function() {
         const data = {
             model: model,
             messages: messages,
-            max_tokens: 1000,
+            max_tokens: 3000,
         };
 
         console.log(headers);
