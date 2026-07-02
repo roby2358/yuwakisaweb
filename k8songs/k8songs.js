@@ -57,7 +57,13 @@ lyrics`
     const modelMap = {
         "haiku": "anthropic/claude-haiku-4.5",
         "sonnet": "anthropic/claude-sonnet-4.5",
-        "opus": "anthropic/claude-opus-4.5"
+        "opus": "anthropic/claude-opus-4.5",
+        "mistral-large": "mistralai/mistral-large-2512",
+        "glm-5.2": "z-ai/glm-5.2",
+        "deepseek-v3.2": "deepseek/deepseek-v3.2",
+        "gemini-2.5-flash": "google/gemini-2.5-flash",
+        "llama-4-maverick": "meta-llama/llama-4-maverick",
+        "qwen3-235b": "qwen/qwen3-235b-a22b-2507"
     };
 
     // Populate prompt select dropdown from promptMap keys
@@ -75,7 +81,7 @@ lyrics`
             text: key
         }));
     });
-    $('#model-select').val('haiku'); // Set default to haiku
+    $('#model-select').val('deepseek-v3.2');
 
     $('#style-select').on('change', function() {
         const selectedStyle = $(this).val();
