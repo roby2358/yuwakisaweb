@@ -1,7 +1,6 @@
 // Hex Grid Utilities
 // Axial coordinates (q, r), pointy-top hexes.
-
-import { HEX_SIZE } from './config.js';
+// Plain-script global; pixel helpers read HEX_SIZE from GameDisplayArtifacts.
 
 const SQRT3 = Math.sqrt(3);
 
@@ -13,7 +12,7 @@ const NEIGHBOR_DIRS = [
 // A single axial hex coordinate. Pure value type: the coordinate math that used to be
 // free hex*(q, r) functions now lives here as methods, with factories for the inverse
 // directions (pixel → hex, key → hex). Methods return new Hex values rather than mutating.
-export class Hex {
+class Hex {
     constructor(q, r) {
         this.q = q;
         this.r = r;
@@ -26,8 +25,9 @@ export class Hex {
 
     // Pixel center of this hex (before any pan offset).
     toPixel() {
-        const x = HEX_SIZE * (SQRT3 * this.q + SQRT3 / 2 * this.r);
-        const y = HEX_SIZE * (3 / 2 * this.r);
+        const size = GameDisplayArtifacts.HEX_SIZE;
+        const x = size * (SQRT3 * this.q + SQRT3 / 2 * this.r);
+        const y = size * (3 / 2 * this.r);
         return { x, y };
     }
 
@@ -86,8 +86,9 @@ export class Hex {
 
     // Nearest hex to a pixel point (before pan offset).
     static fromPixel(x, y) {
-        const q = (SQRT3 / 3 * x - 1 / 3 * y) / HEX_SIZE;
-        const r = (2 / 3 * y) / HEX_SIZE;
+        const size = GameDisplayArtifacts.HEX_SIZE;
+        const q = (SQRT3 / 3 * x - 1 / 3 * y) / size;
+        const r = (2 / 3 * y) / size;
         return Hex.round(q, r);
     }
 }
@@ -95,7 +96,7 @@ export class Hex {
 // ---- Pixel drawing (operates on screen coordinates, not axial) ----
 
 // Get corner points of a hex for drawing
-export function hexCorners(centerX, centerY, size) {
+function hexCorners(centerX, centerY, size) {
     const corners = [];
     for (let i = 0; i < 6; i++) {
         const angle = Math.PI / 180 * (60 * i - 30);
@@ -108,7 +109,7 @@ export function hexCorners(centerX, centerY, size) {
 }
 
 // Draw a hex path on canvas context
-export function drawHexPath(ctx, centerX, centerY, size) {
+function drawHexPath(ctx, centerX, centerY, size) {
     const corners = hexCorners(centerX, centerY, size);
     ctx.beginPath();
     ctx.moveTo(corners[0].x, corners[0].y);
@@ -126,7 +127,7 @@ export function drawHexPath(ctx, centerX, centerY, size) {
 // - hexes: Map of hexKey -> hex objects
 // - movementCost(hex): returns cost to enter hex, or Infinity if impassable
 // - maxCost: stop exploring when cost exceeds this
-export function bfsHexes(startHex, hexes, movementCost, maxCost) {
+function bfsHexes(startHex, hexes, movementCost, maxCost) {
     const costs = new Map();
     costs.set(Hex.key(startHex.q, startHex.r), 0);
 
@@ -162,7 +163,7 @@ export function bfsHexes(startHex, hexes, movementCost, maxCost) {
 
 // All hexes reachable by a unit with given movement points.
 // Returns a Map of hexKey -> cost (excluding the starting hex).
-export function getReachableHexes(startHex, hexes, movementPoints, terrainMovement) {
+function getReachableHexes(startHex, hexes, movementPoints, terrainMovement) {
     const costs = bfsHexes(
         startHex,
         hexes,
@@ -243,7 +244,7 @@ class PathfinderState {
 // - isPassable(q, r): whether the hex at (q, r) can be entered
 // - movementCost(q, r): cost to enter the hex at (q, r)
 // - maxCost: abandon paths whose accumulated cost exceeds this
-export function findPath(start, end, isPassable, movementCost, maxCost) {
+function findPath(start, end, isPassable, movementCost, maxCost) {
     if (Hex.key(start.q, start.r) === Hex.key(end.q, end.r)) return [start];
     if (!isPassable(end.q, end.r)) return null;
 

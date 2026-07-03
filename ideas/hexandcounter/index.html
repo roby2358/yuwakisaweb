@@ -19,8 +19,17 @@
         <p>Victory condition: Move your counter (P) to the target. Good luck!</p>
         <button id="begin-btn">Begin</button>
     </div>
-    <!-- NOTE! We want to be able to double-click to run these games, so
-    use html script tags instead of ES module imports -->
-    <script type="module" src="index.js"></script>
+    <!-- NOTE! We want to be able to double-click to run these games, so use plain
+    script includes (globals), not ES module imports. Order = dependency order:
+    artifacts → display artifacts → libs → state → engine → ui → bootstrap. -->
+    <script src="artifacts.js"></script>
+    <script src="displayartifacts.js"></script>
+    <script src="rando.js"></script>
+    <script src="colortheory.js"></script>
+    <script src="hex.js"></script>
+    <script src="gamestate.js"></script>
+    <script src="gameengine.js"></script>
+    <script src="gameui.js"></script>
+    <script src="index.js"></script>
 </body>
 </html>
