@@ -1,0 +1,150 @@
+/* En Garde! — The Season in Paris. MIT License. */
+
+:root {
+  --ink: #2b2118;
+  --paper: #f3e9d2;
+  --paper-dark: #e8dabb;
+  --edge: #b39b6d;
+  --accent: #7a1f1f;
+  --gold: #8a6d1f;
+  --bg: #241c14;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 15px;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 10px 18px;
+  color: var(--paper);
+  border-bottom: 2px solid var(--gold);
+}
+
+header h1 { margin: 0; font-size: 22px; letter-spacing: 1px; }
+header h1 small { font-size: 14px; color: var(--edge); font-style: italic; margin-left: 8px; }
+.header-right { display: flex; gap: 12px; align-items: center; }
+#date-line { color: var(--paper); font-variant: small-caps; }
+
+main {
+  display: grid;
+  grid-template-columns: 300px 1fr 340px;
+  gap: 12px;
+  padding: 12px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+@media (max-width: 1000px) {
+  main { grid-template-columns: 1fr; }
+}
+
+.panel {
+  background: var(--paper);
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.panel h2 { margin: 0 0 8px; font-size: 18px; color: var(--accent); }
+.panel h3 { margin: 0 0 8px; font-size: 15px; font-variant: small-caps; letter-spacing: 1px; border-bottom: 1px solid var(--edge); padding-bottom: 4px; }
+.panel h4 { margin: 0 0 4px; color: var(--accent); font-size: 14px; }
+
+.row { display: flex; justify-content: space-between; padding: 1px 0; }
+.row span { color: #6b5a44; }
+
+.hint { font-size: 12px; color: #6b5a44; font-style: italic; margin: 8px 0 0; }
+
+.soc { padding: 3px 0; border-bottom: 1px dotted var(--edge); font-size: 13px; }
+.soc b { display: block; }
+.soc span { color: #6b5a44; font-size: 12px; }
+.soc.dead { color: #8a8175; font-style: italic; }
+
+.week { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }
+.week label { width: 60px; font-variant: small-caps; color: var(--accent); }
+.week-params small { color: #6b5a44; }
+
+select, input[type="number"], input[type="text"] {
+  font-family: inherit;
+  font-size: 14px;
+  background: #fbf5e6;
+  border: 1px solid var(--edge);
+  border-radius: 2px;
+  padding: 3px 6px;
+}
+input[type="number"] { width: 70px; }
+
+button {
+  font-family: inherit;
+  font-size: 14px;
+  background: var(--paper-dark);
+  border: 1px solid var(--edge);
+  border-radius: 2px;
+  padding: 4px 12px;
+  cursor: pointer;
+  color: var(--ink);
+}
+button:hover { background: var(--gold); color: var(--paper); }
+button:disabled { opacity: 0.45; cursor: default; }
+button:disabled:hover { background: var(--paper-dark); color: var(--ink); }
+button.big {
+  display: block;
+  margin: 12px auto 0;
+  padding: 8px 30px;
+  font-size: 16px;
+  background: var(--accent);
+  color: var(--paper);
+  border-color: #4d1313;
+}
+button.big:hover { background: #9c2a2a; }
+
+.errors { color: var(--accent); font-weight: bold; margin-top: 8px; }
+.note { font-style: italic; color: #6b5a44; }
+
+.alert { border: 2px solid var(--accent); }
+.affair { margin: 8px 0; padding-bottom: 8px; border-bottom: 1px dotted var(--edge); }
+.affair p { margin: 0 0 6px; }
+
+.estab { display: flex; gap: 8px; align-items: center; margin: 8px 0; flex-wrap: wrap; }
+.estab select { max-width: 320px; }
+.estab small { color: #6b5a44; }
+
+.gazette-panel { max-height: calc(100vh - 90px); overflow-y: auto; }
+.entry { border-bottom: 1px solid var(--edge); padding: 8px 0; }
+.entry p { margin: 3px 0; font-size: 13px; }
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 14, 8, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.dialog {
+  background: var(--paper);
+  border: 2px solid var(--gold);
+  border-radius: 4px;
+  padding: 24px 30px;
+  width: min(440px, 92vw);
+  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.7);
+}
+
+.dialog h2 { margin-top: 0; color: var(--accent); }
+.dialog label { display: block; margin: 14px 0 0; }
+.dialog input[type="text"] { width: 100%; margin-top: 4px; font-size: 16px; }
+.dialog-buttons { display: flex; justify-content: space-between; margin-top: 18px; align-items: center; }
+
+.hidden { display: none !important; }

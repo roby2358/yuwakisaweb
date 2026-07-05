@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>En Garde! — The Season in Paris</title>
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <header>
+    <h1>En Garde! <small>The Season in Paris</small></h1>
+    <div class="header-right">
+      <span id="date-line"></span>
+      <button id="new-game">New Game</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="left">
+      <section class="panel">
+        <h2 id="sheet-name"></h2>
+        <div id="sheet-rows"></div>
+        <p class="hint" id="status-need"></p>
+      </section>
+      <section class="panel">
+        <h3>Gentlemen of Note</h3>
+        <div id="npc-list"></div>
+      </section>
+      <section class="panel">
+        <h3>Ladies of the Town</h3>
+        <div id="lady-list"></div>
+      </section>
+    </aside>
+
+    <section id="center">
+      <div id="affairs" class="panel alert hidden"></div>
+      <div id="planner" class="panel"></div>
+      <section class="panel">
+        <h3>About Town</h3>
+        <div class="estab" id="club-join-row">
+          <select id="club-select"></select>
+          <button id="club-join">Seek election</button>
+        </div>
+        <div class="estab" id="regiment-join-row">
+          <select id="regiment-select"></select>
+          <button id="regiment-apply">Apply</button>
+        </div>
+        <div class="estab">
+          <input type="number" id="loan-amount" value="100" min="1" step="10">
+          <button id="loan-borrow">Borrow</button>
+          <button id="loan-repay">Repay</button>
+          <small id="lender-info"></small>
+        </div>
+        <div class="estab">
+          <button id="resign-regiment" class="hidden">Resign your commission</button>
+        </div>
+      </section>
+    </section>
+
+    <aside id="right">
+      <section class="panel gazette-panel">
+        <h3>Le Petit Journal de Paris</h3>
+        <div id="gazette"></div>
+      </section>
+    </aside>
+  </main>
+
+  <div id="chargen-overlay" class="overlay hidden">
+    <div class="dialog">
+      <h2>A Gentleman Arrives</h2>
+      <div id="chargen-stats"></div>
+      <label>Name <input type="text" id="chargen-name"></label>
+      <div class="dialog-buttons">
+        <button id="chargen-reroll">Another birth</button>
+        <button id="chargen-begin" class="big">To Paris!</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="death-overlay" class="overlay hidden">
+    <div class="dialog">
+      <h2>Requiescat</h2>
+      <p id="epitaph"></p>
+      <div class="dialog-buttons">
+        <button id="death-new-character" class="big">A new gentleman arrives</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="dice.js"></script>
+  <script src="names.js"></script>
+  <script src="data.js"></script>
+  <script src="state.js"></script>
+  <script src="engine.js"></script>
+  <script src="ui.js"></script>
+  <script src="index.js"></script>
+</body>
+</html>
