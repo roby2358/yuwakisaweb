@@ -211,10 +211,6 @@ function renderPlanner(state) {
     return;
   }
   const char = state.character;
-  if (char.atFront !== null) {
-    renderFrontPlanner(state, planner);
-    return;
-  }
   const choices = actionChoices(state);
   const presets = plannerPresets(state);
   let html = '<h3>Plan of the Month — ' + esc(monthLabel(state)) + '</h3>';
@@ -235,18 +231,18 @@ function renderPlanner(state) {
   html += '<div id="plan-errors" class="errors"></div>';
   html += '<button id="live-month" class="big">Live the Month</button>';
   planner.innerHTML = html;
-  if (deploymentSeason(state) && char.atFront === null) {
+  if (deploymentSeason(state)) {
     planner.insertAdjacentHTML('beforeend',
-      '<p class="note">The armies are in the field. <button id="volunteer">Volunteer for the frontier</button></p>');
+      '<p class="note">The armies are in the field. <button id="volunteer">March to the frontier</button></p>');
   }
 }
 
-function renderFrontPlanner(state, planner) {
-  const front = state.character.atFront;
-  const regiment = frontRegiment(state.character);
-  planner.innerHTML = '<h3>' + esc(monthLabel(state)) + ' — With the Colours</h3>' +
-    '<p class="note">You are at the front with the ' + esc(regiment.name) + '. ' + front.monthsLeft + ' month(s) of the season remain.</p>' +
-    '<button id="live-month" class="big">Endure the Month</button>';
+// ---------- Campaign overlay ----------
+
+function renderCampaign(state, result) {
+  el('campaign-title').textContent = result.died ? 'The Last Campaign' : 'The Summer Campaign';
+  el('campaign-body').innerHTML = result.lines.map(function (l) { return '<p>' + esc(l) + '</p>'; }).join('');
+  el('campaign-return').textContent = result.died ? 'Requiescat' : 'Return to Paris';
 }
 
 // ---------- Establishments panel ----------
@@ -259,7 +255,7 @@ function renderEstablishments(state) {
   const advice = el('ask-advice');
   advice.disabled = adviceAsked(state);
   advice.title = advice.disabled ? 'Your friend has said his piece; come back next month.' : '';
-  el('resign-regiment').classList.toggle('hidden', char.regimentId === null || char.atFront !== null);
+  el('resign-regiment').classList.toggle('hidden', char.regimentId === null);
   el('club-resign').classList.toggle('hidden', char.clubId === null);
 }
 
@@ -318,11 +314,6 @@ function renderEntryRanks(state) {
 function renderStatusPanel(state) {
   const box = el('status-panel');
   const char = state.character;
-  if (char.atFront !== null) {
-    box.innerHTML = '<p class="note">Status is reckoned when you return from the front.' +
-      (char.carrySP !== 0 ? ' Carried so far: ' + formatSP(char.carrySP) + '.' : '') + '</p>';
-    return;
-  }
   const items = statusForecast(state, collectPlan(state));
   const total = items.reduce(function (sum, item) { return sum + item.sp; }, 0);
   box.innerHTML = items.map(function (item) {
@@ -339,10 +330,6 @@ function renderStatusPanel(state) {
 function renderLedgerPanel(state) {
   const box = el('ledger-panel');
   const char = state.character;
-  if (char.atFront !== null) {
-    box.innerHTML = '<p class="note">The army feeds you; Paris prices wait for your return.</p>';
-    return;
-  }
   const income = incomeForecast(state);
   const expenses = expensesForecast(state, collectPlan(state));
   const net = sumAmounts(income) - sumAmounts(expenses);

@@ -201,6 +201,7 @@ function newGame(character) {
     campaign: null, // active summer deployment for the player's brigade
     applications: { club: -1, regiment: -1 }, // monthIndex of the last attempt
     adviceMonth: -1, // monthIndex the knowing friend last gave counsel
+    pendingCampaign: false, // set when a brigade call-up awaits the campaign panel
     lastPlan: null, // last month's plan, used to pre-fill the planner
   };
 }
@@ -263,6 +264,10 @@ function loadGame() {
   const state = JSON.parse(raw);
   state.npcs.forEach(ensureNpcStats);
   ensureLadies(state);
+  // Campaigns no longer persist across months; drop any stale mid-season state
+  // from an older save so the gentleman simply starts fresh in Paris.
+  state.character.atFront = null;
+  if (state.pendingCampaign === undefined) state.pendingCampaign = false;
   return state;
 }
 

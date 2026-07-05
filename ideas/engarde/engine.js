@@ -584,24 +584,27 @@ function entryRanks(char, regiment) {
 function applyToRegiment(state, regimentId, rankIndex) {
   const char = state.character;
   const regiment = findRegiment(regimentId);
+  // attempted marks whether a suit was actually pressed. Failing the eligibility
+  // or affordability pre-checks means you never petitioned, so it must not burn
+  // your one application for the month; only reaching the acceptance roll does.
   const needed = applicationRollNeeded(char, regiment);
-  if (needed > 6) return { ok: false, message: 'The ' + regiment.name + ' does not take gentlemen of your standing.' };
+  if (needed > 6) return { ok: false, attempted: false, message: 'The ' + regiment.name + ' does not take gentlemen of your standing.' };
   const rank = RANKS[rankIndex];
   const col = regiment.column;
-  if (char.sl < rank.minSL[col]) return { ok: false, message: 'A ' + rank.name + "'s commission in the " + regiment.name + ' wants a gentleman of social level ' + rank.minSL[col] + '.' };
+  if (char.sl < rank.minSL[col]) return { ok: false, attempted: false, message: 'A ' + rank.name + "'s commission in the " + regiment.name + ' wants a gentleman of social level ' + rank.minSL[col] + '.' };
   const price = commissionPrice(rankIndex, col);
   const horses = horsesForRank(rankIndex, regiment);
   const cost = price + horses * HORSE_PRICE;
-  if (char.cash < cost) return { ok: false, message: 'Joining as a ' + rank.name + ' costs ' + cost + ' crowns' + (horses > 0 ? ' (' + horses + ' horse' + (horses > 1 ? 's' : '') + ' included)' : '') + ' — beyond your purse.' };
-  if (needed > 0 && d6() < needed) return { ok: false, message: 'The ' + regiment.name + ' regrets it has no place for you at present.' };
+  if (char.cash < cost) return { ok: false, attempted: false, message: 'Joining as a ' + rank.name + ' costs ' + cost + ' crowns' + (horses > 0 ? ' (' + horses + ' horse' + (horses > 1 ? 's' : '') + ' included)' : '') + ' — beyond your purse.' };
+  if (needed > 0 && d6() < needed) return { ok: false, attempted: true, message: 'The ' + regiment.name + ' regrets it has no place for you at present.' };
   char.cash -= cost;
   char.horses = horses;
   char.regimentId = regimentId;
   char.rankIndex = rankIndex;
   char.seniority = 0;
   char.appointmentId = null;
-  if (rankIndex === 0) return { ok: true, message: 'You are sworn in as a Private of the ' + regiment.name + '.' };
-  return { ok: true, message: 'You purchase a ' + rank.name + "'s commission in the " + regiment.name + ' (' + cost + ' crowns' + (horses > 0 ? ', stable of ' + horses : '') + ').' };
+  if (rankIndex === 0) return { ok: true, attempted: true, message: 'You are sworn in as a Private of the ' + regiment.name + '.' };
+  return { ok: true, attempted: true, message: 'You purchase a ' + rank.name + "'s commission in the " + regiment.name + ' (' + cost + ' crowns' + (horses > 0 ? ', stable of ' + horses : '') + ').' };
 }
 
 function leaveRegiment(state) {
@@ -710,13 +713,6 @@ function newMonthContext() {
 function resolveMonth(state, plan) {
   const char = state.character;
   const ctx = newMonthContext();
-
-  if (char.atFront !== null) {
-    resolveCampaignMonth(state, ctx);
-    if (!char.dead) simulateRivals(state, ctx);
-    finishMonth(state, ctx, true);
-    return ctx;
-  }
 
   ctx.dutyRequired = requiredDutyWeeks(char);
   ctx.carouseRequired = requiredCarouseWeeks(char);
@@ -1211,15 +1207,15 @@ function rollJuneDeployments(state, ctx) {
   if (char.regimentId === null) return;
   const regiment = findRegiment(char.regimentId);
   if (state.warBrigades.indexOf(regiment.brigade) < 0) return;
-  char.atFront = { volunteer: false, monthsLeft: 3, engaged: false };
-  ctx.lines.push('The ' + regiment.name + ' takes the field! You march with the summer campaign.');
+  state.pendingCampaign = true; // index.js resolves it and pops the campaign panel
+  ctx.lines.push('The ' + regiment.name + ' is called to the field for the summer.');
 }
 
-function volunteerForCampaign(state) {
-  const char = state.character;
-  char.atFront = { volunteer: true, monthsLeft: 4 - CAMPAIGN_MONTHS.indexOf(currentMonth(state)) - 1, engaged: false };
-  char.carrySP += 3;
-  return 'You volunteer for the frontier — Paris approves of dash (+3 status on your return).';
+// Months of the campaign season still to run, counting the current one. A June
+// call-up serves all three; a July or August volunteer serves what remains.
+function campaignSeasonMonths(state) {
+  const last = CAMPAIGN_MONTHS[CAMPAIGN_MONTHS.length - 1];
+  return Math.max(1, last - currentMonth(state) + 1);
 }
 
 function frontRegiment(char) {
@@ -1227,24 +1223,49 @@ function frontRegiment(char) {
   return findRegiment(char.regimentId);
 }
 
-function resolveCampaignMonth(state, ctx) {
+// The whole summer resolves in one episode: the season's single engagement,
+// pay for each month served, and whatever the rivals get up to while you are
+// away. Advances the calendar past the season and returns the narrative plus
+// whether the gentleman fell. char.atFront is set only for the duration so the
+// away-logic (poaching, frontier regiment) still reads it.
+function resolveCampaign(state, volunteer) {
   const char = state.character;
-  const front = char.atFront;
-  front.monthsLeft -= 1;
-  const mustEngage = front.monthsLeft === 0 && !front.engaged;
-  if (!front.engaged && (mustEngage || d6() <= 2)) {
-    front.engaged = true;
-    resolveEngagement(state, ctx);
-  } else {
-    ctx.lines.push('Camp fever, mud, and drill. The war keeps its distance this month.');
+  const months = campaignSeasonMonths(state);
+  char.atFront = { volunteer: volunteer };
+  const regiment = frontRegiment(char);
+  const ctx = newMonthContext();
+  ctx.lines.push('You march to the frontier with the ' + regiment.name + ' for the season.');
+  if (volunteer) {
+    char.carrySP += 3;
+    ctx.lines.push('Paris approves of such dash (+3 status on your return).');
   }
-  if (char.dead) return;
-  const rank = rankData(char);
-  if (rank !== null) char.cash += rank.pay;
-  if (front.monthsLeft <= 0) {
-    char.atFront = null;
-    ctx.lines.push('The regiment is recalled to Paris for the winter. You have survived the season.');
+  let engaged = false;
+  for (let m = 0; m < months; m++) {
+    const mustEngage = m === months - 1 && !engaged;
+    if (!engaged && (mustEngage || d6() <= 2)) {
+      engaged = true;
+      resolveEngagement(state, ctx);
+      if (char.dead) break;
+    } else {
+      ctx.lines.push('Camp fever, mud, and drill; the war keeps its distance.');
+    }
+    const rank = rankData(char);
+    if (rank !== null) char.cash += rank.pay;
+    simulateRivals(state, ctx);
+    state.monthIndex += 1;
+    char.seniority += 1;
+    // A grievous wound (resolveBattleDeath clears atFront) carts you home early.
+    if (char.atFront === null) break;
   }
+  char.atFront = null;
+  // resolveBattleDeath already narrates a death or a wound-and-home; only the
+  // unscathed survivor needs the season's closing line.
+  if (!char.dead && char.woundWeeks === 0) {
+    ctx.lines.push('The season closes; the regiment marches home for the winter. You have survived.');
+  }
+  const lines = ctx.lines.concat(ctx.gazette);
+  appendGazette(state, 'The Summer Campaign of ' + currentYear(state), lines);
+  return { lines: lines, died: char.dead };
 }
 
 function resolveEngagement(state, ctx) {

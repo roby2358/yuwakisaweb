@@ -3,7 +3,7 @@
 
 // Bump on every change to the scripts. Shown in the header so you can confirm
 // the browser is running the current build and not a cached one.
-const BUILD = 35;
+const BUILD = 37;
 
 let game = null;
 let candidate = null;
@@ -26,20 +26,36 @@ function updateWeekParams(state, week, action, prior) {
 // ---------- Month flow ----------
 
 function liveMonth() {
-  const plan = game.character.atFront !== null
-    ? { weeks: [], conspicuous: false }
-    : collectPlan(game);
-  if (game.character.atFront === null) {
-    const errors = validatePlan(game, plan);
-    if (errors.length > 0) {
-      el('plan-errors').innerHTML = errors.map(esc).join('<br>');
-      return;
-    }
-    game.lastPlan = plan; // next month defaults to this same plan
+  const plan = collectPlan(game);
+  const errors = validatePlan(game, plan);
+  if (errors.length > 0) {
+    el('plan-errors').innerHTML = errors.map(esc).join('<br>');
+    return;
   }
+  game.lastPlan = plan; // next month defaults to this same plan
   resolveMonth(game, plan);
   saveGame(game);
+  if (!game.character.dead && game.pendingCampaign) {
+    game.pendingCampaign = false;
+    enterCampaign(false);
+    return;
+  }
   render(game);
+}
+
+// A campaign — volunteered or a brigade call-up — resolves the whole summer at
+// once and shows it in the campaign panel. Its return button lands the player
+// back in Paris, or at the death overlay if he fell.
+function enterCampaign(volunteer) {
+  const result = resolveCampaign(game, volunteer);
+  saveGame(game);
+  renderCampaign(game, result);
+  el('campaign-overlay').classList.remove('hidden');
+}
+
+function doCampaignReturn() {
+  el('campaign-overlay').classList.add('hidden');
+  render(game); // month view, or the death overlay via renderDeath if he fell
 }
 
 // ---------- Chargen flow ----------
@@ -94,8 +110,8 @@ function doJoinClub() {
 }
 
 function doApplyRegiment() {
-  applications(game).regiment = game.monthIndex;
   const result = applyToRegiment(game, el('regiment-select').value, parseInt(el('rank-select').value, 10));
+  if (result.attempted) applications(game).regiment = game.monthIndex; // only a real petition spends the month
   appendGazette(game, 'The Regiments', [result.message]);
   saveGame(game);
   render(game);
@@ -141,10 +157,7 @@ function doAskAdvice() {
 }
 
 function doVolunteer() {
-  const message = volunteerForCampaign(game);
-  appendGazette(game, 'The Drums of Summer', [message]);
-  saveGame(game);
-  render(game);
+  enterCampaign(true);
 }
 
 // ---------- Event delegation ----------
@@ -167,6 +180,7 @@ function onClick(event) {
     'loan-borrow': doBorrow,
     'loan-repay': doRepay,
     'ask-advice': doAskAdvice,
+    'campaign-return': doCampaignReturn,
     'new-game': confirmNewGame,
     'chargen-reroll': function () { showChargen(); },
     'chargen-begin': beginGame,
