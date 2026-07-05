@@ -129,37 +129,54 @@ function prefermentTargets(state) {
   return targets;
 }
 
-function weekParamsHTML(state, week, action) {
+// prior holds last month's params for this week, so a repeated plan keeps the
+// same lady, rival, stake, or petition rather than resetting to the default.
+function weekParamsHTML(state, week, action, prior) {
   if (action === 'gamble') {
     const venue = gamblingVenue(state.character);
     const limit = venue.houseLimit === null ? 'no limit' : 'limit ' + venue.houseLimit;
-    return 'stake <input type="number" class="p-stake" data-week="' + week + '" value="' + Math.max(10, venue.minBet) + '" min="' + venue.minBet + '"> × ' +
-      'bets <input type="number" class="p-bets" data-week="' + week + '" value="3" min="1" max="' + MAX_BETS_PER_WEEK + '"> <small>(' + limit + ')</small>';
+    const stake = prior.stake !== undefined ? prior.stake : Math.max(10, venue.minBet);
+    const bets = prior.bets !== undefined ? prior.bets : 3;
+    return 'stake <input type="number" class="p-stake" data-week="' + week + '" value="' + stake + '" min="' + venue.minBet + '"> × ' +
+      'bets <input type="number" class="p-bets" data-week="' + week + '" value="' + bets + '" min="1" max="' + MAX_BETS_PER_WEEK + '"> <small>(' + limit + ')</small>';
   }
   if (action === 'court') {
-    return '<select class="p-lady" data-week="' + week + '">' + courtableLadies(state).map(function (l) {
+    return selectHTML('p-lady', week, courtableLadies(state).map(function (l) {
       const need = courtingRollNeeded(state.character.sl - l.sl) + (l.lover !== null ? 2 : 0);
       const needText = need > 6 ? 'hopeless' : 'needs ' + need + '+';
-      return '<option value="' + l.id + '">' + esc(l.name) + ' (SL ' + l.sl + ', ' + COURTING_COST_MULT * l.sl + ' cr, ' + needText + ')</option>';
-    }).join('') + '</select>';
+      return { value: l.id, label: esc(l.name) + ' (SL ' + l.sl + ', ' + COURTING_COST_MULT * l.sl + ' cr, ' + needText + ')' };
+    }), prior.ladyId);
   }
   if (action === 'toady') {
-    return '<select class="p-npc" data-week="' + week + '">' + toadyTargets(state).map(function (n) {
-      return '<option value="' + n.id + '">' + esc(n.name) + ' (SL ' + n.sl + ')</option>';
-    }).join('') + '</select>';
+    return selectHTML('p-npc', week, toadyTargets(state).map(function (n) {
+      return { value: n.id, label: esc(n.name) + ' (SL ' + n.sl + ')' };
+    }), prior.npcId);
   }
   if (action === 'preferment') {
-    return '<select class="p-pref" data-week="' + week + '">' + prefermentTargets(state).map(function (t) {
-      return '<option value="' + t.kind + ':' + t.index + '">' + esc(t.label) + '</option>';
-    }).join('') + '</select>';
+    const priorPref = prior.kind !== undefined ? prior.kind + ':' + prior.targetIndex : null;
+    return selectHTML('p-pref', week, prefermentTargets(state).map(function (t) {
+      return { value: t.kind + ':' + t.index, label: esc(t.label) };
+    }), priorPref);
   }
   return '';
 }
 
-// Wounds claim the opening weeks; required duty is pre-set in the last slots.
-function plannerPresets(char) {
+function selectHTML(cls, week, options, priorValue) {
+  const body = options.map(function (o) {
+    const selected = o.value === priorValue ? ' selected' : '';
+    return '<option value="' + o.value + '"' + selected + '>' + o.label + '</option>';
+  }).join('');
+  return '<select class="' + cls + '" data-week="' + week + '">' + body + '</select>';
+}
+
+// Each week defaults to what you did that week last month (if it is still a
+// valid choice); wounds claim the opening weeks; required duty fills the tail.
+function plannerPresets(state) {
+  const char = state.character;
   const woundIdle = Math.min(4, char.woundWeeks);
   const dutyNeeded = requiredDutyWeeks(char);
+  const last = state.lastPlan;
+  const available = actionChoices(state).map(function (c) { return c[0]; });
   const presets = [];
   for (let week = 0; week < 4; week++) {
     if (week < woundIdle) {
@@ -167,10 +184,18 @@ function plannerPresets(char) {
     } else if (week >= 4 - dutyNeeded) {
       presets.push({ action: 'duty', locked: false });
     } else {
-      presets.push({ action: 'idle', locked: false });
+      const prior = last && last.weeks[week] ? last.weeks[week].action : 'idle';
+      const action = available.indexOf(prior) >= 0 ? prior : 'idle';
+      presets.push({ action: action, locked: false });
     }
   }
   return presets;
+}
+
+function priorParams(state, week) {
+  const last = state.lastPlan;
+  if (!last || !last.weeks[week] || last.weeks[week].params === undefined) return {};
+  return last.weeks[week].params;
 }
 
 function renderPlanner(state) {
@@ -185,7 +210,7 @@ function renderPlanner(state) {
     return;
   }
   const choices = actionChoices(state);
-  const presets = plannerPresets(char);
+  const presets = plannerPresets(state);
   let html = '<h3>Plan of the Month — ' + esc(monthLabel(state)) + '</h3>';
   for (let week = 0; week < 4; week++) {
     const preset = presets[week];
@@ -198,7 +223,8 @@ function renderPlanner(state) {
       '<select class="week-action" data-week="' + week + '"' + locked + '>' + options + '</select>' +
       '<span class="week-params" id="params-' + week + '"></span></div>';
   }
-  html += '<div class="week"><label>Luxury</label>Conspicuous purchases: <input type="number" id="conspicuous" value="0" min="0" max="9"> × ' +
+  const priorConspicuous = state.lastPlan ? state.lastPlan.conspicuous : 0;
+  html += '<div class="week"><label>Luxury</label>Conspicuous purchases: <input type="number" id="conspicuous" value="' + priorConspicuous + '" min="0" max="9"> × ' +
     (CONSPICUOUS_MULT * char.sl) + ' crowns (+1 status each)</div>';
   html += '<div id="plan-errors" class="errors"></div>';
   html += '<button id="live-month" class="big">Live the Month</button>';

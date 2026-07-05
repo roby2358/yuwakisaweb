@@ -1,6 +1,10 @@
 // En Garde! — The Season in Paris
 // index.js — bootstrapping and event wiring. MIT License.
 
+// Bump on every change to the scripts. Shown in the header so you can confirm
+// the browser is running the current build and not a cached one.
+const BUILD = 5;
+
 let game = null;
 let candidate = null;
 let chargenMode = 'new'; // 'new' = fresh world, 'replace' = same world, new character
@@ -9,13 +13,14 @@ let chargenMode = 'new'; // 'new' = fresh world, 'replace' = same world, new cha
 
 function wirePlanner(state) {
   document.querySelectorAll('.week-action').forEach(function (select) {
-    updateWeekParams(state, parseInt(select.dataset.week, 10), select.value);
+    const week = parseInt(select.dataset.week, 10);
+    updateWeekParams(state, week, select.value, priorParams(state, week));
   });
 }
 
-function updateWeekParams(state, week, action) {
+function updateWeekParams(state, week, action, prior) {
   const span = el('params-' + week);
-  if (span !== null) span.innerHTML = weekParamsHTML(state, week, action);
+  if (span !== null) span.innerHTML = weekParamsHTML(state, week, action, prior);
 }
 
 // ---------- Month flow ----------
@@ -30,6 +35,7 @@ function liveMonth() {
       el('plan-errors').innerHTML = errors.map(esc).join('<br>');
       return;
     }
+    game.lastPlan = plan; // next month defaults to this same plan
   }
   resolveMonth(game, plan);
   saveGame(game);
@@ -50,6 +56,7 @@ function beginGame() {
   if (chargenMode === 'replace') {
     game.character = candidate;
     game.affairs = [];
+    game.lastPlan = null;
   } else {
     game = newGame(candidate);
   }
@@ -155,44 +162,15 @@ function onClick(event) {
 
 function onChange(event) {
   const target = event.target;
-  if (target.classList.contains('week-action')) {
-    const week = parseInt(target.dataset.week, 10);
-    updateWeekParams(game, week, target.value);
-    carryActionForward(game, week, target.value);
-    return;
-  }
-  carryParamForward(target);
-}
-
-// A chosen action carries into the following weeks, sparing the duty slots
-// pre-set at the month's end and any weeks locked by wounds.
-function carryActionForward(state, week, action) {
-  const dutyNeeded = requiredDutyWeeks(state.character);
-  for (let w = week + 1; w < 4; w++) {
-    if (w >= 4 - dutyNeeded) continue;
-    const select = document.querySelector('.week-action[data-week="' + w + '"]');
-    if (select === null || select.disabled) continue;
-    select.value = action;
-    updateWeekParams(state, w, action);
-  }
-}
-
-const CARRIED_PARAM_CLASSES = ['p-stake', 'p-bets', 'p-lady', 'p-npc', 'p-pref'];
-
-function carryParamForward(target) {
+  if (!target.classList.contains('week-action')) return;
   const week = parseInt(target.dataset.week, 10);
-  if (Number.isNaN(week)) return;
-  const cls = CARRIED_PARAM_CLASSES.find(function (c) { return target.classList.contains(c); });
-  if (cls === undefined) return;
-  for (let w = week + 1; w < 4; w++) {
-    const next = document.querySelector('.' + cls + '[data-week="' + w + '"]');
-    if (next !== null) next.value = target.value;
-  }
+  updateWeekParams(game, week, target.value, {});
 }
 
 // ---------- Boot ----------
 
 function boot() {
+  el('build-tag').textContent = 'build ' + BUILD;
   document.addEventListener('click', onClick);
   document.addEventListener('change', onChange);
   const saved = loadGame();

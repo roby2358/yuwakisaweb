@@ -174,6 +174,7 @@ function newGame(character) {
     affairs: [],   // pending affairs of honour awaiting the player's answer
     campaign: null, // active summer deployment for the player's brigade
     applications: { club: -1, regiment: -1 }, // monthIndex of the last attempt
+    lastPlan: null, // last month's plan, used to pre-fill the planner
   };
 }
 
