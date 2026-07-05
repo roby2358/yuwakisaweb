@@ -234,7 +234,9 @@ function resolveGambling(state, stake, bets, ctx) {
   const bonus = Math.floor(wagered / venue.divisor);
   ctx.sp += bonus;
   const bonusNote = bonus > 0 ? (' Word of your play spreads (+' + bonus + ' status).') : '';
-  ctx.lines.push('Gambling at ' + venue.name + ': ' + wins + ' won, ' + losses + ' lost at ' + wager + ' crowns a hand.' + bonusNote);
+  const net = (wins - losses) * wager;
+  const outcome = net > 0 ? 'Won ' + net + ' crowns' : (net < 0 ? 'Lost ' + (-net) + ' crowns' : 'Broke even');
+  ctx.lines.push(outcome + ' at ' + venue.name + ': ' + wins + ' won, ' + losses + ' lost at ' + wager + ' crowns a hand.' + bonusNote);
 }
 
 function resolveCourtship(state, ladyId, ctx) {
