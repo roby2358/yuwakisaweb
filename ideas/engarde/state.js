@@ -212,6 +212,10 @@ function findClub(id) {
   return CLUBS.find(function (c) { return c.id === id; });
 }
 
+function findAppointment(id) {
+  return APPOINTMENTS.find(function (a) { return a.id === id; });
+}
+
 // ---------- Save / load ----------
 
 const SAVE_KEY = 'engarde-save';

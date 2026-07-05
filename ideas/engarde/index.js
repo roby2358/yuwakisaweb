@@ -3,7 +3,7 @@
 
 // Bump on every change to the scripts. Shown in the header so you can confirm
 // the browser is running the current build and not a cached one.
-const BUILD = 5;
+const BUILD = 7;
 
 let game = null;
 let candidate = null;
@@ -162,9 +162,11 @@ function onClick(event) {
 
 function onChange(event) {
   const target = event.target;
-  if (!target.classList.contains('week-action')) return;
-  const week = parseInt(target.dataset.week, 10);
-  updateWeekParams(game, week, target.value, {});
+  if (target.classList.contains('week-action')) {
+    const week = parseInt(target.dataset.week, 10);
+    updateWeekParams(game, week, target.value, {});
+  }
+  if (target.closest('#planner') !== null) renderStatusPanel(game);
 }
 
 // ---------- Boot ----------

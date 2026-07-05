@@ -15,6 +15,15 @@ function rankData(char) {
   return { name: rank.name, pay: rank.pay[col], status: rank.status[col], dutyWeeks: rank.dutyWeeks };
 }
 
+function currentRankStatus(char) {
+  const rank = rankData(char);
+  return rank === null ? 0 : rank.status;
+}
+
+function currentAppointmentStatus(char) {
+  return char.appointmentId === null ? 0 : findAppointment(char.appointmentId).status;
+}
+
 function titleIndex(char) {
   if (char.title === null) return -1;
   return TITLES.findIndex(function (t) { return t.name === char.title; });
@@ -51,6 +60,7 @@ function gamblingVenue(char) {
 
 // ---------- Week actions (dispatch table) ----------
 
+// forecastSP: the best status the week could yield, for the Status panel.
 const WEEK_ACTIONS = {
   idle: {
     label: 'Keep to your lodgings',
@@ -65,6 +75,7 @@ const WEEK_ACTIONS = {
       char.endCur = Math.min(char.endMax, char.endCur + char.con);
       ctx.lines.push('A quiet week at your lodgings.');
     },
+    forecastSP: function (state, params) { return 0; },
   },
   duty: {
     label: 'Regimental duty',
@@ -72,6 +83,7 @@ const WEEK_ACTIONS = {
       ctx.dutyDone += 1;
       ctx.lines.push('A week on duty with the ' + findRegiment(state.character.regimentId).name + '.');
     },
+    forecastSP: function (state, params) { return 0; },
   },
   carouse: {
     label: 'Carouse at your club',
@@ -87,6 +99,7 @@ const WEEK_ACTIONS = {
       ctx.caroused = true;
       ctx.lines.push('You carouse at ' + findClub(char.clubId).name + ' (' + cost + ' crowns, +1 status).');
     },
+    forecastSP: function (state, params) { return CAROUSE_STATUS; },
   },
   bawdy: {
     label: 'Visit the bawdyhouse',
@@ -102,11 +115,19 @@ const WEEK_ACTIONS = {
       ctx.bawdyVisited = true;
       ctx.lines.push('A week of low company at the bawdyhouse (' + cost + ' crowns, +1 status).');
     },
+    forecastSP: function (state, params) { return CAROUSE_STATUS; },
   },
   gamble: {
     label: 'Gamble',
     resolve: function (state, params, ctx) {
       resolveGambling(state, params.stake, params.bets, ctx);
+    },
+    forecastSP: function (state, params) {
+      const venue = gamblingVenue(state.character);
+      const limit = venue.houseLimit === null ? Infinity : venue.houseLimit;
+      const wager = Math.max(venue.minBet, Math.min(params.stake, limit));
+      const bets = Math.min(params.bets, MAX_BETS_PER_WEEK);
+      return bets + Math.floor(bets * wager / venue.divisor);
     },
   },
   court: {
@@ -114,11 +135,19 @@ const WEEK_ACTIONS = {
     resolve: function (state, params, ctx) {
       resolveCourtship(state, params.ladyId, ctx);
     },
+    forecastSP: function (state, params) { return 0; }, // her favour lands under companionship
   },
   toady: {
     label: 'Toady to a gentleman',
     resolve: function (state, params, ctx) {
       resolveToadying(state, params.npcId, ctx);
+    },
+    forecastSP: function (state, params) {
+      const npc = findNpc(state, params.npcId);
+      if (npc === undefined) return 0;
+      const diff = npc.sl - state.character.sl;
+      if (diff <= 0) return 0;
+      return 1 + Math.floor(diff / 4);
     },
   },
   petition: {
@@ -126,11 +155,21 @@ const WEEK_ACTIONS = {
     resolve: function (state, params, ctx) {
       resolvePromotionPetition(state, ctx);
     },
+    forecastSP: function (state, params) {
+      const char = state.character;
+      const purchase = nextRankPurchase(char);
+      if (purchase === null) return 0;
+      const col = findRegiment(char.regimentId).column;
+      return Math.max(0, purchase.rank.status[col] - currentRankStatus(char));
+    },
   },
   preferment: {
     label: 'Seek preferment at court',
     resolve: function (state, params, ctx) {
       resolvePreferment(state, params.kind, params.targetIndex, ctx);
+    },
+    forecastSP: function (state, params) {
+      return PREFERMENT_KINDS[params.kind].forecastSP(state, params.targetIndex);
     },
   },
 };
@@ -302,6 +341,9 @@ const PREFERMENT_KINDS = {
       ctx.lines.push('You are named ' + APPOINTMENTS[i].name + '. The appointment is worth ' + APPOINTMENTS[i].status + ' status a month.');
     },
     name: function (i) { return APPOINTMENTS[i].name; },
+    // A new appointment replaces the old, so only the improvement counts;
+    // if it would be a step down, the best case is the petition failing.
+    forecastSP: function (state, i) { return Math.max(0, APPOINTMENTS[i].status - currentAppointmentStatus(state.character)); },
   },
   title: {
     eligible: titleEligible,
@@ -316,6 +358,7 @@ const PREFERMENT_KINDS = {
       ctx.lines.push('The King is pleased to create you ' + t.name + '! Your social level rises to ' + char.sl + '.');
     },
     name: function (i) { return TITLES[i].name; },
+    forecastSP: function (state, i) { return TITLES[i].statusBurst; },
   },
   generalRank: {
     eligible: generalRankEligible,
@@ -326,6 +369,8 @@ const PREFERMENT_KINDS = {
       ctx.lines.push('You are gazetted ' + GENERAL_RANKS[i].name + '. Paris bows a little lower.');
     },
     name: function (i) { return GENERAL_RANKS[i].name; },
+    // General rank supersedes regimental rank in the monthly reckoning.
+    forecastSP: function (state, i) { return Math.max(0, GENERAL_RANKS[i].status - currentRankStatus(state.character)); },
   },
 };
 
@@ -624,8 +669,7 @@ function resolveIncome(state, ctx) {
   const rank = rankData(char);
   if (rank !== null) income += rank.pay;
   if (char.appointmentId !== null) {
-    const appt = APPOINTMENTS.find(function (a) { return a.id === char.appointmentId; });
-    income += appt.pay;
+    income += findAppointment(char.appointmentId).pay;
   }
   if (income > 0) {
     char.cash += income;
@@ -706,7 +750,7 @@ function resolveMonthlyStatus(state, ctx) {
   const rank = rankData(char);
   if (rank !== null) ctx.sp += rank.status;
   if (char.appointmentId !== null) {
-    ctx.sp += APPOINTMENTS.find(function (a) { return a.id === char.appointmentId; }).status;
+    ctx.sp += findAppointment(char.appointmentId).status;
   }
   ctx.sp += Math.min(char.mentions, 5);
   resolveCompanionship(state, ctx);
@@ -748,6 +792,52 @@ function resolveDebts(state, ctx) {
     char.sl = Math.max(1, char.sl - 1);
     ctx.lines.push('Bailiffs at the door! ' + seized + ' crowns are seized and your credit is a public joke. Social level falls to ' + char.sl + '.');
   }
+}
+
+// ---------- Status forecast (the Status panel) ----------
+
+// Everything that will count toward this month's status if every roll goes
+// the player's way: standing influences plus the planned weeks' best cases.
+function statusForecast(state, plan) {
+  const char = state.character;
+  const items = [];
+  if (char.carrySP !== 0) items.push({ label: 'Carried over', sp: char.carrySP });
+  const rank = rankData(char);
+  if (rank !== null) items.push({ label: rank.name + ', ' + findRegiment(char.regimentId).name, sp: rank.status });
+  if (char.clubId !== null) {
+    const club = findClub(char.clubId);
+    items.push({ label: 'Member of ' + club.name, sp: club.status });
+  }
+  if (char.appointmentId !== null) {
+    const appt = findAppointment(char.appointmentId);
+    items.push({ label: appt.name, sp: appt.status });
+  }
+  if (char.mentions > 0) items.push({ label: 'Mentioned in despatches', sp: Math.min(char.mentions, 5) });
+  const companionship = companionshipForecast(state, plan);
+  if (companionship !== null) items.push(companionship);
+  plan.weeks.forEach(function (week, i) {
+    const sp = WEEK_ACTIONS[week.action].forecastSP(state, week.params);
+    if (sp !== 0) items.push({ label: 'Week ' + (i + 1) + ': ' + WEEK_ACTIONS[week.action].label, sp: sp });
+  });
+  if (plan.conspicuous > 0) items.push({ label: 'Conspicuous consumption', sp: plan.conspicuous });
+  const dutyPlanned = plan.weeks.filter(function (w) { return w.action === 'duty'; }).length;
+  if (dutyPlanned < requiredDutyWeeks(char)) items.push({ label: 'Shirking regimental duty', sp: -2 });
+  return items;
+}
+
+function companionshipForecast(state, plan) {
+  const char = state.character;
+  if (char.mistressId !== null) {
+    const lady = findLady(state, char.mistressId);
+    return { label: 'Mistress: ' + lady.name, sp: 1 + (lady.beautiful ? 1 : 0) };
+  }
+  const courted = plan.weeks.find(function (w) { return w.action === 'court'; });
+  if (courted !== undefined) {
+    const lady = findLady(state, courted.params.ladyId);
+    if (lady !== undefined) return { label: 'If ' + lady.name + ' consents', sp: 1 + (lady.beautiful ? 1 : 0) };
+  }
+  if (plan.weeks.some(function (w) { return w.action === 'bawdy'; })) return null;
+  return { label: 'No lady on your arm', sp: -(char.lonelyMonths + 1) };
 }
 
 // ---------- Status reckoning ----------

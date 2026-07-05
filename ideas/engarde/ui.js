@@ -30,7 +30,7 @@ function renderSheet(state) {
     ['Debt', char.debt > 0 ? char.debt + ' crowns' : '—'],
     ['Influence', characterInfluence(state)],
     ['Regiment', rank === null ? 'None' : rank.name + ', ' + findRegiment(char.regimentId).name],
-    ['Appointment', char.appointmentId === null ? '—' : APPOINTMENTS.find(function (a) { return a.id === char.appointmentId; }).name],
+    ['Appointment', char.appointmentId === null ? '—' : findAppointment(char.appointmentId).name],
     ['Club', club === null ? 'None' : club.name],
     ['Mistress', mistress === null ? 'None' : mistress.name + ' (SL ' + mistress.sl + ')'],
     ['Mentions', char.mentions],
@@ -285,6 +285,27 @@ function renderRegimentOffers(state) {
   setPetitionButton(el('regiment-apply'), applications(state).regiment === state.monthIndex);
 }
 
+// ---------- Status panel ----------
+
+// Reads the planner's current selections, so it must render after wirePlanner
+// has filled in the week params.
+function renderStatusPanel(state) {
+  const box = el('status-panel');
+  const char = state.character;
+  if (char.atFront !== null) {
+    box.innerHTML = '<p class="note">Status is reckoned when you return from the front.' +
+      (char.carrySP !== 0 ? ' Carried so far: ' + formatSP(char.carrySP) + '.' : '') + '</p>';
+    return;
+  }
+  const items = statusForecast(state, collectPlan(state));
+  const total = items.reduce(function (sum, item) { return sum + item.sp; }, 0);
+  box.innerHTML = items.map(function (item) {
+    return '<div class="row"><span>' + esc(item.label) + '</span><b>' + formatSP(item.sp) + '</b></div>';
+  }).join('') +
+    '<div class="row total"><span>If all goes well</span><b>' + formatSP(total) + '</b></div>' +
+    '<p class="hint">Hold your level at ' + char.sl + ' pts; rise at ' + (3 * (char.sl + 1)) + ' pts.</p>';
+}
+
 // ---------- Gazette ----------
 
 function renderGazette(state) {
@@ -338,6 +359,7 @@ function render(state) {
   renderGazette(state);
   renderDeath(state);
   wirePlanner(state);
+  renderStatusPanel(state);
 }
 
 // ---------- Plan collection ----------

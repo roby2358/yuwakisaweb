@@ -63,6 +63,7 @@ main {
 
 .row { display: flex; justify-content: space-between; padding: 1px 0; }
 .row span { color: #6b5a44; }
+.row.total { border-top: 1px solid var(--edge); margin-top: 4px; padding-top: 4px; font-variant: small-caps; }
 
 .hint { font-size: 12px; color: #6b5a44; font-style: italic; margin: 8px 0 0; }
 
