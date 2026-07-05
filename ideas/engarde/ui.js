@@ -17,6 +17,7 @@ function renderSheet(state) {
   const char = state.character;
   const rank = rankData(char);
   const club = char.clubId === null ? null : findClub(char.clubId);
+  const appt = char.appointmentId === null ? null : findAppointment(char.appointmentId);
   const mistress = char.mistressId === null ? null : findLady(state, char.mistressId);
   const styled = char.title === null ? char.name : char.name + ', ' + char.title;
   const rows = [
@@ -29,12 +30,13 @@ function renderSheet(state) {
     ['Allowance', char.allowance + '/month'],
     ['Debt', char.debt > 0 ? char.debt + ' crowns' : '—'],
     ['Influence', characterInfluence(state)],
-    ['Regiment', rank === null ? 'None' : rank.name + ', ' + findRegiment(char.regimentId).name],
-    ['Appointment', char.appointmentId === null ? '—' : findAppointment(char.appointmentId).name],
-    ['Club', club === null ? 'None' : club.name],
+    ['Regiment', rank === null ? 'None' : rank.name + ', ' + findRegiment(char.regimentId).name + ' (+' + rank.status + 'S)'],
+    ['Appointment', appt === null ? '—' : appt.name + ' (+' + appt.status + 'S)'],
+    ['Club', club === null ? 'None' : club.name + ' (+' + club.status + 'S)'],
     ['Mistress', mistress === null ? 'None' : mistress.name + ' (SL ' + mistress.sl + ')'],
     ['Mentions', char.mentions],
   ];
+  if (char.horses > 0) rows.push(['Stable', char.horses + ' horse' + (char.horses > 1 ? 's' : '') + ' (' + (char.horses * HORSE_UPKEEP + GROOM_WAGE) + ' cr/month with groom)']);
   if (char.woundWeeks > 0) rows.push(['Wounds', char.woundWeeks + ' week(s) of rest needed']);
   el('sheet-name').innerHTML = esc(styled);
   el('sheet-rows').innerHTML = rows.map(function (r) {
@@ -118,13 +120,13 @@ function toadyTargets(state) {
 function prefermentTargets(state) {
   const targets = [];
   APPOINTMENTS.forEach(function (a, i) {
-    if (state.character.appointmentId !== a.id && appointmentEligible(state, a)) targets.push({ kind: 'appointment', index: i, label: a.name });
+    if (state.character.appointmentId !== a.id && appointmentEligible(state, a)) targets.push({ kind: 'appointment', index: i, label: a.name + ' (+' + a.status + 'S)' });
   });
   TITLES.forEach(function (t, i) {
-    if (titleEligible(state, i)) targets.push({ kind: 'title', index: i, label: 'The title of ' + t.name });
+    if (titleEligible(state, i)) targets.push({ kind: 'title', index: i, label: 'The title of ' + t.name + ' (+' + t.statusBurst + 'S)' });
   });
   GENERAL_RANKS.forEach(function (g, i) {
-    if (generalRankEligible(state, i)) targets.push({ kind: 'generalRank', index: i, label: 'Promotion to ' + g.name });
+    if (generalRankEligible(state, i)) targets.push({ kind: 'generalRank', index: i, label: 'Promotion to ' + g.name + ' (+' + g.status + 'S)' });
   });
   return targets;
 }
@@ -258,7 +260,7 @@ function renderClubOffers(state) {
   const open = CLUBS.filter(function (c) { return clubEligible(char, c) && char.clubId !== c.id; });
   const select = el('club-select');
   select.innerHTML = open.map(function (c) {
-    return '<option value="' + c.id + '">' + esc(c.name) + ' (' + c.dues * CLUB_ADMISSION_MULT + ' cr entry, ' + c.dues + '/mo, +' + c.status + ' status)</option>';
+    return '<option value="' + c.id + '">' + esc(c.name) + ' (' + c.dues * CLUB_ADMISSION_MULT + ' cr entry, ' + c.dues + '/mo, +' + c.status + 'S)</option>';
   }).join('');
   el('club-join-row').classList.toggle('hidden', open.length === 0);
   setPetitionButton(el('club-join'), applications(state).club === state.monthIndex);
@@ -282,7 +284,24 @@ function renderRegimentOffers(state) {
     const note = need > 6 ? 'closed to you' : (need <= 0 ? 'open' : 'roll ' + need + '+');
     return '<option value="' + r.id + '">' + esc(r.name) + ' (' + note + (r.cavalry ? ', cavalry' : '') + ')</option>';
   }).join('');
+  renderEntryRanks(state);
   setPetitionButton(el('regiment-apply'), applications(state).regiment === state.monthIndex);
+}
+
+// Ranks purchasable at the regiment currently picked in the join row.
+function renderEntryRanks(state) {
+  const regiment = findRegiment(el('regiment-select').value);
+  if (regiment === undefined) {
+    el('rank-select').innerHTML = '';
+    return;
+  }
+  el('rank-select').innerHTML = entryRanks(state.character, regiment).map(function (r) {
+    const parts = [];
+    if (r.price > 0) parts.push(r.price + ' cr');
+    if (r.horses > 0) parts.push(r.horses + (r.horses > 1 ? ' horses' : ' horse'));
+    parts.push('+' + r.status + 'S');
+    return '<option value="' + r.index + '">' + r.rank.name + ' (' + parts.join(', ') + ')</option>';
+  }).join('');
 }
 
 // ---------- Status panel ----------
@@ -300,10 +319,10 @@ function renderStatusPanel(state) {
   const items = statusForecast(state, collectPlan(state));
   const total = items.reduce(function (sum, item) { return sum + item.sp; }, 0);
   box.innerHTML = items.map(function (item) {
-    return '<div class="row"><span>' + esc(item.label) + '</span><b>' + formatSP(item.sp) + '</b></div>';
+    return '<div class="row"><span>' + esc(item.label) + '</span><b>' + formatSP(item.sp) + 'S</b></div>';
   }).join('') +
-    '<div class="row total"><span>If all goes well</span><b>' + formatSP(total) + '</b></div>' +
-    '<p class="hint">Hold your level at ' + char.sl + ' pts; rise at ' + (3 * (char.sl + 1)) + ' pts.</p>';
+    '<div class="row total"><span>If all goes well</span><b>' + formatSP(total) + 'S</b></div>' +
+    '<p class="hint">Hold your level at ' + char.sl + 'S; rise at ' + (3 * (char.sl + 1)) + 'S.</p>';
 }
 
 // ---------- Gazette ----------

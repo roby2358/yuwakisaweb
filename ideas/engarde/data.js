@@ -128,6 +128,10 @@ const RANKS = [
   { name: 'Colonel', dutyWeeks: 0, minSL: [12, 11, 10, 9, 8, 7, 6, 6, 5, 5], price: [240, 230, 220, 210, 200, 190, 180, 170, 160, 150], pay: [30, 28, 28, 26, 26, 24, 22, 22, 20, 20], status: [11, 10, 9, 8, 8, 7, 6, 5, 4, 3] },
 ];
 
+// A commission may be purchased on joining, up through Major, paying for
+// every rank up to it (purchase is cumulative).
+const MAX_ENTRY_RANK = 3;
+
 // General officer ranks sit above the regimental ladder (rank index 6+).
 // Reached by petition at court, not purchase. inf/roll: influence needed to
 // petition and the 2d6 roll required.
@@ -138,10 +142,11 @@ const GENERAL_RANKS = [
   { name: 'Field Marshal', minSL: 12, pay: 45, status: 20, inf: 6, roll: 11 },
 ];
 
-// Cavalry: a horse must be bought on joining; Majors and above keep three
-// horses and grooms (monthly upkeep). Adaptation of the horse rules.
-const HORSE_PRICE = 50;
-const CAVALRY_FIELD_UPKEEP = 10;
+// Horses: cavalrymen and captains must keep a horse; majors and above keep
+// three. Any stable, large or small, needs a single groom.
+const HORSE_PRICE = 100;
+const HORSE_UPKEEP = 3; // crowns per horse per month
+const GROOM_WAGE = 2;   // crowns per month while any horses are kept
 
 // ---------- Campaign tables ----------
 

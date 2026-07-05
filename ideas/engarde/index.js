@@ -3,7 +3,7 @@
 
 // Bump on every change to the scripts. Shown in the header so you can confirm
 // the browser is running the current build and not a cached one.
-const BUILD = 7;
+const BUILD = 15;
 
 let game = null;
 let candidate = null;
@@ -96,7 +96,7 @@ function doJoinClub() {
 
 function doApplyRegiment() {
   applications(game).regiment = game.monthIndex;
-  const result = applyToRegiment(game, el('regiment-select').value);
+  const result = applyToRegiment(game, el('regiment-select').value, parseInt(el('rank-select').value, 10));
   appendGazette(game, 'The Regiments', [result.message]);
   saveGame(game);
   render(game);
@@ -166,6 +166,7 @@ function onChange(event) {
     const week = parseInt(target.dataset.week, 10);
     updateWeekParams(game, week, target.value, {});
   }
+  if (target.id === 'regiment-select') renderEntryRanks(game);
   if (target.closest('#planner') !== null) renderStatusPanel(game);
 }
 

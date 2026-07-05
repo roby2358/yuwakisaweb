@@ -288,8 +288,9 @@ function resolvePromotionPetition(state, ctx) {
     ctx.lines.push('The colonel is polite, but a ' + purchase.rank.name + "'s commission wants a gentleman of standing (social level " + purchase.minSL + ').');
     return;
   }
-  if (char.cash < purchase.price) {
-    ctx.lines.push('A ' + purchase.rank.name + "'s commission costs " + purchase.price + ' crowns — beyond your purse.');
+  const stableCost = Math.max(0, horsesForRank(char.rankIndex + 1, findRegiment(char.regimentId)) - char.horses) * HORSE_PRICE;
+  if (char.cash < purchase.price + stableCost) {
+    ctx.lines.push('A ' + purchase.rank.name + "'s commission costs " + purchase.price + ' crowns' + (stableCost > 0 ? ' and ' + stableCost + ' more in horses' : '') + ' — beyond your purse.');
     return;
   }
   const roll = d6() + Math.min(char.mentions, 2);
@@ -297,10 +298,11 @@ function resolvePromotionPetition(state, ctx) {
     ctx.lines.push('No vacancy this month; your petition gathers dust.');
     return;
   }
-  char.cash -= purchase.price;
+  char.cash -= purchase.price + stableCost;
   char.rankIndex += 1;
+  char.horses = Math.max(char.horses, horsesForRank(char.rankIndex, findRegiment(char.regimentId)));
   char.seniority = 0;
-  ctx.lines.push('Your purchase is approved: you are now a ' + purchase.rank.name + ' of the ' + findRegiment(char.regimentId).name + ' (' + purchase.price + ' crowns).');
+  ctx.lines.push('Your purchase is approved: you are now a ' + purchase.rank.name + ' of the ' + findRegiment(char.regimentId).name + ' (' + (purchase.price + stableCost) + ' crowns' + (stableCost > 0 ? ', horses included' : '') + ').');
 }
 
 // ---------- Preferment: titles, appointments, general ranks ----------
@@ -509,22 +511,54 @@ function applicationRollNeeded(char, regiment) {
   return 5 - Math.floor((char.sl - regiment.firstSL) / 2);
 }
 
-function applyToRegiment(state, regimentId) {
+// Cavalrymen and captains ride; majors and above (generals included) keep three.
+function horsesForRank(rankIndex, regiment) {
+  if (rankIndex >= 3) return 3;
+  if (rankIndex >= 2) return 1;
+  return regiment.cavalry ? 1 : 0;
+}
+
+// Purchase is cumulative: a commission costs every rank up to it.
+function commissionPrice(rankIndex, col) {
+  let total = 0;
+  for (let i = 1; i <= rankIndex; i++) total += RANKS[i].price[col];
+  return total;
+}
+
+// Ranks open to a direct buy-in at this regiment, by social level,
+// best commission first.
+function entryRanks(char, regiment) {
+  const col = regiment.column;
+  const open = [];
+  for (let i = MAX_ENTRY_RANK; i >= 0; i--) {
+    if (char.sl >= RANKS[i].minSL[col]) {
+      open.push({ index: i, rank: RANKS[i], price: commissionPrice(i, col), horses: horsesForRank(i, regiment), status: RANKS[i].status[col] });
+    }
+  }
+  return open;
+}
+
+function applyToRegiment(state, regimentId, rankIndex) {
   const char = state.character;
   const regiment = findRegiment(regimentId);
   const needed = applicationRollNeeded(char, regiment);
   if (needed > 6) return { ok: false, message: 'The ' + regiment.name + ' does not take gentlemen of your standing.' };
-  if (regiment.cavalry && char.cash < HORSE_PRICE) return { ok: false, message: 'A cavalry regiment requires a horse (' + HORSE_PRICE + ' crowns).' };
+  const rank = RANKS[rankIndex];
+  const col = regiment.column;
+  if (char.sl < rank.minSL[col]) return { ok: false, message: 'A ' + rank.name + "'s commission in the " + regiment.name + ' wants a gentleman of social level ' + rank.minSL[col] + '.' };
+  const price = commissionPrice(rankIndex, col);
+  const horses = horsesForRank(rankIndex, regiment);
+  const cost = price + horses * HORSE_PRICE;
+  if (char.cash < cost) return { ok: false, message: 'Joining as a ' + rank.name + ' costs ' + cost + ' crowns' + (horses > 0 ? ' (' + horses + ' horse' + (horses > 1 ? 's' : '') + ' included)' : '') + ' — beyond your purse.' };
   if (needed > 0 && d6() < needed) return { ok: false, message: 'The ' + regiment.name + ' regrets it has no place for you at present.' };
-  if (regiment.cavalry) {
-    char.cash -= HORSE_PRICE;
-    char.horses = 1;
-  }
+  char.cash -= cost;
+  char.horses = horses;
   char.regimentId = regimentId;
-  char.rankIndex = 0;
+  char.rankIndex = rankIndex;
   char.seniority = 0;
   char.appointmentId = null;
-  return { ok: true, message: 'You are sworn in as a Private of the ' + regiment.name + '.' };
+  if (rankIndex === 0) return { ok: true, message: 'You are sworn in as a Private of the ' + regiment.name + '.' };
+  return { ok: true, message: 'You purchase a ' + rank.name + "'s commission in the " + regiment.name + ' (' + cost + ' crowns' + (horses > 0 ? ', stable of ' + horses : '') + ').' };
 }
 
 function leaveRegiment(state) {
@@ -693,7 +727,7 @@ function resolveUpkeep(state, ctx) {
   const char = state.character;
   resolveMistressSupport(state, ctx);
   resolveClubDues(state, ctx);
-  resolveHorseUpkeep(state, ctx);
+  resolveStableUpkeep(state, ctx);
   const maintenance = MAINTENANCE_MULT * char.sl;
   if (char.cash >= maintenance) {
     char.cash -= maintenance;
@@ -732,16 +766,16 @@ function resolveClubDues(state, ctx) {
   ctx.lines.push('Struck from the rolls of ' + club.name + ' for non-payment of dues.');
 }
 
-function resolveHorseUpkeep(state, ctx) {
+function resolveStableUpkeep(state, ctx) {
   const char = state.character;
-  if (char.regimentId === null || !findRegiment(char.regimentId).cavalry) return;
-  if (char.rankIndex < 3) return;
-  if (char.cash >= CAVALRY_FIELD_UPKEEP) {
-    char.cash -= CAVALRY_FIELD_UPKEEP;
+  if (char.horses <= 0) return;
+  const cost = char.horses * HORSE_UPKEEP + GROOM_WAGE;
+  if (char.cash >= cost) {
+    char.cash -= cost;
     return;
   }
   ctx.sp -= 1;
-  ctx.lines.push('Your grooms go unpaid and your horses look it (-1 status).');
+  ctx.lines.push('Your groom goes unpaid and your horses look it (-1 status).');
 }
 
 function resolveMonthlyStatus(state, ctx) {
@@ -967,6 +1001,13 @@ function resolveBattlePromotion(state, ctx) {
   char.rankIndex += 1;
   char.seniority = 0;
   ctx.lines.push('Field promotion! You are made ' + purchase.rank.name + ' without purchase.');
+  const needed = horsesForRank(char.rankIndex, findRegiment(char.regimentId));
+  const stableCost = Math.max(0, needed - char.horses) * HORSE_PRICE;
+  if (stableCost > 0 && char.cash >= stableCost) {
+    char.cash -= stableCost;
+    char.horses = needed;
+    ctx.lines.push('New rank, new stable: you buy up to ' + needed + ' horses (' + stableCost + ' crowns).');
+  }
 }
 
 // ---------- Rival NPCs ----------
