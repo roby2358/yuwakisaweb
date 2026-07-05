@@ -54,7 +54,7 @@ Seven scripts share the global namespace, loaded in dependency order
   `forecastSP(state, params)`, `forecastCost(state, params)`, and optionally
   `costLabel`. Adding a week action is one table entry, not a scavenger hunt.
   Follow this shape for any new kind/mode discriminator.
-- **Forecast panels mirror resolution.** The Status and Expenses panels
+- **Forecast panels mirror resolution.** The Status and Ledger panels
   predict what `resolveMonth` will do by reading live planner selections via
   `collectPlan(state)`. They must render *after* `wirePlanner(state)` in
   `render()`, and are re-rendered from the `onChange` handler whenever an

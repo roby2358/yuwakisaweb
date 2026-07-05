@@ -67,6 +67,14 @@ main {
 
 .hint { font-size: 12px; color: #6b5a44; font-style: italic; margin: 8px 0 0; }
 
+table.ledger { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+table.ledger th { font-variant: small-caps; font-weight: normal; color: var(--accent); text-align: right; padding: 1px 0 3px; }
+table.ledger td { padding: 1px 0; }
+table.ledger td:first-child { color: #6b5a44; }
+table.ledger th + th, table.ledger td + td { text-align: right; width: 80px; }
+table.ledger tr.total td { border-top: 1px solid var(--edge); padding-top: 4px; font-variant: small-caps; font-weight: bold; }
+table.ledger tr.total td:first-child { color: var(--ink); }
+
 .soc { padding: 3px 0; border-bottom: 1px dotted var(--edge); font-size: 13px; }
 .soc b { display: block; }
 .soc span { color: #6b5a44; font-size: 12px; }

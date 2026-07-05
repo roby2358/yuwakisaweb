@@ -3,7 +3,7 @@
 
 // Bump on every change to the scripts. Shown in the header so you can confirm
 // the browser is running the current build and not a cached one.
-const BUILD = 22;
+const BUILD = 24;
 
 let game = null;
 let candidate = null;
@@ -168,7 +168,7 @@ function onChange(event) {
   if (target.id === 'regiment-select') renderEntryRanks(game);
   if (target.closest('#planner') !== null) {
     renderStatusPanel(game);
-    renderExpensesPanel(game);
+    renderLedgerPanel(game);
   }
 }
 

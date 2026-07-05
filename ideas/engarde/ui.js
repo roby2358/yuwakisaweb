@@ -324,24 +324,39 @@ function renderStatusPanel(state) {
     '<p class="hint">Hold your level at ' + char.sl + 'S; rise at ' + (3 * (char.sl + 1)) + 'S.</p>';
 }
 
-// ---------- Expenses panel ----------
+// ---------- Ledger panel ----------
 
 // Reads the planner like the Status panel, so it also renders after
 // wirePlanner has filled in the week params.
-function renderExpensesPanel(state) {
-  const box = el('expenses-panel');
+function renderLedgerPanel(state) {
+  const box = el('ledger-panel');
   const char = state.character;
   if (char.atFront !== null) {
     box.innerHTML = '<p class="note">The army feeds you; Paris prices wait for your return.</p>';
     return;
   }
-  const items = expensesForecast(state, collectPlan(state));
-  const total = items.reduce(function (sum, item) { return sum + item.cost; }, 0);
-  box.innerHTML = items.map(function (item) {
-    return '<div class="row"><span>' + esc(item.label) + '</span><b>' + item.cost + ' cr</b></div>';
-  }).join('') +
-    '<div class="row total"><span>Set to spend</span><b>' + total + ' cr</b></div>' +
-    '<p class="hint">In the purse: ' + char.cash + ' cr · expected income: ' + incomeForecast(state) + ' cr.</p>';
+  const income = incomeForecast(state);
+  const expenses = expensesForecast(state, collectPlan(state));
+  const net = sumAmounts(income) - sumAmounts(expenses);
+  box.innerHTML =
+    '<table class="ledger">' +
+    '<tr><th></th><th>Expenses</th><th>Income</th></tr>' +
+    expenses.map(function (item) { return ledgerRow(item.label, item.amount, null); }).join('') +
+    income.map(function (item) { return ledgerRow(item.label, null, item.amount); }).join('') +
+    '<tr class="total"><td>Totals</td><td>' + sumAmounts(expenses) + '</td><td>' + sumAmounts(income) + '</td></tr>' +
+    '</table>' +
+    '<div class="row total"><span>Balance of the month</span><b>' + (net >= 0 ? '+' : '') + net + ' cr</b></div>' +
+    '<p class="hint">In the purse: ' + char.cash + ' cr.</p>';
+}
+
+function sumAmounts(items) {
+  return items.reduce(function (sum, item) { return sum + item.amount; }, 0);
+}
+
+function ledgerRow(label, spent, earned) {
+  return '<tr><td>' + esc(label) + '</td>' +
+    '<td>' + (spent === null ? '' : spent) + '</td>' +
+    '<td>' + (earned === null ? '' : earned) + '</td></tr>';
 }
 
 // ---------- Gazette ----------
@@ -398,7 +413,7 @@ function render(state) {
   renderDeath(state);
   wirePlanner(state);
   renderStatusPanel(state);
-  renderExpensesPanel(state);
+  renderLedgerPanel(state);
 }
 
 // ---------- Plan collection ----------
