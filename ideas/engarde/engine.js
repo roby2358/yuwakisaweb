@@ -69,6 +69,7 @@ const WEEK_ACTIONS = {
       const char = state.character;
       if (char.woundWeeks > 0) {
         char.woundWeeks -= 1;
+        ctx.recuperated = true;
         // Half the harm mends in the first week; Constitution per week after.
         const heal = char.firstWeekHeal > 0 ? char.firstWeekHeal : char.con;
         char.firstWeekHeal = 0;
@@ -680,7 +681,7 @@ function validatePlan(state, plan) {
 }
 
 function newMonthContext() {
-  return { sp: 0, lines: [], gazette: [], dutyDone: 0, bawdyVisited: false, caroused: false, duesPaid: false, finalSP: 0 };
+  return { sp: 0, lines: [], gazette: [], dutyDone: 0, bawdyVisited: false, caroused: false, duesPaid: false, recuperated: false, finalSP: 0 };
 }
 
 function resolveMonth(state, plan) {
@@ -842,6 +843,11 @@ function resolveCompanionship(state, ctx) {
     char.lonelyMonths = 0;
     return;
   }
+  if (ctx.recuperated) {
+    char.lonelyMonths = 0;
+    ctx.lines.push('Society excuses a wounded man his solitude.');
+    return;
+  }
   char.lonelyMonths += 1;
   ctx.sp -= char.lonelyMonths;
   ctx.lines.push('A gentleman seen nowhere with a lady is talked about (-' + char.lonelyMonths + ' status).');
@@ -911,6 +917,7 @@ function companionshipForecast(state, plan) {
     if (lady !== undefined) return { label: 'If ' + lady.name + ' consents', sp: 1 + (lady.beautiful ? 1 : 0) };
   }
   if (plan.weeks.some(function (w) { return w.action === 'bawdy'; })) return null;
+  if (char.woundWeeks > 0) return null; // recuperation excuses the solitude
   return { label: 'No lady on your arm', sp: -(char.lonelyMonths + 1) };
 }
 
