@@ -75,6 +75,7 @@ table.ledger th + th, table.ledger td + td { text-align: right; width: 80px; }
 table.ledger tr.total td { border-top: 1px solid var(--edge); padding-top: 4px; font-variant: small-caps; font-weight: bold; }
 table.ledger tr.total td:first-child { color: var(--ink); }
 
+#npc-list, #lady-list { max-height: 320px; overflow-y: auto; }
 .soc { padding: 3px 0; border-bottom: 1px dotted var(--edge); font-size: 13px; }
 .soc b { display: block; }
 .soc span { color: #6b5a44; font-size: 12px; }

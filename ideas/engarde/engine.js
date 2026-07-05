@@ -166,7 +166,7 @@ const WEEK_ACTIONS = {
     },
     forecastSP: function (state, params) {
       const npc = findNpc(state, params.npcId);
-      if (npc === undefined) return 0;
+      if (npc === undefined || !npc.alive) return 0;
       const diff = npc.sl - state.character.sl;
       if (diff <= 0) return 0;
       return 1 + Math.floor(diff / 4);
@@ -286,6 +286,10 @@ function acceptMistress(state, lady, ctx) {
 function resolveToadying(state, npcId, ctx) {
   const char = state.character;
   const npc = findNpc(state, npcId);
+  if (npc === undefined || !npc.alive) {
+    ctx.lines.push('The gentleman you meant to flatter has left Paris, feet first.');
+    return;
+  }
   const diff = npc.sl - char.sl;
   if (diff <= 0) {
     ctx.lines.push(npc.name + ' is beneath your station; nothing is gained by fawning on him.');
@@ -475,6 +479,7 @@ function finishDuelWon(state, npc, toTheDeath, ctx) {
     sp += DUEL_STATUS.kill;
     npc.alive = false;
     if (npc.mistressId !== null) findLady(state, npc.mistressId).lover = null;
+    clearDanglingAffairs(state);
     ctx.lines.push('Your point takes ' + npc.name + ' through the chest. He does not rise. (' + formatSP(sp) + ' status, +1 Expertise)');
   } else {
     npc.grudge += 1;
@@ -998,10 +1003,11 @@ function mistressGiftForecast(state) {
 function adviceReport(state) {
   const lines = [
     adviceOnRank(state),
+    adviceOnRegiment(state),
     adviceOnTitle(state),
     adviceOnAppointment(state),
     adviceOnClub(state),
-  ];
+  ].filter(function (line) { return line !== null; });
   if (characterInfluence(state) === 0) {
     lines.push('And remember: influence is had two ways — stand at social level 8 yourself, or keep a mistress whose word opens doors. The grander the lady, the wider they swing.');
   }
@@ -1027,6 +1033,37 @@ function adviceOnRank(state) {
   const wants = prefermentWants(state, g.minSL, g.inf);
   if (wants.length === 0) return 'On rank: nothing bars your gazetting as ' + g.name + '. Seek preferment at court.';
   return 'On rank: to be gazetted ' + g.name + ' wants ' + wants.join(', and ') + '.';
+}
+
+// A finer regiment at the same rank. Commissions are only sold up through
+// Major (MAX_ENTRY_RANK), so above that there is no changing coats.
+function adviceOnRegiment(state) {
+  const char = state.character;
+  if (char.regimentId === null || char.rankIndex >= 6) return null;
+  if (char.rankIndex > MAX_ENTRY_RANK) {
+    return 'On regiments: no regiment sells a commission above ' + RANKS[MAX_ENTRY_RANK].name + ', so there is no changing coats at your rank.';
+  }
+  const here = findRegiment(char.regimentId);
+  const rank = RANKS[char.rankIndex];
+  const hereStatus = rank.status[here.column];
+  const better = REGIMENTS.filter(function (r) {
+    return r.id !== here.id && rank.status[r.column] > hereStatus;
+  });
+  if (better.length === 0) return 'On regiments: no other coat would wear finer at your rank.';
+  const open = better.filter(function (r) {
+    return char.sl >= rank.minSL[r.column] && applicationRollNeeded(char, r) <= 6;
+  });
+  if (open.length > 0) {
+    const best = open.reduce(function (a, b) { return rank.status[b.column] > rank.status[a.column] ? b : a; });
+    const horses = horsesForRank(char.rankIndex, best);
+    const cost = commissionPrice(char.rankIndex, best.column) + horses * HORSE_PRICE;
+    let line = 'On regiments: the ' + best.name + ' might take you as a ' + rank.name + ' (+' + rank.status[best.column] + 'S against your +' + hereStatus + 'S), a fresh commission at ' + cost + ' crowns' + (horses > 0 ? ', stable included' : '') + '.';
+    line += char.cash < cost ? ' Your purse holds ' + char.cash + '.' : ' Apply and pray for a place.';
+    return line;
+  }
+  const next = better.reduce(function (a, b) { return rank.status[b.column] < rank.status[a.column] ? b : a; });
+  const needSL = Math.max(rank.minSL[next.column], Math.max(1, next.firstSL));
+  return 'On regiments: the next finer coat is the ' + next.name + ', whose ' + rank.name + ' wants a gentleman of social level ' + needSL + ' (you stand at ' + char.sl + ').';
 }
 
 function adviceOnTitle(state) {
@@ -1247,6 +1284,38 @@ function simulateRivals(state, ctx) {
     simulateRivalCourtship(state, npc, ctx);
     simulateRivalPoaching(state, npc, ctx);
     simulateRivalInsult(state, npc, ctx);
+  });
+  replenishGentlemen(state, ctx);
+}
+
+// Paris never wants for ambitious young men. The fallen linger in the roll
+// a while; each month one of them (1-in-3 chance) is struck from the list
+// and his place taken by a newcomer of modest standing.
+function replenishGentlemen(state, ctx) {
+  clearDanglingAffairs(state);
+  const arrivals = [];
+  const dead = state.npcs.filter(function (n) { return !n.alive; });
+  if (dead.length > 0 && chance(1 / 3)) {
+    state.npcs.splice(state.npcs.indexOf(dead[0]), 1); // longest-fallen first
+    arrivals.push(newcomer(state));
+  }
+  while (state.npcs.length < NPC_COUNT) arrivals.push(newcomer(state));
+  if (arrivals.length === 0) return;
+  ctx.gazette.push('Lately arrived from the provinces and making themselves known about town: ' + arrivals.join(', ') + '.');
+}
+
+function newcomer(state) {
+  const npc = generateNpc(nextNpcId(state), state.ladies, 2 + Math.floor(Math.random() * 4));
+  state.npcs.push(npc);
+  return npc.name;
+}
+
+// Dead men demand no satisfaction: drop any affair whose gentleman is dead
+// or struck from the list.
+function clearDanglingAffairs(state) {
+  state.affairs = state.affairs.filter(function (a) {
+    const npc = findNpc(state, a.npcId);
+    return npc !== undefined && npc.alive;
   });
 }
 

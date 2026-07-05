@@ -2,8 +2,8 @@
 // state.js — character generation (Birth Tables A-D) and world state. MIT License.
 
 const START_YEAR = 1631;
-const LADY_COUNT = 15;
-const NPC_COUNT = 8;
+const LADY_COUNT = 30;
+const NPC_COUNT = 16;
 
 // ---------- Character generation ----------
 
@@ -124,6 +124,14 @@ function generateLadies() {
   return ladies;
 }
 
+// Ladies are never struck from the list, so length-based ids stay unique.
+// Tops up saves from before LADY_COUNT grew.
+function ensureLadies(state) {
+  while (state.ladies.length < LADY_COUNT) {
+    state.ladies.push(generateLady('lady' + state.ladies.length));
+  }
+}
+
 // ---------- Rival NPCs ----------
 
 function eligibleRegimentsForSL(sl) {
@@ -142,8 +150,7 @@ function ensureNpcStats(npc) {
   npc.endMax = npc.str * npc.con;
 }
 
-function generateNpc(id, ladies) {
-  const sl = 3 + Math.floor(Math.random() * 10);
+function generateNpc(id, ladies, sl) {
   const regiment = chance(0.7) ? pick(eligibleRegimentsForSL(sl)) : null;
   const npc = {
     id: id,
@@ -167,9 +174,16 @@ function generateNpc(id, ladies) {
   return npc;
 }
 
+// Ids must stay unique for the life of a world even as the fallen are
+// struck from the list, so index past the highest ever issued.
+function nextNpcId(state) {
+  const max = state.npcs.reduce(function (m, n) { return Math.max(m, parseInt(n.id.slice(3), 10)); }, -1);
+  return 'npc' + (max + 1);
+}
+
 function generateNpcs(ladies) {
   const npcs = [];
-  for (let i = 0; i < NPC_COUNT; i++) npcs.push(generateNpc('npc' + i, ladies));
+  for (let i = 0; i < NPC_COUNT; i++) npcs.push(generateNpc('npc' + i, ladies, 3 + Math.floor(Math.random() * 10)));
   return npcs;
 }
 
@@ -248,6 +262,7 @@ function loadGame() {
   if (raw === null) return null;
   const state = JSON.parse(raw);
   state.npcs.forEach(ensureNpcStats);
+  ensureLadies(state);
   return state;
 }
 
