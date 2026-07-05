@@ -1,0 +1,27 @@
+Priority:   60
+Status: ToDo
+ID: peaksl-title-v2k3
+Created: 2026-07-05T06:24:27Z
+Updated: 2026-07-05T06:24:27Z
+En Garde!: peakSL misses title grants. The title preferment grant (engine.js, PREFERMENT_KINDS.title.grant) raises char.sl directly via t.newSL but only reckonStatus updates char.peakSL, so a gentleman knighted from SL 6 to 10 who then dies shows peak 6 on his epitaph. Update peakSL wherever sl rises outside reckonStatus.
+----
+Priority:   50
+Status: ToDo
+ID: wk-dispatch-u38c
+Created: 2026-07-05T06:24:56Z
+Updated: 2026-07-05T06:24:56Z
+En Garde!: fold the week-action if-chains into the WEEK_ACTIONS dispatch table. weekParamsHTML and collectParams in ui.js both branch on 'gamble'/'court'/'toady'/'preferment' — the same discriminator WEEK_ACTIONS already dispatches (resolve, forecastSP). Give each entry paramsHTML(state, week, prior) and collectParams(week) members (empty for idle/duty/carouse/bawdy/petition) so adding a week action is a single-table edit.
+----
+Priority:   40
+Status: ToDo
+ID: debt-formula-uih9
+Created: 2026-07-05T06:25:06Z
+Updated: 2026-07-05T06:25:06Z
+En Garde!: bailiff threshold re-inlines the borrow-limit formula. resolveDebts (engine.js) hardcodes LOAN_LIMIT_BASE + char.sl * LOAN_LIMIT_PER_SL + 100 instead of building on borrowLimit or a shared helper, so tuning loan limits would silently desync the bailiffs. Express the seizure threshold in terms of the one credit-limit definition.
+----
+Priority:   30
+Status: ToDo
+ID: dead-code-na57
+Created: 2026-07-05T06:25:15Z
+Updated: 2026-07-05T06:25:15Z
+En Garde!: dead-code sweep. Remove state.campaign (newGame; campaign state actually lives on character.atFront), char.seniority (incremented/reset but never read), ctx.finalSP (set in reckonStatus, never read), and unused DUEL_STATUS.challengeWithoutCause / DUEL_STATUS.opponentRefused entries — or wire them into refusal handling if wanted. Also init state.warBrigades = [] in newGame and drop the (state.warBrigades || []) guard in npcAtWar, and hoist the onClick handlers table in index.js to module level.
