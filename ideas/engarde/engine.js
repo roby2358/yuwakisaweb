@@ -95,7 +95,7 @@ const WEEK_ACTIONS = {
     forecastCost: function (state, params) { return 0; },
   },
   carouse: {
-    label: 'Carouse at your club',
+    label: 'Carouse',
     resolve: function (state, params, ctx) {
       const char = state.character;
       const cost = char.sl;
@@ -106,7 +106,7 @@ const WEEK_ACTIONS = {
       char.cash -= cost;
       ctx.sp += CAROUSE_STATUS;
       ctx.caroused = true;
-      ctx.lines.push('You carouse at ' + findClub(char.clubId).name + ' (' + cost + ' crowns, +1 status).');
+      ctx.lines.push('You carouse at ' + carouseCompany(state) + ' (' + cost + ' crowns, +1 status).');
     },
     forecastSP: function (state, params) { return CAROUSE_STATUS; },
     forecastCost: function (state, params) { return state.character.sl; },
@@ -671,12 +671,30 @@ function requiredDutyWeeks(char) {
   return rank.dutyWeeks;
 }
 
+// A mistress expects an evening on the town: one carouse week each month.
+function requiredCarouseWeeks(char) {
+  if (char.woundWeeks > 0) return 0; // she forgives a wounded man
+  return char.mistressId === null ? 0 : 1;
+}
+
+// Where, and with whom, the carousing week is spent.
+function carouseCompany(state) {
+  const char = state.character;
+  const where = char.clubId !== null ? findClub(char.clubId).name : 'the taverns of the town';
+  if (char.mistressId === null) return where;
+  return where + ' with ' + findLady(state, char.mistressId).name;
+}
+
 function validatePlan(state, plan) {
   const char = state.character;
   const errors = [];
   const dutyPlanned = plan.weeks.filter(function (w) { return w.action === 'duty'; }).length;
   if (dutyPlanned < requiredDutyWeeks(char)) {
     errors.push('Your rank requires ' + requiredDutyWeeks(char) + ' duty week(s) this month.');
+  }
+  const carousePlanned = plan.weeks.filter(function (w) { return w.action === 'carouse'; }).length;
+  if (carousePlanned < requiredCarouseWeeks(char)) {
+    errors.push('Your mistress expects to be taken carousing one week this month.');
   }
   const woundIdle = plan.weeks.slice(0, Math.min(4, char.woundWeeks)).filter(function (w) { return w.action === 'idle'; }).length;
   if (woundIdle < Math.min(4, char.woundWeeks)) {
@@ -701,6 +719,7 @@ function resolveMonth(state, plan) {
   }
 
   ctx.dutyRequired = requiredDutyWeeks(char);
+  ctx.carouseRequired = requiredCarouseWeeks(char);
   plan.weeks.forEach(function (week) {
     if (char.dead) return;
     WEEK_ACTIONS[week.action].resolve(state, week.params, ctx);
@@ -711,6 +730,7 @@ function resolveMonth(state, plan) {
     return ctx;
   }
   resolveDutyFines(state, ctx);
+  resolveMistressNeglect(state, ctx);
   resolveIncome(state, ctx);
   resolveUpkeep(state, ctx);
   resolveMonthlyStatus(state, ctx);
@@ -743,6 +763,17 @@ function resolveDutyFines(state, ctx) {
   ctx.lines.push('You shirked duty; the regiment fines you ' + fine + ' crowns and the mess talks (-2 status).');
 }
 
+// The planner requires a carouse week, so this only fires when the week
+// fizzled — too poor to pay for the evening. She does not stay for that.
+function resolveMistressNeglect(state, ctx) {
+  const char = state.character;
+  if (ctx.carouseRequired <= 0 || ctx.caroused || char.mistressId === null) return;
+  const lady = findLady(state, char.mistressId);
+  lady.lover = null;
+  char.mistressId = null;
+  ctx.lines.push(lady.name + ' waits all month for an evening on the town, and finding none, departs.');
+}
+
 function resolveIncome(state, ctx) {
   const char = state.character;
   let income = char.allowance + char.pension;
@@ -763,7 +794,7 @@ function resolveMistressGifts(state, ctx) {
   if (char.mistressId === null) return;
   const lady = findLady(state, char.mistressId);
   if (lady.wealthy && lady.sl > char.sl) {
-    const gift = MISTRESS_SUPPORT_MULT * lady.sl;
+    const gift = MISTRESS_GIFT_MULT * (lady.sl - char.sl);
     char.cash += gift;
     ctx.lines.push(lady.name + ' presses a purse of ' + gift + ' crowns on you. It would be rude to refuse.');
   }
@@ -788,7 +819,7 @@ function resolveMistressSupport(state, ctx) {
   const char = state.character;
   if (char.mistressId === null) return;
   const lady = findLady(state, char.mistressId);
-  if (lady.wealthy && lady.sl > char.sl) return;
+  if (lady.wealthy) return; // a wealthy mistress never needs keeping
   const support = MISTRESS_SUPPORT_MULT * lady.sl;
   if (char.cash >= support) {
     char.cash -= support;
@@ -914,6 +945,11 @@ function companionshipForecast(state, plan) {
   const char = state.character;
   if (char.mistressId !== null) {
     const lady = findLady(state, char.mistressId);
+    const caroused = plan.weeks.some(function (w) { return w.action === 'carouse'; });
+    if (requiredCarouseWeeks(char) > 0 && !caroused) {
+      const excused = plan.weeks.some(function (w) { return w.action === 'bawdy'; });
+      return { label: lady.name + ', neglected, will depart', sp: excused ? 0 : -(char.lonelyMonths + 1) };
+    }
     return { label: 'Mistress: ' + lady.name, sp: 1 + (lady.beautiful ? 1 : 0) };
   }
   const courted = plan.weeks.find(function (w) { return w.action === 'court'; });
@@ -967,7 +1003,7 @@ function mistressSupportForecast(state) {
   const char = state.character;
   if (char.mistressId === null) return null;
   const lady = findLady(state, char.mistressId);
-  if (lady.wealthy && lady.sl > char.sl) return null;
+  if (lady.wealthy) return null; // a wealthy mistress never needs keeping
   return { label: 'Keeping ' + lady.name, amount: MISTRESS_SUPPORT_MULT * lady.sl };
 }
 
@@ -993,7 +1029,7 @@ function mistressGiftForecast(state) {
   if (char.mistressId === null) return null;
   const lady = findLady(state, char.mistressId);
   if (!lady.wealthy || lady.sl <= char.sl) return null;
-  return { label: lady.name + '’s purse', amount: MISTRESS_SUPPORT_MULT * lady.sl };
+  return { label: lady.name + '’s purse', amount: MISTRESS_GIFT_MULT * (lady.sl - char.sl) };
 }
 
 // ---------- A knowing friend (the Ask advice button) ----------

@@ -99,7 +99,7 @@ function actionChoices(state) {
   const char = state.character;
   const choices = [['idle', WEEK_ACTIONS.idle.label]];
   if (char.regimentId !== null) choices.push(['duty', WEEK_ACTIONS.duty.label]);
-  if (char.clubId !== null) choices.push(['carouse', WEEK_ACTIONS.carouse.label]);
+  if (char.clubId !== null || char.mistressId !== null) choices.push(['carouse', WEEK_ACTIONS.carouse.label]);
   choices.push(['bawdy', WEEK_ACTIONS.bawdy.label]);
   choices.push(['gamble', WEEK_ACTIONS.gamble.label]);
   if (courtableLadies(state).length > 0) choices.push(['court', WEEK_ACTIONS.court.label]);
@@ -172,11 +172,13 @@ function selectHTML(cls, week, options, priorValue) {
 }
 
 // Each week defaults to what you did that week last month (if it is still a
-// valid choice); wounds claim the opening weeks; required duty fills the tail.
+// valid choice); wounds claim the opening weeks; required duty fills the
+// tail, with the mistress's carouse week just ahead of it.
 function plannerPresets(state) {
   const char = state.character;
   const woundIdle = Math.min(4, char.woundWeeks);
   const dutyNeeded = requiredDutyWeeks(char);
+  const carouseNeeded = requiredCarouseWeeks(char);
   const last = state.lastPlan;
   const available = actionChoices(state).map(function (c) { return c[0]; });
   const presets = [];
@@ -185,6 +187,8 @@ function plannerPresets(state) {
       presets.push({ action: 'idle', locked: true });
     } else if (week >= 4 - dutyNeeded) {
       presets.push({ action: 'duty', locked: false });
+    } else if (week >= 4 - dutyNeeded - carouseNeeded) {
+      presets.push({ action: 'carouse', locked: false });
     } else {
       const prior = last && last.weeks[week] ? last.weeks[week].action : 'idle';
       const action = available.indexOf(prior) >= 0 ? prior : 'idle';

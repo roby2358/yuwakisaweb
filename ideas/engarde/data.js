@@ -233,6 +233,7 @@ function courtingRollNeeded(slDifference) {
 
 const COURTING_COST_MULT = 3;   // 3 x her social level in crowns
 const MISTRESS_SUPPORT_MULT = 3; // 3 x her social level per month
+const MISTRESS_GIFT_MULT = 2;    // wealthy mistress pays 2 x the SL difference
 
 // Influence Table A: influence from own social level.
 function influenceFromSL(sl) {
