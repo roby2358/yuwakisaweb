@@ -1268,31 +1268,65 @@ function resolveCampaign(state, volunteer) {
   return { lines: lines, died: char.dead };
 }
 
+function signed(n) {
+  return (n >= 0 ? '+' : '') + n;
+}
+
+// One line of after-action arithmetic: the 2d6, the modifiers that apply, the
+// total, the number wanted, and whether it carried. Returns the pass/fail so
+// the caller can act on it and the panel shows exactly how it was decided.
+function outcomeCheck(label, roll, regMod, rankMod, needed) {
+  const total = roll + regMod + rankMod;
+  let mods = '';
+  if (rankMod !== 0) mods += ' ' + signed(rankMod) + ' rank';
+  if (regMod !== 0) mods += ' ' + signed(regMod) + ' regiment';
+  return {
+    pass: total >= needed,
+    line: label + ': 2d6 ' + roll + mods + ' = ' + total + ' vs ' + needed + ' needed. ' + (total >= needed ? 'Yes.' : 'No.'),
+  };
+}
+
 function resolveEngagement(state, ctx) {
   const char = state.character;
   const regiment = frontRegiment(char);
   const mission = MISSION_TYPES[d6() - 1];
-  const row = Math.max(1, Math.min(10, roll2d6() - 2));
+  const rawRoll = roll2d6();
+  const row = Math.max(1, Math.min(10, rawRoll - 2));
   const br = BATTLE_RESULT[row - 1][char.ma - 1];
   const outcome = PERSONAL_OUTCOME[mission][br - 1];
   const rankMods = RANK_OUTCOME_MODS[Math.max(0, char.rankIndex)];
   ctx.lines.push(engagementFlavor(mission, br, regiment));
-  if (roll2d6() + regiment.mods.death + rankMods.death >= outcome.death) {
+  ctx.lines.push('Battle roll: 2d6 ' + rawRoll + ' - 2 = row ' + row + '; Military Ability ' + char.ma + ' gives Battle Result ' + br + '.');
+
+  const death = outcomeCheck('Casualty', roll2d6(), regiment.mods.death, rankMods.death, outcome.death);
+  ctx.lines.push(death.line);
+  if (death.pass) {
     resolveBattleDeath(state, regiment, ctx);
     if (char.dead) return;
   }
-  if (roll2d6() + regiment.mods.mention + rankMods.mention >= outcome.mention) {
+
+  const mention = outcomeCheck('Mention in despatches', roll2d6(), regiment.mods.mention, rankMods.mention, outcome.mention);
+  ctx.lines.push(mention.line);
+  if (mention.pass) {
     char.mentions += 1;
     char.carrySP += 6;
     ctx.lines.push('You are mentioned in despatches! (+6 status on your return, and Paris remembers.)');
   }
-  if (roll2d6() + regiment.mods.promotion + rankMods.promotion >= outcome.promotion) {
-    resolveBattlePromotion(state, ctx);
+
+  const promo = outcomeCheck('Promotion', roll2d6(), regiment.mods.promotion, rankMods.promotion, outcome.promotion);
+  ctx.lines.push(promo.line);
+  if (promo.pass) resolveBattlePromotion(state, ctx);
+
+  if (outcome.plunder === null) {
+    ctx.lines.push('Plunder: none to be had from this action.');
+    return;
   }
-  if (outcome.plunder !== null && roll2d6() + regiment.mods.crowns + rankMods.crowns >= outcome.crowns) {
+  const plunder = outcomeCheck('Plunder', roll2d6(), regiment.mods.crowns, rankMods.crowns, outcome.crowns);
+  ctx.lines.push(plunder.line);
+  if (plunder.pass) {
     const loot = rollDice(outcome.plunder[0], 6) * outcome.plunder[1];
     char.cash += loot;
-    ctx.lines.push('Plunder! You come away ' + loot + ' crowns the richer.');
+    ctx.lines.push('Plunder! ' + outcome.plunder[0] + 'd6 x ' + outcome.plunder[1] + ' = ' + loot + ' crowns the richer.');
   }
 }
 
@@ -1303,21 +1337,28 @@ function engagementFlavor(mission, br, regiment) {
 
 function resolveBattleDeath(state, regiment, ctx) {
   const char = state.character;
-  if (d6() <= 3) {
+  const save = d6();
+  if (save <= 3) {
     killCharacter(state, 'Fell in ' + monthLabel(state) + ', serving with the ' + regiment.name + '.');
-    ctx.lines.push('A ball finds you in the smoke. The regiment buries you with honours.');
+    ctx.lines.push('Struck down: d6 ' + save + ' (1-3 kills). A ball finds you in the smoke; the regiment buries you with honours.');
     return;
   }
   applyWound(char, Math.ceil(char.endCur / 2), 8);
   char.atFront = null;
-  ctx.lines.push('You fall grievously wounded and are carted home to Paris to mend.');
+  ctx.lines.push('Struck down: d6 ' + save + ' (4-6 wounds). You fall grievously wounded and are carted home to Paris to mend.');
 }
 
 function resolveBattlePromotion(state, ctx) {
   const char = state.character;
   const purchase = nextRankPurchase(char);
-  if (purchase === null) return;
-  if (char.sl < purchase.minSL) return;
+  if (purchase === null) {
+    ctx.lines.push('A step up is earned, but there is no higher commission open for you to fill.');
+    return;
+  }
+  if (char.sl < purchase.minSL) {
+    ctx.lines.push('A step up is earned, but ' + purchase.rank.name + ' wants social level ' + purchase.minSL + ' (you stand at ' + char.sl + ').');
+    return;
+  }
   char.rankIndex += 1;
   char.seniority = 0;
   ctx.lines.push('Field promotion! You are made ' + purchase.rank.name + ' without purchase.');
