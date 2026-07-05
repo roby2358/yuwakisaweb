@@ -117,16 +117,24 @@ function toadyTargets(state) {
   return state.npcs.filter(function (n) { return n.alive && n.sl > state.character.sl; });
 }
 
+// Titles first, then positions (court appointments and general's rank),
+// each group in decreasing order of the status it confers. group orders the
+// two bands; status is the sort key within a band (a title's one-time burst,
+// a position's monthly award).
 function prefermentTargets(state) {
   const targets = [];
-  APPOINTMENTS.forEach(function (a, i) {
-    if (state.character.appointmentId !== a.id && appointmentEligible(state, a)) targets.push({ kind: 'appointment', index: i, label: a.name + ' (+' + a.status + 'S)' });
-  });
   TITLES.forEach(function (t, i) {
-    if (titleEligible(state, i)) targets.push({ kind: 'title', index: i, label: 'The title of ' + t.name + ' (+' + t.statusBurst + 'S)' });
+    if (titleEligible(state, i)) targets.push({ kind: 'title', index: i, group: 0, status: t.statusBurst, label: 'The title of ' + t.name + ' (+' + t.statusBurst + 'S)' });
+  });
+  APPOINTMENTS.forEach(function (a, i) {
+    if (state.character.appointmentId !== a.id && appointmentEligible(state, a)) targets.push({ kind: 'appointment', index: i, group: 1, status: a.status, label: a.name + ' (+' + a.status + 'S)' });
   });
   GENERAL_RANKS.forEach(function (g, i) {
-    if (generalRankEligible(state, i)) targets.push({ kind: 'generalRank', index: i, label: 'Promotion to ' + g.name + ' (+' + g.status + 'S)' });
+    if (generalRankEligible(state, i)) targets.push({ kind: 'generalRank', index: i, group: 1, status: g.status, label: 'Promotion to ' + g.name + ' (+' + g.status + 'S)' });
+  });
+  targets.sort(function (a, b) {
+    if (a.group !== b.group) return a.group - b.group;
+    return b.status - a.status;
   });
   return targets;
 }
