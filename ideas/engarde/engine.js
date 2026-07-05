@@ -618,6 +618,13 @@ function joinClub(state, clubId) {
   return { ok: true, message: 'You are made a member of ' + club.name + ' at once.' };
 }
 
+function leaveClub(state) {
+  const char = state.character;
+  const club = findClub(char.clubId);
+  char.clubId = null;
+  return 'You send your resignation round to ' + club.name + '; the porter bows you out without a word.';
+}
+
 // ---------- Moneylender ----------
 
 function borrowMoney(state, amount) {
@@ -975,6 +982,116 @@ function mistressGiftForecast(state) {
   const lady = findLady(state, char.mistressId);
   if (!lady.wealthy || lady.sl <= char.sl) return null;
   return { label: lady.name + '’s purse', amount: MISTRESS_SUPPORT_MULT * lady.sl };
+}
+
+// ---------- A knowing friend (the Ask advice button) ----------
+
+// Scripted counsel from the same tables the resolvers use: what bars each
+// road of advancement. Reads state, rolls nothing, changes nothing.
+function adviceReport(state) {
+  const lines = [
+    adviceOnRank(state),
+    adviceOnTitle(state),
+    adviceOnAppointment(state),
+    adviceOnClub(state),
+  ];
+  if (characterInfluence(state) === 0) {
+    lines.push('And remember: influence is had two ways — stand at social level 8 yourself, or keep a mistress whose word opens doors. The grander the lady, the wider they swing.');
+  }
+  return lines;
+}
+
+function adviceOnRank(state) {
+  const char = state.character;
+  if (char.regimentId === null) return 'On rank: a gentleman without a regiment has no ladder to climb. Present yourself to a colonel.';
+  if (char.rankIndex < 5) {
+    const purchase = nextRankPurchase(char);
+    const stableCost = Math.max(0, horsesForRank(char.rankIndex + 1, findRegiment(char.regimentId)) - char.horses) * HORSE_PRICE;
+    const cost = purchase.price + stableCost;
+    const wants = [];
+    if (char.sl < purchase.minSL) wants.push('a gentleman of social level ' + purchase.minSL + ' (you stand at ' + char.sl + ')');
+    if (char.cash < cost) wants.push(cost + ' crowns' + (stableCost > 0 ? ', horses included' : '') + ' — your purse holds ' + char.cash);
+    if (wants.length === 0) return 'On rank: a ' + purchase.rank.name + '’s commission can be had for ' + cost + ' crowns. Petition for promotion and pray for a vacancy.';
+    return 'On rank: a ' + purchase.rank.name + '’s commission wants ' + wants.join(', and ') + '.';
+  }
+  const idx = char.rankIndex - 5;
+  if (idx >= GENERAL_RANKS.length) return 'On rank: there is none in France above Field Marshal.';
+  const g = GENERAL_RANKS[idx];
+  const wants = prefermentWants(state, g.minSL, g.inf);
+  if (wants.length === 0) return 'On rank: nothing bars your gazetting as ' + g.name + '. Seek preferment at court.';
+  return 'On rank: to be gazetted ' + g.name + ' wants ' + wants.join(', and ') + '.';
+}
+
+function adviceOnTitle(state) {
+  const next = titleIndex(state.character) + 1;
+  if (next >= TITLES.length) return 'On title: you bear the grandest the King bestows.';
+  const t = TITLES[next];
+  const wants = prefermentWants(state, t.minSL, t.inf);
+  if (wants.length === 0) return 'On title: the King might well make you ' + t.name + '. Seek preferment at court.';
+  return 'On title: to be made ' + t.name + ' wants ' + wants.join(', and ') + '.';
+}
+
+function adviceOnAppointment(state) {
+  const char = state.character;
+  const held = currentAppointmentStatus(char);
+  const candidates = APPOINTMENTS
+    .filter(function (a) { return a.id !== char.appointmentId && a.status > held; })
+    .map(function (a) { return { appt: a, wants: appointmentWants(state, a) }; });
+  if (candidates.length === 0) return 'On appointments: none at court would raise you higher than you sit.';
+  const ready = candidates.filter(function (c) { return c.wants.length === 0; });
+  if (ready.length > 0) {
+    const best = ready.reduce(function (a, b) { return b.appt.status > a.appt.status ? b : a; });
+    return 'On appointments: ' + best.appt.name + ' (+' + best.appt.status + 'S) is yours to ask for. Seek preferment at court.';
+  }
+  const nearest = candidates.reduce(function (a, b) {
+    if (b.wants.length !== a.wants.length) return b.wants.length < a.wants.length ? b : a;
+    if (b.appt.inf !== a.appt.inf) return b.appt.inf < a.appt.inf ? b : a;
+    return b.appt.status > a.appt.status ? b : a;
+  });
+  return 'On appointments: the nearest is ' + nearest.appt.name + ' (+' + nearest.appt.status + 'S), which wants ' + nearest.wants.join(', and ') + '.';
+}
+
+function appointmentWants(state, appt) {
+  const char = state.character;
+  const wants = [];
+  if (appt.needsRegiment && char.regimentId === null) wants.push('a regiment');
+  if (char.sl < appt.minSL) wants.push('social level ' + appt.minSL + ' (you stand at ' + char.sl + ')');
+  if (appt.ma > 0 && char.ma < appt.ma) wants.push('military ability ' + appt.ma + ' (yours is ' + char.ma + ')');
+  const rankOk = char.rankIndex >= appt.rankReq;
+  const titleOk = appt.titleAlt !== null && titleIndex(char) >= appt.titleAlt;
+  if (!rankOk && !titleOk) {
+    let need = 'the rank of ' + rankName(appt.rankReq);
+    if (appt.titleAlt !== null) need += ' (or the title of ' + TITLES[appt.titleAlt].name + ')';
+    wants.push(need);
+  }
+  const inf = characterInfluence(state);
+  if (inf < appt.inf) wants.push('influence of ' + appt.inf + ' (you have ' + inf + ')');
+  return wants;
+}
+
+function prefermentWants(state, minSL, infNeeded) {
+  const char = state.character;
+  const wants = [];
+  if (char.sl < minSL) wants.push('social level ' + minSL + ' (you stand at ' + char.sl + ')');
+  const inf = characterInfluence(state);
+  if (inf < infNeeded) wants.push('influence of ' + infNeeded + ' (you have ' + inf + ')');
+  return wants;
+}
+
+function rankName(index) {
+  return index <= 5 ? RANKS[index].name : GENERAL_RANKS[index - 6].name;
+}
+
+function adviceOnClub(state) {
+  const char = state.character;
+  const held = char.clubId === null ? 0 : findClub(char.clubId).status;
+  const better = CLUBS.filter(function (c) {
+    return c.id !== char.clubId && c.status > held && !(c.requiresHorseGuards && !isHorseGuardsOfficer(char));
+  });
+  if (better.length === 0) return 'On clubs: there is no finer door in Paris than the one you already pass.';
+  const next = better.reduce(function (a, b) { return b.status < a.status ? b : a; });
+  if (clubEligible(char, next)) return 'On clubs: ' + next.name + ' (+' + next.status + 'S, ' + next.dues + '/mo) would have you. Seek election.';
+  return 'On clubs: the next step is ' + next.name + ' (+' + next.status + 'S, ' + next.dues + '/mo), which wants a gentleman of social level ' + next.minSL + ' (you stand at ' + char.sl + ').';
 }
 
 // ---------- Status reckoning ----------

@@ -186,6 +186,7 @@ function newGame(character) {
     affairs: [],   // pending affairs of honour awaiting the player's answer
     campaign: null, // active summer deployment for the player's brigade
     applications: { club: -1, regiment: -1 }, // monthIndex of the last attempt
+    adviceMonth: -1, // monthIndex the knowing friend last gave counsel
     lastPlan: null, // last month's plan, used to pre-fill the planner
   };
 }
@@ -194,6 +195,12 @@ function newGame(character) {
 function applications(state) {
   if (state.applications === undefined) state.applications = { club: -1, regiment: -1 };
   return state.applications;
+}
+
+// Lazy init so saves from before this field existed keep working.
+function adviceAsked(state) {
+  if (state.adviceMonth === undefined) state.adviceMonth = -1;
+  return state.adviceMonth === state.monthIndex;
 }
 
 function currentMonth(state) {

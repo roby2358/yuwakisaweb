@@ -252,7 +252,11 @@ function renderEstablishments(state) {
   renderClubOffers(state);
   renderRegimentOffers(state);
   el('lender-info').textContent = 'Credit remaining: ' + Math.max(0, borrowLimit(char)) + ' crowns. Debt: ' + char.debt + '.';
+  const advice = el('ask-advice');
+  advice.disabled = adviceAsked(state);
+  advice.title = advice.disabled ? 'Your friend has said his piece; come back next month.' : '';
   el('resign-regiment').classList.toggle('hidden', char.regimentId === null || char.atFront !== null);
+  el('club-resign').classList.toggle('hidden', char.clubId === null);
 }
 
 function renderClubOffers(state) {

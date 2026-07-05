@@ -3,7 +3,7 @@
 
 // Bump on every change to the scripts. Shown in the header so you can confirm
 // the browser is running the current build and not a cached one.
-const BUILD = 24;
+const BUILD = 26;
 
 let game = null;
 let candidate = null;
@@ -101,6 +101,13 @@ function doApplyRegiment() {
   render(game);
 }
 
+function doResignClub() {
+  if (!confirm('Resign your membership of ' + findClub(game.character.clubId).name + '?')) return;
+  appendGazette(game, 'The Clubs', [leaveClub(game)]);
+  saveGame(game);
+  render(game);
+}
+
 function doResignRegiment() {
   if (!confirm('Resign your commission?')) return;
   appendGazette(game, 'The Regiments', ['You resign from the ' + findRegiment(game.character.regimentId).name + '.']);
@@ -121,6 +128,14 @@ function doRepay() {
   const amount = Math.max(0, parseInt(el('loan-amount').value, 10) || 0);
   const result = repayDebt(game, amount);
   appendGazette(game, 'The Moneylender', [result.message]);
+  saveGame(game);
+  render(game);
+}
+
+function doAskAdvice() {
+  if (adviceAsked(game)) return;
+  game.adviceMonth = game.monthIndex;
+  appendGazette(game, 'A Knowing Friend', adviceReport(game));
   saveGame(game);
   render(game);
 }
@@ -148,8 +163,10 @@ function onClick(event) {
     'club-join': doJoinClub,
     'regiment-apply': doApplyRegiment,
     'resign-regiment': doResignRegiment,
+    'club-resign': doResignClub,
     'loan-borrow': doBorrow,
     'loan-repay': doRepay,
+    'ask-advice': doAskAdvice,
     'new-game': confirmNewGame,
     'chargen-reroll': function () { showChargen(); },
     'chargen-begin': beginGame,
