@@ -61,6 +61,7 @@ function gamblingVenue(char) {
 // ---------- Week actions (dispatch table) ----------
 
 // forecastSP: the best status the week could yield, for the Status panel.
+// forecastCost: what the week is set to cost, for the Expenses panel.
 const WEEK_ACTIONS = {
   idle: {
     label: 'Keep to your lodgings',
@@ -81,6 +82,7 @@ const WEEK_ACTIONS = {
       ctx.lines.push('A quiet week at your lodgings.');
     },
     forecastSP: function (state, params) { return 0; },
+    forecastCost: function (state, params) { return 0; },
   },
   duty: {
     label: 'Regimental duty',
@@ -89,6 +91,7 @@ const WEEK_ACTIONS = {
       ctx.lines.push('A week on duty with the ' + findRegiment(state.character.regimentId).name + '.');
     },
     forecastSP: function (state, params) { return 0; },
+    forecastCost: function (state, params) { return 0; },
   },
   carouse: {
     label: 'Carouse at your club',
@@ -105,6 +108,7 @@ const WEEK_ACTIONS = {
       ctx.lines.push('You carouse at ' + findClub(char.clubId).name + ' (' + cost + ' crowns, +1 status).');
     },
     forecastSP: function (state, params) { return CAROUSE_STATUS; },
+    forecastCost: function (state, params) { return state.character.sl; },
   },
   bawdy: {
     label: 'Visit the bawdyhouse',
@@ -121,9 +125,11 @@ const WEEK_ACTIONS = {
       ctx.lines.push('A week of low company at the bawdyhouse (' + cost + ' crowns, +1 status).');
     },
     forecastSP: function (state, params) { return CAROUSE_STATUS; },
+    forecastCost: function (state, params) { return state.character.sl; },
   },
   gamble: {
     label: 'Gamble',
+    costLabel: 'Gambling stakes at risk',
     resolve: function (state, params, ctx) {
       resolveGambling(state, params.stake, params.bets, ctx);
     },
@@ -134,6 +140,12 @@ const WEEK_ACTIONS = {
       const bets = Math.min(params.bets, MAX_BETS_PER_WEEK);
       return bets + Math.floor(bets * wager / venue.divisor);
     },
+    forecastCost: function (state, params) {
+      const venue = gamblingVenue(state.character);
+      const limit = venue.houseLimit === null ? Infinity : venue.houseLimit;
+      const wager = Math.max(venue.minBet, Math.min(params.stake, limit));
+      return wager * Math.min(params.bets, MAX_BETS_PER_WEEK);
+    },
   },
   court: {
     label: 'Court a lady',
@@ -141,6 +153,10 @@ const WEEK_ACTIONS = {
       resolveCourtship(state, params.ladyId, ctx);
     },
     forecastSP: function (state, params) { return 0; }, // her favour lands under companionship
+    forecastCost: function (state, params) {
+      const lady = findLady(state, params.ladyId);
+      return lady === undefined ? 0 : COURTING_COST_MULT * lady.sl;
+    },
   },
   toady: {
     label: 'Toady to a gentleman',
@@ -154,9 +170,11 @@ const WEEK_ACTIONS = {
       if (diff <= 0) return 0;
       return 1 + Math.floor(diff / 4);
     },
+    forecastCost: function (state, params) { return 0; },
   },
   petition: {
     label: 'Petition for promotion',
+    costLabel: 'Promotion, if granted',
     resolve: function (state, params, ctx) {
       resolvePromotionPetition(state, ctx);
     },
@@ -167,6 +185,13 @@ const WEEK_ACTIONS = {
       const col = findRegiment(char.regimentId).column;
       return Math.max(0, purchase.rank.status[col] - currentRankStatus(char));
     },
+    forecastCost: function (state, params) {
+      const char = state.character;
+      const purchase = nextRankPurchase(char);
+      if (purchase === null) return 0;
+      const stableCost = Math.max(0, horsesForRank(char.rankIndex + 1, findRegiment(char.regimentId)) - char.horses) * HORSE_PRICE;
+      return purchase.price + stableCost;
+    },
   },
   preferment: {
     label: 'Seek preferment at court',
@@ -176,6 +201,7 @@ const WEEK_ACTIONS = {
     forecastSP: function (state, params) {
       return PREFERMENT_KINDS[params.kind].forecastSP(state, params.targetIndex);
     },
+    forecastCost: function (state, params) { return 0; },
   },
 };
 
@@ -883,6 +909,65 @@ function companionshipForecast(state, plan) {
   }
   if (plan.weeks.some(function (w) { return w.action === 'bawdy'; })) return null;
   return { label: 'No lady on your arm', sp: -(char.lonelyMonths + 1) };
+}
+
+// ---------- Expenses forecast (the Expenses panel) ----------
+
+// Everything the month is set to cost: standing commitments (maintenance,
+// dues, mistress, stable, interest) plus the planned weeks' outlays.
+function expensesForecast(state, plan) {
+  const char = state.character;
+  const items = [];
+  items.push({ label: 'Keeping up appearances (SL ' + char.sl + ')', cost: MAINTENANCE_MULT * char.sl });
+  if (char.clubId !== null) {
+    const club = findClub(char.clubId);
+    items.push({ label: 'Dues at ' + club.name, cost: club.dues });
+  }
+  const support = mistressSupportForecast(state);
+  if (support !== null) items.push(support);
+  if (char.horses > 0) {
+    items.push({ label: 'Stable of ' + char.horses + ' and a groom', cost: char.horses * HORSE_UPKEEP + GROOM_WAGE });
+  }
+  if (char.debt > 0 && (char.debtMonths + 1) % LOAN_INTEREST_PERIOD === 0) {
+    items.push({ label: 'Interest falls due', cost: Math.ceil(char.debt * LOAN_INTEREST_RATE) });
+  }
+  plan.weeks.forEach(function (week, i) {
+    const action = WEEK_ACTIONS[week.action];
+    const cost = action.forecastCost(state, week.params);
+    if (cost !== 0) {
+      const label = action.costLabel !== undefined ? action.costLabel : action.label;
+      items.push({ label: 'Week ' + (i + 1) + ': ' + label, cost: cost });
+    }
+  });
+  if (plan.conspicuous > 0) {
+    items.push({ label: 'Conspicuous consumption', cost: plan.conspicuous * CONSPICUOUS_MULT * char.sl });
+  }
+  const dutyPlanned = plan.weeks.filter(function (w) { return w.action === 'duty'; }).length;
+  const owed = requiredDutyWeeks(char);
+  if (dutyPlanned < owed) items.push({ label: 'Fines for shirked duty', cost: 10 * (owed - dutyPlanned) });
+  return items;
+}
+
+function mistressSupportForecast(state) {
+  const char = state.character;
+  if (char.mistressId === null) return null;
+  const lady = findLady(state, char.mistressId);
+  if (lady.wealthy && lady.sl > char.sl) return null;
+  return { label: 'Keeping ' + lady.name, cost: MISTRESS_SUPPORT_MULT * lady.sl };
+}
+
+// Forecast counterpart of resolveIncome, for the Expenses panel hint.
+function incomeForecast(state) {
+  const char = state.character;
+  let income = char.allowance + char.pension;
+  const rank = rankData(char);
+  if (rank !== null) income += rank.pay;
+  if (char.appointmentId !== null) income += findAppointment(char.appointmentId).pay;
+  if (char.mistressId !== null) {
+    const lady = findLady(state, char.mistressId);
+    if (lady.wealthy && lady.sl > char.sl) income += MISTRESS_SUPPORT_MULT * lady.sl;
+  }
+  return income;
 }
 
 // ---------- Status reckoning ----------

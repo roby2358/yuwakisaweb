@@ -3,7 +3,7 @@
 
 // Bump on every change to the scripts. Shown in the header so you can confirm
 // the browser is running the current build and not a cached one.
-const BUILD = 17;
+const BUILD = 18;
 
 let game = null;
 let candidate = null;
@@ -167,7 +167,10 @@ function onChange(event) {
     updateWeekParams(game, week, target.value, {});
   }
   if (target.id === 'regiment-select') renderEntryRanks(game);
-  if (target.closest('#planner') !== null) renderStatusPanel(game);
+  if (target.closest('#planner') !== null) {
+    renderStatusPanel(game);
+    renderExpensesPanel(game);
+  }
 }
 
 // ---------- Boot ----------
