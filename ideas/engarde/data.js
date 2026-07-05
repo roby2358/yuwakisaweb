@@ -68,7 +68,6 @@ const CLUBS = [
 ];
 
 // Admission fee is an adaptation (not on the reference sheet): 3 months' dues.
-const CLUB_ADMISSION_MULT = 3;
 
 // Bawdyhouse gambling terms (adaptation: the low end of the club table).
 const BAWDYHOUSE_GAMBLING = { houseLimit: 25, minBet: 1, divisor: 150 };
@@ -306,7 +305,7 @@ const APPOINTMENTS = [
 // ---------- Economy ----------
 
 const MAINTENANCE_MULT = 2;          // 2 x SL crowns per month, mandatory
-const CONSPICUOUS_MULT = 3;          // 3 x SL crowns per status point
+const CONSPICUOUS_MULT = 1;          // 1 x SL crowns extra per status point
 const CAROUSE_STATUS = 1;            // status per week carousing
 const LOAN_INTEREST_RATE = 0.10;     // per six months
 const LOAN_INTEREST_PERIOD = 6;      // months

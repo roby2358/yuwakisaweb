@@ -609,15 +609,13 @@ function leaveRegiment(state) {
 
 // ---------- Clubs ----------
 
+// A gentleman who meets the requirements is made a member immediately.
 function joinClub(state, clubId) {
   const char = state.character;
   const club = findClub(clubId);
   if (!clubEligible(char, club)) return { ok: false, message: club.name + ' will not have you.' };
-  const admission = club.dues * CLUB_ADMISSION_MULT;
-  if (char.cash < admission) return { ok: false, message: 'Admission to ' + club.name + ' costs ' + admission + ' crowns.' };
-  char.cash -= admission;
   char.clubId = clubId;
-  return { ok: true, message: 'You are elected to ' + club.name + ' (' + admission + ' crowns).' };
+  return { ok: true, message: 'You are made a member of ' + club.name + ' at once.' };
 }
 
 // ---------- Moneylender ----------

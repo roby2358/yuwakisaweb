@@ -260,10 +260,9 @@ function renderClubOffers(state) {
   const open = CLUBS.filter(function (c) { return clubEligible(char, c) && char.clubId !== c.id; });
   const select = el('club-select');
   select.innerHTML = open.map(function (c) {
-    return '<option value="' + c.id + '">' + esc(c.name) + ' (' + c.dues * CLUB_ADMISSION_MULT + ' cr entry, ' + c.dues + '/mo, +' + c.status + 'S)</option>';
+    return '<option value="' + c.id + '">' + esc(c.name) + ' (' + c.dues + '/mo, +' + c.status + 'S)</option>';
   }).join('');
   el('club-join-row').classList.toggle('hidden', open.length === 0);
-  setPetitionButton(el('club-join'), applications(state).club === state.monthIndex);
 }
 
 function setPetitionButton(button, spent) {

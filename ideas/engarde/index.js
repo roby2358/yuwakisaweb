@@ -3,7 +3,7 @@
 
 // Bump on every change to the scripts. Shown in the header so you can confirm
 // the browser is running the current build and not a cached one.
-const BUILD = 18;
+const BUILD = 20;
 
 let game = null;
 let candidate = null;
@@ -87,7 +87,6 @@ function confirmNewGame() {
 // ---------- Establishment actions ----------
 
 function doJoinClub() {
-  applications(game).club = game.monthIndex;
   const result = joinClub(game, el('club-select').value);
   appendGazette(game, 'The Clubs', [result.message]);
   saveGame(game);

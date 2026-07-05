@@ -23,7 +23,7 @@ Deviations for solo play:
   to the full rules); King's Musketeers vs. Cardinal's Guard, naturally.
 - Campaign season resolves one engagement per summer rather than full
   army/division assignment; a saving throw turns some deaths into wounds.
-- Club admission fees, NPC rivals, and the monthly gazette are inventions.
+- NPC rivals and the monthly gazette are inventions.
 - Promotion is purchase + petition roll rather than strict vacancy tracking.
 - A commission up through Major may be purchased on joining a regiment,
   paying cumulatively for every rank up to it (social level minimums apply).
