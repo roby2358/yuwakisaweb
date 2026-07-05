@@ -52,7 +52,7 @@ function renderSociety(state) {
     if (!npc.alive) return '<div class="soc dead">&#8224; ' + esc(npc.name) + '</div>';
     const reg = npc.regimentId === null ? 'no regiment' : findRegiment(npc.regimentId).name;
     const grudge = npc.grudge >= 2 ? ' &#9876;' : '';
-    return '<div class="soc"><b>' + esc(npc.name) + grudge + '</b><span>SL ' + npc.sl + ' · ' + esc(reg) + '</span></div>';
+    return '<div class="soc"><b>' + esc(npc.name) + grudge + '</b><span>SL ' + npc.sl + ' · Exp ' + npc.exp + ' · ' + esc(reg) + '</span></div>';
   }).join('');
   el('lady-list').innerHTML = state.ladies.slice().sort(function (a, b) { return b.sl - a.sl; }).map(function (lady) {
     const tags = [lady.beautiful ? 'beautiful' : '', lady.wealthy ? 'wealthy' : '', lady.influential ? 'influential' : ''].filter(Boolean).join(', ');

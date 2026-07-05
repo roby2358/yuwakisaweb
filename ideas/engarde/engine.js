@@ -68,8 +68,13 @@ const WEEK_ACTIONS = {
       const char = state.character;
       if (char.woundWeeks > 0) {
         char.woundWeeks -= 1;
-        char.endCur = Math.min(char.endMax, char.endCur + 2 * char.con);
-        ctx.lines.push('A week abed; the wounds knit slowly.');
+        // Half the harm mends in the first week; Constitution per week after.
+        const heal = char.firstWeekHeal > 0 ? char.firstWeekHeal : char.con;
+        char.firstWeekHeal = 0;
+        char.endCur = Math.min(char.endMax, char.endCur + heal);
+        ctx.lines.push(heal > char.con
+          ? 'A week under the surgeon\'s care; the worst of the damage mends.'
+          : 'A week abed; the wounds knit slowly.');
         return;
       }
       char.endCur = Math.min(char.endMax, char.endCur + char.con);
@@ -419,7 +424,7 @@ function resolveDuel(state, npc, toTheDeath, ctx) {
     const mine = d6() + Math.floor(char.exp / 4);
     const his = d6() + Math.floor(npc.exp / 4);
     if (mine > his) npcWounds += d6() + Math.floor(char.str / 6);
-    if (his > mine) playerWounds += d6() + 2;
+    if (his > mine) playerWounds += d6() + Math.floor(npc.str / 6);
     if (playerWounds >= playerThreshold || npcWounds >= npcThreshold) break;
   }
   if (npcWounds >= npcThreshold && playerWounds < playerThreshold) {
@@ -461,13 +466,19 @@ function finishDuelLost(state, npc, toTheDeath, wounds, ctx) {
     ctx.lines.push(npc.name + "'s blade slips past your guard, and the morning goes very quiet.");
     return;
   }
-  char.endCur = Math.max(1, char.endCur - wounds * 4);
-  char.woundWeeks += toTheDeath ? 4 : 1;
+  applyWound(char, wounds * 4, toTheDeath ? 4 : 1);
   ctx.lines.push(npc.name + ' pinks you neatly. The wound is more to your pride than your person.');
 }
 
 function formatSP(sp) {
   return sp >= 0 ? '+' + sp : String(sp);
+}
+
+// Endurance lost to violence; half of it mends in the first week of rest.
+function applyWound(char, endLost, restWeeks) {
+  char.endCur = Math.max(1, char.endCur - endLost);
+  char.firstWeekHeal = Math.floor(endLost / 2);
+  char.woundWeeks += restWeeks;
 }
 
 // ---------- Affairs of honour ----------
@@ -987,8 +998,7 @@ function resolveBattleDeath(state, regiment, ctx) {
     ctx.lines.push('A ball finds you in the smoke. The regiment buries you with honours.');
     return;
   }
-  char.woundWeeks = 8;
-  char.endCur = Math.max(1, Math.floor(char.endCur / 2));
+  applyWound(char, Math.ceil(char.endCur / 2), 8);
   char.atFront = null;
   ctx.lines.push('You fall grievously wounded and are carted home to Paris to mend.');
 }

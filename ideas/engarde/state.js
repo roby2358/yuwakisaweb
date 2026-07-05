@@ -96,6 +96,7 @@ function generateCharacter() {
     debtMonths: 0,
     horses: 0,
     woundWeeks: 0,
+    firstWeekHeal: 0,
     atFront: null,
     dead: false,
     epitaph: null,
@@ -131,6 +132,16 @@ function eligibleRegimentsForSL(sl) {
   });
 }
 
+// Duelling stats, rolled as for the player. Also patches NPCs from saves
+// that predate these fields.
+function ensureNpcStats(npc) {
+  if (npc.endMax !== undefined) return;
+  npc.str = roll3d6();
+  npc.con = roll3d6();
+  npc.exp = roll3d6();
+  npc.endMax = npc.str * npc.con;
+}
+
 function generateNpc(id, ladies) {
   const sl = 3 + Math.floor(Math.random() * 10);
   const regiment = chance(0.7) ? pick(eligibleRegimentsForSL(sl)) : null;
@@ -144,6 +155,7 @@ function generateNpc(id, ladies) {
     alive: true,
     grudge: 0,
   };
+  ensureNpcStats(npc);
   if (chance(0.4)) {
     const free = ladies.filter(function (l) { return l.lover === null && l.sl <= sl + 4; });
     if (free.length > 0) {
@@ -227,7 +239,9 @@ function saveGame(state) {
 function loadGame() {
   const raw = localStorage.getItem(SAVE_KEY);
   if (raw === null) return null;
-  return JSON.parse(raw);
+  const state = JSON.parse(raw);
+  state.npcs.forEach(ensureNpcStats);
+  return state;
 }
 
 function clearSave() {
