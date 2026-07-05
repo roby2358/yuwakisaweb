@@ -3,7 +3,7 @@
 
 // Bump on every change to the scripts. Shown in the header so you can confirm
 // the browser is running the current build and not a cached one.
-const BUILD = 20;
+const BUILD = 22;
 
 let game = null;
 let candidate = null;
@@ -27,7 +27,7 @@ function updateWeekParams(state, week, action, prior) {
 
 function liveMonth() {
   const plan = game.character.atFront !== null
-    ? { weeks: [], conspicuous: 0 }
+    ? { weeks: [], conspicuous: false }
     : collectPlan(game);
   if (game.character.atFront === null) {
     const errors = validatePlan(game, plan);

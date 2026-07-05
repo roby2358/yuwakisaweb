@@ -225,9 +225,9 @@ function renderPlanner(state) {
       '<select class="week-action" data-week="' + week + '"' + locked + '>' + options + '</select>' +
       '<span class="week-params" id="params-' + week + '"></span></div>';
   }
-  const priorConspicuous = state.lastPlan ? state.lastPlan.conspicuous : 0;
-  html += '<div class="week"><label>Luxury</label>Conspicuous purchases: <input type="number" id="conspicuous" value="' + priorConspicuous + '" min="0" max="9"> × ' +
-    (CONSPICUOUS_MULT * char.sl) + ' crowns (+1 status each)</div>';
+  const priorConspicuous = state.lastPlan ? Boolean(state.lastPlan.conspicuous) : false;
+  html += '<div class="week"><label>Luxury</label><label class="check"><input type="checkbox" id="conspicuous"' + (priorConspicuous ? ' checked' : '') + '> ' +
+    'Conspicuous consumption (-' + (CONSPICUOUS_MULT * char.sl) + ' cr, +1S)</label></div>';
   html += '<div id="plan-errors" class="errors"></div>';
   html += '<button id="live-month" class="big">Live the Month</button>';
   planner.innerHTML = html;
@@ -411,7 +411,7 @@ function collectPlan(state) {
     weeks.push({ action: action, params: collectParams(week, action) });
   }
   const conspicuousInput = el('conspicuous');
-  const conspicuous = conspicuousInput === null ? 0 : Math.max(0, parseInt(conspicuousInput.value, 10) || 0);
+  const conspicuous = conspicuousInput !== null && conspicuousInput.checked;
   return { weeks: weeks, conspicuous: conspicuous };
 }
 

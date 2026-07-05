@@ -708,18 +708,16 @@ function resolveMonth(state, plan) {
   return ctx;
 }
 
-function resolveConspicuous(state, count, ctx) {
+// A flat +1: spending an extra SL crowns on show buys one status point,
+// and no more however much is spent.
+function resolveConspicuous(state, wanted, ctx) {
   const char = state.character;
-  const each = CONSPICUOUS_MULT * char.sl;
-  let bought = 0;
-  for (let i = 0; i < count; i++) {
-    if (char.cash < each) break;
-    char.cash -= each;
-    bought += 1;
-  }
-  if (bought === 0) return;
-  ctx.sp += bought;
-  ctx.lines.push('Conspicuous consumption: new plumes, new lace, new carriage-hire (' + bought * each + ' crowns, +' + bought + ' status).');
+  if (!wanted) return;
+  const cost = CONSPICUOUS_MULT * char.sl;
+  if (char.cash < cost) return;
+  char.cash -= cost;
+  ctx.sp += 1;
+  ctx.lines.push('Conspicuous consumption: new plumes, new lace, new carriage-hire (' + cost + ' crowns, +1 status).');
 }
 
 function resolveDutyFines(state, ctx) {
@@ -888,7 +886,7 @@ function statusForecast(state, plan) {
     const sp = WEEK_ACTIONS[week.action].forecastSP(state, week.params);
     if (sp !== 0) items.push({ label: 'Week ' + (i + 1) + ': ' + WEEK_ACTIONS[week.action].label, sp: sp });
   });
-  if (plan.conspicuous > 0) items.push({ label: 'Conspicuous consumption', sp: plan.conspicuous });
+  if (plan.conspicuous) items.push({ label: 'Conspicuous consumption', sp: 1 });
   const dutyPlanned = plan.weeks.filter(function (w) { return w.action === 'duty'; }).length;
   if (dutyPlanned < requiredDutyWeeks(char)) items.push({ label: 'Shirking regimental duty', sp: -2 });
   return items;
@@ -937,8 +935,8 @@ function expensesForecast(state, plan) {
       items.push({ label: 'Week ' + (i + 1) + ': ' + label, cost: cost });
     }
   });
-  if (plan.conspicuous > 0) {
-    items.push({ label: 'Conspicuous consumption', cost: plan.conspicuous * CONSPICUOUS_MULT * char.sl });
+  if (plan.conspicuous) {
+    items.push({ label: 'Conspicuous consumption', cost: CONSPICUOUS_MULT * char.sl });
   }
   const dutyPlanned = plan.weeks.filter(function (w) { return w.action === 'duty'; }).length;
   const owed = requiredDutyWeeks(char);

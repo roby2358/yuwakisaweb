@@ -74,6 +74,7 @@ main {
 
 .week { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }
 .week label { width: 60px; font-variant: small-caps; color: var(--accent); }
+.week label.check { width: auto; font-variant: normal; color: var(--ink); display: flex; align-items: center; gap: 6px; }
 .week-params small { color: #6b5a44; }
 
 select, input[type="number"], input[type="text"] {
