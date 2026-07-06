@@ -24,6 +24,11 @@ Deviations for solo play:
 - Campaign season resolves one engagement per summer rather than full
   army/division assignment; a saving throw turns some deaths into wounds.
 - NPC rivals and the monthly gazette are inventions.
+- Everyone in Paris is mortal: rival gentlemen, ladies, and the player each
+  face a 0.1% monthly chance of death by misadventure, with a flavour table
+  per constituency (inglorious, tragic, tragicomic). A lady who dies is
+  replaced by a debutante; the player's check is skipped on campaign, where
+  the war supplies its own mortality.
 - Affairs of honour arrive by a single monthly check (6%), the affront drawn
   from paired 40-entry tables ranked by social level — one of offence given
   to you, one of offence you have given; a rival courting the mistress is a

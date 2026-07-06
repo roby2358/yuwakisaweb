@@ -282,6 +282,10 @@ const DUEL_STATUS = {
 const HONOR_EVENT_CHANCE = 0.06;
 const MISTRESS_SUIT_CHANCE = 0.06;
 
+// Paris is mortal: gentlemen, ladies, and the player alike may simply expire,
+// each with a flavour table to suit — inglorious, tragic, or tragicomic.
+const NATURAL_DEATH_CHANCE = 0.001; // per person, per month
+
 // The affront itself, humble (index 0) to grand: 40-entry tables picked with
 // flourishWide() — indexed at twice the social level with a ±1d6 swing — so a
 // pauper is shoved into the gutter and a grandee slighted in the King's

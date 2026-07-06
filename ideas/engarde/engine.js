@@ -675,6 +675,18 @@ function killCharacter(state, epitaph) {
   }
 }
 
+// Fate makes the same monthly visit to the player it makes to everyone else
+// (0.1%), but with a keener sense of comedy. Only in ordinary months — at
+// the front, the war supplies its own mortality. The chosen line serves as
+// both the month's narrative and the epitaph.
+function resolvePlayerMortality(state, ctx) {
+  const char = state.character;
+  if (char.dead || !chance(NATURAL_DEATH_CHANCE)) return;
+  const line = flourishWide(PLAYER_DEATHS, char.sl);
+  ctx.lines.push(line);
+  killCharacter(state, line);
+}
+
 // ---------- Monthly resolution ----------
 
 function requiredDutyWeeks(char) {
@@ -731,6 +743,7 @@ function resolveMonth(state, plan) {
     WEEK_ACTIONS[week.action].resolve(state, week.params, ctx);
   });
   resolveConspicuous(state, plan.conspicuous, ctx);
+  resolvePlayerMortality(state, ctx);
   if (char.dead) {
     finishMonth(state, ctx, true);
     return ctx;
@@ -1397,6 +1410,7 @@ function simulateRivals(state, ctx) {
     simulateRivalDrift(npc);
     simulateRivalCourtship(state, npc, ctx);
   });
+  simulateLadyMortality(state, ctx);
   simulateHonorEvent(state, ctx);
   simulateMistressSuit(state, ctx);
   replenishGentlemen(state, ctx);
@@ -1455,10 +1469,34 @@ function simulateRivalCampaign(state, npc, ctx) {
 // Even away from the duelling ground, a gentleman may be struck down. Rare
 // (0.1% a month), but Paris is a dangerous city for the mortal.
 function simulateRivalMortality(state, npc, ctx) {
-  if (!chance(0.001)) return;
+  if (!chance(NATURAL_DEATH_CHANCE)) return;
   npc.alive = false;
   if (npc.mistressId !== null) findLady(state, npc.mistressId).lover = null;
-  ctx.gazette.push(npc.name + ' ' + flourish(NATURAL_DEATHS, npc.sl));
+  ctx.gazette.push(npc.name + ' ' + flourishWide(NATURAL_DEATHS, npc.sl));
+}
+
+// The ladies of Paris are as mortal as the men (0.1% a month), but die
+// tragically where the men die ingloriously. The departed's place in society
+// is taken at once by a debutante; a bereaved lover, the player included,
+// is left without a mistress.
+function simulateLadyMortality(state, ctx) {
+  const char = state.character;
+  state.ladies.forEach(function (lady, i) {
+    if (!chance(NATURAL_DEATH_CHANCE)) return;
+    if (lady.lover === 'player') {
+      char.mistressId = null;
+      ctx.lines.push(lady.name + ' ' + flourishWide(LADY_DEATHS, lady.sl) + ' You wear black for the season.');
+    } else {
+      if (lady.lover !== null) {
+        const npc = findNpc(state, lady.lover);
+        if (npc !== undefined) npc.mistressId = null;
+      }
+      ctx.gazette.push(lady.name + ' ' + flourishWide(LADY_DEATHS, lady.sl));
+    }
+    const debutante = generateLady(nextLadyId(state));
+    state.ladies[i] = debutante;
+    ctx.gazette.push(debutante.name + ' is newly presented in society.');
+  });
 }
 
 function simulateRivalDrift(npc) {

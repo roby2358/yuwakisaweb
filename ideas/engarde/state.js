@@ -123,11 +123,17 @@ function generateLadies() {
   return ladies;
 }
 
-// Ladies are never struck from the list, so length-based ids stay unique.
+// Ids must stay unique for the life of a world even as the departed are
+// replaced, so index past the highest ever issued.
+function nextLadyId(state) {
+  const max = state.ladies.reduce(function (m, l) { return Math.max(m, parseInt(l.id.slice(4), 10)); }, -1);
+  return 'lady' + (max + 1);
+}
+
 // Tops up saves from before LADY_COUNT grew.
 function ensureLadies(state) {
   while (state.ladies.length < LADY_COUNT) {
-    state.ladies.push(generateLady('lady' + state.ladies.length));
+    state.ladies.push(generateLady(nextLadyId(state)));
   }
 }
 
