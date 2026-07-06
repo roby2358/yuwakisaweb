@@ -1249,7 +1249,7 @@ function resolveCampaign(state, volunteer) {
       resolveEngagement(state, ctx);
       if (char.dead) break;
     } else {
-      ctx.lines.push('Camp fever, mud, and drill; the war keeps its distance.');
+      ctx.lines.push(flourish(QUIET_CAMPAIGN, char.sl));
     }
     const rank = rankData(char);
     if (rank !== null) char.cash += rank.pay;
@@ -1379,33 +1379,6 @@ function resolveBattlePromotion(state, ctx) {
 
 // ---------- Rival NPCs ----------
 
-// The ways a gentleman leaves Paris feet-first without a sword in his hand,
-// ordered humble to grand — the higher his social level, the higher his death
-// indexes into the table (with a little jitter). Each is a sentence the
-// gazette appends after his name.
-const NATURAL_DEATHS = [
-  'is knifed in an alley off the Rue des Mauvais-Garçons for the coat on his back.',
-  'perishes when a tavern quarrel he did not start turns to fire.',
-  'is found floating in the Seine, his purse long gone.',
-  'succumbs to the gaol-fever after a night in the watch-house.',
-  'is found cold in a garret by a distraught landlady.',
-  'is trampled in a crowd pressing to see a hanging.',
-  'is carried off by the smallpox despite every attention.',
-  'drowns when his hired boat overturns crossing to the Left Bank.',
-  'is taken by a wasting sickness that had long troubled him.',
-  'succumbs to a fever the physicians cannot name.',
-  'is thrown by his horse on the Pont Neuf and does not recover.',
-  'is bled to death by a physician for a complaint that would have passed.',
-  'takes a chill at the opera and is dead within the week.',
-  'is crushed when a balcony gives way beneath the press of admirers.',
-  'succumbs to an apoplexy at the card table, three kings in his hand.',
-  'expires of a surfeit of lampreys at the Duc’s own table.',
-  'chokes upon a fish bone at a banquet, to the horror of his host.',
-  'is found insensible in a bawdy-house and never wakes.',
-  'breaks his neck upon the grand staircase, deep in his cups.',
-  'is carried off by a fit while berating his tailor over the cut of a sleeve.',
-];
-
 function simulateRivals(state, ctx) {
   state.npcs.forEach(function (npc) {
     if (!npc.alive) return;
@@ -1477,9 +1450,7 @@ function simulateRivalMortality(state, npc, ctx) {
   if (!chance(0.001)) return;
   npc.alive = false;
   if (npc.mistressId !== null) findLady(state, npc.mistressId).lover = null;
-  const last = NATURAL_DEATHS.length - 1;
-  const index = Math.max(0, Math.min(last, (npc.sl - 1) + (d6() - 3)));
-  ctx.gazette.push(npc.name + ' ' + NATURAL_DEATHS[index]);
+  ctx.gazette.push(npc.name + ' ' + flourish(NATURAL_DEATHS, npc.sl));
 }
 
 function simulateRivalDrift(npc) {
