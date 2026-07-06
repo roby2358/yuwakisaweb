@@ -15,6 +15,10 @@ the Mistress Courting table, Influence Tables A–C, the Toady table, Duelling
 Table D (status consequences), the Personal Outcome / Battle Result campaign
 tables, the Military & Government Appointments tables, and the Title table.
 
+In the code, everything traceable to those tables lives in `core.js`; the
+solo-play inventions below live in `data.js` (odds and event tables) and
+`town.js` (the simulated town).
+
 Deviations for solo play:
 
 - Duels resolve abstractly (Expertise/Strength/Endurance exchanges), not with

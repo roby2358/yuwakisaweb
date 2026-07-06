@@ -18,25 +18,33 @@ up; `git add` paths are relative to this directory, not the repo root).
 - **No unit tests.** This is a playtest-driven prototype. Verify changes by:
   1. `node --check <file>.js` for syntax,
   2. a throwaway headless sim in the scratchpad: concatenate the DOM-free
-     files (`dice.js names.js data.js flourish.js state.js engine.js`) into one
-     file, run
-     scenarios under Node, assert on the output,
+     files (`dice.js names.js core.js data.js flourish.js state.js engine.js
+     town.js`) into one file, run scenarios under Node, assert on the output,
   3. browser playtest.
-- **Cache busting:** `BUILD` in `index.js` and the `?v=N` query on all eight
+- **Cache busting:** `BUILD` in `index.js` and the `?v=N` query on all ten
   script tags in `index.html` must be bumped together on every script change.
   The build number renders in the header so a stale cache is visible.
 
 ## Architecture
 
-Eight scripts share the global namespace, loaded in dependency order
-(`index.html`): `dice.js` → `names.js` → `data.js` → `flourish.js` →
-`state.js` → `engine.js` → `ui.js` → `index.js`.
+Ten scripts share the global namespace, loaded in dependency order
+(`index.html`): `dice.js` → `names.js` → `core.js` → `data.js` →
+`flourish.js` → `state.js` → `engine.js` → `town.js` → `ui.js` → `index.js`.
 
-- **data.js** — static game tables adapted from the official reference tables
-  at www.engarde.co.uk (birth, clubs, regiments, ranks, mistresses, influence,
-  appointments, titles) plus economy constants (`MAINTENANCE_MULT`,
-  `CONSPICUOUS_MULT`, `LOAN_INTEREST_RATE`, `HORSE_PRICE`, …). Rules-fidelity
-  deviations are listed in README.md — keep that list current.
+The core/color split matters: material traceable to the published game goes
+in `core.js`; solo-play inventions go in `data.js` (numbers and event tables)
+or `town.js` (simulation behavior). New house rules must not land in core.js.
+
+- **core.js** — the published game: tables and rule functions from the
+  official reference tables at www.engarde.co.uk (birth, clubs, regiments,
+  ranks, campaign outcomes, mistresses, influence, appointments, titles) plus
+  economy constants (`MAINTENANCE_MULT`, `LOAN_INTEREST_RATE`, `HORSE_PRICE`,
+  …). Nothing invented lives here. Rules-fidelity deviations are listed in
+  README.md — keep that list current.
+- **data.js** — the solo-play layer: house-rule constants and invented tables
+  (regiment friendships `REGIMENT_RELATIONS`, brigade deployment odds, mission
+  selection, bawdyhouse gambling, honor-event/mortality/malady chances, the
+  paired 40-entry affront tables).
 - **flourish.js** — `flourish(table, sl)` picks a purely-cosmetic line from a
   humble→grand 20-item table, indexed by social level with d6 jitter, so flavor
   fits a gentleman's station (`NATURAL_DEATHS`, `QUIET_CAMPAIGN`). Add a ranked
@@ -44,9 +52,13 @@ Eight scripts share the global namespace, loaded in dependency order
 - **state.js** — character generation (Birth Tables A–D), `newGame()`, world
   state shape, localStorage save/load. Old saves get lazy back-compat shims at
   load time (e.g. `applications()`, `ensureNpcStats`) rather than migrations.
-- **engine.js** — all rules resolution: the monthly loop (`resolveMonth`),
-  duels, campaigns, rivals, and the forecast functions the panels use
-  (`statusForecast`, `expensesForecast`, `incomeForecast`).
+- **engine.js** — rules resolution: the monthly loop (`resolveMonth`), duels,
+  campaigns, and the forecast functions the panels use (`statusForecast`,
+  `expensesForecast`, `incomeForecast`).
+- **town.js** — the invented living-Paris simulation `resolveMonth` calls into:
+  rival gentlemen (campaigning, drift, courtship, replenishment), lady and
+  player mortality, maladies, honour events, and mistress suits. Entry point is
+  `simulateRivals`.
 - **ui.js** — DOM rendering only, plus `collectPlan(state)` which reads the
   planner inputs back into a plan object. `el()` and `esc()` helpers live here.
 - **index.js** — boot, event delegation (single document-level `click`/`change`
