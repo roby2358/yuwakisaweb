@@ -119,6 +119,52 @@ const LADY_DEATHS = [
   'ascends, the abbé declares at the graveside, because Heaven grew impatient; the King himself sends white roses.',
 ];
 
+// Paris's gentler cruelties: the mishaps and maladies that put a gentleman
+// to bed without putting him in the ground. 40 entries, picked with
+// flourishWide. Full sentences in the second person.
+const PLAYER_MALADIES = [
+  'You are bitten by something in a lodging-house bed, and the bite knows its business.',
+  'A winter in thin boots settles into your chest.',
+  'You take the flux from a pot of tavern stew that had outlived its era.',
+  'A quarrel between carters is settled across your foot.',
+  'You slip on the icy steps of your garret and count every one.',
+  'The barber draws the wrong tooth, and then, apologizing, the right one.',
+  'A dog of no particular breeding takes exception to your calves.',
+  'You catch the itch from a borrowed cloak and scratch your way through the month.',
+  'A low shop-shutter swings as you pass, and the street applauds.',
+  'You drink from the wrong well and regret it for weeks.',
+  'Your horse declines a fence you had already committed to.',
+  'A plate of oysters late in the month mounts a rearguard action.',
+  'You turn an ankle demonstrating a dance you had seen only once.',
+  'A fencing lesson goes one exchange too long, and your pride is not the only thing bruised.',
+  'The new fashion in tight boots costs you a toenail and your good temper.',
+  'You sit a draughty box at the theatre through five acts and pay for every one.',
+  'A physician bleeds you for vigour, and the vigour goes with the blood.',
+  'You wrench your shoulder handing a lady into a carriage that lurched.',
+  'A hired horse with a grudge against hired riders has the last word.',
+  'Late suppers and later arguments bring on a fever of some standing.',
+  'You are knocked flat by a sedan chair racing another sedan chair.',
+  'The gout announces itself in your left foot, precisely at the ball.',
+  'You take a soaking on the Pont Neuf and cough until Lent.',
+  "An apothecary's tonic, taken for strength, proves stronger than you.",
+  'A wager to swim the Seine is won, at a cost the far bank did not mention.',
+  'You strain your back holding a fashionable pose through an entire portrait sitting.',
+  'A masked ball ends in a fountain; the fever arrives by morning.',
+  'Your new carriage takes a corner as though it had a rival, and you are the loser.',
+  "You eat the Marquis's celebrated sauce against your better judgment, and your judgment is avenged.",
+  'A short-sighted count peppers your hat at the autumn shoot, and some of the shot finds you.',
+  'The waters, taken for your health, very nearly finish it.',
+  'You bow too deeply in too tight a coat, and something in your back gives notice.',
+  'The gout, promoted along with your fortunes, claims the right foot as well.',
+  'You keep pace with a visiting ambassador through six courses and a night of toasts, and lose by a length.',
+  'A firework at a royal fête returns to earth still lit, and chooses your shoulder.',
+  "You take a chill riding uncovered in the King's hunt, it being unthinkable to leave early.",
+  'The fashionable new physician prescribes mercury; the old complaint departs and takes your strength with it.',
+  'You faint in the crush of the levee and are trodden upon by the best people in France.',
+  "A surfeit at the Cardinal's table lays you up a fortnight.",
+  'The strain of precedence — four hours standing at Versailles — puts you to bed like a common mortal.',
+];
+
 // And the player's own exits: pure tragicomedy, fortune's joke landing at
 // last. 40 entries, picked with flourishWide. Full sentences in the second
 // person; used both as the month's narrative and as the epitaph.

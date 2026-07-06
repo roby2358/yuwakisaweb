@@ -687,6 +687,19 @@ function resolvePlayerMortality(state, ctx) {
   killCharacter(state, line);
 }
 
+// Paris has gentler cruelties than the grave (0.2% a month): a mishap or
+// malady costing 1-50% of full endurance, capped so it can never kill —
+// the sickbed floor is 1. Ordinary months only; the front has its own
+// hazards.
+function resolvePlayerMalady(state, ctx) {
+  const char = state.character;
+  if (char.dead || !chance(MALADY_CHANCE)) return;
+  const pct = 1 + Math.floor(Math.random() * MALADY_MAX_LOSS_PCT);
+  const loss = Math.min(char.endCur - 1, Math.max(1, Math.floor(char.endMax * pct / 100)));
+  char.endCur -= loss;
+  ctx.lines.push(flourishWide(PLAYER_MALADIES, char.sl) + ' (-' + loss + ' endurance)');
+}
+
 // ---------- Monthly resolution ----------
 
 function requiredDutyWeeks(char) {
@@ -748,6 +761,7 @@ function resolveMonth(state, plan) {
     finishMonth(state, ctx, true);
     return ctx;
   }
+  resolvePlayerMalady(state, ctx);
   resolveDutyFines(state, ctx);
   resolveMistressNeglect(state, ctx);
   resolveIncome(state, ctx);

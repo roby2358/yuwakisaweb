@@ -29,6 +29,9 @@ Deviations for solo play:
   per constituency (inglorious, tragic, tragicomic). A lady who dies is
   replaced by a debutante; the player's check is skipped on campaign, where
   the war supplies its own mortality.
+- A separate 0.2% monthly mishap-or-malady check can cost the player 1-50%
+  of full endurance (never fatal — the sickbed floor is 1), drawn from its
+  own 40-entry table.
 - Affairs of honour arrive by a single monthly check (6%), the affront drawn
   from paired 40-entry tables ranked by social level — one of offence given
   to you, one of offence you have given; a rival courting the mistress is a
