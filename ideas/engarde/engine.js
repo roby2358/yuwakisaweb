@@ -717,7 +717,7 @@ function validatePlan(state, plan) {
 }
 
 function newMonthContext() {
-  return { sp: 0, lines: [], gazette: [], dutyDone: 0, bawdyVisited: false, caroused: false, duesPaid: false, recuperated: false, restedThisMonth: false, poached: false, finalSP: 0 };
+  return { sp: 0, lines: [], gazette: [], dutyDone: 0, bawdyVisited: false, caroused: false, duesPaid: false, recuperated: false, restedThisMonth: false, finalSP: 0 };
 }
 
 function resolveMonth(state, plan) {
@@ -1396,9 +1396,9 @@ function simulateRivals(state, ctx) {
     if (!npc.alive) return;
     simulateRivalDrift(npc);
     simulateRivalCourtship(state, npc, ctx);
-    simulateRivalPoaching(state, npc, ctx);
-    simulateRivalInsult(state, npc, ctx);
   });
+  simulateHonorEvent(state, ctx);
+  simulateMistressSuit(state, ctx);
   replenishGentlemen(state, ctx);
 }
 
@@ -1476,33 +1476,58 @@ function simulateRivalCourtship(state, npc, ctx) {
   ctx.gazette.push(lady.name + ' is seen everywhere on the arm of ' + npc.name + '.');
 }
 
-function simulateRivalPoaching(state, npc, ctx) {
+// Once a month at most, Paris tests a gentleman's honour: a single check,
+// then a coin decides which way the offence ran — given to you (demand
+// satisfaction or let it pass) or given by you (his seconds call; accept or
+// refuse). Either way his station picks the venue — gutters and taverns for
+// the low, levees and the King's antechamber for the great. Never while an
+// affair already waits, never while he is away at the wars, and never while
+// he is at half endurance or less — no one presses a convalescent (the same
+// threshold that lets a challenged man plead his wounds).
+function simulateHonorEvent(state, ctx) {
   const char = state.character;
-  if (char.mistressId === null || npcAtWar(state, npc)) return;
-  // At most one poacher a month, and none while an earlier suit is unanswered.
-  if (ctx.poached || state.affairs.some(function (a) { return a.type === 'poach'; })) return;
+  if (char.atFront !== null || state.affairs.length > 0) return;
+  if (char.endCur * 2 <= char.endMax) return;
+  if (!chance(HONOR_EVENT_CHANCE)) return;
+  const pool = state.npcs.filter(function (n) { return n.alive && !npcAtWar(state, n); });
+  if (pool.length === 0) return;
+  const npc = pick(pool);
+  if (chance(0.5)) {
+    state.affairs.push({ type: 'insult', npcId: npc.id, reason: flourishWide(HONOR_EVENTS_CHALLENGE, char.sl) });
+    ctx.gazette.push('Hot words between you and ' + npc.name + ' — all Paris waits to see what you will do.');
+    return;
+  }
+  state.affairs.push({ type: 'challenged', npcId: npc.id, reason: flourishWide(HONOR_EVENTS_CHALLENGED, char.sl) });
+  ctx.gazette.push(npc.name + ' demands satisfaction of you — his seconds will call.');
+}
+
+// A rival paying court to the mistress is its own flat monthly check, apart
+// from the honour table. At home the suit is open and the answer is the
+// player's; at the front the suitor presses unopposed, and the usual
+// courting roll (+2, for she is taken) decides whether she is carried off.
+function simulateMistressSuit(state, ctx) {
+  const char = state.character;
+  if (char.mistressId === null || state.affairs.some(function (a) { return a.type === 'poach'; })) return;
+  if (!chance(MISTRESS_SUIT_CHANCE)) return;
   const lady = findLady(state, char.mistressId);
-  const away = char.atFront !== null;
-  if (npc.sl < lady.sl - 2 || !chance(away ? 0.06 : 0.025)) return;
-  ctx.poached = true;
-  if (away) {
+  const suitors = state.npcs.filter(function (n) {
+    return n.alive && n.mistressId === null && !npcAtWar(state, n) && n.sl >= lady.sl - 2;
+  });
+  if (suitors.length === 0) return;
+  const npc = pick(suitors);
+  if (char.atFront === null) {
+    state.affairs.push({ type: 'poach', npcId: npc.id, reason: 'He pays open court to ' + lady.name + ', your mistress.' });
+    ctx.gazette.push(npc.name + ' sends flowers to ' + lady.name + ' — everyone is watching to see what you will do.');
+    return;
+  }
+  if (d6() >= courtingRollNeeded(npc.sl - lady.sl) + 2) {
     lady.lover = npc.id;
     npc.mistressId = lady.id;
     char.mistressId = null;
     ctx.gazette.push('While you were at the wars, ' + npc.name + ' has carried off ' + lady.name + '.');
     return;
   }
-  state.affairs.push({ type: 'poach', npcId: npc.id, reason: 'He pays open court to ' + lady.name + ', your mistress.' });
-  ctx.gazette.push(npc.name + ' sends flowers to ' + lady.name + ' — everyone is watching to see what you will do.');
-}
-
-function simulateRivalInsult(state, npc, ctx) {
-  const char = state.character;
-  if (!ctx.caroused || char.regimentId === null || npc.regimentId === null) return;
-  const relation = regimentRelation(char, npc);
-  if (relation !== 'enemy' || !chance(0.12)) return;
-  state.affairs.push({ type: 'insult', npcId: npc.id, reason: 'Words over cards: he calls your regiment a pack of tavern bullies.' });
-  ctx.gazette.push('Hot words between you and ' + npc.name + ' at the club — seconds are being spoken of.');
+  ctx.gazette.push(npc.name + ' pressed his suit on ' + lady.name + ' in your absence; she sent him away with a flea in his ear.');
 }
 
 // ---------- Month bookkeeping ----------

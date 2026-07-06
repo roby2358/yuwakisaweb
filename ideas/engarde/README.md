@@ -24,6 +24,11 @@ Deviations for solo play:
 - Campaign season resolves one engagement per summer rather than full
   army/division assignment; a saving throw turns some deaths into wounds.
 - NPC rivals and the monthly gazette are inventions.
+- Affairs of honour arrive by a single monthly check (6%), the affront drawn
+  from paired 40-entry tables ranked by social level — one of offence given
+  to you, one of offence you have given; a rival courting the mistress is a
+  separate flat monthly check (6%), resolved at once by the courting roll if
+  the player is away at the wars.
 - Promotion is purchase + petition roll rather than strict vacancy tracking.
 - A commission up through Major may be purchased on joining a regiment,
   paying cumulatively for every rank up to it (social level minimums apply).

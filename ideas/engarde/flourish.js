@@ -18,6 +18,15 @@ function flourish(table, sl) {
   return table[index];
 }
 
+// The double-width variant: 40-entry tables indexed at (SL - 1) x 2 with a
+// uniform d8 - 4 swing (-3..+4), so a station sees a spread of its neighbours
+// without clustering on its own row or reaching across the whole room.
+function flourishWide(table, sl) {
+  const last = table.length - 1;
+  const swing = rollDice(1, 8) - 4;
+  return table[Math.max(0, Math.min(last, (sl - 1) * 2 + swing))];
+}
+
 // The ways a gentleman leaves Paris feet-first without a sword in his hand.
 // Composed after his name, so each is a sentence fragment: "<Name> " + line.
 const NATURAL_DEATHS = [
