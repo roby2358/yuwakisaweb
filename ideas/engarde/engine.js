@@ -1443,8 +1443,8 @@ function simulateRivalCampaign(state, npc, ctx) {
 }
 
 function simulateRivalDrift(npc) {
-  if (chance(0.12)) npc.sl += 1;
-  else if (chance(0.08)) npc.sl = Math.max(1, npc.sl - 1);
+  if (chance(0.03)) npc.sl += 1;
+  else if (chance(0.01)) npc.sl = Math.max(1, npc.sl - 1);
 }
 
 function simulateRivalCourtship(state, npc, ctx) {
