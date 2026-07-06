@@ -3,7 +3,7 @@
 
 // Bump on every change to the scripts. Shown in the header so you can confirm
 // the browser is running the current build and not a cached one.
-const BUILD = 41;
+const BUILD = 42;
 
 let game = null;
 let candidate = null;

@@ -269,7 +269,13 @@ function renderEstablishments(state) {
 
 function renderClubOffers(state) {
   const char = state.character;
-  const open = CLUBS.filter(function (c) { return clubEligible(char, c) && char.clubId !== c.id; });
+  // A member sees only the resign button; to trade up he first resigns, then
+  // seeks election elsewhere — the same flow regiments use for a commission.
+  if (char.clubId !== null) {
+    el('club-join-row').classList.add('hidden');
+    return;
+  }
+  const open = CLUBS.filter(function (c) { return clubEligible(char, c); });
   const select = el('club-select');
   select.innerHTML = open.map(function (c) {
     return '<option value="' + c.id + '">' + esc(c.name) + ' (' + c.dues + '/mo, +' + c.status + 'S)</option>';
