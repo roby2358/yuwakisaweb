@@ -1274,17 +1274,21 @@ function signed(n) {
   return (n >= 0 ? '+' : '') + n;
 }
 
-// One line of after-action arithmetic: the 2d6, the modifiers that apply, the
-// total, the number wanted, and whether it carried. Returns the pass/fail so
-// the caller can act on it and the panel shows exactly how it was decided.
-function outcomeCheck(label, roll, regMod, rankMod, needed) {
-  const total = roll + regMod + rankMod;
+// One line of after-action arithmetic, per the rulebook: the number to beat is
+// the personal-outcome value plus its modifiers, and the raw 2d6 must reach it.
+// A positive modifier lifts the bar (rarer outcome), a negative one lowers it;
+// a target of 2 or less is guaranteed, 13 or more impossible.
+function outcomeCheck(label, roll, regMod, rankMod, base) {
+  const required = base + regMod + rankMod;
   let mods = '';
   if (rankMod !== 0) mods += ' ' + signed(rankMod) + ' rank';
   if (regMod !== 0) mods += ' ' + signed(regMod) + ' regiment';
+  let target = 'needs ' + required;
+  if (required <= 2) target += ' (guaranteed)';
+  else if (required > 12) target += ' (impossible)';
   return {
-    pass: total >= needed,
-    line: label + ': 2d6 ' + roll + mods + ' = ' + total + ' vs ' + needed + ' needed. ' + (total >= needed ? 'Yes.' : 'No.'),
+    pass: roll >= required,
+    line: label + ': ' + base + mods + ' = ' + target + '; rolled 2d6 ' + roll + '. ' + (roll >= required ? 'Yes.' : 'No.'),
   };
 }
 
