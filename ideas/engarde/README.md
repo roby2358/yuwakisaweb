@@ -27,6 +27,8 @@ Deviations for solo play:
 - Promotion is purchase + petition roll rather than strict vacancy tracking.
 - A commission up through Major may be purchased on joining a regiment,
   paying cumulatively for every rank up to it (social level minimums apply).
+- A challenged character at half Endurance or less may decline the duel
+  without the coward's status loss (the rival still nurses the grudge).
 
 ## License
 

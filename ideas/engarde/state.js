@@ -96,7 +96,6 @@ function generateCharacter() {
     debtMonths: 0,
     horses: 0,
     woundWeeks: 0,
-    firstWeekHeal: 0,
     atFront: null,
     dead: false,
     epitaph: null,

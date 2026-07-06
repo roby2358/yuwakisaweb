@@ -67,19 +67,21 @@ const WEEK_ACTIONS = {
     label: 'Keep to your lodgings',
     resolve: function (state, params, ctx) {
       const char = state.character;
+      // The first rest week of the month mends half of all lost Endurance
+      // or Constitution, whichever is greater; every other rest week that
+      // month mends Constitution.
+      const deficit = char.endMax - char.endCur;
+      const heal = ctx.restedThisMonth ? char.con : Math.max(Math.floor(deficit / 2), char.con);
+      ctx.restedThisMonth = true;
+      char.endCur = Math.min(char.endMax, char.endCur + heal);
       if (char.woundWeeks > 0) {
         char.woundWeeks -= 1;
         ctx.recuperated = true;
-        // Half the harm mends in the first week; Constitution per week after.
-        const heal = char.firstWeekHeal > 0 ? char.firstWeekHeal : char.con;
-        char.firstWeekHeal = 0;
-        char.endCur = Math.min(char.endMax, char.endCur + heal);
         ctx.lines.push(heal > char.con
           ? 'A week under the surgeon\'s care; the worst of the damage mends.'
           : 'A week abed; the wounds knit slowly.');
         return;
       }
-      char.endCur = Math.min(char.endMax, char.endCur + char.con);
       ctx.lines.push('A quiet week at your lodgings.');
     },
     forecastSP: function (state, params) { return 0; },
@@ -256,7 +258,7 @@ function resolveCourtship(state, ladyId, ctx) {
     return;
   }
   ctx.lines.push(lady.name + ' accepts your gifts (' + cost + ' crowns) and gives nothing back but a smile.');
-  if (taken && d6() <= 2) {
+  if (taken && d6() <= 1) {
     const rival = findNpc(state, lady.lover);
     if (rival !== undefined && rival.alive) {
       state.affairs.push({ type: 'challenged', npcId: rival.id, reason: 'He has discovered your suit to ' + lady.name + '.' });
@@ -508,10 +510,10 @@ function formatSP(sp) {
   return sp >= 0 ? '+' + sp : String(sp);
 }
 
-// Endurance lost to violence; half of it mends in the first week of rest.
+// Endurance lost to violence; the first rest week of a month mends half
+// of whatever is missing (see the idle week action).
 function applyWound(char, endLost, restWeeks) {
   char.endCur = Math.max(1, char.endCur - endLost);
-  char.firstWeekHeal = Math.floor(endLost / 2);
   char.woundWeeks += restWeeks;
 }
 
@@ -536,6 +538,12 @@ const AFFAIR_RESPONSES = {
   letpass: function (state, affair, ctx) {
     ctx.sp -= 2;
     ctx.lines.push('You affect not to hear. It costs you in the telling (-2 status).');
+  },
+  // A gentleman at half his endurance or less may decline without dishonour.
+  pleadwounds: function (state, affair, ctx) {
+    const npc = findNpc(state, affair.npcId);
+    npc.grudge += 1;
+    ctx.lines.push("Your seconds present the surgeon's report. Not even " + npc.name + ' can press a wounded man; the affair is set aside without dishonour.');
   },
 };
 
@@ -709,7 +717,7 @@ function validatePlan(state, plan) {
 }
 
 function newMonthContext() {
-  return { sp: 0, lines: [], gazette: [], dutyDone: 0, bawdyVisited: false, caroused: false, duesPaid: false, recuperated: false, finalSP: 0 };
+  return { sp: 0, lines: [], gazette: [], dutyDone: 0, bawdyVisited: false, caroused: false, duesPaid: false, recuperated: false, restedThisMonth: false, poached: false, finalSP: 0 };
 }
 
 function resolveMonth(state, plan) {
@@ -1471,9 +1479,12 @@ function simulateRivalCourtship(state, npc, ctx) {
 function simulateRivalPoaching(state, npc, ctx) {
   const char = state.character;
   if (char.mistressId === null || npcAtWar(state, npc)) return;
+  // At most one poacher a month, and none while an earlier suit is unanswered.
+  if (ctx.poached || state.affairs.some(function (a) { return a.type === 'poach'; })) return;
   const lady = findLady(state, char.mistressId);
   const away = char.atFront !== null;
-  if (npc.sl < lady.sl - 2 || !chance(away ? 0.12 : 0.05)) return;
+  if (npc.sl < lady.sl - 2 || !chance(away ? 0.06 : 0.025)) return;
+  ctx.poached = true;
   if (away) {
     lady.lover = npc.id;
     npc.mistressId = lady.id;

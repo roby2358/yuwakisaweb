@@ -86,7 +86,12 @@ function renderAffairs(state) {
   box.classList.remove('hidden');
   box.innerHTML = '<h3>Affairs of Honour</h3>' + state.affairs.map(function (affair, i) {
     const npc = findNpc(state, affair.npcId);
-    const buttons = AFFAIR_BUTTONS[affair.type].map(function (b) {
+    const char = state.character;
+    const responses = AFFAIR_BUTTONS[affair.type].slice();
+    if (affair.type === 'challenged' && char.endCur * 2 <= char.endMax) {
+      responses.push(['pleadwounds', 'Plead your wounds (decline)']);
+    }
+    const buttons = responses.map(function (b) {
       return '<button data-affair="' + i + '" data-response="' + b[0] + '">' + b[1] + '</button>';
     }).join(' ');
     return '<div class="affair"><p><b>' + esc(npc.name) + '</b> — ' + esc(affair.reason) + '</p>' + buttons + '</div>';
