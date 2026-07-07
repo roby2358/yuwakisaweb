@@ -597,7 +597,7 @@ function entryRanks(char, regiment) {
   const open = [];
   for (let i = MAX_ENTRY_RANK; i >= 0; i--) {
     if (char.sl >= RANKS[i].minSL[col]) {
-      open.push({ index: i, rank: RANKS[i], price: commissionPrice(i, col), horses: horsesForRank(i, regiment), status: RANKS[i].status[col] });
+      open.push({ index: i, rank: RANKS[i], price: commissionPrice(i, col), horses: Math.max(0, horsesForRank(i, regiment) - char.horses), status: RANKS[i].status[col] });
     }
   }
   return open;
@@ -615,27 +615,29 @@ function applyToRegiment(state, regimentId, rankIndex) {
   const col = regiment.column;
   if (char.sl < rank.minSL[col]) return { ok: false, attempted: false, message: 'A ' + rank.name + "'s commission in the " + regiment.name + ' wants a gentleman of social level ' + rank.minSL[col] + '.' };
   const price = commissionPrice(rankIndex, col);
-  const horses = horsesForRank(rankIndex, regiment);
+  // Horses already in the stable count: only the shortfall is bought.
+  const horses = Math.max(0, horsesForRank(rankIndex, regiment) - char.horses);
   const cost = price + horses * HORSE_PRICE;
   if (char.cash < cost) return { ok: false, attempted: false, message: 'Joining as a ' + rank.name + ' costs ' + cost + ' crowns' + (horses > 0 ? ' (' + horses + ' horse' + (horses > 1 ? 's' : '') + ' included)' : '') + ' — beyond your purse.' };
   if (needed > 0 && d6() < needed) return { ok: false, attempted: true, message: 'The ' + regiment.name + ' regrets it has no place for you at present.' };
   char.cash -= cost;
-  char.horses = horses;
+  char.horses = Math.max(char.horses, horsesForRank(rankIndex, regiment));
   char.regimentId = regimentId;
   char.rankIndex = rankIndex;
   char.seniority = 0;
   char.appointmentId = null;
   if (rankIndex === 0) return { ok: true, attempted: true, message: 'You are sworn in as a Private of the ' + regiment.name + '.' };
-  return { ok: true, attempted: true, message: 'You purchase a ' + rank.name + "'s commission in the " + regiment.name + ' (' + cost + ' crowns' + (horses > 0 ? ', stable of ' + horses : '') + ').' };
+  return { ok: true, attempted: true, message: 'You purchase a ' + rank.name + "'s commission in the " + regiment.name + ' (' + cost + ' crowns' + (horses > 0 ? ', ' + horses + ' horse' + (horses > 1 ? 's' : '') + ' included' : '') + ').' };
 }
 
+// The horses are the gentleman's own property, not the regiment's: they stay
+// in his stable (and on his upkeep) when he resigns.
 function leaveRegiment(state) {
   const char = state.character;
   char.regimentId = null;
   char.rankIndex = -1;
   char.seniority = 0;
   char.appointmentId = null;
-  char.horses = 0;
 }
 
 // ---------- Clubs ----------
@@ -824,6 +826,7 @@ function resolveUpkeep(state, ctx) {
   const char = state.character;
   resolveMistressSupport(state, ctx);
   resolveClubDues(state, ctx);
+  resolveRemount(state, ctx);
   resolveStableUpkeep(state, ctx);
   const maintenance = MAINTENANCE_MULT * char.sl;
   if (char.cash >= maintenance) {
@@ -863,6 +866,20 @@ function resolveClubDues(state, ctx) {
   ctx.lines.push('Struck from the rolls of ' + club.name + ' for non-payment of dues.');
 }
 
+// A mounted rank obliges its holder to stay mounted: if the stable has run
+// short (sold for arrears, say, or a field promotion he could not yet
+// afford to match), he buys remounts as soon as his purse allows.
+function resolveRemount(state, ctx) {
+  const char = state.character;
+  if (char.regimentId === null) return;
+  const needed = horsesForRank(char.rankIndex, findRegiment(char.regimentId));
+  const shortfall = needed - char.horses;
+  if (shortfall <= 0 || char.cash < shortfall * HORSE_PRICE) return;
+  char.cash -= shortfall * HORSE_PRICE;
+  char.horses = needed;
+  ctx.lines.push('Your rank obliges you to keep ' + (needed > 1 ? needed + ' horses' : 'a horse') + ': you buy ' + (shortfall > 1 ? shortfall + ' remounts' : 'a remount') + ' (' + shortfall * HORSE_PRICE + ' crowns).');
+}
+
 function resolveStableUpkeep(state, ctx) {
   const char = state.character;
   if (char.horses <= 0) return;
@@ -871,8 +888,9 @@ function resolveStableUpkeep(state, ctx) {
     char.cash -= cost;
     return;
   }
+  char.horses = 0;
   ctx.sp -= 1;
-  ctx.lines.push('Your groom goes unpaid and your horses look it (-1 status).');
+  ctx.lines.push('The stableman, unpaid, sells your horses to cover the arrears (-1 status).');
 }
 
 function resolveMonthlyStatus(state, ctx) {
@@ -996,8 +1014,14 @@ function expensesForecast(state, plan) {
   }
   const support = mistressSupportForecast(state);
   if (support !== null) items.push(support);
-  if (char.horses > 0) {
-    items.push({ label: 'Stable of ' + char.horses + ' and a groom', amount: char.horses * HORSE_UPKEEP + GROOM_WAGE });
+  // Mirrors resolveRemount + resolveStableUpkeep: a mounted rank buys the
+  // stable up to strength, then the whole stable eats.
+  const stabled = char.regimentId === null ? char.horses : Math.max(char.horses, horsesForRank(char.rankIndex, findRegiment(char.regimentId)));
+  if (stabled > char.horses) {
+    items.push({ label: 'Remounts your rank obliges', amount: (stabled - char.horses) * HORSE_PRICE });
+  }
+  if (stabled > 0) {
+    items.push({ label: 'Stable of ' + stabled + ' and a groom', amount: stabled * HORSE_UPKEEP + GROOM_WAGE });
   }
   if (char.debt > 0 && (char.debtMonths + 1) % LOAN_INTEREST_PERIOD === 0) {
     items.push({ label: 'Interest falls due', amount: Math.ceil(char.debt * LOAN_INTEREST_RATE) });
@@ -1111,9 +1135,9 @@ function adviceOnRegiment(state) {
   });
   if (open.length > 0) {
     const best = open.reduce(function (a, b) { return rank.status[b.column] > rank.status[a.column] ? b : a; });
-    const horses = horsesForRank(char.rankIndex, best);
+    const horses = Math.max(0, horsesForRank(char.rankIndex, best) - char.horses);
     const cost = commissionPrice(char.rankIndex, best.column) + horses * HORSE_PRICE;
-    let line = 'On regiments: the ' + best.name + ' might take you as a ' + rank.name + ' (+' + rank.status[best.column] + 'S against your +' + hereStatus + 'S), a fresh commission at ' + cost + ' crowns' + (horses > 0 ? ', stable included' : '') + '.';
+    let line = 'On regiments: the ' + best.name + ' might take you as a ' + rank.name + ' (+' + rank.status[best.column] + 'S against your +' + hereStatus + 'S), a fresh commission at ' + cost + ' crowns' + (horses > 0 ? ', horses included' : '') + '.';
     line += char.cash < cost ? ' Your purse holds ' + char.cash + '.' : ' Apply and pray for a place.';
     return line;
   }

@@ -41,6 +41,10 @@ Deviations for solo play:
   to you, one of offence you have given; a rival courting the mistress is a
   separate flat monthly check (6%), resolved at once by the courting roll if
   the player is away at the wars.
+- Horses are the gentleman's own property: once bought they persist across
+  commissions and resignations, and are lost only when the stable upkeep
+  goes unpaid (the stableman sells them for the arrears, -1 status). A
+  mounted rank obliges him to buy remounts as soon as his purse allows.
 - Promotion is purchase + petition roll rather than strict vacancy tracking.
 - A commission up through Major may be purchased on joining a regiment,
   paying cumulatively for every rank up to it (social level minimums apply).
