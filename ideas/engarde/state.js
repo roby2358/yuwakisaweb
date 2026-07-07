@@ -88,6 +88,12 @@ function generateCharacter() {
     rankIndex: -1,
     seniority: 0,
     appointmentId: null,
+    // Preferment cooldowns: monthIndex when each road reopens, rolled fresh
+    // at every grant (base from data.js, gaussian -50%..+50% spread). Far
+    // enough in the past that the first of each is never barred.
+    nextTitleMonth: -9999,
+    nextPromotionMonth: -9999,
+    nextAppointmentMonth: -9999,
     mistressId: null,
     lonelyMonths: 0,
     mentions: 0,
@@ -273,6 +279,10 @@ function loadGame() {
   // from an older save so the gentleman simply starts fresh in Paris.
   state.character.atFront = null;
   if (state.pendingCampaign === undefined) state.pendingCampaign = false;
+  // Preferment cooldowns postdate older saves.
+  if (state.character.nextTitleMonth === undefined) state.character.nextTitleMonth = -9999;
+  if (state.character.nextPromotionMonth === undefined) state.character.nextPromotionMonth = -9999;
+  if (state.character.nextAppointmentMonth === undefined) state.character.nextAppointmentMonth = -9999;
   return state;
 }
 

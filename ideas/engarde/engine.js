@@ -186,14 +186,14 @@ const WEEK_ACTIONS = {
     forecastSP: function (state, params) {
       const char = state.character;
       const purchase = nextRankPurchase(char);
-      if (purchase === null) return 0;
+      if (purchase === null || promotionWaitMonths(state) > 0) return 0;
       const col = findRegiment(char.regimentId).column;
       return Math.max(0, purchase.rank.status[col] - currentRankStatus(char));
     },
     forecastCost: function (state, params) {
       const char = state.character;
       const purchase = nextRankPurchase(char);
-      if (purchase === null) return 0;
+      if (purchase === null || promotionWaitMonths(state) > 0) return 0;
       const stableCost = Math.max(0, horsesForRank(char.rankIndex + 1, findRegiment(char.regimentId)) - char.horses) * HORSE_PRICE;
       return purchase.price + stableCost;
     },
@@ -204,7 +204,9 @@ const WEEK_ACTIONS = {
       resolvePreferment(state, params.kind, params.targetIndex, ctx);
     },
     forecastSP: function (state, params) {
-      return PREFERMENT_KINDS[params.kind].forecastSP(state, params.targetIndex);
+      const handler = PREFERMENT_KINDS[params.kind];
+      if (handler.wait(state) > 0) return 0;
+      return handler.forecastSP(state, params.targetIndex);
     },
     forecastCost: function (state, params) { return 0; },
   },
@@ -319,11 +321,39 @@ function nextRankPurchase(char) {
   return { rank: next, minSL: next.minSL[col], price: next.price[col] };
 }
 
+// House rule (data.js): each grant starts a waiting period before the next
+// of its kind, rolled fresh at grant time — the base with a gaussian
+// -50%..+50% spread. Months still to wait; zero means the road is open. A
+// field promotion ignores the wait but restarts the clock.
+function rollCooldown(state, base) {
+  return state.monthIndex + Math.round(base * gaussianMult());
+}
+
+function titleWaitMonths(state) {
+  return Math.max(0, state.character.nextTitleMonth - state.monthIndex);
+}
+
+function promotionWaitMonths(state) {
+  return Math.max(0, state.character.nextPromotionMonth - state.monthIndex);
+}
+
+function appointmentWaitMonths(state) {
+  return Math.max(0, state.character.nextAppointmentMonth - state.monthIndex);
+}
+
+function monthsWord(n) {
+  return n === 1 ? 'a month' : n + ' months';
+}
+
 function resolvePromotionPetition(state, ctx) {
   const char = state.character;
   const purchase = nextRankPurchase(char);
   if (purchase === null) {
     ctx.lines.push('There is no commission above yours to be had at regimental headquarters.');
+    return;
+  }
+  if (promotionWaitMonths(state) > 0) {
+    ctx.lines.push(flourish(PROMOTION_PATIENCE, char.sl));
     return;
   }
   if (char.sl < purchase.minSL) {
@@ -344,6 +374,7 @@ function resolvePromotionPetition(state, ctx) {
   char.rankIndex += 1;
   char.horses = Math.max(char.horses, horsesForRank(char.rankIndex, findRegiment(char.regimentId)));
   char.seniority = 0;
+  char.nextPromotionMonth = rollCooldown(state, PROMOTION_COOLDOWN_MONTHS);
   ctx.lines.push('Your purchase is approved: you are now a ' + purchase.rank.name + ' of the ' + findRegiment(char.regimentId).name + ' (' + (purchase.price + stableCost) + ' crowns' + (stableCost > 0 ? ', horses included' : '') + ').');
 }
 
@@ -380,8 +411,11 @@ const PREFERMENT_KINDS = {
   appointment: {
     eligible: function (state, i) { return appointmentEligible(state, APPOINTMENTS[i]); },
     needed: function (i) { return APPOINTMENTS[i].roll; },
+    wait: appointmentWaitMonths,
+    patience: APPOINTMENT_PATIENCE,
     grant: function (state, i, ctx) {
       state.character.appointmentId = APPOINTMENTS[i].id;
+      state.character.nextAppointmentMonth = rollCooldown(state, APPOINTMENT_COOLDOWN_MONTHS);
       ctx.lines.push('You are named ' + APPOINTMENTS[i].name + '. The appointment is worth ' + APPOINTMENTS[i].status + ' status a month.');
     },
     name: function (i) { return APPOINTMENTS[i].name; },
@@ -392,12 +426,15 @@ const PREFERMENT_KINDS = {
   title: {
     eligible: titleEligible,
     needed: function (i) { return TITLES[i].roll; },
+    wait: titleWaitMonths,
+    patience: TITLE_PATIENCE,
     grant: function (state, i, ctx) {
       const t = TITLES[i];
       const char = state.character;
       char.title = t.name;
       char.sl = Math.max(char.sl, t.newSL);
       char.pension = t.pension;
+      char.nextTitleMonth = rollCooldown(state, TITLE_COOLDOWN_MONTHS);
       ctx.sp += t.statusBurst;
       ctx.lines.push('The King is pleased to create you ' + t.name + '! Your social level rises to ' + char.sl + '.');
     },
@@ -407,9 +444,13 @@ const PREFERMENT_KINDS = {
   generalRank: {
     eligible: generalRankEligible,
     needed: function (i) { return GENERAL_RANKS[i].roll; },
+    // A general's gazetting is a promotion, so it shares the promotion clock.
+    wait: promotionWaitMonths,
+    patience: PROMOTION_PATIENCE,
     grant: function (state, i, ctx) {
       state.character.rankIndex = 6 + i;
       state.character.seniority = 0;
+      state.character.nextPromotionMonth = rollCooldown(state, PROMOTION_COOLDOWN_MONTHS);
       ctx.lines.push('You are gazetted ' + GENERAL_RANKS[i].name + '. Paris bows a little lower.');
     },
     name: function (i) { return GENERAL_RANKS[i].name; },
@@ -420,6 +461,10 @@ const PREFERMENT_KINDS = {
 
 function resolvePreferment(state, kind, targetIndex, ctx) {
   const handler = PREFERMENT_KINDS[kind];
+  if (handler.wait(state) > 0) {
+    ctx.lines.push(flourish(handler.patience, state.character.sl));
+    return;
+  }
   if (!handler.eligible(state, targetIndex)) {
     ctx.lines.push('Your petition for preferment is not even read; you lack the standing or the friends.');
     return;
@@ -1104,14 +1149,22 @@ function adviceOnRank(state) {
     const wants = [];
     if (char.sl < purchase.minSL) wants.push('a gentleman of social level ' + purchase.minSL + ' (you stand at ' + char.sl + ')');
     if (char.cash < cost) wants.push(cost + ' crowns' + (stableCost > 0 ? ', horses included' : '') + ' — your purse holds ' + char.cash);
-    if (wants.length === 0) return 'On rank: a ' + purchase.rank.name + '’s commission can be had for ' + cost + ' crowns. Petition for promotion and pray for a vacancy.';
+    if (wants.length === 0) {
+      const wait = promotionWaitMonths(state);
+      if (wait > 0) return 'On rank: a ' + purchase.rank.name + '’s commission can be had for ' + cost + ' crowns, but the army will not see you promoted again for ' + monthsWord(wait) + ' — barring a step won in the field.';
+      return 'On rank: a ' + purchase.rank.name + '’s commission can be had for ' + cost + ' crowns. Petition for promotion and pray for a vacancy.';
+    }
     return 'On rank: a ' + purchase.rank.name + '’s commission wants ' + wants.join(', and ') + '.';
   }
   const idx = char.rankIndex - 5;
   if (idx >= GENERAL_RANKS.length) return 'On rank: there is none in France above Field Marshal.';
   const g = GENERAL_RANKS[idx];
   const wants = prefermentWants(state, g.minSL, g.inf);
-  if (wants.length === 0) return 'On rank: nothing bars your gazetting as ' + g.name + '. Seek preferment at court.';
+  if (wants.length === 0) {
+    const wait = promotionWaitMonths(state);
+    if (wait > 0) return 'On rank: nothing bars your gazetting as ' + g.name + ' save the calendar — the army will not promote you again for ' + monthsWord(wait) + '.';
+    return 'On rank: nothing bars your gazetting as ' + g.name + '. Seek preferment at court.';
+  }
   return 'On rank: to be gazetted ' + g.name + ' wants ' + wants.join(', and ') + '.';
 }
 
@@ -1151,7 +1204,11 @@ function adviceOnTitle(state) {
   if (next >= TITLES.length) return 'On title: you bear the grandest the King bestows.';
   const t = TITLES[next];
   const wants = prefermentWants(state, t.minSL, t.inf);
-  if (wants.length === 0) return 'On title: the King might well make you ' + t.name + '. Seek preferment at court.';
+  if (wants.length === 0) {
+    const wait = titleWaitMonths(state);
+    if (wait > 0) return 'On title: the King might well make you ' + t.name + ', but his last favour is too fresh — have patience some ' + monthsWord(wait) + ' more.';
+    return 'On title: the King might well make you ' + t.name + '. Seek preferment at court.';
+  }
   return 'On title: to be made ' + t.name + ' wants ' + wants.join(', and ') + '.';
 }
 
@@ -1165,6 +1222,8 @@ function adviceOnAppointment(state) {
   const ready = candidates.filter(function (c) { return c.wants.length === 0; });
   if (ready.length > 0) {
     const best = ready.reduce(function (a, b) { return b.appt.status > a.appt.status ? b : a; });
+    const wait = appointmentWaitMonths(state);
+    if (wait > 0) return 'On appointments: ' + best.appt.name + ' (+' + best.appt.status + 'S) would be yours to ask for, but the court will not be hurried — ' + monthsWord(wait) + ' more.';
     return 'On appointments: ' + best.appt.name + ' (+' + best.appt.status + 'S) is yours to ask for. Seek preferment at court.';
   }
   const nearest = candidates.reduce(function (a, b) {
@@ -1413,6 +1472,7 @@ function resolveBattlePromotion(state, ctx) {
   }
   char.rankIndex += 1;
   char.seniority = 0;
+  char.nextPromotionMonth = rollCooldown(state, PROMOTION_COOLDOWN_MONTHS);
   ctx.lines.push('Field promotion! You are made ' + purchase.rank.name + ' without purchase.');
   const needed = horsesForRank(char.rankIndex, findRegiment(char.regimentId));
   const stableCost = Math.max(0, needed - char.horses) * HORSE_PRICE;

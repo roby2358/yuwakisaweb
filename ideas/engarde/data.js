@@ -46,6 +46,19 @@ const REGIMENT_RELATIONS = {
 // every rank up to it (purchase is cumulative).
 const MAX_ENTRY_RANK = 3;
 
+// ---------- Preferment cooldowns ----------
+
+// The ladder is slowed: after each grant a waiting period must pass before
+// the next of its kind, and petitions in the interval are met with counsel
+// of patience (the PATIENCE tables in flourish.js). A field promotion won in
+// battle ignores the wait but restarts the clock. Each wait is rolled at
+// grant time with a gaussian -50%..+50% spread (gaussianMult in dice.js), so
+// an unlucky knight who says the wrong thing near the King may wait a year
+// longer for his marquisate.
+const TITLE_COOLDOWN_MONTHS = 24;
+const PROMOTION_COOLDOWN_MONTHS = 12;
+const APPOINTMENT_COOLDOWN_MONTHS = 12;
+
 // ---------- Campaigns ----------
 
 // Chance in 6 that a brigade deploys for the summer campaign — the solo

@@ -46,6 +46,14 @@ Deviations for solo play:
   goes unpaid (the stableman sells them for the arrears, -1 status). A
   mounted rank obliges him to buy remounts as soon as his purse allows.
 - Promotion is purchase + petition roll rather than strict vacancy tracking.
+- The King does not shower favours: after a new title some two years must
+  pass before the next, and promotions and court appointments each wait
+  about a year from the last of their kind (a general's gazetting shares the
+  promotion clock). Each wait is rolled fresh at the grant, bell-curved
+  between half and half-again the base — an unlucky knight may say the wrong
+  thing near the King and wait three years for his next step. A field
+  promotion won in battle alone comes at once, though it restarts the clock.
+  Petitions in the interval are met with SL-ranked counsel of patience.
 - A commission up through Major may be purchased on joining a regiment,
   paying cumulatively for every rank up to it (social level minimums apply).
 - A challenged character at half Endurance or less may decline the duel

@@ -211,6 +211,84 @@ const PLAYER_DEATHS = [
   'You choke upon a compliment from the King, delivered, at long last, in person.',
 ];
 
+// The court's answer to a gentleman who asks for a second title before the
+// King's last favour has aged its two years. 20 entries, picked with
+// flourish(). Full sentences in the second person; counsel of patience.
+const TITLE_PATIENCE = [
+  'A clerk of the third antechamber informs you, through the door, that the King is not to be pestered.',
+  'You wait four hours among the footmen and are sent home with nothing but a chill.',
+  'An under-clerk glances at your petition and asks, kindly, whether you know how many such he burns in a week.',
+  'The word from court is short: the King has given once, and does not care to be reminded of it.',
+  'Your petition is received, docketed, and, you are given to understand, buried.',
+  'An usher counsels patience: favours, like vintages, must be given their years.',
+  'You are told the King remembers you perfectly — which is precisely why he will hear no more of you at present.',
+  'A secretary returns your petition unopened; the ink on your last patent, he observes, is scarcely dry.',
+  'The chancellery replies that titles ripen slowly, and that yours is still upon the bough.',
+  'A gentleman of the bedchamber murmurs that to ask again so soon is the surest way to ask never.',
+  'The minister receives you warmly and promises nothing, with an eloquence you almost admire.',
+  'Word comes down that His Majesty admires nothing in a gentleman so much as the patience to wait for the next honour.',
+  'The minister is all courtesy: the King’s grace, once poured, must be allowed to settle before the glass is filled again.',
+  'You are assured your name is written in the book — and shown, gently, how very long the book is.',
+  'The chancellor himself regrets that honours given too close together cheapen both, and he is sure you agree.',
+  'A duke of your acquaintance advises, over excellent wine, that at court the second favour is won by never asking for it.',
+  'The King’s confessor remarks that Heaven itself rested on the seventh day, and Heaven had less correspondence.',
+  'His Majesty, you are told, spoke your name warmly on Tuesday; the greater reason not to spend that warmth on paper.',
+  'The first minister walks you the length of the gallery, praising your patience so handsomely you cannot now abandon it.',
+  'The King, passing, observes that his favour, like the sun, cannot rise twice in one day; the court applauds the mot for a quarter of an hour.',
+];
+
+// The army's answer to a gentleman who petitions for a step within a year of
+// his last. 20 entries, picked with flourish(). Full sentences in the second
+// person; the field promotion alone outruns this counsel.
+const PROMOTION_PATIENCE = [
+  'The sergeant-clerk laughs you out of the orderly room: two steps in a twelvemonth, in this army?',
+  'The adjutant does not look up: the ink of your last commission is still wet, and so is the colonel’s temper.',
+  'You are reminded, curtly, that there are subalterns grown grey waiting for less.',
+  'The colonel’s man returns your petition with a single word written across it: patience.',
+  'The mess finds your ambition amusing; the colonel does not find it at all.',
+  'The adjutant prescribes a year of good conduct and better silence.',
+  'The colonel is blunt: a step a year is as fast as any man should climb who is not being shot at the top.',
+  'Headquarters replies that seniority, like wine, cannot be hurried without turning to vinegar.',
+  'The brigade-major reminds you that the army promotes by the calendar, not by the appetite.',
+  'The colonel toasts your zeal at mess and assigns it a year’s drill to ripen in.',
+  'Your petition travels to brigade and returns with the season’s compliments and nothing else.',
+  'The general’s aide is sympathetic: the list is long, the year is short, and your name has lately been crossed off the top of it.',
+  'The war office notes that you have been promoted once already this year, a fact it seems to hold against you.',
+  'A friend at headquarters shows you the gazette: your last step is still in it, which is precisely the difficulty.',
+  'The general receives you kindly and observes that a sword drawn too often at the ladder is drawn too seldom at the enemy.',
+  'The commissary of musters explains that France pays for glory annually, and yours is not yet due.',
+  'The Marshal’s secretary assures you the Marshal thinks of you often — indeed, only last promotion.',
+  'At headquarters they speak of you as a coming man; they are content, for a year, that you should still be coming.',
+  'The Minister of War regrets that gazetting you again so soon would oblige him to explain you to the other generals.',
+  'The Marshal himself waves your papers away with perfect good humour: France cannot promote you twice a year without unbalancing the army.',
+];
+
+// The court's answer to a gentleman angling for a new appointment within a
+// year of the last. 20 entries, picked with flourish(). Full sentences in
+// the second person.
+const APPOINTMENT_PATIENCE = [
+  'A porter at the palace gate explains that offices are not handed out at the door, nor twice running to the same coat.',
+  'You spend a day among the petitioners and are given thin wine and no encouragement.',
+  'A clerk explains, not unkindly, that the court must first tire of the last man it obliged — that is, of you.',
+  'The comptroller’s office observes that offices are like pews: one sits in them a decent while before eyeing the next.',
+  'You are advised to enjoy the place you have; better men are enjoying the wait for it.',
+  'A chamberlain remarks that a new office every season is the mark of a projector, not a gentleman.',
+  'The steward of the household is courteous, brief, and entirely unmoved.',
+  'Your inquiry is met with the year’s most polished shrug.',
+  'A secretary confides that the surest path to the next office is to be seen filling the present one.',
+  'The comptroller praises your energy and files it.',
+  'You are told the household is quite full, and reminded who was most lately fitted into it.',
+  'An intendant explains that the court digests slowly, and that you are, as it were, still on the table.',
+  'The master of ceremonies allows that you are much discussed, and begs you not to spoil it by being much seen.',
+  'A minister’s wife tells you, behind her fan, that asking twice in a year is dining twice at the same house uninvited.',
+  'The first gentleman of the chamber assures you the King knows your worth, and would hate to seem to be paying it off in instalments.',
+  'The comptroller-general observes that the budget of favours, like any budget, is annual.',
+  'A cardinal’s secretary suggests, with great delicacy, that appetite at court is best worn as indifference.',
+  'The minister strolls you past the offices you might one day hold, in the manner of a man showing his cellar to a guest who has drunk enough.',
+  'The King’s own valet lets it be known that His Majesty found your last elevation charming, and charm must never be hurried into habit.',
+  'The King remarks that a gentleman so lately obliged ought to be the last to remind him of it; you bow to the carpet and withdraw.',
+];
+
 // A campaign month where the war keeps its distance — no engagement, just the
 // texture of the season as the gentleman's rank would know it.
 const QUIET_CAMPAIGN = [
