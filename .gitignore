@@ -1,7 +1,9 @@
 .idea/
 
 *.iml
-**/.claude/
+# local Claude settings stay untracked, but project skills are shared
+**/.claude/*
+!**/.claude/skills/
 **/pjpd/bak/
 **/avail/orig/
 
