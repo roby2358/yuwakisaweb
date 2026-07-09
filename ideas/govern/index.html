@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CHARTER — a game of governance</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header id="hud">
+    <div id="hud-title">CHARTER <span class="subtitle">the Regency of Lexden</span></div>
+    <div id="hud-season" class="hud-item"></div>
+    <div id="hud-ap" class="hud-item"></div>
+    <div id="hud-treasury" class="hud-item"></div>
+    <div id="hud-legitimacy" class="hud-item"></div>
+  </header>
+
+  <main>
+    <aside id="realm"></aside>
+    <section id="chronicle-wrap">
+      <div id="chronicle"></div>
+    </section>
+  </main>
+
+  <div id="status"></div>
+
+  <div id="endgame" class="hidden">
+    <div id="end-card">
+      <h1 id="end-title"></h1>
+      <p id="end-body"></p>
+      <p id="end-score"></p>
+      <button class="btn btn-ratify" data-action="newGame">Begin a new Regency</button>
+    </div>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
