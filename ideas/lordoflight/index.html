@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Great-Souled Sam — a Lord of Light game</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="layout">
+  <main id="map-pane">
+    <svg id="map" viewBox="0 0 900 620" preserveAspectRatio="xMidYMid meet"></svg>
+  </main>
+
+  <aside id="panel">
+    <header>
+      <h1>The Great-Souled Sam</h1>
+      <p class="subtitle">a game of the war against Heaven</p>
+    </header>
+
+    <section id="stats">
+      <div class="stat-row">
+        <span class="stat-label">Turn</span><span id="stat-turn" class="stat-value"></span>
+        <span class="stat-label">Karma</span><span id="stat-karma" class="stat-value karma"></span>
+      </div>
+      <div class="meter-block">
+        <div class="meter-head"><span>Enlightenment</span><span id="stat-enl"></span></div>
+        <div class="meter"><div id="bar-enl" class="meter-fill enl"></div></div>
+      </div>
+      <div class="meter-block">
+        <div class="meter-head"><span>Heaven's Wrath</span><span id="stat-wrath"></span></div>
+        <div class="meter">
+          <div id="bar-wrath" class="meter-fill wrath"></div>
+          <div class="tick" style="left:20%" title="Agni descends"></div>
+          <div class="tick" style="left:45%" title="Kali descends"></div>
+          <div class="tick" style="left:70%" title="Yama descends"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="body-card">
+      <div class="card-title">Sam wears the body of</div>
+      <div id="body-name" class="body-name"></div>
+      <div id="body-perk" class="body-perk"></div>
+      <div id="sam-status" class="sam-status"></div>
+    </section>
+
+    <section id="actions">
+      <div class="card-title">This turn, Sam may…</div>
+      <div id="action-buttons"></div>
+      <div id="travel-hint" class="hint">…or click a glowing road-linked city to travel there.</div>
+    </section>
+
+    <section id="hunters">
+      <div class="card-title">The Hunters of Heaven</div>
+      <div id="god-list"></div>
+    </section>
+
+    <section id="log-wrap">
+      <div class="card-title">The Chronicle</div>
+      <div id="log"></div>
+    </section>
+  </aside>
+</div>
+
+<!-- Confrontation -->
+<div id="modal-confront" class="modal hidden">
+  <div class="modal-box">
+    <h2 id="confront-title"></h2>
+    <p id="confront-text"></p>
+    <div id="confront-aid" class="confront-aid"></div>
+    <div class="card-title">Channel karma into the fight</div>
+    <div id="channel-row" class="channel-row"></div>
+    <div class="modal-buttons">
+      <button id="btn-fight" class="btn danger">Give battle</button>
+      <button id="btn-flee" class="btn">Flee</button>
+    </div>
+  </div>
+</div>
+
+<!-- Death -->
+<div id="modal-death" class="modal hidden">
+  <div class="modal-box">
+    <h2>Death is not the end. Usually.</h2>
+    <p id="death-text"></p>
+    <div class="modal-buttons">
+      <button id="btn-rebirth" class="btn gold"></button>
+      <button id="btn-fate" class="btn">Accept the real death</button>
+    </div>
+  </div>
+</div>
+
+<!-- Intro / endings -->
+<div id="overlay" class="modal">
+  <div class="modal-box wide">
+    <h2 id="overlay-title">Lord of Light</h2>
+    <div id="overlay-text"></div>
+    <div class="modal-buttons">
+      <button id="btn-begin" class="btn gold">Take up the burden</button>
+    </div>
+  </div>
+</div>
+
+<script src="engine.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>

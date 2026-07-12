@@ -1,0 +1,255 @@
+/* The Great-Souled Sam — night over the river Vedra */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --ink: #dfe4ff;
+  --dim: #8a93c4;
+  --gold: #ffd76a;
+  --gold-dark: #b98a1e;
+  --panel: #131832;
+  --panel-edge: #2a3260;
+  --night-top: #05070f;
+  --night-mid: #0c1230;
+  --night-low: #182050;
+  --agni: #ff8c3a;
+  --kali: #c94fd8;
+  --yama: #e04545;
+  --demon: #7cf29b;
+}
+
+html, body { height: 100%; }
+
+body {
+  font-family: Georgia, 'Times New Roman', serif;
+  background: var(--night-top);
+  color: var(--ink);
+  overflow: hidden;
+}
+
+#layout { display: flex; height: 100vh; }
+
+#map-pane {
+  flex: 1;
+  min-width: 0;
+  background: radial-gradient(ellipse at 50% 120%, var(--night-low) 0%, var(--night-mid) 45%, var(--night-top) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#map { width: 100%; height: 100%; }
+
+/* ---------- side panel ---------- */
+
+#panel {
+  width: 360px;
+  flex-shrink: 0;
+  background: var(--panel);
+  border-left: 1px solid var(--panel-edge);
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+#panel header h1 {
+  font-size: 1.35rem;
+  color: var(--gold);
+  letter-spacing: 0.04em;
+  font-weight: normal;
+  font-variant: small-caps;
+}
+
+.subtitle { color: var(--dim); font-style: italic; font-size: 0.85rem; }
+
+section {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--panel-edge);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.card-title {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--dim);
+  margin-bottom: 6px;
+}
+
+.stat-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto 1fr;
+  gap: 6px 10px;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.stat-label { color: var(--dim); font-size: 0.8rem; }
+.stat-value { font-size: 1.2rem; }
+.stat-value.karma { color: var(--gold); }
+
+.meter-block { margin-top: 6px; }
+.meter-head {
+  display: flex; justify-content: space-between;
+  font-size: 0.8rem; color: var(--dim); margin-bottom: 3px;
+}
+.meter {
+  position: relative;
+  height: 10px;
+  background: #0a0e22;
+  border: 1px solid var(--panel-edge);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.meter-fill { height: 100%; width: 0; transition: width 0.6s ease; }
+.meter-fill.enl { background: linear-gradient(90deg, #3d6ecf, var(--gold)); }
+.meter-fill.wrath { background: linear-gradient(90deg, #7a2020, var(--yama)); }
+.tick { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,0.45); }
+
+.body-name { color: var(--gold); font-size: 1.02rem; }
+.body-perk { color: var(--dim); font-size: 0.82rem; font-style: italic; margin-top: 2px; }
+.sam-status { font-size: 0.82rem; margin-top: 6px; }
+.sam-status .hidden-yes { color: #7cd8f2; }
+.sam-status .hidden-no { color: var(--yama); }
+
+#action-buttons { display: flex; flex-direction: column; gap: 6px; }
+
+.btn {
+  font-family: inherit;
+  font-size: 0.92rem;
+  padding: 7px 12px;
+  background: #1d2547;
+  color: var(--ink);
+  border: 1px solid #3a4680;
+  border-radius: 5px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+.btn:hover:not(:disabled) { background: #2a3468; }
+.btn:disabled { opacity: 0.35; cursor: default; }
+.btn.gold { border-color: var(--gold-dark); color: var(--gold); }
+.btn.gold:hover:not(:disabled) { background: #33290e; }
+.btn.danger { border-color: #8a2c2c; color: #ff9a9a; }
+.btn.danger:hover:not(:disabled) { background: #3a1515; }
+.btn .cost { color: var(--dim); font-size: 0.8rem; }
+
+.hint { color: var(--dim); font-size: 0.78rem; font-style: italic; margin-top: 8px; }
+
+.god-row { display: flex; align-items: baseline; gap: 8px; font-size: 0.86rem; padding: 3px 0; }
+.god-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; align-self: center; }
+.god-name { min-width: 4.2em; }
+.god-status { color: var(--dim); font-style: italic; font-size: 0.8rem; }
+
+#log-wrap { flex: 1; min-height: 140px; display: flex; flex-direction: column; }
+#log { flex: 1; overflow-y: auto; font-size: 0.84rem; line-height: 1.45; min-height: 100px; }
+#log p { margin-bottom: 7px; }
+#log .turn-no { color: var(--dim); font-size: 0.72rem; margin-right: 5px; }
+#log .k-sam   { color: var(--ink); }
+#log .k-god   { color: #ffb0a0; }
+#log .k-demon { color: var(--demon); }
+#log .k-event { color: var(--gold); }
+#log .k-death { color: var(--yama); font-style: italic; }
+#log .k-win   { color: var(--gold); font-style: italic; }
+
+/* ---------- map ---------- */
+
+.road { stroke: #2b3466; stroke-width: 2; stroke-dasharray: 1 5; stroke-linecap: round; }
+.river { fill: none; stroke: #1f3a6e; stroke-width: 10; opacity: 0.55; }
+.star { fill: #cdd6ff; }
+
+.node-label {
+  fill: var(--dim);
+  font-family: Georgia, serif;
+  font-size: 13px;
+  text-anchor: middle;
+  pointer-events: none;
+}
+.node-label.special { fill: #6f7bb5; font-style: italic; }
+
+.city-base { fill: #161d3d; stroke: #3d4a7a; stroke-width: 2; }
+.city-base.hellwell { fill: #1a0f0f; stroke: #7a3520; }
+.city-base.travelable { cursor: pointer; stroke: #7cd8f2; }
+.city-base.travelable:hover { fill: #23305e; }
+.city-base.converted { stroke: var(--gold); }
+.city-base.burned { fill: #241a16; stroke: #4a3a30; }
+
+.conv-ring { fill: none; stroke: var(--gold); stroke-width: 3.5; stroke-linecap: round; transition: stroke-dashoffset 0.5s; }
+
+.pulse-ring {
+  fill: none; stroke: #7cd8f2; stroke-width: 1.5; opacity: 0.7;
+  animation: pulse 1.6s ease-out infinite;
+  pointer-events: none;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@keyframes pulse {
+  0% { transform: scale(0.8); opacity: 0.8; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+.sam-marker { font-size: 22px; text-anchor: middle; cursor: default; }
+.sam-glyph { fill: var(--gold); }
+
+.god-marker text {
+  font-size: 13px; text-anchor: middle; fill: #05070f;
+  font-weight: bold; font-family: Georgia, serif; pointer-events: none;
+}
+.god-marker circle { stroke: #05070f; stroke-width: 1.5; }
+.god-marker { transition: transform 0.45s ease; }
+
+.eye-marker { font-size: 15px; text-anchor: middle; opacity: 0.9; pointer-events: none; }
+.demon-marker { font-size: 15px; text-anchor: middle; pointer-events: none; }
+
+.flash-burn { animation: burnflash 0.8s ease-out; }
+@keyframes burnflash {
+  0% { fill: #ffdd99; } 40% { fill: #ff6a1f; } 100% { fill: #241a16; }
+}
+.flash-fight { animation: fightflash 0.6s ease-in-out 2; }
+@keyframes fightflash {
+  0%, 100% { opacity: 1; } 50% { opacity: 0.15; }
+}
+
+/* ---------- modals ---------- */
+
+.modal {
+  position: fixed; inset: 0;
+  background: rgba(3, 5, 12, 0.82);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 20;
+}
+.modal.hidden { display: none; }
+
+.modal-box {
+  background: var(--panel);
+  border: 1px solid var(--gold-dark);
+  border-radius: 8px;
+  max-width: 480px;
+  width: calc(100% - 40px);
+  padding: 22px 26px;
+  box-shadow: 0 0 60px rgba(255, 215, 106, 0.12);
+}
+.modal-box.wide { max-width: 620px; }
+
+.modal-box h2 {
+  color: var(--gold);
+  font-weight: normal;
+  font-variant: small-caps;
+  letter-spacing: 0.04em;
+  margin-bottom: 12px;
+}
+
+.modal-box p, #overlay-text p { line-height: 1.55; margin-bottom: 10px; font-size: 0.95rem; }
+#overlay-text .quote { font-style: italic; color: var(--dim); }
+#overlay-text .quote em { color: var(--gold); font-style: italic; }
+
+.confront-aid { color: var(--demon); font-size: 0.88rem; margin-bottom: 12px; min-height: 1em; }
+
+.channel-row { display: flex; gap: 6px; margin-bottom: 16px; }
+.channel-row .btn { flex: 1; text-align: center; }
+.channel-row .btn.selected { background: #33290e; border-color: var(--gold); color: var(--gold); }
+
+.modal-buttons { display: flex; gap: 10px; justify-content: flex-end; }
