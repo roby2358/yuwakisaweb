@@ -1,7 +1,8 @@
 // Interactive human version of the principle benchmark.
-// Flow per suite: read the shown statements, type the principle (<= CHAR_LIMIT
-// chars), then select matching statements from the full list. Scoring mirrors
-// src/score.py from the benchmark.
+// Suites are taken one at a time: a random draw from the suites with the
+// fewest completed iterations. Completing a suite stores that iteration's
+// result (retakes overwrite), and the results page aggregates the latest
+// result per suite. Scoring mirrors src/score.py from the benchmark.
 
 const CHAR_LIMIT = 300;
 const STORAGE_KEY = "principle-human-run";
@@ -13,8 +14,10 @@ const MODEL_SCORES = [];
 
 const app = document.getElementById("app");
 
-// answers[i] = { principle: string, selected: [1-based statement numbers] }
-let state = { suiteIndex: 0, phase: "intro", answers: [] };
+// results[suiteId] = { iteration, principle, selected: [1-based numbers] }
+// current = { suiteId, principle } for a suite in progress (principle null
+// until the generalize step is submitted).
+let state = { phase: "intro", results: {}, current: null };
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -23,13 +26,10 @@ function saveState() {
 function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (saved && saved.phase && Array.isArray(saved.answers)) return saved;
+    if (saved && saved.phase && saved.results && typeof saved.results === "object")
+      return saved;
   } catch (e) { /* corrupt save: ignore */ }
   return null;
-}
-
-function clearState() {
-  localStorage.removeItem(STORAGE_KEY);
 }
 
 function el(tag, attrs, children) {
@@ -47,16 +47,60 @@ function el(tag, attrs, children) {
 function render() {
   app.replaceChildren();
   app.className = state.phase;
+  window.scrollTo(0, 0);
   if (state.phase === "intro") renderIntro();
   else if (state.phase === "generalize") renderGeneralize();
   else if (state.phase === "classify") renderClassify();
   else renderResults();
 }
 
+function suiteById(suiteId) {
+  return SUITES.find((s) => s.suiteId === suiteId);
+}
+
+function iterationOf(suiteId) {
+  return state.results[suiteId] ? state.results[suiteId].iteration : 0;
+}
+
+// Uniform random draw from the suites with the fewest completed iterations.
+function drawSuite() {
+  const low = Math.min(...SUITES.map((s) => iterationOf(s.suiteId)));
+  const pool = SUITES.filter((s) => iterationOf(s.suiteId) === low);
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function beginSuite(suiteId) {
+  state.current = { suiteId, principle: null };
+  state.phase = "generalize";
+  saveState();
+  render();
+}
+
 // ---------------------------------------------------------------- intro
 
 function renderIntro() {
-  const resumable = state.answers.length > 0 || state.suiteIndex > 0;
+  const attempted = Object.keys(state.results).length;
+  const buttons = [];
+  if (state.current) {
+    buttons.push(el("button", { class: "primary",
+      text: `Resume ${state.current.suiteId}`,
+      onclick: () => {
+        state.phase = state.current.principle ? "classify" : "generalize";
+        saveState();
+        render();
+      } }));
+  }
+  buttons.push(el("button", { class: state.current ? "" : "primary",
+    text: attempted > 0 ? "Take a suite" : "Begin",
+    onclick: () => beginSuite(drawSuite().suiteId) }));
+  if (attempted > 0) {
+    buttons.push(el("button", { text: "Go to results", onclick: () => {
+      state.phase = "results";
+      saveState();
+      render();
+    } }));
+  }
+
   app.append(
     el("header", { class: "intro-header" }, [
       el("img", { class: "logo", src: "../../pics/logo_yuwakisa_daughters.png",
@@ -70,8 +114,9 @@ function renderIntro() {
       el("div", { class: "step" }, [
         el("h3", { text: "Read" }),
         el("p", { text:
-          "Each of the " + SUITES.length + " suites opens with a handful of " +
-          "observations that share a single unifying principle." }),
+          "Each suite opens with a handful of observations that share a " +
+          "single unifying principle. You get one of the " + SUITES.length +
+          " suites at random, least-taken first." }),
       ]),
       el("div", { class: "step" }, [
         el("h3", { text: "Generalize" }),
@@ -87,34 +132,17 @@ function renderIntro() {
       ]),
     ]),
     el("p", { class: "intro-note", text:
-      "Progress is saved in your browser, so you can close the tab and come " +
-      "back. At the end you get the same metrics the models are scored on." }),
-    el("div", { class: "actions intro-actions" }, [
-      el("button", { class: "primary", text: resumable ? "Resume" : "Begin",
-        onclick: () => {
-          // A saved principle without a selection means classify was in progress.
-          const current = state.answers[state.suiteIndex];
-          state.phase = current && current.principle && current.selected == null
-            ? "classify" : "generalize";
-          saveState();
-          render();
-        } }),
-      resumable
-        ? el("button", { text: "Start over", onclick: () => {
-            clearState();
-            state = { suiteIndex: 0, phase: "generalize", answers: [] };
-            saveState();
-            render();
-          } })
-        : el("span"),
-    ])
+      "Each completed suite lands you on the results page, scored on the " +
+      "same metrics as the models. Retaking a suite replaces its result. " +
+      "Everything is saved in your browser." }),
+    el("div", { class: "actions intro-actions" }, buttons)
   );
 }
 
 // ---------------------------------------------------------------- generalize
 
 function renderGeneralize() {
-  const suite = SUITES[state.suiteIndex];
+  const suite = suiteById(state.current.suiteId);
   const shown = suite.statements.filter((s) => s.role === "shown");
   const counter = el("div", { class: "charcount", text: `0 / ${CHAR_LIMIT}` });
   const textarea = el("textarea", {
@@ -129,14 +157,15 @@ function renderGeneralize() {
     else nextButton.setAttribute("disabled", "");
   });
   nextButton.addEventListener("click", () => {
-    state.answers[state.suiteIndex] = { principle: textarea.value.trim(), selected: null };
+    state.current.principle = textarea.value.trim();
     state.phase = "classify";
     saveState();
     render();
   });
 
   app.append(
-    el("div", { class: "progress", text: `Suite ${state.suiteIndex + 1} of ${SUITES.length}` }),
+    el("div", { class: "progress",
+      text: `Suite ${suite.suiteId} · iteration ${iterationOf(suite.suiteId) + 1}` }),
     el("h1", { text: "What do these have in common?" }),
     el("p", { text:
       `Here are ${shown.length} observations that share a single unifying principle. ` +
@@ -152,9 +181,7 @@ function renderGeneralize() {
 // ---------------------------------------------------------------- classify
 
 function renderClassify() {
-  const suite = SUITES[state.suiteIndex];
-  const answer = state.answers[state.suiteIndex];
-  const last = state.suiteIndex === SUITES.length - 1;
+  const suite = suiteById(state.current.suiteId);
 
   const checkboxes = [];
   const list = el("ul", { class: "checklist" }, suite.statements.map((s, i) => {
@@ -170,27 +197,27 @@ function renderClassify() {
   }));
 
   const doneButton = el("button", { class: "primary",
-    text: last ? "Finish and see results" : "Next suite",
+    text: "Finish and see results",
     onclick: () => {
-      answer.selected = checkboxes
-        .map((box, i) => (box.checked ? i + 1 : 0))
-        .filter(Boolean);
-      if (last) {
-        state.phase = "results";
-      } else {
-        state.suiteIndex += 1;
-        state.phase = "generalize";
-      }
+      state.results[suite.suiteId] = {
+        iteration: iterationOf(suite.suiteId) + 1,
+        principle: state.current.principle,
+        selected: checkboxes
+          .map((box, i) => (box.checked ? i + 1 : 0))
+          .filter(Boolean),
+      };
+      state.current = null;
+      state.phase = "results";
       saveState();
-      window.scrollTo(0, 0);
       render();
     } });
 
   app.append(
-    el("div", { class: "progress", text: `Suite ${state.suiteIndex + 1} of ${SUITES.length}` }),
+    el("div", { class: "progress",
+      text: `Suite ${suite.suiteId} · iteration ${iterationOf(suite.suiteId) + 1}` }),
     el("h1", { text: "Select every statement that meets your principle" }),
     el("p", { class: "note", text: "Your principle:" }),
-    el("div", { class: "principle-box", text: answer.principle }),
+    el("div", { class: "principle-box", text: state.current.principle }),
     el("p", { text: `Here are ${suite.statements.length} statements. Check every one that meets the principle — including the ones you already saw.` }),
     el("div", { class: "scrollbox" }, [
       list,
@@ -249,12 +276,33 @@ function metricCells(score) {
 const METRIC_HEADERS = ["Shown acc", "Held-out recall", "Near FPR", "Far FPR",
                         "FPR", "Overall"];
 
+function backToStartActions() {
+  return el("div", { class: "actions" }, [
+    el("button", { class: "primary", text: "Back to start", onclick: () => {
+      state.phase = "intro";
+      saveState();
+      render();
+    } }),
+  ]);
+}
+
 function renderResults() {
-  const scored = SUITES.map((suite, i) => ({
-    suite,
-    answer: state.answers[i],
-    score: scoreSuite(suite, state.answers[i].selected || []),
-  }));
+  // Latest result per attempted suite, in canonical suite order.
+  const scored = SUITES
+    .filter((suite) => state.results[suite.suiteId])
+    .map((suite) => ({
+      suite,
+      result: state.results[suite.suiteId],
+      score: scoreSuite(suite, state.results[suite.suiteId].selected || []),
+    }));
+
+  app.append(el("h1", { text: "Your results" }));
+
+  if (scored.length === 0) {
+    app.append(el("p", { text: "No suites completed yet." }), backToStartActions());
+    return;
+  }
+
   const means = {
     shownAccuracy: mean(scored.map((r) => r.score.shownAccuracy)),
     heldOutRecall: mean(scored.map((r) => r.score.heldOutRecall)),
@@ -263,32 +311,37 @@ function renderResults() {
     fpr: mean(scored.map((r) => r.score.fpr)),
     overall: mean(scored.map((r) => r.score.overall)),
   };
-
-  app.append(el("h1", { text: "Your results" }));
+  const meanLabel = `Mean (${scored.length} of ${SUITES.length} suites)`;
 
   // --- per-suite metrics, matching the benchmark's scoring ---
   app.append(el("h2", { text: "Performance" }));
   app.append(el("table", {}, [
     el("thead", {}, [el("tr", {},
-      [el("th", { text: "Suite" }), el("th", { text: "Difficulty" })]
+      [el("th", { text: "Suite" }), el("th", { text: "Difficulty" }),
+       el("th", { class: "num", text: "Iter" })]
         .concat(METRIC_HEADERS.map((h) => el("th", { class: "num", text: h }))))]),
     el("tbody", {},
       scored.map((r) => el("tr", {},
-        [el("td", { text: r.suite.suiteId }), el("td", { text: r.suite.difficulty })]
+        [el("td", { text: r.suite.suiteId }),
+         el("td", { text: r.suite.difficulty }),
+         el("td", { class: "num", text: String(r.result.iteration) })]
           .concat(metricCells(r.score))))
       .concat([el("tr", { class: "mean-row" },
-        [el("td", { text: "Mean" }), el("td", {})].concat(metricCells(means)))])),
+        [el("td", { text: meanLabel }), el("td", {}), el("td", {})]
+          .concat(metricCells(means)))])),
   ]));
   app.append(el("p", { class: "note", text:
     "Shown acc: fraction of the statements you were shown that you re-selected. " +
     "Held-out recall: fraction of unseen statements matching the true principle that you caught. " +
     "FPR: fraction of distractors you wrongly selected (near = same-domain lookalikes, far = unrelated facts). " +
-    "Overall: fraction of all statements classified correctly." }));
+    "Overall: fraction of all statements classified correctly. " +
+    "Iter: how many times you've taken the suite — scores are from the latest take." }));
 
   // --- model comparison (scores to be filled in later) ---
   app.append(el("h2", { text: "Comparison with models" }));
   const comparisonRows = [
-    el("tr", {}, [el("td", { text: "You" })].concat(metricCells(means))),
+    el("tr", {}, [el("td", { text: `You (${scored.length} of ${SUITES.length} suites)` })]
+      .concat(metricCells(means))),
   ].concat(MODEL_SCORES.map((m) =>
     el("tr", {}, [el("td", { text: m.model })].concat(metricCells(m)))));
   app.append(el("table", {}, [
@@ -316,7 +369,7 @@ function renderResults() {
         el("div", { class: "plabel", text: `Actual (${r.suite.suiteId}):` }),
         el("div", { class: "ptext", text: r.suite.principle }),
         el("div", { class: "plabel", text: "Yours:" }),
-        el("div", { class: "ptext", text: r.answer.principle }),
+        el("div", { class: "ptext", text: r.result.principle }),
       ]);
       const errors = r.score.falsePositives
         .map((s) => el("span", { class: "errcell fp" }, [
@@ -334,13 +387,7 @@ function renderResults() {
     })),
   ]));
 
-  app.append(el("div", { class: "actions" }, [
-    el("button", { text: "Start over", onclick: () => {
-      clearState();
-      state = { suiteIndex: 0, phase: "intro", answers: [] };
-      render();
-    } }),
-  ]));
+  app.append(backToStartActions());
 }
 
 // ---------------------------------------------------------------- boot
