@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TIGER! TIGER! — The Stars My Destination</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+  <h1>TIGER! TIGER!</h1>
+  <p class="epigraph">Tyger! Tyger! burning bright / In the forests of the night &mdash; after Alfred Bester's <em>The Stars My Destination</em></p>
+</header>
+
+<main>
+  <div id="mapwrap">
+    <canvas id="map"></canvas>
+    <div id="legend">
+      <span><i class="sw foyle"></i> Foyle</span>
+      <span><i class="sw hunter"></i> Hunter</span>
+      <span class="gold">◆ Vorga crew</span>
+      <span class="purple">? Informant</span>
+      <span class="orange">✶ PyrE</span>
+      <span class="cyan">◎ Jaunte stage</span>
+      <span class="green">☢ Radiation</span>
+      <span class="purple">⌂ Nomad wreck</span>
+      <span class="white">★ Citadel</span>
+      <span class="cyan">· memorized</span>
+    </div>
+  </div>
+
+  <aside id="panel">
+    <pre id="portrait"></pre>
+    <div id="tigerbanner"></div>
+
+    <div class="statrow"><label>Vitality</label><span id="hp" class="hp"></span></div>
+    <div class="statrow"><label>Actions</label><span id="ap" class="ap"></span></div>
+    <div class="statrow"><label>Rage</label><span class="ragebar"><i id="ragefill"></i></span></div>
+    <div class="statrow small">
+      <span>Turn <b id="turn"></b></span>
+      <span>Manhunt <b id="manhunt"></b></span>
+      <span>PyrE <b id="pyrestatus"></b></span>
+    </div>
+
+    <h2>Vorga Crew</h2>
+    <ul id="dossier"></ul>
+
+    <div class="buttons">
+      <button id="wait">Wait <kbd>Space</kbd></button>
+      <button id="detonate">Detonate PyrE</button>
+      <button class="newgame">New Game</button>
+    </div>
+
+    <div id="log"></div>
+    <p class="seedline">seed <span id="seed"></span> &middot; arrows/WASD walk &middot; click memorized tile to jaunte</p>
+  </aside>
+</main>
+
+<div class="modal-back" id="modal-intro">
+  <div class="modal">
+    <h2>TIGER! TIGER!</h2>
+    <p>You are <b>Gully Foyle</b> — mechanic's mate 3rd class, education none, skills none,
+    merits none. For 170 days you rotted in the airless wreck of the <b>Nomad</b>.
+    Then the liner <b>Vorga</b> saw your flares... and passed you by.</p>
+    <p>Now you are back on the scarred earth, and five of Vorga's crew are hiding on this map.
+    <b>Find them. Make them talk. Learn who gave the order.</b></p>
+    <ul>
+      <li><b>Walk</b> (arrows / WASD / click adjacent) — every tile you walk is <i>memorized</i>.</li>
+      <li><b>Jaunte</b> (click any memorized tile) — instant teleport, but the shockwave alerts every hunter within 7 tiles.</li>
+      <li><b>Rage</b> — wounds and confessions stoke it. At full rage the tiger stigmata blazes: 3 actions, jaunte to anything you can <i>see</i>... and every hunter knows exactly where you are.</li>
+      <li><b>Radiation</b> ☢ burns you but hunters won't follow. The wreck ⌂ heals you. Informants ? sell locations. PyrE ✶ is the fire that ends worlds — it answers only to a burning mind.</li>
+    </ul>
+    <p class="quote">"Vorga, I kill you filthy."</p>
+    <button id="begin">Begin the hunt</button>
+  </div>
+</div>
+
+<div class="modal-back" id="modal-captured">
+  <div class="modal">
+    <h2>GOUFFRE MARTEL</h2>
+    <p>Dagenham's hunters drag you down. You wake in the lightless hospital-caverns of
+    Gouffre Martel, where prisoners live and die in the dark. No jaunte without sight.
+    No escape without light.</p>
+    <p class="quote">The tiger paces its black cage, remembering a ship called Vorga.</p>
+    <button class="newgame">Hunt again</button>
+  </div>
+</div>
+
+<div class="modal-back" id="modal-choice">
+  <div class="modal">
+    <h2>THE CITADEL</h2>
+    <p>Olivia Presteign stands before you — the Ice Maiden, blind albino daughter of power,
+    who watched your flares through ruby eyes and ordered Vorga on.
+    She is the answer to 170 days of dying.</p>
+    <p><b>The tiger is at her throat. What are you, Gully Foyle?</b></p>
+    <div class="choicerow">
+      <button id="choose-vengeance">Kill her filthy</button>
+      <button id="choose-stars">Be more than a tiger</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-back" id="modal-ending">
+  <div class="modal">
+    <h2 id="ending-title"></h2>
+    <p id="ending-text"></p>
+    <button class="newgame">Play again</button>
+  </div>
+</div>
+
+<script src="js/artifacts.js"></script>
+<script src="js/state.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>TIGER! TIGER! — engine tests</title>
+<style>
+  body { background: #07080d; color: #c8cede; font-family: monospace; padding: 24px; }
+  h1 { color: #ff8c1a; }
+  .pass { color: #4fd66a; }
+  .fail { color: #ff5c5c; }
+</style>
+</head>
+<body>
+<h1>Engine tests</h1>
+<div id="out"></div>
+<script src="../js/artifacts.js"></script>
+<script src="../js/state.js"></script>
+<script src="../js/engine.js"></script>
+<script src="tests.js"></script>
+<script>
+  var results = GameTests.run();
+  var out = document.getElementById('out');
+  var passed = results.filter(function (r) { return r.ok; }).length;
+  out.innerHTML = results.map(function (r) {
+    return '<p class="' + (r.ok ? 'pass' : 'fail') + '">' + (r.ok ? 'PASS' : 'FAIL') + ' — ' + r.label + '</p>';
+  }).join('') + '<h2>' + passed + ' / ' + results.length + ' passed</h2>';
+</script>
+</body>
+</html>
