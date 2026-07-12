@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Principle benchmark — human edition</title>
+<style>
+body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 60rem; margin: 2rem auto;
+       padding: 0 1rem; color: #222; background: #fafafa; line-height: 1.6; }
+h1, h2 { line-height: 1.2; color: #111; }
+h1 { font-size: 1.5rem; }
+h2 { font-size: 1.2rem; margin-top: 2rem; }
+.note { color: #52514e; }
+.progress { color: #52514e; font-size: 0.9rem; }
+
+/* Intro page, in the yuwakisa house style */
+.intro-header { text-align: center; margin: 3rem 0 2.5rem; }
+.intro-header .logo { width: 110px; height: auto; margin-bottom: 1.2rem; }
+.intro-title { font-size: 2.2rem; font-weight: 700; letter-spacing: 0.02em;
+               margin: 0 0 0.6rem; }
+.intro-tagline { font-size: 1.1rem; color: #444; max-width: 40rem;
+                 margin: 0 auto; line-height: 1.5; }
+.steps { display: grid; grid-template-columns: 1fr; gap: 1.4rem; margin: 2.5rem 0; }
+.step { background: white; border-left: 4px solid transparent;
+        border-image: linear-gradient(180deg, #32CD32, #00BFFF) 1;
+        border-radius: 4px; padding: 1.3rem 1.6rem;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06); }
+.step h3 { font-size: 1.05rem; font-weight: 600; margin: 0 0 0.3rem; color: #111; }
+.step p { font-size: 0.95rem; color: #555; line-height: 1.55; margin: 0; }
+.intro-note { text-align: center; font-style: italic; color: #555;
+              max-width: 40rem; margin: 0 auto 2.5rem; }
+.intro-actions { display: flex; justify-content: center; gap: 0.8rem;
+                 margin-bottom: 3rem; }
+.intro-actions button.primary {
+  background-image: linear-gradient(45deg, #32CD32, #00BFFF);
+  border: none; color: white; font-size: 1rem; padding: 0.7rem 1.8rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; }
+.intro-actions button.primary:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.18); transform: translateY(-1px); }
+@media (min-width: 640px) { .steps { grid-template-columns: 1fr 1fr 1fr; } }
+
+ol.statements { padding-left: 1.5rem; }
+ol.statements li { margin: 0.35rem 0; }
+
+textarea { width: 100%; box-sizing: border-box; min-height: 6rem; padding: 0.6rem;
+           font: inherit; border: 1px solid #c9c8c3; border-radius: 6px; background: #fff; }
+.charcount { text-align: right; font-size: 0.85rem; color: #52514e; }
+.charcount.over { color: #b3261e; font-weight: 600; }
+
+button { font: inherit; padding: 0.5rem 1.2rem; border: 1px solid #c9c8c3;
+         border-radius: 6px; background: #fff; cursor: pointer; }
+button.primary { background: #1a1a18; color: #fff; border-color: #1a1a18; }
+button:disabled { opacity: 0.4; cursor: default; }
+.actions { margin: 1.5rem 0; display: flex; gap: 0.8rem; align-items: center; }
+
+.principle-box { background: #f1f0ec; border: 1px solid #e5e4e0; border-radius: 6px;
+                 padding: 0.8rem 1rem; margin: 1rem 0; white-space: pre-wrap; }
+
+/* Classify phase: header + principle stay put, statements scroll in their own box */
+#app.classify { display: flex; flex-direction: column;
+                height: calc(100vh - 4rem); }
+#app.classify h1 { margin: 0.3rem 0; }
+#app.classify p { margin: 0.3rem 0; }
+.scrollbox { flex: 1 1 auto; min-height: 10rem; overflow-y: auto;
+             margin: 0.8rem 0; padding: 0.2rem 1rem;
+             background: #fff; border: 1px solid #e0e0e0; border-radius: 6px;
+             box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06); }
+.scrollbox .checklist { margin: 0.5rem 0; }
+.scrollbox .actions { margin: 1rem 0 1.2rem; }
+
+.checklist { list-style: none; padding: 0; margin: 1rem 0; }
+.checklist li { margin: 0; border-bottom: 1px solid #eeede9; }
+.checklist label { display: flex; gap: 0.7rem; padding: 0.45rem 0.3rem; cursor: pointer; }
+.checklist label:hover { background: #f4f3ef; }
+.checklist input { margin-top: 0.3rem; flex: none; }
+.checklist .stmt-num { color: #8a8985; min-width: 1.8rem; text-align: right;
+                       font-variant-numeric: tabular-nums; flex: none; }
+
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+th, td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid #e5e4e0;
+         vertical-align: top; }
+th { color: #52514e; font-weight: 600; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+tr.mean-row td { font-weight: 600; border-top: 2px solid #c9c8c3; }
+
+.detail-table td.principles { width: 40%; }
+.detail-table .plabel { font-weight: 600; color: #52514e; font-size: 0.85rem;
+                        text-transform: uppercase; letter-spacing: 0.03em; }
+.detail-table .ptext { margin: 0.15rem 0 0.9rem; }
+.errcell { display: block; border-radius: 5px; padding: 0.35rem 0.6rem; margin: 0.3rem 0;
+           font-size: 0.92rem; }
+.errcell.fp { background: #fbe3e1; border: 1px solid #e8b6b2; }
+.errcell.fn { background: #e2f0e0; border: 1px solid #b7d5b3; }
+.errcell .tag { font-weight: 600; font-size: 0.78rem; text-transform: uppercase;
+                letter-spacing: 0.03em; margin-right: 0.5rem; }
+.errcell.fp .tag { color: #8f221c; }
+.errcell.fn .tag { color: #2c5e28; }
+.all-correct { color: #2c5e28; font-weight: 600; }
+
+.legend { font-size: 0.9rem; color: #52514e; margin: 0.5rem 0 1rem; }
+.legend .swatch { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 3px;
+                  vertical-align: -0.1rem; margin: 0 0.3rem 0 0.9rem; }
+.legend .swatch.fp { background: #fbe3e1; border: 1px solid #e8b6b2; }
+.legend .swatch.fn { background: #e2f0e0; border: 1px solid #b7d5b3; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="suites.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
