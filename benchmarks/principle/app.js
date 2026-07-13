@@ -188,6 +188,11 @@ function renderIntro() {
         "Models are measured on how well they induce a rule from a few " +
         "examples and apply it to unseen cases. Now it's your turn." }),
     ]),
+    el("p", { class: "intro-note", text:
+      "Each completed test lands you on the results page, scored on the " +
+      "same metrics as the models. You can take the test as many times as " +
+      "you like. Retaking a suite replaces its result. " +
+      "Everything is saved in your browser." }),
     el("section", { class: "steps" }, [
       el("div", { class: "step" }, [
         el("h3", { text: "Read" }),
@@ -209,10 +214,16 @@ function renderIntro() {
           "that meets the principle." }),
       ]),
     ]),
-    el("p", { class: "intro-note", text:
-      "Each completed suite lands you on the results page, scored on the " +
-      "same metrics as the models. Retaking a suite replaces its result. " +
-      "Everything is saved in your browser." }),
+    el("p", { class: "intro-meaning", text:
+      "This benchmark asks one question: can you collapse scattered " +
+      "observations into an idea that preserves their shape? " +
+      "Call it structure-preserving collapse: the statement gets smaller, but " +
+      "it preserves the important structure of the observations. " +
+      "A good principle is compression that survives contact with new cases — " +
+      "small enough to be clear, sharp enough to spot what fits. " +
+      "It must also reject distractors, " +
+      "which the benchmark presents deliberately. That's the same capability " +
+      "behind enduring science, math, and law." }),
     el("div", { class: "actions intro-actions" }, buttons)
   );
 }
