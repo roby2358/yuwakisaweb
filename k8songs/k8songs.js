@@ -56,14 +56,16 @@ lyrics`
 
     const modelMap = {
         "haiku": "anthropic/claude-haiku-4.5",
-        "sonnet": "anthropic/claude-sonnet-4.5",
-        "opus": "anthropic/claude-opus-4.5",
-        "mistral-large": "mistralai/mistral-large-2512",
+        "sonnet": "anthropic/claude-sonnet-5",
+        "opus": "anthropic/claude-opus-4.8",
+        "fable": "anthropic/claude-fable-5",
+        "mistral-medium-3.5": "mistralai/mistral-medium-3-5",
         "glm-5.2": "z-ai/glm-5.2",
-        "deepseek-v3.2": "deepseek/deepseek-v3.2",
-        "gemini-2.5-flash": "google/gemini-2.5-flash",
+        "deepseek-v4-flash": "deepseek/deepseek-v4-flash",
+        "deepseek-v4-pro": "deepseek/deepseek-v4-pro",
+        "gemini-3.5-flash": "google/gemini-3.5-flash",
         "llama-4-maverick": "meta-llama/llama-4-maverick",
-        "qwen3-235b": "qwen/qwen3-235b-a22b-2507"
+        "qwen3.7-max": "qwen/qwen3.7-max"
     };
 
     // Populate prompt select dropdown from promptMap keys
@@ -81,7 +83,7 @@ lyrics`
             text: key
         }));
     });
-    $('#model-select').val('deepseek-v3.2');
+    $('#model-select').val('deepseek-v4-pro');
 
     $('#style-select').on('change', function() {
         const selectedStyle = $(this).val();
