@@ -7,10 +7,88 @@
 const CHAR_LIMIT = 300;
 const STORAGE_KEY = "principle-human-run";
 
-// Model comparison rows: fill in later from benchmark results
-// (results/report/scores.json). Shape: { model, shownAccuracy, heldOutRecall,
-// nearFpr, farFpr, fpr, overall } with rates as fractions in [0, 1].
-const MODEL_SCORES = [];
+// Model comparison rows from the 7-suite pilot run
+// (/work/yuwakisabenchmarks/principle/2026071212.4jHU/results/report/scores.json),
+// sorted by overall accuracy. Rates are fractions in [0, 1]; suiteCount is how
+// many of the 7 pilot suites the model completed.
+const MODEL_SCORES = [
+  { model: "anthropic/claude-fable-5", suiteCount: 5, shownAccuracy: 0.992, heldOutRecall: 0.926,
+    nearFpr: 0.005, farFpr: 0, fpr: 0.0024, overall: 0.979 },
+  { model: "anthropic/claude-opus-4.7", suiteCount: 7, shownAccuracy: 0.9914, heldOutRecall: 0.9914,
+    nearFpr: 0.0679, farFpr: 0, fpr: 0.0326, overall: 0.9764 },
+  { model: "qwen/qwen3.7-max", suiteCount: 2, shownAccuracy: 0.91, heldOutRecall: 0.92,
+    nearFpr: 0, farFpr: 0, fpr: 0, overall: 0.9688 },
+  { model: "google/gemini-3.1-flash-lite", suiteCount: 7, shownAccuracy: 0.9629, heldOutRecall: 0.9429,
+    nearFpr: 0.05, farFpr: 0, fpr: 0.024, overall: 0.9661 },
+  { model: "google/gemini-2.5-pro", suiteCount: 7, shownAccuracy: 0.98, heldOutRecall: 0.9471,
+    nearFpr: 0.0655, farFpr: 0, fpr: 0.0314, overall: 0.9646 },
+  { model: "z-ai/glm-5.2", suiteCount: 7, shownAccuracy: 0.9829, heldOutRecall: 0.9029,
+    nearFpr: 0.0417, farFpr: 0, fpr: 0.02, overall: 0.9611 },
+  { model: "deepseek/deepseek-v4-pro", suiteCount: 7, shownAccuracy: 0.9629, heldOutRecall: 0.8929,
+    nearFpr: 0.0536, farFpr: 0.0011, fpr: 0.0263, overall: 0.9521 },
+  { model: "qwen/qwen3.6-flash", suiteCount: 7, shownAccuracy: 0.9171, heldOutRecall: 0.8914,
+    nearFpr: 0.0345, farFpr: 0, fpr: 0.0166, overall: 0.9521 },
+  { model: "openai/gpt-5.5", suiteCount: 7, shownAccuracy: 0.9914, heldOutRecall: 0.9214,
+    nearFpr: 0.0917, farFpr: 0, fpr: 0.044, overall: 0.9518 },
+  { model: "google/gemini-3.5-flash", suiteCount: 7, shownAccuracy: 0.8971, heldOutRecall: 0.9086,
+    nearFpr: 0.056, farFpr: 0, fpr: 0.0269, overall: 0.9475 },
+  { model: "nvidia/nemotron-3-ultra-550b-a55b", suiteCount: 7, shownAccuracy: 0.9371, heldOutRecall: 0.8543,
+    nearFpr: 0.0298, farFpr: 0.0011, fpr: 0.0149, overall: 0.9464 },
+  { model: "z-ai/glm-4.7", suiteCount: 7, shownAccuracy: 0.9029, heldOutRecall: 0.8586,
+    nearFpr: 0.0214, farFpr: 0, fpr: 0.0103, overall: 0.9461 },
+  { model: "minimax/minimax-m3", suiteCount: 7, shownAccuracy: 0.9429, heldOutRecall: 0.8814,
+    nearFpr: 0.0738, farFpr: 0, fpr: 0.0354, overall: 0.9411 },
+  { model: "openai/gpt-5.6-terra", suiteCount: 7, shownAccuracy: 0.9943, heldOutRecall: 0.8871,
+    nearFpr: 0.1083, farFpr: 0, fpr: 0.052, overall: 0.9386 },
+  { model: "moonshotai/kimi-k2.5", suiteCount: 7, shownAccuracy: 0.92, heldOutRecall: 0.8314,
+    nearFpr: 0.0321, farFpr: 0, fpr: 0.0154, overall: 0.9382 },
+  { model: "qwen/qwen3.6-plus", suiteCount: 7, shownAccuracy: 0.9143, heldOutRecall: 0.8357,
+    nearFpr: 0.0345, farFpr: 0, fpr: 0.0166, overall: 0.9379 },
+  { model: "stepfun/step-3.7-flash", suiteCount: 7, shownAccuracy: 0.9114, heldOutRecall: 0.8529,
+    nearFpr: 0.0595, farFpr: 0.0011, fpr: 0.0291, overall: 0.9339 },
+  { model: "deepseek/deepseek-v4-flash", suiteCount: 7, shownAccuracy: 0.9343, heldOutRecall: 0.8914,
+    nearFpr: 0.0988, farFpr: 0.0055, fpr: 0.0503, overall: 0.9332 },
+  { model: "tencent/hy3", suiteCount: 7, shownAccuracy: 0.9771, heldOutRecall: 0.9414,
+    nearFpr: 0.181, farFpr: 0, fpr: 0.0869, overall: 0.9282 },
+  { model: "anthropic/claude-sonnet-5", suiteCount: 7, shownAccuracy: 0.9286, heldOutRecall: 0.8686,
+    nearFpr: 0.1083, farFpr: 0, fpr: 0.052, overall: 0.9257 },
+  { model: "anthropic/claude-sonnet-4.6", suiteCount: 7, shownAccuracy: 0.98, heldOutRecall: 0.9586,
+    nearFpr: 0.2131, farFpr: 0, fpr: 0.1023, overall: 0.9232 },
+  { model: "inception/mercury-2", suiteCount: 7, shownAccuracy: 0.9171, heldOutRecall: 0.8129,
+    nearFpr: 0.0762, farFpr: 0, fpr: 0.0366, overall: 0.92 },
+  { model: "meta-llama/llama-4-maverick", suiteCount: 7, shownAccuracy: 0.8943, heldOutRecall: 0.89,
+    nearFpr: 0.1155, farFpr: 0.0176, fpr: 0.0646, overall: 0.9189 },
+  { model: "anthropic/claude-haiku-4.5", suiteCount: 7, shownAccuracy: 0.9943, heldOutRecall: 0.9486,
+    nearFpr: 0.2262, farFpr: 0, fpr: 0.1086, overall: 0.9186 },
+  { model: "moonshotai/kimi-k2.6", suiteCount: 7, shownAccuracy: 0.94, heldOutRecall: 0.81,
+    nearFpr: 0.0881, farFpr: 0, fpr: 0.0423, overall: 0.9186 },
+  { model: "anthropic/claude-opus-4.8", suiteCount: 7, shownAccuracy: 0.9514, heldOutRecall: 0.8857,
+    nearFpr: 0.1631, farFpr: 0.0022, fpr: 0.0794, overall: 0.9157 },
+  { model: "z-ai/glm-4.7-flash", suiteCount: 7, shownAccuracy: 0.88, heldOutRecall: 0.87,
+    nearFpr: 0.1083, farFpr: 0.0165, fpr: 0.0606, overall: 0.9146 },
+  { model: "minimax/minimax-m2.7", suiteCount: 7, shownAccuracy: 0.8943, heldOutRecall: 0.79,
+    nearFpr: 0.0893, farFpr: 0, fpr: 0.0429, overall: 0.9075 },
+  { model: "google/gemini-3.1-pro-preview", suiteCount: 7, shownAccuracy: 0.8686, heldOutRecall: 0.6929,
+    nearFpr: 0, farFpr: 0, fpr: 0, overall: 0.9068 },
+  { model: "cohere/command-a", suiteCount: 7, shownAccuracy: 0.9629, heldOutRecall: 0.89,
+    nearFpr: 0.206, farFpr: 0.0011, fpr: 0.0994, overall: 0.9057 },
+  { model: "deepseek/deepseek-v3.2", suiteCount: 6, shownAccuracy: 0.8167, heldOutRecall: 0.8267,
+    nearFpr: 0.1097, farFpr: 0.009, fpr: 0.0573, overall: 0.8979 },
+  { model: "mistralai/mistral-large-2512", suiteCount: 7, shownAccuracy: 0.9457, heldOutRecall: 0.9414,
+    nearFpr: 0.2774, farFpr: 0, fpr: 0.1331, overall: 0.8954 },
+  { model: "openai/gpt-5.4-mini", suiteCount: 7, shownAccuracy: 0.9829, heldOutRecall: 0.96,
+    nearFpr: 0.394, farFpr: 0.0022, fpr: 0.1903, overall: 0.8689 },
+  { model: "mistralai/mistral-small-2603", suiteCount: 7, shownAccuracy: 0.8571, heldOutRecall: 0.8886,
+    nearFpr: 0.2857, farFpr: 0.0297, fpr: 0.1526, overall: 0.8589 },
+  { model: "mistralai/mistral-medium-3-5", suiteCount: 7, shownAccuracy: 0.9714, heldOutRecall: 0.9671,
+    nearFpr: 0.4167, farFpr: 0.0176, fpr: 0.2091, overall: 0.8575 },
+  { model: "meta-llama/llama-4-scout", suiteCount: 7, shownAccuracy: 0.9257, heldOutRecall: 0.8586,
+    nearFpr: 0.3107, farFpr: 0.0253, fpr: 0.1623, overall: 0.8539 },
+  { model: "amazon/nova-2-lite-v1", suiteCount: 7, shownAccuracy: 0.8686, heldOutRecall: 0.9243,
+    nearFpr: 0.3893, farFpr: 0.0011, fpr: 0.1874, overall: 0.8475 },
+  { model: "openai/gpt-5.4-nano", suiteCount: 7, shownAccuracy: 0.9086, heldOutRecall: 0.8386,
+    nearFpr: 0.3738, farFpr: 0.0352, fpr: 0.1977, overall: 0.8246 },
+];
 
 const app = document.getElementById("app");
 
@@ -268,13 +346,13 @@ function pct(x) {
 }
 
 function metricCells(score) {
-  return [score.shownAccuracy, score.heldOutRecall, score.nearFpr, score.farFpr,
-          score.fpr, score.overall]
+  return [score.overall, score.heldOutRecall, score.shownAccuracy, score.nearFpr,
+          score.farFpr, score.fpr]
     .map((v) => el("td", { class: "num", text: pct(v) }));
 }
 
-const METRIC_HEADERS = ["Shown acc", "Held-out recall", "Near FPR", "Far FPR",
-                        "FPR", "Overall"];
+const METRIC_HEADERS = ["Overall", "Held-out recall", "Shown acc", "Near FPR",
+                        "Far FPR", "FPR"];
 
 function backToStartActions() {
   return el("div", { class: "actions" }, [
@@ -296,7 +374,11 @@ function renderResults() {
       score: scoreSuite(suite, state.results[suite.suiteId].selected || []),
     }));
 
-  app.append(el("h1", { text: "Your results" }));
+  app.append(el("header", { class: "results-header" }, [
+    el("img", { class: "logo", src: "../../pics/logo_yuwakisa_daughters.png",
+                alt: "Yuwakisa" }),
+    el("h1", { text: "Your results" }),
+  ]));
 
   if (scored.length === 0) {
     app.append(el("p", { text: "No suites completed yet." }), backToStartActions());
@@ -331,27 +413,35 @@ function renderResults() {
           .concat(metricCells(means)))])),
   ]));
   app.append(el("p", { class: "note", text:
-    "Shown acc: fraction of the statements you were shown that you re-selected. " +
-    "Held-out recall: fraction of unseen statements matching the true principle that you caught. " +
-    "FPR: fraction of distractors you wrongly selected (near = same-domain lookalikes, far = unrelated facts). " +
     "Overall: fraction of all statements classified correctly. " +
+    "Held-out recall: fraction of unseen statements matching the true principle that you caught. " +
+    "Shown acc: fraction of the statements you were shown that you re-selected. " +
+    "FPR: fraction of distractors you wrongly selected (near = same-domain lookalikes, far = unrelated facts). " +
     "Iter: how many times you've taken the suite — scores are from the latest take." }));
 
-  // --- model comparison (scores to be filled in later) ---
+  // --- model comparison, from the pilot benchmark run ---
+  app.append(el("p", { class: "note", text:
+    "Yuwakisa LLC ran the benchmark against 38 models with 10 iterations " +
+    "of 7 test suites on 2026-07-12." }));
   app.append(el("h2", { text: "Comparison with models" }));
   const comparisonRows = [
-    el("tr", {}, [el("td", { text: `You (${scored.length} of ${SUITES.length} suites)` })]
-      .concat(metricCells(means))),
+    el("tr", { class: "you-row" },
+      [el("td", { text: `You (${scored.length} of ${SUITES.length} suites)` })]
+        .concat(metricCells(means))),
   ].concat(MODEL_SCORES.map((m) =>
-    el("tr", {}, [el("td", { text: m.model })].concat(metricCells(m)))));
+    el("tr", {}, [el("td", { text: m.suiteCount < SUITES.length
+      ? `${m.model} (${m.suiteCount} of ${SUITES.length} suites)`
+      : m.model })].concat(metricCells(m)))));
   app.append(el("table", {}, [
     el("thead", {}, [el("tr", {},
       [el("th", { text: "Who" })]
         .concat(METRIC_HEADERS.map((h) => el("th", { class: "num", text: h }))))]),
     el("tbody", {}, comparisonRows),
   ]));
-  if (MODEL_SCORES.length === 0)
-    app.append(el("p", { class: "note", text: "Model scores not loaded yet." }));
+  app.append(el("p", { class: "note", text:
+    "Model scores are means over all iterations, sorted by overall accuracy. " +
+    "Your means cover one iteration per suite, so treat the comparison as " +
+    "directional." }));
 
   // --- per-suite detail: principles vs. mistakes ---
   app.append(el("h2", { text: "Detail" }));
