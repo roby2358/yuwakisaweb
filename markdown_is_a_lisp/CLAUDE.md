@@ -15,7 +15,7 @@ Open `index.html` directly in a browser (or use any static file server). No buil
 - **`interpreter.js`** — The language itself: parser, evaluator, and runner. Exports `runMarkdownIsALISP(code, logFn)` and `nodeToMarkdown(node, indent)` as globals.
   - Parser: Markdown → AST (headings become DEF nodes, bullet nesting becomes tree structure via indent-tracking stack)
   - Evaluator: walks AST directly (no IR transformation) — `evaluate()` handles literals, symbols, special forms (`if`, `lambda`, `mial`, `eval`), and function application
-  - Standard library: arithmetic, comparison, logic, cons/car/cdr, tag/children/make-mial/mial-of, print/print-mial, parse-mial
+  - Standard library: arithmetic (`+ - * /` are variadic, folding left; single-arg `-` negates, `/` reciprocates), comparison, logic, cons/car/cdr (`cons` folds right, last arg is the tail), tag/children/make-mial/mial-of, print/print-mial, parse-mial
   - `nodeToMarkdown`: renders AST back to Markdown (homoiconicity — code and data share the same Markdown form)
 - **`index.js`** — UI controller: wires up editor, console output, AST panel, and example code snippets
 - **`index.css`** — Styling (dark theme, split-pane layout)

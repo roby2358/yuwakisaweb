@@ -49,52 +49,50 @@ const EXAMPLE_CODES = {
     * \`10\``,
   
   'fizzbuzz-n': `# fizzbuzz-helper
-* current
-* max
+* *
+  * current
+  * max
 * if
   * >
     * current
     * max
   * \`""\`
   * +
-    * +
+    * if
+      * and
+        * eq
+          * %
+            * current
+            * \`3\`
+          * \`0\`
+        * eq
+          * %
+            * current
+            * \`5\`
+          * \`0\`
+      * \`"fizzbuzz "\`
       * if
-        * and
-          * eq
-            * %
-              * current
-              * \`3\`
-            * \`0\`
+        * eq
+          * %
+            * current
+            * \`3\`
+          * \`0\`
+        * \`"fizz "\`
+        * if
           * eq
             * %
               * current
               * \`5\`
             * \`0\`
-        * \`"fizzbuzz "\`
-        * if
-          * eq
-            * %
-              * current
-              * \`3\`
-            * \`0\`
-          * \`"fizz "\`
-          * if
-            * eq
-              * %
-                * current
-                * \`5\`
-              * \`0\`
-            * \`"buzz "\`
-            * +
-              * +
-                * current
-                * \`""\`
-              * \`" "\`
-      * fizzbuzz-helper
-        * +
-          * current
-          * \`1\`
-        * max
+          * \`"buzz "\`
+          * +
+            * current
+            * \`" "\`
+    * fizzbuzz-helper
+      * +
+        * current
+        * \`1\`
+      * max
 
 # fizzbuzz
 * n
@@ -141,9 +139,7 @@ const EXAMPLE_CODES = {
         * n
       * \`"buzz "\`
       * +
-        * +
-          * n
-          * \`""\`
+        * n
         * \`" "\`
 
 # fizzbuzz-helper
@@ -274,12 +270,10 @@ const EXAMPLE_CODES = {
   * car
     * cons
       * \`10\`
-      * cons
-        * \`20\`
-        * cons
-          * \`30\`
-          * mial
-            * null
+      * \`20\`
+      * \`30\`
+      * mial
+        * null
 * print
   * car
     * cdr

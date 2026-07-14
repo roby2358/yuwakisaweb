@@ -332,19 +332,35 @@ const evaluate = (n, env) => {
  */
 
 const setupStandardLibrary = (env, logFn) => {
-  // Arithmetic
-  setVar(env, '+', (a, b) => {
-    const av = a.value, bv = b.value;
-    if (typeof av === 'object' && 'string' in av || typeof bv === 'object' && 'string' in bv) {
-      const sa = typeof av === 'object' && 'string' in av ? av.string : av;
-      const sb = typeof bv === 'object' && 'string' in bv ? bv.string : bv;
-      return node({ string: String(sa) + String(sb) });
+  // Arithmetic — variadic, folding left. + and * have identities (0 and 1),
+  // so they accept zero or one argument; - and / need at least one
+  // (single-arg - negates, single-arg / reciprocates, Lisp-style).
+  const addPair = (av, bv) => {
+    const aStr = typeof av === 'object' && av !== null && 'string' in av;
+    const bStr = typeof bv === 'object' && bv !== null && 'string' in bv;
+    if (aStr || bStr) {
+      return { string: String(aStr ? av.string : av) + String(bStr ? bv.string : bv) };
     }
-    return node(av + bv);
+    return av + bv;
+  };
+  setVar(env, '+', (...args) => {
+    if (args.length === 0) return node(0);
+    return node(args.map(a => a.value).reduce(addPair));
   });
-  setVar(env, '-', (a, b) => node(a.value - b.value));
-  setVar(env, '*', (a, b) => node(a.value * b.value));
-  setVar(env, '/', (a, b) => node(a.value / b.value));
+  setVar(env, '-', (...args) => {
+    if (args.length === 0) return makeError('-', 'needs at least one argument');
+    if (args.length === 1) return node(-args[0].value);
+    return node(args.map(a => a.value).reduce((a, b) => a - b));
+  });
+  setVar(env, '*', (...args) => {
+    if (args.length === 0) return node(1);
+    return node(args.map(a => a.value).reduce((a, b) => a * b));
+  });
+  setVar(env, '/', (...args) => {
+    if (args.length === 0) return makeError('/', 'needs at least one argument');
+    if (args.length === 1) return node(1 / args[0].value);
+    return node(args.map(a => a.value).reduce((a, b) => a / b));
+  });
   setVar(env, '%', (a, b) => node(a.value % b.value));
 
   // Comparison
@@ -433,11 +449,16 @@ const setupStandardLibrary = (env, logFn) => {
     return node(null, n.children.slice(1));
   });
 
-  setVar(env, 'cons', (a, b) => {
-    if (b && b.value === null && b.children && b.children.length > 0) {
-      return node(null, [a, ...b.children]);
-    }
-    return node(null, [a, b]);
+  // Variadic, folding right: the last argument is the tail, every argument
+  // before it is prepended — (cons a b tail) === (cons a (cons b tail)).
+  setVar(env, 'cons', (...args) => {
+    if (args.length === 0) return makeError('cons', 'needs at least one argument');
+    return args.reduceRight((tail, a) => {
+      if (tail && tail.value === null && tail.children && tail.children.length > 0) {
+        return node(null, [a, ...tail.children]);
+      }
+      return node(null, [a, tail]);
+    });
   });
 
   setVar(env, 'list', (...args) => {

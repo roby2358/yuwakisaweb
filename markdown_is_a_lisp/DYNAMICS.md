@@ -276,7 +276,7 @@ A labeled tree node and a flat data list are genuinely different uses of the sam
 Builtins receive argument nodes and return result nodes. They access `.value` directly — there is no universal unwrapping function between builtins and nodes.
 
 ```js
-setVar(env, '-', (a, b) => node(a.value - b.value));
+setVar(env, '%', (a, b) => node(a.value % b.value));
 setVar(env, 'eq', (a, b) => node(a.value === b.value));
 ```
 
@@ -293,6 +293,10 @@ The string literal wrapper `{ string: '...' }` requires explicit handling in the
 | List primitives | `car` `cdr` `cons` `list` |
 | I/O | `print` `print-mial` |
 | Meta | `parse-mial` |
+
+`+` `-` `*` `/` are variadic and fold left across their arguments. `+` and `*` have identities (`0` and `1`), so a single argument passes through unchanged; a single-argument `-` negates and a single-argument `/` reciprocates, LISP-style. String concatenation via `+` folds the same way: `(+ "n=" 5 " ok")` → `"n=5 ok"`. `%` stays binary.
+
+`cons` is variadic too, folding right: the last argument is the tail and every argument before it is prepended, so `(cons a b tail)` is `(cons a (cons b tail))` — LISP's `list*`. A single argument returns the tail itself.
 
 `atom?` returns `true` if its argument has no children, `false` otherwise. This is one of McCarthy's original seven primitives, required for writing recursive list and tree traversals — it's the base case test that tells you when to stop recursing into `.children`.
 

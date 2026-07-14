@@ -110,6 +110,8 @@ The same expression four ways: evaluated plainly (`5`), inspected for its operat
 | I/O | `print` `print-mial` |
 | Meta | `parse-mial` |
 
+`+` `-` `*` `/` fold left over any number of arguments: `+` over `1 2 3 4` is `10`, `*` of a single `7` is `7`, single-argument `-` negates, and single-argument `/` reciprocates. `cons` folds right — the last argument is the tail and everything before it is prepended, so one `cons` builds a whole list the way a nested chain of pairs would.
+
 ### Literals
 
 | Syntax | Value |
