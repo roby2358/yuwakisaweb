@@ -125,6 +125,22 @@ A definition with a single self-evaluating child:
 
 Binds `pi` to `node(3.14)` directly.
 
+### Code constants
+
+A definition with a single `mial` child binds the quoted subtree — the definition names a piece of MIAL as data:
+
+```markdown
+# add23
+* mial
+  * +
+    * `2`
+    * `3`
+```
+
+Binds `add23` to the `(+ 2 3)` node, unevaluated. Referencing `add23` anywhere yields the code as data: `(tag add23)` → `+`, `(eval add23)` → `5`, `(children add23)` feeds `make-mial`. This is the named counterpart of writing `mial` inline.
+
+The same code is reachable without the marker: define `# add23` as plain `(+ 2 3)` (a zero-arg closure) and read it back with `(mial-of add23)`. The two mechanisms differ in where the code-vs-data decision lives — a code constant decides at the **definition** ("this name IS data; every reference gets the tree"), while `mial-of` decides at the **reference** ("this name is a function, but right here I want its source").
+
 ### Functions with parameters
 
 A definition whose first child is a parameter spec (a symbol or symbol-with-symbol-children):
@@ -155,7 +171,7 @@ The `*` with children `a`, `b` is the parameter spec. `extractParams` reads `[a,
 
 ### Zero-argument functions
 
-If the first child doesn't look like a parameter spec (it's a literal, or a symbol with non-symbol children), all children become the body of a zero-arg closure.
+If the first child doesn't look like a parameter spec (it's a literal, or a symbol with non-symbol children), all children become the body of a zero-arg closure. No call syntax applies a closure to zero arguments, but the shape is not inert: `(eval (mial-of f))` reads the body back as MIAL and runs it.
 
 ### Entry point
 
@@ -186,6 +202,7 @@ These are for **code introspection and construction** — working with labeled t
 | `tag` | `.value` | Atom carrying the label |
 | `children` | `.children` | Data list of sub-nodes |
 | `make-mial` | — | New labeled node from tag + children list |
+| `mial-of` | a binding | The code behind a name, unevaluated |
 
 `tag` extracts the label: `(tag (mial (+ 1 2)))` → `+`.
 
@@ -194,6 +211,15 @@ These are for **code introspection and construction** — working with labeled t
 `make-mial` assembles a labeled node from a tag and a data list of children: `(make-mial "*" (children (mial (+ 1 2))))` → `(* 1 2)`. A string-literal tag denotes a symbol — literal atoms never need `make-mial` (an evaluated value already is its own node), so the string representation is free to mean "symbol name" in tag position. A `mial`-quoted symbol works as the tag too.
 
 The round-trip is lossless: `(make-mial (tag x) (children x))` reconstructs `x` for any node. This is the homoiconicity proof — the language can take apart any piece of its own code and put it back together, or rearrange the pieces into new code and `eval` the result.
+
+`mial-of` is the named counterpart of `mial`: it hands back a definition's code as MIAL instead of running it. `mial` quotes a tree you wrote inline; `mial-of` reads back a tree you defined under a heading. A bare name in argument position looks up the binding without applying it, so `(mial-of add23)` reaches the closure and returns its source:
+
+- A **zero-argument closure** yields its body — `# add23` defined as plain `(+ 2 3)` gives back that tree (a multi-expression body comes back as a data list).
+- A **parameterized closure** yields an equivalent `lambda` form — `(mial-of double)` returns `(lambda (x) (* x 2))`, and `eval` of that reconstructs a working closure.
+- **MIAL data** (a literal constant, a code constant, a list) passes through unchanged — it already is its own MIAL.
+- A **builtin** is an error — it's JS, there is no MIAL source to give.
+
+This makes every user definition introspectable: any function's code can be fed to `tag`/`children`/`make-mial` without marking the definition in advance. See the `function-surgery` example.
 
 ### List primitives: `car`, `cdr`, `cons`, `list`
 
@@ -263,7 +289,7 @@ The string literal wrapper `{ string: '...' }` requires explicit handling in the
 | Arithmetic | `+` `-` `*` `/` `%` |
 | Comparison | `<=` `>=` `<` `>` `eq` `!=` |
 | Logic | `and` `or` `not` `atom?` |
-| Tree primitives | `tag` `children` `make-mial` |
+| Tree primitives | `tag` `children` `make-mial` `mial-of` |
 | List primitives | `car` `cdr` `cons` `list` |
 | I/O | `print` `print-mial` |
 | Meta | `parse-mial` |

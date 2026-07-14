@@ -243,6 +243,32 @@ const EXAMPLE_CODES = {
             * \`2\`
             * \`3\``,
 
+  'function-surgery': `# add23
+* +
+  * \`2\`
+  * \`3\`
+
+# main
+* print
+  * eval
+    * mial-of
+      * add23
+* print
+  * tag
+    * mial-of
+      * add23
+* print-mial
+  * children
+    * mial-of
+      * add23
+* print
+  * eval
+    * make-mial
+      * \`"*"\`
+      * children
+        * mial-of
+          * add23`,
+
   'data-lists': `# main
 * print
   * car

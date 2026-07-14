@@ -31,6 +31,7 @@ MIAL's `{ value, children }` serves the same role but is richer — it's a label
 - `tag` — the label on a node (the operator in a function call)
 - `children` — the sub-nodes (the arguments)
 - `make-mial` — build a node from a tag and a children list (a string-literal tag denotes a symbol: `` `"*"` `` builds a node tagged `*`)
+- `mial-of` — the code behind a name, unevaluated (`mial` quotes a tree you wrote inline; `mial-of` reads back a tree you defined under a heading)
 
 **List primitives** — for flat data:
 - `car` / `cdr` / `cons` / `list`
@@ -104,7 +105,7 @@ The same expression four ways: evaluated plainly (`5`), inspected for its operat
 | Comparison | `<=` `>=` `<` `>` `eq` `!=` |
 | Logic | `and` `or` `not` |
 | Predicates | `null?` `atom?` `list?` |
-| Tree | `tag` `children` `make-mial` |
+| Tree | `tag` `children` `make-mial` `mial-of` |
 | List | `car` `cdr` `cons` `list` |
 | I/O | `print` `print-mial` |
 | Meta | `parse-mial` |

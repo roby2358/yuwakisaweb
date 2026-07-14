@@ -397,6 +397,24 @@ const setupStandardLibrary = (env, logFn) => {
     return node(tag, [...childrenList.children]);
   });
 
+  setVar(env, 'mial-of', (f) => {
+    // The named counterpart of mial: hand back a definition's code as MIAL
+    // instead of running it. A bare name in argument position looks up the
+    // binding without applying it, so this reads the source of a function.
+    if (typeof f === 'function') return makeError('mial-of', 'builtins have no MIAL source');
+    if (f && f._isLambda) {
+      if (f.params.length === 0) {
+        return f.body.length === 1 ? f.body[0] : node(null, [...f.body]);
+      }
+      const paramSpec = f.params.length === 1
+        ? node(f.params[0])
+        : node('*', f.params.map(p => node(p)));
+      return node('lambda', [paramSpec, ...f.body]);
+    }
+    // Already MIAL data (a code constant, a literal, a list) — identity.
+    return f;
+  });
+
   // List primitives — flat data lists (null-valued nodes)
   setVar(env, 'car', (n) => {
     if (!n.children || n.children.length === 0) return makeError('car', 'empty list');
@@ -471,6 +489,14 @@ const registerDefinition = (def, globalEnv) => {
 
   if (def.children.length === 1 && isSelfEvaluating(def.children[0].value) && def.children[0].children.length === 0) {
     setVar(globalEnv, def.name, def.children[0]);
+    return;
+  }
+
+  // Code constant: a single mial child binds the quoted subtree — the
+  // definition names a piece of MIAL as data. Evaluating the mial node
+  // reuses the special form (including its one-child error).
+  if (def.children.length === 1 && def.children[0].value === 'mial') {
+    setVar(globalEnv, def.name, evaluate(def.children[0], globalEnv));
     return;
   }
 
