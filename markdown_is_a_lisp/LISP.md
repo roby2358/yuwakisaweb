@@ -12,18 +12,18 @@ MarkdownIsALISP meets all of them, using Markdown as the concrete syntax and a l
 
 **The constraint:** Programs are written in the same data structures the language manipulates. There is no separate "code format" and "data format." A piece of code IS a piece of data, and any piece of data can be treated as code.
 
-**How it's met:** Everything — parsed source, runtime values, data structures, quoted code — is `{ value, children }`. The parser produces this shape. The evaluator executes this shape. `quote` returns this shape. `eval` accepts this shape. The program's own AST is a value the program can hold, inspect, modify, and execute.
+**How it's met:** Everything — parsed source, runtime values, data structures, quoted code — is `{ value, children }`. The parser produces this shape. The evaluator executes this shape. `mial` returns this shape. `eval` accepts this shape. The program's own AST is a value the program can hold, inspect, modify, and execute.
 
 ```markdown
 # main
 * eval
-  * quote
+  * mial
     * +
       * `1`
       * `2`
 ```
 
-`quote` prevents evaluation, returning the `(+ 1 2)` node as data. `eval` takes that data and executes it as code. The node didn't change shape between these roles. It was always `{ value: '+', children: [{value: 1}, {value: 2}] }`.
+`mial` prevents evaluation, returning the `(+ 1 2)` node as data. `eval` takes that data and executes it as code. The node didn't change shape between these roles. It was always `{ value: '+', children: [{value: 1}, {value: 2}] }`.
 
 ## 2. The Language Can Decompose Its Own Code
 
@@ -31,8 +31,8 @@ MarkdownIsALISP meets all of them, using Markdown as the concrete syntax and a l
 
 **How it's met:** Three tree primitives decompose any node:
 
-- `tag` reads the label: `(tag (quote (+ 1 2)))` → `+`
-- `children` reads the sub-expressions: `(children (quote (+ 1 2)))` → `(1 2)`
+- `tag` reads the label: `(tag (mial (+ 1 2)))` → `+`
+- `children` reads the sub-expressions: `(children (mial (+ 1 2)))` → `(1 2)`
 - Together they extract everything the evaluator uses: the operator (`.value`) and the operands (`.children`).
 
 Classic LISP could use `car`/`cdr` for this because LISP code was flat lists — the operator was the first element. MarkdownIsALISP code is a labeled tree — the operator is the label. `tag`/`children` are the decomposition primitives that match this structure. They answer the same question McCarthy's `car`/`cdr` answered ("what are the parts of this expression?") for the structure Markdown actually produces.
@@ -41,14 +41,13 @@ Classic LISP could use `car`/`cdr` for this because LISP code was flat lists —
 
 **The constraint:** The language provides primitives to build new expressions from parts. In classic LISP, `cons` constructs lists. The requirement is not "has `cons`" — it's "can build any code structure the evaluator will accept."
 
-**How it's met:** `make-node` constructs a labeled tree node from a tag and a list of children:
+**How it's met:** `make-mial` constructs a labeled tree node from a tag and a list of children:
 
 ```markdown
-* make-node
-  * quote
-    * *
+* make-mial
+  * `"*"`
   * children
-    * quote
+    * mial
       * +
         * `1`
         * `2`
@@ -56,19 +55,26 @@ Classic LISP could use `car`/`cdr` for this because LISP code was flat lists —
 
 This builds `(* 1 2)` — takes the children from `(+ 1 2)` and attaches them to a new operator. The result is a node the evaluator can execute.
 
-The round-trip is lossless: `(make-node (tag x) (children x))` reconstructs `x` for any node `x`. Any code structure can be taken apart and reassembled, or assembled from scratch.
+The tag can be given as a string literal (`` `"*"` `` denotes the symbol `*`) or as any expression that yields a node, including a `mial`-quoted symbol. The string form works because literal atoms never need `make-mial` — an evaluated value already IS its own node — so the string representation is free to mean "symbol name" in tag position.
+
+The round-trip is lossless: `(make-mial (tag x) (children x))` reconstructs `x` for any node `x`. Any code structure can be taken apart and reassembled, or assembled from scratch.
 
 ## 4. Quoting Suppresses Evaluation
 
 **The constraint:** There must be a mechanism to refer to code without executing it — to treat an expression as data. In classic LISP, this is `quote` (abbreviated `'`).
 
-**How it's met:** `quote` is a special form. The evaluator recognizes it and returns the child node unevaluated:
+**How it's met:** MIAL's quote is named `mial`. It is a special form: the evaluator recognizes it and returns its single child unevaluated (more than one child is an error, not a silent drop):
 
 ```js
-if (opName === 'quote') return n.children[0];
+if (opName === 'mial') {
+  if (n.children.length !== 1) return makeError('mial', `takes exactly one child, got ${n.children.length}`);
+  return n.children[0];
+}
 ```
 
-Without `quote`, writing `(+ 1 2)` always executes the addition. With `quote`, writing `(quote (+ 1 2))` returns the node representing `(+ 1 2)` as inert data. This is the toggle between code-mode and data-mode, and it's essential for metaprogramming — you can't manipulate code you can't hold without executing.
+The name is deliberate. Every operator's subtree is MIAL, but every other operator consumes its subtree as instructions — `mial` is the one that hands you the subtree as material. The argument doesn't just *happen* to be MIAL; it *stays* MIAL. And it completes the literal system: backticks quote an atom, `mial` quotes a tree. Both mean "this piece of MIAL stands for itself."
+
+Without `mial`, writing `(+ 1 2)` always executes the addition. With `mial`, writing `(mial (+ 1 2))` returns the node representing `(+ 1 2)` as inert data. This is the toggle between code-mode and data-mode, and it's essential for metaprogramming — you can't manipulate code you can't hold without executing.
 
 ## 5. `eval` Bridges Data Back to Code
 
@@ -80,17 +86,17 @@ Without `quote`, writing `(+ 1 2)` always executes the addition. With `quote`, w
 if (opName === 'eval') return evaluate(evaluate(n.children[0], env), env);
 ```
 
-`quote` turns code into data. `eval` turns data into code. Together they form the bridge:
+`mial` turns code into data. `eval` turns data into code. Together they form the bridge:
 
 ```markdown
 * eval
-  * quote
+  * mial
     * +
       * `1`
       * `2`
 ```
 
-First evaluation: `quote` returns the `(+ 1 2)` node. Second evaluation: the node is executed as code, yielding `3`. The data became code again.
+First evaluation: `mial` returns the `(+ 1 2)` node. Second evaluation: the node is executed as code, yielding `3`. The data became code again.
 
 ## 6. Lambda Creates Anonymous Functions
 
@@ -163,10 +169,10 @@ This doesn't violate any LISP constraint. It satisfies them differently:
 | `(+ 1 2)` — flat list, `+` is first element | `{ value: '+', children: [1, 2] }` — labeled tree, `+` is the label | Code is a data structure |
 | `car` gets the operator (first element) | `tag` gets the operator (the label) | Can decompose code |
 | `cdr` gets the arguments (rest of list) | `children` gets the arguments (the sub-nodes) | Can decompose code |
-| `cons` builds lists | `make-node` builds labeled nodes | Can construct code |
+| `cons` builds lists | `make-mial` builds labeled nodes | Can construct code |
 | One structure (cons cell) for everything | One structure (`{ value, children }`) for everything | Uniform representation |
 
-The constraint was never "use cons cells." The constraint was "the language must be able to fully decompose and construct its own code using the same structures the evaluator operates on." `tag`/`children`/`make-node` satisfy this for the labeled tree the same way `car`/`cdr`/`cons` satisfied it for McCarthy's flat lists.
+The constraint was never "use cons cells." The constraint was "the language must be able to fully decompose and construct its own code using the same structures the evaluator operates on." `tag`/`children`/`make-mial` satisfy this for the labeled tree the same way `car`/`cdr`/`cons` satisfied it for McCarthy's flat lists.
 
 MarkdownIsALISP also has `car`/`cdr`/`cons`/`list` — but these operate on flat data lists (null-valued container nodes), not on code. Two primitive sets, one node shape, each doing the job it's suited for.
 
@@ -177,33 +183,49 @@ Can the language take apart a piece of its own code, rearrange it, and execute t
 ```markdown
 # main
 * print
+  * +
+    * `2`
+    * `3`
+* print
   * tag
-    * quote
+    * mial
       * +
-        * `1`
         * `2`
+        * `3`
+* print-mial
+  * children
+    * mial
+      * +
+        * `2`
+        * `3`
 * print
   * eval
-    * make-node
-      * quote
-        * *
+    * make-mial
+      * `"*"`
       * children
-        * quote
+        * mial
           * +
-            * `1`
             * `2`
+            * `3`
 ```
 
 Output:
 
 ```
+5
 +
-2
+- `2`
+- `3`
+6
 ```
 
-Line 1: `tag` extracts the operator from quoted code. The language can see inside its own expressions.
+First: the plain expression, evaluated as code. `(+ 2 3)` is `5` — this is what the tree means when it runs.
 
-Line 2: `children` extracts the operands from `(+ 1 2)`, `make-node` attaches them to `*` instead, `eval` executes the result as `(* 1 2)`. The language performed surgery on its own code and ran the result.
+Second: `tag` extracts the operator from the same expression quoted with `mial`. The language can see inside its own expressions.
+
+Third: `children` extracts the operands as a data list, and `print-mial` renders them back as Markdown — the pieces of the expression, shown in the language's own syntax.
+
+Fourth: `make-mial` attaches those same operands to `*` instead, `eval` executes the result as `(* 2 3)`. The `6` proves the constructed multiplication ran, not the addition from the first line. The language performed surgery on its own code and ran the result.
 
 That's homoiconicity. That's LISP. The syntax is Markdown.
 
@@ -253,7 +275,7 @@ A cons cell holds exactly two things. To represent `(+ 1 2 3)`, classic LISP bui
 
 A Markdown bullet can have any number of sub-bullets. `{ value: '+', children: [1, 2, 3] }` is the natural representation — the parser produces it directly. MIAL's labeled tree is n-ary by default, not binary. This means the node shape matches the intent (a function applied to three arguments) rather than encoding it through a chain of pairs.
 
-This is why MIAL has two primitive sets. The labeled tree (`tag`/`children`/`make-node`) handles n-ary code nodes naturally. Flat data lists (`car`/`cdr`/`cons`/`list`) handle ordered sequences. Classic LISP needed one primitive set because cons cells were the only structure. MIAL can afford two because Markdown gave it a richer structure to start with.
+This is why MIAL has two primitive sets. The labeled tree (`tag`/`children`/`make-mial`) handles n-ary code nodes naturally. Flat data lists (`car`/`cdr`/`cons`/`list`) handle ordered sequences. Classic LISP needed one primitive set because cons cells were the only structure. MIAL can afford two because Markdown gave it a richer structure to start with.
 
 ### Multi-expression bodies are implicit
 

@@ -287,7 +287,12 @@ const evaluate = (n, env) => {
   const opName = n.value;
 
   // Special forms
-  if (opName === 'quote') return n.children[0];
+  if (opName === 'mial') {
+    if (n.children.length !== 1) {
+      return makeError('mial', `takes exactly one child, got ${n.children.length}`);
+    }
+    return n.children[0];
+  }
   if (opName === 'eval') {
     const inner = evaluate(n.children[0], env);
     if (isError(inner)) return addTrace(inner, 'in eval');
@@ -379,11 +384,17 @@ const setupStandardLibrary = (env, logFn) => {
     return node(null, [...n.children]);
   });
 
-  setVar(env, 'make-node', (tagNode, childrenList) => {
+  setVar(env, 'make-mial', (tagNode, childrenList) => {
+    // A string-literal tag denotes a symbol: `"*"` builds a node tagged *.
+    // Literal atoms never need make-mial (an evaluated value already is one),
+    // so the string representation is free to mean "symbol name" here.
+    const tag = (typeof tagNode.value === 'object' && tagNode.value !== null && 'string' in tagNode.value)
+      ? tagNode.value.string
+      : tagNode.value;
     if (!childrenList || (childrenList.value === null && childrenList.children.length === 0)) {
-      return node(tagNode.value);
+      return node(tag);
     }
-    return node(tagNode.value, [...childrenList.children]);
+    return node(tag, [...childrenList.children]);
   });
 
   // List primitives — flat data lists (null-valued nodes)
@@ -427,14 +438,14 @@ const setupStandardLibrary = (env, logFn) => {
     return node({ string: out });
   });
 
-  setVar(env, 'print-ast', (n) => {
+  setVar(env, 'print-mial', (n) => {
     const md = nodeToMarkdown(n, 0);
     logFn(md);
     return n;
   });
 
-  // Parse exposed at runtime
-  setVar(env, 'parse', (code) => {
+  // Parse exposed at runtime — print-mial's inverse (Markdown string → MIAL)
+  setVar(env, 'parse-mial', (code) => {
     const src = typeof code.value === 'object' && 'string' in code.value
       ? code.value.string : String(code.value);
     const { defs } = parseMarkdown(src);

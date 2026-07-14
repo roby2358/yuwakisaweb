@@ -197,7 +197,7 @@ const EXAMPLE_CODES = {
     * \`48\`
     * \`18\``,
 
-  'quote-and-constants': `# pi
+  'mial-and-constants': `# pi
 * \`3.14\`
 
 # double
@@ -210,29 +210,38 @@ const EXAMPLE_CODES = {
 * print
   * double
     * pi
-* print-ast
-  * quote
+* print-mial
+  * mial
     * +
       * \`1\`
       * \`2\``,
 
   'tree-surgery': `# main
 * print
+  * +
+    * \`2\`
+    * \`3\`
+* print
   * tag
-    * quote
+    * mial
       * +
-        * \`1\`
         * \`2\`
+        * \`3\`
+* print-mial
+  * children
+    * mial
+      * +
+        * \`2\`
+        * \`3\`
 * print
   * eval
-    * make-node
-      * quote
-        * *
+    * make-mial
+      * \`"*"\`
       * children
-        * quote
+        * mial
           * +
-            * \`1\`
-            * \`2\``,
+            * \`2\`
+            * \`3\``,
 
   'data-lists': `# main
 * print
@@ -243,7 +252,7 @@ const EXAMPLE_CODES = {
         * \`20\`
         * cons
           * \`30\`
-          * quote
+          * mial
             * null
 * print
   * car
@@ -254,8 +263,8 @@ const EXAMPLE_CODES = {
         * \`3\``,
 
   'lambda-roundtrip': `# main
-* print-ast
-  * quote
+* print-mial
+  * mial
     * lambda
       * x
       * +
@@ -281,7 +290,7 @@ const initApp = () => {
   };
 
   const clearAST = () => {
-    astOutput.querySelector('pre').textContent = '// AST will appear here after run';
+    astOutput.querySelector('pre').textContent = '// parsed MIAL will appear here after run';
   };
 
   const appendLog = (message) => {

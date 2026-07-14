@@ -14,8 +14,8 @@ Open `index.html` directly in a browser (or use any static file server). No buil
 
 - **`interpreter.js`** — The language itself: parser, evaluator, and runner. Exports `runMarkdownIsALISP(code, logFn)` and `nodeToMarkdown(node, indent)` as globals.
   - Parser: Markdown → AST (headings become DEF nodes, bullet nesting becomes tree structure via indent-tracking stack)
-  - Evaluator: walks AST directly (no IR transformation) — `evaluate()` handles literals, symbols, special forms (`if`, `lambda`, `quote`, `eval`), and function application
-  - Standard library: arithmetic, comparison, logic, cons/car/cdr, print/print-ast
+  - Evaluator: walks AST directly (no IR transformation) — `evaluate()` handles literals, symbols, special forms (`if`, `lambda`, `mial`, `eval`), and function application
+  - Standard library: arithmetic, comparison, logic, cons/car/cdr, tag/children/make-mial, print/print-mial, parse-mial
   - `nodeToMarkdown`: renders AST back to Markdown (homoiconicity — code and data share the same Markdown form)
 - **`index.js`** — UI controller: wires up editor, console output, AST panel, and example code snippets
 - **`index.css`** — Styling (dark theme, split-pane layout)
@@ -29,7 +29,8 @@ Open `index.html` directly in a browser (or use any static file server). No buil
 - Backtick-wrapped values (`` `42` ``, `` `"hello"` ``) are literals; bare words are symbols
 - Indentation (2 spaces = 1 level) determines tree nesting
 - Entry point is `# main`
-- Special forms: `if`, `lambda`, `quote`, `eval`
+- Special forms: `if`, `lambda`, `mial`, `eval`
+- `mial` is MIAL's `quote` — returns its single child unevaluated (multi-child is an error). Backticks quote an atom; `mial` quotes a tree. `make-mial` constructs nodes (a string-literal tag denotes a symbol); `print-mial` renders a node to Markdown; `parse-mial` is its inverse
 
 ### Parser grammar (specified, not vibes)
 

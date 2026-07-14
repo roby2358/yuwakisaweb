@@ -30,7 +30,7 @@ MIAL's `{ value, children }` serves the same role but is richer — it's a label
 **Tree primitives** — for code introspection:
 - `tag` — the label on a node (the operator in a function call)
 - `children` — the sub-nodes (the arguments)
-- `make-node` — build a node from a tag and a children list
+- `make-mial` — build a node from a tag and a children list (a string-literal tag denotes a symbol: `` `"*"` `` builds a node tagged `*`)
 
 **List primitives** — for flat data:
 - `car` / `cdr` / `cons` / `list`
@@ -42,24 +42,43 @@ Same `{ value, children }` shape, different access patterns. `tag` reads the lab
 ```markdown
 # main
 * print
+  * +
+    * `2`
+    * `3`
+* print
   * tag
-    * quote
+    * mial
       * +
-        * `1`
         * `2`
+        * `3`
+* print-mial
+  * children
+    * mial
+      * +
+        * `2`
+        * `3`
 * print
   * eval
-    * make-node
-      * quote
-        * *
+    * make-mial
+      * `"*"`
       * children
-        * quote
+        * mial
           * +
-            * `1`
             * `2`
+            * `3`
 ```
 
-Output: `+` then `2`. The program extracts the operator from `(+ 1 2)`, swaps it for `*`, and evaluates the result. Code surgery with three primitives.
+Output:
+
+```
+5
++
+- `2`
+- `3`
+6
+```
+
+The same expression four ways: evaluated plainly (`5`), inspected for its operator (`+`), decomposed into its operands (`` `2` `` and `` `3` ``, rendered back as Markdown by `print-mial`), and taken apart, given a new operator, and re-executed (`6`). The `6` can only come from the constructed multiplication. Code surgery with three primitives.
 
 ## Documentation
 
@@ -72,7 +91,7 @@ Output: `+` then `2`. The program extracts the operator from `(+ 1 2)`, swaps it
 
 | Form | Description |
 |---|---|
-| `quote` | Return child unevaluated (code as data) |
+| `mial` | Return child unevaluated — the subtree stays MIAL (code as data) |
 | `if` | Conditional (falsy: `false`, `null`, `0`) |
 | `lambda` | Anonymous function with lexical closure |
 | `eval` | Evaluate data as code |
@@ -85,10 +104,10 @@ Output: `+` then `2`. The program extracts the operator from `(+ 1 2)`, swaps it
 | Comparison | `<=` `>=` `<` `>` `eq` `!=` |
 | Logic | `and` `or` `not` |
 | Predicates | `null?` `atom?` `list?` |
-| Tree | `tag` `children` `make-node` |
+| Tree | `tag` `children` `make-mial` |
 | List | `car` `cdr` `cons` `list` |
-| I/O | `print` `print-ast` |
-| Meta | `parse` |
+| I/O | `print` `print-mial` |
+| Meta | `parse-mial` |
 
 ### Literals
 
@@ -99,3 +118,5 @@ Output: `+` then `2`. The program extracts the operator from `(+ 1 2)`, swaps it
 | `` `true` `` / `` `false` `` | Boolean |
 | `` `null` `` | Null |
 | `bare-word` | Symbol (looked up in environment) |
+
+Literals work at two levels: backticks quote an atom, `mial` quotes a tree. Both mean "this piece of MIAL stands for itself." `mial` is `quote` in classic LISP terms — renamed because what it returns *is* the language: `print-mial` renders it back to Markdown, `parse-mial` reads Markdown into it, `make-mial` constructs it, `eval` runs it.

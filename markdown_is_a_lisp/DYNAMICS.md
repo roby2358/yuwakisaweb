@@ -98,7 +98,7 @@ No need to extract the operator from the first child of a flat list. The labeled
 
 Four special forms are handled before general function application:
 
-- **`quote`** — Returns the first child unevaluated. This is how the language refers to code as data.
+- **`mial`** — Returns its single child unevaluated (more than one child is an error). This is how the language refers to code as data: the subtree stays MIAL. Backticks quote an atom; `mial` quotes a tree.
 - **`if`** — Evaluates the condition (first child), then evaluates either the consequent (second child) or alternate (third child). Truthiness: `false`, `null`, and `0` are falsy; everything else is truthy.
 - **`lambda`** — First child is the parameter spec, remaining children are the body. Creates a closure capturing the current environment.
 - **`eval`** — Evaluates its argument, then evaluates the result. The bridge from data back to code.
@@ -177,7 +177,7 @@ The language must be able to fully decompose and reconstruct its own code at run
 
 This is satisfied by two independent primitive sets that access the same node shape for different purposes.
 
-### Tree primitives: `tag`, `children`, `make-node`
+### Tree primitives: `tag`, `children`, `make-mial`
 
 These are for **code introspection and construction** — working with labeled tree nodes as the evaluator sees them.
 
@@ -185,15 +185,15 @@ These are for **code introspection and construction** — working with labeled t
 |---|---|---|
 | `tag` | `.value` | Atom carrying the label |
 | `children` | `.children` | Data list of sub-nodes |
-| `make-node` | — | New labeled node from tag + children list |
+| `make-mial` | — | New labeled node from tag + children list |
 
-`tag` extracts the label: `(tag (quote (+ 1 2)))` → `+`.
+`tag` extracts the label: `(tag (mial (+ 1 2)))` → `+`.
 
-`children` extracts the sub-nodes as a flat data list (a null-valued node whose `.children` are the sub-nodes): `(children (quote (+ 1 2)))` → a list containing `1` and `2`.
+`children` extracts the sub-nodes as a flat data list (a null-valued node whose `.children` are the sub-nodes): `(children (mial (+ 1 2)))` → a list containing `1` and `2`.
 
-`make-node` assembles a labeled node from a tag atom and a data list of children: `(make-node (quote *) (children (quote (+ 1 2))))` → `(* 1 2)`.
+`make-mial` assembles a labeled node from a tag and a data list of children: `(make-mial "*" (children (mial (+ 1 2))))` → `(* 1 2)`. A string-literal tag denotes a symbol — literal atoms never need `make-mial` (an evaluated value already is its own node), so the string representation is free to mean "symbol name" in tag position. A `mial`-quoted symbol works as the tag too.
 
-The round-trip is lossless: `(make-node (tag x) (children x))` reconstructs `x` for any node. This is the homoiconicity proof — the language can take apart any piece of its own code and put it back together, or rearrange the pieces into new code and `eval` the result.
+The round-trip is lossless: `(make-mial (tag x) (children x))` reconstructs `x` for any node. This is the homoiconicity proof — the language can take apart any piece of its own code and put it back together, or rearrange the pieces into new code and `eval` the result.
 
 ### List primitives: `car`, `cdr`, `cons`, `list`
 
@@ -224,14 +224,14 @@ A data list:
 
 ### The interop point
 
-`children` outputs a data list. `car`/`cdr` can walk it. `make-node` accepts a data list as input. This is where the two primitive sets shake hands:
+`children` outputs a data list. `car`/`cdr` can walk it. `make-mial` accepts a data list as input. This is where the two primitive sets shake hands:
 
 ```markdown
 # main
 * print
   * car
     * children
-      * quote
+      * mial
         * +
           * `1`
           * `2`
@@ -263,10 +263,10 @@ The string literal wrapper `{ string: '...' }` requires explicit handling in the
 | Arithmetic | `+` `-` `*` `/` `%` |
 | Comparison | `<=` `>=` `<` `>` `eq` `!=` |
 | Logic | `and` `or` `not` `atom?` |
-| Tree primitives | `tag` `children` `make-node` |
+| Tree primitives | `tag` `children` `make-mial` |
 | List primitives | `car` `cdr` `cons` `list` |
-| I/O | `print` `print-ast` |
-| Meta | `parse` |
+| I/O | `print` `print-mial` |
+| Meta | `parse-mial` |
 
 `atom?` returns `true` if its argument has no children, `false` otherwise. This is one of McCarthy's original seven primitives, required for writing recursive list and tree traversals — it's the base case test that tells you when to stop recursing into `.children`.
 
@@ -284,9 +284,9 @@ Because the AST shape matches the Markdown shape, serialization is direct:
 
 The parser produces what `nodeToMarkdown` serializes, and `nodeToMarkdown` produces what the parser reads. This is not a pretty-printer — it is the canonical representation. Markdown IS the S-expression syntax.
 
-## `parse`: Runtime Access to the Parser
+## `parse-mial`: Runtime Access to the Parser
 
-The `parse` builtin takes a string of Markdown source and returns the parsed AST as a node the evaluator can operate on. This closes the loop: a program can construct Markdown source as a string, parse it into nodes, manipulate those nodes with `tag`/`children`/`make-node`, and `eval` the result. The full metaprogramming cycle runs within the language.
+The `parse-mial` builtin takes a string of Markdown source and returns the parsed tree as a node the evaluator can operate on — it is `print-mial`'s inverse. This closes the loop: a program can construct Markdown source as a string, parse it into nodes, manipulate those nodes with `tag`/`children`/`make-mial`, and `eval` the result. The full metaprogramming cycle runs within the language.
 
 ## Execution Flow
 
@@ -294,4 +294,4 @@ The `parse` builtin takes a string of Markdown source and returns the parsed AST
 2. **Setup** — `setupStandardLibrary` registers builtins into the global environment.
 3. **Register** — Each definition is analyzed (constant, parameterized function, or zero-arg function) and bound in the global environment.
 4. **Execute** — The `main` closure is looked up and its body is evaluated.
-5. **Output** — `print` sends formatted output to the log callback. `print-ast` serializes a node back to Markdown and logs it.
+5. **Output** — `print` sends formatted output to the log callback. `print-mial` serializes a node back to Markdown and logs it.
