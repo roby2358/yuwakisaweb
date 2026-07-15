@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hex &amp; Counters</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <canvas id="game"></canvas>
+    <div id="hud">
+        <span id="turn-info">Turn 1</span>
+        <span id="mp-info">MP: 5/5</span>
+        <span id="hp-info">HP: 3/3</span>
+        <span id="prestige-info">Prestige: 0</span>
+        <span id="status-info">Wanderer</span>
+        <span id="hover-info"></span>
+        <button id="end-turn">End Turn</button>
+        <button id="new-game">New Game</button>
+    </div>
+    <div id="message-bar"><span id="message-info"></span></div>
+    <div id="intro-panel">
+        <p>The villages plow new fields each season, and their prosperity draws raiders
+        from the wilds. Hunt the raiders (P selects; red hexes attack, yellow hexes move)
+        to earn prestige — renown fades, so keep earning it. Rise in status and the world
+        will grant you privileges. There is no end: only the world, growing or burning.</p>
+        <button id="begin-btn">Begin</button>
+    </div>
+    <!-- NOTE! We want to be able to double-click to run these games, so use plain
+    script includes (globals), not ES module imports. Order = dependency order:
+    artifacts → display artifacts → libs → state → engine → ui → bootstrap. -->
+    <script src="artifacts.js"></script>
+    <script src="displayartifacts.js"></script>
+    <script src="rando.js"></script>
+    <script src="colortheory.js"></script>
+    <script src="hex.js"></script>
+    <script src="gamestate.js"></script>
+    <script src="gameengine.js"></script>
+    <script src="gameui.js"></script>
+    <script src="index.js"></script>
+</body>
+</html>
