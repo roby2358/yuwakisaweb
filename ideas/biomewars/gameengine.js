@@ -516,9 +516,10 @@ const GameEngine = (function () {
         }
 
         // Harvest essence from the hex underfoot, draining its vitality — the land
-        // you feed on is land that flips easier. Gathering takes the rest of the
-        // turn (all remaining MP): you root where you harvest, and you'll eat the
-        // hex's hazard before you move again.
+        // you feed on is land that flips easier, and land gathered to death (≤0)
+        // falls to its strongest rival at the next world phase. Gathering takes the
+        // rest of the turn (all remaining MP): you root where you harvest, and
+        // you'll eat the hex's hazard before you move again.
         gather() {
             if (!this.canGather()) return { ok: false };
             const s = this.state;
@@ -535,18 +536,19 @@ const GameEngine = (function () {
             const s = this.state;
             if (s.gameOver || s.mp < RULES.FEED_MP) return false;
             if (s.hero.essence < RULES.FEED_ESSENCE) return false;
-            const settlement = this.settlementAt(s.hero.q, s.hero.r);
-            return !!settlement && settlement.prosperity < RULES.PROSPERITY_MAX;
+            return !!this.settlementAt(s.hero.q, s.hero.r);
         }
 
         // Convert essence into a settlement's prosperity — a bigger aura pushing its
         // biome outward. The self-vs-world spend at the heart of the thriving loop.
+        // Feeding is uncapped: a devoted hero can grow a town into an arms race with
+        // the ever-fattening blights.
         feed() {
             if (!this.canFeed()) return { ok: false };
             const s = this.state;
             const settlement = this.settlementAt(s.hero.q, s.hero.r);
             const gain = RULES.FEED_PROSPERITY + this.talentBonus('voice');
-            settlement.prosperity = Math.min(RULES.PROSPERITY_MAX, settlement.prosperity + gain);
+            settlement.prosperity += gain;
             s.hero.essence -= RULES.FEED_ESSENCE;
             s.mp -= RULES.FEED_MP;
             this.log(`You feed ${settlement.name} (+${gain} prosperity).`);
@@ -790,6 +792,11 @@ const GameEngine = (function () {
 
                 if (rival && rival.pressure > own)
                     flips.push({ hex, drain: (rival.pressure - own) * RULES.PRESSURE_DRAIN, to: rival.biome });
+                else if (rival && hex.vitality <= 0)
+                    // Dead land is anyone's: a hex drained to nothing (gathered to
+                    // death, say) falls to its strongest rival even against the
+                    // pressure — the sapper's opening.
+                    flips.push({ hex, drain: 0, to: rival.biome });
                 else
                     hex.vitality = Math.min(100, hex.vitality + RULES.VITALITY_REGROW);
             }
@@ -818,7 +825,9 @@ const GameEngine = (function () {
         }
 
         // Total pressure on one hex by biome: warring neighbors + this hex's slice
-        // of the aura map (may be undefined when no aura reaches it).
+        // of the aura map (may be undefined when no aura reaches it). An aura counts
+        // double on its own biome's hexes — defense beats offense, so an anchor is a
+        // visible brake on the creep, not just a distant push.
         pressureOn(hex, anchorPressure) {
             const pressure = new Map();
             for (const n of new Hex(hex.q, hex.r).neighbors()) {
@@ -827,8 +836,10 @@ const GameEngine = (function () {
                 pressure.set(nh.biome, (pressure.get(nh.biome) || 0) + 1);
             }
             if (anchorPressure)
-                for (const [biome, p] of anchorPressure)
-                    pressure.set(biome, (pressure.get(biome) || 0) + p);
+                for (const [biome, p] of anchorPressure) {
+                    const mult = biome === hex.biome ? RULES.AURA_DEFENSE_MULT : 1;
+                    pressure.set(biome, (pressure.get(biome) || 0) + p * mult);
+                }
             return pressure;
         }
 

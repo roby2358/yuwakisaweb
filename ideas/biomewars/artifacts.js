@@ -76,8 +76,9 @@ const GameArtifacts = (function () {
         ATTACK_MP: 2,
         FEED_MP: 1,
 
-        GATHER_MIN_VITALITY: 40,   // land weaker than this has nothing to give
-        GATHER_DRAIN: 40,          // vitality a harvest strips from the hex
+        GATHER_MIN_VITALITY: 10,   // land weaker than this has nothing to give
+        GATHER_DRAIN: 40,          // vitality a harvest strips from the hex; repeated
+                                   // harvests can gather land to death (≤0 flips)
         VITALITY_REGROW: 4,        // per turn when a hex isn't under pressure
         PRESSURE_DRAIN: 8,         // vitality lost per point of pressure deficit
         FLIP_VITALITY: 30,         // a freshly conquered hex starts this healthy
@@ -85,7 +86,9 @@ const GameArtifacts = (function () {
         FEED_ESSENCE: 10,
         FEED_PROSPERITY: 5,
         SETTLEMENT_HEAL: 5,        // resting (ending the turn) at a settlement
-        PROSPERITY_MAX: 100,
+        PROSPERITY_MAX: 100,       // natural-growth ceiling (golden ages) and the HUD
+                                   // bar scale; *feeding* is uncapped — the player can
+                                   // grow a town into an arms race with the blights
         SETTLEMENT_START: 30,
         SETTLEMENT_SELF_CAP: 50,   // settlements plateau here on their own; only feeding
                                    // (or a golden age) pushes them higher — the player is
@@ -94,7 +97,7 @@ const GameArtifacts = (function () {
         BLIGHT_START: 50,
         BLIGHT_HP: 25,
         BLIGHT_REWARD: 30,         // essence windfall for cleansing one
-        BLIGHT_GROWTH: 1,          // prosperity per turn — the doom clock
+        BLIGHT_GROWTH: 0.5,        // prosperity per turn — the doom clock
         BLIGHT_GROWTH_HP: 10,      // per eruption
         BLIGHT_GROWTH_PROSPERITY: 10,
         SIEGE_DRAIN: 3,            // prosperity lost per turn on a foreign biome
@@ -102,6 +105,8 @@ const GameArtifacts = (function () {
         AURA_RADIUS_MAX: 30,       // hard perf ceiling; reach otherwise follows power
         AURA_PROSPERITY_DIV: 20,   // aura power = 1 + prosperity / this
         AURA_FALLOFF: 0.5,         // pressure lost per hex of distance — prosperity buys reach
+        AURA_DEFENSE_MULT: 2,      // an aura counts double on its own biome's hexes —
+                                   // defense beats offense, so towns are brakes on the creep
 
         CREATURE_CAP: 6,           // per biome
         INITIAL_CREATURES: 3,      // per biome at world gen

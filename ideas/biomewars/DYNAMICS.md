@@ -42,11 +42,23 @@ acts — gather, feed, cull, strike — visibly tilt it.*
 - **Hazard biomes** — hostile biomes hurt you each turn you stand in them, but their
   essence yield is 2–4× the safe lands. *Weaves into: thriving loop. Driver: variable
   reinforcement (risk/reward), double-edged.*
-- **Gathering drains the land and roots you** — a harvest costs the hex 40 vitality,
-  making it easier to flip, and takes the rest of your turn, so you weather the hex's
-  hazard where you harvest. Harvest enemy borderland and you're a saboteur paying in
-  blood; harvest beside your own settlement and you're eating your ally. *Weaves into:
-  pressure tick. Driver: readable consequences, double-edged.*
+- **Gathering drains the land and roots you** — a harvest costs the hex 40 vitality
+  (gatherable down to 10), making it easier to flip, and takes the rest of your turn,
+  so you weather the hex's hazard where you harvest. Harvest enemy borderland and
+  you're a saboteur paying in blood; harvest beside your own settlement and you're
+  eating your ally. *Weaves into: pressure tick. Driver: readable consequences,
+  double-edged.*
+- **Dead land is anyone's** — a hex at ≤0 vitality flips to its strongest rival at the
+  next world phase *even against the pressure*. Two or three turn-ending harvests can
+  gather a front-line hex to death and hand it to your biome — sapper play, paid for
+  in hazard and rooted turns. The same rule cuts back: over-farm your own frontier and
+  the enemy claims the corpse. *Weaves into: gathering + pressure tick. Driver:
+  accumulation (a plan the war visibly honors), double-edged.*
+- **Defensive auras** — an anchor's aura counts ×2 on hexes of its own biome: defense
+  beats offense. Creep visibly slows inside a town's reach (and blight cores are
+  correspondingly tough to storm by pressure alone). *Weaves into: anchors + pressure
+  tick. Driver: guardianship (towns are brakes you can see working); readable
+  consequences.*
 - **Creatures are bound to their biome** — wildlife never crosses a front line, so
   biome borders are visible safety lines and a moving front literally swallows the
   creatures on it. *Weaves into: pressure tick. Driver: readable consequences; rival
@@ -66,18 +78,21 @@ acts — gather, feed, cull, strike — visibly tilt it.*
   turns; then the planet convulses and *more, stronger* blights erupt. Escalation is
   tied to your success, and the long game never runs dry. *Weaves into: anchors.
   Driver: escalating commitment; accumulation & windfall.*
-- **Blights grow without limit** — +1 prosperity every turn, uncapped, and prosperity
+- **Blights grow without limit** — +0.5 prosperity every turn, uncapped, and prosperity
   buys aura *reach*. An untended world measurably falls (first settlement lost around
-  turn 130–170 in probes); cleansing blights is how the player resets the doom clock.
-  Settlements self-grow only to 50 — beyond that, prosperity is the hero's gift alone.
-  *Weaves into: anchors. Driver: escalating commitment (anti-turtle); the player is the
-  difference between holding and losing.*
+  turn 260–400 in probes, collapse by ~500–700); cleansing blights is how the player
+  resets the doom clock. Settlements self-grow only to 50 — beyond that, prosperity is
+  the hero's gift alone, and **feeding is uncapped**: a devoted hero can grow a town
+  into an arms race with the fattening blights. *Weaves into: anchors. Driver:
+  escalating commitment (anti-turtle); the player is the difference between holding
+  and losing.*
 - **Sea and crag are neutral** — impassable, unconquerable firebreaks. Fronts pinch and
   stall at them; geography is strategy. *Weaves into: pressure tick. Driver: terrain as
   language.*
 
 **Gut checks:** burning land burns you ✓; feeding a town makes it stronger ✓;
-over-harvesting kills the land ✓; creatures never leave their biome (they *are* the
+over-harvesting kills the land, and dead land falls to whoever's nearest ✓; home turf
+is easier to hold than to take ✓; creatures never leave their biome (they *are* the
 biome — stated in the intro) ✓; a besieged town starves rather than vanishing
 instantly ✓.
 
@@ -117,8 +132,8 @@ whose hex is flipped out from under it perishes with the front.
 | | Settlement | Blight |
 |---|---|---|
 | Starting prosperity | 30 | 50 (+10 per eruption) |
-| Growth | +1/turn if ≥60% of radius-2 land is home biome, self-capped at 50; +1 more in a golden age (cap 100); +5 (+2/Voice) per feed (cap 100) | +1/turn, **uncapped** |
-| Aura | power = 1 + prosperity/20, pushes home biome, falloff −0.5 per hex (prosperity buys reach) | same |
+| Growth | +1/turn if ≥60% of radius-2 land is home biome, self-capped at 50; +1 more in a golden age (natural cap 100); +5 (+2/Voice) per feed, **uncapped** | +0.5/turn, **uncapped** |
+| Aura | power = 1 + prosperity/20, pushes home biome, falloff −0.5 per hex (prosperity buys reach); counts ×2 on own-biome hexes (defense beats offense) | same |
 | Dies by | siege (−3 prosperity/turn on foreign biome) → "has fallen" | siege ("starved out") or attack (25 HP, +10 per eruption) → +30 essence |
 | Also | heals hero +5 when ending turn there; respawn point; feedable | named — a revenge target, not a swarm |
 
@@ -126,9 +141,10 @@ whose hex is flipped out from under it perishes with the front.
 
 - 20 HP, 5 MP/turn, 3 attack damage, 0 essence at start. Starts at a Meadow settlement.
 - **Actions** (all spend MP; hitting 0 MP auto-ends the turn):
-  move (terrain cost) · gather (all remaining MP — ends the turn; hex vitality ≥40,
-  drains 40) · attack (2 MP, adjacent creature or blight) · feed (1 MP, 10 essence →
-  prosperity, on a settlement). Gathering roots you: one harvest per turn, and you eat
+  move (terrain cost) · gather (all remaining MP — ends the turn; hex vitality ≥10,
+  drains 40; land drained to ≤0 flips to its strongest rival next world phase) ·
+  attack (2 MP, adjacent creature or blight) · feed (1 MP, 10 essence → prosperity,
+  uncapped, on a settlement). Gathering roots you: one harvest per turn, and you eat
   the hex's hazard where you harvest — no grab-and-run out of the Writhe.
 - **Talents** — one template: a passive stat bump, repeatable levels, cost =
   base × (level+1). No snowflake code paths. Talents are learned only while standing
@@ -160,8 +176,11 @@ world phase:
   3. hero fall?  — respawn at strongest settlement (−½ essence) or defeat if none left
   4. spawns      — per-biome 15% under cap of 6
   5. anchors     — siege drain / growth / feed effects; deaths resolve here
-  6. biome tick  — pressure = same-biome neighbors (+1 each) + anchor auras;
+  6. biome tick  — pressure = same-biome neighbors (+1 each) + anchor auras
+                   (aura ×2 on its own biome's hexes — defense beats offense);
                    deficit → vitality −(deficit×8); at 0 flip (vitality 30);
+                   dead land (≤0, e.g. gathered out) flips to its strongest
+                   rival even without a deficit;
                    surplus/parity → vitality +4 (cap 100)
   7. golden age  — countdown; at 0 the eruption spawns (2 + eruptions) blights,
                    each converting a radius-2 disk, HP/prosperity scaled up
@@ -204,13 +223,15 @@ learn where the fronts are, let grazers top you up. Cull the odd shardling for b
 essence.
 
 **Mid:** raid the Crystal/Ash border — triple yield pays for talents fast, and every
-harvest there weakens the enemy front. Feed the settlement nearest the worst front to
-crank its aura. Hunt cinder hounds before they hunt you.
+harvest there weakens the enemy front. Sap the line: two or three rooted harvests
+gather a front hex to death and hand it to your side. Feed the settlement nearest the
+worst front to crank its aura — feeding is uncapped, so a champion town is a real
+project, not a checkbox. Hunt cinder hounds before they hunt you.
 
 **Late:** Warding + Strider + Vigor open deep raids into the Writhe. Assassinate
-blights — storm them (attack) or strangle them (flip the land under them by feeding the
-nearest settlement and harvesting the blight's borders). Then survive your own success:
-each golden age ends in a bigger eruption.
+blights — storm them (attack) or strangle them (flip the land under them: feed the
+nearest settlement and gather the blight's borders to death). Then survive your own
+success: each golden age ends in a bigger eruption.
 
 **Recurring tensions (the decisions that never go away):**
 - Essence on *me* (talents) or the *world* (feeding)?
@@ -220,8 +241,15 @@ each golden age ends in a bigger eruption.
 
 **Anti-strategies (and the mechanic that punishes each):**
 - *Turtle at home forever* → blight prosperity grows without limit and its aura's reach
-  with it; probes show an untended world loses its first settlement by ~turn 150 and
-  collapses by ~250.
+  with it; probes show an untended world loses its first settlement by ~turn 260–400
+  and collapses by ~500–700, while a steadily fed world holds indefinitely — the clock
+  is slow enough to garden against, and only the player winds it back.
+- *Gather-bomb everything in sight* → dead land flips to the strongest **rival**, so
+  killing hexes near your own biome hands them to the enemy; each harvest also roots
+  you for a turn in whatever the hex's hazard is.
+- *Pump one mega-town and ignore the map* → an aura defends its own biome's hexes, but
+  eruptions seed fresh blights far from it, sieges strangle the unfed towns, and losing
+  them costs respawn points and training halls.
 - *Farm friendly wildlife* → spawn caps + low yields make it slow, and you're killing
   your own healers.
 - *Talents-only, ignore the war* → settlements fall; fewer respawn/heal points; last
