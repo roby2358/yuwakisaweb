@@ -82,6 +82,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a12; }
 #talent-panel { width: 440px; max-height: 80vh; overflow-y: auto; }
 #talent-panel h2 { margin-bottom: 6px; }
 #talent-panel #talent-essence { color: #aaccaa; margin-bottom: 14px; }
+#talent-panel #talent-hint { color: #cc9955; font-size: 12px; margin-bottom: 14px; }
 .talent-row {
     display: flex;
     align-items: center;

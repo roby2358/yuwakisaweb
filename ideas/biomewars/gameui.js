@@ -219,9 +219,14 @@ const GameUI = (function () {
         // ---- Talent panel (DOM overlay) ----
         buildTalentPanel() {
             const s = this.state;
+            const canTrain = this.engine.canTrain();
+            document.getElementById('talent-hint').classList.toggle('hidden', canTrain);
             const list = document.getElementById('talent-list');
             list.innerHTML = '';
-            for (const def of TALENTS) {
+            // Purchased talents list first; the unbought wait below, uncounted.
+            const purchased = TALENTS.filter(t => this.engine.talentLevel(t.key) > 0);
+            const unbought = TALENTS.filter(t => this.engine.talentLevel(t.key) === 0);
+            for (const def of [...purchased, ...unbought]) {
                 const level = this.engine.talentLevel(def.key);
                 const cost = this.engine.talentCost(def.key);
                 const maxed = level >= def.max;
@@ -233,7 +238,7 @@ const GameUI = (function () {
                 info.className = 'talent-info';
                 const title = document.createElement('div');
                 title.className = 'talent-name';
-                title.textContent = `${def.name} ${level}/${def.max}`;
+                title.textContent = level > 0 ? `${def.name} ${level}/${def.max}` : def.name;
                 const desc = document.createElement('div');
                 desc.className = 'talent-desc';
                 desc.textContent = def.desc;
@@ -242,7 +247,7 @@ const GameUI = (function () {
 
                 const btn = document.createElement('button');
                 btn.textContent = maxed ? 'MAX' : `Buy (${cost})`;
-                btn.disabled = maxed || s.hero.essence < cost || s.gameOver;
+                btn.disabled = maxed || s.hero.essence < cost || !canTrain;
                 btn.addEventListener('click', () => {
                     const res = this.engine.buyTalent(def.key);
                     if (!res.ok) return;

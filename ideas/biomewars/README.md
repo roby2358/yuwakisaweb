@@ -23,8 +23,9 @@ so `file://` works; serving over HTTP is fine too.)
 
 - **Click @** to select the hero — yellow hexes are reachable, red are attackable
   (adjacent creatures and blights). Click a highlighted hex to move or strike.
-- **Gather (G)** harvests essence from the hex underfoot — and drains its vitality,
-  weakening whoever owns it.
+- **Gather (G)** harvests essence from the hex underfoot — draining its vitality,
+  weakening whoever owns it, and taking the rest of your turn: you camp where you
+  harvest.
 - **Feed (F)** spends 10 essence on the settlement you stand in: prosperity is aura
   power, and aura power is the war.
 - **Talents (T)** opens the skill panel — spend essence on permanent levels.

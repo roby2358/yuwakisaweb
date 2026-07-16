@@ -42,10 +42,11 @@ acts — gather, feed, cull, strike — visibly tilt it.*
 - **Hazard biomes** — hostile biomes hurt you each turn you stand in them, but their
   essence yield is 2–4× the safe lands. *Weaves into: thriving loop. Driver: variable
   reinforcement (risk/reward), double-edged.*
-- **Gathering drains the land** — a harvest costs the hex 40 vitality, making it easier
-  to flip. Harvest enemy borderland and you're a saboteur; harvest beside your own
-  settlement and you're eating your ally. *Weaves into: pressure tick. Driver: readable
-  consequences, double-edged.*
+- **Gathering drains the land and roots you** — a harvest costs the hex 40 vitality,
+  making it easier to flip, and takes the rest of your turn, so you weather the hex's
+  hazard where you harvest. Harvest enemy borderland and you're a saboteur paying in
+  blood; harvest beside your own settlement and you're eating your ally. *Weaves into:
+  pressure tick. Driver: readable consequences, double-edged.*
 - **Creatures are bound to their biome** — wildlife never crosses a front line, so
   biome borders are visible safety lines and a moving front literally swallows the
   creatures on it. *Weaves into: pressure tick. Driver: readable consequences; rival
@@ -125,10 +126,15 @@ whose hex is flipped out from under it perishes with the front.
 
 - 20 HP, 5 MP/turn, 3 attack damage, 0 essence at start. Starts at a Meadow settlement.
 - **Actions** (all spend MP; hitting 0 MP auto-ends the turn):
-  move (terrain cost) · gather (2 MP, hex vitality ≥40, drains 40) · attack (2 MP,
-  adjacent creature or blight) · feed (1 MP, 10 essence → prosperity, on a settlement).
+  move (terrain cost) · gather (all remaining MP — ends the turn; hex vitality ≥40,
+  drains 40) · attack (2 MP, adjacent creature or blight) · feed (1 MP, 10 essence →
+  prosperity, on a settlement). Gathering roots you: one harvest per turn, and you eat
+  the hex's hazard where you harvest — no grab-and-run out of the Writhe.
 - **Talents** — one template: a passive stat bump, repeatable levels, cost =
-  base × (level+1). No snowflake code paths.
+  base × (level+1). No snowflake code paths. Talents are learned only while standing
+  in a settlement — training is one more thing the towns provide, and one more reason
+  to keep them alive (guardianship); a deep raid's haul isn't power until you make it
+  home (loss aversion — dying out there costs half the essence you meant to train with).
 
 | Talent | Effect/level | Base cost | Max |
 |---|---|---|---|

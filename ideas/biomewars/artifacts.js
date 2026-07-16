@@ -74,7 +74,6 @@ const GameArtifacts = (function () {
         HERO_MP: 5,
         HERO_ATTACK: 3,
         ATTACK_MP: 2,
-        GATHER_MP: 2,
         FEED_MP: 1,
 
         GATHER_MIN_VITALITY: 40,   // land weaker than this has nothing to give

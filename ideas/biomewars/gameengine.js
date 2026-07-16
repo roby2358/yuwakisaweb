@@ -435,7 +435,7 @@ const GameEngine = (function () {
 
         canGather() {
             const s = this.state;
-            if (s.gameOver || s.mp < RULES.GATHER_MP) return false;
+            if (s.gameOver || s.mp <= 0) return false;
             if (this.anchorAt(s.hero.q, s.hero.r)) return false;
             const hex = this.hexAt(s.hero);
             if (!BIOME_RULES[hex.biome].warring) return false;
@@ -443,7 +443,9 @@ const GameEngine = (function () {
         }
 
         // Harvest essence from the hex underfoot, draining its vitality — the land
-        // you feed on is land that flips easier.
+        // you feed on is land that flips easier. Gathering takes the rest of the
+        // turn (all remaining MP): you root where you harvest, and you'll eat the
+        // hex's hazard before you move again.
         gather() {
             if (!this.canGather()) return { ok: false };
             const s = this.state;
@@ -451,7 +453,7 @@ const GameEngine = (function () {
             const amount = BIOME_RULES[hex.biome].yield + this.talentLevel('harvest') * this.talentDef('harvest').per;
             s.hero.essence += amount;
             hex.vitality -= RULES.GATHER_DRAIN;
-            s.mp -= RULES.GATHER_MP;
+            s.mp = 0;
             this.log(`You harvest ${amount} essence from the ${this.biomeName(hex.biome).toLowerCase()}.`);
             return this.finishAction({ ok: true, amount });
         }
@@ -479,7 +481,17 @@ const GameEngine = (function () {
             return this.finishAction({ ok: true });
         }
 
+        // Talents are learned at settlements — training is one more thing the
+        // towns provide, and one more reason to keep them alive.
+        canTrain() {
+            const s = this.state;
+            if (s.gameOver) return false;
+            const anchor = this.anchorAt(s.hero.q, s.hero.r);
+            return !!anchor && anchor.kind === 'settlement';
+        }
+
         buyTalent(key) {
+            if (!this.canTrain()) return { ok: false };
             const s = this.state;
             const def = this.talentDef(key);
             const level = this.talentLevel(key);
