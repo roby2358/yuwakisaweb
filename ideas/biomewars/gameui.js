@@ -22,6 +22,35 @@ const GameUI = (function () {
 
     const SAVE_KEY = 'biomewars-save';
 
+    // How each anchor kind presents — counter face, status bar, hover readout.
+    // The view-side mirror of the engine's ANCHOR_KINDS dispatch: the UI never
+    // asks `kind === ...` either.
+    const ANCHOR_VIEWS = {
+        settlement: {
+            counter: a => ({ color: SETTLEMENT_COLOR, glyph: a.name.charAt(0), ring: BIOME_COLORS[a.biome] }),
+            bar: a => ({ fraction: a.prosperity / RULES.PROSPERITY_MAX, color: PROSPERITY_BAR }),
+            describe: a => `${a.name} — settlement, prosperity ${Math.round(a.prosperity)}`
+        },
+        blight: {
+            counter: () => ({ color: BLIGHT_COLOR, glyph: '✸', ring: BLIGHT_GLYPH_COLOR }),
+            bar: a => ({ fraction: a.hp / a.maxHp, color: BLIGHT_BAR }),
+            describe: a => `${a.name} — blight, ${a.hp} HP, prosperity ${Math.round(a.prosperity)}`
+        }
+    };
+
+    // Canvas-drawn overlay banners, keyed by overlay name. (The DOM overlays —
+    // intro, talents — are toggled in syncOverlayDom instead.)
+    const BANNERS = {
+        goldenage: {
+            title: 'A GOLDEN AGE DAWNS',
+            sub: 'Every blight is cleansed — for now. (click to continue)'
+        },
+        defeat: {
+            title: 'THE LAST SETTLEMENT HAS FALLEN',
+            sub: 'The planet\'s war rolls on without you. New World to begin again.'
+        }
+    };
+
     class GameUI {
         constructor(engine, canvas) {
             this.engine = engine;
@@ -169,19 +198,25 @@ const GameUI = (function () {
             this.doAction(this.engine.attack(q, r));
         }
 
+        // Gameplay input is live only with no overlay up, on the player's phase,
+        // while the game is on — the shared guard for every action activator.
+        canAct() {
+            return !this.overlay && this.state.phase === 'player' && !this.state.gameOver;
+        }
+
         doGather() {
-            if (this.overlay || this.state.phase !== 'player') return;
+            if (!this.canAct()) return;
             this.doAction(this.engine.gather());
         }
 
         doFeed() {
-            if (this.overlay || this.state.phase !== 'player') return;
+            if (!this.canAct()) return;
             this.doAction(this.engine.feed());
         }
 
         // ---- L2.1 One context-sensitive primary action (End Turn button + Space/Enter) ----
         primaryAction() {
-            if (this.overlay || this.state.phase !== 'player' || this.state.gameOver) return;
+            if (!this.canAct()) return;
             const loc = this.engine.locationAt(this.state.hero);
             if (loc) {
                 // openLocation(loc) — wire up when interactive locations exist
@@ -218,7 +253,6 @@ const GameUI = (function () {
 
         // ---- Talent panel (DOM overlay) ----
         buildTalentPanel() {
-            const s = this.state;
             const canTrain = this.engine.canTrain();
             document.getElementById('talent-hint').classList.toggle('hidden', canTrain);
             const list = document.getElementById('talent-list');
@@ -226,53 +260,65 @@ const GameUI = (function () {
             // Purchased talents list first; the unbought wait below, uncounted.
             const purchased = TALENTS.filter(t => this.engine.talentLevel(t.key) > 0);
             const unbought = TALENTS.filter(t => this.engine.talentLevel(t.key) === 0);
-            for (const def of [...purchased, ...unbought]) {
-                const level = this.engine.talentLevel(def.key);
-                const cost = this.engine.talentCost(def.key);
-                const maxed = level >= def.max;
+            for (const def of [...purchased, ...unbought])
+                list.appendChild(this.talentRow(def, canTrain));
+            document.getElementById('talent-essence').textContent = `Essence: ${this.state.hero.essence}`;
+        }
 
-                const row = document.createElement('div');
-                row.className = 'talent-row';
+        talentRow(def, canTrain) {
+            const level = this.engine.talentLevel(def.key);
+            const cost = this.engine.talentCost(def.key);
+            const maxed = level >= def.max;
 
-                const info = document.createElement('div');
-                info.className = 'talent-info';
-                const title = document.createElement('div');
-                title.className = 'talent-name';
-                title.textContent = level > 0 ? `${def.name} ${level}/${def.max}` : def.name;
-                const desc = document.createElement('div');
-                desc.className = 'talent-desc';
-                desc.textContent = def.desc;
-                info.appendChild(title);
-                info.appendChild(desc);
+            const row = document.createElement('div');
+            row.className = 'talent-row';
 
-                const btn = document.createElement('button');
-                btn.textContent = maxed ? 'MAX' : `Buy (${cost})`;
-                btn.disabled = maxed || s.hero.essence < cost || !canTrain;
-                btn.addEventListener('click', () => {
-                    const res = this.engine.buyTalent(def.key);
-                    if (!res.ok) return;
-                    this.saveGame();
-                    this.buildTalentPanel();
-                    this.updateHUD();
-                    this.renderLog();
-                });
+            const info = document.createElement('div');
+            info.className = 'talent-info';
+            const title = document.createElement('div');
+            title.className = 'talent-name';
+            title.textContent = level > 0 ? `${def.name} ${level}/${def.max}` : def.name;
+            const desc = document.createElement('div');
+            desc.className = 'talent-desc';
+            desc.textContent = def.desc;
+            info.appendChild(title);
+            info.appendChild(desc);
 
-                row.appendChild(info);
-                row.appendChild(btn);
-                list.appendChild(row);
-            }
-            document.getElementById('talent-essence').textContent = `Essence: ${s.hero.essence}`;
+            const btn = document.createElement('button');
+            btn.textContent = maxed ? 'MAX' : `Buy (${cost})`;
+            btn.disabled = maxed || this.state.hero.essence < cost || !canTrain;
+            btn.addEventListener('click', () => this.onBuyTalent(def.key));
+
+            row.appendChild(info);
+            row.appendChild(btn);
+            return row;
+        }
+
+        onBuyTalent(key) {
+            const res = this.engine.buyTalent(key);
+            if (!res.ok) return;
+            this.saveGame();
+            this.buildTalentPanel();
+            this.updateHUD();
+            this.renderLog();
         }
 
         // ---- Rendering ----
 
+        // '#rrggbb' -> { r, g, b } in 0-255.
+        hexToRgb(color) {
+            return {
+                r: parseInt(color.slice(1, 3), 16),
+                g: parseInt(color.slice(3, 5), 16),
+                b: parseInt(color.slice(5, 7), 16)
+            };
+        }
+
         // Darken a '#rrggbb' color toward black as vitality drains, so front lines
         // read as sickly bands (UI reveals mechanics).
         shade(color, factor) {
-            const r = Math.round(parseInt(color.slice(1, 3), 16) * factor);
-            const g = Math.round(parseInt(color.slice(3, 5), 16) * factor);
-            const b = Math.round(parseInt(color.slice(5, 7), 16) * factor);
-            return `rgb(${r},${g},${b})`;
+            const { r, g, b } = this.hexToRgb(color);
+            return `rgb(${Math.round(r * factor)},${Math.round(g * factor)},${Math.round(b * factor)})`;
         }
 
         hexFill(hex) {
@@ -283,18 +329,27 @@ const GameUI = (function () {
         }
 
         render() {
+            this.ctx.fillStyle = '#0a0a12';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+            this.drawBiomes();
+            this.drawSelectionHighlights();
+            this.drawAnchors();
+            this.drawCreatures();
+            this.drawHero();
+            this.drawOverlayBanner();
+
+            this.updateHUD();
+            this.renderLog();
+        }
+
+        // Biomes, shaded by vitality; hexes far off-screen are skipped.
+        drawBiomes() {
             const ctx = this.ctx;
-            const canvas = this.canvas;
-            const s = this.state;
-
-            ctx.fillStyle = '#0a0a12';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Biomes, shaded by vitality
-            for (const [, hex] of s.hexes) {
+            for (const [, hex] of this.state.hexes) {
                 const { x, y } = this.hexToScreen(hex.q, hex.r);
-                if (x < -HEX_SIZE * 2 || x > canvas.width + HEX_SIZE * 2 ||
-                    y < -HEX_SIZE * 2 || y > canvas.height + HEX_SIZE * 2) continue;
+                if (x < -HEX_SIZE * 2 || x > this.canvas.width + HEX_SIZE * 2 ||
+                    y < -HEX_SIZE * 2 || y > this.canvas.height + HEX_SIZE * 2) continue;
                 drawHexPath(ctx, x, y, HEX_SIZE);
                 ctx.fillStyle = this.hexFill(hex);
                 ctx.fill();
@@ -302,41 +357,42 @@ const GameUI = (function () {
                 ctx.lineWidth = 1;
                 ctx.stroke();
             }
+        }
 
-            // L1.2 highlight sets: movement tint (yellow) + attack tint (red)
-            if (this.selection) {
-                for (const key of this.selection.reachable.keys()) {
-                    const { q, r } = Hex.fromKey(key);
-                    const { x, y } = this.hexToScreen(q, r);
-                    drawHexPath(ctx, x, y, HEX_SIZE);
-                    ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
-                    ctx.fill();
-                }
-                for (const key of this.selection.attackable) {
-                    const { q, r } = Hex.fromKey(key);
-                    const { x, y } = this.hexToScreen(q, r);
-                    drawHexPath(ctx, x, y, HEX_SIZE);
-                    ctx.fillStyle = 'rgba(255, 0, 0, 0.35)';
-                    ctx.fill();
-                }
+        // L1.2 highlight sets: movement tint (yellow) + attack tint (red).
+        drawSelectionHighlights() {
+            if (!this.selection) return;
+            this.tintHexes(this.selection.reachable.keys(), 'rgba(255, 255, 0, 0.3)');
+            this.tintHexes(this.selection.attackable, 'rgba(255, 0, 0, 0.35)');
+        }
+
+        tintHexes(keys, color) {
+            for (const key of keys) {
+                const { q, r } = Hex.fromKey(key);
+                const { x, y } = this.hexToScreen(q, r);
+                drawHexPath(this.ctx, x, y, HEX_SIZE);
+                this.ctx.fillStyle = color;
+                this.ctx.fill();
             }
+        }
 
-            // Anchors: settlements (prosperity bar) and blights (HP bar)
-            for (const a of s.anchors) {
+        // Anchors: counter + biome ring + status bar, per the kind's view.
+        drawAnchors() {
+            for (const a of this.state.anchors) {
                 const { x, y } = this.hexToScreen(a.q, a.r);
-                if (a.kind === 'settlement') {
-                    this.drawCounter(x, y, SETTLEMENT_COLOR, a.name.charAt(0));
-                    this.drawRing(x, y, BIOME_COLORS[a.biome]);
-                    this.drawBar(x, y, a.prosperity / RULES.PROSPERITY_MAX, PROSPERITY_BAR);
-                } else {
-                    this.drawCounter(x, y, BLIGHT_COLOR, '✸');
-                    this.drawRing(x, y, BLIGHT_GLYPH_COLOR);
-                    this.drawBar(x, y, a.hp / a.maxHp, BLIGHT_BAR);
-                }
+                const view = ANCHOR_VIEWS[a.kind];
+                const counter = view.counter(a);
+                this.drawCounter(x, y, counter.color, counter.glyph);
+                this.drawRing(x, y, counter.ring);
+                const bar = view.bar(a);
+                this.drawBar(x, y, bar.fraction, bar.color);
             }
+        }
 
-            // Creatures: species-lettered discs, ring color = disposition
-            for (const c of s.creatures) {
+        // Creatures: species-lettered discs, ring color = disposition.
+        drawCreatures() {
+            const ctx = this.ctx;
+            for (const c of this.state.creatures) {
                 const { x, y } = this.hexToScreen(c.q, c.r);
                 const def = CREATURES[c.biome];
                 ctx.beginPath();
@@ -352,32 +408,26 @@ const GameUI = (function () {
                 ctx.textBaseline = 'middle';
                 ctx.fillText(this.engine.creatureName(c.biome).charAt(0), x, y + 1);
             }
+        }
 
-            // Hero
-            if (s.hero) {
-                const { x, y } = this.hexToScreen(s.hero.q, s.hero.r);
-                this.drawCounter(x, y, HERO_COLOR, '@');
-                if (this.selection) {
-                    const sz = COUNTER_SIZE + 4;
-                    this.roundRect(x - sz / 2, y - sz / 2, sz, sz, 6);
-                    ctx.strokeStyle = '#fff';
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-                }
-            }
+        // The hero counter, boxed in white while selected.
+        drawHero() {
+            const s = this.state;
+            if (!s.hero) return;
+            const { x, y } = this.hexToScreen(s.hero.q, s.hero.r);
+            this.drawCounter(x, y, HERO_COLOR, '@');
+            if (!this.selection) return;
+            const sz = COUNTER_SIZE + 4;
+            this.roundRect(x - sz / 2, y - sz / 2, sz, sz, 6);
+            this.ctx.strokeStyle = '#fff';
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
+        }
 
-            // L5 canvas-drawn overlays (input-capturing layers)
-            if (this.overlay === 'goldenage') {
-                this.drawBanner('A GOLDEN AGE DAWNS',
-                    'Every blight is cleansed — for now. (click to continue)');
-            }
-            if (this.overlay === 'defeat') {
-                this.drawBanner('THE LAST SETTLEMENT HAS FALLEN',
-                    'The planet\'s war rolls on without you. New World to begin again.');
-            }
-
-            this.updateHUD();
-            this.renderLog();
+        // L5 canvas-drawn overlays (input-capturing layers).
+        drawOverlayBanner() {
+            const banner = BANNERS[this.overlay];
+            if (banner) this.drawBanner(banner.title, banner.sub);
         }
 
         drawBanner(title, sub) {
@@ -428,11 +478,9 @@ const GameUI = (function () {
             ctx.closePath();
         }
 
-        contrastText(hexColor) {
-            const r = parseInt(hexColor.slice(1, 3), 16) / 255;
-            const g = parseInt(hexColor.slice(3, 5), 16) / 255;
-            const b = parseInt(hexColor.slice(5, 7), 16) / 255;
-            const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        contrastText(color) {
+            const { r, g, b } = this.hexToRgb(color);
+            const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
             return lum > 0.4 ? '#000' : '#fff';
         }
 
@@ -500,12 +548,7 @@ const GameUI = (function () {
             }
 
             const anchor = this.engine.anchorAt(hex.q, hex.r);
-            if (anchor) {
-                if (anchor.kind === 'settlement')
-                    parts.push(`${anchor.name} — settlement, prosperity ${Math.round(anchor.prosperity)}`);
-                else
-                    parts.push(`${anchor.name} — blight, ${anchor.hp} HP, prosperity ${Math.round(anchor.prosperity)}`);
-            }
+            if (anchor) parts.push(ANCHOR_VIEWS[anchor.kind].describe(anchor));
 
             return parts.join(' · ');
         }

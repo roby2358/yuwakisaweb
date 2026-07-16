@@ -104,8 +104,10 @@ const GameArtifacts = (function () {
         AURA_FALLOFF: 0.5,         // pressure lost per hex of distance — prosperity buys reach
 
         CREATURE_CAP: 6,           // per biome
+        INITIAL_CREATURES: 3,      // per biome at world gen
         SPAWN_CHANCE: 0.15,        // per biome per turn while under cap
         SPAWN_MIN_DIST: 3,         // hexes from the hero
+        WANDER_CHANCE: 0.5,        // chance an idle creature drifts a hex
 
         SETTLEMENTS_PER_BIOME: 2,
         ANCHOR_MIN_DIST: 8,

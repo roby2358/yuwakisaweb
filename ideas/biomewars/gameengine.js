@@ -21,6 +21,72 @@ const GameEngine = (function () {
         CREATURES, TALENTS, RULES
     } = GameArtifacts;
 
+    const TALENT_BY_KEY = new Map(TALENTS.map(t => [t.key, t]));
+
+    // ---- Anchor kinds: the one dispatch point for the settlement/blight split ----
+    // Everything that differs by anchor kind lives here — construction, the siege
+    // announcement, home-ground growth, and what happens when prosperity starves to
+    // zero. The engine looks up and calls; it never asks `kind === ...` beyond the
+    // settlementAt/blightAt lookups.
+    const ANCHOR_KINDS = {
+        settlement: {
+            make(engine, biome, spot) {
+                return {
+                    kind: 'settlement', biome,
+                    name: NameGen.word(BIOME_RULES[biome].nameStyle),
+                    q: spot.q, r: spot.r,
+                    prosperity: RULES.SETTLEMENT_START, hp: 0, besieged: false
+                };
+            },
+            announceSiege(engine, anchor, hex) {
+                engine.log(`${anchor.name} is besieged by the ${engine.biomeName(hex.biome).toLowerCase()}!`);
+            },
+            // Natural growth plateaus at the self cap (golden ages excepted);
+            // beyond it, prosperity is the hero's gift alone.
+            grow(engine, anchor) {
+                const s = engine.state;
+                let growth = engine.ownFraction(anchor) >= RULES.SETTLEMENT_GROWTH_FRACTION ? 1 : 0;
+                if (s.goldenAge > 0) growth += 1;
+                const cap = s.goldenAge > 0 ? RULES.PROSPERITY_MAX : RULES.SETTLEMENT_SELF_CAP;
+                if (anchor.prosperity < cap)
+                    anchor.prosperity = Math.min(cap, anchor.prosperity + growth);
+            },
+            starve(engine, anchor, flags) {
+                const s = engine.state;
+                s.anchors.splice(s.anchors.indexOf(anchor), 1);
+                flags.settlementLost = true;
+                engine.log(`${anchor.name} has fallen.`);
+                if (engine.settlements().length === 0) {
+                    s.gameOver = true;
+                    flags.defeat = true;
+                    engine.log('The last settlement is gone. The war rolls on without you.');
+                }
+            }
+        },
+        blight: {
+            make(engine, biome, spot) {
+                const hp = RULES.BLIGHT_HP + RULES.BLIGHT_GROWTH_HP * engine.state.eruptions;
+                return {
+                    kind: 'blight', biome,
+                    name: NameGen.word(BIOME_RULES[biome].nameStyle),
+                    q: spot.q, r: spot.r,
+                    prosperity: RULES.BLIGHT_START + RULES.BLIGHT_GROWTH_PROSPERITY * engine.state.eruptions,
+                    hp, maxHp: hp, besieged: false
+                };
+            },
+            announceSiege() { /* blights suffer their sieges in silence */ },
+            // Uncapped: a blight left alone grows without limit, and its aura's
+            // reach with it. The world *will* lose eventually — cleansing blights
+            // is how the player resets the clock.
+            grow(engine, anchor) {
+                anchor.prosperity += RULES.BLIGHT_GROWTH;
+            },
+            starve(engine, anchor, flags) {
+                flags.goldenAge = engine.destroyBlight(anchor, 'starved out') || flags.goldenAge;
+            }
+        }
+    };
+
     class GameEngine {
         constructor(state) {
             this.state = state;
@@ -37,6 +103,17 @@ const GameEngine = (function () {
 
         anchorAt(q, r) {
             return this.state.anchors.find(a => a.q === q && a.r === r);
+        }
+
+        // Kind-filtered lookups: null when the hex holds nothing of that kind.
+        settlementAt(q, r) {
+            const a = this.anchorAt(q, r);
+            return a && a.kind === 'settlement' ? a : null;
+        }
+
+        blightAt(q, r) {
+            const a = this.anchorAt(q, r);
+            return a && a.kind === 'blight' ? a : null;
         }
 
         settlements() {
@@ -60,7 +137,7 @@ const GameEngine = (function () {
 
         // ---- Hero derived stats (talents are levels; effects derive here) ----
         talentDef(key) {
-            return TALENTS.find(t => t.key === key);
+            return TALENT_BY_KEY.get(key);
         }
 
         talentLevel(key) {
@@ -71,16 +148,21 @@ const GameEngine = (function () {
             return this.talentDef(key).base * (this.talentLevel(key) + 1);
         }
 
+        // Total effect a talent contributes right now: level × per-level magnitude.
+        talentBonus(key) {
+            return this.talentLevel(key) * this.talentDef(key).per;
+        }
+
         heroMaxHp() {
-            return RULES.HERO_HP + this.talentLevel('vigor') * this.talentDef('vigor').per;
+            return RULES.HERO_HP + this.talentBonus('vigor');
         }
 
         heroMp() {
-            return RULES.HERO_MP + this.talentLevel('fleet') * this.talentDef('fleet').per;
+            return RULES.HERO_MP + this.talentBonus('fleet');
         }
 
         heroAttack() {
-            return RULES.HERO_ATTACK + this.talentLevel('strike') * this.talentDef('strike').per;
+            return RULES.HERO_ATTACK + this.talentBonus('strike');
         }
 
         // ---- Terrain passability ----
@@ -105,13 +187,17 @@ const GameEngine = (function () {
         }
 
         // ---- New world generation ----
-        // Regenerates (up to 10 tries) until anchor placement succeeds; a seed may be
-        // supplied for reproducibility, otherwise one is drawn and stored.
-        newGame(seed) {
+
+        // Draw a fresh seed and generate a world from it.
+        newGame() {
+            this.newGameFromSeed(Math.floor(Math.random() * 0x100000000));
+        }
+
+        // Generate a reproducible world from an explicit seed: regenerates (up to
+        // 10 tries) until anchor placement succeeds.
+        newGameFromSeed(seed) {
             const s = this.state;
-            s.seed = (seed === undefined || seed === null)
-                ? Math.floor(Math.random() * 0x100000000)
-                : (seed >>> 0);
+            s.seed = seed >>> 0;
             Rando.seed(s.seed);
 
             let attempts = 0;
@@ -134,7 +220,7 @@ const GameEngine = (function () {
 
             s.creatures = [];
             for (const biome of WARRING_BIOMES)
-                for (let i = 0; i < 3; i++) this.spawnCreatureIn(biome);
+                for (let i = 0; i < RULES.INITIAL_CREATURES; i++) this.spawnCreatureIn(biome);
 
             s.turn = 1;
             s.mp = this.heroMp();
@@ -277,21 +363,7 @@ const GameEngine = (function () {
         }
 
         makeAnchor(kind, biome, hex) {
-            const s = this.state;
-            const style = BIOME_RULES[biome].nameStyle;
-            if (kind === 'settlement') {
-                return {
-                    kind, biome, name: NameGen.word(style), q: hex.q, r: hex.r,
-                    prosperity: RULES.SETTLEMENT_START, hp: 0, besieged: false
-                };
-            }
-            const hp = RULES.BLIGHT_HP + RULES.BLIGHT_GROWTH_HP * s.eruptions;
-            return {
-                kind, biome, name: NameGen.word(style), q: hex.q, r: hex.r,
-                prosperity: RULES.BLIGHT_START + RULES.BLIGHT_GROWTH_PROSPERITY * s.eruptions,
-                hp, maxHp: hp,
-                besieged: false
-            };
+            return ANCHOR_KINDS[kind].make(this, biome, hex);
         }
 
         // Per-world proper names: every creature species, and each warring biome at
@@ -359,8 +431,7 @@ const GameEngine = (function () {
             const out = new Set();
             if (s.gameOver || s.mp < RULES.ATTACK_MP) return out;
             for (const n of new Hex(s.hero.q, s.hero.r).neighbors()) {
-                const anchor = this.anchorAt(n.q, n.r);
-                if (this.creatureAt(n.q, n.r) || (anchor && anchor.kind === 'blight'))
+                if (this.creatureAt(n.q, n.r) || this.blightAt(n.q, n.r))
                     out.add(n.key());
             }
             return out;
@@ -403,34 +474,36 @@ const GameEngine = (function () {
             if (new Hex(s.hero.q, s.hero.r).distance(new Hex(q, r)) !== 1) return { ok: false };
 
             const creature = this.creatureAt(q, r);
-            const anchor = this.anchorAt(q, r);
-            const blight = anchor && anchor.kind === 'blight' ? anchor : null;
+            const blight = this.blightAt(q, r);
             if (!creature && !blight) return { ok: false };
 
             s.mp -= RULES.ATTACK_MP;
-            const dmg = this.heroAttack();
-            const res = { ok: true };
-
-            if (creature) {
-                creature.hp -= dmg;
-                const def = CREATURES[creature.biome];
-                const name = this.creatureName(creature.biome).toLowerCase();
-                if (creature.hp <= 0) {
-                    s.creatures.splice(s.creatures.indexOf(creature), 1);
-                    s.hero.essence += def.essence;
-                    this.log(`You slay the ${name} (+${def.essence} essence).`);
-                } else {
-                    this.log(`You wound the ${name} (${creature.hp}/${def.hp}).`);
-                }
-            } else {
-                blight.hp -= dmg;
-                if (blight.hp <= 0) {
-                    res.goldenAge = this.destroyBlight(blight, 'shattered');
-                } else {
-                    this.log(`You strike ${blight.name} (${blight.hp} HP left).`);
-                }
-            }
+            const res = creature ? this.strikeCreature(creature) : this.strikeBlight(blight);
             return this.finishAction(res);
+        }
+
+        strikeCreature(creature) {
+            const s = this.state;
+            creature.hp -= this.heroAttack();
+            const def = CREATURES[creature.biome];
+            const name = this.creatureName(creature.biome).toLowerCase();
+            if (creature.hp > 0) {
+                this.log(`You wound the ${name} (${creature.hp}/${def.hp}).`);
+                return { ok: true };
+            }
+            s.creatures.splice(s.creatures.indexOf(creature), 1);
+            s.hero.essence += def.essence;
+            this.log(`You slay the ${name} (+${def.essence} essence).`);
+            return { ok: true };
+        }
+
+        strikeBlight(blight) {
+            blight.hp -= this.heroAttack();
+            if (blight.hp > 0) {
+                this.log(`You strike ${blight.name} (${blight.hp} HP left).`);
+                return { ok: true };
+            }
+            return { ok: true, goldenAge: this.destroyBlight(blight, 'shattered') };
         }
 
         canGather() {
@@ -450,7 +523,7 @@ const GameEngine = (function () {
             if (!this.canGather()) return { ok: false };
             const s = this.state;
             const hex = this.hexAt(s.hero);
-            const amount = BIOME_RULES[hex.biome].yield + this.talentLevel('harvest') * this.talentDef('harvest').per;
+            const amount = BIOME_RULES[hex.biome].yield + this.talentBonus('harvest');
             s.hero.essence += amount;
             hex.vitality -= RULES.GATHER_DRAIN;
             s.mp = 0;
@@ -462,9 +535,8 @@ const GameEngine = (function () {
             const s = this.state;
             if (s.gameOver || s.mp < RULES.FEED_MP) return false;
             if (s.hero.essence < RULES.FEED_ESSENCE) return false;
-            const anchor = this.anchorAt(s.hero.q, s.hero.r);
-            if (!anchor || anchor.kind !== 'settlement') return false;
-            return anchor.prosperity < RULES.PROSPERITY_MAX;
+            const settlement = this.settlementAt(s.hero.q, s.hero.r);
+            return !!settlement && settlement.prosperity < RULES.PROSPERITY_MAX;
         }
 
         // Convert essence into a settlement's prosperity — a bigger aura pushing its
@@ -472,12 +544,12 @@ const GameEngine = (function () {
         feed() {
             if (!this.canFeed()) return { ok: false };
             const s = this.state;
-            const anchor = this.anchorAt(s.hero.q, s.hero.r);
-            const gain = RULES.FEED_PROSPERITY + this.talentLevel('voice') * this.talentDef('voice').per;
-            anchor.prosperity = Math.min(RULES.PROSPERITY_MAX, anchor.prosperity + gain);
+            const settlement = this.settlementAt(s.hero.q, s.hero.r);
+            const gain = RULES.FEED_PROSPERITY + this.talentBonus('voice');
+            settlement.prosperity = Math.min(RULES.PROSPERITY_MAX, settlement.prosperity + gain);
             s.hero.essence -= RULES.FEED_ESSENCE;
             s.mp -= RULES.FEED_MP;
-            this.log(`You feed ${anchor.name} (+${gain} prosperity).`);
+            this.log(`You feed ${settlement.name} (+${gain} prosperity).`);
             return this.finishAction({ ok: true });
         }
 
@@ -485,9 +557,7 @@ const GameEngine = (function () {
         // towns provide, and one more reason to keep them alive.
         canTrain() {
             const s = this.state;
-            if (s.gameOver) return false;
-            const anchor = this.anchorAt(s.hero.q, s.hero.r);
-            return !!anchor && anchor.kind === 'settlement';
+            return !s.gameOver && !!this.settlementAt(s.hero.q, s.hero.r);
         }
 
         buyTalent(key) {
@@ -537,7 +607,7 @@ const GameEngine = (function () {
             const s = this.state;
             const hex = this.hexAt(s.hero);
             const rules = BIOME_RULES[hex.biome];
-            const dmg = Math.max(0, rules.hazard - this.talentLevel('warding') * this.talentDef('warding').per);
+            const dmg = Math.max(0, rules.hazard - this.talentBonus('warding'));
             if (dmg <= 0) return;
             s.hero.hp -= dmg;
             this.log(`The ${this.biomeName(hex.biome).toLowerCase()} ${rules.hazardVerb} you (-${dmg} HP).`);
@@ -556,7 +626,7 @@ const GameEngine = (function () {
         }
 
         wander(creature) {
-            if (Rando.bool(0.5)) return;
+            if (!Rando.bool(RULES.WANDER_CHANCE)) return;
             const steps = this.validCreatureSteps(creature);
             if (steps.length === 0) return;
             const dest = Rando.choice(steps);
@@ -612,7 +682,7 @@ const GameEngine = (function () {
         creatureAttack(creature, def) {
             const s = this.state;
             const name = this.creatureName(creature.biome).toLowerCase();
-            const dmg = Math.max(0, def.dmg - this.talentLevel('carapace') * this.talentDef('carapace').per);
+            const dmg = Math.max(0, def.dmg - this.talentBonus('carapace'));
             if (dmg <= 0) {
                 this.log(`The ${name} claws harmlessly at your carapace.`);
                 return;
@@ -666,51 +736,26 @@ const GameEngine = (function () {
         }
 
         // One siege rule for both kinds: an anchor on a foreign biome bleeds
-        // prosperity and dies at zero. On home ground, settlements grow with healthy
-        // surroundings (and golden ages), blights grow on their own every other turn.
+        // prosperity and dies at zero. Home-ground growth and starvation are the
+        // kind-specific halves — ANCHOR_KINDS carries them.
         anchorsTick(flags) {
-            const s = this.state;
-            for (const anchor of [...s.anchors]) {
+            for (const anchor of [...this.state.anchors]) {
+                const kind = ANCHOR_KINDS[anchor.kind];
                 const hex = this.hexAt(anchor);
+
                 if (hex.biome !== anchor.biome) {
                     anchor.prosperity -= RULES.SIEGE_DRAIN;
                     if (!anchor.besieged) {
                         anchor.besieged = true;
                         flags.siege = true;
-                        if (anchor.kind === 'settlement')
-                            this.log(`${anchor.name} is besieged by the ${this.biomeName(hex.biome).toLowerCase()}!`);
+                        kind.announceSiege(this, anchor, hex);
                     }
                 } else {
                     anchor.besieged = false;
-                    if (anchor.kind === 'settlement') {
-                        let growth = this.ownFraction(anchor) >= RULES.SETTLEMENT_GROWTH_FRACTION ? 1 : 0;
-                        if (s.goldenAge > 0) growth += 1;
-                        // Natural growth plateaus at the self cap (golden ages excepted);
-                        // beyond it, prosperity is the hero's gift alone.
-                        const cap = s.goldenAge > 0 ? RULES.PROSPERITY_MAX : RULES.SETTLEMENT_SELF_CAP;
-                        if (anchor.prosperity < cap)
-                            anchor.prosperity = Math.min(cap, anchor.prosperity + growth);
-                    } else {
-                        // Uncapped: a blight left alone grows without limit, and its
-                        // aura's reach with it. The world *will* lose eventually —
-                        // cleansing blights is how the player resets the clock.
-                        anchor.prosperity += RULES.BLIGHT_GROWTH;
-                    }
+                    kind.grow(this, anchor);
                 }
 
-                if (anchor.prosperity > 0) continue;
-                if (anchor.kind === 'settlement') {
-                    s.anchors.splice(s.anchors.indexOf(anchor), 1);
-                    flags.settlementLost = true;
-                    this.log(`${anchor.name} has fallen.`);
-                    if (this.settlements().length === 0) {
-                        s.gameOver = true;
-                        flags.defeat = true;
-                        this.log('The last settlement is gone. The war rolls on without you.');
-                    }
-                } else {
-                    flags.goldenAge = this.destroyBlight(anchor, 'starved out') || flags.goldenAge;
-                }
+                if (anchor.prosperity <= 0) kind.starve(this, anchor, flags);
             }
         }
 
@@ -734,8 +779,26 @@ const GameEngine = (function () {
         // at zero the hex flips to the winning biome. Flips are collected first and
         // applied after, so a turn's outcome doesn't depend on iteration order.
         biomeTick() {
-            const s = this.state;
+            const aura = this.auraPressure();
+            const flips = [];
+            for (const [key, hex] of this.state.hexes) {
+                if (!BIOME_RULES[hex.biome].warring) continue;
 
+                const pressure = this.pressureOn(hex, aura.get(key));
+                const own = pressure.get(hex.biome) || 0;
+                const rival = this.strongestRival(pressure, hex.biome);
+
+                if (rival && rival.pressure > own)
+                    flips.push({ hex, drain: (rival.pressure - own) * RULES.PRESSURE_DRAIN, to: rival.biome });
+                else
+                    hex.vitality = Math.min(100, hex.vitality + RULES.VITALITY_REGROW);
+            }
+            this.applyFlips(flips);
+        }
+
+        // Sum every anchor's aura into Map<hexKey, Map<biome, pressure>>.
+        auraPressure() {
+            const s = this.state;
             const aura = new Map();
             for (const anchor of s.anchors) {
                 const power = 1 + anchor.prosperity / RULES.AURA_PROSPERITY_DIV;
@@ -751,35 +814,36 @@ const GameEngine = (function () {
                     m.set(anchor.biome, (m.get(anchor.biome) || 0) + contribution);
                 }
             }
+            return aura;
+        }
 
-            const flips = [];
-            for (const [key, hex] of s.hexes) {
-                if (!BIOME_RULES[hex.biome].warring) continue;
-
-                const pressure = new Map();
-                for (const n of new Hex(hex.q, hex.r).neighbors()) {
-                    const nh = s.hexes.get(n.key());
-                    if (!nh || !BIOME_RULES[nh.biome].warring) continue;
-                    pressure.set(nh.biome, (pressure.get(nh.biome) || 0) + 1);
-                }
-                const anchorPressure = aura.get(key);
-                if (anchorPressure)
-                    for (const [biome, p] of anchorPressure)
-                        pressure.set(biome, (pressure.get(biome) || 0) + p);
-
-                const own = pressure.get(hex.biome) || 0;
-                let bestBiome = null, bestVal = 0;
-                for (const [biome, p] of pressure) {
-                    if (biome === hex.biome) continue;
-                    if (p > bestVal) { bestVal = p; bestBiome = biome; }
-                }
-
-                if (bestBiome !== null && bestVal > own)
-                    flips.push({ hex, drain: (bestVal - own) * RULES.PRESSURE_DRAIN, to: bestBiome });
-                else
-                    hex.vitality = Math.min(100, hex.vitality + RULES.VITALITY_REGROW);
+        // Total pressure on one hex by biome: warring neighbors + this hex's slice
+        // of the aura map (may be undefined when no aura reaches it).
+        pressureOn(hex, anchorPressure) {
+            const pressure = new Map();
+            for (const n of new Hex(hex.q, hex.r).neighbors()) {
+                const nh = this.state.hexes.get(n.key());
+                if (!nh || !BIOME_RULES[nh.biome].warring) continue;
+                pressure.set(nh.biome, (pressure.get(nh.biome) || 0) + 1);
             }
+            if (anchorPressure)
+                for (const [biome, p] of anchorPressure)
+                    pressure.set(biome, (pressure.get(biome) || 0) + p);
+            return pressure;
+        }
 
+        // The strongest foreign biome pressing on a hex, or null if none press at all.
+        strongestRival(pressure, ownBiome) {
+            let rival = null;
+            for (const [biome, p] of pressure) {
+                if (biome === ownBiome) continue;
+                if (!rival || p > rival.pressure) rival = { biome, pressure: p };
+            }
+            return rival;
+        }
+
+        // Drain the contested hexes; any bled to zero flip to the winner.
+        applyFlips(flips) {
             for (const f of flips) {
                 f.hex.vitality -= f.drain;
                 if (f.hex.vitality <= 0) {
@@ -807,10 +871,29 @@ const GameEngine = (function () {
         erupt(flags) {
             const s = this.state;
             s.eruptions++;
-            const count = RULES.ERUPTION_BASE + s.eruptions;
 
+            const sites = this.eruptionSites(RULES.ERUPTION_BASE + s.eruptions);
+            sites.forEach((hex, i) => {
+                const biome = i % 2 === 0 ? BIOMES.ASH : BIOMES.WRITHE;
+                s.anchors.push(this.makeAnchor('blight', biome, hex));
+                this.convertDisk(hex, biome);
+            });
+
+            if (sites.length > 0) {
+                flags.eruption = true;
+                this.log(`The planet convulses — ${sites.length} new blights erupt!`);
+            } else {
+                this.log('The planet shudders, but holds — for now.');
+            }
+        }
+
+        // Up to `count` eruption sites: warring, unoccupied land clear of the hero
+        // and every settlement, pairwise ERUPTION_SPREAD apart.
+        eruptionSites(count) {
+            const s = this.state;
             const hero = new Hex(s.hero.q, s.hero.r);
             const settlements = this.settlements();
+
             const candidates = [];
             for (const [, hex] of s.hexes) {
                 if (!BIOME_RULES[hex.biome].warring) continue;
@@ -822,42 +905,35 @@ const GameEngine = (function () {
             }
             Rando.shuffle(candidates);
 
-            const placed = [];
+            const sites = [];
             for (const hex of candidates) {
-                if (placed.length >= count) break;
+                if (sites.length >= count) break;
                 const pos = new Hex(hex.q, hex.r);
-                if (placed.every(p => pos.distance(new Hex(p.q, p.r)) >= RULES.ERUPTION_SPREAD))
-                    placed.push(hex);
+                if (sites.every(p => pos.distance(new Hex(p.q, p.r)) >= RULES.ERUPTION_SPREAD))
+                    sites.push(hex);
             }
+            return sites;
+        }
 
-            placed.forEach((hex, i) => {
-                const biome = i % 2 === 0 ? BIOMES.ASH : BIOMES.WRITHE;
-                s.anchors.push(this.makeAnchor('blight', biome, hex));
-                for (const h of new Hex(hex.q, hex.r).inRange(RULES.ERUPTION_DISK)) {
-                    const nh = s.hexes.get(h.key());
-                    if (!nh || !BIOME_RULES[nh.biome].warring) continue;
-                    nh.biome = biome;
-                    nh.vitality = 90;
-                }
-            });
-
-            if (placed.length > 0) {
-                flags.eruption = true;
-                this.log(`The planet convulses — ${placed.length} new blights erupt!`);
-            } else {
-                this.log('The planet shudders, but holds — for now.');
+        // Claim the warring land in a disk around a new blight for its biome.
+        convertDisk(center, biome) {
+            for (const h of new Hex(center.q, center.r).inRange(RULES.ERUPTION_DISK)) {
+                const hex = this.state.hexes.get(h.key());
+                if (!hex || !BIOME_RULES[hex.biome].warring) continue;
+                hex.biome = biome;
+                hex.vitality = 90;
             }
         }
 
         // Ending the turn at a settlement heals: home is where the hearth is.
         settlementRest() {
             const s = this.state;
-            const anchor = this.anchorAt(s.hero.q, s.hero.r);
-            if (!anchor || anchor.kind !== 'settlement') return;
+            const settlement = this.settlementAt(s.hero.q, s.hero.r);
+            if (!settlement) return;
             const heal = Math.min(RULES.SETTLEMENT_HEAL, this.heroMaxHp() - s.hero.hp);
             if (heal <= 0) return;
             s.hero.hp += heal;
-            this.log(`You rest at ${anchor.name} (+${heal} HP).`);
+            this.log(`You rest at ${settlement.name} (+${heal} HP).`);
         }
 
         log(msg) {

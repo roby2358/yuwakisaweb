@@ -53,7 +53,7 @@ const Rando = (function () {
             return min + _rng() * (max - min);
         }
 
-        static bool(probability = 0.5) {
+        static bool(probability) {
             return _rng() < probability;
         }
 
