@@ -290,14 +290,7 @@ $(document).ready(function() {
         showMessage('Translated IPA to approximate English.', 'success');
     };
 
-    const handleVerses = () => {
-        const text = $('#generated-text').val();
-        if (!text.trim()) {
-            showMessage('No text to versify. Generate some text first.', 'error');
-            return;
-        }
-
-        const maxLength = parseInt($('#verses-length').val(), 10) || 32;
+    const versify = (text, maxLength) => {
         const words = text.replace(/\s+/g, ' ').trim().split(' ');
 
         const lines = [];
@@ -314,12 +307,33 @@ $(document).ready(function() {
         }
         if (current !== '') lines.push(current);
 
-        const versed = lines
+        return lines
             .map((line, i) => (i > 0 && i % 4 === 0) ? '\n' + line : line)
             .join('\n');
+    };
 
-        $('#generated-text').val(versed);
+    const handleVerses = () => {
+        const text = $('#generated-text').val();
+        if (!text.trim()) {
+            showMessage('No text to versify. Generate some text first.', 'error');
+            return;
+        }
+
+        const maxLength = parseInt($('#verses-length').val(), 10) || 32;
+        $('#generated-text').val(versify(text, maxLength));
         showMessage('Broke text into verses.', 'success');
+    };
+
+    const handleSourceVerses = () => {
+        const text = $('#source-text').val();
+        if (!text.trim()) {
+            showMessage('Please enter source text first.', 'error');
+            return;
+        }
+
+        const maxLength = parseInt($('#verses-length').val(), 10) || 32;
+        $('#source-text').val(versify(text, maxLength));
+        showMessage('Collapsed newlines and broke source into verses.', 'success');
     };
 
     const handleSpeak = () => {
@@ -343,6 +357,7 @@ $(document).ready(function() {
     $('#generate-btn').on('click', handleGenerate);
     $('#translate-btn').on('click', handleTranslate);
     $('#verses-btn').on('click', handleVerses);
+    $('#source-verses-btn').on('click', handleSourceVerses);
     $('#speak-btn').on('click', handleSpeak);
 
     // Keep verses length input and slider in sync
