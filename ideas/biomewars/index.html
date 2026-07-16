@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biome Wars</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <canvas id="game"></canvas>
+    <div id="hud">
+        <span id="turn-info">Turn 1</span>
+        <span id="hp-info">HP 20/20</span>
+        <span id="mp-info">MP 5/5</span>
+        <span id="essence-info">Essence 0</span>
+        <span id="world-info"></span>
+        <button id="gather-btn" title="Harvest essence from the hex underfoot (drains its vitality)">Gather (G)</button>
+        <button id="feed-btn" title="Spend 10 essence to raise this settlement's prosperity">Feed (F)</button>
+        <button id="talents-btn" title="Spend essence on skills and talents">Talents (T)</button>
+        <button id="end-turn" title="End your turn (Space/Enter)">End Turn</button>
+        <button id="new-game">New World</button>
+        <span id="hover-info"></span>
+    </div>
+    <div id="log"></div>
+    <div id="talent-panel" class="hidden">
+        <h2>Skills &amp; Talents</h2>
+        <p id="talent-essence">Essence: 0</p>
+        <div id="talent-list"></div>
+        <button id="talents-close">Close</button>
+    </div>
+    <div id="intro-panel">
+        <h1>Biome Wars</h1>
+        <p>This planet is at war with itself. Living biomes grind against each other
+        hex by hex — some lush, some inhospitable, some outright hostile to you —
+        and the creatures that wander them never cross a front line.</p>
+        <p>You are one small hero. Gather essence (hostile land pays best), learn
+        talents, feed the settlements that shelter you, and cleanse the blights that
+        drive the enemy tide. The war never ends. Thrive anyway.</p>
+        <p class="controls">Click @ to select · click yellow to move, red to attack ·
+        G gather · F feed · T talents · Space ends the turn · right-drag pans</p>
+        <button id="continue-btn" class="hidden">Continue</button>
+        <button id="begin-btn">New World</button>
+    </div>
+    <!-- NOTE! We want to be able to double-click to run these games, so use plain
+    script includes (globals), not ES module imports. Order = dependency order:
+    artifacts → display artifacts → libs → state → engine → ui → bootstrap. -->
+    <script src="artifacts.js"></script>
+    <script src="displayartifacts.js"></script>
+    <script src="rando.js"></script>
+    <script src="namegen.js"></script>
+    <script src="hex.js"></script>
+    <script src="gamestate.js"></script>
+    <script src="gameengine.js"></script>
+    <script src="gameui.js"></script>
+    <script src="index.js"></script>
+</body>
+</html>
