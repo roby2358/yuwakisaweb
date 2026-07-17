@@ -70,6 +70,11 @@ const GameArtifacts = (function () {
         MAP_COLS: 60,
         MAP_ROWS: 40,
 
+        ROLL_SPREAD: 0.25,         // every effect quantity is a gaussian roll around
+                                   // its rule value; stddev = value * this. Costs
+                                   // (MP, essence prices) stay fixed — you always
+                                   // know what an action costs, never what it pays
+
         HERO_HP: 20,
         HERO_MP: 5,
         HERO_ATTACK: 3,

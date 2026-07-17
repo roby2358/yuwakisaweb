@@ -35,7 +35,7 @@ const GameEngine = (function () {
                     kind: 'settlement', biome,
                     name: NameGen.word(BIOME_RULES[biome].nameStyle),
                     q: spot.q, r: spot.r,
-                    prosperity: RULES.SETTLEMENT_START, hp: 0, besieged: false
+                    prosperity: engine.roll(RULES.SETTLEMENT_START), hp: 0, besieged: false
                 };
             },
             announceSiege(engine, anchor, hex) {
@@ -45,8 +45,8 @@ const GameEngine = (function () {
             // beyond it, prosperity is the hero's gift alone.
             grow(engine, anchor) {
                 const s = engine.state;
-                let growth = engine.ownFraction(anchor) >= RULES.SETTLEMENT_GROWTH_FRACTION ? 1 : 0;
-                if (s.goldenAge > 0) growth += 1;
+                let growth = engine.ownFraction(anchor) >= RULES.SETTLEMENT_GROWTH_FRACTION ? engine.roll(1) : 0;
+                if (s.goldenAge > 0) growth += engine.roll(1);
                 const cap = s.goldenAge > 0 ? RULES.PROSPERITY_MAX : RULES.SETTLEMENT_SELF_CAP;
                 if (anchor.prosperity < cap)
                     anchor.prosperity = Math.min(cap, anchor.prosperity + growth);
@@ -65,12 +65,12 @@ const GameEngine = (function () {
         },
         blight: {
             make(engine, biome, spot) {
-                const hp = RULES.BLIGHT_HP + RULES.BLIGHT_GROWTH_HP * engine.state.eruptions;
+                const hp = engine.rollInt(RULES.BLIGHT_HP + RULES.BLIGHT_GROWTH_HP * engine.state.eruptions);
                 return {
                     kind: 'blight', biome,
                     name: NameGen.word(BIOME_RULES[biome].nameStyle),
                     q: spot.q, r: spot.r,
-                    prosperity: RULES.BLIGHT_START + RULES.BLIGHT_GROWTH_PROSPERITY * engine.state.eruptions,
+                    prosperity: engine.roll(RULES.BLIGHT_START + RULES.BLIGHT_GROWTH_PROSPERITY * engine.state.eruptions),
                     hp, maxHp: hp, besieged: false
                 };
             },
@@ -79,7 +79,7 @@ const GameEngine = (function () {
             // reach with it. The world *will* lose eventually — cleansing blights
             // is how the player resets the clock.
             grow(engine, anchor) {
-                anchor.prosperity += RULES.BLIGHT_GROWTH;
+                anchor.prosperity += engine.roll(RULES.BLIGHT_GROWTH);
             },
             starve(engine, anchor, flags) {
                 flags.goldenAge = engine.destroyBlight(anchor, 'starved out') || flags.goldenAge;
@@ -133,6 +133,21 @@ const GameEngine = (function () {
         // This world's species name for a biome's creature archetype.
         creatureName(biome) {
             return this.state.names.creatures[biome];
+        }
+
+        // ---- Dice ----
+        // Every effect quantity in the game is a roll: a gaussian centered on the
+        // rule's value with stddev ROLL_SPREAD of it, floored at zero. Tuning stays
+        // intact on average while every strike, harvest, and growth tick lands a
+        // little different. Costs (MP, essence prices) never roll — you always know
+        // what an action costs, never exactly what it pays.
+        roll(value) {
+            return Math.max(0, Rando.around(value, value * RULES.ROLL_SPREAD));
+        }
+
+        // Integer roll for quantities that stay whole (damage, essence, HP).
+        rollInt(value) {
+            return Math.round(this.roll(value));
         }
 
         // ---- Hero derived stats (talents are levels; effects derive here) ----
@@ -484,7 +499,7 @@ const GameEngine = (function () {
 
         strikeCreature(creature) {
             const s = this.state;
-            creature.hp -= this.heroAttack();
+            creature.hp -= this.rollInt(this.heroAttack());
             const def = CREATURES[creature.biome];
             const name = this.creatureName(creature.biome).toLowerCase();
             if (creature.hp > 0) {
@@ -492,13 +507,14 @@ const GameEngine = (function () {
                 return { ok: true };
             }
             s.creatures.splice(s.creatures.indexOf(creature), 1);
-            s.hero.essence += def.essence;
-            this.log(`You slay the ${name} (+${def.essence} essence).`);
+            const essence = this.rollInt(def.essence);
+            s.hero.essence += essence;
+            this.log(`You slay the ${name} (+${essence} essence).`);
             return { ok: true };
         }
 
         strikeBlight(blight) {
-            blight.hp -= this.heroAttack();
+            blight.hp -= this.rollInt(this.heroAttack());
             if (blight.hp > 0) {
                 this.log(`You strike ${blight.name} (${blight.hp} HP left).`);
                 return { ok: true };
@@ -524,9 +540,9 @@ const GameEngine = (function () {
             if (!this.canGather()) return { ok: false };
             const s = this.state;
             const hex = this.hexAt(s.hero);
-            const amount = BIOME_RULES[hex.biome].yield + this.talentBonus('harvest');
+            const amount = this.rollInt(BIOME_RULES[hex.biome].yield + this.talentBonus('harvest'));
             s.hero.essence += amount;
-            hex.vitality -= RULES.GATHER_DRAIN;
+            hex.vitality -= this.roll(RULES.GATHER_DRAIN);
             s.mp = 0;
             this.log(`You harvest ${amount} essence from the ${this.biomeName(hex.biome).toLowerCase()}.`);
             return this.finishAction({ ok: true, amount });
@@ -547,7 +563,7 @@ const GameEngine = (function () {
             if (!this.canFeed()) return { ok: false };
             const s = this.state;
             const settlement = this.settlementAt(s.hero.q, s.hero.r);
-            const gain = RULES.FEED_PROSPERITY + this.talentBonus('voice');
+            const gain = this.rollInt(RULES.FEED_PROSPERITY + this.talentBonus('voice'));
             settlement.prosperity += gain;
             s.hero.essence -= RULES.FEED_ESSENCE;
             s.mp -= RULES.FEED_MP;
@@ -609,7 +625,7 @@ const GameEngine = (function () {
             const s = this.state;
             const hex = this.hexAt(s.hero);
             const rules = BIOME_RULES[hex.biome];
-            const dmg = Math.max(0, rules.hazard - this.talentBonus('warding'));
+            const dmg = Math.max(0, this.rollInt(rules.hazard) - this.talentBonus('warding'));
             if (dmg <= 0) return;
             s.hero.hp -= dmg;
             this.log(`The ${this.biomeName(hex.biome).toLowerCase()} ${rules.hazardVerb} you (-${dmg} HP).`);
@@ -644,14 +660,17 @@ const GameEngine = (function () {
             }
         }
 
-        // Friendly wildlife wanders its biome and nuzzles an adjacent hero for +1 HP.
+        // Friendly wildlife wanders its biome and nuzzles an adjacent hero for ~1 HP.
         friendlyAct(creature) {
             const s = this.state;
             const heroHex = new Hex(s.hero.q, s.hero.r);
             if (new Hex(creature.q, creature.r).distance(heroHex) === 1 && s.hero.hp < this.heroMaxHp()) {
-                s.hero.hp += 1;
-                this.log(`A ${this.creatureName(creature.biome).toLowerCase()} nuzzles you (+1 HP).`);
-                return;
+                const heal = Math.min(this.rollInt(1), this.heroMaxHp() - s.hero.hp);
+                if (heal > 0) {
+                    s.hero.hp += heal;
+                    this.log(`A ${this.creatureName(creature.biome).toLowerCase()} nuzzles you (+${heal} HP).`);
+                    return;
+                }
             }
             this.wander(creature);
         }
@@ -684,7 +703,7 @@ const GameEngine = (function () {
         creatureAttack(creature, def) {
             const s = this.state;
             const name = this.creatureName(creature.biome).toLowerCase();
-            const dmg = Math.max(0, def.dmg - this.talentBonus('carapace'));
+            const dmg = Math.max(0, this.rollInt(def.dmg) - this.talentBonus('carapace'));
             if (dmg <= 0) {
                 this.log(`The ${name} claws harmlessly at your carapace.`);
                 return;
@@ -746,7 +765,7 @@ const GameEngine = (function () {
                 const hex = this.hexAt(anchor);
 
                 if (hex.biome !== anchor.biome) {
-                    anchor.prosperity -= RULES.SIEGE_DRAIN;
+                    anchor.prosperity -= this.roll(RULES.SIEGE_DRAIN);
                     if (!anchor.besieged) {
                         anchor.besieged = true;
                         flags.siege = true;
@@ -766,8 +785,9 @@ const GameEngine = (function () {
         destroyBlight(anchor, verb) {
             const s = this.state;
             s.anchors.splice(s.anchors.indexOf(anchor), 1);
-            s.hero.essence += RULES.BLIGHT_REWARD;
-            this.log(`${anchor.name} is ${verb}! (+${RULES.BLIGHT_REWARD} essence)`);
+            const reward = this.rollInt(RULES.BLIGHT_REWARD);
+            s.hero.essence += reward;
+            this.log(`${anchor.name} is ${verb}! (+${reward} essence)`);
             if (this.blights().length > 0) return false;
             s.goldenAge = RULES.GOLDEN_AGE_TURNS;
             this.log('Every blight is cleansed. A golden age dawns.');
@@ -791,14 +811,14 @@ const GameEngine = (function () {
                 const rival = this.strongestRival(pressure, hex.biome);
 
                 if (rival && rival.pressure > own)
-                    flips.push({ hex, drain: (rival.pressure - own) * RULES.PRESSURE_DRAIN, to: rival.biome });
+                    flips.push({ hex, drain: this.roll((rival.pressure - own) * RULES.PRESSURE_DRAIN), to: rival.biome });
                 else if (rival && hex.vitality <= 0)
                     // Dead land is anyone's: a hex drained to nothing (gathered to
                     // death, say) falls to its strongest rival even against the
                     // pressure — the sapper's opening.
                     flips.push({ hex, drain: 0, to: rival.biome });
                 else
-                    hex.vitality = Math.min(100, hex.vitality + RULES.VITALITY_REGROW);
+                    hex.vitality = Math.min(100, hex.vitality + this.roll(RULES.VITALITY_REGROW));
             }
             this.applyFlips(flips);
         }
@@ -859,7 +879,7 @@ const GameEngine = (function () {
                 f.hex.vitality -= f.drain;
                 if (f.hex.vitality <= 0) {
                     f.hex.biome = f.to;
-                    f.hex.vitality = RULES.FLIP_VITALITY;
+                    f.hex.vitality = this.roll(RULES.FLIP_VITALITY);
                 }
             }
         }
@@ -941,7 +961,7 @@ const GameEngine = (function () {
             const s = this.state;
             const settlement = this.settlementAt(s.hero.q, s.hero.r);
             if (!settlement) return;
-            const heal = Math.min(RULES.SETTLEMENT_HEAL, this.heroMaxHp() - s.hero.hp);
+            const heal = Math.min(this.rollInt(RULES.SETTLEMENT_HEAL), this.heroMaxHp() - s.hero.hp);
             if (heal <= 0) return;
             s.hero.hp += heal;
             this.log(`You rest at ${settlement.name} (+${heal} HP).`);

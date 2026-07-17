@@ -43,10 +43,17 @@ const Rando = (function () {
             return min + Math.floor(_rng() * (max - min + 1));
         }
 
+        // Standard normal (Box-Muller). 1 - u1 keeps log() off zero: _rng() is
+        // [0, 1), so 1 - u1 is (0, 1].
         static gaussian() {
             const u1 = _rng();
             const u2 = _rng();
-            return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+            return Math.sqrt(-2 * Math.log(1 - u1)) * Math.cos(2 * Math.PI * u2);
+        }
+
+        // A normal sample centered on mean with the given standard deviation.
+        static around(mean, stdDev) {
+            return mean + this.gaussian() * stdDev;
         }
 
         static float(min, max) {

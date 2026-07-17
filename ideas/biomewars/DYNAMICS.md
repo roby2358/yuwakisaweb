@@ -39,6 +39,15 @@ acts — gather, feed, cull, strike — visibly tilt it.*
 
 ## Secondary Mechanics (each woven into a key mechanic, driver named)
 
+- **Everything rolls** — every effect quantity is a gaussian centered on its rule value
+  (stddev = value × `ROLL_SPREAD` 0.25, floored at 0): attack damage both ways, essence
+  from kills/gathers/blights, hazard, heals, feed gain, anchor growth, siege drain,
+  pressure drain, regrowth, flip vitality, even anchor starting stats. **Costs never
+  roll** — MP, move costs, and essence prices stay fixed, so you always know what an
+  action costs, never exactly what it pays. Rolls are mean-preserving, so all tuning
+  below holds on average (probe pacing confirmed unchanged). *Weaves into: every
+  mechanic it touches. Driver: variable reinforcement on a competence backbone — the
+  plan is yours, luck only shapes the edges.*
 - **Hazard biomes** — hostile biomes hurt you each turn you stand in them, but their
   essence yield is 2–4× the safe lands. *Weaves into: thriving loop. Driver: variable
   reinforcement (risk/reward), double-edged.*
@@ -94,7 +103,8 @@ acts — gather, feed, cull, strike — visibly tilt it.*
 over-harvesting kills the land, and dead land falls to whoever's nearest ✓; home turf
 is easier to hold than to take ✓; creatures never leave their biome (they *are* the
 biome — stated in the intro) ✓; a besieged town starves rather than vanishing
-instantly ✓.
+instantly ✓; blows land harder or softer but a stronger arm still wins on average, and
+the price tag on an action never surprises you ✓.
 
 ## The World
 
