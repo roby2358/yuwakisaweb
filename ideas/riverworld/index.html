@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>RIVERWORLD — Up the River</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <div id="board-wrap">
+    <canvas id="board" width="672" height="672"></canvas>
+    <div id="overlay" class="hidden">
+      <div id="overlay-text"></div>
+      <input id="name-input" class="hidden" maxlength="24" placeholder="Richard Burton" autocomplete="off">
+      <button id="overlay-btn">Wake</button>
+    </div>
+  </div>
+  <div id="panel">
+    <h1>RIVERWORLD</h1>
+    <div id="clock-row">
+      <div class="clock-box"><span class="clock-label">GONG IN</span><span id="gong-count"></span></div>
+      <div class="clock-box" title="Leagues of river between Burton and the Tower"><span class="clock-label">TOWER</span><span id="tower"></span></div>
+      <div class="clock-box"><span class="clock-label">STRETCH</span><span id="stretch"></span></div>
+    </div>
+    <div id="party"></div>
+    <div id="actions"></div>
+    <h2>Grail Goods</h2>
+    <div id="inventory"></div>
+    <h2>The River Says</h2>
+    <div id="log"></div>
+    <button id="end-turn">End Turn <span class="key">Space</span></button>
+    <div id="hint">Click one of your people, then a lit hex to move. Reach a grailstone before the gong. Your river is saved automatically.</div>
+    <button id="new-river">⚓ Abandon this river and wake on a new one</button>
+  </div>
+</div>
+<script src="js/hex.js"></script>
+<script src="js/data.js"></script>
+<script src="js/map.js"></script>
+<script src="js/game.js"></script>
+<script src="js/render.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
