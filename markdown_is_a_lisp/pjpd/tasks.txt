@@ -1,0 +1,27 @@
+Priority:   60
+Status: ToDo
+ID: paramtrap-c2vv
+Created: 2026-07-14T22:01:11Z
+Updated: 2026-07-14T22:01:11Z
+MIAL: close the silent sibling-param trap. Writing function parameters as sibling bullets (* current / * max) under a heading registers a one-param function whose second name becomes a body expression — this silently broke the fizzbuzz-n example for weeks (fixed by switching to the * multi-param form). Either make sibling atom bullets a legal multi-param spec in registerDefinition/isParamSpec, or emit a diagnostic when a definition body begins with a bare childless symbol that looks like an intended parameter. In interpreter.js.
+----
+Priority:   60
+Status: ToDo
+ID: lambdrender-4z9q
+Created: 2026-07-14T22:01:13Z
+Updated: 2026-07-14T22:01:13Z
+MIAL: fix nodeToMarkdown's lambda rendering so multi-param closures round-trip. It currently renders lambda params as sibling bullets — exactly the shape that mis-parses as one param plus body — so print-mial of a multi-param closure re-parses into the wrong function. Render the * multi-param spec form instead (single param stays a bare bullet), matching what the mial-of builtin already constructs. Related to the sibling-param trap; consider fixing both together. In interpreter.js.
+----
+Priority:   50
+Status: ToDo
+ID: zeroargcall-uj55
+Created: 2026-07-14T22:01:08Z
+Updated: 2026-07-14T22:01:08Z
+MIAL: design direct call syntax for zero-arg functions. Application only triggers on a node with children, so a childless bullet naming a zero-arg closure is a symbol lookup that returns the closure instead of running it; (eval (mial-of f)) is the only workaround. Same root cause makes zero-argument + and * unreachable from syntax despite having identity returns. Decide on a call marker or evaluation rule and implement in evaluate() in interpreter.js.
+----
+Priority:   45
+Status: ToDo
+ID: codeconsts-stgv
+Created: 2026-07-14T22:01:07Z
+Updated: 2026-07-14T22:01:07Z
+MIAL: decide whether code constants are redundant now that mial-of exists. A definition with a single mial child binds the quoted subtree at the definition site ("this name IS data"); mial-of reads any definition's source at the reference site. Both are kept; mial-of covered every use in the function-surgery example. If redundant, remove the code-constant branch from registerDefinition in interpreter.js and update README/DYNAMICS/CLAUDE docs; if kept, document when to prefer each.
