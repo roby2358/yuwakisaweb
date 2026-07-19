@@ -249,6 +249,7 @@ const GameEngine = (function () {
             arrivedDay: state.day,
             warned: false,
             aid: 0,
+            pendingChoice: null,
             revealed: { kind: false, place: false, day: false, victim: false, magnitude: false },
             riddle: {
                 kind: Rando.choice(ev.riddles),
@@ -329,25 +330,49 @@ const GameEngine = (function () {
 
     // ---- actions ----
 
-    function divine(state, visionId, facet) {
+    // Stone-Tongue: the Stones volunteer a second facet after any earned reveal.
+    function stoneTongue(state, vision, atStones, msgs) {
+        if (!atStones || state.rankIndex() < 2) return;
+        const veiled = facetKeys(vision).filter(f => !vision.revealed[f]);
+        if (veiled.length === 0) return;
+        const extra = Rando.choice(veiled);
+        vision.revealed[extra] = true;
+        msgs.push(`The Stones add, unasked: ${facetText(state, vision, extra)}.`);
+    }
+
+    // Divination is a gamble, paid up front: half the time the veil holds,
+    // half of the rest the vision picks the facet, and only the last quarter
+    // parts the veil for the augur to choose (divineReveal spends that).
+    function divineAttempt(state, visionId) {
         const vision = state.visions.find(v => v.id === visionId);
-        if (!vision || !canDivineHere(state) || vision.revealed[facet]) return null;
+        if (!vision || !canDivineHere(state) || vision.pendingChoice) return null;
+        const veiled = facetKeys(vision).filter(f => !vision.revealed[f]);
+        if (veiled.length === 0) return null;
         const atStones = atSite(state, ['stones']);
 
         state.actions -= 1;
         state.burden = clampBurden(state.burden + (atStones ? T.DIVINE_BURDEN_STONES : T.DIVINE_BURDEN_SHRINE));
+
+        if (Rando.bool(T.DIVINE_WHIFF)) return [Flourish.pick('divine-nothing')];
+        if (Rando.bool(T.DIVINE_UNBIDDEN)) {
+            const facet = Rando.choice(veiled);
+            vision.revealed[facet] = true;
+            const msgs = [`${Flourish.pick('divine-unbidden')} ${facetText(state, vision, facet)}.`];
+            stoneTongue(state, vision, atStones, msgs);
+            return msgs;
+        }
+        vision.pendingChoice = { stones: atStones };
+        return [Flourish.pick('divine-parts')];
+    }
+
+    function divineReveal(state, visionId, facet) {
+        const vision = state.visions.find(v => v.id === visionId);
+        if (!vision || !vision.pendingChoice || vision.revealed[facet]) return null;
+        const atStones = vision.pendingChoice.stones;
+        vision.pendingChoice = null;
         vision.revealed[facet] = true;
         const msgs = [`You divine: ${facetText(state, vision, facet)}.`];
-
-        // Stone-Tongue: the Stones volunteer a second facet.
-        if (atStones && state.rankIndex() >= 2) {
-            const veiled = facetKeys(vision).filter(f => !vision.revealed[f]);
-            if (veiled.length > 0) {
-                const extra = Rando.choice(veiled);
-                vision.revealed[extra] = true;
-                msgs.push(`The Stones add, unasked: ${facetText(state, vision, extra)}.`);
-            }
-        }
+        stoneTongue(state, vision, atStones, msgs);
         return msgs;
     }
 
@@ -616,6 +641,17 @@ const GameEngine = (function () {
             if (state.trust > 0) vision.aid += Math.max(0, Rando.around(T.VILLAGE_AID, T.VILLAGE_AID_SD));
         }
 
+        // Inspiration: some mornings the veil simply slips.
+        if (Rando.bool(T.INSPIRATION_CHANCE)) {
+            const open = state.visions.filter(v => facetKeys(v).some(f => !v.revealed[f]));
+            if (open.length > 0) {
+                const vision = Rando.choice(open);
+                const facet = Rando.choice(facetKeys(vision).filter(f => !vision.revealed[f]));
+                vision.revealed[facet] = true;
+                report.msgs.push(`${Flourish.pick('inspiration')} ${facetText(state, vision, facet)}.`);
+            }
+        }
+
         if (state.visions.length < state.rank().cap && Rando.bool(T.VISION_CHANCE)) {
             const vision = createVision(state);
             if (vision) report.msgs.push(`${Rando.choice(A.FLAVOR.arrival)} ${describeVision(state, vision)}`);
@@ -670,7 +706,7 @@ const GameEngine = (function () {
 
     return {
         newGame, endDay, reachable, moveOracle, movementCost,
-        divine, warn, prepare, work, festival, turnFate,
+        divineAttempt, divineReveal, warn, prepare, work, festival, turnFate,
         canDivineHere, canWarnHere, canPrepareHere, canWorkHere, canFestivalHere, canTurnFate,
         warnBlocker, divineBlocker,
         facetKeys, facetText, describeVision, magWord, preparedness, preparednessText

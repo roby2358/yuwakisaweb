@@ -126,6 +126,9 @@ const GameArtifacts = (function () {
 
         DIVINE_BURDEN_SHRINE: 8,
         DIVINE_BURDEN_STONES: 4,
+        DIVINE_WHIFF: 0.5,        // divination is a gamble: chance the veil holds and nothing comes
+        DIVINE_UNBIDDEN: 0.5,     // when it works: chance the vision picks the facet, not the augur
+        INSPIRATION_CHANCE: 0.1,  // per dawn: a random veiled facet reveals itself unasked
 
         VISION_CHANCE: 0.4,       // per dawn, when under the rank's cap
         VISION_DAYS_MEAN: 7,      // lands this many days out...

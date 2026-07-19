@@ -13,7 +13,6 @@ const GameUI = (function () {
     let dragging = null;
     let hoverHex = null;
     let selected = false;
-    let diviningId = null;      // vision id currently choosing a facet for
     let animating = false;
     let flashes = [];           // { hexKey, start, dur }
     let saveHook = () => {};
@@ -276,9 +275,9 @@ const GameUI = (function () {
             ? GameEngine.facetText(state, vision, facet)
             : vision.riddle[facet];
         const cls = revealed ? 'facet-known' : 'facet-veiled';
-        const canPick = diviningId === vision.id && !revealed;
+        const canPick = vision.pendingChoice && !revealed;
         const btn = canPick
-            ? ` <button class="pick-btn" data-vision="${vision.id}" data-facet="${facet}">divine this</button>`
+            ? ` <button class="pick-btn" data-vision="${vision.id}" data-facet="${facet}">reveal this</button>`
             : '';
         let extra = '';
         if (revealed && facet === 'day') {
@@ -295,10 +294,13 @@ const GameUI = (function () {
         const veiledLeft = GameEngine.facetKeys(vision).some(f => !vision.revealed[f]);
 
         const divineWhy = GameEngine.divineBlocker(state);
+        const divineTitle = vision.pendingChoice
+            ? 'the veil has parted — pick the facet to reveal'
+            : (divineWhy ?? 'cast for a reveal — a gamble: the veil may hold, or show what it pleases');
         const divineBtn = `<button class="divine-btn" data-vision="${vision.id}" ` +
-            `title="${divineWhy ?? 'reveal a facet of your choice'}" ` +
-            `${(divineWhy !== null || !veiledLeft || animating) ? 'disabled' : ''}>` +
-            `${diviningId === vision.id ? 'Choose a facet…' : 'Divine'}</button>`;
+            `title="${divineTitle}" ` +
+            `${(vision.pendingChoice || divineWhy !== null || !veiledLeft || animating) ? 'disabled' : ''}>` +
+            `${vision.pendingChoice ? 'Choose a facet…' : 'Divine'}</button>`;
         const warnWhy = GameEngine.warnBlocker(state, vision);
         const warnBtn = vision.warned
             ? `<span class="warned-tag">⚑ vigil kept (aid ${Math.round(vision.aid)})</span>`
@@ -353,7 +355,6 @@ const GameUI = (function () {
     function afterAction(msgs) {
         if (msgs === null) return;
         logAll(msgs);
-        diviningId = null;
         updateAll();
         saveHook();
     }
@@ -364,7 +365,6 @@ const GameUI = (function () {
         if (animating) return;
         animating = true;
         selected = false;
-        diviningId = null;
         updateAll();
         const report = GameEngine.endDay(state);
 
@@ -451,11 +451,10 @@ const GameUI = (function () {
             if (!btn || btn.disabled) return;
             const visionId = Number(btn.dataset.vision);
             if (btn.classList.contains('divine-btn')) {
-                diviningId = diviningId === visionId ? null : visionId;
-                updateVisions();
+                afterAction(GameEngine.divineAttempt(state, visionId));
             }
             if (btn.classList.contains('pick-btn')) {
-                afterAction(GameEngine.divine(state, visionId, btn.dataset.facet));
+                afterAction(GameEngine.divineReveal(state, visionId, btn.dataset.facet));
             }
             if (btn.classList.contains('warn-btn')) {
                 afterAction(GameEngine.warn(state, visionId));
@@ -487,7 +486,7 @@ const GameUI = (function () {
             if (e.key === 'w') afterAction(GameEngine.work(state));
             if (e.key === 'f') afterAction(GameEngine.festival(state));
             if (e.key === 'p') { el('prep-panel').classList.toggle('hidden'); updatePrepPanel(); }
-            if (e.key === 'Escape') { el('prep-panel').classList.add('hidden'); diviningId = null; updateVisions(); }
+            if (e.key === 'Escape') el('prep-panel').classList.add('hidden');
         });
     }
 
@@ -512,7 +511,6 @@ const GameUI = (function () {
     function setState(newState) {
         state = newState;
         selected = false;
-        diviningId = null;
         const shrine = state.buildingsOfKind('shrine')[0];
         centerOn(shrine.hexKey);
         el('log').innerHTML = '';
