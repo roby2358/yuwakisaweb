@@ -90,7 +90,7 @@ const GameArtifacts = (function () {
         smithy: { name: 'the Smithy', glyph: 'F', flammable: true, rich: true, placeRiddles: ['where the sparks live', 'at the ringing anvil'] },
         well: { name: 'the Well', glyph: 'W', flammable: false, rich: false, placeRiddles: ['where the buckets go', 'at the deep stone throat'] },
         bridge: { name: 'Mossgate Bridge', glyph: 'B', flammable: false, rich: false, placeRiddles: ['where the road crosses the water', 'at the mossy crossing'] },
-        cottage: { name: 'Cottage', glyph: 'c', flammable: true, rich: false, placeRiddles: ['under a low thatch roof', 'behind a door you have knocked on'] }
+        cottage: { name: 'Cottage', glyph: '⌂', flammable: true, rich: false, placeRiddles: ['under a low thatch roof', 'behind a door you have knocked on'] }
     };
 
     // The renown ladder. magMean is the difficulty dial: fame draws grander dooms.

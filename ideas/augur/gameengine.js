@@ -119,13 +119,17 @@ const GameEngine = (function () {
         const centerQ = Math.floor(MAP_COLS / 2) - Math.floor(MAP_ROWS / 4);
         const center = new Hex(centerQ, Math.floor(MAP_ROWS / 2));
 
-        const landNear = Array.from(state.hexes.values())
-            .filter(h => h.terrain !== A.TERRAIN.WATER && h.terrain !== A.TERRAIN.MARSH)
-            .sort((a, b) => new Hex(a.q, a.r).distance(center) - new Hex(b.q, b.r).distance(center));
-        const shrineHex = landNear[0];
+        // The village center: the shrine sits at the middle of the map,
+        // with open ground for a radius of 3 around it.
+        const shrine = center;
+        const shrineHex = state.hexes.get(center.key());
+        for (const h of state.hexes.values()) {
+            if (new Hex(h.q, h.r).distance(shrine) <= 3) {
+                h.terrain = A.TERRAIN.FIELD;
+            }
+        }
         addBuilding(state, 'shrine', shrineHex, A.BUILDINGS.shrine.name);
         state.oracle = { q: shrineHex.q, r: shrineHex.r };
-        const shrine = new Hex(shrineHex.q, shrineHex.r);
 
         // A bridge where the road meets the water, if the map offers one.
         const bridgeSpot = Array.from(state.hexes.values()).find(h =>

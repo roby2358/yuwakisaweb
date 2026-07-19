@@ -76,6 +76,20 @@ const GameUI = (function () {
         ctx.fill();
     }
 
+    function drawCircleCounter(x, y, size, fill) {
+        const half = size / 2;
+        // depth arc under and to the right (matches the square counters)
+        ctx.strokeStyle = D.DEPTH_LINE;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x + 2, y + 2, half, -Math.PI / 4, Math.PI * 0.8);
+        ctx.stroke();
+        ctx.fillStyle = fill;
+        ctx.beginPath();
+        ctx.arc(x, y, half, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
     function drawGlyph(x, y, glyph, color, size) {
         ctx.fillStyle = color;
         ctx.font = `bold ${size}px monospace`;
@@ -188,7 +202,11 @@ const GameUI = (function () {
             const spec = A.BUILDINGS[building.kind];
             const fill = building.ruined ? D.RUIN_COLOR
                 : building.kind === 'stones' ? D.STONES_COLOR : D.BUILDING_COLOR;
-            drawRoundedSquare(c.x, c.y, D.COUNTER_SIZE, fill);
+            if (building.kind === 'cottage') {
+                drawCircleCounter(c.x, c.y, D.COUNTER_SIZE, fill);
+            } else {
+                drawRoundedSquare(c.x, c.y, D.COUNTER_SIZE, fill);
+            }
             drawGlyph(c.x, c.y, building.ruined ? '✕' : spec.glyph, building.ruined ? '#221' : '#332', 15);
             drawOmens(building, c.x, c.y, now);
         }
