@@ -33,6 +33,14 @@
 
     GameUI.init(save);
 
+    // The howto card remembers whether the player folded it away.
+    const HOWTO_KEY = 'augur-howto-open';
+    const howto = document.getElementById('howto-card');
+    howto.open = localStorage.getItem(HOWTO_KEY) !== 'closed';
+    howto.addEventListener('toggle', () => {
+        localStorage.setItem(HOWTO_KEY, howto.open ? 'open' : 'closed');
+    });
+
     const hasSave = localStorage.getItem(SAVE_KEY) !== null;
     const continueBtn = document.getElementById('continue-btn');
     if (hasSave) continueBtn.classList.remove('hidden');
