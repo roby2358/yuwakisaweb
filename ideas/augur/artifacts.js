@@ -149,6 +149,8 @@ const GameArtifacts = (function () {
         ],
 
         WARN_BURDEN_RELIEF: 15,
+        SELF_WARN_PER_TRUST: 0.001,     // per prep at a known doom's target: trust × this = odds the village sees the work and warns itself
+        SELF_WARN_BURDEN_RELIEF: 8,     // a shared secret weighs less — but less than saying it yourself
         VIGIL_TRUST_DRAIN: 2,     // per warned doom, per dawn it hasn't landed
         VILLAGE_AID: 2.5,         // accrues on the warned target per dawn (rolls)
         VILLAGE_AID_SD: 0.8,

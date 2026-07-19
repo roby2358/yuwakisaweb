@@ -248,6 +248,7 @@ const GameEngine = (function () {
             magnitude: Math.round(Math.max(4, Rando.around(rank.magMean, rank.magMean * T.MAG_SD_FRAC))),
             arrivedDay: state.day,
             warned: false,
+            selfWarned: false,
             aid: 0,
             pendingChoice: null,
             revealed: { kind: false, place: false, day: false, victim: false, magnitude: false },
@@ -447,6 +448,21 @@ const GameEngine = (function () {
             `The village takes up the vigil — and starts counting the days.`];
     }
 
+    // The village watches the augur work. If the augur is warding a doom whose
+    // what and where they already know, sometimes the vale puts it together and
+    // takes up the vigil unasked — the warn, free of charge, with a little
+    // burden relief. But the vigil starts whether the augur wanted quiet or not.
+    function selfWarn(state, building, msgs) {
+        const vision = state.visions.find(v => !v.warned && v.buildingId === building.id &&
+            v.revealed.kind && v.revealed.place);
+        if (!vision || !Rando.bool(state.trust * T.SELF_WARN_PER_TRUST)) return;
+        vision.warned = true;
+        vision.selfWarned = true;   // a vigil the vale chose itself drains no trust
+        state.burden = clampBurden(state.burden - T.SELF_WARN_BURDEN_RELIEF);
+        msgs.push(`The village has been watching you work. By dusk everyone has said it for you: ` +
+            `${A.EVENTS[vision.kind].name} is coming to ${building.name}. They take up the vigil unasked.`);
+    }
+
     function prepare(state, prepKind) {
         if (!canPrepareHere(state)) return null;
         const building = state.buildingAtOracle();
@@ -456,7 +472,9 @@ const GameEngine = (function () {
         state.burden = clampBurden(state.burden - T.PREP_BURDEN_RELIEF);   // action eases suffering
         const strength = Math.max(1, Math.round(Rando.around(T.PREP_STRENGTH, T.PREP_STRENGTH_SD)));
         building.preps[prepKind] = (building.preps[prepKind] ?? 0) + strength;
-        return [`${A.PREPS[prepKind].name} raised at ${building.name} (+${strength}, now ${building.preps[prepKind]}).`];
+        const msgs = [`${A.PREPS[prepKind].name} raised at ${building.name} (+${strength}, now ${building.preps[prepKind]}).`];
+        selfWarn(state, building, msgs);
+        return msgs;
     }
 
     function work(state) {
@@ -636,9 +654,10 @@ const GameEngine = (function () {
             }
         }
 
-        // Vigil fatigue and village aid on warned dooms.
+        // Vigil fatigue and village aid on warned dooms. A vigil the vale took
+        // up on its own drains no trust — they are doing it to themselves.
         for (const vision of state.visions.filter(v => v.warned)) {
-            state.trust = clampTrust(state.trust - T.VIGIL_TRUST_DRAIN);
+            if (!vision.selfWarned) state.trust = clampTrust(state.trust - T.VIGIL_TRUST_DRAIN);
             if (state.trust > 0) vision.aid += Math.max(0, Rando.around(T.VILLAGE_AID, T.VILLAGE_AID_SD));
         }
 
