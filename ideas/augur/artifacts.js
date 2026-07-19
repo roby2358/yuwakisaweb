@@ -108,7 +108,7 @@ const GameArtifacts = (function () {
         ACTIONS_PER_DAY: 3,
         BURDEN_SLOW_1: 50,        // burden >= this: -1 action
         BURDEN_SLOW_2: 90,        // burden >= this: -1 more (floor 1)
-        BURDEN_CLOUD: 70,         // burden >= this: new visions arrive with 1 facet
+        BURDEN_CLOUD: 70,         // burden >= this: new visions arrive with one facet fewer (floor 1)
 
         START_SUPPLIES: 12,
         START_TRUST: 50,
@@ -135,7 +135,7 @@ const GameArtifacts = (function () {
         MAG_SD_FRAC: 0.2,         // magnitude rolls around the rank mean
         DMG_SD_FRAC: 0.25,        // damage rolls around magnitude
 
-        FACETS_ON_ARRIVAL: 2,
+        FACETS_ON_ARRIVAL: 1,     // murky by design: one glimpse, the rest is divination
         FACET_WEIGHTS: [
             { item: 'kind', weight: 30 },
             { item: 'place', weight: 25 },
