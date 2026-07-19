@@ -171,14 +171,6 @@ const GameArtifacts = (function () {
         GOAT_RENOWN: 2            // the ballad of Barnabas
     };
 
-    const RIDDLES = {
-        day: ['soon, or late', 'before the moon forgets', 'when it pleases'],
-        dayNear: ['soon — the candle bends toward it', 'very soon, the bones say'],
-        victim: ['a face you know', 'someone who has poured you a drink', 'a name you would grieve'],
-        magnitude: ['it may be small, or it may be great', 'the bones will not say how hard'],
-        place: ['somewhere in the vale', 'a roof you can see from the shrine']
-    };
-
     const FLAVOR = {
         mutterings: [
             '{name} swears the hens are laying warm eggs. An omen, surely.',
@@ -207,5 +199,5 @@ const GameArtifacts = (function () {
         ]
     };
 
-    return { TERRAIN, TERRAIN_BANDS, MOVE_COST, EVENTS, PREPS, BUILDINGS, RANKS, TUNING, RIDDLES, FLAVOR };
+    return { TERRAIN, TERRAIN_BANDS, MOVE_COST, EVENTS, PREPS, BUILDINGS, RANKS, TUNING, FLAVOR };
 })();

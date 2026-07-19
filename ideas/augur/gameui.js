@@ -296,7 +296,7 @@ const GameUI = (function () {
             : '';
 
         return `<div class="vision-card">` +
-            `<div class="vision-title">◆ A doom gathers <span class="vision-age">(seen day ${vision.arrivedDay})</span></div>` +
+            `<div class="vision-title">◆ ${Flourish.stable('doom-title', vision.id)} <span class="vision-age">(seen day ${vision.arrivedDay})</span></div>` +
             rows +
             `<div class="vision-assess">${GameEngine.preparednessText(state, vision)}</div>` +
             `<div class="vision-actions">${divineBtn}${warnBtn}${fateBtn}</div>` +
@@ -306,7 +306,7 @@ const GameUI = (function () {
     function updateVisions() {
         const box = el('vision-list');
         if (state.visions.length === 0) {
-            box.innerHTML = `<div class="no-visions">The candle burns steady. Nothing gathers — for now.</div>`;
+            box.innerHTML = `<div class="no-visions">${Flourish.stable('quiet-candle', state.day)}</div>`;
             return;
         }
         box.innerHTML = state.visions.map(visionCard).join('');
@@ -502,7 +502,7 @@ const GameUI = (function () {
         const shrine = state.buildingsOfKind('shrine')[0];
         centerOn(shrine.hexKey);
         el('log').innerHTML = '';
-        log(`Day ${state.day}. The vale is quiet. You know better.`);
+        log(`Day ${state.day}. ${Flourish.stable('day-dawn', state.day)}`);
         const first = state.visions[0];
         if (first) log(`${A.FLAVOR.arrival[0]} ${GameEngine.describeVision(state, first)}`);
         updateAll();

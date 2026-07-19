@@ -253,9 +253,9 @@ const GameEngine = (function () {
             riddle: {
                 kind: Rando.choice(ev.riddles),
                 place: Rando.choice(A.BUILDINGS[building.kind].placeRiddles),
-                day: Rando.choice(daysOut <= 5 ? A.RIDDLES.dayNear : A.RIDDLES.day),
-                victim: Rando.choice(A.RIDDLES.victim),
-                magnitude: Rando.choice(A.RIDDLES.magnitude)
+                day: Flourish.pick(daysOut <= 5 ? 'riddle-day-near' : 'riddle-day'),
+                victim: Flourish.pick('riddle-victim'),
+                magnitude: Flourish.pick('riddle-magnitude')
             }
         };
 
@@ -426,7 +426,7 @@ const GameEngine = (function () {
         state.actions -= 1;
         const yield_ = Math.max(1, Math.round(Rando.around(T.WORK_YIELD, T.WORK_YIELD_SD)));
         state.supplies += yield_;
-        return [`A day's honest work. +${yield_} supplies.`];
+        return [Flourish.pick('work', { n: yield_ })];
     }
 
     function festival(state) {
@@ -444,7 +444,7 @@ const GameEngine = (function () {
         vision.day += T.TURN_FATE_DELAY;
         state.turnFateDay = state.day;
         state.burden = clampBurden(state.burden + T.TURN_FATE_BURDEN);
-        return [`You reach into the loom and pull one thread three days looser. Your head rings with it.`];
+        return [Flourish.pick('turn-fate')];
     }
 
     // ---- movement ----
@@ -504,18 +504,16 @@ const GameEngine = (function () {
         record.msgs.push(`${ev.name}${beastName} comes to ${building.name}: ${dmg} fury against ${defense} of ward.`);
 
         if (net <= 0) {
-            record.msgs.push(vision.warned
-                ? `The vale holds its breath — and holds. They SAW it break against your ward. They will not forget.`
-                : `It breaks and is gone. No one else will ever know what almost happened.`);
+            record.msgs.push(Flourish.pick(vision.warned ? 'averted-warned' : 'averted-quiet'));
             applyLedger(state, vision.warned ? T.AVERT_WARNED : T.AVERT_QUIET);
         } else {
             record.outcome = net >= T.RUIN_AT ? 'ruined' : 'scarred';
             if (vision.warned) {
                 applyLedger(state, T.HIT_WARNED);
-                record.msgs.push(`It lands despite the vigil. Grim faces — but you were right, and they know it.`);
+                record.msgs.push(Flourish.pick('hit-warned'));
             } else {
                 applyLedger(state, knewMuch ? T.HIT_KNEW : T.HIT_QUIET);
-                if (knewMuch) record.msgs.push(`You knew. You said nothing. That sits in the chest like a stone.`);
+                if (knewMuch) record.msgs.push(Flourish.pick('knew-quiet'));
             }
             if (ev.targetPool !== 'villager') {
                 if (record.outcome === 'ruined') {
@@ -524,7 +522,7 @@ const GameEngine = (function () {
                     building.preps = {};
                     record.msgs.push(`${building.name} ${ev.verb === 'burns' ? 'burns to the rafters' : 'is ruined'}.`);
                 } else {
-                    record.msgs.push(`${building.name} is scarred, but stands.`);
+                    record.msgs.push(Flourish.pick('scarred', { name: building.name }));
                 }
             }
             const victim = vision.victimId !== null ? state.villagerById(vision.victimId) : null;
@@ -539,7 +537,7 @@ const GameEngine = (function () {
                     record.msgs.push(`${victim.name} the goat is taken. The vale composes a ballad by nightfall. He was a very good goat.`);
                 } else {
                     applyLedger(state, { renown: 0, trust: T.DEATH_TRUST, burden: T.DEATH_BURDEN });
-                    record.msgs.push(`${victim.name} ${victim.role} is ${ev.verb === 'takes' ? 'taken' : 'lost'}. A stone is raised by the chapel.`);
+                    record.msgs.push(`${victim.name} ${victim.role} is ${ev.verb === 'takes' ? 'taken' : 'lost'}. ${Flourish.pick('memorial')}`);
                 }
             } else if (victim && victim.alive) {
                 record.msgs.push(ev.targetPool === 'villager'
@@ -592,7 +590,7 @@ const GameEngine = (function () {
             building.rebuildDays -= 1;
             if (building.rebuildDays <= 0) {
                 building.ruined = false;
-                report.msgs.push(`${building.name} stands again, smelling of new timber.`);
+                report.msgs.push(Flourish.pick('rebuilt', { name: building.name }));
             }
         }
 
@@ -613,7 +611,7 @@ const GameEngine = (function () {
         if (rankAfter > rankBefore) {
             const rank = A.RANKS[rankAfter];
             report.msgs.push(`Word of you spreads. You are now ${rank.name}. ${rank.gift ?? ''}`);
-            report.msgs.push(`Fame is a lamp: it draws grander moths.`);
+            report.msgs.push(Flourish.pick('fame'));
             addNewcomer(state, report.msgs);
         }
 
