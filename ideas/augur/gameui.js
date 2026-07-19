@@ -136,12 +136,26 @@ const GameUI = (function () {
         return map;
     }
 
+    function drawBadge(x, y, text, bg, fg) {
+        ctx.font = 'bold 9px monospace';
+        const w = Math.ceil(ctx.measureText(text).width) + 8;
+        ctx.fillStyle = bg;
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, 12, 3);
+        ctx.fill();
+        ctx.fillStyle = fg;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, x + 4, y + 7);
+    }
+
     function drawOmens(building, x, y, now) {
         const visions = omensByBuilding().get(building.id);
         if (!visions) return;
-        visions.forEach((v, i) => {
-            const ox = x + D.COUNTER_SIZE / 2 + 2 + i * 13;
-            const oy = y - D.COUNTER_SIZE / 2 - 4;
+        // badges stack from the counter's top-left, running down
+        const bx = x - D.HEX_SIZE - 6;
+        let by = y - D.HEX_SIZE + 4;
+        for (const v of visions) {
             if (v.warned) {
                 const pulse = 0.5 + 0.5 * Math.sin(now / 300);
                 ctx.strokeStyle = D.WARNED_RING;
@@ -152,18 +166,18 @@ const GameUI = (function () {
                 ctx.stroke();
                 ctx.globalAlpha = 1;
             }
-            ctx.fillStyle = D.OMEN_COLOR;
-            ctx.beginPath();
-            ctx.moveTo(ox, oy - 6);
-            ctx.lineTo(ox + 5, oy);
-            ctx.lineTo(ox, oy + 6);
-            ctx.lineTo(ox - 5, oy);
-            ctx.closePath();
-            ctx.fill();
-            if (v.revealed.day) {
-                drawGlyph(ox, oy, String(Math.max(0, v.day - state.day)), '#fff', 9);
+            const left = Math.max(0, v.day - state.day);
+            const daysText = !v.revealed.day ? '? days'
+                : left === 0 ? 'tonight'
+                : `${left} day${left === 1 ? '' : 's'}`;
+            drawBadge(bx, by, daysText, D.OMEN_COLOR, '#fff');
+            by += 14;
+            const p = GameEngine.preparedness(state, v);
+            if (p) {
+                drawBadge(bx, by, String(p.defense), D.TIER_COLORS[p.tier ?? 'unknown'], '#000');
+                by += 14;
             }
-        });
+        }
     }
 
     function render() {

@@ -377,13 +377,25 @@ const GameEngine = (function () {
 
     // An honest read of the village's readiness against this doom, leaking
     // nothing the augur has not divined.
-    function preparednessText(state, vision) {
-        if (!vision.revealed.kind || !vision.revealed.place) {
-            return 'You cannot judge their readiness while the doom keeps its shape.';
-        }
+    // What the map badge shows: null until kind+place are both revealed;
+    // tier stays null while the doom's weight is veiled.
+    function preparedness(state, vision) {
+        if (!vision.revealed.kind || !vision.revealed.place) return null;
         const ev = A.EVENTS[vision.kind];
         const building = state.buildingById(vision.buildingId);
         const defense = Math.round((building.preps[ev.prep] ?? 0) + vision.aid);
+        if (!vision.revealed.magnitude) return { defense, tier: null };
+        const ratio = defense / vision.magnitude;
+        const tier = ratio < 0.9 ? 'vulnerable' : ratio <= 1.15 ? 'close' : 'ready';
+        return { defense, tier };
+    }
+
+    function preparednessText(state, vision) {
+        const p = preparedness(state, vision);
+        if (!p) {
+            return 'You cannot judge their readiness while the doom keeps its shape.';
+        }
+        const defense = p.defense;
         if (!vision.revealed.magnitude) {
             return defense === 0
                 ? 'Nothing stands against it — however hard it may come.'
@@ -661,6 +673,6 @@ const GameEngine = (function () {
         divine, warn, prepare, work, festival, turnFate,
         canDivineHere, canWarnHere, canPrepareHere, canWorkHere, canFestivalHere, canTurnFate,
         warnBlocker, divineBlocker,
-        facetKeys, facetText, describeVision, magWord, preparednessText
+        facetKeys, facetText, describeVision, magWord, preparedness, preparednessText
     };
 })();

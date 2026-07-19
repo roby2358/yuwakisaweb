@@ -26,6 +26,13 @@ const GameDisplayArtifacts = (function () {
 
         REACHABLE_FILL: 'rgba(255, 235, 60, 0.35)',
         OMEN_COLOR: '#b04fd8',
+        // preparedness badge backgrounds (black lettering on top)
+        TIER_COLORS: {
+            vulnerable: '#e04838',
+            close: '#eec83c',
+            ready: '#54c454',
+            unknown: '#a8a0b8'
+        },
         WARNED_RING: '#ff9530',
         FLASH_COLOR: '#ff4030',
 
