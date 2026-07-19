@@ -583,9 +583,12 @@ const GameEngine = (function () {
         }
         state.burden = clampBurden(state.burden - T.BURDEN_DECAY);
 
-        // Dawn. The vale's unnamed hands bring in the harvest.
+        // Dawn. The vale's unnamed hands bring in the harvest — unless a vigil
+        // has them scrambling to prep instead.
         state.day += 1;
-        state.supplies += state.aliveVillagers().length * T.VILLAGER_YIELD;
+        if (!state.visions.some(v => v.warned)) {
+            state.supplies += state.aliveVillagers().length * T.VILLAGER_YIELD;
+        }
 
         for (const building of state.buildings.filter(b => b.ruined)) {
             building.rebuildDays -= 1;
