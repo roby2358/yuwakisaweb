@@ -501,11 +501,15 @@ const GameUI = (function () {
         window.addEventListener('keydown', e => {
             if (!state || animating) return;
             if (e.target.tagName === 'INPUT') return;
-            if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); endDay(); }
+            if (e.code === 'Space' || e.code === 'Enter') {
+                e.preventDefault();
+                // Space closes an open ward menu; only an unobstructed Space ends the day
+                if (!el('prep-panel').classList.contains('hidden')) el('prep-panel').classList.add('hidden');
+                else endDay();
+            }
             if (e.key === 'w') afterAction(GameEngine.work(state));
             if (e.key === 'f') afterAction(GameEngine.festival(state));
             if (e.key === 'p') { el('prep-panel').classList.toggle('hidden'); updatePrepPanel(); }
-            if (e.key === 'Escape') el('prep-panel').classList.add('hidden');
         });
     }
 
