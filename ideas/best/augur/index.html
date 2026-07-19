@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Augur</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <canvas id="game"></canvas>
+    <div id="hud">
+        <span id="day-info">Day 1</span>
+        <span id="supplies-info" title="Spent on wards and festivals; earned by Work">Supplies</span>
+        <span id="trust-info" title="The village's belief in you. Vigils drain it; being right restores it">Trust</span>
+        <span id="renown-info" title="Your fame. It climbs the ladder — and draws grander dooms">Renown</span>
+        <span id="burden-info" title="The weight of known futures. Heavy Burden slows you and clouds new visions">Burden</span>
+        <span id="actions-info">Actions</span>
+        <span id="mp-info">MP</span>
+        <button id="work-btn" title="Work a field or the mill for supplies (W)">Work (W)</button>
+        <button id="prep-btn" title="Raise wards at the building you stand at (P)">Prepare (P)</button>
+        <button id="festival-btn" title="Throw a festival at the tavern: trust up, burden down (F)">Festival (F)</button>
+        <button id="end-day" title="End the day — dooms whose day has come will land (Space/Enter)">End Day</button>
+        <button id="new-game">New Vale</button>
+        <span id="hover-info"></span>
+    </div>
+    <div id="visions">
+        <h2>Pending Fates</h2>
+        <p class="visions-hint">Divine at the Shrine or the Standing Stones · warn at the Chapel or the Wan Hart</p>
+        <div id="vision-list"></div>
+    </div>
+    <div id="log"></div>
+    <div id="prep-panel" class="hidden">
+        <h2 id="prep-title">Wards</h2>
+        <div id="prep-list"></div>
+        <button id="prep-close">Close (Esc)</button>
+    </div>
+    <div id="intro-panel">
+        <h1>AUGUR</h1>
+        <p>Your visions are always true and never complete. Something red-toothed is
+        coming — but where? The mill is doomed — but when? You are the village augur,
+        and the future arrives in facets: what, where, when, who, how hard.</p>
+        <p>Divine to know more, and carry the weight of knowing. Raise wards where you
+        dare to guess. Warn the village and spend its patience. Fame will find you —
+        and fame draws grander dooms. There is no ending and no defeat: dooms land,
+        stones are raised, the vale endures, and so do you.</p>
+        <p class="controls">Click ✶ to select · click yellow to move · right-drag pans ·
+        W work · P wards · F festival · Space ends the day · autosaves at dawn</p>
+        <button id="continue-btn" class="hidden">Continue</button>
+        <button id="begin-btn">New Vale</button>
+    </div>
+    <!-- NOTE! We want to be able to double-click to run these games, so use plain
+    script includes (globals), not ES module imports. Order = dependency order:
+    artifacts → display artifacts → libs → state → engine → ui → bootstrap. -->
+    <script src="artifacts.js"></script>
+    <script src="displayartifacts.js"></script>
+    <script src="rando.js"></script>
+    <script src="hex.js"></script>
+    <script src="namegen.js"></script>
+    <script src="gamestate.js"></script>
+    <script src="gameengine.js"></script>
+    <script src="gameui.js"></script>
+    <script src="index.js"></script>
+</body>
+</html>
