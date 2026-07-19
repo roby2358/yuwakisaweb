@@ -298,6 +298,7 @@ const GameUI = (function () {
         return `<div class="vision-card">` +
             `<div class="vision-title">◆ A doom gathers <span class="vision-age">(seen day ${vision.arrivedDay})</span></div>` +
             rows +
+            `<div class="vision-assess">${GameEngine.preparednessText(state, vision)}</div>` +
             `<div class="vision-actions">${divineBtn}${warnBtn}${fateBtn}</div>` +
             `</div>`;
     }

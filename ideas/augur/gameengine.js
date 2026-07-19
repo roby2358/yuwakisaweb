@@ -375,6 +375,28 @@ const GameEngine = (function () {
         return `${magWord(vision.magnitude)} (${vision.magnitude})`;
     }
 
+    // An honest read of the village's readiness against this doom, leaking
+    // nothing the augur has not divined.
+    function preparednessText(state, vision) {
+        if (!vision.revealed.kind || !vision.revealed.place) {
+            return 'You cannot judge their readiness while the doom keeps its shape.';
+        }
+        const ev = A.EVENTS[vision.kind];
+        const building = state.buildingById(vision.buildingId);
+        const defense = Math.round((building.preps[ev.prep] ?? 0) + vision.aid);
+        if (!vision.revealed.magnitude) {
+            return defense === 0
+                ? 'Nothing stands against it — however hard it may come.'
+                : `A ward of ${defense} stands — against what weight, you cannot say.`;
+        }
+        if (defense === 0) return 'Nothing stands against it.';
+        const ratio = defense / vision.magnitude;
+        if (ratio < 0.5) return `What stands (${defense}) is far from enough.`;
+        if (ratio < 0.9) return `The wards are rising (${defense}), but not yet equal to it.`;
+        if (ratio <= 1.15) return `It will be a near thing (${defense} against ${vision.magnitude}).`;
+        return `The village stands ready (${defense} against ${vision.magnitude}).`;
+    }
+
     function warn(state, visionId) {
         const vision = state.visions.find(v => v.id === visionId);
         if (!vision || !canWarnHere(state) || vision.warned) return null;
@@ -637,6 +659,6 @@ const GameEngine = (function () {
         divine, warn, prepare, work, festival, turnFate,
         canDivineHere, canWarnHere, canPrepareHere, canWorkHere, canFestivalHere, canTurnFate,
         warnBlocker, divineBlocker,
-        facetKeys, facetText, describeVision, magWord
+        facetKeys, facetText, describeVision, magWord, preparednessText
     };
 })();
