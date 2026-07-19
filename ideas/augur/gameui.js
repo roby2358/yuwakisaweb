@@ -59,6 +59,50 @@ const GameUI = (function () {
         return `rgba(0, 0, 0, ${(1 - elev) * 0.18})`;
     }
 
+    // ---- building palette ----
+    // A random color scheme per vale — same seed, same coats of paint on reload.
+    // Runs on its own PRNG so painting never nudges the engine's Rando stream.
+
+    let paint = null;           // building kind -> { fill, glyph }
+    let paintSeed = null;
+
+    function paintRng(seed) {
+        let a = (seed ^ 0x5eedc010) >>> 0;
+        return function () {
+            a |= 0;
+            a = (a + 0x6D2B79F5) | 0;
+            let t = Math.imul(a ^ (a >>> 15), 1 | a);
+            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+    }
+
+    function buildingPaint(kind) {
+        if (paintSeed !== state.seed) {
+            paintSeed = state.seed;
+            const rng = paintRng(state.seed);
+            const palette = ColorTheory.randomScheme(rng).map(([r, g, b]) => {
+                const [h, s, l] = ColorTheory.rgbToHsl(r, g, b);
+                // lift lightness into a readable band so no roof melts into the night
+                const [lr, lg, lb] = ColorTheory.hslToRgb(h, Math.min(s, 0.7), 0.35 + l * 0.45);
+                return {
+                    fill: ColorTheory.rgbToHex(lr, lg, lb),
+                    glyph: ColorTheory.rgbLuminance([lr, lg, lb]) > 0.45 ? '#332' : '#eee'
+                };
+            });
+            // deal the five colors out across the kinds, shuffled per vale; every
+            // cottage is the same kind, so every cottage wears the same color
+            const kinds = Object.keys(A.BUILDINGS);
+            const slots = kinds.map((_, i) => i % palette.length);
+            for (let i = slots.length - 1; i > 0; i--) {
+                const j = Math.floor(rng() * (i + 1));
+                [slots[i], slots[j]] = [slots[j], slots[i]];
+            }
+            paint = Object.fromEntries(kinds.map((k, i) => [k, palette[slots[i]]]));
+        }
+        return paint[kind];
+    }
+
     function drawRoundedSquare(x, y, size, fill) {
         const half = size / 2;
         // depth lines under and to the right (house counter style)
@@ -213,14 +257,14 @@ const GameUI = (function () {
             const hex = state.hexes.get(building.hexKey);
             const c = hexCenter(hex);
             const spec = A.BUILDINGS[building.kind];
-            const fill = building.ruined ? D.RUIN_COLOR
-                : building.kind === 'stones' ? D.STONES_COLOR : D.BUILDING_COLOR;
+            const coat = buildingPaint(building.kind);
+            const fill = building.ruined ? D.RUIN_COLOR : coat.fill;
             if (building.kind === 'cottage') {
                 drawCircleCounter(c.x, c.y, D.COUNTER_SIZE, fill);
             } else {
                 drawRoundedSquare(c.x, c.y, D.COUNTER_SIZE, fill);
             }
-            drawGlyph(c.x, c.y, building.ruined ? '✕' : spec.glyph, building.ruined ? '#221' : '#332', 15);
+            drawGlyph(c.x, c.y, building.ruined ? '✕' : spec.glyph, building.ruined ? '#221' : coat.glyph, 15);
             drawOmens(building, c.x, c.y, now);
         }
 

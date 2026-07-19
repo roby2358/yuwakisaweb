@@ -18,9 +18,7 @@ const GameDisplayArtifacts = (function () {
         },
 
         ORACLE_COLOR: '#ffd24a',
-        BUILDING_COLOR: '#f0ead6',
         RUIN_COLOR: '#4a4038',
-        STONES_COLOR: '#b8b0c8',
         MEMORIAL_COLOR: '#9a9a9a',
         FIELD_MARK: '#e8d86a',
 
