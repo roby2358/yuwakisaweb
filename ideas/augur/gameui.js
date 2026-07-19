@@ -255,7 +255,10 @@ const GameUI = (function () {
     function updateHud() {
         el('day-info').textContent = `Day ${state.day} · ${state.rank().name}`;
         el('supplies-info').textContent = `Supplies ${state.supplies}`;
-        el('trust-info').textContent = `Trust ${state.trust}`;
+        const heeded = state.effectiveTrust();
+        el('trust-info').textContent = heeded < state.trust
+            ? `Trust ${state.trust} (heeded ${heeded})`
+            : `Trust ${state.trust}`;
         el('renown-info').textContent = `Renown ${state.renown}`;
         updateMadnessBar();
         el('actions-info').textContent = `Actions ${state.actions}`;

@@ -45,7 +45,9 @@ toll, not an ending. It autosaves every dawn and waits.
   around magnitude, minus matching wards and village aid; costs never roll, effects
   always do.
 - **Madness**: pending futures accrue weight each dusk (more if well-divined); heavy
-  Madness slows you (fewer actions) and clouds new visions (fewer facets).
+  Madness slows you (fewer actions) and clouds new visions (fewer facets). It also
+  discounts your word: wherever Trust acts (village aid, self-warn odds), what counts
+  is Trust − Madness/2 — a raving seer is set aside, however much they once believed.
 - **Renown ladder**: Hedge Seer → Village Augur → Far-Famed Oracle → Voice of the
   Vale → Crown of Ravens; each rank raises doom magnitude and pending-doom cap, grants
   a gift, and draws a newcomer to the village.

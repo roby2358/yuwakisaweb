@@ -62,6 +62,12 @@ class GameState {
         return Math.max(1, n);                             // never let a unit feel stuck
     }
 
+    // What the vale actually heeds: trust discounted by how mad you seem.
+    // A raving seer is set aside, however much they once believed.
+    effectiveTrust() {
+        return Math.max(0, Math.round(this.trust - this.madness / 2));
+    }
+
     // ---- lookups ----
 
     hexAt(q, r) {

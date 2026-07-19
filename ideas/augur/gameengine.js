@@ -455,7 +455,7 @@ const GameEngine = (function () {
     function selfWarn(state, building, msgs) {
         const vision = state.visions.find(v => !v.warned && v.buildingId === building.id &&
             v.revealed.kind && v.revealed.place);
-        if (!vision || !Rando.bool(state.trust * T.SELF_WARN_PER_TRUST)) return;
+        if (!vision || !Rando.bool(state.effectiveTrust() * T.SELF_WARN_PER_TRUST)) return;
         vision.warned = true;
         vision.selfWarned = true;   // a vigil the vale chose itself drains no trust
         state.madness = clampMadness(state.madness - T.SELF_WARN_MADNESS_RELIEF);
@@ -658,7 +658,7 @@ const GameEngine = (function () {
         // up on its own drains no trust — they are doing it to themselves.
         for (const vision of state.visions.filter(v => v.warned)) {
             if (!vision.selfWarned) state.trust = clampTrust(state.trust - T.VIGIL_TRUST_DRAIN);
-            if (state.trust > 0) vision.aid += Math.max(0, Rando.around(T.VILLAGE_AID, T.VILLAGE_AID_SD));
+            if (state.effectiveTrust() > 0) vision.aid += Math.max(0, Rando.around(T.VILLAGE_AID, T.VILLAGE_AID_SD));
         }
 
         // Inspiration: some mornings the veil simply slips.
