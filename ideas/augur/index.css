@@ -40,7 +40,9 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a12; }
     right: 10px;
     bottom: 10px;
     width: 300px;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     background: rgba(10, 6, 18, 0.85);
     border: 1px solid #4a3a66;
     border-radius: 6px;
@@ -53,6 +55,20 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a12; }
 #visions h2 { font-size: 15px; letter-spacing: 1px; color: #cbb7ee; margin-bottom: 4px; }
 .visions-hint { color: #776a92; font-size: 11px; margin-bottom: 10px; line-height: 1.4; }
 .no-visions { color: #887ba5; font-style: italic; line-height: 1.5; }
+#vision-list { flex: 1; min-height: 0; overflow-y: auto; }
+
+.howto-card {
+    border: 1px dashed #4a3a66;
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-top: 4px;
+    background: rgba(20, 14, 34, 0.5);
+    color: #887ba5;
+    font-size: 11px;
+    line-height: 1.55;
+}
+.howto-title { color: #9a86c8; font-size: 11px; letter-spacing: 1px; margin-bottom: 4px; }
+.howto-card b { color: #cbb7ee; }
 
 .vision-card {
     border: 1px solid #4a3a66;
