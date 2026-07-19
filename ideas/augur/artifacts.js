@@ -116,6 +116,7 @@ const GameArtifacts = (function () {
         PREP_COST: 2,             // supplies; costs never roll
         PREP_STRENGTH: 6,         // effects always roll (sd below)
         PREP_STRENGTH_SD: 1.5,
+        VILLAGER_YIELD: 1,        // supplies/day per live villager — the unnamed hands in the fields
         WORK_YIELD: 4,
         WORK_YIELD_SD: 1,
 
