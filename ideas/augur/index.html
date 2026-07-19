@@ -13,7 +13,6 @@
         <span id="supplies-info" title="Spent on wards and festivals; earned by Work">Supplies</span>
         <span id="trust-info" title="The village's belief in you. Vigils drain it; being right restores it">Trust</span>
         <span id="renown-info" title="Your fame. It climbs the ladder — and draws grander dooms">Renown</span>
-        <span id="burden-info" title="The weight of known futures. Heavy Burden slows you and clouds new visions">Burden</span>
         <span id="actions-info">Actions</span>
         <span id="mp-info">MP</span>
         <button id="work-btn" title="Work a field or the mill for supplies (W)">Work (W)</button>
@@ -22,6 +21,10 @@
         <button id="end-day" title="End the day — dooms whose day has come will land (Space/Enter)">End Day</button>
         <button id="new-game">New Vale</button>
         <span id="hover-info"></span>
+        <div id="burden-bar" title="The weight of known futures. Heavy Burden slows you and clouds new visions">
+            <div id="burden-fill"></div>
+            <span id="burden-text"></span>
+        </div>
     </div>
     <div id="visions">
         <h2>Pending Fates</h2>
@@ -32,7 +35,7 @@
             1. Divine at the Shrine or Stones until you know <b>what</b> and <b>where</b>.
             It is a gamble: the veil may hold, show what it pleases, or part for your choosing.<br>
             2. Walk there and press <b>P</b> — raise the ward that counters that doom.<br>
-            3. Stack raises: each is ≈6 ward for 2 supplies and an action.<br>
+            3. Stack raises: each is ≈6 ward for 2 supplies and an action — and doing something eases your Burden.<br>
             4. Or <b>Warn</b> (Chapel / Wan Hart): the village adds aid every dawn — but the vigil drains Trust and halts the harvest.<br>
             5. On the fated day, ward + aid meets the doom's weight. Enough, and it breaks. The matching ward is spent either way; wrong wards keep.
         </div>

@@ -114,6 +114,7 @@ const GameArtifacts = (function () {
         START_TRUST: 50,
 
         PREP_COST: 2,             // supplies; costs never roll
+        PREP_BURDEN_RELIEF: 4,    // action eases suffering — raising a ward lightens the mind
         PREP_STRENGTH: 6,         // effects always roll (sd below)
         PREP_STRENGTH_SD: 1.5,
         VILLAGER_YIELD: 1,        // supplies/day per live villager — the unnamed hands in the fields

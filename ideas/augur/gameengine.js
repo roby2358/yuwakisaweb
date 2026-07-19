@@ -453,6 +453,7 @@ const GameEngine = (function () {
 
         state.actions -= 1;
         state.supplies -= T.PREP_COST;
+        state.burden = clampBurden(state.burden - T.PREP_BURDEN_RELIEF);   // action eases suffering
         const strength = Math.max(1, Math.round(Rando.around(T.PREP_STRENGTH, T.PREP_STRENGTH_SD)));
         building.preps[prepKind] = (building.preps[prepKind] ?? 0) + strength;
         return [`${A.PREPS[prepKind].name} raised at ${building.name} (+${strength}, now ${building.preps[prepKind]}).`];
