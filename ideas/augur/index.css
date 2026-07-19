@@ -33,7 +33,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a12; }
 #hud button:disabled, #prep-panel button:disabled { opacity: 0.4; cursor: default; }
 #hover-info { color: #aaccaa; }
 
-#burden-bar {
+#madness-bar {
     flex-basis: 100%;
     position: relative;
     height: 16px;
@@ -42,7 +42,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a12; }
     background: rgba(255, 255, 255, 0.04);
     overflow: hidden;
 }
-#burden-fill {
+#madness-fill {
     position: absolute;
     top: 0;
     bottom: 0;
@@ -50,7 +50,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a12; }
     width: 0;
     transition: width 0.3s, background-color 0.3s;
 }
-#burden-text {
+#madness-text {
     position: absolute;
     left: 8px;
     top: 0;

@@ -11,7 +11,7 @@ class GameState {
         this.supplies = 0;
         this.trust = 0;
         this.renown = 0;
-        this.burden = 0;
+        this.madness = 0;
 
         this.actions = 0;
         this.mp = 0;
@@ -57,8 +57,8 @@ class GameState {
         const T = GameArtifacts.TUNING;
         let n = T.ACTIONS_PER_DAY;
         if (this.rankIndex() >= 4) n += 1;                 // Crown of Ravens
-        if (this.burden >= T.BURDEN_SLOW_1) n -= 1;
-        if (this.burden >= T.BURDEN_SLOW_2) n -= 1;
+        if (this.madness >= T.MADNESS_SLOW_1) n -= 1;
+        if (this.madness >= T.MADNESS_SLOW_2) n -= 1;
         return Math.max(1, n);                             // never let a unit feel stuck
     }
 
@@ -103,7 +103,7 @@ class GameState {
     toJSON() {
         return {
             seed: this.seed, day: this.day,
-            supplies: this.supplies, trust: this.trust, renown: this.renown, burden: this.burden,
+            supplies: this.supplies, trust: this.trust, renown: this.renown, madness: this.madness,
             actions: this.actions, mp: this.mp, oracle: this.oracle,
             hexes: Array.from(this.hexes.values()),
             buildings: this.buildings,

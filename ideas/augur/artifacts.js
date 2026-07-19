@@ -99,22 +99,22 @@ const GameArtifacts = (function () {
         { at: 0, name: 'Hedge Seer', cap: 2, magMean: 10, gift: null },
         { at: 30, name: 'Village Augur', cap: 3, magMean: 12, gift: 'Second Sight — new visions arrive with one more facet shown' },
         { at: 80, name: 'Far-Famed Oracle', cap: 3, magMean: 15, gift: 'Stone-Tongue — divining at the Standing Stones reveals a second facet, free' },
-        { at: 160, name: 'Voice of the Vale', cap: 4, magMean: 18, gift: 'Turn Fate — once per 7 days, push a doom 3 days out (+10 Burden)' },
+        { at: 160, name: 'Voice of the Vale', cap: 4, magMean: 18, gift: 'Turn Fate — once per 7 days, push a doom 3 days out (+10 Madness)' },
         { at: 280, name: 'Crown of Ravens', cap: 5, magMean: 22, gift: 'The ravens work for you now — +1 action every day' }
     ];
 
     const TUNING = {
         MP_PER_DAY: 6,
         ACTIONS_PER_DAY: 3,
-        BURDEN_SLOW_1: 50,        // burden >= this: -1 action
-        BURDEN_SLOW_2: 90,        // burden >= this: -1 more (floor 1)
-        BURDEN_CLOUD: 70,         // burden >= this: new visions arrive with one facet fewer (floor 1)
+        MADNESS_SLOW_1: 50,        // madness >= this: -1 action
+        MADNESS_SLOW_2: 90,        // madness >= this: -1 more (floor 1)
+        MADNESS_CLOUD: 70,         // madness >= this: new visions arrive with one facet fewer (floor 1)
 
         START_SUPPLIES: 12,
         START_TRUST: 50,
 
         PREP_COST: 2,             // supplies; costs never roll
-        PREP_BURDEN_RELIEF: 4,    // action eases suffering — raising a ward lightens the mind
+        PREP_MADNESS_RELIEF: 4,    // action eases suffering — raising a ward lightens the mind
         PREP_STRENGTH: 6,         // effects always roll (sd below)
         PREP_STRENGTH_SD: 1.5,
         VILLAGER_YIELD: 1,        // supplies/day per live villager — the unnamed hands in the fields
@@ -123,10 +123,10 @@ const GameArtifacts = (function () {
 
         FESTIVAL_COST: 10,
         FESTIVAL_TRUST: 10,
-        FESTIVAL_BURDEN: -10,
+        FESTIVAL_MADNESS: -10,
 
-        DIVINE_BURDEN_SHRINE: 8,
-        DIVINE_BURDEN_STONES: 4,
+        DIVINE_MADNESS_SHRINE: 8,
+        DIVINE_MADNESS_STONES: 4,
         DIVINE_WHIFF: 0.5,        // divination is a gamble: chance the veil holds and nothing comes
         DIVINE_UNBIDDEN: 0.5,     // when it works: chance the vision picks the facet, not the augur
         INSPIRATION_CHANCE: 0.1,  // per dawn: a random veiled facet reveals itself unasked
@@ -148,9 +148,9 @@ const GameArtifacts = (function () {
             { item: 'magnitude', weight: 10 }
         ],
 
-        WARN_BURDEN_RELIEF: 15,
+        WARN_MADNESS_RELIEF: 15,
         SELF_WARN_PER_TRUST: 0.001,     // per prep at a known doom's target: trust × this = odds the village sees the work and warns itself
-        SELF_WARN_BURDEN_RELIEF: 8,     // a shared secret weighs less — but less than saying it yourself
+        SELF_WARN_MADNESS_RELIEF: 8,     // a shared secret weighs less — but less than saying it yourself
         VIGIL_TRUST_DRAIN: 2,     // per warned doom, per dawn it hasn't landed
         VILLAGE_AID: 2.5,         // accrues on the warned target per dawn (rolls)
         VILLAGE_AID_SD: 0.8,
@@ -158,23 +158,23 @@ const GameArtifacts = (function () {
         RUIN_AT: 7,               // net damage thresholds
         DEATH_AT: 10,
 
-        BURDEN_PER_PENDING: 1,    // per dusk; +1 more if 3+ facets known (knowing weighs)
-        BURDEN_KNOWN_EXTRA: 1,
-        BURDEN_DECAY: 1,          // per dusk, always
+        MADNESS_PER_PENDING: 1,    // per dusk; +1 more if 3+ facets known (knowing weighs)
+        MADNESS_KNOWN_EXTRA: 1,
+        MADNESS_DECAY: 1,          // per dusk, always
 
         REBUILD_DAYS: 6,
         TURN_FATE_COOLDOWN: 7,
         TURN_FATE_DELAY: 3,
-        TURN_FATE_BURDEN: 10,
+        TURN_FATE_MADNESS: 10,
 
         // Resolution ledger (see DYNAMICS.md driver audit)
-        AVERT_WARNED: { renown: 20, trust: 25, burden: -12 },
-        AVERT_QUIET: { renown: 8, trust: 0, burden: -12 },
-        HIT_WARNED: { renown: 6, trust: 10, burden: -12 },
-        HIT_QUIET: { renown: 0, trust: -3, burden: -12 },
-        HIT_KNEW: { renown: 0, trust: -8, burden: -2 },  // 3+ facets and said nothing
+        AVERT_WARNED: { renown: 20, trust: 25, madness: -12 },
+        AVERT_QUIET: { renown: 8, trust: 0, madness: -12 },
+        HIT_WARNED: { renown: 6, trust: 10, madness: -12 },
+        HIT_QUIET: { renown: 0, trust: -3, madness: -12 },
+        HIT_KNEW: { renown: 0, trust: -8, madness: -2 },  // 3+ facets and said nothing
         DEATH_TRUST: -10,
-        DEATH_BURDEN: 15,
+        DEATH_MADNESS: 15,
         GOAT_RENOWN: 2            // the ballad of Barnabas
     };
 

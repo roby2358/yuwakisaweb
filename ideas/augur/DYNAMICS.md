@@ -34,18 +34,18 @@ toll, not an ending. It autosaves every dawn and waits.
 - **Visions**: a vision is a true future event `{kind, place, day, victim, magnitude}`
   of which only 2 facets are revealed on arrival; the rest show as riddles.
 - **Divining**: at the Shrine or the Standing Stones, spend 1 action to reveal a facet
-  of your choice — and take on Burden, because knowing weighs.
+  of your choice — and take on Madness, because knowing weighs.
 - **Preparing**: stand at a building, spend 1 action + 2 supplies to raise a named
   ward (Firebreak, Levee, Militia, Physic, Stakes, Shoring) whose strength rolls
   gaussian; wards persist until their doom arrives, then are consumed.
-- **Warning**: once you know *what* and *where*, you may warn the village — Burden
+- **Warning**: once you know *what* and *where*, you may warn the village — Madness
   lifts and the village preps the target a little each day, but vigil fatigue bleeds
   Trust for every day the doom doesn't come.
 - **Resolution**: when a doom's day arrives it lands visibly — damage rolls gaussian
   around magnitude, minus matching wards and village aid; costs never roll, effects
   always do.
-- **Burden**: pending futures accrue weight each dusk (more if well-divined); heavy
-  Burden slows you (fewer actions) and clouds new visions (fewer facets).
+- **Madness**: pending futures accrue weight each dusk (more if well-divined); heavy
+  Madness slows you (fewer actions) and clouds new visions (fewer facets).
 - **Renown ladder**: Hedge Seer → Village Augur → Far-Famed Oracle → Voice of the
   Vale → Crown of Ravens; each rank raises doom magnitude and pending-doom cap, grants
   a gift, and draws a newcomer to the village.
@@ -65,14 +65,14 @@ toll, not an ending. It autosaves every dawn and waits.
 - **Wrong wards remain** (weaves into Preparing): only the matching ward is consumed
   by a doom; a mis-guessed levee stands proudly beside the ashes of the mill, forever.
   *Driver: comedy, readable consequences.*
-- **Guilt** (weaves into Burden + Trust): if a doom lands unwarned and you had divined
+- **Guilt** (weaves into Madness + Trust): if a doom lands unwarned and you had divined
   3+ facets — you *knew* — Trust and your own head both pay extra. Ignorance is a
   defense; knowledge is a debt. *Driver: loss aversion.*
 - **The Stones** (weaves into Divining + map): the Standing Stones sit on a far hill —
-  divining there costs half the Burden (and at rank 3 yields a second facet), but the
+  divining there costs half the Madness (and at rank 3 yields a second facet), but the
   trek eats your day's movement, far from the wards you should be raising. *Driver:
   scarcity of agency, landmarks as anchors.*
-- **Turn Fate** (rank gift): once per 7 days, push a doom 3 days out at +10 Burden —
+- **Turn Fate** (rank gift): once per 7 days, push a doom 3 days out at +10 Madness —
   a breakable lever meant to enable outrageous rescue combos. Do not cap it further.
 - **Newcomers** (weaves into Renown): each rank-up, a stranger drawn by your fame
   settles in a new cottage — one more name to guard, one more target for fate.
@@ -81,7 +81,7 @@ toll, not an ending. It autosaves every dawn and waits.
 ## Why is this fun? (driver audit)
 
 - *Scarcity of agency*: 3 actions and 6 movement a day; divining, warding, working,
-  and the Stones trek all compete. Burden can squeeze actions to 1 — never 0.
+  and the Stones trek all compete. Madness can squeeze actions to 1 — never 0.
 - *Readable consequences*: every resolution logs the arithmetic in prose — what
   rolled, what held, what broke. You can always trace a death to the facet you didn't
   buy or the ward you put in the wrong place.
@@ -104,7 +104,7 @@ toll, not an ending. It autosaves every dawn and waits.
   become planned pilgrimages.
 - **Recurring tension**: divine more vs. prepare more — every facet is an action not
   spent on a ward, and makes failure cost extra (guilt).
-- **Recurring tension**: warn now vs. hold it alone — Trust drain per day vs. Burden
+- **Recurring tension**: warn now vs. hold it alone — Trust drain per day vs. Madness
   crush and no aid.
 
 ### Anti-strategies (and what prevents them)
@@ -126,7 +126,7 @@ toll, not an ending. It autosaves every dawn and waits.
 
 ## Tuning notes (halve-and-double first)
 
-- Actions 3/day (−1 at Burden ≥ 50, −1 at ≥ 90, floor 1). MP 6/day.
+- Actions 3/day (−1 at Madness ≥ 50, −1 at ≥ 90, floor 1). MP 6/day.
 - Ward strength ~N(6, 1.5) for 2 supplies; Work yields ~N(4, 1) supplies.
 - Magnitude mean by rank: 10 / 12 / 15 / 18 / 22, sd 20%; damage rolls N(mag, 0.25·mag).
 - Outcomes: net ≤ 0 averted · < 7 scarred · ≥ 7 ruined · ≥ 10 kills the victim.

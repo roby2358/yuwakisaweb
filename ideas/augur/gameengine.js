@@ -263,7 +263,7 @@ const GameEngine = (function () {
 
         let facets = T.FACETS_ON_ARRIVAL;
         if (state.rankIndex() >= 1) facets += 1;              // Second Sight
-        if (state.burden >= T.BURDEN_CLOUD) facets -= 1;      // a clouded mind
+        if (state.madness >= T.MADNESS_CLOUD) facets -= 1;      // a clouded mind
         facets = Math.max(1, facets);
         const available = T.FACET_WEIGHTS.filter(w => w.item !== 'victim' || victimId !== null);
         const pool = available.slice();
@@ -352,7 +352,7 @@ const GameEngine = (function () {
         const atStones = atSite(state, ['stones']);
 
         state.actions -= 1;
-        state.burden = clampBurden(state.burden + (atStones ? T.DIVINE_BURDEN_STONES : T.DIVINE_BURDEN_SHRINE));
+        state.madness = clampMadness(state.madness + (atStones ? T.DIVINE_MADNESS_STONES : T.DIVINE_MADNESS_SHRINE));
 
         if (Rando.bool(T.DIVINE_WHIFF)) return [Flourish.pick('divine-nothing')];
         if (Rando.bool(T.DIVINE_UNBIDDEN)) {
@@ -442,7 +442,7 @@ const GameEngine = (function () {
 
         state.actions -= 1;
         vision.warned = true;
-        state.burden = clampBurden(state.burden - T.WARN_BURDEN_RELIEF);
+        state.madness = clampMadness(state.madness - T.WARN_MADNESS_RELIEF);
         const building = state.buildingById(vision.buildingId);
         return [`You stand up and say it plainly: ${A.EVENTS[vision.kind].name} is coming to ${building.name}. ` +
             `The village takes up the vigil — and starts counting the days.`];
@@ -451,14 +451,14 @@ const GameEngine = (function () {
     // The village watches the augur work. If the augur is warding a doom whose
     // what and where they already know, sometimes the vale puts it together and
     // takes up the vigil unasked — the warn, free of charge, with a little
-    // burden relief. But the vigil starts whether the augur wanted quiet or not.
+    // madness relief. But the vigil starts whether the augur wanted quiet or not.
     function selfWarn(state, building, msgs) {
         const vision = state.visions.find(v => !v.warned && v.buildingId === building.id &&
             v.revealed.kind && v.revealed.place);
         if (!vision || !Rando.bool(state.trust * T.SELF_WARN_PER_TRUST)) return;
         vision.warned = true;
         vision.selfWarned = true;   // a vigil the vale chose itself drains no trust
-        state.burden = clampBurden(state.burden - T.SELF_WARN_BURDEN_RELIEF);
+        state.madness = clampMadness(state.madness - T.SELF_WARN_MADNESS_RELIEF);
         msgs.push(`The village has been watching you work. By dusk everyone has said it for you: ` +
             `${A.EVENTS[vision.kind].name} is coming to ${building.name}. They take up the vigil unasked.`);
     }
@@ -469,7 +469,7 @@ const GameEngine = (function () {
 
         state.actions -= 1;
         state.supplies -= T.PREP_COST;
-        state.burden = clampBurden(state.burden - T.PREP_BURDEN_RELIEF);   // action eases suffering
+        state.madness = clampMadness(state.madness - T.PREP_MADNESS_RELIEF);   // action eases suffering
         const strength = Math.max(1, Math.round(Rando.around(T.PREP_STRENGTH, T.PREP_STRENGTH_SD)));
         building.preps[prepKind] = (building.preps[prepKind] ?? 0) + strength;
         const msgs = [`${A.PREPS[prepKind].name} raised at ${building.name} (+${strength}, now ${building.preps[prepKind]}).`];
@@ -490,7 +490,7 @@ const GameEngine = (function () {
         state.actions -= 1;
         state.supplies -= T.FESTIVAL_COST;
         state.trust = clampTrust(state.trust + T.FESTIVAL_TRUST);
-        state.burden = clampBurden(state.burden + T.FESTIVAL_BURDEN);
+        state.madness = clampMadness(state.madness + T.FESTIVAL_MADNESS);
         return [`You stand a round for the whole vale. ${Rando.choice(A.FLAVOR.festival)}`];
     }
 
@@ -499,7 +499,7 @@ const GameEngine = (function () {
         if (!vision || !canTurnFate(state)) return null;
         vision.day += T.TURN_FATE_DELAY;
         state.turnFateDay = state.day;
-        state.burden = clampBurden(state.burden + T.TURN_FATE_BURDEN);
+        state.madness = clampMadness(state.madness + T.TURN_FATE_MADNESS);
         return [Flourish.pick('turn-fate')];
     }
 
@@ -521,12 +521,12 @@ const GameEngine = (function () {
     // ---- resolution ----
 
     function clampTrust(v) { return Math.max(0, Math.min(100, Math.round(v))); }
-    function clampBurden(v) { return Math.max(0, Math.min(100, Math.round(v))); }
+    function clampMadness(v) { return Math.max(0, Math.min(100, Math.round(v))); }
 
     function applyLedger(state, ledger) {
         state.renown = Math.max(0, state.renown + ledger.renown);
         state.trust = clampTrust(state.trust + ledger.trust);
-        state.burden = clampBurden(state.burden + ledger.burden);
+        state.madness = clampMadness(state.madness + ledger.madness);
     }
 
     function placeMemorial(state, building) {
@@ -592,7 +592,7 @@ const GameEngine = (function () {
                     state.renown += T.GOAT_RENOWN;
                     record.msgs.push(`${victim.name} the goat is taken. The vale composes a ballad by nightfall. He was a very good goat.`);
                 } else {
-                    applyLedger(state, { renown: 0, trust: T.DEATH_TRUST, burden: T.DEATH_BURDEN });
+                    applyLedger(state, { renown: 0, trust: T.DEATH_TRUST, madness: T.DEATH_MADNESS });
                     record.msgs.push(`${victim.name} ${victim.role} is ${ev.verb === 'takes' ? 'taken' : 'lost'}. ${Flourish.pick('memorial')}`);
                 }
             } else if (victim && victim.alive) {
@@ -634,10 +634,10 @@ const GameEngine = (function () {
 
         // Pending futures accrue weight; knowing more weighs more.
         for (const vision of state.visions) {
-            const extra = state.facetsKnown(vision) >= 3 ? T.BURDEN_KNOWN_EXTRA : 0;
-            state.burden = clampBurden(state.burden + T.BURDEN_PER_PENDING + extra);
+            const extra = state.facetsKnown(vision) >= 3 ? T.MADNESS_KNOWN_EXTRA : 0;
+            state.madness = clampMadness(state.madness + T.MADNESS_PER_PENDING + extra);
         }
-        state.burden = clampBurden(state.burden - T.BURDEN_DECAY);
+        state.madness = clampMadness(state.madness - T.MADNESS_DECAY);
 
         // Dawn. The vale's unnamed hands bring in the harvest — unless a vigil
         // has them scrambling to prep instead.

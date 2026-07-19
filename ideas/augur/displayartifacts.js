@@ -39,13 +39,13 @@ const GameDisplayArtifacts = (function () {
         GRID_LINE: 'rgba(0, 0, 0, 0.25)',
         DEPTH_LINE: '#777',
 
-        // burden bar descriptions, lightest first
-        BURDEN_BANDS: [
-            { upTo: 10, name: 'a passing shadow' },
-            { upTo: 30, name: 'a light weight' },
-            { upTo: 50, name: 'a gathering weight' },
-            { upTo: 70, name: 'a heavy burden' },
-            { upTo: 90, name: 'a crushing weight' },
+        // madness bar descriptions, lightest first
+        MADNESS_BANDS: [
+            { upTo: 10, name: 'a passing whisper' },
+            { upTo: 30, name: 'strange dreams' },
+            { upTo: 50, name: 'sleepless and muttering' },
+            { upTo: 70, name: 'voices in the walls' },
+            { upTo: 90, name: 'the vale is screaming' },
             { upTo: 101, name: 'the weight of all tomorrows' }
         ]
     };
