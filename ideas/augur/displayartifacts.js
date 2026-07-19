@@ -37,6 +37,16 @@ const GameDisplayArtifacts = (function () {
         FLASH_COLOR: '#ff4030',
 
         GRID_LINE: 'rgba(0, 0, 0, 0.25)',
-        DEPTH_LINE: '#777'
+        DEPTH_LINE: '#777',
+
+        // burden bar descriptions, lightest first
+        BURDEN_BANDS: [
+            { upTo: 10, name: 'a passing shadow' },
+            { upTo: 30, name: 'a light weight' },
+            { upTo: 50, name: 'a gathering weight' },
+            { upTo: 70, name: 'a heavy burden' },
+            { upTo: 90, name: 'a crushing weight' },
+            { upTo: 101, name: 'the weight of all tomorrows' }
+        ]
     };
 })();

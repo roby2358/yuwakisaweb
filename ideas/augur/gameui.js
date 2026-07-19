@@ -257,9 +257,7 @@ const GameUI = (function () {
         el('supplies-info').textContent = `Supplies ${state.supplies}`;
         el('trust-info').textContent = `Trust ${state.trust}`;
         el('renown-info').textContent = `Renown ${state.renown}`;
-        const burden = el('burden-info');
-        burden.textContent = `Burden ${state.burden}`;
-        burden.style.color = state.burden >= A.TUNING.BURDEN_SLOW_1 ? '#e08a5a' : '#b9a6d8';
+        updateBurdenBar();
         el('actions-info').textContent = `Actions ${state.actions}`;
         el('mp-info').textContent = `MP ${state.mp}`;
 
@@ -267,6 +265,24 @@ const GameUI = (function () {
         el('prep-btn').disabled = animating || state.buildingAtOracle() === null;
         el('festival-btn').disabled = animating || !GameEngine.canFestivalHere(state);
         el('end-day').disabled = animating;
+    }
+
+    // Clear through green to yellow to red as the weight of knowing piles up.
+    function updateBurdenBar() {
+        const b = state.burden;
+        const fill = el('burden-fill');
+        fill.style.width = `${b}%`;
+        const hue = Math.max(0, 120 - b * 1.2);
+        const alpha = Math.min(1, 0.15 + b / 40);
+        fill.style.backgroundColor = `hsla(${hue}, 70%, 42%, ${alpha})`;
+
+        const tolls = [];
+        if (b >= A.TUNING.BURDEN_SLOW_2) tolls.push('−2 actions');
+        else if (b >= A.TUNING.BURDEN_SLOW_1) tolls.push('−1 action');
+        if (b >= A.TUNING.BURDEN_CLOUD) tolls.push('new visions clouded');
+        const band = D.BURDEN_BANDS.find(x => b < x.upTo);
+        el('burden-text').textContent =
+            `Burden ${b} · ${band.name} — ${tolls.length ? tolls.join(', ') : 'no toll yet'}`;
     }
 
     function facetRow(vision, facet, labels) {
