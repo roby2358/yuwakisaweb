@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laurels</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <canvas id="game"></canvas>
+    <div id="hud">
+        <span id="title-info"></span>
+        <span id="renown-info"></span>
+        <span id="wealth-info"></span>
+        <span id="pack-info"></span>
+        <span id="hp-info"></span>
+        <span id="mp-info"></span>
+        <span id="world-info"></span>
+        <button id="harvest-btn" title="Harvest the node underfoot — takes the rest of your turn (G)">Harvest (G)</button>
+        <button id="bank-btn" title="Bank your pack at the Hall or a holding: wealth + renown (B)">Bank (B)</button>
+        <button id="craft-btn" title="At the Hall: fuse your three humblest spoils into a treasure worth more (C)">Craft (C)</button>
+        <button id="build-btn" title="Raise a monument here: renown every dawn — and a target. Defiance draws the Reckoning's eye (M)">Build (M)</button>
+        <button id="sack-btn" title="Put this holding to the torch: rich plunder, loud renown, and the Reckoning remembers">Sack</button>
+        <button id="skills-btn" title="The thriving skills and the ladder of ranks (T)">Skills (T)</button>
+        <button id="end-turn" title="End your turn (Space/Enter)">End Turn</button>
+        <button id="new-game">New World</button>
+        <span id="hover-info"></span>
+    </div>
+    <div id="log"></div>
+    <div id="skills-panel" class="hidden">
+        <h2>The Thriving Skills</h2>
+        <p id="skills-title"></p>
+        <div id="skills-list"></div>
+        <h2>The Ladder</h2>
+        <div id="rank-list"></div>
+        <button id="skills-close">Close</button>
+    </div>
+    <div id="intro-panel">
+        <h1>LAURELS</h1>
+        <p class="tagline">Rest on them and be forgotten.</p>
+        <p>You are a hero whose legend must be fed. Every dawn the bards' interest
+        wanes — renown melts by a tenth — and rank, title, and privilege go with it.
+        The only fuel is deeds.</p>
+        <p><b>Acquire:</b> harvest forage, ore, and relics (the dread pays best), hunt
+        beasts, and carry it all home — nothing counts until it's banked.
+        <b>Rise:</b> bank hauls, raise monuments, climb from Unsung toward Mythic.
+        <b>Destroy:</b> topple named dooms for windfalls of glory — or sack a holding,
+        if you can bear the name. The world keeps score, and it answers.</p>
+        <p>You cannot lose. You can only be forgotten.</p>
+        <p class="controls">Click @ to select · yellow moves, red attacks ·
+        G harvest · B bank · C craft · M build · T skills · Space ends the turn ·
+        right-drag pans</p>
+        <button id="continue-btn" class="hidden">Continue</button>
+        <button id="begin-btn">New World</button>
+    </div>
+    <!-- NOTE! We want to be able to double-click to run these games, so use plain
+    script includes (globals), not ES module imports. Order = dependency order:
+    artifacts → display artifacts → libs → state → engine → ui → bootstrap. -->
+    <script src="artifacts.js"></script>
+    <script src="displayartifacts.js"></script>
+    <script src="rando.js"></script>
+    <script src="namegen.js"></script>
+    <script src="hex.js"></script>
+    <script src="gamestate.js"></script>
+    <script src="gameengine.js"></script>
+    <script src="gameui.js"></script>
+    <script src="index.js"></script>
+</body>
+</html>
