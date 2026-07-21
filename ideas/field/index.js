@@ -23,6 +23,9 @@
     const BALL_RADIUS = 6;
     const BALL_DRAG = 0.6; // per-second linear drag; keeps speed from growing unbounded
     const MAX_DT = 1 / 20; // clamp large gaps (e.g. backgrounded tab)
+    const HIGHLIGHT_RADIUS_RATIO = 0.55;
+    const HIGHLIGHT_OFFSET_RATIO = 0.35;
+    const HIGHLIGHT_LIGHTEN = 0.6; // fraction of the way toward white
 
     // Live view state: the field the balls fly over, plus the balls
     // themselves. Rebuilt by draw(); balls persist across it.
@@ -78,7 +81,19 @@
         renderField(target.getContext('2d'), generateField(sampler, params), params);
     }
 
-    // Paints the cached field grid plus every current ball on top of it.
+    // Mixes a #rrggbb color toward white by `amount` (0-1), for a highlight
+    // tint that reads as a light source rather than a flat recolor.
+    function lightenHex(hex, amount) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        const mix = (c) => Math.round(c + (255 - c) * amount);
+        return ColorTheory.rgbToHex(mix(r) / 255, mix(g) / 255, mix(b) / 255);
+    }
+
+    // Paints the cached field grid plus every current ball on top of it. Each
+    // ball is drawn as a base circle plus a smaller, lighter circle offset
+    // toward the upper-left, suggesting a light source for a faint 3D look.
     // Called every animation frame, so it never recomputes the noise grid.
     function renderFrame() {
         const ctx = canvas.getContext('2d');
@@ -87,6 +102,12 @@
             ctx.beginPath();
             ctx.fillStyle = ball.color;
             ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            const offset = ball.radius * HIGHLIGHT_OFFSET_RATIO;
+            ctx.beginPath();
+            ctx.fillStyle = lightenHex(ball.color, HIGHLIGHT_LIGHTEN);
+            ctx.arc(ball.x - offset, ball.y - offset, ball.radius * HIGHLIGHT_RADIUS_RATIO, 0, Math.PI * 2);
             ctx.fill();
         }
     }
