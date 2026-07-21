@@ -1,0 +1,49 @@
+// Ball physics for the flow-field visualization: no DOM, no noise — takes
+// an angleAt(x, y) function supplied by the caller (field.js's sampler).
+
+function createBall(x, y, color, radius) {
+    return { x, y, vx: 0, vy: 0, color, radius };
+}
+
+// Advances one ball by dt seconds: the flow field pushes it as a constant
+// acceleration along the local line direction, a slight linear drag opposes
+// its velocity (so speed settles instead of growing forever), then it
+// bounces elastically off the canvas edges (velocity component flips, no
+// energy loss).
+function stepBall(ball, angleAt, accel, drag, dt, width, height) {
+    const angle = angleAt(ball.x, ball.y);
+    const vx = ball.vx + (Math.cos(angle) * accel - drag * ball.vx) * dt;
+    const vy = ball.vy + (Math.sin(angle) * accel - drag * ball.vy) * dt;
+
+    let x = ball.x + vx * dt;
+    let y = ball.y + vy * dt;
+    let nx = vx;
+    let ny = vy;
+
+    if (x < ball.radius) {
+        x = ball.radius;
+        nx = -nx;
+    } else if (x > width - ball.radius) {
+        x = width - ball.radius;
+        nx = -nx;
+    }
+
+    if (y < ball.radius) {
+        y = ball.radius;
+        ny = -ny;
+    } else if (y > height - ball.radius) {
+        y = height - ball.radius;
+        ny = -ny;
+    }
+
+    return Object.assign({}, ball, { x, y, vx: nx, vy: ny });
+}
+
+// Keeps a ball inside a resized canvas (e.g. after Regenerate changes
+// width/height) without touching its velocity.
+function clampBallPosition(ball, width, height) {
+    return Object.assign({}, ball, {
+        x: Math.min(Math.max(ball.x, ball.radius), width - ball.radius),
+        y: Math.min(Math.max(ball.y, ball.radius), height - ball.radius),
+    });
+}

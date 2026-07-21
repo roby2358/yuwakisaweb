@@ -102,6 +102,23 @@
             <button id="btn-randomize">Randomize seed</button>
             <button id="btn-export">Export PNG</button>
         </div>
+
+        <hr>
+
+        <div class="field-row">
+            <label for="ctl-ball-accel">Ball acceleration</label>
+            <select id="ctl-ball-accel">
+                <option value="100">Low</option>
+                <option value="250" selected>Medium</option>
+                <option value="500">High</option>
+                <option value="1000">Very high</option>
+            </select>
+        </div>
+
+        <div class="actions">
+            <button id="btn-drop-ball">Drop ball</button>
+            <button id="btn-remove-all">Remove all</button>
+        </div>
     </div>
 
     <div id="canvas-wrap">
@@ -109,10 +126,13 @@
     </div>
 
     <!-- NOTE: double-click to run — plain script includes (globals), no ES
-    module imports. Order = dependency order: noise -> field -> render -> bootstrap. -->
+    module imports. Order = dependency order: noise -> field -> render ->
+    colortheory -> balls -> bootstrap. -->
     <script src="noise.js"></script>
     <script src="field.js"></script>
     <script src="render.js"></script>
+    <script src="colortheory.js"></script>
+    <script src="balls.js"></script>
     <script src="index.js"></script>
 </body>
 </html>

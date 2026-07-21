@@ -28,16 +28,31 @@ const ANGLE_SAMPLERS = {
     },
 };
 
-// Builds the grid of { x, y, angle, magnitude } points that render.js draws.
-// `params` is the single source of truth for every adjustable knob.
-function generateField(params) {
+// Builds one noise instance for `params` and exposes it as angle/magnitude
+// lookups in pixel space. generateField() walks this over the grid; the
+// ball physics in index.js queries it at arbitrary points — both read the
+// same noise, so a ball's motion always agrees with the drawn arrows.
+function createFieldSampler(params) {
     const noise = new PerlinNoise(params.seed);
     const noiseFn = (x, y) => noise.fbm(x, y, params.octaves, params.lacunarity, params.gain);
     const sampleAngle = ANGLE_SAMPLERS[params.mode];
+    const eps = params.noiseScale * 0.5;
 
+    return {
+        angleAt(px, py) {
+            return sampleAngle(noiseFn, px * params.noiseScale, py * params.noiseScale, eps);
+        },
+        magnitudeAt(px, py) {
+            return noiseFn(px * params.noiseScale, py * params.noiseScale);
+        },
+    };
+}
+
+// Builds the grid of { x, y, angle, magnitude } points that render.js draws.
+// `params` is the single source of truth for every adjustable knob.
+function generateField(sampler, params) {
     const cols = Math.floor(params.width / params.spacing);
     const rows = Math.floor(params.height / params.spacing);
-    const eps = params.noiseScale * 0.5;
 
     const points = [];
     for (let j = 0; j <= rows; j++) {
@@ -47,14 +62,11 @@ function generateField(params) {
             const px = i * params.spacing + params.spacing / 2;
             if (px > params.width) continue;
 
-            const nx = px * params.noiseScale;
-            const ny = py * params.noiseScale;
-
             points.push({
                 x: px,
                 y: py,
-                angle: sampleAngle(noiseFn, nx, ny, eps),
-                magnitude: noiseFn(nx, ny),
+                angle: sampler.angleAt(px, py),
+                magnitude: sampler.magnitudeAt(px, py),
             });
         }
     }
