@@ -21,9 +21,9 @@ function loadLibs(fileNames, exportNames) {
     return sandbox.module.exports;
 }
 
-const { createFieldSampler, generateField } = loadLibs(
+const { createFieldSampler, generateField, createRNG } = loadLibs(
     ['noise.js', 'field.js'],
-    ['createFieldSampler', 'generateField']
+    ['createFieldSampler', 'generateField', 'createRNG']
 );
 const { createBall, stepBall, clampBallPosition } = loadLibs(['balls.js'], [
     'createBall',
@@ -121,10 +121,15 @@ check('sampler.angleAt matches the rendered grid at grid points', () => {
 
 // --- ball physics ---
 
+// A fixed randomFn (always 0.5) makes jitterX/jitterY collapse to 0 * jitter,
+// so these tests can pass jitter=0 and stay exact/deterministic like before.
+const NO_JITTER = 0;
+const FIXED_RANDOM = () => 0.5;
+
 check('stepBall accelerates along the given angle from rest', () => {
     const ball = createBall(100, 100, '#fff', 6);
     const angleAt = () => 0; // pure rightward push
-    const next = stepBall(ball, angleAt, 250, 0, 1 / 60, 1200, 700);
+    const next = stepBall(ball, angleAt, 250, 0, NO_JITTER, FIXED_RANDOM, 1 / 60, 1200, 700);
     assert.ok(next.vx > 0, 'expected rightward velocity');
     assert.strictEqual(next.vy, 0);
     assert.ok(next.x > ball.x, 'expected ball to move right');
@@ -133,7 +138,7 @@ check('stepBall accelerates along the given angle from rest', () => {
 check('stepBall bounces elastically off the right wall', () => {
     const width = 200;
     const ball = Object.assign(createBall(width - 3, 100, '#fff', 6), { vx: 500, vy: 0 });
-    const next = stepBall(ball, () => 0, 0, 0, 1 / 60, width, 700);
+    const next = stepBall(ball, () => 0, 0, 0, NO_JITTER, FIXED_RANDOM, 1 / 60, width, 700);
     assert.ok(next.x <= width - ball.radius, 'ball should be clamped inside the wall');
     assert.ok(next.vx < 0, 'x-velocity should have flipped sign');
 });
@@ -141,7 +146,7 @@ check('stepBall bounces elastically off the right wall', () => {
 check('stepBall bounces elastically off the bottom wall', () => {
     const height = 200;
     const ball = Object.assign(createBall(100, height - 3, '#fff', 6), { vx: 0, vy: 500 });
-    const next = stepBall(ball, () => 0, 0, 0, 1 / 60, 1200, height);
+    const next = stepBall(ball, () => 0, 0, 0, NO_JITTER, FIXED_RANDOM, 1 / 60, 1200, height);
     assert.ok(next.y <= height - ball.radius, 'ball should be clamped inside the wall');
     assert.ok(next.vy < 0, 'y-velocity should have flipped sign');
 });
@@ -150,7 +155,7 @@ check('stepBall drag slows a coasting ball toward rest', () => {
     let ball = Object.assign(createBall(100, 100, '#fff', 6), { vx: 300, vy: 0 });
     const angleAt = () => Math.PI; // push left, opposing the initial rightward coast
     for (let i = 0; i < 120; i++) {
-        ball = stepBall(ball, angleAt, 0, 0.6, 1 / 60, 1200, 700);
+        ball = stepBall(ball, angleAt, 0, 0.6, NO_JITTER, FIXED_RANDOM, 1 / 60, 1200, 700);
     }
     assert.ok(Math.abs(ball.vx) < 300, `drag should have reduced speed, got vx=${ball.vx}`);
 });
@@ -164,8 +169,8 @@ check('stepBall drag caps speed at a terminal velocity instead of growing foreve
     const drag = 0.6;
     let a = ball;
     let b = ball;
-    for (let i = 0; i < 60; i++) a = stepBall(a, angleAt, accel, drag, 1 / 60, 1_000_000, 1_000_000);
-    for (let i = 0; i < 600; i++) b = stepBall(b, angleAt, accel, drag, 1 / 60, 1_000_000, 1_000_000);
+    for (let i = 0; i < 60; i++) a = stepBall(a, angleAt, accel, drag, NO_JITTER, FIXED_RANDOM, 1 / 60, 1_000_000, 1_000_000);
+    for (let i = 0; i < 600; i++) b = stepBall(b, angleAt, accel, drag, NO_JITTER, FIXED_RANDOM, 1 / 60, 1_000_000, 1_000_000);
     const terminalSpeed = accel / drag;
     assert.ok(b.vx > a.vx, 'speed should still be rising early on');
     assert.ok(b.vx < terminalSpeed * 1.01, `speed exceeded terminal velocity: ${b.vx} vs ${terminalSpeed}`);
@@ -176,7 +181,7 @@ check('stepBall never produces NaN/Infinity over many steps in a real field', ()
     const sampler = createFieldSampler(params);
     let ball = createBall(600, 350, '#fff', 6);
     for (let i = 0; i < 2000; i++) {
-        ball = stepBall(ball, sampler.angleAt, 250, 0.6, 1 / 60, params.width, params.height);
+        ball = stepBall(ball, sampler.angleAt, 250, 0.6, NO_JITTER, FIXED_RANDOM, 1 / 60, params.width, params.height);
         assert.ok(Number.isFinite(ball.x) && Number.isFinite(ball.y), `non-finite position at step ${i}`);
         assert.ok(Number.isFinite(ball.vx) && Number.isFinite(ball.vy), `non-finite velocity at step ${i}`);
     }
@@ -187,7 +192,41 @@ check('stepBall keeps the ball within canvas bounds over many steps', () => {
     const sampler = createFieldSampler(params);
     let ball = createBall(50, 650, '#fff', 6);
     for (let i = 0; i < 2000; i++) {
-        ball = stepBall(ball, sampler.angleAt, 250, 0.6, 1 / 60, params.width, params.height);
+        ball = stepBall(ball, sampler.angleAt, 250, 0.6, NO_JITTER, FIXED_RANDOM, 1 / 60, params.width, params.height);
+        assert.ok(ball.x >= 0 && ball.x <= params.width, `x out of bounds at step ${i}: ${ball.x}`);
+        assert.ok(ball.y >= 0 && ball.y <= params.height, `y out of bounds at step ${i}: ${ball.y}`);
+    }
+});
+
+// --- Brownian jitter ---
+
+check('stepBall jitter nudges velocity even with zero acceleration and drag', () => {
+    const ball = createBall(100, 100, '#fff', 6);
+    const next = stepBall(ball, () => 0, 0, 0, 30, () => 1, 1 / 60, 1200, 700);
+    assert.ok(next.vx > 0, `expected jitter to push vx positive, got ${next.vx}`);
+    assert.ok(next.vy > 0, `expected jitter to push vy positive, got ${next.vy}`);
+});
+
+check('stepBall jitter is deterministic given the same randomFn sequence', () => {
+    const rngA = createRNG(99);
+    const rngB = createRNG(99);
+    let a = createBall(100, 100, '#fff', 6);
+    let b = createBall(100, 100, '#fff', 6);
+    for (let i = 0; i < 50; i++) {
+        a = stepBall(a, () => 0, 250, 0.6, 30, rngA, 1 / 60, 1200, 700);
+        b = stepBall(b, () => 0, 250, 0.6, 30, rngB, 1 / 60, 1200, 700);
+    }
+    assert.deepStrictEqual(a, b);
+});
+
+check('stepBall stays finite and in bounds over many steps with jitter in a real field', () => {
+    const params = paramsFor('curl', 42);
+    const sampler = createFieldSampler(params);
+    const rng = createRNG(7);
+    let ball = createBall(600, 350, '#fff', 6);
+    for (let i = 0; i < 2000; i++) {
+        ball = stepBall(ball, sampler.angleAt, 250, 0.6, 30, rng, 1 / 60, params.width, params.height);
+        assert.ok(Number.isFinite(ball.x) && Number.isFinite(ball.y), `non-finite position at step ${i}`);
         assert.ok(ball.x >= 0 && ball.x <= params.width, `x out of bounds at step ${i}: ${ball.x}`);
         assert.ok(ball.y >= 0 && ball.y <= params.height, `y out of bounds at step ${i}: ${ball.y}`);
     }

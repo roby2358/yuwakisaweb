@@ -22,6 +22,7 @@
     const LINE_COLOR = '#f4f1ea';
     const BALL_RADIUS = 6;
     const BALL_DRAG = 0.6; // per-second linear drag; keeps speed from growing unbounded
+    const BALL_JITTER = 30; // per-axis random accel magnitude; slight Brownian-like wobble
     const MAX_DT = 1 / 20; // clamp large gaps (e.g. backgrounded tab)
     const HIGHLIGHT_RADIUS_RATIO = 0.55;
     const HIGHLIGHT_OFFSET_RATIO = 0.35;
@@ -160,7 +161,7 @@
 
         const accel = parseFloat(controls.ballAccel.value);
         balls = balls.map((ball) =>
-            stepBall(ball, fieldSampler.angleAt, accel, BALL_DRAG, dt, fieldParams.width, fieldParams.height)
+            stepBall(ball, fieldSampler.angleAt, accel, BALL_DRAG, BALL_JITTER, Math.random, dt, fieldParams.width, fieldParams.height)
         );
         renderFrame();
         requestAnimationFrame(tick);

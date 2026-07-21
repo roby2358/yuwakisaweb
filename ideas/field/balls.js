@@ -6,14 +6,19 @@ function createBall(x, y, color, radius) {
 }
 
 // Advances one ball by dt seconds: the flow field pushes it as a constant
-// acceleration along the local line direction, a slight linear drag opposes
-// its velocity (so speed settles instead of growing forever), then it
-// bounces elastically off the canvas edges (velocity component flips, no
-// energy loss).
-function stepBall(ball, angleAt, accel, drag, dt, width, height) {
+// acceleration along the local line direction, a tiny random acceleration
+// (Brownian-like jitter, magnitude `jitter`, drawn from `randomFn`) nudges it
+// off the flow line, a slight linear drag opposes its velocity (so speed
+// settles instead of growing forever), then it bounces elastically off the
+// canvas edges (velocity component flips, no energy loss). `randomFn` is
+// injected (rather than calling Math.random directly) so callers can supply
+// a seeded or fixed source for deterministic tests.
+function stepBall(ball, angleAt, accel, drag, jitter, randomFn, dt, width, height) {
     const angle = angleAt(ball.x, ball.y);
-    const vx = ball.vx + (Math.cos(angle) * accel - drag * ball.vx) * dt;
-    const vy = ball.vy + (Math.sin(angle) * accel - drag * ball.vy) * dt;
+    const jitterX = jitter * (randomFn() * 2 - 1);
+    const jitterY = jitter * (randomFn() * 2 - 1);
+    const vx = ball.vx + (Math.cos(angle) * accel + jitterX - drag * ball.vx) * dt;
+    const vy = ball.vy + (Math.sin(angle) * accel + jitterY - drag * ball.vy) * dt;
 
     let x = ball.x + vx * dt;
     let y = ball.y + vy * dt;
