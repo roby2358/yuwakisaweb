@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flow Field</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <div id="panel">
+        <h1>Flow Field</h1>
+        <p class="subtitle">Procedural vector field from Perlin noise</p>
+
+        <div class="field-pair">
+            <div class="field-row">
+                <label for="ctl-width">Canvas width</label>
+                <input id="ctl-width" type="number" value="1200" min="100" step="10">
+            </div>
+            <div class="field-row">
+                <label for="ctl-height">Canvas height</label>
+                <input id="ctl-height" type="number" value="700" min="100" step="10">
+            </div>
+        </div>
+
+        <div class="field-row">
+            <label for="ctl-spacing">Grid spacing (px)</label>
+            <input id="ctl-spacing" type="number" value="20" min="4" step="1">
+        </div>
+
+        <div class="field-pair">
+            <div class="field-row">
+                <label for="ctl-line-length">Line length (px)</label>
+                <input id="ctl-line-length" type="number" value="14" min="1" step="1">
+            </div>
+            <div class="field-row">
+                <label for="ctl-line-thickness">Line thickness (px)</label>
+                <input id="ctl-line-thickness" type="number" value="1.6" min="0.2" step="0.2">
+            </div>
+        </div>
+
+        <div class="field-row">
+            <label for="ctl-noise-scale">Noise scale (feature size)</label>
+            <input id="ctl-noise-scale" type="number" value="0.0008" min="0.0001" step="0.0001">
+        </div>
+
+        <div class="field-row">
+            <label for="ctl-mode">Field mode</label>
+            <select id="ctl-mode">
+                <option value="curl" selected>Curl noise (swirling)</option>
+                <option value="gradient">Gradient field</option>
+                <option value="angle">Direct noise angle</option>
+            </select>
+        </div>
+
+        <div class="field-row">
+            <label for="ctl-color-mode">Line color</label>
+            <select id="ctl-color-mode">
+                <option value="none" selected>Plain white</option>
+                <option value="direction">By direction</option>
+                <option value="magnitude">By noise magnitude</option>
+            </select>
+        </div>
+
+        <hr>
+
+        <div class="field-pair">
+            <div class="field-row">
+                <label for="ctl-octaves">fBm octaves</label>
+                <input id="ctl-octaves" type="number" value="3" min="1" max="8" step="1">
+            </div>
+            <div class="field-row">
+                <label for="ctl-seed">Random seed</label>
+                <input id="ctl-seed" type="number" value="42" step="1">
+            </div>
+        </div>
+
+        <div class="field-pair">
+            <div class="field-row">
+                <label for="ctl-lacunarity">Lacunarity</label>
+                <input id="ctl-lacunarity" type="number" value="2.0" min="1" step="0.1">
+            </div>
+            <div class="field-row">
+                <label for="ctl-gain">Gain</label>
+                <input id="ctl-gain" type="number" value="0.5" min="0.05" max="0.95" step="0.05">
+            </div>
+        </div>
+
+        <hr>
+
+        <div class="field-row">
+            <label for="ctl-export-scale">Export resolution multiplier</label>
+            <select id="ctl-export-scale">
+                <option value="1">1x</option>
+                <option value="2" selected>2x</option>
+                <option value="3">3x</option>
+                <option value="4">4x</option>
+            </select>
+        </div>
+
+        <div class="actions">
+            <button id="btn-regenerate" class="primary">Regenerate</button>
+            <button id="btn-randomize">Randomize seed</button>
+            <button id="btn-export">Export PNG</button>
+        </div>
+    </div>
+
+    <div id="canvas-wrap">
+        <canvas id="field-canvas"></canvas>
+    </div>
+
+    <!-- NOTE: double-click to run — plain script includes (globals), no ES
+    module imports. Order = dependency order: noise -> field -> render -> bootstrap. -->
+    <script src="noise.js"></script>
+    <script src="field.js"></script>
+    <script src="render.js"></script>
+    <script src="index.js"></script>
+</body>
+</html>

@@ -1,0 +1,131 @@
+:root {
+    --panel-bg: #241e15;
+    --panel-border: #4a3f2c;
+    --canvas-bg: #33291d;
+    --text: #e8e0cf;
+    --text-dim: #a89a7c;
+    --accent: #c9a24c;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    background: #17130d;
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+body {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 20px;
+    min-height: 100vh;
+}
+
+#panel {
+    flex: 0 0 260px;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+#panel h1 {
+    font-size: 16px;
+    margin: 0 0 4px;
+    color: var(--accent);
+}
+
+#panel .subtitle {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin: 0 0 16px;
+}
+
+.field-row {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 10px;
+}
+
+.field-row label {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 3px;
+}
+
+.field-row input,
+.field-row select {
+    background: #17130d;
+    color: var(--text);
+    border: 1px solid var(--panel-border);
+    border-radius: 4px;
+    padding: 5px 6px;
+    font-size: 13px;
+}
+
+.field-pair {
+    display: flex;
+    gap: 8px;
+}
+
+.field-pair .field-row {
+    flex: 1;
+}
+
+.actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+button {
+    background: #3a2f1f;
+    color: var(--text);
+    border: 1px solid var(--panel-border);
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #4a3d28;
+    border-color: var(--accent);
+}
+
+button.primary {
+    background: var(--accent);
+    color: #17130d;
+    font-weight: 600;
+    border-color: var(--accent);
+}
+
+button.primary:hover {
+    filter: brightness(1.1);
+}
+
+hr {
+    border: none;
+    border-top: 1px solid var(--panel-border);
+    margin: 14px 0;
+}
+
+#canvas-wrap {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+}
+
+#field-canvas {
+    background: var(--canvas-bg);
+    border: 1px solid var(--panel-border);
+    max-width: 100%;
+    height: auto;
+}
