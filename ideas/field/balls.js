@@ -2,7 +2,13 @@
 // an angleAt(x, y) function supplied by the caller (field.js's sampler).
 
 function createBall(x, y, color, radius) {
-    return { x, y, vx: 0, vy: 0, color, radius };
+    return { x, y, vx: 0, vy: 0, color, radius, anchorX: x, anchorY: y, stuckTime: 0 };
+}
+
+// True once a ball has drifted more than `radius` from its anchor point in
+// either axis — i.e. it has left the small "stuck" rectangle.
+function hasLeftStuckRect(x, y, ball, radius) {
+    return Math.abs(x - ball.anchorX) > radius || Math.abs(y - ball.anchorY) > radius;
 }
 
 // Advances one ball by dt seconds: the flow field pushes it as a constant
@@ -13,7 +19,12 @@ function createBall(x, y, color, radius) {
 // canvas edges (velocity component flips, no energy loss). `randomFn` is
 // injected (rather than calling Math.random directly) so callers can supply
 // a seeded or fixed source for deterministic tests.
-function stepBall(ball, angleAt, accel, drag, jitter, randomFn, dt, width, height) {
+//
+// Separately, if the ball hasn't left a `stuckRadius`-sized rectangle around
+// its last anchor point for `stuckDuration` seconds (e.g. caught in a calm
+// spot of the field), it teleports to a fresh random position with zero
+// velocity instead of sitting there forever.
+function stepBall(ball, angleAt, accel, drag, jitter, randomFn, stuckRadius, stuckDuration, dt, width, height) {
     const angle = angleAt(ball.x, ball.y);
     const jitterX = jitter * (randomFn() * 2 - 1);
     const jitterY = jitter * (randomFn() * 2 - 1);
@@ -41,7 +52,23 @@ function stepBall(ball, angleAt, accel, drag, jitter, randomFn, dt, width, heigh
         ny = -ny;
     }
 
-    return Object.assign({}, ball, { x, y, vx: nx, vy: ny });
+    const leftRect = hasLeftStuckRect(x, y, ball, stuckRadius);
+    const stuckTime = leftRect ? 0 : ball.stuckTime + dt;
+
+    if (stuckTime > stuckDuration) {
+        const relocatedX = ball.radius + randomFn() * (width - 2 * ball.radius);
+        const relocatedY = ball.radius + randomFn() * (height - 2 * ball.radius);
+        return Object.assign({}, ball, {
+            x: relocatedX, y: relocatedY, vx: 0, vy: 0,
+            anchorX: relocatedX, anchorY: relocatedY, stuckTime: 0,
+        });
+    }
+
+    return Object.assign({}, ball, {
+        x, y, vx: nx, vy: ny, stuckTime,
+        anchorX: leftRect ? x : ball.anchorX,
+        anchorY: leftRect ? y : ball.anchorY,
+    });
 }
 
 // Keeps a ball inside a resized canvas (e.g. after Regenerate changes
