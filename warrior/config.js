@@ -259,17 +259,17 @@ export const EQUIP_SLOT = { WEAPON: 'weapon', ARMOR: 'armor', ARTIFACT: 'artifac
 // Non-magical weapons
 export const WEAPONS = [
     { id: 'rusty_blade', name: 'Rusty Blade', type: 'melee', damage: 1, range: 0, special: null, price: 0, tier: 0, magical: false },
-    { id: 'iron_sword', name: 'Iron Sword', type: 'melee', damage: 2, range: 0, special: null, price: 12, tier: 1, magical: false },
-    { id: 'spear', name: 'Spear', type: 'melee', damage: 2, range: 0, special: null, price: 12, tier: 1, magical: false },
-    { id: 'battle_axe', name: 'Battle Axe', type: 'melee', damage: 3, range: 0, special: null, price: 25, tier: 2, magical: false },
-    { id: 'warhammer', name: 'Warhammer', type: 'melee', damage: 4, range: 0, special: null, price: 45, tier: 3, magical: false },
-    { id: 'blade_spear', name: 'Blade Spear', type: 'melee', damage: 4, range: 0, special: null, price: 45, tier: 3, magical: false },
-    { id: 'greatsword', name: 'Greatsword', type: 'melee', damage: 5, range: 0, special: null, price: 70, tier: 4, magical: false },
     { id: 'stick_bow', name: 'Stick Bow', type: 'ranged', damage: 1, range: 2, special: null, price: 0, tier: 0, magical: false },
     { id: 'short_bow', name: 'Short Bow', type: 'ranged', damage: 1, range: 2, special: null, price: 5, tier: 1, magical: false },
+    { id: 'iron_sword', name: 'Iron Sword', type: 'melee', damage: 2, range: 0, special: null, price: 12, tier: 1, magical: false },
+    { id: 'spear', name: 'Spear', type: 'melee', damage: 2, range: 0, special: null, price: 12, tier: 1, magical: false },
     { id: 'hunting_bow', name: 'Hunting Bow', type: 'ranged', damage: 2, range: 2, special: null, price: 12, tier: 1, magical: false },
+    { id: 'battle_axe', name: 'Battle Axe', type: 'melee', damage: 3, range: 0, special: null, price: 25, tier: 2, magical: false },
     { id: 'crossbow', name: 'Crossbow', type: 'ranged', damage: 3, range: 3, special: null, price: 25, tier: 2, magical: false },
+    { id: 'warhammer', name: 'Warhammer', type: 'melee', damage: 4, range: 0, special: null, price: 45, tier: 3, magical: false },
+    { id: 'blade_spear', name: 'Blade Spear', type: 'melee', damage: 4, range: 0, special: null, price: 45, tier: 3, magical: false },
     { id: 'war_bow', name: 'War Bow', type: 'ranged', damage: 4, range: 3, special: null, price: 45, tier: 3, magical: false },
+    { id: 'greatsword', name: 'Greatsword', type: 'melee', damage: 5, range: 0, special: null, price: 70, tier: 4, magical: false },
     { id: 'great_bow', name: 'Great Bow', type: 'ranged', damage: 5, range: 4, special: null, price: 70, tier: 4, magical: false }
 ];
 
@@ -331,27 +331,51 @@ const ARCHETYPES_GENERAL = [
     'Navigator', 'Operator', 'Pilot', 'Replicant', 'Starpilot',
     'Technomancer', 'Wanderer', 'Witch', 'Wraith', 'Xenarch'
 ];
-// Common nouns are listed three times so they roll roughly three times as often as the rest.
+// Noun tables run from 2 to 6 damage (weapons) or defense (armor), one row each:
+// a 6-damage blade is a Powersword, 5-defense armor is Plate. The top row absorbs
+// anything above 6 — heavy weapons double their damage past the end of the table.
 const COMMON_MELEE = [
-    'Axe', 'Blade', 'Edge', 'Mace', 'Spear', 'Sword', 'Glaive', 'Slipblade', 'Ripper'
+    ['Blade', 'Edge', 'Sword'],
+    ['Axe', 'Mace', 'Ripper', 'Lance', 'Glaive', 'Spear'],
+    ['Slipblade', 'Warhammer', 'Blade Spear', 'Ionmace', 'Shockglaive'],
+    ['Great Sword', 'Great Axe', 'Ionblade', 'High Lance', 'Blazespear', 'Sunspear'],
+    ['Powersword', 'Riftspear', 'Star Pike', 'Worldcleaver', 'Godlance', 'Astralglaive']
 ];
 const OTHER_MELEE = [
-    'Cleaver', 'Pick', 'Spike', 'Thorn', 'Flail', 'Scythe', 'Fist', 'Shard', 'Vane'
+    ['Cleaver', 'Spike', 'Fist'],
+    ['Pick', 'Shard', 'Thorn'],
+    ['Vane', 'Flail', 'Maul'],
+    ['Scythe', 'Wrack', 'Rend'],
+    ['Scythe', 'Wrack', 'Rend']
 ];
-const MELEE_ITEMS = [...COMMON_MELEE, ...COMMON_MELEE, ...COMMON_MELEE, ...OTHER_MELEE];
+// Common nouns are listed three times so they roll roughly three times as often as the rest.
+const MELEE_ITEMS = COMMON_MELEE.map((c, i) => [...c, ...c, ...c, ...OTHER_MELEE[i]]);
 
 const COMMON_RANGED = [
-    'Bolt', 'Bow', 'Cannon', 'Launcher', 'Longbow', 'Rifle', 'Crossbow', 'Handcannon', 'Wand', 'Coilgun'
+    ['Short Bow', 'Pistol', 'Needler', 'Darter'],
+    ['Crossbow', 'Bolt', 'Carbine', 'Wand', 'Hexpistol', 'Runecaster', 'Scattergun'],
+    ['Longbow', 'Cannon', 'Rifle', 'Launcher', 'Repeater', 'Boltcaster', 'Flechette Bow'],
+    ['Great Bow', 'Handcannon', 'Coilgun', 'Hexthrower', 'Stormcannon', 'Manalauncher', 'Ley Cannon'],
+    ['Great Bow', 'Great Gun', 'Boomstick', 'Dragonmaw', 'Voidbow', 'Worldpiercer'],
 ];
 const OTHER_RANGED = [
-    'Caster', 'Lance', 'Repeater', 'Rod', 'Sling', 'Arbalest', 'Javelin', 'Accelerator', 'Emitter'
+    ['Sling', 'Caster'],
+    ['Javelin'],
+    ['Arbalest', 'Rod'],
+    ['Emitter', 'Accelerator'],
+    ['Emitter', 'Accelerator']
 ];
-const RANGED_ITEMS = [...COMMON_RANGED, ...COMMON_RANGED, ...COMMON_RANGED, ...OTHER_RANGED];
+const RANGED_ITEMS = COMMON_RANGED.map((c, i) => [...c, ...c, ...c, ...OTHER_RANGED[i]]);
 const ARMOR_ITEMS = [
-    'Aegis', 'Cloak', 'Cuirass', 'Hide', 'Mail', 'Plate', 'Robe', 'Shield',
-    'Tunic', 'Vest', 'Weave', 'Mantle', 'Carapace', 'Hauberk', 'Wrap', 'Cowl', 'Baldric'
+    ['Cloak', 'Hide', 'Tunic', 'Weave', 'Hauberk', 'Wrap', 'Jerkin'],
+    ['Shield', 'Cuirass', 'Mail', 'Robe', 'Sheath'],
+    ['Aegis', 'Baldric', 'Vest', 'Harness', 'Lattice', 'Scale', 'Ward'],
+    ['Plate', 'Carapace', 'Mantle', 'Frame', 'Husk', 'Membrane'],
+    ['Rig', 'Exo', 'Battle Armor', 'Null Suit', 'Phase Mail']
 ];
 const ARTIFACT_ITEMS = [
+    'Hide', 'Robe', 'Tunic', 'Vest', 'Weave', 'Mantle', 'Hauberk', 'Wrap',
+    'Cowl', 'Baldric',
     'Amulet', 'Anchor', 'Boots', 'Bracers', 'Circlet', 'Compass', 'Crown',
     'Crystal', 'Gloves', 'Hood', 'Jewel', 'Lens', 'Ring', 'Shroud', 'Sigil',
     'Signet', 'Stone', 'Talisman', 'Torc', 'Veil', 'Ward', 'Wraps', 'Lantern',
@@ -587,6 +611,15 @@ function _pickArchetype(naming) {
     return Rando.bool(0.5) ? Rando.choice(ARCHETYPES_GENERAL) : Rando.choice(naming.a);
 }
 
+// Nouns for an item of this damage/defense. Row 0 is level 2; anything above the
+// table's top level (or below its bottom) clamps to the nearest row.
+const TIER_MIN = 2;
+
+function _tierWords(table, level) {
+    const i = Math.max(0, Math.min(level - TIER_MIN, table.length - 1));
+    return table[i];
+}
+
 function _rollName(itemWords, naming) {
     const pattern = Rando.int(0, 5);
     const mode = Rando.choice(MODES);
@@ -612,13 +645,13 @@ export function rollMagicItem(category) {
     switch (category) {
         case 'melee': {
             const { value, ...effect } = Rando.choice(MELEE_EFFECTS);
-            const name = _rollName(MELEE_ITEMS, EFFECT_NAMING[effect.special]);
             let damage = Rando.int(2, 6);
             // d6: 1-3 normal, 4-5 fast (0 MP), 6 heavy (all MP, 2x dmg)
             const variant = Rando.int(1, 6);
             const heavy = variant === 6;
             const fast = variant === 4 || variant === 5;
             if (heavy) damage *= 2;
+            const name = _rollName(_tierWords(MELEE_ITEMS, damage), EFFECT_NAMING[effect.special]);
             const price = (damage + 1) * 60 * value;
             item = { id, name, type: 'melee', slot: EQUIP_SLOT.WEAPON, damage, range: 0, price, magical: true, ...effect };
             if (heavy) item.mpCost = 'all';
@@ -627,7 +660,6 @@ export function rollMagicItem(category) {
         }
         case 'ranged': {
             const { value, ...effect } = Rando.choice(RANGED_EFFECTS);
-            const name = _rollName(RANGED_ITEMS, EFFECT_NAMING[effect.special]);
             let damage = Rando.int(2, 6);
             const range = Rando.int(3, 5);
             // d6: 1-4 normal (2 MP), 5 fast (1 MP), 6 heavy (all MP, 2x dmg, 2x AE)
@@ -635,6 +667,7 @@ export function rollMagicItem(category) {
             const heavy = variant === 6;
             const fast = variant === 5;
             if (heavy) damage *= 2;
+            const name = _rollName(_tierWords(RANGED_ITEMS, damage), EFFECT_NAMING[effect.special]);
             const price = (damage + range + 1) * 30 * value;
             item = { id, name, type: 'ranged', slot: EQUIP_SLOT.WEAPON, damage, range, price, magical: true, ...effect };
             if (heavy) { item.mpCost = 'all'; item.aetherCost = 2; }
@@ -644,8 +677,8 @@ export function rollMagicItem(category) {
         }
         case 'armor': {
             const { value, ...effect } = Rando.choice(ARMOR_OR_PASSIVE);
-            const name = _rollName(ARMOR_ITEMS, EFFECT_NAMING[effect.special]);
             const defense = Rando.int(2, 6);
+            const name = _rollName(_tierWords(ARMOR_ITEMS, defense), EFFECT_NAMING[effect.special]);
             const price = (defense + 1) * 60 * value;
             item = { id, name, slot: EQUIP_SLOT.ARMOR, defense, price, magical: true, ...effect };
             break;
