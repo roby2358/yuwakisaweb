@@ -1,0 +1,97 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
+#game { display: block; cursor: default; }
+#hud {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    max-width: calc(100vw - 20px);
+    background: rgba(0, 0, 0, 0.7);
+    color: #eee;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 14px;
+    z-index: 10;
+    user-select: none;
+}
+#hud button {
+    background: #444;
+    color: #eee;
+    border: 1px solid #666;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 13px;
+}
+#hud button:hover { background: #555; }
+#log {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    max-width: 460px;
+    background: rgba(0, 0, 0, 0.6);
+    color: #cfc7b8;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    z-index: 10;
+    user-select: none;
+    pointer-events: none;
+}
+#log div:last-child { color: #fff; }
+#intro-panel, #location-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(10, 8, 6, 0.92);
+    color: #eee;
+    padding: 24px 32px;
+    border-radius: 8px;
+    border: 1px solid #666;
+    font-family: monospace;
+    font-size: 15px;
+    z-index: 20;
+}
+#intro-panel { max-width: 440px; text-align: center; }
+#intro-panel.hidden, #location-panel.hidden { display: none; }
+#intro-panel h2 { margin-bottom: 12px; letter-spacing: 4px; color: #daa520; }
+#intro-panel p { margin-bottom: 14px; line-height: 1.5; }
+#intro-panel .controls { font-size: 12px; color: #aaa; }
+#intro-panel button, #location-panel button {
+    background: #444;
+    color: #eee;
+    border: 1px solid #666;
+    padding: 5px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 13px;
+}
+#intro-panel button:hover, #location-panel button:hover:not(:disabled) { background: #555; }
+#location-panel button:disabled { opacity: 0.4; cursor: default; }
+#location-panel {
+    min-width: 420px;
+    max-width: 560px;
+    max-height: 80vh;
+    overflow-y: auto;
+    text-align: left;
+    font-size: 13px;
+}
+#location-panel h2 { color: #daa520; margin-bottom: 2px; }
+#location-panel h3 { margin: 14px 0 6px; color: #c8b88a; border-bottom: 1px solid #444; }
+#location-panel .loc-sub { color: #999; margin-bottom: 6px; }
+#location-panel .loc-note { color: #888; font-size: 11px; }
+#location-panel .loc-row { margin-top: 12px; }
+#location-panel table { width: 100%; border-collapse: collapse; }
+#location-panel td { padding: 4px 6px 4px 0; vertical-align: top; }
+#location-panel td:last-child { text-align: right; white-space: nowrap; }
+#location-panel .ticket-btn { border-color: #daa520; color: #daa520; }

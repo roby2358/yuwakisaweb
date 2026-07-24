@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dustrunner</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <canvas id="game"></canvas>
+    <div id="hud">
+        <span id="day-info">Day 1</span>
+        <span id="mp-info">MP</span>
+        <span id="hp-info">HP</span>
+        <span id="bike-info">Bike</span>
+        <span id="credits-info">0 cr</span>
+        <span id="cargo-info">Cargo</span>
+        <span id="hover-info"></span>
+        <button id="action-btn">End Day</button>
+        <button id="mount-btn">Dismount (M)</button>
+        <button id="end-day">End Day (E)</button>
+        <button id="new-world">New World</button>
+    </div>
+    <div id="log"></div>
+    <div id="location-panel" class="hidden"></div>
+    <div id="intro-panel">
+        <h2>DUSTRUNNER</h2>
+        <p>Your ship left without you. The Vesk Barrens don't care.</p>
+        <p>Ride out on your gravbike, dismount to harvest what the waste grows, and haul
+        it home past the gangs and the things that eat gravbikes. Sell, craft, survive.
+        An offworld ticket costs 4,000 credits. Freedom is a number.</p>
+        <p class="controls">Click P to select · click yellow to move, red to attack ·
+        M mounts/dismounts · Space does the obvious thing · E ends the day ·
+        right-drag pans. Settlements heal; the deep waste pays better.</p>
+        <button id="begin-btn">Ride</button>
+    </div>
+    <!-- NOTE! We want to be able to double-click to run these games, so use plain
+    script includes (globals), not ES module imports. Order = dependency order:
+    artifacts → display artifacts → libs → state → engine → ui → bootstrap. -->
+    <script src="artifacts.js"></script>
+    <script src="displayartifacts.js"></script>
+    <script src="rando.js"></script>
+    <script src="hex.js"></script>
+    <script src="sound.js"></script>
+    <script src="gamestate.js"></script>
+    <script src="gameengine.js"></script>
+    <script src="gameui.js"></script>
+    <script src="index.js"></script>
+</body>
+</html>
