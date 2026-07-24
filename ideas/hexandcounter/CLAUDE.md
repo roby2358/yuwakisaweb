@@ -48,6 +48,7 @@ Shared libraries the game modules depend on:
 | `hex.js` | Axial hex math + `bfsHexes` (Dijkstra reachability), `Hex.key`, `drawHexPath`. Pixel helpers read `GameDisplayArtifacts.HEX_SIZE`; the axial math the engine uses needs neither artifacts file. |
 | `rando.js` | `Rando` RNG helpers, **seedable** via `Rando.seed(n)` (mulberry32) so a game is reproducible from `state.seed` |
 | `colortheory.js` | `ColorTheory.randomScheme` / `rgbToHex` for per-enemy counter colors |
+| `sound.js` | `GameSound` — client-only WebAudio bleeps/boops (pulse wave over a pentatonic scale), adapted from Warrior. Owned by `GameUI`; randomizes with `Math.random` so it never perturbs the seeded `Rando` stream. |
 
 Server-readiness notes baked into the split: all randomness routes through the seeded
 `Rando` (map, spawns, and AI reproduce from `state.seed`); `GameEngine.movePlayer`

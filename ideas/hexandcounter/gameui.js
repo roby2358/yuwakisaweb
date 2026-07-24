@@ -21,6 +21,7 @@ const GameUI = (function () {
             this.state = engine.state;
             this.canvas = canvas;
             this.ctx = canvas.getContext('2d');
+            this.sound = new GameSound();   // client-only audio cues
 
             // ---- View state (render-only; never part of GameState) ----
             this.panX = 0;
@@ -94,8 +95,11 @@ const GameUI = (function () {
         commitMove(q, r) {
             const res = this.engine.movePlayer(q, r);
             if (!res.ok) { this.render(); return; }
-            if (res.won) { this.deselect(); this.showOverlay('victory'); this.render(); return; }
-            if (res.endedTurn) { this.deselect(); this.render(); return; }
+            // Each terminal outcome owns its cue; only a plain move gets the step boop,
+            // so ending the day mid-move stays "bleep bloop" and not a three-note stumble.
+            if (res.won) { this.sound.fanfare(); this.deselect(); this.showOverlay('victory'); this.render(); return; }
+            if (res.endedTurn) { this.sound.endTurn(); this.deselect(); this.render(); return; }
+            this.sound.step();
             // L1.4 turn continues: recompute the highlight sets from the new position.
             this.selectPlayer();
             this.render();
@@ -109,6 +113,7 @@ const GameUI = (function () {
                 // openLocation(loc) — wire up when interactive locations exist
             } else {
                 this.engine.endTurn();
+                this.sound.endTurn();
                 this.deselect();
                 this.render();
             }
@@ -126,6 +131,9 @@ const GameUI = (function () {
         }
 
         dismissOverlay() {
+            // Clearing the intro is the start of play — and the first user gesture, so
+            // it's also where the AudioContext gets to open.
+            if (this.overlay === 'intro') this.sound.fanfare();
             this.overlay = null;
             this.syncOverlayDom();
             this.render();
