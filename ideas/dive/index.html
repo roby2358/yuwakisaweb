@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DIVE — the Chroma Deep</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <canvas id="game"></canvas>
+    <div id="hud">
+        <span id="turn-info">Turn 1</span>
+        <span id="mp-info">MP: 8/8</span>
+        <span id="o2-info" class="hidden">O₂: 10/10</span>
+        <span id="hull-info">Hull: 3/3</span>
+        <span id="credits-info">0cr</span>
+        <span id="bag-info">Bag: 0/6</span>
+        <span id="hold-info">Hold: 0/20</span>
+        <span id="hover-info"></span>
+        <span id="action-buttons"></span>
+        <button id="end-turn">End Turn</button>
+        <button id="new-game">New Game</button>
+    </div>
+    <div id="msg-info" class="hidden"></div>
+    <div id="intro-panel">
+        <h2>DIVE</h2>
+        <p>You prospect the Chroma Deep out of Berth Station, alone.</p>
+        <p>Pilot the sub anywhere — then <b>dive</b> to gather. O₂ drains every turn
+        outside, faster the deeper the water; hit zero and your bag sinks where you
+        stand. Eels hunt the diver, never the sub. The leviathans hunt the sub's
+        engine wake, never the diver. Kelp hides you — while it stands.</p>
+        <p>Sell and craft at the station. Build the <b>Deepwave Beacon</b> and the
+        tender ship will come for you.</p>
+        <button id="begin-btn">Dive</button>
+    </div>
+    <div id="market-panel" class="hidden"></div>
+    <!-- NOTE! We want to be able to double-click to run these games, so use plain
+    script includes (globals), not ES module imports. Order = dependency order:
+    artifacts → display artifacts → libs → state → engine → ui → bootstrap. -->
+    <script src="artifacts.js"></script>
+    <script src="displayartifacts.js"></script>
+    <script src="rando.js"></script>
+    <script src="colortheory.js"></script>
+    <script src="hex.js"></script>
+    <script src="sound.js"></script>
+    <script src="gamestate.js"></script>
+    <script src="gameengine.js"></script>
+    <script src="gameui.js"></script>
+    <script src="index.js"></script>
+</body>
+</html>
