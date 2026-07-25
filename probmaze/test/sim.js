@@ -13,7 +13,7 @@ for (const file of ["delaunay.js", "game.js"]) {
   vm.runInContext(src, context, { filename: file });
 }
 const G = vm.runInContext(
-  "({ buildMaze, newRun, rollFace, applyRoll, applyMove, applyPass, usableMoves, DIE_FACES })",
+  "({ buildMaze, randomLakes, newRun, rollFace, applyRoll, applyMove, applyPass, usableMoves, DIE_FACES })",
   context
 );
 
@@ -47,9 +47,12 @@ let totalRolls = 0;
 let totalPar = 0;
 
 for (let m = 0; m < MAZES; m++) {
-  const maze = G.buildMaze(900, 600, 48, 60, 60, 120);
-  const colorsValid = maze.edges.every(e => ["red", "blue", "green"].includes(e.color));
-  if (maze.start === maze.end || maze.par < 1 || !colorsValid) {
+  const lakes = G.randomLakes(900, 600, 3, 55, 85);
+  const maze = G.buildMaze(900, 600, 48, 80, 35, 3, 120, lakes);
+  const colorsValid = maze.edges.every(e => ["red", "green", "blue"].includes(e.color));
+  const dryNodes = maze.nodes.every(p =>
+    lakes.every(L => Math.hypot(p.x - L.x, p.y - L.y) >= L.r));
+  if (maze.start === maze.end || maze.par < 1 || !colorsValid || !dryNodes) {
     structureOk = false;
     continue;
   }
@@ -63,7 +66,7 @@ for (let m = 0; m < MAZES; m++) {
     totalPar += maze.par;
   }
 }
-check("all " + MAZES + " mazes: connected, start!=end, valid edge colors", structureOk);
+check("all " + MAZES + " mazes: connected, start!=end, valid colors, no node in a lake", structureOk);
 check("par is expected-rolls weighted (>= 1.5x hop count)", parWeighted);
 check("greedy bot reached exit in every maze", botFailures === 0);
 

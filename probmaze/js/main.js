@@ -3,9 +3,13 @@
 const BOARD_WIDTH = 900;
 const BOARD_HEIGHT = 600;
 const BOARD_MARGIN = 48;
-const NODE_COUNT = 60;
-const NODE_MIN_DIST = 60;
+const NODE_COUNT = 80;
+const NODE_MIN_DIST = 35;
+const NODE_DIST_SPREAD = 3;
 const EDGE_MAX_LEN = 120;
+const LAKE_COUNT = 3;
+const LAKE_R_MIN = 55;
+const LAKE_R_MAX = 85;
 const NODE_RADIUS = 8;
 const CLICK_RADIUS = 18;
 const ROLL_FLICKER_TICKS = 8;
@@ -42,7 +46,8 @@ function startGame(maze) {
 
 function newMaze() {
   bestRolls = null;
-  startGame(buildMaze(BOARD_WIDTH, BOARD_HEIGHT, BOARD_MARGIN, NODE_COUNT, NODE_MIN_DIST, EDGE_MAX_LEN));
+  const lakes = randomLakes(BOARD_WIDTH, BOARD_HEIGHT, LAKE_COUNT, LAKE_R_MIN, LAKE_R_MAX);
+  startGame(buildMaze(BOARD_WIDTH, BOARD_HEIGHT, BOARD_MARGIN, NODE_COUNT, NODE_MIN_DIST, NODE_DIST_SPREAD, EDGE_MAX_LEN, lakes));
 }
 
 function setMessage(text) {
@@ -97,11 +102,17 @@ canvas.addEventListener("click", event => {
 });
 
 function pickTarget(x, y) {
+  let best = null;
+  let bestD2 = CLICK_RADIUS * CLICK_RADIUS;
   for (const { other } of usableMoves(run)) {
     const p = run.maze.nodes[other];
-    if ((p.x - x) ** 2 + (p.y - y) ** 2 <= CLICK_RADIUS * CLICK_RADIUS) return other;
+    const d2 = (p.x - x) ** 2 + (p.y - y) ** 2;
+    if (d2 <= bestD2) {
+      best = other;
+      bestD2 = d2;
+    }
   }
-  return null;
+  return best;
 }
 
 function finishRun() {

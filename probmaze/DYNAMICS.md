@@ -30,6 +30,21 @@ plan the whole crossing up front, then negotiate with luck one step at a time.
   either color. *(Driver: variable reinforcement)*
 - **Dead rolls cost the turn** — no matching edge at your node, the roll still counts.
   Camping in a green/blue pocket has a real price. *(Driver: near-miss)*
+- **Lakes** — three unmarked void regions carved from the point field; routes must
+  wind around them while the graph stays locally dense. The lakes are invisible:
+  the player reads them as gaps in the web, terrain implied rather than drawn.
+  *(Principle: terrain as language; driver: readable consequences)*
+- **Variable density** — each node claims a random-size exclusion circle (x1-x3
+  of the base spacing), so the map grows dense webs in some places and sparse
+  straits in others. Webs are safe hubs with color choice; straits are corridor
+  gambles. *(Driver: variable reinforcement; principle: terrain as language)*
+
+  Why lakes and not coloring: the die caps the cost spread at 2x (blue 3 vs red
+  1.5), so no coloring scheme can bend the optimal route — measured flat 1.03
+  twist across uniform, axis-bias, and hidden-vein colorings (test/twistlab.js).
+  Deleting edges twists routes (sinuosity 1.46) but collapses the naive-vs-smart
+  routing gap to ~1.0 — one path, pure dice. Lakes get sinuosity ~1.28 while
+  keeping the gap at ~1.1-1.2: twisty AND choiceful.
 - **Pass is always legal** — after a usable roll you may decline to move. You can be
   delayed, never forced backward. *(Principle: never let a unit feel stuck)*
 - **Fewest rolls, per-maze best** — Retry replays the same maze; New Maze rerolls
@@ -47,6 +62,9 @@ plan the whole crossing up front, then negotiate with luck one step at a time.
   wait; one that saves 1 hop is a trap. Paired faces (R+B, G+B) are the windfall rolls.
 - **Hub camping** — high-degree nodes with all three colors on offer almost never
   waste a roll; low-degree single-color nodes are where dead rolls live.
+- **Shore hugging** — lake shores are forced corridors: fewer alternative edges,
+  so a blue shore edge is a real toll booth. Reading which shore of a lake is
+  red-friendly before committing to a side is the new macro decision.
 - **Pass discipline** — a usable roll toward the wrong side of the graph is worse than
   standing still. Passing is a move.
 

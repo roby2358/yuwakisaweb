@@ -13,17 +13,35 @@ const DIE_FACES = [
   ["green", "blue"],
 ];
 
-function scatterPoints(width, height, margin, count, minDist) {
+// Void regions carved from the point field: routes must wind around them,
+// while the graph stays locally dense enough to keep color choices alive.
+function randomLakes(width, height, count, rMin, rMax) {
+  return Array.from({ length: count }, () => ({
+    x: width * 0.19 + Math.random() * width * 0.62,
+    y: height * 0.18 + Math.random() * height * 0.64,
+    r: rMin + Math.random() * (rMax - rMin),
+  }));
+}
+
+function inAnyLake(lakes, p) {
+  return lakes.some(lake => Math.hypot(p.x - lake.x, p.y - lake.y) < lake.r);
+}
+
+// Each node claims an exclusion circle of random size (minDist x1 .. x
+// distSpread); later nodes must land outside every claimed circle. Big circles
+// make sparse stretches, small ones make dense webs — variable density.
+function scatterPoints(width, height, margin, count, minDist, distSpread, lakes) {
   const points = [];
-  const minD2 = minDist * minDist;
   let attempts = 0;
   while (points.length < count && attempts < 20000) {
     attempts += 1;
     const p = {
       x: margin + Math.random() * (width - 2 * margin),
       y: margin + Math.random() * (height - 2 * margin),
+      r: minDist * (1 + (distSpread - 1) * Math.random()),
     };
-    const clear = points.every(q => (q.x - p.x) ** 2 + (q.y - p.y) ** 2 >= minD2);
+    if (inAnyLake(lakes, p)) continue;
+    const clear = points.every(q => Math.hypot(q.x - p.x, q.y - p.y) >= q.r);
     if (clear) points.push(p);
   }
   return points;
@@ -110,15 +128,15 @@ function expectedRollsPar(adj, edges, start, end) {
   }
 }
 
-function buildMaze(width, height, margin, nodeCount, minDist, maxEdgeLen) {
-  const nodes = scatterPoints(width, height, margin, nodeCount, minDist);
+function buildMaze(width, height, margin, nodeCount, minDist, distSpread, maxEdgeLen, lakes) {
+  const nodes = scatterPoints(width, height, margin, nodeCount, minDist, distSpread, lakes);
   const pairs = pruneLongEdges(nodes, delaunayEdges(nodes), maxEdgeLen);
   const edges = pairs.map(([a, b]) => ({ a, b, color: randomEdgeColor() }));
   const start = indexOfExtreme(nodes, (p, q) => p.x < q.x);
   const end = indexOfExtreme(nodes, (p, q) => p.x > q.x);
   const adj = adjacency(nodes.length, edges);
   const par = Math.round(expectedRollsPar(adj, edges, start, end));
-  return { nodes, edges, adj, start, end, par };
+  return { nodes, edges, adj, start, end, par, lakes };
 }
 
 // Run state: one attempt at one maze.
