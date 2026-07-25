@@ -1,7 +1,7 @@
 "use strict";
 
-const BOARD_WIDTH = 900;
-const BOARD_HEIGHT = 600;
+const BOARD_LONG = 900;
+const BOARD_SHORT = 600;
 const BOARD_MARGIN = 48;
 const NODE_COUNT = 80;
 const NODE_MIN_DIST = 35;
@@ -44,10 +44,20 @@ function startGame(maze) {
   refresh();
 }
 
+function boardSize() {
+  const portrait = window.matchMedia("(max-width: 720px)").matches;
+  return portrait
+    ? { width: BOARD_SHORT, height: BOARD_LONG }
+    : { width: BOARD_LONG, height: BOARD_SHORT };
+}
+
 function newMaze() {
   bestRolls = null;
-  const lakes = randomLakes(BOARD_WIDTH, BOARD_HEIGHT, LAKE_COUNT, LAKE_R_MIN, LAKE_R_MAX);
-  startGame(buildMaze(BOARD_WIDTH, BOARD_HEIGHT, BOARD_MARGIN, NODE_COUNT, NODE_MIN_DIST, NODE_DIST_SPREAD, EDGE_MAX_LEN, EDGE_KEEP, lakes));
+  const { width, height } = boardSize();
+  canvas.width = width;
+  canvas.height = height;
+  const lakes = randomLakes(width, height, LAKE_COUNT, LAKE_R_MIN, LAKE_R_MAX);
+  startGame(buildMaze(width, height, BOARD_MARGIN, NODE_COUNT, NODE_MIN_DIST, NODE_DIST_SPREAD, EDGE_MAX_LEN, EDGE_KEEP, lakes));
 }
 
 function setMessage(text, tone) {

@@ -50,7 +50,8 @@ const document = {
   createElement: tag => stubElement(tag),
 };
 
-const context = vm.createContext({ Math, console, document, setInterval, clearInterval });
+const window = { matchMedia: () => ({ matches: false }) }; // desktop layout
+const context = vm.createContext({ Math, console, document, window, setInterval, clearInterval });
 for (const file of ["delaunay.js", "game.js", "main.js"]) {
   const src = fs.readFileSync(path.join(__dirname, "..", "js", file), "utf8");
   vm.runInContext(src, context, { filename: file });
