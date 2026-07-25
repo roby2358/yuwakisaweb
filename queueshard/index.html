@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QueueShard</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <div class="desktop-notice">
+        <h1>QueueShard</h1>
+        <p>This demo renders a six-shard planning map with per-shard capacity detail —
+           it needs a desktop-sized viewport (900&nbsp;pixels or wider).</p>
+    </div>
+
+    <div class="container">
+        <header class="header">
+            <div class="header-left">
+                <h1 class="title">QueueShard</h1>
+                <span class="subtitle">solver-certified queue sharding — the plan is the artifact</span>
+            </div>
+            <div class="header-actions">
+                <span id="z3Status" class="z3-status">Loading Z3…</span>
+                <button id="resolveBtn" class="btn" disabled>Re-solve</button>
+            </div>
+        </header>
+
+        <nav class="stage-nav" id="stageNav"></nav>
+        <p class="narration" id="narration"></p>
+
+        <div class="main-content">
+            <aside class="workloads-panel">
+                <div class="panel-section-title">Queues &amp; job classes</div>
+                <div id="queueList"></div>
+                <div class="panel-section-title">Constraint policy groups</div>
+                <div id="policyList"></div>
+            </aside>
+
+            <section class="viz-area">
+                <div class="viz-toolbar">
+                    <div class="scenario-select" id="scenarioSelect"></div>
+                    <div class="legend" id="legend"></div>
+                </div>
+                <div class="shard-map" id="shardMap"></div>
+                <div class="db-bars" id="dbBars"></div>
+                <div class="queue-detail hidden" id="queueDetail"></div>
+            </section>
+        </div>
+
+        <footer class="result-panel" id="resultPanel">
+            <div class="result-head">
+                <span class="solve-time">Waiting for Z3…</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Surface module-load failures (e.g. dataset validation) loudly. -->
+    <script>
+      const bootFail = (msg) => {
+        const panel = document.getElementById('resultPanel');
+        if (panel) panel.innerHTML = '<div class="result-error">' + msg + '</div>';
+      };
+      window.addEventListener('error', (e) => bootFail('Load error: ' + e.message));
+      window.addEventListener('unhandledrejection', (e) => bootFail('Load error: ' + (e.reason?.message ?? e.reason)));
+    </script>
+    <!-- Classic script (not module) so emscripten pthread workers can re-load
+         it as a Web Worker source. Exposes init on globalThis.MiasZ3. -->
+    <script src="vendor/z3-bundle.js"></script>
+    <script type="module" src="index.js"></script>
+</body>
+</html>

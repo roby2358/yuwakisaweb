@@ -1,0 +1,10 @@
+{
+  "name": "queueshard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser demo: solver-certified queue sharding with in-browser Z3.",
+  "scripts": {
+    "serve": "node scripts/serve.mjs"
+  }
+}
