@@ -1,0 +1,110 @@
+"use strict";
+
+// Headless verification: loads the browser scripts (no DOM needed) into a vm
+// context, checks maze structure, die distribution, and runs a greedy bot to
+// the exit across many mazes. Usage: node test/sim.js
+const fs = require("fs");
+const path = require("path");
+const vm = require("vm");
+
+const context = vm.createContext({ Math, console });
+for (const file of ["delaunay.js", "game.js"]) {
+  const src = fs.readFileSync(path.join(__dirname, "..", "js", file), "utf8");
+  vm.runInContext(src, context, { filename: file });
+}
+const G = vm.runInContext(
+  "({ buildMaze, newRun, rollFace, applyRoll, applyMove, applyPass, usableMoves, DIE_FACES })",
+  context
+);
+
+let failures = 0;
+function check(label, ok) {
+  if (!ok) failures += 1;
+  console.log((ok ? "ok   " : "FAIL ") + label);
+}
+
+// --- Die distribution ---
+const ROLLS = 60000;
+const seen = { red: 0, blue: 0, green: 0 };
+for (let i = 0; i < ROLLS; i++) {
+  for (const color of G.rollFace()) seen[color] += 1;
+}
+check("die faces: 6 faces, 9 color slots", G.DIE_FACES.length === 6 &&
+  G.DIE_FACES.reduce((s, f) => s + f.length, 0) === 9);
+check("red available ~4/6 (" + (seen.red / ROLLS).toFixed(3) + ")",
+  Math.abs(seen.red / ROLLS - 4 / 6) < 0.02);
+check("green available ~3/6 (" + (seen.green / ROLLS).toFixed(3) + ")",
+  Math.abs(seen.green / ROLLS - 3 / 6) < 0.02);
+check("blue available ~2/6 (" + (seen.blue / ROLLS).toFixed(3) + ")",
+  Math.abs(seen.blue / ROLLS - 2 / 6) < 0.02);
+
+// --- Maze structure ---
+const MAZES = 200;
+let structureOk = true;
+let parWeighted = true;
+let botFailures = 0;
+let totalRolls = 0;
+let totalPar = 0;
+
+for (let m = 0; m < MAZES; m++) {
+  const maze = G.buildMaze(900, 600, 48, 60, 60, 120);
+  const colorsValid = maze.edges.every(e => ["red", "blue", "green"].includes(e.color));
+  if (maze.start === maze.end || maze.par < 1 || !colorsValid) {
+    structureOk = false;
+    continue;
+  }
+  // Cheapest edge is red at 1.5 expected rolls, so par can't be under 1.5x hops
+  const hops = hopsToEnd(maze)[maze.start];
+  if (maze.par < 1.5 * hops - 0.5) parWeighted = false;
+  const rolls = runBot(maze);
+  if (rolls === null) botFailures += 1;
+  else {
+    totalRolls += rolls;
+    totalPar += maze.par;
+  }
+}
+check("all " + MAZES + " mazes: connected, start!=end, valid edge colors", structureOk);
+check("par is expected-rolls weighted (>= 1.5x hop count)", parWeighted);
+check("greedy bot reached exit in every maze", botFailures === 0);
+
+const meanRolls = totalRolls / (MAZES - botFailures);
+const meanPar = totalPar / (MAZES - botFailures);
+console.log("bot mean rolls " + meanRolls.toFixed(1) + ", mean par " + meanPar.toFixed(1) +
+  ", ratio " + (meanRolls / meanPar).toFixed(2));
+
+// Greedy bot: precompute hop distance to exit; take any usable edge that
+// strictly decreases it, otherwise pass. Returns roll count or null if capped.
+function runBot(maze) {
+  const dist = hopsToEnd(maze);
+  const run = G.newRun(maze);
+  for (let i = 0; i < 10000; i++) {
+    const moves = G.applyRoll(run, G.rollFace());
+    const forward = moves.filter(mv => dist[mv.other] < dist[run.current]);
+    if (forward.length) {
+      forward.sort((p, q) => dist[p.other] - dist[q.other]);
+      G.applyMove(run, forward[0].other);
+    } else if (moves.length) {
+      G.applyPass(run);
+    }
+    if (run.phase === "won") return run.rolls;
+  }
+  return null;
+}
+
+function hopsToEnd(maze) {
+  const dist = new Array(maze.nodes.length).fill(-1);
+  dist[maze.end] = 0;
+  const queue = [maze.end];
+  while (queue.length) {
+    const u = queue.shift();
+    for (const { other } of maze.adj[u]) {
+      if (dist[other] === -1) {
+        dist[other] = dist[u] + 1;
+        queue.push(other);
+      }
+    }
+  }
+  return dist;
+}
+
+process.exit(failures ? 1 : 0);

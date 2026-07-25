@@ -1,0 +1,177 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+body {
+  background: #14161a;
+  color: #e8ebf0;
+  font-family: system-ui, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px;
+}
+
+header {
+  width: 100%;
+  max-width: 1200px;
+  margin-bottom: 12px;
+}
+
+h1 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+main {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+canvas {
+  background: #1b1e24;
+  border: 1px solid #2a2e36;
+  border-radius: 8px;
+}
+
+#panel {
+  width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #1b1e24;
+  border: 1px solid #2a2e36;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+#die-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.die {
+  width: 72px;
+  height: 72px;
+  background: #e8ebf0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.pip {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pip.blank {
+  color: #9aa2ae;
+  font-size: 1.6rem;
+  font-weight: 700;
+  background: none;
+}
+
+button {
+  background: #2f6fed;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: #4a83f2;
+}
+
+button:disabled {
+  background: #333a45;
+  color: #7d8697;
+  cursor: default;
+}
+
+#pass {
+  background: #444c59;
+}
+
+#pass:hover {
+  background: #57606f;
+}
+
+#message {
+  min-height: 3em;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  color: #c3cad4;
+}
+
+#scores {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.95rem;
+}
+
+#scores span {
+  font-weight: 700;
+  color: #f5c518;
+}
+
+#faces h2 {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9aa2ae;
+  margin-bottom: 8px;
+}
+
+#face-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.face-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 46px;
+  height: 30px;
+  background: #e8ebf0;
+  border-radius: 6px;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+#controls {
+  display: flex;
+  gap: 8px;
+}
+
+#controls button {
+  flex: 1;
+  background: #444c59;
+}
+
+#controls button:hover {
+  background: #57606f;
+}

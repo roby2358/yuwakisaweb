@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Probability Maze</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Probability Maze</h1>
+  </header>
+  <main>
+    <canvas id="board" width="900" height="600"></canvas>
+    <aside id="panel">
+      <section id="die-section">
+        <div id="die" class="die"></div>
+        <div>
+          <button id="roll">Roll</button>
+          <button id="pass" hidden>Pass</button>
+        </div>
+      </section>
+      <p id="message"></p>
+      <section id="scores">
+        <div>Rolls <span id="rolls">0</span></div>
+        <div>Par <span id="par"></span></div>
+        <div>Best <span id="best">—</span></div>
+      </section>
+      <section id="faces">
+        <h2>Die faces</h2>
+        <div id="face-list"></div>
+      </section>
+      <section id="controls">
+        <button id="retry">Retry maze</button>
+        <button id="new-maze">New maze</button>
+      </section>
+    </aside>
+  </main>
+  <script src="js/delaunay.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
