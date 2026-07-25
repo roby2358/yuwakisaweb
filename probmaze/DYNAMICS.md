@@ -101,6 +101,15 @@ only pressure is the roll counter vs. par and best. Acceptable for a puzzle-toy.
   this math invisibly; drawing the route itself stays deferred because discovering
   the red-artery insight unaided is the fun.
 - Roll budget mode (fixed rolls, win/lose) if the toy wants stakes later.
+- **Force-field maps** (next big direction, 2026-07-25): the map as a field of
+  probabilistic swirls and eddies that push you along — currents composing with
+  forced marches, so the map itself has agency. Likely not purely random
+  generation: a coherent noise field (curl noise) could assign edge colors or
+  directional traversal bias by alignment with the local flow vector — swirls,
+  conveyor corridors, dead-water pockets; structured but still procedural.
+  Mechanically spiciest form: direction-dependent edge costs (cheap with the
+  current, dear against it), turning the maze into a river system read like
+  weather.
 - Par's math assumes you can hold position on a bad roll — forced marches broke
   that assumption, so real play runs ~1.2x par (cost-aware bot: 30 rolls vs
   par 25 with the blue road priced in). Par is a stretch goal.
