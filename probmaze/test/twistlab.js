@@ -237,7 +237,7 @@ console.log("strategy  par   twist  sinuo  naive  smart  gap");
 for (const [name, recolor] of Object.entries(STRATEGIES)) {
   let par = 0, twist = 0, sinuosity = 0, naive = 0, smart = 0;
   for (let m = 0; m < MAZES; m++) {
-    let maze = G.buildMaze(900, 600, 48, 80, 35, 3, 120, []); // lakeless base; lake strategies build their own
+    let maze = G.buildMaze(900, 600, 48, 80, 35, 3, 120, 1.0, []); // lakeless, unthinned base; strategies vary from here
     maze = recolor(maze) || maze;
     const route = cheapestRoute(maze);
     const minHops = hopField(maze, maze.start)[maze.end];

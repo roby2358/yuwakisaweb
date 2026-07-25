@@ -2,15 +2,16 @@
 
 const EDGE_COLORS = ["red", "blue", "green"];
 
-// Six faces: red on 4, green on 3, blue on 2 — three of them paired.
-// A frequency spectrum: red common, green mid, blue rare.
+// Six faces: red on 4, green on 3, blue on 2 — a frequency spectrum, red
+// common, green mid, blue rare. Half the faces are single-color (narrow
+// rolls), and every paired face includes red.
 const DIE_FACES = [
   ["red"],
-  ["red"],
-  ["red", "green"],
   ["red", "blue"],
+  ["red", "green"],
+  ["red", "green"],
   ["green"],
-  ["green", "blue"],
+  ["blue"],
 ];
 
 // Void regions carved from the point field: routes must wind around them,
@@ -96,6 +97,34 @@ function pruneLongEdges(nodes, pairs, maxLen) {
   return kept;
 }
 
+function shuffled(items) {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+// Thin the web: always keep a random spanning tree (connectivity), then keep
+// keepFraction of the loop-making extras. The fraction applies to the extras,
+// not the total — a pruned planar web has ~2n edges, so half the TOTAL is ~n-1,
+// which is exactly a spanning tree: a maze with no route choice at all.
+function sparsifyPairs(nodeCount, pairs, keepFraction) {
+  const uf = unionFind(nodeCount);
+  const tree = [];
+  const extras = [];
+  for (const [a, b] of shuffled(pairs)) {
+    if (uf.find(a) !== uf.find(b)) {
+      uf.union(a, b);
+      tree.push([a, b]);
+    } else {
+      extras.push([a, b]);
+    }
+  }
+  return tree.concat(extras.slice(0, Math.round(extras.length * keepFraction)));
+}
+
 function adjacency(nodeCount, edges) {
   const adj = Array.from({ length: nodeCount }, () => []);
   edges.forEach((e, i) => {
@@ -128,13 +157,36 @@ function expectedRollsPar(adj, edges, start, end) {
   }
 }
 
-function buildMaze(width, height, margin, nodeCount, minDist, distSpread, maxEdgeLen, lakes) {
+// Edge indices along a shortest-hop path start -> end.
+function shortestHopPathEdges(adj, start, end) {
+  const prev = new Array(adj.length).fill(null);
+  prev[start] = { node: start, edge: -1 };
+  const queue = [start];
+  while (queue.length) {
+    const u = queue.shift();
+    if (u === end) break;
+    for (const { edge, other } of adj[u]) {
+      if (prev[other] === null) {
+        prev[other] = { node: u, edge };
+        queue.push(other);
+      }
+    }
+  }
+  const path = [];
+  for (let u = end; u !== start; u = prev[u].node) path.push(prev[u].edge);
+  return path;
+}
+
+function buildMaze(width, height, margin, nodeCount, minDist, distSpread, maxEdgeLen, edgeKeep, lakes) {
   const nodes = scatterPoints(width, height, margin, nodeCount, minDist, distSpread, lakes);
-  const pairs = pruneLongEdges(nodes, delaunayEdges(nodes), maxEdgeLen);
+  const pruned = pruneLongEdges(nodes, delaunayEdges(nodes), maxEdgeLen);
+  const pairs = sparsifyPairs(nodes.length, pruned, edgeKeep);
   const edges = pairs.map(([a, b]) => ({ a, b, color: randomEdgeColor() }));
   const start = indexOfExtreme(nodes, (p, q) => p.x < q.x);
   const end = indexOfExtreme(nodes, (p, q) => p.x > q.x);
   const adj = adjacency(nodes.length, edges);
+  // The favor (sort of): the direct route is traceable — and priced in blue.
+  for (const i of shortestHopPathEdges(adj, start, end)) edges[i].color = "blue";
   const par = Math.round(expectedRollsPar(adj, edges, start, end));
   return { nodes, edges, adj, start, end, par, lakes };
 }

@@ -65,22 +65,26 @@ function check(label, ok) {
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-// BFS hop distances to the exit; moves are forced, so the driver needs real
-// graph distances — euclidean greed thrashes around lakes.
-function hopsToEnd(maze) {
-  const dist = new Array(maze.nodes.length).fill(-1);
+// Color-aware distances to the exit (Dijkstra, expected rolls per edge);
+// moves are forced, and hop or euclidean greed walks into the all-blue road.
+function costToEnd(maze) {
+  const EXPECTED = { red: 1.5, green: 2, blue: 3 };
+  const n = maze.nodes.length;
+  const dist = new Array(n).fill(Infinity);
+  const done = new Array(n).fill(false);
   dist[maze.end] = 0;
-  const queue = [maze.end];
-  while (queue.length) {
-    const u = queue.shift();
-    for (const { other } of maze.adj[u]) {
-      if (dist[other] === -1) {
-        dist[other] = dist[u] + 1;
-        queue.push(other);
-      }
+  for (;;) {
+    let u = -1;
+    for (let i = 0; i < n; i++) {
+      if (!done[i] && (u === -1 || dist[i] < dist[u])) u = i;
+    }
+    if (u === -1) return dist;
+    done[u] = true;
+    for (const { edge, other } of maze.adj[u]) {
+      const alt = dist[u] + EXPECTED[maze.edges[edge].color];
+      if (alt < dist[other]) dist[other] = alt;
     }
   }
-  return dist;
 }
 
 (async () => {
@@ -89,7 +93,7 @@ function hopsToEnd(maze) {
     first.run && first.run.phase === "idle" && first.run.maze.par > 0);
   check("die legend built (6 face chips)", byId["face-list"].children.length === 6);
 
-  const dist = hopsToEnd(first.run.maze);
+  const dist = costToEnd(first.run.maze);
   let clicks = 0;
   for (let turn = 0; turn < 600 && S().run.phase !== "won"; turn++) {
     const { run } = S();

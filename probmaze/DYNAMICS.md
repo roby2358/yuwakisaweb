@@ -25,9 +25,11 @@ plan the whole crossing up front, then negotiate with luck one step at a time.
 - **Colored Delaunay graph** — random points, Delaunay edges, each edge uniformly
   red / green / blue. Terrain as language: a red-dense corridor *reads* as a highway,
   a blue bottleneck reads as a gamble. *(Driver: readable consequences)*
-- **Weighted paired die** — six faces: R, R, R+G, R+B, G, G+B. A frequency spectrum:
+- **Weighted paired die** — six faces: R, R+B, R+G, R+G, G, B. A frequency spectrum:
   red usable 4/6 turns, green 3/6, blue 2/6. A paired face lets you cross an edge of
-  either color. *(Driver: variable reinforcement)*
+  either color — and every paired face includes red. Half the faces are single-color:
+  narrow rolls where you take what you're given, including a pure-blue face that's a
+  1-in-6 grenade. *(Driver: variable reinforcement)*
 - **Dead rolls cost the turn** — no matching edge at your node, the roll still counts.
   Camping in a green/blue pocket has a real price. *(Driver: near-miss)*
 - **Lakes** — three unmarked void regions carved from the point field; routes must
@@ -45,6 +47,18 @@ plan the whole crossing up front, then negotiate with luck one step at a time.
   Deleting edges twists routes (sinuosity 1.46) but collapses the naive-vs-smart
   routing gap to ~1.0 — one path, pure dice. Lakes get sinuosity ~1.28 while
   keeping the gap at ~1.1-1.2: twisty AND choiceful.
+- **Thinned web (dormant)** — EDGE_KEEP can drop loop-making extras beyond a
+  random spanning tree; playtest verdict at 0.5 was "too weird," so it sits at
+  1.0 (full pruned web). Lesson kept for posterity: the fraction must apply to
+  the extras, NOT the total — a pruned planar web holds ~2n edges, so keeping
+  half the total leaves ~n-1, exactly a spanning tree ("the maze turned into a
+  tree"). *(Driver when active: scarcity of agency)*
+- **The blue road** — the shortest-hop path from start to exit is painted solid
+  blue after coloring. The "favor": the best route is traceable at a glance — and
+  it's a toll road in the rarest color. On the thinned web some of it is usually
+  unavoidable, so the real game is choosing which stretches to pay for and which
+  to detour around. Par is computed after the repaint, so it prices the taunt
+  honestly. *(Drivers: comedy, readable consequences, near-miss)*
 - **Forced marches** — a usable roll MUST be spent, even when every lit edge points
   backward. The dice can push you off your route, and standing on the wrong node is
   a liability, not a shelter. (This knowingly bends "never let a unit feel stuck" —
@@ -62,7 +76,12 @@ plan the whole crossing up front, then negotiate with luck one step at a time.
 - **Red arteries** — a longer path through red-dense edges beats a shorter mixed one
   (expected rolls: red 1.5/edge vs blue 3/edge). The core skill is seeing this.
 - **The blue gamble** — a blue edge that saves 3+ hops is worth the expected 3-roll
-  wait; one that saves 1 hop is a trap. Paired faces (R+B, G+B) are the windfall rolls.
+  wait; one that saves 1 hop is a trap. R+B is the windfall roll; a bare B at the
+  wrong node is the punishment.
+- **Road running** — the blue road is the shortest way and the map shows it. Ride
+  it opportunistically when B or R+B comes up, bail to red/green side paths when
+  it stalls. Knowing which road segments have no detour (pay up) and which do
+  (never pay) is the maze's core read.
 - **Hub camping** — high-degree nodes with all three colors on offer almost never
   waste a roll; low-degree single-color nodes are where dead rolls live.
 - **Shore hugging** — lake shores are forced corridors: fewer alternative edges,
@@ -83,6 +102,6 @@ only pressure is the roll counter vs. par and best. Acceptable for a puzzle-toy.
   the red-artery insight unaided is the fun.
 - Roll budget mode (fixed rolls, win/lose) if the toy wants stakes later.
 - Par's math assumes you can hold position on a bad roll — forced marches broke
-  that assumption, so real play runs ~1.3x par (hop-greedy bot: 27.5 rolls vs
-  par 21.5). Par is now a stretch goal rather than a beatable expectation.
+  that assumption, so real play runs ~1.2x par (cost-aware bot: 30 rolls vs
+  par 25 with the blue road priced in). Par is a stretch goal.
   Recalibrate after playtest if chasing it stings instead of tempts.

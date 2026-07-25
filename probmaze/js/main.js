@@ -7,6 +7,7 @@ const NODE_COUNT = 80;
 const NODE_MIN_DIST = 35;
 const NODE_DIST_SPREAD = 3;
 const EDGE_MAX_LEN = 120;
+const EDGE_KEEP = 1.0;
 const LAKE_COUNT = 3;
 const LAKE_R_MIN = 55;
 const LAKE_R_MAX = 85;
@@ -46,7 +47,7 @@ function startGame(maze) {
 function newMaze() {
   bestRolls = null;
   const lakes = randomLakes(BOARD_WIDTH, BOARD_HEIGHT, LAKE_COUNT, LAKE_R_MIN, LAKE_R_MAX);
-  startGame(buildMaze(BOARD_WIDTH, BOARD_HEIGHT, BOARD_MARGIN, NODE_COUNT, NODE_MIN_DIST, NODE_DIST_SPREAD, EDGE_MAX_LEN, lakes));
+  startGame(buildMaze(BOARD_WIDTH, BOARD_HEIGHT, BOARD_MARGIN, NODE_COUNT, NODE_MIN_DIST, NODE_DIST_SPREAD, EDGE_MAX_LEN, EDGE_KEEP, lakes));
 }
 
 function setMessage(text, tone) {

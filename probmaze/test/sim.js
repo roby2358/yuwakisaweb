@@ -48,7 +48,7 @@ let totalPar = 0;
 
 for (let m = 0; m < MAZES; m++) {
   const lakes = G.randomLakes(900, 600, 3, 55, 85);
-  const maze = G.buildMaze(900, 600, 48, 80, 35, 3, 120, lakes);
+  const maze = G.buildMaze(900, 600, 48, 80, 35, 3, 120, 1.0, lakes);
   const colorsValid = maze.edges.every(e => ["red", "green", "blue"].includes(e.color));
   const dryNodes = maze.nodes.every(p =>
     lakes.every(L => Math.hypot(p.x - L.x, p.y - L.y) >= L.r));
@@ -75,11 +75,34 @@ const meanPar = totalPar / (MAZES - botFailures);
 console.log("bot mean rolls " + meanRolls.toFixed(1) + ", mean par " + meanPar.toFixed(1) +
   ", ratio " + (meanRolls / meanPar).toFixed(2));
 
-// Greedy bot: precompute hop distance to exit; a usable roll MUST be spent
-// (no pass), so take the least-bad edge — backward if that's all there is.
-// Returns roll count or null if capped.
+// Color-aware distance: Dijkstra to the exit weighted by expected rolls per
+// edge (red 1.5, green 2, blue 3). Hop counting walks straight into the blue
+// road; this prices it.
+function costToEnd(maze) {
+  const EXPECTED = { red: 1.5, green: 2, blue: 3 };
+  const n = maze.nodes.length;
+  const dist = new Array(n).fill(Infinity);
+  const done = new Array(n).fill(false);
+  dist[maze.end] = 0;
+  for (;;) {
+    let u = -1;
+    for (let i = 0; i < n; i++) {
+      if (!done[i] && (u === -1 || dist[i] < dist[u])) u = i;
+    }
+    if (u === -1) return dist;
+    done[u] = true;
+    for (const { edge, other } of maze.adj[u]) {
+      const alt = dist[u] + EXPECTED[maze.edges[edge].color];
+      if (alt < dist[other]) dist[other] = alt;
+    }
+  }
+}
+
+// Greedy bot: precompute expected-cost distance to exit; a usable roll MUST
+// be spent (no pass), so take the least-bad edge — backward if that's all
+// there is. Returns roll count or null if capped.
 function runBot(maze) {
-  const dist = hopsToEnd(maze);
+  const dist = costToEnd(maze);
   const run = G.newRun(maze);
   for (let i = 0; i < 10000; i++) {
     const moves = G.applyRoll(run, G.rollFace());
