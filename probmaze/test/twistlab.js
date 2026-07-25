@@ -14,7 +14,7 @@ for (const file of ["delaunay.js", "game.js"]) {
   vm.runInContext(src, context, { filename: file });
 }
 const G = vm.runInContext(
-  "({ buildMaze, newRun, rollFace, applyRoll, applyMove, applyPass, usableMoves, " +
+  "({ buildMaze, newRun, rollFace, applyRoll, applyMove, usableMoves, " +
   "adjacency, pruneLongEdges, indexOfExtreme, randomEdgeColor })",
   context
 );
@@ -216,17 +216,15 @@ function routeLength(maze, routeNodes) {
   return len;
 }
 
-// Adaptive bot: take any usable move that strictly lowers distToEnd, else pass.
+// Adaptive bot: a usable roll must be spent (no pass) — take the move that
+// minimizes distToEnd, backward if that's all the dice offer.
 function runBot(maze, distToEnd) {
   const run = G.newRun(maze);
   for (let i = 0; i < 10000; i++) {
     const moves = G.applyRoll(run, G.rollFace());
-    const forward = moves.filter(mv => distToEnd[mv.other] < distToEnd[run.current]);
-    if (forward.length) {
-      forward.sort((p, q) => distToEnd[p.other] - distToEnd[q.other]);
-      G.applyMove(run, forward[0].other);
-    } else if (moves.length) {
-      G.applyPass(run);
+    if (moves.length) {
+      moves.sort((p, q) => distToEnd[p.other] - distToEnd[q.other]);
+      G.applyMove(run, moves[0].other);
     }
     if (run.phase === "won") return run.rolls;
   }

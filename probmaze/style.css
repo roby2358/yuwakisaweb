@@ -83,51 +83,26 @@ canvas {
   background: none;
 }
 
-button {
-  background: #2f6fed;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 8px 14px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-button:hover:not(:disabled) {
-  background: #4a83f2;
-}
-
-button:disabled {
-  background: #333a45;
-  color: #7d8697;
-  cursor: default;
-}
-
-#pass {
-  background: #444c59;
-}
-
-#pass:hover {
-  background: #57606f;
+[hidden] {
+  display: none !important;
 }
 
 #message {
-  min-height: 3em;
-  font-size: 0.95rem;
-  line-height: 1.4;
-  color: #c3cad4;
+  min-height: 3.2em;
 }
 
 #scores {
   display: flex;
   justify-content: space-between;
-  font-size: 0.95rem;
+  align-items: center;
+  font-size: 0.9rem;
+  color: #9aa2ae;
 }
 
-#scores span {
-  font-weight: 700;
-  color: #f5c518;
+#scores div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 #faces h2 {
@@ -167,11 +142,6 @@ button:disabled {
   gap: 8px;
 }
 
-#controls button {
+#controls jelly-button {
   flex: 1;
-  background: #444c59;
-}
-
-#controls button:hover {
-  background: #57606f;
 }

@@ -4,8 +4,10 @@
   <meta charset="utf-8">
   <title>Probability Maze</title>
   <link rel="stylesheet" href="style.css">
+  <script type="module" src="https://jelly-ui.com/package.js"></script>
 </head>
 <body>
+<jelly-theme mode="dark">
   <header>
     <h1>Probability Maze</h1>
   </header>
@@ -14,29 +16,27 @@
     <aside id="panel">
       <section id="die-section">
         <div id="die" class="die"></div>
-        <div>
-          <button id="roll">Roll</button>
-          <button id="pass" hidden>Pass</button>
-        </div>
+        <jelly-button id="roll">Roll</jelly-button>
       </section>
-      <p id="message"></p>
+      <jelly-alert id="message" tone="info" size="small"></jelly-alert>
       <section id="scores">
-        <div>Rolls <span id="rolls">0</span></div>
-        <div>Par <span id="par"></span></div>
-        <div>Best <span id="best">—</span></div>
+        <div>Rolls <jelly-badge id="rolls" live variant="azure">0</jelly-badge></div>
+        <div>Par <jelly-badge id="par" variant="platinum"></jelly-badge></div>
+        <div>Best <jelly-badge id="best" live variant="amber">—</jelly-badge></div>
       </section>
       <section id="faces">
         <h2>Die faces</h2>
         <div id="face-list"></div>
       </section>
       <section id="controls">
-        <button id="retry">Retry maze</button>
-        <button id="new-maze">New maze</button>
+        <jelly-button id="retry" variant="graphite" size="small">Retry maze</jelly-button>
+        <jelly-button id="new-maze" variant="graphite" size="small">New maze</jelly-button>
       </section>
     </aside>
   </main>
-  <script src="js/delaunay.js"></script>
-  <script src="js/game.js"></script>
-  <script src="js/main.js"></script>
+</jelly-theme>
+<script src="js/delaunay.js"></script>
+<script src="js/game.js"></script>
+<script src="js/main.js"></script>
 </body>
 </html>

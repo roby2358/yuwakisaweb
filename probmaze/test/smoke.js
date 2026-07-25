@@ -13,6 +13,7 @@ function stubElement(id) {
     id,
     handlers: {},
     style: {},
+    attrs: {},
     children: [],
     textContent: "",
     disabled: false,
@@ -20,6 +21,14 @@ function stubElement(id) {
     addEventListener(type, fn) { this.handlers[type] = fn; },
     replaceChildren() { this.children = []; },
     appendChild(child) { this.children.push(child); },
+    setAttribute(name, value) { this.attrs[name] = value; },
+    removeAttribute(name) { delete this.attrs[name]; },
+    toggleAttribute(name, force) {
+      const on = force !== undefined ? force : !(name in this.attrs);
+      if (on) this.attrs[name] = "";
+      else delete this.attrs[name];
+      return on;
+    },
   };
 }
 
@@ -56,26 +65,44 @@ function check(label, ok) {
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+// BFS hop distances to the exit; moves are forced, so the driver needs real
+// graph distances — euclidean greed thrashes around lakes.
+function hopsToEnd(maze) {
+  const dist = new Array(maze.nodes.length).fill(-1);
+  dist[maze.end] = 0;
+  const queue = [maze.end];
+  while (queue.length) {
+    const u = queue.shift();
+    for (const { other } of maze.adj[u]) {
+      if (dist[other] === -1) {
+        dist[other] = dist[u] + 1;
+        queue.push(other);
+      }
+    }
+  }
+  return dist;
+}
+
 (async () => {
   const first = S();
   check("game boots: run exists, phase idle, par > 0",
     first.run && first.run.phase === "idle" && first.run.maze.par > 0);
   check("die legend built (6 face chips)", byId["face-list"].children.length === 6);
 
+  const dist = hopsToEnd(first.run.maze);
   let clicks = 0;
-  for (let turn = 0; turn < 300 && S().run.phase !== "won"; turn++) {
+  for (let turn = 0; turn < 600 && S().run.phase !== "won"; turn++) {
     const { run } = S();
     if (run.phase === "idle") {
       byId.roll.handlers.click();
       await sleep(600); // outlast the 8 x 60ms flicker
       continue;
     }
-    // phase "move": real canvas click on the target closest to the exit
+    // phase "move": real canvas click on the least-bad target (moves are forced)
     const { moves } = S();
-    const end = run.maze.nodes[run.maze.end];
-    const nodes = moves.map(m => run.maze.nodes[m.other]);
-    nodes.sort((p, q) => Math.hypot(p.x - end.x, p.y - end.y) - Math.hypot(q.x - end.x, q.y - end.y));
-    canvas.handlers.click({ clientX: nodes[0].x, clientY: nodes[0].y });
+    moves.sort((p, q) => dist[p.other] - dist[q.other]);
+    const node = run.maze.nodes[moves[0].other];
+    canvas.handlers.click({ clientX: node.x, clientY: node.y });
     clicks += 1;
   }
 

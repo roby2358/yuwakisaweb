@@ -170,8 +170,3 @@ function applyMove(run, target) {
   run.face = null;
   run.phase = target === run.maze.end ? "won" : "idle";
 }
-
-function applyPass(run) {
-  run.face = null;
-  run.phase = "idle";
-}

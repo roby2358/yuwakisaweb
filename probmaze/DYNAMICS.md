@@ -45,8 +45,11 @@ plan the whole crossing up front, then negotiate with luck one step at a time.
   Deleting edges twists routes (sinuosity 1.46) but collapses the naive-vs-smart
   routing gap to ~1.0 — one path, pure dice. Lakes get sinuosity ~1.28 while
   keeping the gap at ~1.1-1.2: twisty AND choiceful.
-- **Pass is always legal** — after a usable roll you may decline to move. You can be
-  delayed, never forced backward. *(Principle: never let a unit feel stuck)*
+- **Forced marches** — a usable roll MUST be spent, even when every lit edge points
+  backward. The dice can push you off your route, and standing on the wrong node is
+  a liability, not a shelter. (This knowingly bends "never let a unit feel stuck" —
+  there is always *a* move; it just might hurt. That sting is the game.)
+  *(Driver: scarcity of agency, near-miss)*
 - **Fewest rolls, per-maze best** — Retry replays the same maze; New Maze rerolls
   everything and resets best. *(Driver: near-miss)*
 - **Expected-rolls par** — par is the minimum expected roll count over fixed routes,
@@ -65,8 +68,10 @@ plan the whole crossing up front, then negotiate with luck one step at a time.
 - **Shore hugging** — lake shores are forced corridors: fewer alternative edges,
   so a blue shore edge is a real toll booth. Reading which shore of a lake is
   red-friendly before committing to a side is the new macro decision.
-- **Pass discipline** — a usable roll toward the wrong side of the graph is worse than
-  standing still. Passing is a move.
+- **Exposure management** — since you must move when you can, a node's *bad* edges
+  matter as much as its good ones. A hub whose red edges all point backward is a
+  trap dressed as a haven; a two-edge strait where both edges point forward is
+  safer than it looks. Reading a node means reading where its colors can throw you.
 
 **Anti-strategy check:** there is no fail state, so nothing to degenerate into — the
 only pressure is the roll counter vs. par and best. Acceptable for a puzzle-toy.
@@ -77,5 +82,7 @@ only pressure is the roll counter vs. par and best. Acceptable for a puzzle-toy.
   this math invisibly; drawing the route itself stays deferred because discovering
   the red-artery insight unaided is the fun.
 - Roll budget mode (fixed rolls, win/lose) if the toy wants stakes later.
-- Par assumes a fixed route; truly optimal adaptive play (deviating when a lucky
-  face opens a shortcut) does slightly better. Fine — par should be beatable.
+- Par's math assumes you can hold position on a bad roll — forced marches broke
+  that assumption, so real play runs ~1.3x par (hop-greedy bot: 27.5 rolls vs
+  par 21.5). Par is now a stretch goal rather than a beatable expectation.
+  Recalibrate after playtest if chasing it stings instead of tempts.

@@ -23,7 +23,6 @@ const ctx = canvas.getContext("2d");
 const els = {
   die: document.getElementById("die"),
   roll: document.getElementById("roll"),
-  pass: document.getElementById("pass"),
   message: document.getElementById("message"),
   rolls: document.getElementById("rolls"),
   par: document.getElementById("par"),
@@ -40,7 +39,7 @@ let rolling = false;
 function startGame(maze) {
   run = newRun(maze);
   rolling = false;
-  setMessage("Roll the die.");
+  setMessage("Roll the die.", "info");
   refresh();
 }
 
@@ -50,8 +49,9 @@ function newMaze() {
   startGame(buildMaze(BOARD_WIDTH, BOARD_HEIGHT, BOARD_MARGIN, NODE_COUNT, NODE_MIN_DIST, NODE_DIST_SPREAD, EDGE_MAX_LEN, lakes));
 }
 
-function setMessage(text) {
+function setMessage(text, tone) {
   els.message.textContent = text;
+  els.message.setAttribute("tone", tone);
 }
 
 function refresh() {
@@ -79,9 +79,9 @@ function startRoll() {
 function resolveRoll(face) {
   const moves = applyRoll(run, face);
   if (moves.length) {
-    setMessage("Take a bright edge — or pass.");
+    setMessage("Take a bright edge.", "info");
   } else {
-    setMessage("Dead roll — no " + face.join(" or ") + " edge here. Turn lost.");
+    setMessage("Dead roll — no " + face.join(" or ") + " edge here. Turn lost.", "warning");
   }
   refresh();
 }
@@ -97,7 +97,7 @@ canvas.addEventListener("click", event => {
   if (target === null) return;
   applyMove(run, target);
   if (run.phase === "won") finishRun();
-  else setMessage("Roll the die.");
+  else setMessage("Roll the die.", "info");
   refresh();
 });
 
@@ -117,7 +117,7 @@ function pickTarget(x, y) {
 
 function finishRun() {
   if (bestRolls === null || run.rolls < bestRolls) bestRolls = run.rolls;
-  setMessage("Out in " + run.rolls + " rolls (par " + run.maze.par + "). Retry or new maze?");
+  setMessage("Out in " + run.rolls + " rolls (par " + run.maze.par + "). Retry or new maze?", "success");
 }
 
 // --- Panel ---
@@ -126,8 +126,7 @@ function updatePanel() {
   els.rolls.textContent = run.rolls;
   els.par.textContent = run.maze.par;
   els.best.textContent = bestRolls === null ? "—" : bestRolls;
-  els.roll.disabled = rolling || run.phase !== "idle";
-  els.pass.hidden = run.phase !== "move";
+  els.roll.toggleAttribute("disabled", rolling || run.phase !== "idle");
   if (!rolling) showFace(run.face);
 }
 
@@ -245,11 +244,6 @@ function drawNode(index, p, isTarget) {
 // --- Wiring ---
 
 els.roll.addEventListener("click", startRoll);
-els.pass.addEventListener("click", () => {
-  applyPass(run);
-  setMessage("Passed. Roll the die.");
-  refresh();
-});
 els.retry.addEventListener("click", () => startGame(run.maze));
 els.newMaze.addEventListener("click", newMaze);
 

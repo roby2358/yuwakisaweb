@@ -13,7 +13,7 @@ for (const file of ["delaunay.js", "game.js"]) {
   vm.runInContext(src, context, { filename: file });
 }
 const G = vm.runInContext(
-  "({ buildMaze, randomLakes, newRun, rollFace, applyRoll, applyMove, applyPass, usableMoves, DIE_FACES })",
+  "({ buildMaze, randomLakes, newRun, rollFace, applyRoll, applyMove, usableMoves, DIE_FACES })",
   context
 );
 
@@ -75,19 +75,17 @@ const meanPar = totalPar / (MAZES - botFailures);
 console.log("bot mean rolls " + meanRolls.toFixed(1) + ", mean par " + meanPar.toFixed(1) +
   ", ratio " + (meanRolls / meanPar).toFixed(2));
 
-// Greedy bot: precompute hop distance to exit; take any usable edge that
-// strictly decreases it, otherwise pass. Returns roll count or null if capped.
+// Greedy bot: precompute hop distance to exit; a usable roll MUST be spent
+// (no pass), so take the least-bad edge — backward if that's all there is.
+// Returns roll count or null if capped.
 function runBot(maze) {
   const dist = hopsToEnd(maze);
   const run = G.newRun(maze);
   for (let i = 0; i < 10000; i++) {
     const moves = G.applyRoll(run, G.rollFace());
-    const forward = moves.filter(mv => dist[mv.other] < dist[run.current]);
-    if (forward.length) {
-      forward.sort((p, q) => dist[p.other] - dist[q.other]);
-      G.applyMove(run, forward[0].other);
-    } else if (moves.length) {
-      G.applyPass(run);
+    if (moves.length) {
+      moves.sort((p, q) => dist[p.other] - dist[q.other]);
+      G.applyMove(run, moves[0].other);
     }
     if (run.phase === "won") return run.rolls;
   }
