@@ -89,16 +89,26 @@ canvas {
   display: none !important;
 }
 
+#mobile-note {
+  display: none;
+  text-align: center;
+  padding: 48px 24px;
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #c3cad4;
+}
+
+#mobile-note p:first-child {
+  font-size: 3rem;
+}
+
 @media (max-width: 720px) {
   main {
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
+    display: none;
   }
 
-  #panel {
-    width: 100%;
-    max-width: 480px;
+  #mobile-note {
+    display: block;
   }
 }
 
