@@ -470,7 +470,10 @@ const Engine = (() => {
     state.users = Math.max(1, state.users * Math.exp(growth * dt));
     state.peakUsers = Math.max(state.peakUsers, state.users);
 
-    const income = servedRps * state.revenue;
+    // Any live customer base means some cash flow — subscriptions, contracts,
+    // the traffic that did get through. Revenue floors while anyone is left.
+    const earned = servedRps * state.revenue;
+    const income = state.users > 1 ? Math.max(S.MIN_INCOME, earned) : earned;
     const costs = costTotals(state);
     const spend = costs.total;
     state.cash += (income - spend) * dt;

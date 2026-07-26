@@ -20,6 +20,7 @@ Content.SIM = {
   ERR_TOLERANCE: 0.02,      // users forgive errors below 2%
   BUST_USERS: 25,           // fall this low after having grown — busto
   START_CASH: 3000,         // seed runway — you burn it before revenue arrives
+  MIN_INCOME: 1,            // a live customer base always trickles some cash
   WIN_RPS: 1000000,
   WIN_HOLD_S: 30,
   WIN_MAX_ERR: 0.01,
