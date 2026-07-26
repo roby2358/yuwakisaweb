@@ -143,11 +143,17 @@ console.log('\n=== every guru rule is reachable from a real board ===');
       profile: 'iot', buys: ['indexes', 'pooler', 'tier', 'replica', 'replica', 'warehouse'], users: 40000 },
     { rule: 'staleReads', why: 'replicas lagging under load',
       profile: 'feed', buys: ['indexes', 'pooler', 'tier', 'replica'], users: 120000 },
-    // Rode vertical all the way to the top of the ladder on a write-heavy
-    // workload and never sharded — the exact mistake this rule exists to catch.
-    // Every load-deleting option is already bought, so nothing cheaper is left
-    // to recommend and the wall is genuinely the answer.
-    { rule: 'verticalWall', why: 'biggest box, still not enough',
+    // Rode vertical to the end of the commodity ladder on a write-heavy
+    // workload and never sharded — the exact mistake this rule exists to catch,
+    // and the moment it needs catching: bigger boxes still exist, they have
+    // just stopped being worth buying. Every load-deleting option is already
+    // bought, so nothing cheaper is left to recommend.
+    { rule: 'verticalWall', why: 'past the commodity ladder, still pegged',
+      profile: 'iot', users: 150000,
+      buys: ['indexes', 'pooler', ...Array(Content.COMMODITY_TIER - 1).fill('tier'),
+        'warehouse', 'kv', 'replica'] },
+    // and the same rule at the true ceiling, where the wording changes
+    { rule: 'verticalWall', why: 'the biggest box that exists, still not enough',
       profile: 'iot', users: 2000000,
       buys: ['indexes', 'pooler', ...Array(Content.MAX_TIER - 1).fill('tier'),
         'warehouse', 'kv', 'kv', 'kv', 'replica', 'replica'] },

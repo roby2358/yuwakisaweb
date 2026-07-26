@@ -86,7 +86,7 @@ function botBuyOne(state) {
 
   // --- capacity: this is what actually serves traffic, so it outranks the
   // accessories above. Write-heavy workloads shard early (only shards scale
-  // writes); everyone else rides vertical to the wall first. Keep a cash
+  // writes); everyone else rides the commodity ladder to tier 6, then shards — the boxes past there cost more than they return. Keep a cash
   // buffer so the migration dip cannot bankrupt the run.
   // Capacity is what serves traffic, so it outranks accessories — but it still
   // commits run-rate forever. Check what burn becomes AFTER the purchase (a
@@ -97,11 +97,11 @@ function botBuyOne(state) {
     if (price === null || state.cash < price) return false;
     return state.cash - price > 20 * Engine.expensesIfBought(state, key);
   };
-  const shardAtTier = writeHeavy ? 3 : Content.MAX_TIER;
+  const shardAtTier = writeHeavy ? 3 : Content.COMMODITY_TIER;
   if (pressure > 0.55 && infra.tier < shardAtTier && affordable('tier')) return buy('tier');
   if (pressure > 0.55 && !state.migration && infra.shards < Content.MAX_SHARDS
       && affordable('shard')) return buy('shard');
-  if (pressure > 0.55 && infra.tier < Content.MAX_TIER && affordable('tier')) return buy('tier');
+  if (pressure > 0.55 && infra.tier < Content.COMMODITY_TIER && affordable('tier')) return buy('tier');
 
   // --- spare capacity for the read side, once the real load is handled -----
   if (analyticsHeavy && tryCache()) return true;

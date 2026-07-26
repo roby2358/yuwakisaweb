@@ -506,8 +506,8 @@ Content.INSIGHTS = {
   },
   wall: {
     title: 'The vertical wall',
-    text: 'You are on the biggest box money can buy and it is still not enough. Vertical scaling is simple (no code changes!) and you should ride it while you can — but it ends: prices grow faster than capacity, and there is always a biggest box. Everything past this line is horizontal.',
-    check: (s, r) => s.infra.tier >= Content.MAX_TIER && r.sql.primaryUtil >= 0.85,
+    text: 'You have ridden the boxes as far as they are worth riding, and it is still not enough. Vertical scaling is the best deal in systems right up until it is not: no code changes, no new failure modes, no sharding maths — take it while the price tracks the capacity. Then the curve bends. Past the commodity tier, hardware starts charging you a premium for being exotic: each step buys less work for more money, and bills it forever. Those boxes are not useless — capacity that arrives instantly is worth something when a shard split would cost you a migration under load — but you are buying time, not value. There is usually a bigger box; the question is never "does one exist?" but "is it still cheaper than changing the architecture?" Once the answer is no, everything left is horizontal — more primaries, or less work. Interview line: "I would scale vertically until the price stops tracking the capacity, and plan the shard split before that point, not after."',
+    check: (s, r) => s.infra.tier >= Content.COMMODITY_TIER && r.sql.primaryUtil >= 0.85,
   },
   sharding: {
     title: 'Sharding scales writes',

@@ -76,6 +76,13 @@ These are real systems facts, encoded as mechanics, surfaced as collectible
    longer a hard stop, it is the point where money stops being the answer —
    which is what "prices grow faster than capacity" means on a real price list.
    Forces the horizontal turn without ever saying *no*.
+
+   Measured, the two routes past tier 6 are a genuine trade rather than a right
+   and a wrong answer: climbing the bespoke tiers wins ~20s **faster** (a box
+   arrives instantly; a shard split costs a 20s migration at 60% capacity)
+   while sharding instead runs **cheaper** on four of five profiles. The exotic
+   box is a legitimate emergency lever — you are paying a premium for time, not
+   for value — which is exactly the double-edged shape a good decision needs.
 9. **Sharding scales writes** — N shards ≈ N× write capacity. Cross-shard
    analytics pays *coordination* (touch every shard, wait for the slowest,
    merge), not N× the scanning — each shard reads only its slice — so a report
@@ -292,8 +299,8 @@ Milestone-triggered (guaranteed story beats) and random (weather):
   time. Tension: replicas vs cache money. Write growth quietly erodes replica
   headroom (they replay writes) — the player who only watches reads gets
   surprised. KV offload is the cheap 15% relief valve.
-- **Late game**: vertical scaling stops paying at tier 6; only sharding scales
-  writes. Resharding costs a capacity dip, so the recurring tension is *reshard
+- **Late game**: vertical scaling stops paying at tier 6, and only sharding
+  scales writes. Resharding costs a capacity dip, so the recurring tension is *reshard
   early (pay now, safely) vs late (pay under fire)*. ANALYTICS fan-out punishes
   over-sharding — 32 shards make report day scary, so shard count is a real
   decision, not a monotone ladder.

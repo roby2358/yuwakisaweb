@@ -185,10 +185,27 @@ var Guru = (() => {
     {
       key: 'verticalWall',
       severity: 'warn',
-      when: (s, r) => s.infra.tier >= Content.MAX_TIER && r.sql.primaryUtil > 0.8,
-      headline: () => 'You are on the biggest box that exists, and it is not enough.',
-      body: () => 'Vertical scaling has ended. There is no tier ' + (Content.MAX_TIER + 1) +
-        '. Everything from here is horizontal: more primaries, or less work.',
+      // Fires at the end of the COMMODITY ladder, not at the last rung. Bigger
+      // boxes still exist past tier 6 — they just stop being worth buying, and
+      // that is the moment the player needs telling. Waiting for tier 12 would
+      // announce the wall to almost nobody.
+      when: (s, r) => s.infra.tier >= Content.COMMODITY_TIER && r.sql.primaryUtil > 0.8,
+      headline: (s) => s.infra.tier >= Content.MAX_TIER
+        ? 'You are on the biggest box that exists, and it is not enough.'
+        : 'Vertical scaling has stopped paying, and the box is still pegged.',
+      body: (s) => {
+        if (s.infra.tier >= Content.MAX_TIER) {
+          return 'There is no tier ' + (Content.MAX_TIER + 1) + '. Everything from here is ' +
+            'horizontal: more primaries, or less work.';
+        }
+        const left = Content.MAX_TIER - s.infra.tier;
+        return 'Tier ' + Content.COMMODITY_TIER + ' is the last commodity box. There ' +
+          (left === 1 ? 'is 1 bigger box' : 'are ' + left + ' bigger boxes') + ' on the price ' +
+          'list, but each buys 1.5× the work for 2.5× the money and bills it forever — that is ' +
+          'what "prices grow faster than capacity" looks like. Buy one only for what it is: ' +
+          'capacity that arrives instantly, where a shard split costs a migration dip first. ' +
+          'You are paying a premium for time, not for value.';
+      },
       action: (s) => s.infra.shards < Content.MAX_SHARDS
         ? 'Shard split, or delete load (warehouse for reports, KV for lookups, cache for repeated reads).'
         : 'You are at max shards — the only lever left is deleting load: warehouse, KV, cache.',
@@ -202,7 +219,7 @@ var Guru = (() => {
         (s.infra.replicas > 0 ? '— your ' + s.infra.replicas + ' replicas per shard replay every one of them. ' : '. ') +
         'Only more primaries add write capacity.',
       // proportional to the ladder, not a fixed rung: "still room to climb"
-      action: (s) => s.infra.tier < Content.MAX_TIER * 2 / 3
+      action: (s) => s.infra.tier < Content.COMMODITY_TIER
         ? 'A bigger box buys time cheaply right now, but plan the shard split — vertical scaling ends and writes keep growing.'
         : 'Shard split. Do it while you have cash and headroom; a migration at 95% utilization is self-inflicted downtime.',
     },
@@ -236,12 +253,12 @@ var Guru = (() => {
           .map(p => pct(p[1]) + ' ' + p[0]).join(', ');
         return 'Latency is service time ÷ (1 − utilization), so this is where it goes vertical. Your load is ' + parts + '.';
       },
+      // Past the commodity ladder the verticalWall card above has already made
+      // the argument, so this one sticks to what the load mix implies.
       action: (s) => {
-        if (s.infra.tier >= Content.MAX_TIER) return 'Shard split — the box cannot get bigger.';
         if (s.infra.tier >= Content.COMMODITY_TIER) {
-          return 'You are past the commodity ladder: the next box buys 1.5× the work for 2.5× ' +
-            'the price, and bills it forever. Shard instead unless you are certain this is a ' +
-            'brief spike — horizontal is now the cheaper capacity.';
+          return 'Horizontal is the cheaper capacity from here: shard for writes, replicas for ' +
+            'reads, and delete what you can (warehouse, KV, cache).';
         }
         return 'Bigger box: it is the simplest move, needs no redesign, and you have ' +
           (Content.COMMODITY_TIER - s.infra.tier) + ' fairly-priced tier(s) left. ' +
@@ -273,7 +290,7 @@ var Guru = (() => {
       action: (s, r) => {
         const mix = loadMix(r);
         if (mix.analytics > 0.3 && !s.infra.warehouse) return 'Next bottleneck: analytics. A warehouse before it hurts.';
-        if (mix.write > 0.35 && s.infra.tier >= Content.MAX_TIER * 2 / 3) return 'Next bottleneck: writes. Shard while it is calm — migrations under load are downtime.';
+        if (mix.write > 0.35 && s.infra.tier >= Content.COMMODITY_TIER) return 'Next bottleneck: writes. Shard while it is calm — migrations under load are downtime.';
         if (s.repetition >= 0.6 && r.cache.hitRate < 0.7 && s.infra.cacheNodes < Content.MAX_CACHE) {
           return 'Cheapest next win: more cache — this workload repeats and your hit rate has room.';
         }
