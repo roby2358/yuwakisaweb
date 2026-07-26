@@ -141,6 +141,30 @@ a question about headcount, not hosting. Every subsystem can be scaled back
 down (nodes retired, boxes downgraded, whole systems decommissioned) with
 nothing refunded; **sharding is the one-way door** you cannot walk back.
 
+### Management memos (the normative voice)
+
+Insight cards explain *how systems work*; memos say *what you should have done*,
+in the voice of people who sign the invoices. Thirteen triggers watch for
+specific mistakes and specific hesitation — a bigger box bought at 12%
+utilization, a cache stuck under a 35% hit rate, a second datastore adopted for
+a rounding error of traffic, resharding mid-fire, sixty seconds of doing nothing
+while the graphs are red — plus one backhanded-praise trigger so success is not
+silent.
+
+Each memo composes from three `Flourish` decks (sender × subject × barb),
+giving ~4,650 distinct panels from ~130 hand-written lines. `Flourish` draws
+without replacement and reshuffles only when exhausted, because the failure
+mode of a plain random pick is hearing the same joke twice in a row. Decks are
+per-game so runs stay seeded and reproducible.
+
+Memos never pause the game — they slide in as paper memos over the map, three
+at a time, auto-dismissing. Management interrupting a fire is the joke; making
+the player click through it would not be. A 📣/🔇 toggle mutes them.
+
+*Serves: readable consequences (naming the specific mistake at the moment it is
+made), comedy (the release valve for a run going badly), and escalating
+commitment (memos about hesitation push the player to act rather than turtle).*
+
 ### Money bar
 
 A stacked bar above the charts shows burn broken down per subsystem against a

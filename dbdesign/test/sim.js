@@ -124,6 +124,32 @@ console.log('\n=== sustained meltdown plummets users to busto ===');
     'error churn drains users to bust within minutes');
 }
 
+console.log('\n=== management notices specific mistakes ===');
+{
+  // buy a bigger box on day one, at 4% utilization, exactly as warned against
+  const s = Engine.createState(3);
+  Engine.applyProfile(s, 'feed');
+  s.cash = 1e6;
+  step(s, 5, null);
+  Engine.buy(s, 'tier');
+  Engine.tick(s);
+  const m = s.newMemos[0];
+  console.log(`  ${m ? '“' + m.body + '” — ' + m.from + (m.title ? ', ' + m.title : '') : '(silence)'}`);
+  assert(m && m.key === 'verticalEarly', 'scaling vertically on day one draws a memo');
+
+  // and the deck is deep: distinct barbs across repeated firings
+  const bodies = new Set();
+  for (let i = 0; i < 8; i++) {
+    s.memoLast = {}; s.lastMemoT = -999;
+    Engine.buy(s, 'tier');
+    s.infra.tier = 1; // reset so the purchase stays "early"
+    Engine.tick(s);
+    while (s.newMemos.length) bodies.add(s.newMemos.shift().body);
+  }
+  console.log(`  ${bodies.size} distinct barbs over 8 repeat firings`);
+  assert(bodies.size >= 6, 'repeated firings draw fresh lines, not the same one');
+}
+
 console.log('\n=== pooler-skipping bot (seed 7) ===');
 const starved = runBot(7, { skipPooler: true });
 console.log(`outcome=${starved.outcome} t=${starved.t.toFixed(0)}s peakRps=${(starved.peakUsers * S.RPS_PER_USER).toFixed(0)}`);

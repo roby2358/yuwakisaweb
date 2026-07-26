@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>HUG OF DEATH — a database scaling game</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗄️</text></svg>">
-<link rel="stylesheet" href="index.css?v=6">
+<link rel="stylesheet" href="index.css?v=7">
 </head>
 <body>
 <div id="topbar">
@@ -23,6 +23,7 @@
   <div id="controls">
     <button class="speed" data-speed="0">⏸</button><button class="speed sel" data-speed="1">1×</button><button class="speed" data-speed="2">2×</button><button class="speed" data-speed="4">4×</button>
     <button id="btn-insights">insights <span id="insight-count">0</span>/<span id="insight-total">0</span></button>
+    <button id="btn-memos" title="Mute management">📣</button>
   </div>
 </div>
 
@@ -36,6 +37,7 @@
     <div id="winbar" class="hidden"><div id="winbar-fill"></div><div id="winbar-text"></div></div>
     <canvas id="scene"></canvas>
     <div id="toasts"></div>
+    <div id="memos"></div>
     <div id="legend"></div>
   </div>
   <div id="shop">
@@ -101,15 +103,18 @@
       before they die of CPU, and latency explodes long before utilization hits 100%.
       Each disaster you survive mints an <span style="color:#e3b341">insight card</span> —
       your interview crib sheet.<br><br>
+      Management will have opinions. They are not always wrong. 📣 mutes them.<br><br>
       Reach <b style="color:#43d17a">1,000,000 requests/second</b> and hold it. Space pauses.
     </div>
     <button id="intro-ok">accept the pager</button>
   </div>
 </div>
 
-<script src="content.js?v=6"></script>
-<script src="engine.js?v=6"></script>
-<script src="ui.js?v=6"></script>
-<script src="index.js?v=6"></script>
+<script src="flourish.js?v=7"></script>
+<script src="content.js?v=7"></script>
+<script src="memos.js?v=7"></script>
+<script src="engine.js?v=7"></script>
+<script src="ui.js?v=7"></script>
+<script src="index.js?v=7"></script>
 </body>
 </html>

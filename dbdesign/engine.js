@@ -3,7 +3,8 @@
 // on state.report for the UI / tests.
 
 if (typeof require !== 'undefined' && typeof Content === 'undefined') {
-  var Content = require('./content.js');
+  var Content = require('./memos.js'); // memos.js extends and re-exports Content
+  var Flourish = require('./flourish.js');
 }
 
 const Engine = (() => {
@@ -39,6 +40,21 @@ const Engine = (() => {
     state.revenue = def.revenue;
   }
 
+  // One deck per variation list, per game — so a run is reproducible and the
+  // player sees every line before any repeat.
+  function buildDecks() {
+    const decks = {
+      senders: new Flourish(Content.MEMO_SENDERS),
+      subjects: {},
+      barbs: {},
+    };
+    for (const key of Content.MEMO_KEYS) {
+      decks.subjects[key] = new Flourish(Content.MEMOS[key].subjects);
+      decks.barbs[key] = new Flourish(Content.MEMOS[key].barbs);
+    }
+    return decks;
+  }
+
   function createState(seed) {
     const prevLatency = {};
     for (const k of Content.TYPE_KEYS) prevLatency[k] = Content.TYPES[k].baseMs;
@@ -63,6 +79,12 @@ const Engine = (() => {
       insights: {},
       newInsights: [],
       newEvents: [],
+      newMemos: [],
+      memosFired: {},
+      memoLast: {},
+      lastMemoT: -999,
+      lastBuy: { key: null, t: 0, util: 0 },
+      decks: buildDecks(),
       failWindow: [],           // recent {reason, rps} samples for post-mortem
       winTimer: 0,
       history: [],
@@ -87,6 +109,11 @@ const Engine = (() => {
     if (state.cash < price) return { ok: false, msg: 'not enough cash' };
     state.cash -= price;
     item.apply(state);
+    // stamped for memos that react to WHAT you bought and WHEN
+    state.lastBuy = {
+      key, t: state.t,
+      util: state.report ? state.report.sql.primaryUtil : 0,
+    };
     if (item.insightOnBuy) grantInsight(state, item.insightOnBuy);
     return { ok: true };
   }
@@ -150,6 +177,35 @@ const Engine = (() => {
       if (ins.check && !state.insights[key] && ins.check(state, report)) {
         grantInsight(state, key);
       }
+    }
+  }
+
+  // --- management memos -----------------------------------------------------
+  function fireMemo(state, key) {
+    const decks = state.decks;
+    const sender = decks.senders.draw(rand(state));
+    state.newMemos.push({
+      key,
+      from: sender.name,
+      title: sender.title,
+      subject: decks.subjects[key].draw(rand(state)),
+      body: decks.barbs[key].draw(rand(state)),
+    });
+    state.memosFired[key] = true;
+    state.memoLast[key] = state.t;
+    state.lastMemoT = state.t;
+  }
+
+  function checkMemos(state, report) {
+    if (state.t - state.lastMemoT < Content.MEMO_MIN_GAP) return;
+    for (const key of Content.MEMO_KEYS) {
+      const memo = Content.MEMOS[key];
+      if (memo.once && state.memosFired[key]) continue;
+      const last = state.memoLast[key];
+      if (last !== undefined && state.t - last < memo.cooldown) continue;
+      if (!memo.check(state, report)) continue;
+      fireMemo(state, key);
+      return; // management sends one at a time, mercifully
     }
   }
 
@@ -444,6 +500,7 @@ const Engine = (() => {
     while (state.failWindow.length && state.failWindow[0].t < state.t - 15) state.failWindow.shift();
 
     checkInsights(state, report);
+    checkMemos(state, report);
     updateEvents(state, servedRps, dt);
     updateHistory(state, report, dt);
     updateOutcome(state, report, dt);

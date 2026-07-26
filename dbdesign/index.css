@@ -154,6 +154,51 @@ button.sel { background: var(--accent); color: #08131f; border-color: var(--acce
 .toast .t-blurb { color: var(--dim); font-size: 11px; margin-top: 2px; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(-8px); } }
 
+/* ---------- management memos ---------- */
+#memos {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 310px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 6;
+}
+.memo {
+  background: #f4efe2;
+  color: #2a2620;
+  border-radius: 3px;
+  border-left: 5px solid #8a1c1c;
+  padding: 9px 12px;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, .55);
+  cursor: pointer;
+  font-family: Georgia, "Times New Roman", serif;
+  animation: memo-in .3s cubic-bezier(.2, .9, .3, 1.2);
+}
+.memo.leaving { animation: memo-out .35s ease-in forwards; }
+.memo-head {
+  font-family: inherit;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #8a1c1c;
+  border-bottom: 1px solid #cdc3ad;
+  padding-bottom: 3px;
+  margin-bottom: 5px;
+  display: flex;
+  justify-content: space-between;
+}
+.memo-subject { font-weight: bold; font-size: 12px; margin-bottom: 3px; }
+.memo-body { font-size: 12.5px; line-height: 1.45; }
+.memo-from { font-size: 10.5px; color: #6b6357; margin-top: 6px; font-style: italic; }
+@keyframes memo-in {
+  from { opacity: 0; transform: translateX(28px) rotate(1.5deg); }
+}
+@keyframes memo-out {
+  to { opacity: 0; transform: translateX(28px); }
+}
+
 /* ---------- shop ---------- */
 #shop {
   flex: 0 0 300px;

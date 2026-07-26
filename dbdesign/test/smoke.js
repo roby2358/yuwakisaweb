@@ -19,7 +19,7 @@ function assert(cond, msg) {
 // 1. classic-script load order, shared global scope like a browser
 const ctxObj = {};
 const ctx = vm.createContext(ctxObj);
-for (const f of ['content.js', 'engine.js']) {
+for (const f of ['flourish.js', 'content.js', 'memos.js', 'engine.js']) {
   vm.runInContext(fs.readFileSync(path.join(root, f), 'utf8'), ctx, { filename: f });
 }
 assert(typeof ctxObj.Content === 'object' || vm.runInContext('typeof Content', ctx) === 'object',
@@ -102,8 +102,48 @@ assert(costCheck.negative.length === 0,
   'every scale-down lowers the run-rate' +
   (costCheck.negative.length ? ' (failed: ' + costCheck.negative.join(', ') + ')' : ''));
 
-// 6. syntax check the DOM-dependent files
-for (const f of ['ui.js', 'index.js', 'content.js', 'engine.js']) {
+// 6. management memos: decks are deep enough, and Flourish exhausts every
+// variant before repeating any (the joke dies on an immediate repeat)
+const memoCheck = vm.runInContext(`
+  (() => {
+    const keys = Content.MEMO_KEYS;
+    const thin = keys.filter(k => Content.MEMOS[k].barbs.length < 5);
+    let combos = 0;
+    for (const k of keys) {
+      const m = Content.MEMOS[k];
+      combos += m.barbs.length * m.subjects.length * Content.MEMO_SENDERS.length;
+    }
+    // draw a full cycle out of one deck and check for duplicates
+    const deck = new Flourish(Content.MEMOS[keys[0]].barbs);
+    const n = deck.size();
+    const seen = new Set();
+    for (let i = 0; i < n; i++) seen.add(deck.draw((i * 7919 % 1000) / 1000));
+    return { keys: keys.length, thin, combos, cycle: n, unique: seen.size };
+  })()
+`, ctx);
+assert(memoCheck.thin.length === 0,
+  `every memo has a deep enough deck (${memoCheck.keys} memos, ~${memoCheck.combos} distinct panels)` +
+  (memoCheck.thin.length ? ' — thin: ' + memoCheck.thin.join(', ') : ''));
+assert(memoCheck.unique === memoCheck.cycle,
+  `Flourish draws all ${memoCheck.cycle} variants before repeating any`);
+
+// memo checks must survive being called against a live report
+const memoRun = vm.runInContext(`
+  (() => {
+    const s = Engine.createState(21);
+    const fired = {};
+    for (let i = 0; i < 4000; i++) {
+      Engine.tick(s);
+      if (i === 300) { s.cash = 1e6; Engine.buy(s, 'tier'); }
+      while (s.newMemos.length) fired[s.newMemos.shift().key] = true;
+    }
+    return Object.keys(fired);
+  })()
+`, ctx);
+assert(memoRun.length > 0, 'memos fire during a real run (' + memoRun.join(', ') + ')');
+
+// 7. syntax check the DOM-dependent files
+for (const f of ['ui.js', 'index.js', 'content.js', 'engine.js', 'flourish.js', 'memos.js']) {
   try {
     execFileSync(process.execPath, ['--check', path.join(root, f)]);
     console.log('  PASS ' + f + ' parses');

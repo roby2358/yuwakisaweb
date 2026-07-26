@@ -4,6 +4,7 @@
   const S = Content.SIM;
   let state = Engine.createState((Date.now() ^ (Math.random() * 1e9)) | 0);
   let speed = 1;          // 0 pause, 1, 2, 4
+  let memosMuted = false;
   let pausedForModal = false;
   let speedBeforeModal = 1;
   let acc = 0;
@@ -44,9 +45,18 @@
     while ((key = state.newEvents.shift())) UI.toast(key);
   }
 
+  function drainMemos() {
+    let m;
+    while ((m = state.newMemos.shift())) {
+      if (memosMuted || ended) continue;
+      UI.memo(m);
+    }
+  }
+
   function restart() {
     state = Engine.createState((Date.now() ^ (Math.random() * 1e9)) | 0);
     ended = false;
+    UI.clearMemos();
     document.getElementById('modal-backdrop').classList.add('hidden');
     document.getElementById('endscreen').classList.add('hidden');
     closeModal();
@@ -65,6 +75,7 @@
       }
     }
     drainEvents();
+    drainMemos();
     drainInsights();
     UI.render(state, dtFrame, !ended && !pausedForModal && speed > 0);
     if (state.outcome && !ended) {
@@ -102,6 +113,13 @@
       if (pausedForModal || ended) return;
       setSpeed(Number(b.dataset.speed));
     });
+  });
+
+  document.getElementById('btn-memos').addEventListener('click', e => {
+    memosMuted = !memosMuted;
+    e.currentTarget.textContent = memosMuted ? '🔇' : '📣';
+    e.currentTarget.title = memosMuted ? 'Unmute management' : 'Mute management';
+    if (memosMuted) UI.clearMemos();
   });
 
   document.getElementById('btn-insights').addEventListener('click', () => {

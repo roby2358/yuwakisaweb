@@ -713,6 +713,33 @@ const UI = (() => {
     setTimeout(() => el.remove(), Math.min(def.dur, 8) * 1000);
   }
 
+  // management memos ---------------------------------------------------
+  function dismissMemo(el) {
+    if (el.classList.contains('leaving')) return;
+    el.classList.add('leaving');
+    setTimeout(() => el.remove(), 350);
+  }
+
+  function memo(m) {
+    const wrap = $('memos');
+    while (wrap.children.length >= 3) dismissMemo(wrap.firstElementChild);
+    const el = document.createElement('div');
+    el.className = 'memo';
+    el.innerHTML =
+      '<div class="memo-head"><span>Internal memo</span><span>do not reply</span></div>' +
+      '<div class="memo-subject"></div><div class="memo-body"></div><div class="memo-from"></div>';
+    el.querySelector('.memo-subject').textContent = m.subject;
+    el.querySelector('.memo-body').textContent = '“' + m.body + '”';
+    el.querySelector('.memo-from').textContent = '— ' + m.from + (m.title ? ', ' + m.title : '');
+    el.addEventListener('click', () => dismissMemo(el));
+    wrap.appendChild(el);
+    setTimeout(() => dismissMemo(el), Content.MEMO_DWELL * 1000);
+  }
+
+  function clearMemos() {
+    $('memos').innerHTML = '';
+  }
+
   // modal --------------------------------------------------------------
   function showInsight(key, onClose) {
     const ins = Content.INSIGHTS[key];
@@ -833,5 +860,5 @@ const UI = (() => {
     }
   }
 
-  return { init, render, toast, showInsight, showDrawer, showEnd, fmt };
+  return { init, render, toast, memo, clearMemos, showInsight, showDrawer, showEnd, fmt };
 })();
