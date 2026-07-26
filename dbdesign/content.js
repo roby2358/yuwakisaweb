@@ -94,26 +94,61 @@ Content.BANDS = {
   goodput: { warn: 0.99, bad: 0.95 },     // worse when low
 };
 
-// SQL node tiers (applies to primaries and replicas alike)
+// SQL node tiers (applies to primaries and replicas alike).
+//
+// Two regimes, and the change between them IS the vertical wall.
+//
+// Tiers 1-6 are commodity: capacity doubles, run-rate doubles, price rises
+// ~2.1×. Cost per unit of work is flat, so climbing is a fair trade and you
+// should ride it as far as it goes. This is the honest case for vertical
+// scaling — no redesign, no new failure modes, no sharding maths.
+//
+// Tiers 7-12 are the exotic end of the catalogue: capacity now grows 1.5× per
+// step while the sticker price grows 2.5×. You can still buy your way up, and
+// a player who wants to can pour a fortune into one enormous box — but each
+// rung buys less and costs more, which is exactly what "prices grow faster
+// than capacity" means in a real vendor's price list. The wall is no longer a
+// hard stop; it is the point where money stops being the answer.
 Content.TIERS = [
-  { cap: 6000,   conns: 200,  run: 0.5 },
-  { cap: 12000,  conns: 300,  run: 1 },
-  { cap: 24000,  conns: 450,  run: 2 },
-  { cap: 48000,  conns: 700,  run: 4 },
-  { cap: 96000,  conns: 1000, run: 8 },
-  { cap: 192000, conns: 1500, run: 16 },
+  { cap: 6000,    conns: 200,   run: 0.5 },
+  { cap: 12000,   conns: 300,   run: 1 },
+  { cap: 24000,   conns: 450,   run: 2 },
+  { cap: 48000,   conns: 700,   run: 4 },
+  { cap: 96000,   conns: 1000,  run: 8 },
+  { cap: 192000,  conns: 1500,  run: 16 },
+  // — the commodity ladder ends here; everything below is bespoke hardware —
+  { cap: 288000,  conns: 2250,  run: 24 },
+  { cap: 432000,  conns: 3400,  run: 36 },
+  { cap: 648000,  conns: 5100,  run: 54 },
+  { cap: 972000,  conns: 7600,  run: 81 },
+  { cap: 1458000, conns: 11400, run: 121.5 },
+  { cap: 2187000, conns: 17100, run: 182.25 },
 ];
+Content.MAX_TIER = Content.TIERS.length;
+Content.COMMODITY_TIER = 6;   // last rung where price tracks capacity
 // Upgrading to tier 2..6. These MUST scale at roughly the same rate as
 // capacity (~2.1× per step), because your income scales with the traffic you
 // can serve — i.e. with capacity. Price them at 2.5× and each tier takes
 // longer to afford than the last (38s → 95s of income) while demand doubles
 // every ~14s, so vertical scaling becomes mathematically unreachable and the
 // player is pinned watching red gauges. Playtest found exactly that.
-Content.TIER_PRICES = [180, 380, 800, 1700, 3600];
-Content.MAX_SHARDS = 64;
-Content.MAX_REPLICAS = 4;
-Content.MAX_CACHE = 8;
-Content.MAX_KV = 40;
+// Price to reach tier 2..MAX_TIER. Through the commodity ladder these track
+// capacity (~2.1× per step) so each tier stays about as affordable as the last
+// — see the note above; pricing them steeper than capacity makes vertical
+// scaling mathematically unreachable and pins the player watching red gauges.
+// Past tier 6 they deliberately outrun capacity (2.5× price for 1.5× work).
+Content.TIER_PRICES = [180, 380, 800, 1700, 3600, 9000, 22500, 56000, 140000, 350000, 875000];
+
+// Ceilings are set high enough that a player can massively over-buy any one of
+// them — that is the point. Over-provisioning has to be REACHABLE for its cost
+// to be a lesson: a cache stops gaining hit rate after ~7 nodes but keeps
+// billing, replicas past the write-replay point are expensive copies, and
+// every extra shard makes reports dearer. The game should let you find that
+// out by doing it, not by being told you cannot.
+Content.MAX_SHARDS = 128;
+Content.MAX_REPLICAS = 8;
+Content.MAX_CACHE = 16;
+Content.MAX_KV = 80;
 
 // Request types — data-driven; the engine dispatches on this table.
 // desc characterizes each class along the axes that matter for capacity
@@ -263,13 +298,13 @@ Content.SHOP = [
   {
     key: 'tier', name: 'Bigger boxes (vertical)', color: '#4ea3ff',
     blurb: '2× query units and more connections on every SQL node.',
-    tradeoff: 'Each step costs a little more than the capacity it adds — and tier 6 is the biggest box made.',
-    price: s => s.infra.tier >= 6 ? null : Content.TIER_PRICES[s.infra.tier - 1],
+    tradeoff: 'Fair value to tier 6; past that each rung buys 1.5× the work for 2.5× the money.',
+    price: s => s.infra.tier >= Content.MAX_TIER ? null : Content.TIER_PRICES[s.infra.tier - 1],
     apply: s => { s.infra.tier += 1; },
     owned: () => true, // you always have a database
     fixed: 4, fixedNote: 'DBAs, backups, failover drills, the on-call rotation',
     marginal: s => s.infra.shards * (1 + s.infra.replicas) * Content.TIERS[s.infra.tier - 1].run,
-    ownedLabel: s => 'tier ' + s.infra.tier + ' / 6',
+    ownedLabel: s => 'tier ' + s.infra.tier + ' / ' + Content.MAX_TIER,
     canScaleDown: s => s.infra.tier > 1,
     scaleDown: s => { s.infra.tier -= 1; },
     scaleDownLabel: 'downgrade to a smaller (cheaper) box',
@@ -472,7 +507,7 @@ Content.INSIGHTS = {
   wall: {
     title: 'The vertical wall',
     text: 'You are on the biggest box money can buy and it is still not enough. Vertical scaling is simple (no code changes!) and you should ride it while you can — but it ends: prices grow faster than capacity, and there is always a biggest box. Everything past this line is horizontal.',
-    check: (s, r) => s.infra.tier >= 6 && r.sql.primaryUtil >= 0.85,
+    check: (s, r) => s.infra.tier >= Content.MAX_TIER && r.sql.primaryUtil >= 0.85,
   },
   sharding: {
     title: 'Sharding scales writes',

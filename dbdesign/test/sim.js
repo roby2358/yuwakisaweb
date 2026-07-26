@@ -143,12 +143,14 @@ console.log('\n=== every guru rule is reachable from a real board ===');
       profile: 'iot', buys: ['indexes', 'pooler', 'tier', 'replica', 'replica', 'warehouse'], users: 40000 },
     { rule: 'staleReads', why: 'replicas lagging under load',
       profile: 'feed', buys: ['indexes', 'pooler', 'tier', 'replica'], users: 120000 },
-    // tier 6 with every load-deleting option already bought, so nothing
-    // cheaper is left to recommend — the wall is genuinely the answer
+    // Rode vertical all the way to the top of the ladder on a write-heavy
+    // workload and never sharded — the exact mistake this rule exists to catch.
+    // Every load-deleting option is already bought, so nothing cheaper is left
+    // to recommend and the wall is genuinely the answer.
     { rule: 'verticalWall', why: 'biggest box, still not enough',
-      profile: 'feed', users: 900000,
-      buys: ['indexes', 'pooler', 'tier', 'tier', 'tier', 'tier', 'tier',
-        'warehouse', 'kv', 'kv', 'cache', 'cache', 'cache', 'cache', 'replica'] },
+      profile: 'iot', users: 2000000,
+      buys: ['indexes', 'pooler', ...Array(Content.MAX_TIER - 1).fill('tier'),
+        'warehouse', 'kv', 'kv', 'kv', 'replica', 'replica'] },
     { rule: 'backlog', why: 'write queue holding debt',
       profile: 'iot', buys: ['indexes', 'pooler', 'queue'], users: 90000 },
     { rule: 'connCapped', why: 'connection ceiling with a pooler',
@@ -160,6 +162,10 @@ console.log('\n=== every guru rule is reachable from a real board ===');
     s.cash = 1e7;
     for (const k of sit.buys) { Engine.buy(s, k); s.migration = null; }
     s.users = sit.users;
+    // Milestone events fire the instant served RPS crosses their threshold, so
+    // at these scales every board would be sitting under a 5× traffic spike.
+    // Judge the architecture, not the weather.
+    for (const key of Object.keys(Content.EVENTS)) s.milestonesFired[key] = true;
     step(s, 8, null);
     s.cash = 1e7; // judge the advice, not the bank balance
     const keys = Guru.advise(s, s.report).map(a => a.key);

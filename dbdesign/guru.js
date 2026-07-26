@@ -177,6 +177,22 @@ var Guru = (() => {
       action: (s, r) => 'Scale the cache down — you are paying $' +
         r.costs.byKey.cache.total.toFixed(0) + '/s for it.',
     },
+    // Sits above the rules that follow it because it is a fact about the board
+    // rather than a symptom: at the top of the ladder, every fix below ("cut
+    // hold time", "relieve the replicas") is something vertical scaling can no
+    // longer deliver. Naming the wall first stops the player buying answers
+    // that no longer exist.
+    {
+      key: 'verticalWall',
+      severity: 'warn',
+      when: (s, r) => s.infra.tier >= Content.MAX_TIER && r.sql.primaryUtil > 0.8,
+      headline: () => 'You are on the biggest box that exists, and it is not enough.',
+      body: () => 'Vertical scaling has ended. There is no tier ' + (Content.MAX_TIER + 1) +
+        '. Everything from here is horizontal: more primaries, or less work.',
+      action: (s) => s.infra.shards < Content.MAX_SHARDS
+        ? 'Shard split, or delete load (warehouse for reports, KV for lookups, cache for repeated reads).'
+        : 'You are at max shards — the only lever left is deleting load: warehouse, KV, cache.',
+    },
     {
       key: 'writeWall',
       severity: 'warn',
@@ -185,7 +201,8 @@ var Guru = (() => {
       body: (s) => 'Writes must reach the owning primary. Caches cannot absorb them and replicas cannot serve them ' +
         (s.infra.replicas > 0 ? '— your ' + s.infra.replicas + ' replicas per shard replay every one of them. ' : '. ') +
         'Only more primaries add write capacity.',
-      action: (s) => s.infra.tier < 4
+      // proportional to the ladder, not a fixed rung: "still room to climb"
+      action: (s) => s.infra.tier < Content.MAX_TIER * 2 / 3
         ? 'A bigger box buys time cheaply right now, but plan the shard split — vertical scaling ends and writes keep growing.'
         : 'Shard split. Do it while you have cash and headroom; a migration at 95% utilization is self-inflicted downtime.',
     },
@@ -206,16 +223,6 @@ var Guru = (() => {
       action: () => 'Relieve the replicas (cache, or more of them) or accept the lag. In production you would pin recent writers to the primary.',
     },
     {
-      key: 'verticalWall',
-      severity: 'warn',
-      when: (s, r) => s.infra.tier >= 6 && r.sql.primaryUtil > 0.8,
-      headline: () => 'You are on the biggest box that exists, and it is not enough.',
-      body: () => 'Vertical scaling has ended. There is no tier 7. Everything from here is horizontal: more primaries, or less work.',
-      action: (s) => s.infra.shards < Content.MAX_SHARDS
-        ? 'Shard split, or delete load (warehouse for reports, KV for lookups, cache for repeated reads).'
-        : 'You are at max shards — the only lever left is deleting load: warehouse, KV, cache.',
-    },
-    {
       key: 'cpuPegged',
       severity: 'warn',
       when: (s, r) => r.sql.primaryUtil > 0.8,
@@ -229,10 +236,17 @@ var Guru = (() => {
           .map(p => pct(p[1]) + ' ' + p[0]).join(', ');
         return 'Latency is service time ÷ (1 − utilization), so this is where it goes vertical. Your load is ' + parts + '.';
       },
-      action: (s) => s.infra.tier < 6
-        ? 'Bigger box: it is the simplest move, needs no redesign, and you have ' + (6 - s.infra.tier) +
-          ' tier(s) left. Shard instead if writes dominate — vertical never fixes writes for long.'
-        : 'Shard split — the box cannot get bigger.',
+      action: (s) => {
+        if (s.infra.tier >= Content.MAX_TIER) return 'Shard split — the box cannot get bigger.';
+        if (s.infra.tier >= Content.COMMODITY_TIER) {
+          return 'You are past the commodity ladder: the next box buys 1.5× the work for 2.5× ' +
+            'the price, and bills it forever. Shard instead unless you are certain this is a ' +
+            'brief spike — horizontal is now the cheaper capacity.';
+        }
+        return 'Bigger box: it is the simplest move, needs no redesign, and you have ' +
+          (Content.COMMODITY_TIER - s.infra.tier) + ' fairly-priced tier(s) left. ' +
+          'Shard instead if writes dominate — vertical never fixes writes for long.';
+      },
     },
     {
       key: 'idle',
@@ -259,7 +273,7 @@ var Guru = (() => {
       action: (s, r) => {
         const mix = loadMix(r);
         if (mix.analytics > 0.3 && !s.infra.warehouse) return 'Next bottleneck: analytics. A warehouse before it hurts.';
-        if (mix.write > 0.35 && s.infra.tier >= 4) return 'Next bottleneck: writes. Shard while it is calm — migrations under load are downtime.';
+        if (mix.write > 0.35 && s.infra.tier >= Content.MAX_TIER * 2 / 3) return 'Next bottleneck: writes. Shard while it is calm — migrations under load are downtime.';
         if (s.repetition >= 0.6 && r.cache.hitRate < 0.7 && s.infra.cacheNodes < Content.MAX_CACHE) {
           return 'Cheapest next win: more cache — this workload repeats and your hit rate has room.';
         }

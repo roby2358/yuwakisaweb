@@ -70,8 +70,12 @@ These are real systems facts, encoded as mechanics, surfaced as collectible
    replication eats replica capacity as write volume grows.
 6. **Replication lag** — an overloaded replica serves stale reads; users notice.
 7. **Indexes** — reads get ~10× cheaper, writes ~20% costlier. Buy them first.
-8. **Vertical scaling ends** — each bigger box costs ~2.5× for 2× capacity, and
-   the biggest box is still not 1M RPS. Forces the horizontal turn.
+8. **Vertical scaling stops paying** — tiers 1–6 are commodity: 2× capacity for
+   ~2.1× price, a fair trade you should ride. Tiers 7–12 are bespoke hardware:
+   1.5× capacity for 2.5× price, and the run-rate follows. The ceiling is no
+   longer a hard stop, it is the point where money stops being the answer —
+   which is what "prices grow faster than capacity" means on a real price list.
+   Forces the horizontal turn without ever saying *no*.
 9. **Sharding scales writes** — N shards ≈ N× write capacity. Cross-shard
    analytics pays *coordination* (touch every shard, wait for the slowest,
    merge), not N× the scanning — each shard reads only its slice — so a report
@@ -144,7 +148,7 @@ Two profile-scoped mechanics make the differences bite:
 |---|---|---|---|---|
 | Add indexes | read cost 10u → 1u | write cost +20% | 0.5 | — |
 | Connection pooler | connections held only for query duration | none — that's the lesson: it's the free win people forget | 2 | — |
-| Bigger primary (tiers 1–6) | 2× query units & connections per tier | price ×2.5 per tier; hard ceiling at tier 6 | 4 | per node, by tier |
+| Bigger primary (tiers 1–12) | 2× units/conns per tier to 6, then 1.5× | price ×2.1 to tier 6, then ×2.5 — the top half buys less for more | 4 | per node, by tier |
 | Read replica (per shard) | adds a read-serving node | replays all writes; lags when hot → stale reads | 3 | nodes billed above |
 | Cache node | +hit rate (caps ~92% × repetition), +ops capacity | invalidated by writes; herd risk on reboot | 8 | 2/node |
 | KV store node (NoSQL) | LOOKUP traffic offloaded, linear scale | can't serve JOINs — ANALYTICS stays on SQL | **28** | 1.5/node |
@@ -210,9 +214,12 @@ the game now teaches with its own insight card the first time you buy one.) The 
 pegged" situation produces different advice depending on the diagnosis:
 analytics-dominant says *buy a warehouse, and note that sharding again makes
 fan-out worse*; write-dominant says *shard, because caches and replicas cannot
-take writes*; tier 6 says *vertical scaling has ended, there is no tier 7*;
-anything below tier 6 says *bigger box is simplest and needs no redesign, but
-plan the split*. When nothing is wrong, the last rule predicts the next wall
+take writes*; the top of the ladder says *vertical scaling has ended*; the
+bespoke tiers say *the next box buys 1.5× the work for 2.5× the price, shard
+instead*; anything on the commodity ladder says *bigger box is simplest and
+needs no redesign, but plan the split*. The wall rule is ranked above the
+symptom rules beneath it, because at the ceiling every fix they propose is one
+vertical scaling can no longer deliver. When nothing is wrong, the last rule predicts the next wall
 ("roughly 42s before utilization reaches 85%").
 
 The panel does not pause the game and updates four times a second, so buying
@@ -285,13 +292,17 @@ Milestone-triggered (guaranteed story beats) and random (weather):
   time. Tension: replicas vs cache money. Write growth quietly erodes replica
   headroom (they replay writes) — the player who only watches reads gets
   surprised. KV offload is the cheap 15% relief valve.
-- **Late game**: vertical scaling hits the tier-6 wall; only sharding scales
+- **Late game**: vertical scaling stops paying at tier 6; only sharding scales
   writes. Resharding costs a capacity dip, so the recurring tension is *reshard
   early (pay now, safely) vs late (pay under fire)*. ANALYTICS fan-out punishes
   over-sharding — 32 shards make report day scary, so shard count is a real
   decision, not a monotone ladder.
-- **Anti-strategy: turtle on one big box** — prevented mechanically: tier 6 max
-  capacity is far below 1M RPS demand; growth doesn't stop.
+- **Anti-strategy: turtle on one big box** — prevented economically rather than
+  by a wall: the boxes past tier 6 are buyable, but each one buys less and bills
+  more, so a player who only climbs runs out of money before demand runs out of
+  growth. Every ceiling in the shop is set high enough to be *massively*
+  over-bought on purpose — a fully maxed build burns ~$210k/s against ~$6k/s of
+  revenue. Over-provisioning has to be reachable for its cost to teach anything.
 - **Anti-strategy: cache everything and forget writes** — prevented: WRITE and
   ANALYTICS are uncacheable and grow with the same user curve; cache hit caps
   at 92%.

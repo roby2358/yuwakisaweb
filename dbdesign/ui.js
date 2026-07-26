@@ -285,7 +285,10 @@ const UI = (() => {
       (infra.shards > 1 ? ' · ' + infra.shards + ' shards' : '') +
       (infra.replicas > 0 ? ' · ' + infra.replicas + ' replicas' : '');
     const { x, y } = boxFrame(b, true, label);
-    const cols = infra.shards, rows = 1 + infra.replicas;
+    // The grid is a picture, not a census — the label above already carries the
+    // real counts. Past these it stops adding cells, because 128 columns in a
+    // 200px box works out to a negative cell width.
+    const cols = Math.min(infra.shards, 16), rows = Math.min(1 + infra.replicas, 9);
     const gw = b.w - 20, gh = 86;
     const cw = Math.min(24, (gw - (cols - 1) * 2) / cols);
     const ch = Math.min(20, (gh - (rows - 1) * 2) / rows);

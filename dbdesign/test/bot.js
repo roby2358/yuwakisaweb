@@ -97,11 +97,11 @@ function botBuyOne(state) {
     if (price === null || state.cash < price) return false;
     return state.cash - price > 20 * Engine.expensesIfBought(state, key);
   };
-  const shardAtTier = writeHeavy ? 3 : 6;
+  const shardAtTier = writeHeavy ? 3 : Content.MAX_TIER;
   if (pressure > 0.55 && infra.tier < shardAtTier && affordable('tier')) return buy('tier');
   if (pressure > 0.55 && !state.migration && infra.shards < Content.MAX_SHARDS
       && affordable('shard')) return buy('shard');
-  if (pressure > 0.55 && infra.tier < 6 && affordable('tier')) return buy('tier');
+  if (pressure > 0.55 && infra.tier < Content.MAX_TIER && affordable('tier')) return buy('tier');
 
   // --- spare capacity for the read side, once the real load is handled -----
   if (analyticsHeavy && tryCache()) return true;
