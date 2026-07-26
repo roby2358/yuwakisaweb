@@ -153,6 +153,12 @@ Content.MIX_CLASSES = [
 // repetition = how much of the read traffic is the same rows again and again.
 // It scales the achievable cache hit rate: high repetition makes the cache the
 // centerpiece; low repetition makes it a cash sink.
+// Analytics is a SMALL share of requests everywhere (0.8%-10%) but each one
+// costs 60x a point read, so it is still a large share of the WORK. That
+// asymmetry is the point: request counts lie, work is what fills a cluster.
+// Do not raise these shares — at 5%+ analytics dominates cluster work in every
+// profile, the warehouse becomes the only correct answer everywhere, and the
+// workload differentiation this whole design rests on quietly stops existing.
 // revenue = dollars per served request. Unit economics differ by business:
 // a B2B dashboard hit is worth 2× a telemetry ping — which is what pays for
 // the heavier queries those workloads demand.
@@ -160,27 +166,27 @@ Content.PROFILES = {
   feed: {
     name: 'Social photo feed', repetition: 1.0, revenue: 0.006,
     blurb: 'Everyone stares at the same hot content — highly repeated reads. Cache hit ratio is your whole ballgame.',
-    mix: { read: 0.70, write: 0.12, lookup: 0.13, analytics: 0.05 },
+    mix: { read: 0.740, write: 0.12, lookup: 0.132, analytics: 0.008 },
   },
   shop: {
     name: 'Flash-sale commerce', repetition: 0.8, revenue: 0.009,
     blurb: 'Product pages repeat, but carts and inventory writes don\'t. The cache helps browsing; only sharding scales checkout.',
-    mix: { read: 0.46, write: 0.32, lookup: 0.14, analytics: 0.08 },
+    mix: { read: 0.500, write: 0.32, lookup: 0.160, analytics: 0.020 },
   },
   iot: {
     name: 'IoT telemetry ingest', repetition: 0.4, revenue: 0.010,
     blurb: 'A million devices never stop writing, and every read is a unique device query. A cache here is a cash sink.',
-    mix: { read: 0.22, write: 0.55, lookup: 0.13, analytics: 0.10 },
+    mix: { read: 0.220, write: 0.61, lookup: 0.140, analytics: 0.030 },
   },
   ads: {
     name: 'Ad-tech exchange', repetition: 0.7, revenue: 0.006,
     blurb: 'Bid requests demand a key lookup in single-digit milliseconds. NoSQL was invented for this.',
-    mix: { read: 0.32, write: 0.10, lookup: 0.53, analytics: 0.05 },
+    mix: { read: 0.320, write: 0.10, lookup: 0.572, analytics: 0.008 },
   },
   saas: {
     name: 'B2B analytics SaaS', repetition: 0.6, revenue: 0.013,
     blurb: 'Customers live in their own dashboards — reads repeat per tenant, and reports are most of the work. OLTP vs OLAP is the war.',
-    mix: { read: 0.47, write: 0.15, lookup: 0.16, analytics: 0.22 },
+    mix: { read: 0.520, write: 0.16, lookup: 0.220, analytics: 0.100 },
   },
 };
 Content.PROFILE_KEYS = Object.keys(Content.PROFILES);

@@ -111,13 +111,20 @@ READ·unique (replicas/shards), READ·repeated (cache), LOOKUP (KV), ANALYTICS
 The profile decides which architecture carries the game — this is the "first
 question you ask in the interview" made mechanical:
 
-| Profile | Signature | Repetition | $/req | Winning shape |
-|---|---|---|---|---|
-| Social photo feed | READ 70% | 1.0 | .006 | cache is the game |
-| Flash-sale commerce | WRITE 32% | 0.8 | .009 | cache browsing, shard checkout |
-| IoT telemetry ingest | WRITE 55% | 0.4 | .010 | shard early; cache is a cash sink |
-| Ad-tech exchange | LOOKUP 53% | 0.7 | .006 | NoSQL KV carries it |
-| B2B analytics SaaS | ANALYTICS 22% | 0.6 | .013 | replicas then warehouse |
+| Profile | Signature (share of requests) | Dominant share of *work* | Repetition | $/req | Winning shape |
+|---|---|---|---|---|---|
+| Social photo feed | READ 74% | reads 36% | 1.0 | .006 | cache is the game |
+| Flash-sale commerce | WRITE 32% | writes 51% | 0.8 | .009 | cache browsing, shard checkout |
+| IoT telemetry ingest | WRITE 61% | writes 63% | 0.4 | .010 | shard early; cache is a cash sink |
+| Ad-tech exchange | LOOKUP 57% | writes 30% / lookups 29% | 0.7 | .006 | NoSQL KV carries it |
+| B2B analytics SaaS | ANALYTICS 10% | analytics 78% | 0.6 | .013 | replicas then warehouse |
+
+Note the two share columns: **analytics is a tiny fraction of requests but a
+large fraction of work**, because each report costs 60× a point read. Request
+counts lie; work is what fills a cluster. This is also a balance tripwire —
+playtesting caught analytics at 5–22% of requests, which made it 62–90% of
+cluster work in *every* profile, so the warehouse was silently the only correct
+answer everywhere and the workload differentiation stopped existing.
 
 Two profile-scoped mechanics make the differences bite:
 

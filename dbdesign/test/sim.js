@@ -125,6 +125,50 @@ console.log('\n=== sustained meltdown plummets users to busto ===');
     'error churn drains users to bust within minutes');
 }
 
+console.log('\n=== every guru rule is reachable from a real board ===');
+{
+  // Build the situation each rule exists for, and check it actually says so.
+  // A rule that can never fire is worse than no rule — the player is stuck
+  // with no advice precisely when they need it.
+  const situations = [
+    { rule: 'cacheable', why: 'repeated reads, no cache',
+      profile: 'feed', buys: ['indexes', 'pooler', 'tier', 'tier'], users: 60000 },
+    { rule: 'cacheDud', why: 'cache on unique reads',
+      profile: 'iot', buys: ['indexes', 'pooler', 'tier', 'cache', 'cache', 'cache'], users: 40000 },
+    { rule: 'lookupFlood', why: 'key lookups drowning SQL, no KV',
+      profile: 'ads', buys: ['indexes', 'pooler', 'tier', 'tier'], users: 90000 },
+    { rule: 'writeWall', why: 'writes dominant and pegged',
+      profile: 'iot', buys: ['indexes', 'pooler', 'tier', 'tier', 'warehouse'], users: 60000 },
+    { rule: 'replicaBurn', why: 'replicas replaying writes',
+      profile: 'iot', buys: ['indexes', 'pooler', 'tier', 'replica', 'replica', 'warehouse'], users: 40000 },
+    { rule: 'staleReads', why: 'replicas lagging under load',
+      profile: 'feed', buys: ['indexes', 'pooler', 'tier', 'replica'], users: 120000 },
+    // tier 6 with every load-deleting option already bought, so nothing
+    // cheaper is left to recommend — the wall is genuinely the answer
+    { rule: 'verticalWall', why: 'biggest box, still not enough',
+      profile: 'feed', users: 900000,
+      buys: ['indexes', 'pooler', 'tier', 'tier', 'tier', 'tier', 'tier',
+        'warehouse', 'kv', 'kv', 'cache', 'cache', 'cache', 'cache', 'replica'] },
+    { rule: 'backlog', why: 'write queue holding debt',
+      profile: 'iot', buys: ['indexes', 'pooler', 'queue'], users: 90000 },
+    { rule: 'connCapped', why: 'connection ceiling with a pooler',
+      profile: 'feed', buys: ['indexes', 'pooler', 'tier', 'tier'], users: 200000 },
+  ];
+  for (const sit of situations) {
+    const s = Engine.createState(4);
+    Engine.applyProfile(s, sit.profile);
+    s.cash = 1e7;
+    for (const k of sit.buys) { Engine.buy(s, k); s.migration = null; }
+    s.users = sit.users;
+    step(s, 8, null);
+    s.cash = 1e7; // judge the advice, not the bank balance
+    const keys = Guru.advise(s, s.report).map(a => a.key);
+    const hit = keys.includes(sit.rule);
+    console.log(`  ${sit.rule.padEnd(13)} (${sit.why})`.padEnd(58) + (hit ? '✓' : '✗ got: ' + keys.join(',')));
+    assert(hit, `guru advises on "${sit.rule}" when ${sit.why}`);
+  }
+}
+
 console.log('\n=== the guru names the right first horizontal move ===');
 {
   // read-heavy, primary pegged, zero replicas — the situation where the answer

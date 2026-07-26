@@ -118,6 +118,14 @@ var Guru = (() => {
       action: () => 'Buy indexes ($60). Do it before you buy any hardware — hardware cannot outrun a missing index.',
     },
     {
+      key: 'backlog',
+      severity: 'info',
+      when: (s) => s.backlog > 1,
+      headline: (s) => 'Write backlog: ' + num(s.backlog) + ' units queued.',
+      body: () => 'The queue converted overload into staleness instead of errors. That is strictly better, but it is debt: users cannot see queued writes yet.',
+      action: () => 'Add write capacity (shards) so the backlog drains faster than it fills.',
+    },
+    {
       key: 'analyticsFanout',
       severity: 'warn',
       when: (s, r) => !s.infra.warehouse && loadMix(r).analytics > 0.4 && r.sql.primaryUtil > 0.6,
@@ -237,14 +245,6 @@ var Guru = (() => {
         (r.spend - r.income).toFixed(0) + '/s.',
       body: () => 'Idle capacity bills you exactly as much as busy capacity. Over-provisioning is not safety, it is an expensive insurance policy.',
       action: () => 'Scale something down, or grow into it — but do not buy more until utilization recovers.',
-    },
-    {
-      key: 'backlog',
-      severity: 'info',
-      when: (s) => s.backlog > 1,
-      headline: (s) => 'Write backlog: ' + num(s.backlog) + ' units queued.',
-      body: () => 'The queue converted overload into staleness instead of errors. That is strictly better, but it is debt: users cannot see queued writes yet.',
-      action: () => 'Add write capacity (shards) so the backlog drains faster than it fills.',
     },
     {
       key: 'healthy',
