@@ -713,6 +713,60 @@ const UI = (() => {
     setTimeout(() => el.remove(), Math.min(def.dur, 8) * 1000);
   }
 
+  // guru ---------------------------------------------------------------
+  const LOAD_KINDS = [
+    { key: 'read', label: 'reads', color: '#4ea3ff' },
+    { key: 'write', label: 'writes', color: '#ff9d3c' },
+    { key: 'analytics', label: 'analytics', color: '#b48cff' },
+    { key: 'replay', label: 'replay', color: '#8b96a5' },
+  ];
+
+  function updateGuru(state) {
+    const panel = $('guru-panel');
+    if (panel.classList.contains('hidden')) return;
+    const r = state.report;
+    if (!r) return;
+
+    // where the cluster's work is going — the diagnosis behind the advice
+    const mix = Guru.loadMix(r);
+    const load = $('guru-load');
+    let bar = '<div class="gl-title">WHAT YOUR CLUSTER IS DOING</div><div class="gl-bar">';
+    for (const kind of LOAD_KINDS) {
+      const frac = mix[kind.key];
+      if (frac <= 0.001) continue;
+      bar += '<div class="gl-seg" style="width:' + (frac * 100).toFixed(1) + '%;background:' +
+        kind.color + '" title="' + kind.label + ': ' + Math.round(frac * 100) + '% of cluster work">' +
+        (frac > 0.13 ? kind.label + ' ' + Math.round(frac * 100) + '%' : '') + '</div>';
+    }
+    bar += '</div>';
+    load.innerHTML = mix.total > 0 ? bar : '';
+
+    const cards = $('guru-cards');
+    cards.innerHTML = '';
+    for (const advice of Guru.advise(state, r)) {
+      const el = document.createElement('div');
+      el.className = 'guru-card ' + advice.severity;
+      el.innerHTML = '<div class="gc-head"></div><div class="gc-body"></div><div class="gc-action"></div>';
+      el.querySelector('.gc-head').textContent = advice.headline;
+      el.querySelector('.gc-body').textContent = advice.body;
+      el.querySelector('.gc-action').textContent = advice.action;
+      cards.appendChild(el);
+    }
+  }
+
+  function toggleGuru(state) {
+    const panel = $('guru-panel');
+    const open = panel.classList.toggle('hidden');
+    $('btn-guru').classList.toggle('sel', !open);
+    updateGuru(state);
+    return !open;
+  }
+
+  function closeGuru() {
+    $('guru-panel').classList.add('hidden');
+    $('btn-guru').classList.remove('sel');
+  }
+
   // management memos ---------------------------------------------------
   function dismissMemo(el) {
     if (el.classList.contains('leaving')) return;
@@ -856,9 +910,13 @@ const UI = (() => {
       updateShop(state);
       updateMixbar(state);
       updateMoneybar(state);
+      updateGuru(state);
       renderCharts(state);
     }
   }
 
-  return { init, render, toast, memo, clearMemos, showInsight, showDrawer, showEnd, fmt };
+  return {
+    init, render, toast, memo, clearMemos, toggleGuru, closeGuru,
+    showInsight, showDrawer, showEnd, fmt,
+  };
 })();

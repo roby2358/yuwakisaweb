@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>HUG OF DEATH — a database scaling game</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗄️</text></svg>">
-<link rel="stylesheet" href="index.css?v=7">
+<link rel="stylesheet" href="index.css?v=8">
 </head>
 <body>
 <div id="topbar">
@@ -39,6 +39,15 @@
     <div id="toasts"></div>
     <div id="memos"></div>
     <div id="legend"></div>
+    <div id="guru-panel" class="hidden">
+      <div id="guru-head">
+        <span>🧘 THE GURU SEES</span>
+        <span id="guru-close">✕</span>
+      </div>
+      <div id="guru-load"></div>
+      <div id="guru-cards"></div>
+    </div>
+    <button id="btn-guru" title="Ask the guru what to do right now">🧘 Guru</button>
   </div>
   <div id="shop">
     <div id="shop-header">ARCHITECTURE<span id="stat-income"></span></div>
@@ -103,18 +112,21 @@
       before they die of CPU, and latency explodes long before utilization hits 100%.
       Each disaster you survive mints an <span style="color:#e3b341">insight card</span> —
       your interview crib sheet.<br><br>
-      Management will have opinions. They are not always wrong. 📣 mutes them.<br><br>
+      Stuck? The <b style="color:#b9aeff">🧘 Guru</b> in the corner diagnoses the board live —
+      what your cluster is actually spending its work on, and what to buy next.
+      Management will also have opinions; they are not always wrong. 📣 mutes them.<br><br>
       Reach <b style="color:#43d17a">1,000,000 requests/second</b> and hold it. Space pauses.
     </div>
     <button id="intro-ok">accept the pager</button>
   </div>
 </div>
 
-<script src="flourish.js?v=7"></script>
-<script src="content.js?v=7"></script>
-<script src="memos.js?v=7"></script>
-<script src="engine.js?v=7"></script>
-<script src="ui.js?v=7"></script>
-<script src="index.js?v=7"></script>
+<script src="flourish.js?v=8"></script>
+<script src="content.js?v=8"></script>
+<script src="memos.js?v=8"></script>
+<script src="engine.js?v=8"></script>
+<script src="guru.js?v=8"></script>
+<script src="ui.js?v=8"></script>
+<script src="index.js?v=8"></script>
 </body>
 </html>

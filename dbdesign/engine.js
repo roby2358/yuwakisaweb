@@ -484,10 +484,19 @@ const Engine = (() => {
         replayFrac, staleFrac,
         connUsed, connCap, rejectRps: fails.connections,
         primaryCapTotal, analyticsUnits: admitAnalyticsUnits,
+        // where the cluster's work actually goes — the first question in any
+        // capacity conversation, and what the guru reasons over
+        units: {
+          read: admitReadUnits,
+          write: admitWriteUnits,
+          analytics: admitAnalyticsUnits,
+          replay: replayUnits,
+        },
+        clusterCapTotal: primaryCapTotal + replicaCapTotal,
         shards: N, replicas: R, nodeCap,
         readOnReplicaFrac: replicaShare,
       },
-      fails, p50, p99, income, spend, costs,
+      fails, p50, p99, income, spend, costs, growthPerS: growth,
       runway: spend > income ? state.cash / (spend - income) : Infinity,
       backlog: state.backlog,
       event: state.event ? { key: state.event.key, left: state.event.left } : null,

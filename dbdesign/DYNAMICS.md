@@ -141,6 +141,29 @@ a question about headcount, not hosting. Every subsystem can be scaled back
 down (nodes retired, boxes downgraded, whole systems decommissioned) with
 nothing refunded; **sharding is the one-way door** you cannot walk back.
 
+### The Guru (advice on demand)
+
+A button in the lower right opens a live-updating diagnosis of the board. It
+answers the question players actually have — *"CPU is pegged; do I buy a bigger
+box or shard again?"* — by looking at **where the work is going**, not just how
+much of it there is. The panel leads with a load breakdown bar (reads / writes /
+analytics / write-replay as fractions of cluster work), then up to four ranked
+cards: headline, explanation, recommended action.
+
+Eighteen rules, ordered by urgency, each reading live numbers. The same "CPU
+pegged" situation produces different advice depending on the diagnosis:
+analytics-dominant says *buy a warehouse, and note that sharding again makes
+fan-out worse*; write-dominant says *shard, because caches and replicas cannot
+take writes*; tier 6 says *vertical scaling has ended, there is no tier 7*;
+anything below tier 6 says *bigger box is simplest and needs no redesign, but
+plan the split*. When nothing is wrong, the last rule predicts the next wall
+("roughly 42s before utilization reaches 85%").
+
+The panel does not pause the game and updates four times a second, so buying
+the recommended fix visibly changes the advice — the feedback loop is the
+lesson. *Serves: readable consequences (naming the bottleneck and the reason),
+and it is the game's answer to "I don't know what I don't know".*
+
 ### Management memos (the normative voice)
 
 Insight cards explain *how systems work*; memos say *what you should have done*,

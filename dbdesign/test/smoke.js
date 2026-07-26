@@ -19,7 +19,7 @@ function assert(cond, msg) {
 // 1. classic-script load order, shared global scope like a browser
 const ctxObj = {};
 const ctx = vm.createContext(ctxObj);
-for (const f of ['flourish.js', 'content.js', 'memos.js', 'engine.js']) {
+for (const f of ['flourish.js', 'content.js', 'memos.js', 'engine.js', 'guru.js']) {
   vm.runInContext(fs.readFileSync(path.join(root, f), 'utf8'), ctx, { filename: f });
 }
 assert(typeof ctxObj.Content === 'object' || vm.runInContext('typeof Content', ctx) === 'object',
@@ -142,8 +142,52 @@ const memoRun = vm.runInContext(`
 `, ctx);
 assert(memoRun.length > 0, 'memos fire during a real run (' + memoRun.join(', ') + ')');
 
-// 7. syntax check the DOM-dependent files
-for (const f of ['ui.js', 'index.js', 'content.js', 'engine.js', 'flourish.js', 'memos.js']) {
+// 7. the guru must always answer, and no rule may throw on any board state
+const guruCheck = vm.runInContext(`
+  (() => {
+    const seen = new Set();
+    let advisedEvery = true, thrown = null, blank = 0;
+    // sweep a spread of situations: fresh, built-out, broke, idle, on fire
+    const setups = [
+      s => {},
+      s => { s.cash = 1e6; for (const i of Content.SHOP) Engine.buy(s, i.key); },
+      s => { s.cash = -100; },
+      s => { s.cash = 1e6; Engine.buy(s, 'indexes'); Engine.buy(s, 'pooler');
+             for (let i = 0; i < 5; i++) Engine.buy(s, 'tier'); },
+      s => { s.cash = 1e6; Engine.buy(s, 'kv'); Engine.buy(s, 'cache'); Engine.buy(s, 'cache'); },
+    ];
+    for (let si = 0; si < setups.length; si++) {
+      for (const profile of Content.PROFILE_KEYS) {
+        const s = Engine.createState(100 + si);
+        Engine.applyProfile(s, profile);
+        Engine.tick(s);
+        setups[si](s);
+        for (let i = 0; i < 900; i++) {
+          Engine.tick(s);
+          if (i % 150 !== 0) continue;
+          try {
+            const out = Guru.advise(s, s.report);
+            if (out.length === 0) { advisedEvery = false; blank++; }
+            for (const a of out) {
+              seen.add(a.key);
+              if (!a.headline || !a.body || !a.action) blank++;
+            }
+          } catch (e) { thrown = e.message; }
+        }
+      }
+    }
+    return { seen: [...seen], advisedEvery, thrown, blank, rules: Guru.RULES.length };
+  })()
+`, ctx);
+assert(guruCheck.thrown === null, 'no guru rule throws on any board state' +
+  (guruCheck.thrown ? ' (' + guruCheck.thrown + ')' : ''));
+assert(guruCheck.advisedEvery && guruCheck.blank === 0,
+  'the guru always returns complete advice (never blank)');
+assert(guruCheck.seen.length >= 8,
+  `guru rules fire across situations (${guruCheck.seen.length}/${guruCheck.rules}: ${guruCheck.seen.join(', ')})`);
+
+// 8. syntax check the DOM-dependent files
+for (const f of ['ui.js', 'index.js', 'content.js', 'engine.js', 'flourish.js', 'memos.js', 'guru.js']) {
   try {
     execFileSync(process.execPath, ['--check', path.join(root, f)]);
     console.log('  PASS ' + f + ' parses');

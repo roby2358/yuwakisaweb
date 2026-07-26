@@ -57,6 +57,7 @@
     state = Engine.createState((Date.now() ^ (Math.random() * 1e9)) | 0);
     ended = false;
     UI.clearMemos();
+    UI.closeGuru();
     document.getElementById('modal-backdrop').classList.add('hidden');
     document.getElementById('endscreen').classList.add('hidden');
     closeModal();
@@ -114,6 +115,9 @@
       setSpeed(Number(b.dataset.speed));
     });
   });
+
+  document.getElementById('btn-guru').addEventListener('click', () => UI.toggleGuru(state));
+  document.getElementById('guru-close').addEventListener('click', () => UI.closeGuru());
 
   document.getElementById('btn-memos').addEventListener('click', e => {
     memosMuted = !memosMuted;
