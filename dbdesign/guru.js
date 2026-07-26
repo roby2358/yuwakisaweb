@@ -148,6 +148,21 @@ var Guru = (() => {
       action: () => 'Add cache nodes. Cheaper per unit of relief than any hardware here, as long as the hit rate keeps climbing.',
     },
     {
+      key: 'needReplica',
+      severity: 'warn',
+      when: (s, r) => s.infra.replicas === 0 && r.sql.primaryUtil > 0.7
+        && loadMix(r).read + loadMix(r).analytics > 0.45,
+      headline: (s, r) => 'Reads and reports are ' + pct(loadMix(r).read + loadMix(r).analytics) +
+        ' of the load, and every one of them runs on the primary.',
+      body: (s, r) => 'You have ' + s.infra.shards + ' primar' + (s.infra.shards > 1 ? 'ies' : 'y') +
+        ' and no replicas, so writes and reads compete for the same nodes. A replica takes the read ' +
+        'traffic off the primary — and it raises your connection ceiling too, because every node ' +
+        'accepts its own connections (' + num(r.sql.connCap) + ' now across ' +
+        (s.infra.shards * (1 + s.infra.replicas)) + ' node' +
+        (s.infra.shards * (1 + s.infra.replicas) > 1 ? 's' : '') + ').',
+      action: () => 'Add a read replica. It is the classic first horizontal move, and it usually drops CPU and connection pressure at the same time.',
+    },
+    {
       key: 'cacheDud',
       severity: 'warn',
       when: (s, r) => s.infra.cacheNodes >= 2 && r.cache.hitRate < 0.35 && r.perType.read.demand > 200,

@@ -247,7 +247,7 @@ Content.SHOP = [
   },
   {
     key: 'replica', name: 'Read replica (per shard)', color: '#7bb7ff',
-    blurb: 'One more read-serving copy of every shard.',
+    blurb: 'One more read-serving copy of every shard — and every node it adds raises the cluster connection limit too.',
     tradeoff: 'Each replica replays ALL writes; lags (stale reads) when hot.',
     price: s => s.infra.replicas >= Content.MAX_REPLICAS ? null : 250 * s.infra.shards,
     apply: s => { s.infra.replicas += 1; },
@@ -255,6 +255,7 @@ Content.SHOP = [
     fixed: 3, fixedNote: 'lag dashboards, failover runbooks, read-your-writes bugs',
     marginal: () => 0, // the nodes themselves are billed under the SQL cluster
     ownedLabel: s => s.infra.replicas + ' per shard',
+    insightOnBuy: 'nodeheadroom',
     canScaleDown: s => s.infra.replicas > 0,
     scaleDown: s => { s.infra.replicas -= 1; },
     scaleDownLabel: 'retire one replica per shard',
@@ -418,6 +419,10 @@ Content.INSIGHTS = {
     text: 'Your cache is stuck at a low hit rate no matter how many nodes you add — this workload just does not re-read the same rows. Caching pays when traffic is repeated; on unique-read workloads (device telemetry, long-tail search) the cache is RAM-shaped cash on fire. Measure the hit ratio before buying more of it. Interview line: "First question: what is the read/write mix, and how repeated are the reads?"',
     check: (s, r) => s.infra.cacheNodes >= 2 && r.cache.hitRate < 0.45 && r.cache.hitRate > 0
       && r.perType.read.demand > 100,
+  },
+  nodeheadroom: {
+    title: 'A node buys two kinds of headroom',
+    text: 'That replica did two things at once, and people usually only plan for the first. It added read capacity — queries can now run somewhere other than the primary. It also raised your connection ceiling, because every database node accepts its own limited set of connections, so the cluster-wide limit is per-node-limit × node count. That is why CPU and connection pressure often fall together the moment you widen a cluster, and why a system starving on connections can sometimes be cured by adding a node rather than by tuning anything. The reverse holds too: scale nodes down and you narrow both at once.',
   },
   replicawrites: {
     title: 'Replicas scale reads, not writes',

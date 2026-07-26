@@ -185,7 +185,12 @@ much of it there is. The panel leads with a load breakdown bar (reads / writes /
 analytics / write-replay as fractions of cluster work), then up to four ranked
 cards: headline, explanation, recommended action.
 
-Eighteen rules, ordered by urgency, each reading live numbers. The same "CPU
+Nineteen rules, ordered by urgency, each reading live numbers. (The
+`needReplica` rule exists because playtesting found the gap: a player pegged on
+a read-heavy workload with zero replicas was told "bigger box" when the answer
+was the classic first horizontal move. Adding one replica dropped CPU 86%→66%
+*and* connections 266%→94%, because node count raises both ceilings — a lesson
+the game now teaches with its own insight card the first time you buy one.) The same "CPU
 pegged" situation produces different advice depending on the diagnosis:
 analytics-dominant says *buy a warehouse, and note that sharding again makes
 fan-out worse*; write-dominant says *shard, because caches and replicas cannot

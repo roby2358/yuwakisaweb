@@ -7,6 +7,7 @@
 
 const Engine = require('../engine.js');
 const Content = require('../content.js');
+const Guru = require('../guru.js');
 const { botAct } = require('./bot.js');
 
 const S = Content.SIM;
@@ -122,6 +123,35 @@ console.log('\n=== sustained meltdown plummets users to busto ===');
   console.log(`  peak=${s.peakUsers.toFixed(0)} users=${s.users.toFixed(0)} outcome=${s.outcome} cause=${s.deathCause}`);
   assert(s.outcome === 'lost' && s.users <= Math.max(S.BUST_USERS, s.peakUsers * S.COLLAPSE_FRAC),
     'error churn drains users to bust within minutes');
+}
+
+console.log('\n=== the guru names the right first horizontal move ===');
+{
+  // read-heavy, primary pegged, zero replicas — the situation where the answer
+  // is "add a replica", not "buy a bigger box"
+  const s = Engine.createState(4);
+  Engine.applyProfile(s, 'feed');
+  s.cash = 1e6;
+  Engine.buy(s, 'indexes'); Engine.buy(s, 'pooler');
+  for (let i = 0; i < 3; i++) Engine.buy(s, 'tier');
+  s.users = 120000;
+  step(s, 8, null);
+  const advice = Guru.advise(s, s.report);
+  const rec = advice.find(a => a.key === 'needReplica');
+  console.log(`  util=${(100 * s.report.sql.primaryUtil).toFixed(0)}% replicas=${s.infra.replicas} → ${advice.map(a => a.key).join(', ')}`);
+  if (rec) console.log(`  “${rec.headline}”\n   → ${rec.action}`);
+  assert(!!rec, 'read-heavy + pegged + no replicas recommends a read replica');
+
+  // and buying one relieves BOTH CPU and connections
+  const before = { util: s.report.sql.primaryUtil, conn: s.report.sql.connUsed / s.report.sql.connCap };
+  Engine.buy(s, 'replica');
+  step(s, 8, null);
+  const after = { util: s.report.sql.primaryUtil, conn: s.report.sql.connUsed / s.report.sql.connCap };
+  console.log(`  after one replica: CPU ${(100 * before.util).toFixed(0)}%→${(100 * after.util).toFixed(0)}%, ` +
+    `connections ${(100 * before.conn).toFixed(0)}%→${(100 * after.conn).toFixed(0)}%`);
+  assert(after.util < before.util && after.conn < before.conn,
+    'one replica relieves CPU and connection pressure together');
+  assert(s.insights.nodeheadroom, 'buying it teaches that a node buys both kinds of headroom');
 }
 
 console.log('\n=== management notices specific mistakes ===');
