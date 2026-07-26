@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LOAD BEARING — a systems architecture simulator</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏗️</text></svg>">
+<link rel="stylesheet" href="index.css?v=2">
+</head>
+<body>
+
+<div id="topbar">
+  <div id="brand">
+    <div id="title">LOAD BEARING</div>
+    <div id="subtitle">run it while it grows</div>
+  </div>
+  <div class="stat big">
+    <div class="stat-label">served</div>
+    <div class="stat-value" id="stat-rps">0</div>
+    <div class="stat-sub" id="stat-rps-sub"></div>
+  </div>
+  <div class="stat"><div class="stat-label">errors</div><div class="stat-value" id="stat-err">0%</div></div>
+  <div class="stat">
+    <div class="stat-label">p99</div>
+    <div class="stat-value" id="stat-p99">–</div>
+    <div class="stat-sub" id="stat-p99-sub"></div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">error budget</div>
+    <div class="stat-value" id="stat-budget">0%</div>
+    <div class="stat-sub">spent</div>
+  </div>
+  <div class="stat"><div class="stat-label">users</div><div class="stat-value" id="stat-users">0</div></div>
+  <div class="stat">
+    <div class="stat-label">reputation</div>
+    <div class="stat-value" id="stat-rep">–</div>
+    <div class="stat-sub" id="stat-rep-sub"></div>
+  </div>
+  <div class="stat"><div class="stat-label">cash</div><div class="stat-value" id="stat-cash">$0</div></div>
+  <div class="stat"><div class="stat-label">win</div><div class="stat-value" id="winbar"></div></div>
+  <div id="controls">
+    <button class="speed" data-speed="0">⏸</button><button class="speed sel" data-speed="1">1×</button><button class="speed" data-speed="2">2×</button><button class="speed" data-speed="4">4×</button>
+    <button id="btn-insights">field notes <span id="insight-count">0</span>/<span id="insight-total">0</span></button>
+    <button id="btn-memos" title="Mute management">📣</button>
+  </div>
+</div>
+
+<div id="briefbar">
+  <span id="brief-name"></span>
+  <span id="brief-chips"></span>
+  <div id="mix-segments" title="the traffic mix this brief generates"></div>
+</div>
+
+<div id="main">
+  <div id="stage">
+    <canvas id="scene"></canvas>
+    <div id="toasts"></div>
+    <div id="memos"></div>
+    <div id="probe" class="hidden"></div>
+    <div id="guru-panel" class="hidden">
+      <div id="guru-head">
+        <span>🧘 THE GURU SEES</span>
+        <span id="guru-close">✕</span>
+      </div>
+      <div id="guru-load"></div>
+      <div id="guru-loadkey"></div>
+      <div id="guru-cards"></div>
+    </div>
+    <button id="btn-guru" title="Ask the guru what to do right now">🧘 Guru</button>
+  </div>
+  <div id="shop">
+    <div id="shop-header"><span>ARCHITECTURE</span><span id="stat-income"></span></div>
+    <div id="shop-items"></div>
+  </div>
+</div>
+
+<div id="moneybar">
+  <span title="Revenue: every served request earns. Failed requests earn nothing.">REVENUE</span>
+  <div id="money-track">
+    <div id="money-segments"></div>
+    <div id="money-marker"></div>
+  </div>
+  <span id="money-net"></span>
+</div>
+
+<div id="charts">
+  <div class="chart"><canvas id="chart-rps"></canvas></div>
+  <div class="chart"><canvas id="chart-lat"></canvas></div>
+  <div class="chart"><canvas id="chart-cash"></canvas></div>
+</div>
+
+<div id="modal-backdrop" class="hidden">
+
+  <div id="intro" class="card">
+    <div class="card-kicker">NOW IN PRODUCTION</div>
+    <div class="card-title" id="intro-title"></div>
+    <div class="card-text" id="intro-blurb"></div>
+    <div class="card-kicker" style="margin-top:14px">WHAT IT HAS TO DO</div>
+    <ul id="brief-req" class="card-text"></ul>
+    <div class="card-kicker">WHAT IT HAS TO HOLD — hover each</div>
+    <div id="brief-nfr"></div>
+    <div class="card-text" style="margin-top:14px">
+      This is the system, running, right now. You start with one small server, one
+      balancer and one database, and real traffic is already arriving. It flows left to
+      right through whatever you build; served requests earn money and bring more users,
+      and more users break what worked yesterday. Nothing here is hypothetical — you are
+      not sketching this architecture, you are operating it.<br><br>
+      Every box shows how full it is, because latency is service time ÷ (1 − utilization) —
+      systems do not slow down gradually, they fall off a cliff. <b>Hover any box</b> to
+      interrogate it: traffic, latency, errors, saturation and run-rate. How much of
+      that answer you get depends on how much <b>telemetry</b> you have bought.<br><br>
+      Everything you own bills you every second in two parts: a <b>fixed</b> cost the
+      moment it exists — the team who knows it, the dashboards, the 3am pages — plus a
+      small amount per node. Your first node of anything is expensive; your tenth is
+      cheap. Anything not carrying its weight can be scaled back down with <b>−</b>.<br><br>
+      Stuck? The <b style="color:#b9aeff">🧘 Guru</b> diagnoses the board live and names
+      the next move. Management will also have opinions; 📣 mutes them.<br><br>
+      When the run ends you get an <b style="color:#e3b341">architecture review</b> — the
+      one you would get at work, on what you built, when you built it, and what it cost.
+      Those seven lines are also, not by accident, the seven things an interviewer is
+      listening for. Space pauses.<br><br>
+      It moves at the speed of a system that is growing, not at the speed of a game.
+      Use <b>2×</b> and <b>4×</b> when nothing is happening, and <b>⏸</b> when it is.
+    </div>
+    <button id="intro-ok">take the pager</button>
+  </div>
+
+  <div id="insight-card" class="card hidden">
+    <div class="card-kicker">INSIGHT UNLOCKED</div>
+    <div class="card-title" id="card-title"></div>
+    <div class="card-text" id="card-text"></div>
+    <button id="card-ok">noted — back to the fire</button>
+  </div>
+
+  <div id="drawer" class="card hidden">
+    <div class="card-kicker">FIELD NOTES</div>
+    <div id="drawer-list"></div>
+    <button id="drawer-close">close</button>
+  </div>
+
+  <div id="endscreen" class="card hidden">
+    <div id="overall"></div>
+    <div class="card-kicker" id="end-kicker"></div>
+    <div class="card-title" id="end-title"></div>
+    <div class="card-text" id="end-lead"></div>
+    <div id="verdict"></div>
+    <div id="wanted"></div>
+    <table id="scorecard"></table>
+    <div id="end-insights"></div>
+    <button id="btn-restart">next system</button>
+  </div>
+
+</div>
+
+<script src="format.js?v=2"></script>
+<script src="flourish.js?v=2"></script>
+<script src="content.js?v=2"></script>
+<script src="catalog.js?v=2"></script>
+<script src="memos.js?v=2"></script>
+<script src="engine.js?v=2"></script>
+<script src="guru.js?v=2"></script>
+<script src="score.js?v=2"></script>
+<script src="ui.js?v=2"></script>
+<script src="index.js?v=2"></script>
+</body>
+</html>

@@ -1,0 +1,223 @@
+/* LOAD BEARING — one dark board, four regions: the brief, the map, the shop,
+   the money. Colours are semantic, not decorative: --good/--warn/--bad are the
+   only three verdicts anything ever renders, and they come from Content.BANDS
+   via Fmt.level, so the canvas cannot disagree with the panel beside it. */
+
+:root {
+  --bg: #0d1117;
+  --panel: #161b22;
+  --panel2: #1c2230;
+  --line: #2b3240;
+  --ink: #c9d1d9;
+  --dim: #7d8899;
+  --faint: #4b5563;
+  --good: #43d17a;
+  --warn: #e3b341;
+  --bad: #f85149;
+  --accent: #4ea3ff;
+  --gold: #e3b341;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font: 13px/1.45 ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  overflow: hidden;
+}
+
+body { display: flex; flex-direction: column; }
+
+.good { color: var(--good); }
+.warn { color: var(--warn); }
+.bad  { color: var(--bad); }
+.hidden { display: none !important; }
+
+/* ---- top bar ---------------------------------------------------------- */
+#topbar {
+  display: flex; align-items: center; gap: 16px;
+  padding: 8px 14px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  flex: 0 0 auto;
+}
+
+#brand { min-width: 200px; }
+#title { font-size: 15px; font-weight: 700; letter-spacing: 2px; color: #fff; }
+#subtitle { font-size: 11px; color: var(--dim); }
+
+.stat { min-width: 62px; }
+.stat-label { font-size: 9px; letter-spacing: 1px; color: var(--faint); text-transform: uppercase; }
+.stat-value { font-size: 14px; font-weight: 600; }
+.stat.big .stat-value { font-size: 20px; }
+.stat-sub { font-size: 9px; color: var(--faint); }
+
+#controls { margin-left: auto; display: flex; gap: 5px; align-items: center; }
+
+button {
+  background: var(--panel2); color: var(--ink); border: 1px solid var(--line);
+  border-radius: 4px; padding: 4px 8px; font: inherit; font-size: 11px; cursor: pointer;
+}
+button:hover { border-color: var(--accent); }
+button:disabled { opacity: 0.35; cursor: not-allowed; }
+button.sel { background: var(--accent); color: #06101d; border-color: var(--accent); font-weight: 700; }
+
+/* ---- the brief -------------------------------------------------------- */
+#briefbar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 5px 14px; background: #11161f;
+  border-bottom: 1px solid var(--line); flex: 0 0 auto; font-size: 11px;
+}
+#brief-name { font-weight: 700; color: var(--gold); white-space: nowrap; }
+.chip {
+  padding: 1px 7px; border: 1px solid var(--line); border-radius: 10px;
+  color: var(--dim); white-space: nowrap; cursor: default;
+}
+.chip b { color: var(--ink); font-weight: 600; }
+
+#mix-segments { display: flex; flex: 1; height: 14px; border-radius: 3px; overflow: hidden; min-width: 150px; }
+#mix-segments div { height: 100%; cursor: default; }
+
+/* ---- main ------------------------------------------------------------- */
+#main { flex: 1 1 auto; display: flex; min-height: 0; }
+#stage { position: relative; flex: 1 1 auto; min-width: 0; }
+#scene { display: block; width: 100%; height: 100%; }
+
+/* ---- shop ------------------------------------------------------------- */
+#shop {
+  flex: 0 0 322px; background: var(--panel); border-left: 1px solid var(--line);
+  display: flex; flex-direction: column; min-height: 0;
+}
+#shop-header {
+  padding: 6px 10px; font-size: 10px; letter-spacing: 2px; color: var(--faint);
+  border-bottom: 1px solid var(--line); display: flex; justify-content: space-between;
+}
+#shop-items { overflow-y: auto; flex: 1 1 auto; }
+
+.group-head {
+  padding: 4px 10px; font-size: 9px; letter-spacing: 2px; color: var(--faint);
+  background: #10151d; border-top: 1px solid var(--line);
+  display: flex; justify-content: space-between;
+}
+.group-head .g-owned { color: var(--dim); letter-spacing: 0; }
+
+.item {
+  padding: 5px 10px; border-bottom: 1px solid #1b212c;
+  display: grid; grid-template-columns: 1fr auto; gap: 2px 6px; align-items: center;
+}
+.item.locked { opacity: 0.32; }
+.item-name { font-size: 12px; }
+.item-name .swatch { display: inline-block; width: 7px; height: 7px; border-radius: 2px; margin-right: 5px; }
+.item-sub { grid-column: 1 / 2; font-size: 10px; color: var(--dim); }
+.item-buys { display: flex; gap: 4px; align-items: center; grid-row: 1 / 3; }
+.item-buy { min-width: 62px; text-align: center; }
+.item-buy.can { border-color: var(--good); color: var(--good); }
+.item-less { padding: 4px 6px; color: var(--dim); }
+
+/* ---- money ------------------------------------------------------------ */
+#moneybar {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 10px;
+  padding: 5px 14px; background: var(--panel); border-top: 1px solid var(--line);
+  font-size: 11px;
+}
+#money-track { position: relative; flex: 1; height: 15px; background: #0a0e14; border-radius: 3px; overflow: hidden; }
+#money-segments { display: flex; height: 100%; }
+#money-segments div { height: 100%; cursor: default; }
+#money-marker { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--good); }
+
+/* ---- charts ----------------------------------------------------------- */
+#charts { flex: 0 0 108px; display: flex; gap: 1px; background: var(--line); }
+.chart { flex: 1; background: var(--bg); position: relative; }
+.chart canvas { display: block; width: 100%; height: 100%; }
+
+/* ---- probe ------------------------------------------------------------ */
+#probe {
+  position: absolute; width: 300px; background: rgba(13,17,23,0.97);
+  border: 1px solid var(--line); border-radius: 6px; padding: 9px 11px;
+  pointer-events: none; z-index: 40; box-shadow: 0 8px 28px #0009;
+}
+#probe h4 { margin: 0 0 3px; font-size: 12px; letter-spacing: 1px; }
+#probe .p-desc { font-size: 10px; color: var(--dim); margin-bottom: 7px; }
+#probe .p-sec { font-size: 9px; letter-spacing: 2px; color: var(--faint); margin-top: 7px; }
+#probe .p-row { display: flex; justify-content: space-between; font-size: 11px; gap: 10px; }
+#probe .p-row span:first-child { color: var(--dim); }
+#probe .p-blind { color: var(--warn); font-size: 10px; margin-top: 6px; }
+
+/* ---- guru ------------------------------------------------------------- */
+#btn-guru { position: absolute; right: 12px; bottom: 12px; z-index: 30; padding: 6px 11px; }
+#guru-panel {
+  position: absolute; right: 12px; bottom: 48px; width: 370px; max-height: 74%;
+  overflow-y: auto; background: rgba(13,17,23,0.98); border: 1px solid #4b3f7a;
+  border-radius: 7px; z-index: 35; box-shadow: 0 10px 34px #000a;
+}
+#guru-head {
+  display: flex; justify-content: space-between; padding: 7px 11px;
+  font-size: 11px; letter-spacing: 2px; color: #b9aeff; border-bottom: 1px solid #2b2545;
+}
+#guru-close { cursor: pointer; }
+#guru-load { display: flex; height: 15px; margin: 8px 11px 4px; border-radius: 3px; overflow: hidden; }
+#guru-load div { height: 100%; }
+#guru-loadkey { padding: 0 11px 6px; font-size: 9px; color: var(--faint); }
+.guru-card { padding: 8px 11px; border-top: 1px solid #21283a; }
+.guru-head2 { font-size: 12px; font-weight: 700; color: #cfc6ff; }
+.guru-why { font-size: 11px; color: var(--dim); margin: 3px 0 5px; }
+.guru-act { font-size: 11px; color: var(--ink); }
+.guru-card button { margin-top: 6px; }
+
+/* ---- toasts & memos --------------------------------------------------- */
+#toasts { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 30; }
+.toast {
+  background: rgba(28,34,48,0.97); border: 1px solid var(--gold); border-radius: 6px;
+  padding: 7px 13px; margin-bottom: 6px; text-align: center; animation: pop 0.3s;
+}
+.toast b { color: var(--gold); }
+.toast div { font-size: 11px; color: var(--dim); }
+
+#memos { position: absolute; left: 12px; bottom: 12px; width: 300px; z-index: 30; }
+.memo {
+  background: #f6f1e3; color: #23201a; border-radius: 3px; padding: 8px 11px;
+  margin-top: 8px; box-shadow: 0 6px 18px #0008; animation: pop 0.3s;
+  font-family: Georgia, "Times New Roman", serif;
+}
+.memo .m-from { font-size: 10px; color: #6b6355; letter-spacing: 1px; }
+.memo .m-subj { font-weight: 700; font-size: 12px; margin: 2px 0 4px; }
+.memo .m-body { font-size: 12px; }
+
+@keyframes pop { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; } }
+
+/* ---- modals ----------------------------------------------------------- */
+#modal-backdrop {
+  position: fixed; inset: 0; background: #060910dd; z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+}
+.card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 9px;
+  padding: 22px 26px; max-width: 700px; max-height: 86vh; overflow-y: auto;
+}
+.card-kicker { font-size: 10px; letter-spacing: 3px; color: var(--gold); }
+.card-title { font-size: 20px; font-weight: 700; color: #fff; margin: 5px 0 10px; }
+.card-text { font-size: 13px; line-height: 1.6; color: var(--ink); }
+.card button { margin-top: 16px; padding: 7px 15px; font-size: 12px; }
+
+#brief-req { margin: 10px 0; padding-left: 18px; color: var(--dim); }
+#brief-req li { margin: 2px 0; }
+#brief-nfr { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; }
+
+#drawer-list .ins { border-top: 1px solid var(--line); padding: 9px 0; }
+#drawer-list .ins h5 { margin: 0 0 3px; font-size: 13px; color: var(--gold); }
+#drawer-list .ins p { margin: 0; font-size: 12px; color: var(--dim); line-height: 1.55; }
+
+/* ---- the scorecard ---------------------------------------------------- */
+#scorecard { width: 100%; margin: 14px 0; border-collapse: collapse; }
+#scorecard td { padding: 6px 8px; border-top: 1px solid var(--line); vertical-align: top; }
+#scorecard .sc-grade { font-size: 17px; font-weight: 700; width: 46px; text-align: center; }
+#scorecard .sc-name { font-weight: 600; white-space: nowrap; }
+#scorecard .sc-what { font-size: 11px; color: var(--faint); }
+#scorecard .sc-note { font-size: 11px; color: var(--dim); }
+#verdict { font-size: 15px; color: var(--gold); margin: 4px 0 2px; }
+#wanted { margin: 12px 0 2px; padding: 9px 12px; background: #11161f; border-left: 2px solid var(--gold); }
+#wanted .card-text { font-size: 12px; color: var(--dim); margin-top: 3px; }
+#overall { font-size: 42px; font-weight: 700; float: right; line-height: 1; }
