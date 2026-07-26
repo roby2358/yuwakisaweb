@@ -113,7 +113,7 @@ console.log('\n=== sustained meltdown plummets users to busto ===');
 {
   const s = Engine.createState(11);
   Engine.applyProfile(s, 'feed');
-  step(s, 400, botAct); // grow to real scale with sensible play
+  step(s, 240, botAct); // grow to real scale with sensible play (but not to a win)
   const peak = s.users;
   // total outage: infrastructure reset to a single tier-1 box, nobody reacts
   s.infra.tier = 1; s.infra.shards = 1; s.infra.replicas = 0;

@@ -124,7 +124,7 @@ var Guru = (() => {
       headline: (s, r) => 'Analytics is ' + pct(loadMix(r).analytics) + ' of your cluster’s work.',
       body: (s, r) => s.infra.shards > 1
         ? 'Each report fans out to all ' + s.infra.shards + ' shards, so sharding again makes this WORSE, not better — ' +
-          'total analytics work scales with shard count.'
+          'every extra shard adds coordination cost to every report.'
         : 'Reports scan and join; each one costs ~60× what a point read costs. They are drowning the transaction path.',
       action: () => 'Buy the analytics warehouse. It deletes this load rather than adding nodes to absorb it — the cheapest capacity on the board.',
     },

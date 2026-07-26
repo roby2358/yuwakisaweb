@@ -32,10 +32,18 @@ intuition the game exists to build.
   the exact component that dropped them.
 - **Reputation loop** (Escalating Commitment): served-fast requests raise
   reputation, reputation grows users exponentially, users generate demand.
-  Errors churn users *directly and fast* (≈10%/s at total meltdown), while
-  reputation crashes fast and rebuilds slowly — so an unaddressed meltdown is a
-  visible plummet, not a plateau. (Loss aversion: the user counter drains in
-  front of you.)
+  Errors churn users *directly and fast*, and reputation tracks
+  `successFrac³` — so growth demands near-perfect service: a clean system
+  doubles every ~11s, 10% errors halve that rate, 20% reverses it, and past
+  30% the user base halves in ~12s. Reputation crashes fast and rebuilds
+  slowly, so a meltdown leaves a scar.
+
+  **This curve is also the game's stabilizer.** Error rate is a real brake on
+  demand: when you are underwater, the traffic causing the pain leaves, demand
+  falls to what you *can* serve, and you get room to recover. Without that,
+  demand outruns anything you can buy and the player is pinned watching red
+  gauges with no move available — which is exactly what playtesting found when
+  growth still outpaced churn at a 30% error rate.
 - **Runway and burn** (Scarcity of Agency): you start with seed runway and no
   revenue. Each served request earns; every subsystem burns per second in two
   parts — a **fixed** cost the instant you own any of it (the team, the
@@ -64,9 +72,11 @@ These are real systems facts, encoded as mechanics, surfaced as collectible
 7. **Indexes** — reads get ~10× cheaper, writes ~20% costlier. Buy them first.
 8. **Vertical scaling ends** — each bigger box costs ~2.5× for 2× capacity, and
    the biggest box is still not 1M RPS. Forces the horizontal turn.
-9. **Sharding scales writes** — N shards ≈ N× write capacity, but cross-shard
-   analytics pays N× fan-out, and the migration window degrades capacity —
-   reshard *before* you're at 90%.
+9. **Sharding scales writes** — N shards ≈ N× write capacity. Cross-shard
+   analytics pays *coordination* (touch every shard, wait for the slowest,
+   merge), not N× the scanning — each shard reads only its slice — so a report
+   at 64 shards costs ~8× one at a single shard. The migration window degrades
+   capacity, so reshard *before* you're at 90%.
 10. **NoSQL contrast** — the KV store scales linearly and cheaply for key
     lookups, but joins/analytics can't go there. It's an offload, not a
     replacement.
@@ -103,11 +113,11 @@ question you ask in the interview" made mechanical:
 
 | Profile | Signature | Repetition | $/req | Winning shape |
 |---|---|---|---|---|
-| Social photo feed | READ 70% | 1.0 | .004 | cache is the game |
-| Flash-sale commerce | WRITE 32% | 0.8 | .006 | cache browsing, shard checkout |
-| IoT telemetry ingest | WRITE 55% | 0.4 | .007 | shard early; cache is a cash sink |
-| Ad-tech exchange | LOOKUP 53% | 0.7 | .004 | NoSQL KV carries it |
-| B2B analytics SaaS | ANALYTICS 22% | 0.6 | .009 | replicas then warehouse |
+| Social photo feed | READ 70% | 1.0 | .006 | cache is the game |
+| Flash-sale commerce | WRITE 32% | 0.8 | .009 | cache browsing, shard checkout |
+| IoT telemetry ingest | WRITE 55% | 0.4 | .010 | shard early; cache is a cash sink |
+| Ad-tech exchange | LOOKUP 53% | 0.7 | .006 | NoSQL KV carries it |
+| B2B analytics SaaS | ANALYTICS 22% | 0.6 | .013 | replicas then warehouse |
 
 Two profile-scoped mechanics make the differences bite:
 
@@ -131,7 +141,7 @@ Two profile-scoped mechanics make the differences bite:
 | Read replica (per shard) | adds a read-serving node | replays all writes; lags when hot → stale reads | 3 | nodes billed above |
 | Cache node | +hit rate (caps ~92% × repetition), +ops capacity | invalidated by writes; herd risk on reboot | 8 | 2/node |
 | KV store node (NoSQL) | LOOKUP traffic offloaded, linear scale | can't serve JOINs — ANALYTICS stays on SQL | **28** | 1.5/node |
-| Shard split (×2, up to 64) | ~2× write & read capacity | ANALYTICS fan-out ×N; 20s migration at reduced capacity | 6 | 2/shard |
+| Shard split (×2, up to 64) | ~2× write & read capacity | ANALYTICS coordination cost climbs per shard; 20s migration at reduced capacity | 6 | 2/shard |
 | Analytics warehouse (OLAP) | reports leave the transaction path | reports take ~2s; a data team to run it | 24 | — |
 | Write queue | write overflow becomes backlog, not errors | backlog = visible staleness debt | 12 | — |
 
@@ -140,6 +150,31 @@ request, and $1.50 per node after — so "just add Redis for this one feature" i
 a question about headcount, not hosting. Every subsystem can be scaled back
 down (nodes retired, boxes downgraded, whole systems decommissioned) with
 nothing refunded; **sharding is the one-way door** you cannot walk back.
+
+### Component probes (observability as a mechanic)
+
+Hovering any component opens a panel interrogating it in the vocabulary of the
+job: **TRAFFIC** (rate in, by request class), **LATENCY** (p50/p99, and what
+this component contributes), **ERRORS** (count *and cause* — connection
+refused vs out of capacity vs client timeout), **SATURATION** (CPU, connections
+held vs limit, cache hit rate against its repetition ceiling, replication lag,
+queue depth), and **COST** (run-rate, fixed and marginal).
+
+Every box answers the same four questions, which is the discipline itself:
+Google SRE's golden signals, with RED (Rate/Errors/Duration) framing the
+client-facing views and USE (Utilization/Saturation/Errors) framing the
+resources. The SQL probe additionally breaks work into query units by kind —
+reads, writes, analytics, write-replay — which is the single most useful view
+in the game, because "41% of your cluster is write replay" answers *what to
+buy* in a way that a CPU percentage never can. An insight card teaches the
+framework once the system is complex enough to need it.
+
+`node test/probes.js [component...] [--profile iot]` renders these panels as
+text for eyeballing without a browser.
+
+*Serves: readable consequences (every mechanic is inspectable at its source),
+and it teaches "what would you monitor?" — an interview question that is really
+asking "do you know what constrains this?"*
 
 ### The Guru (advice on demand)
 

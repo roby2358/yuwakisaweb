@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>HUG OF DEATH — a database scaling game</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗄️</text></svg>">
-<link rel="stylesheet" href="index.css?v=8">
+<link rel="stylesheet" href="index.css?v=10">
 </head>
 <body>
 <div id="topbar">
@@ -38,6 +38,7 @@
     <canvas id="scene"></canvas>
     <div id="toasts"></div>
     <div id="memos"></div>
+    <div id="probe" class="hidden"></div>
     <div id="legend"></div>
     <div id="guru-panel" class="hidden">
       <div id="guru-head">
@@ -112,6 +113,8 @@
       before they die of CPU, and latency explodes long before utilization hits 100%.
       Each disaster you survive mints an <span style="color:#e3b341">insight card</span> —
       your interview crib sheet.<br><br>
+      <b>Hover any component</b> to interrogate it: traffic, latency, errors, saturation and
+      run-rate — the four golden signals, per box.<br><br>
       Stuck? The <b style="color:#b9aeff">🧘 Guru</b> in the corner diagnoses the board live —
       what your cluster is actually spending its work on, and what to buy next.
       Management will also have opinions; they are not always wrong. 📣 mutes them.<br><br>
@@ -121,12 +124,12 @@
   </div>
 </div>
 
-<script src="flourish.js?v=8"></script>
-<script src="content.js?v=8"></script>
-<script src="memos.js?v=8"></script>
-<script src="engine.js?v=8"></script>
-<script src="guru.js?v=8"></script>
-<script src="ui.js?v=8"></script>
-<script src="index.js?v=8"></script>
+<script src="flourish.js?v=10"></script>
+<script src="content.js?v=10"></script>
+<script src="memos.js?v=10"></script>
+<script src="engine.js?v=10"></script>
+<script src="guru.js?v=10"></script>
+<script src="ui.js?v=10"></script>
+<script src="index.js?v=10"></script>
 </body>
 </html>

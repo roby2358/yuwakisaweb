@@ -10,13 +10,23 @@ Content.SIM = {
   RPS_PER_APP_SERVER: 50,   // app servers scale with traffic automatically
   START_USERS: 40,
   RPS_PER_USER: 0.5,
-  GROWTH_RATE: 0.04,        // max exponential user growth per second (rep 100)
+  GROWTH_RATE: 0.05,        // max exponential user growth per second (rep 100):
+                            // a clean system doubles its users every ~14s,
+                            // which is the reaction window when a gauge crosses
+                            // a threshold. Faster than this and the player
+                            // cannot read, decide and click before it pegs.
   MARKET_USERS: 8000000,    // logistic cap — the internet is finite (4M RPS)
   REP_NEUTRAL: 55,          // reputation below this sheds users
+  REP_SHARPNESS: 3,         // reputation ~ successFrac^3, so growth demands
+                            // near-perfect service: 10% errors halves your
+                            // growth rate, 20% reverses it
   REP_TAU_DOWN: 2,          // reputation crashes fast...
   REP_TAU_UP: 10,           // ...and rebuilds slowly
-  ERR_CHURN: 0.10,          // users/s lost at total meltdown (churn is quadratic
-                            // in error rate: 30% err stings, 100% err plummets)
+  ERR_CHURN: 0.35,          // users/s lost at total meltdown (churn is quadratic
+                            // in error rate). With the curve above this makes
+                            // error rate a real brake on demand: overload sheds
+                            // the traffic causing it, so there is always a way
+                            // back rather than a runaway you cannot buy out of.
   ERR_TOLERANCE: 0.02,      // users forgive errors below 2%
   BUST_USERS: 25,           // fall this low after having grown — busto
   START_CASH: 3000,         // seed runway — you burn it before revenue arrives
@@ -28,6 +38,13 @@ Content.SIM = {
   COLLAPSE_FRAC: 0.05,
   BANKRUPT_CASH: -250,      // small overdraft, then the lights go out
   ANALYTICS_UNITS: 60,      // query units per analytics request
+  ANALYTICS_FANOUT: 0.12,   // extra cost per EXTRA shard a report must touch.
+                            // Each shard scans only its 1/N of the data, so
+                            // total work is not N× — what you actually pay is
+                            // coordination: touch every shard, wait for the
+                            // slowest, merge. Still punishes over-sharding
+                            // (64 shards ≈ 8.6× a report's cost) without
+                            // making a sharded cluster instantly unaffordable.
   READ_UNITS_RAW: 10,       // unindexed read cost
   READ_UNITS_INDEXED: 1,
   WRITE_UNITS: 5,
@@ -63,7 +80,13 @@ Content.TIERS = [
   { cap: 96000,  conns: 1000, run: 8 },
   { cap: 192000, conns: 1500, run: 16 },
 ];
-Content.TIER_PRICES = [300, 800, 2000, 5000, 12000]; // upgrading to tier 2..6
+// Upgrading to tier 2..6. These MUST scale at roughly the same rate as
+// capacity (~2.1× per step), because your income scales with the traffic you
+// can serve — i.e. with capacity. Price them at 2.5× and each tier takes
+// longer to afford than the last (38s → 95s of income) while demand doubles
+// every ~14s, so vertical scaling becomes mathematically unreachable and the
+// player is pinned watching red gauges. Playtest found exactly that.
+Content.TIER_PRICES = [180, 380, 800, 1700, 3600];
 Content.MAX_SHARDS = 64;
 Content.MAX_REPLICAS = 4;
 Content.MAX_CACHE = 8;
@@ -211,7 +234,7 @@ Content.SHOP = [
   {
     key: 'tier', name: 'Bigger boxes (vertical)', color: '#4ea3ff',
     blurb: '2× query units and more connections on every SQL node.',
-    tradeoff: 'Each step costs ~2.5× more. Tier 6 is the biggest box made.',
+    tradeoff: 'Each step costs a little more than the capacity it adds — and tier 6 is the biggest box made.',
     price: s => s.infra.tier >= 6 ? null : Content.TIER_PRICES[s.infra.tier - 1],
     apply: s => { s.infra.tier += 1; },
     owned: () => true, // you always have a database
@@ -421,7 +444,7 @@ Content.INSIGHTS = {
   },
   fanout: {
     title: 'Cross-shard fan-out',
-    text: 'Your analytics queries now hit every shard and merge results — total work scales with shard count. Sharding made writes cheap and joins expensive. Pick shard keys so common queries stay single-shard; everything else belongs in a warehouse.',
+    text: 'Your analytics queries now touch every shard and merge the results. Each shard scans only its slice, so the bill is not N× the work — it is coordination: fan out, wait for the slowest shard, merge. That overhead climbs with every split, which is why 64 shards makes a report ~8× dearer than one. Sharding made writes cheap and joins expensive. Pick shard keys so common queries stay single-shard; everything else belongs in a warehouse.',
     check: (s, r) => s.infra.shards >= 4 && !s.infra.warehouse && r.perType.analytics.demand > 0 && r.sql.analyticsUnits > 0.25 * r.sql.primaryCapTotal,
   },
   nosql: {
@@ -440,6 +463,11 @@ Content.INSIGHTS = {
   herd: {
     title: 'Thundering herd',
     text: 'When a cache dies, every request that would have hit it arrives at the database simultaneously — a load spike equal to your full hit rate. Real mitigations: staggered TTLs, cache warming, request coalescing ("only one miss per key refills"). A cache big enough to save your DB is big enough to kill it.',
+  },
+  observability: {
+    title: 'The four golden signals',
+    text: 'Hover any component to interrogate it. Every box in an architecture should answer the same four questions (Google SRE\'s golden signals): TRAFFIC — how much is arriving? LATENCY — how long does it take, at p50 AND p99? ERRORS — how many fail, and from which cause? SATURATION — how full is the constrained resource? Two older framings say the same thing from different ends: RED (Rate, Errors, Duration) for services you call, USE (Utilization, Saturation, Errors) for resources you own. If you cannot answer all four for a component, you cannot debug it at 3am — and in an interview, "what would you monitor?" is really "do you know what constrains this?"',
+    check: (s, r) => r.demandRps > 4000 && s.infra.indexes && s.infra.pooler,
   },
   opex: {
     title: 'Every system you add costs a team',

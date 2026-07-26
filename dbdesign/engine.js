@@ -153,6 +153,17 @@ const Engine = (() => {
     return item.owned(probe) ? item.fixed + item.marginal(probe) : 0;
   }
 
+  // Total burn AFTER buying one of these — the honest number, because a
+  // purchase can raise costs elsewhere (a shard split doubles the node count
+  // the SQL cluster bills for). Price is what you pay once; this is forever.
+  function expensesIfBought(state, key) {
+    const item = shopItem(key);
+    if (item.price(state) === null) return expenses(state);
+    const probe = { ...state, infra: { ...state.infra } };
+    item.apply(probe);
+    return expenses(probe);
+  }
+
   function costTotals(state) {
     const parts = costBreakdown(state);
     let fixed = 0, marginal = 0;
@@ -336,7 +347,8 @@ const Engine = (() => {
     const readUnits = cache.misses * (infra.indexes ? S.READ_UNITS_INDEXED : S.READ_UNITS_RAW)
       + lookupToSql * S.LOOKUP_UNITS;
     const writeUnits = out.write.demand * S.WRITE_UNITS * (infra.indexes ? S.WRITE_INDEX_TAX : 1);
-    const analyticsUnits = analyticsToSql * S.ANALYTICS_UNITS * N; // cross-shard fan-out
+    // cross-shard fan-out: coordination overhead per extra shard, not N× work
+    const analyticsUnits = analyticsToSql * S.ANALYTICS_UNITS * (1 + S.ANALYTICS_FANOUT * (N - 1));
 
     // SQL-bound rps per type (connection gate applies to these)
     const sqlRps = {
@@ -450,7 +462,7 @@ const Engine = (() => {
     const p99 = Math.min(p50 * 3, 5000);
 
     const successFrac = d.rps > 0 ? servedRps / d.rps : 1;
-    let repTarget = 100 * successFrac
+    let repTarget = 100 * Math.pow(successFrac, S.REP_SHARPNESS)
       - 25 * clamp((p99 - 400) / 1600, 0, 1)
       - 10 * staleFrac / 0.3
       - (state.backlog > 1 ? 5 + 10 * clamp(state.backlog / (primaryCapTotal * 5), 0, 1) : 0);
@@ -564,7 +576,8 @@ const Engine = (() => {
   }
 
   return {
-    createState, tick, buy, scaleDown, expenses, costBreakdown, costTotals, costIfBought,
+    createState, tick, buy, scaleDown, expenses, costBreakdown, costTotals,
+    costIfBought, expensesIfBought,
     shopItem, failReasonTotals, applyProfile,
   };
 })();

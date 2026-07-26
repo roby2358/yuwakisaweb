@@ -713,6 +713,214 @@ const UI = (() => {
     setTimeout(() => el.remove(), Math.min(def.dur, 8) * 1000);
   }
 
+  // component probe: per-component observability -------------------------
+  //
+  // Framed as the Four Golden Signals (Google SRE): TRAFFIC, LATENCY, ERRORS,
+  // SATURATION — plus what the thing costs to run. Every component answers the
+  // same four questions, which is the whole point of the discipline: you should
+  // be able to walk up to any box in an architecture and ask them.
+  //
+  // One entry per component; each returns {title, sub, secs:[[label, rows]],
+  // note}. Rows are [key, value, className].
+  const PROBES = {
+    clients: (s, r) => ({
+      title: 'Users & app tier',
+      sub: fmt(s.users) + ' users · ' + fmt(Math.ceil(r.demandRps / S.RPS_PER_APP_SERVER)) + ' app servers',
+      secs: [
+        ['TRAFFIC (rate)', Content.TYPE_KEYS.map(k =>
+          [Content.TYPES[k].label, fmt(r.perType[k].demand) + '/s', ''])],
+        ['ERRORS', [
+          ['failed', fmt(r.failRps) + '/s', r.failRps > 0 ? 'badv' : ''],
+          ['error rate', (100 * (r.demandRps > 0 ? r.failRps / r.demandRps : 0)).toFixed(1) + '%',
+            r.failRps / Math.max(1, r.demandRps) > 0.02 ? 'badv' : 'goodv'],
+        ]],
+        ['LATENCY (what users feel)', [
+          ['p50', r.p50.toFixed(0) + 'ms', r.p50 > 200 ? 'warnv' : 'goodv'],
+          ['p99', r.p99.toFixed(0) + 'ms', r.p99 > 500 ? 'badv' : r.p99 > 200 ? 'warnv' : 'goodv'],
+          ['client timeout', S.TIMEOUT_MS + 'ms', ''],
+        ]],
+      ],
+      note: 'Rate, Errors, Duration — the RED method, measured at the edge. This is what your users actually experience, and the only view that matters for an SLO.',
+    }),
+
+    pooler: (s, r) => ({
+      title: 'Connection pooler',
+      sub: 'multiplexing clients onto database connections',
+      secs: [
+        ['TRAFFIC', [['queries through', fmt(r.servedRps) + '/s', '']]],
+        ['SATURATION', [
+          ['conns held', fmt(r.sql.connUsed) + ' / ' + fmt(r.sql.connCap),
+            r.sql.connUsed > 0.9 * r.sql.connCap ? 'badv' : 'goodv'],
+          ['avg hold time', r.p50.toFixed(0) + 'ms', ''],
+        ]],
+        ['COST', [['run-rate', '$' + r.costs.parts.find(p => p.key === 'pooler').total.toFixed(1) + '/s', '']]],
+      ],
+      note: 'Little\'s Law: connections = arrival rate × hold time. Without this, app servers hold connections while idle and the database starves at low CPU.',
+    }),
+
+    cache: (s, r) => ({
+      title: 'Cache tier',
+      sub: s.infra.cacheNodes + ' nodes · ' + fmt(s.infra.cacheNodes * S.CACHE_OPS) + ' ops/s capacity',
+      secs: [
+        ['TRAFFIC', [
+          ['hits (absorbed)', fmt(r.cache.hits) + '/s', 'goodv'],
+          ['misses (to SQL)', fmt(r.cache.misses) + '/s', ''],
+        ]],
+        ['SATURATION', [
+          ['hit rate', (100 * r.cache.hitRate).toFixed(0) + '%',
+            r.cache.hitRate < 0.4 ? 'badv' : r.cache.hitRate < 0.7 ? 'warnv' : 'goodv'],
+          ['ceiling (repetition)', (100 * s.repetition * S.CACHE_HIT_MAX).toFixed(0) + '%', ''],
+          ['ops utilization', (100 * r.cache.util).toFixed(0) + '%', r.cache.util > 0.9 ? 'badv' : ''],
+        ]],
+        ['COST', [
+          ['run-rate', '$' + r.costs.parts.find(p => p.key === 'cache').total.toFixed(1) + '/s', ''],
+          ['per DB read saved', '$' + (r.cache.hits > 0
+            ? (r.costs.parts.find(p => p.key === 'cache').total / r.cache.hits * 1000).toFixed(3)
+            : '—') + '/1k', ''],
+        ]],
+      ],
+      note: 'Hit rate is the only number that justifies a cache. Its ceiling is set by how much this workload repeats, not by how many nodes you buy.',
+    }),
+
+    kv: (s, r) => ({
+      title: 'NoSQL KV store',
+      sub: s.infra.kvNodes + ' nodes · ' + fmt(s.infra.kvNodes * S.KV_OPS) + ' ops/s capacity',
+      secs: [
+        ['TRAFFIC', [['lookups served', fmt(r.kv.rps) + '/s', '']]],
+        ['SATURATION', [['utilization', (100 * r.kv.util).toFixed(0) + '%',
+          r.kv.util > 0.9 ? 'badv' : r.kv.util > 0.7 ? 'warnv' : 'goodv']]],
+        ['ERRORS', [['dropped', fmt(r.fails.kv) + '/s', r.fails.kv > 0 ? 'badv' : 'goodv']]],
+        ['LATENCY', [['p50', r.perType.lookup.latencyMs.toFixed(1) + 'ms', 'goodv']]],
+        ['COST', [['run-rate', '$' + r.costs.parts.find(p => p.key === 'kv').total.toFixed(1) + '/s', '']]],
+      ],
+      note: 'Scales linearly because it refuses to do the hard things: no joins, no multi-row transactions, no ad-hoc queries.',
+    }),
+
+    warehouse: (s, r) => ({
+      title: 'Analytics warehouse (OLAP)',
+      sub: 'columnar copy, fed off the transaction path',
+      secs: [
+        ['TRAFFIC', [['reports served', fmt(r.perType.analytics.served) + '/s', '']]],
+        ['LATENCY', [['per report', (S.WAREHOUSE_LAT_MS / 1000).toFixed(1) + 's', 'warnv']]],
+        ['SATURATION', [['work removed from OLTP', fmt(r.perType.analytics.demand * S.ANALYTICS_UNITS) +
+          ' units/s', 'goodv']]],
+        ['COST', [['run-rate', '$' + r.costs.parts.find(p => p.key === 'warehouse').total.toFixed(1) + '/s', '']]],
+      ],
+      note: 'Slow on purpose, and nobody minds — reports are not on the checkout path. This deletes load rather than adding nodes to absorb it.',
+    }),
+
+    sql: (s, r) => {
+      const u = r.sql.units;
+      const cap = r.sql.clusterCapTotal;
+      const unitRow = (label, v) => [label, fmt(v) + ' u/s (' +
+        (cap > 0 ? Math.round(100 * v / cap) : 0) + '%)', ''];
+      const sqlCost = r.costs.parts.find(p => p.key === 'tier').total +
+        r.costs.parts.find(p => p.key === 'shard').total +
+        r.costs.parts.find(p => p.key === 'replica').total;
+      return {
+        title: 'SQL cluster',
+        sub: 'tier ' + s.infra.tier + ' · ' + s.infra.shards + ' shard' + (s.infra.shards > 1 ? 's' : '') +
+          ' · ' + s.infra.replicas + ' replica/shard · ' + (s.infra.shards * (1 + s.infra.replicas)) + ' nodes',
+        secs: [
+          ['WORK BREAKDOWN (query units)', [
+            unitRow('reads', u.read),
+            unitRow('writes', u.write),
+            unitRow('analytics', u.analytics),
+            unitRow('write replay', u.replay),
+            ['cluster capacity', fmt(cap) + ' u/s', ''],
+          ]],
+          ['SATURATION', [
+            ['primary CPU', (100 * r.sql.primaryUtil).toFixed(0) + '%',
+              r.sql.primaryUtil > 0.85 ? 'badv' : r.sql.primaryUtil > 0.7 ? 'warnv' : 'goodv'],
+            ['replica CPU', s.infra.replicas ? (100 * r.sql.replicaUtil).toFixed(0) + '%' : '—',
+              r.sql.replicaUtil > 0.85 ? 'badv' : ''],
+            ['connections', fmt(r.sql.connUsed) + ' / ' + fmt(r.sql.connCap),
+              r.sql.connUsed > 0.9 * r.sql.connCap ? 'badv' : 'goodv'],
+            ['replication lag', r.sql.staleFrac > 0.01
+              ? (100 * r.sql.staleFrac).toFixed(0) + '% stale reads' : 'none',
+              r.sql.staleFrac > 0.05 ? 'badv' : 'goodv'],
+            ['write backlog', s.backlog > 1 ? fmt(s.backlog) + ' units' : 'none',
+              s.backlog > 1 ? 'warnv' : 'goodv'],
+          ]],
+          ['ERRORS (by cause)', [
+            ['connection refused', fmt(r.fails.connections) + '/s', r.fails.connections > 0 ? 'badv' : ''],
+            ['out of capacity', fmt(r.fails.cpu) + '/s', r.fails.cpu > 0 ? 'badv' : ''],
+            ['client timeout', fmt(r.fails.timeout) + '/s', r.fails.timeout > 0 ? 'badv' : ''],
+          ]],
+          ['COST', [['run-rate (nodes + ops)', '$' + sqlCost.toFixed(1) + '/s', '']]],
+        ],
+        note: 'Utilization, Saturation, Errors — the USE method, per resource. The work breakdown is the first thing to read: it tells you whether a bigger box, more shards, or less work is the answer.',
+      };
+    },
+
+    exit: (s, r) => ({
+      title: 'Served responses',
+      sub: 'the only traffic that earns anything',
+      secs: [
+        ['TRAFFIC', [
+          ['served', fmt(r.servedRps) + '/s', 'goodv'],
+          ['demanded', fmt(r.demandRps) + '/s', ''],
+          ['goodput', (100 * (r.demandRps > 0 ? r.servedRps / r.demandRps : 1)).toFixed(1) + '%',
+            r.servedRps / Math.max(1, r.demandRps) < 0.95 ? 'warnv' : 'goodv'],
+        ]],
+        ['MONEY', [
+          ['revenue', '$' + fmt(r.income) + '/s', 'goodv'],
+          ['maintenance', '$' + fmt(r.spend) + '/s', 'badv'],
+          ['fixed share', (100 * (r.spend > 0 ? r.costs.fixed / r.spend : 0)).toFixed(0) + '%', ''],
+          ['net', (r.income >= r.spend ? '+$' : '−$') + fmt(Math.abs(r.income - r.spend)) + '/s',
+            r.income >= r.spend ? 'goodv' : 'badv'],
+        ]],
+      ],
+      note: 'Goodput, not throughput: a request you failed cost you money to receive and earned you nothing.',
+    }),
+  };
+
+  // Hit-test the scene. Only components that exist can be probed.
+  function probeAt(px, py, state) {
+    const L = layout(state);
+    const targets = [
+      { key: 'clients', box: { x: L.clients.x, y: L.clients.y, w: 100, h: 100 }, on: true },
+      { key: 'pooler', box: L.pooler, on: state.infra.pooler },
+      { key: 'cache', box: L.cache, on: state.infra.cacheNodes > 0 },
+      { key: 'kv', box: L.kv, on: state.infra.kvNodes > 0 },
+      { key: 'warehouse', box: L.warehouse, on: state.infra.warehouse },
+      { key: 'sql', box: L.sql, on: true },
+      { key: 'exit', box: { x: L.exit.x, y: L.exit.y, w: 90, h: 90 }, on: true },
+    ];
+    for (const t of targets) {
+      if (!t.on) continue;
+      const b = t.box;
+      if (Math.abs(px - b.x) <= b.w / 2 + 6 && Math.abs(py - b.y) <= b.h / 2 + 6) return t.key;
+    }
+    return null;
+  }
+
+  let probeKey = null, probeX = 0, probeY = 0;
+
+  function renderProbe(state) {
+    const el = $('probe');
+    if (!probeKey || !state.report) {
+      el.classList.add('hidden');
+      return;
+    }
+    const data = PROBES[probeKey](state, state.report);
+    let html = '<div class="p-title">' + data.title + '</div><div class="p-sub">' + data.sub + '</div>';
+    for (const [label, rows] of data.secs) {
+      html += '<div class="p-sec">' + label + '</div>';
+      for (const [k, v, cls] of rows) {
+        html += '<div class="p-row"><span class="k">' + k + '</span><span class="v ' + cls + '">' + v + '</span></div>';
+      }
+    }
+    html += '<div class="p-note">' + data.note + '</div>';
+    el.innerHTML = html;
+    el.classList.remove('hidden');
+    // keep it on screen
+    const maxX = scene.clientWidth - el.offsetWidth - 8;
+    const maxY = scene.clientHeight - el.offsetHeight - 8;
+    el.style.left = Math.max(8, Math.min(maxX, probeX + 16)) + 'px';
+    el.style.top = Math.max(8, Math.min(maxY, probeY + 14)) + 'px';
+  }
+
   // guru ---------------------------------------------------------------
   const LOAD_KINDS = [
     { key: 'read', label: 'reads', color: '#4ea3ff' },
@@ -892,13 +1100,28 @@ const UI = (() => {
     buildLegend();
     buildMixbar();
     buildMoneybar();
+    scene.addEventListener('mousemove', e => {
+      const rect = scene.getBoundingClientRect();
+      probeX = e.clientX - rect.left;
+      probeY = e.clientY - rect.top;
+      probeKey = probeState ? probeAt(probeX, probeY, probeState) : null;
+      if (probeState) renderProbe(probeState);
+    });
+    scene.addEventListener('mouseleave', () => {
+      probeKey = null;
+      $('probe').classList.add('hidden');
+    });
     window.addEventListener('resize', resize);
     resize();
   }
 
   let shopClock = 0;
+  let probeState = null;   // latest state, so hover can render between ticks
+
   function render(state, dtFrame, running) {
+    probeState = state;
     drawScene(state, dtFrame, running);
+    if (probeKey) renderProbe(state);
     updateTopbar(state);
     updateLegend();
     shopClock -= dtFrame;
@@ -918,5 +1141,6 @@ const UI = (() => {
   return {
     init, render, toast, memo, clearMemos, toggleGuru, closeGuru,
     showInsight, showDrawer, showEnd, fmt,
+    probes: PROBES, // exported for tests
   };
 })();

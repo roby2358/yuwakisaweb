@@ -186,7 +186,40 @@ assert(guruCheck.advisedEvery && guruCheck.blank === 0,
 assert(guruCheck.seen.length >= 8,
   `guru rules fire across situations (${guruCheck.seen.length}/${guruCheck.rules}: ${guruCheck.seen.join(', ')})`);
 
-// 8. syntax check the DOM-dependent files
+// 8. every component probe renders against any board state without throwing
+// (they read deep into the report, so a renamed field breaks them silently)
+vm.runInContext('var document = undefined, window = undefined;', ctx);
+vm.runInContext(fs.readFileSync(path.join(root, 'ui.js'), 'utf8'), ctx, { filename: 'ui.js' });
+const probeCheck = vm.runInContext(`
+  (() => {
+    const keys = Object.keys(UI.probes);
+    let thrown = null, empty = [];
+    const s = Engine.createState(77);
+    for (let i = 0; i < 40; i++) Engine.tick(s);
+    s.cash = 1e7;
+    for (const item of Content.SHOP) Engine.buy(s, item.key);
+    for (const stage of [0, 1]) {
+      if (stage === 1) { for (let i = 0; i < 600; i++) Engine.tick(s); }
+      for (const k of keys) {
+        try {
+          const d = UI.probes[k](s, s.report);
+          if (!d.title || !d.note || !d.secs.length) empty.push(k);
+          for (const [, rows] of d.secs) {
+            for (const row of rows) if (row.length !== 3 || row[1] === undefined) empty.push(k + '/' + row[0]);
+          }
+        } catch (e) { thrown = k + ': ' + e.message; }
+      }
+    }
+    return { keys, thrown, empty };
+  })()
+`, ctx);
+assert(probeCheck.thrown === null,
+  'every component probe renders without throwing' + (probeCheck.thrown ? ' (' + probeCheck.thrown + ')' : ''));
+assert(probeCheck.empty.length === 0,
+  `all ${probeCheck.keys.length} probes return complete rows` +
+  (probeCheck.empty.length ? ' (bad: ' + probeCheck.empty.slice(0, 3).join(', ') + ')' : ''));
+
+// 9. syntax check the DOM-dependent files
 for (const f of ['ui.js', 'index.js', 'content.js', 'engine.js', 'flourish.js', 'memos.js', 'guru.js']) {
   try {
     execFileSync(process.execPath, ['--check', path.join(root, f)]);
