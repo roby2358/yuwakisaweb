@@ -179,9 +179,73 @@ button.sel { background: var(--accent); color: #08131f; border-color: var(--acce
 .shop-item .owned { color: var(--good); font-size: 11px; }
 .shop-item .blurb { color: var(--dim); font-size: 11px; margin: 3px 0; }
 .shop-item .tradeoff { color: var(--warn); font-size: 10px; margin-bottom: 5px; }
-.shop-item button { width: 100%; padding: 4px; }
+.shop-item .buttons { display: flex; gap: 4px; }
+.shop-item .buttons button { flex: 1 1 auto; padding: 4px; }
+.shop-item .buttons button.down { flex: 0 0 30px; color: var(--dim); }
+.shop-item .buttons button.down:hover:enabled { color: var(--bad); border-color: var(--bad); }
 .shop-item button:disabled { opacity: .35; cursor: default; border-color: var(--line); }
 .shop-item button.affordable { border-color: var(--good); color: var(--good); }
+.shop-item .run { color: var(--dim); font-size: 10px; margin-bottom: 5px; }
+.shop-item .run b { color: var(--warn); font-weight: 400; }
+
+/* ---------- money bar ---------- */
+#moneybar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 14px;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  flex: 0 0 auto;
+  font-size: 10px;
+}
+#money-income { color: var(--good); white-space: nowrap; cursor: help; }
+#money-net { white-space: nowrap; font-variant-numeric: tabular-nums; }
+#money-track {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 18px;
+}
+#money-segments {
+  display: flex;
+  height: 100%;
+  border-radius: 4px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, .25);
+}
+#money-marker {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  background: var(--good);
+  transition: left .4s ease;
+  pointer-events: none;
+}
+#money-marker::after {
+  content: 'revenue';
+  position: absolute;
+  left: 4px;
+  top: 3px;
+  font-size: 9px;
+  color: var(--good);
+  white-space: nowrap;
+}
+.cost-seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  overflow: hidden;
+  min-width: 0;
+  height: 100%;
+  color: var(--text);
+  cursor: help;
+  transition: width .4s ease;
+  border-right: 1px solid var(--bg);
+}
+.cost-seg:last-child { border-right: none; }
 
 /* ---------- charts ---------- */
 #charts {

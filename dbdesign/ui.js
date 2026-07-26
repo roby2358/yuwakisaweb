@@ -502,7 +502,7 @@ const UI = (() => {
     return Math.round(n).toString();
   }
 
-  function buildShop(onBuy) {
+  function buildShop(onBuy, onScaleDown) {
     const wrap = $('shop-items');
     for (const item of Content.SHOP) {
       const div = document.createElement('div');
@@ -512,18 +512,39 @@ const UI = (() => {
         '<span class="owned" id="owned-' + item.key + '"></span></div>' +
         '<div class="blurb">' + item.blurb + '</div>' +
         '<div class="tradeoff">⚖ ' + item.tradeoff + '</div>' +
-        '<button id="buy-' + item.key + '"></button>';
+        '<div class="run" id="run-' + item.key + '"></div>' +
+        '<div class="buttons"><button id="buy-' + item.key + '"></button>' +
+        (item.scaleDown ? '<button class="down" id="down-' + item.key + '" title="' +
+          item.scaleDownLabel + '">−</button>' : '') +
+        '</div>';
       wrap.appendChild(div);
       $('buy-' + item.key).addEventListener('click', () => onBuy(item.key));
+      if (item.scaleDown) {
+        $('down-' + item.key).addEventListener('click', () => onScaleDown(item.key));
+      }
     }
   }
 
   function updateShop(state) {
+    const costs = Engine.costBreakdown(state);
     for (const item of Content.SHOP) {
       const price = item.price(state);
       const btn = $('buy-' + item.key);
       const owned = item.ownedLabel(state);
       $('owned-' + item.key).textContent = owned || '';
+
+      const cost = costs.find(c => c.key === item.key);
+      const run = $('run-' + item.key);
+      if (cost.total > 0) {
+        run.innerHTML = 'runs at <b>$' + cost.total.toFixed(1) + '/s</b> — $' +
+          cost.fixed.toFixed(1) + ' fixed' +
+          (cost.marginal > 0 ? ' + $' + cost.marginal.toFixed(1) + ' nodes' : '');
+        run.title = 'Fixed $' + cost.fixed.toFixed(1) + '/s: ' + cost.fixedNote + '.';
+      } else {
+        run.innerHTML = 'costs <b>$' + item.fixed.toFixed(1) + '/s</b> the moment you own one';
+        run.title = 'Fixed cost covers: ' + item.fixedNote + '.';
+      }
+
       if (price === null) {
         btn.textContent = 'maxed';
         btn.disabled = true;
@@ -533,7 +554,58 @@ const UI = (() => {
         btn.disabled = state.cash < price || !!state.outcome;
         btn.className = state.cash >= price ? 'affordable' : '';
       }
+      if (item.scaleDown) {
+        $('down-' + item.key).disabled = !item.canScaleDown(state) || !!state.outcome;
+      }
     }
+  }
+
+  // money bar ----------------------------------------------------------
+  const costSegs = {};
+
+  function buildMoneybar() {
+    const wrap = $('money-segments');
+    for (const item of Content.SHOP) {
+      const seg = document.createElement('div');
+      seg.className = 'cost-seg';
+      seg.style.background = item.color + '55';
+      seg.style.boxShadow = 'inset 3px 0 0 ' + item.color;
+      wrap.appendChild(seg);
+      costSegs[item.key] = seg;
+    }
+  }
+
+  function runwayText(secs) {
+    if (!isFinite(secs)) return '';
+    if (secs <= 0) return 'RUNWAY: out';
+    const m = Math.floor(secs / 60), s = Math.round(secs % 60);
+    return 'RUNWAY: ' + (m > 0 ? m + 'm ' + s + 's' : s + 's');
+  }
+
+  function updateMoneybar(state) {
+    const r = state.report;
+    if (!r) return;
+    const scale = Math.max(r.income, r.spend, 1);
+    $('money-income').textContent = 'REVENUE $' + fmt(r.income) + '/s';
+    for (const part of r.costs.parts) {
+      const seg = costSegs[part.key];
+      const frac = part.total / scale;
+      seg.style.width = (frac * 100).toFixed(2) + '%';
+      seg.textContent = frac > 0.1 ? '$' + fmt(part.total) : '';
+      seg.title = part.name + ' — $' + part.total.toFixed(1) + '/s = $' +
+        part.fixed.toFixed(1) + ' fixed (' + part.fixedNote + ')' +
+        (part.marginal > 0 ? ' + $' + part.marginal.toFixed(1) + ' per-node hosting' : '') + '.';
+    }
+    $('money-marker').style.left = (100 * r.income / scale).toFixed(2) + '%';
+    const net = r.income - r.spend;
+    const el = $('money-net');
+    el.textContent = (net >= 0 ? 'PROFIT +$' : 'BURN −$') + fmt(Math.abs(net)) + '/s' +
+      (net < 0 ? '  ·  ' + runwayText(r.runway) : '');
+    el.style.color = net >= 0 ? COLORS.good : r.runway < 60 ? COLORS.bad : COLORS.warn;
+    el.title = 'Maintenance $' + r.spend.toFixed(1) + '/s = $' + r.costs.fixed.toFixed(1) +
+      '/s fixed (teams, monitoring, on-call) + $' + r.costs.marginal.toFixed(1) +
+      '/s per-node hosting. Fixed cost is a step function: each new kind of system ' +
+      'adds one whether you use it or not.';
   }
 
   function updateTopbar(state) {
@@ -732,12 +804,13 @@ const UI = (() => {
     }
   }
 
-  function init(onBuy) {
+  function init(onBuy, onScaleDown) {
     scene = $('scene');
     ctx = scene.getContext('2d');
-    buildShop(onBuy);
+    buildShop(onBuy, onScaleDown);
     buildLegend();
     buildMixbar();
+    buildMoneybar();
     window.addEventListener('resize', resize);
     resize();
   }
@@ -755,6 +828,7 @@ const UI = (() => {
       if (scene.clientWidth !== W || scene.clientHeight !== H) resize();
       updateShop(state);
       updateMixbar(state);
+      updateMoneybar(state);
       renderCharts(state);
     }
   }

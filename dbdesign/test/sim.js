@@ -73,14 +73,40 @@ for (const key of Content.PROFILE_KEYS) {
 
 console.log('\n=== cache on a low-repetition workload is a cash sink (iot) ===');
 {
+  // no bot here: this is the player who bought cache for the wrong workload
+  // and leaves it running
   const s = Engine.createState(5);
   Engine.applyProfile(s, 'iot');
   s.cash = 1e9;
   for (const k of ['indexes', 'pooler', 'cache', 'cache', 'cache']) Engine.buy(s, k);
-  step(s, 400, botAct);
-  console.log(`  hitRate=${(s.report.cache.hitRate * 100).toFixed(0)}% cacheroi=${!!s.insights.cacheroi}`);
+  step(s, 400, null);
+  const burn = Engine.expenses(s);
+  console.log(`  hitRate=${(s.report.cache.hitRate * 100).toFixed(0)}% burn=$${burn.toFixed(1)}/s cacheroi=${!!s.insights.cacheroi}`);
   assert(s.report.cache.hitRate < 0.45, 'iot hit rate stays low no matter the node count');
   assert(s.insights.cacheroi, 'fires the cache-ROI insight');
+
+  // ...and scaling it back down recovers the whole subsystem cost, fixed included
+  while (Engine.scaleDown(s, 'cache').ok) { /* retire every node */ }
+  const after = Engine.expenses(s);
+  const cacheItem = Engine.shopItem('cache');
+  console.log(`  after shutdown: burn=$${after.toFixed(1)}/s (saved $${(burn - after).toFixed(1)}/s)`);
+  assert(s.infra.cacheNodes === 0, 'cache can be scaled down to nothing');
+  assert(burn - after >= cacheItem.fixed, 'shutting it down recovers the fixed cost, not just hosting');
+}
+
+console.log('\n=== operational cost is a step function ===');
+{
+  const s = Engine.createState(9);
+  Engine.applyProfile(s, 'feed');
+  s.cash = 1e9;
+  const base = Engine.expenses(s);
+  Engine.buy(s, 'kv');
+  const one = Engine.expenses(s);
+  for (let i = 0; i < 9; i++) Engine.buy(s, 'kv');
+  const ten = Engine.expenses(s);
+  console.log(`  none=$${base.toFixed(1)}/s  1 node=$${one.toFixed(1)}/s  10 nodes=$${ten.toFixed(1)}/s`);
+  assert(one - base > 4 * ((ten - one) / 9),
+    'the first KV node costs far more than each additional one');
 }
 
 console.log('\n=== sustained meltdown plummets users to busto ===');

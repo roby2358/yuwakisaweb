@@ -36,9 +36,13 @@ intuition the game exists to build.
   reputation crashes fast and rebuilds slowly — so an unaddressed meltdown is a
   visible plummet, not a plateau. (Loss aversion: the user counter drains in
   front of you.)
-- **Cash with run-rate** (Scarcity of Agency): each served request earns money;
-  every component burns money per second; upgrades are purchases with stated
-  trade-offs.
+- **Runway and burn** (Scarcity of Agency): you start with seed runway and no
+  revenue. Each served request earns; every subsystem burns per second in two
+  parts — a **fixed** cost the instant you own any of it (the team, the
+  monitoring, the on-call rotation) plus a small **marginal** cost per node.
+  Operational cost is a step function, not a slope: the first KV node is
+  expensive, the tenth is cheap. Anything can be scaled back down to stop
+  paying for it, and nothing is refunded.
 
 ## The Simulation Truths (what the game teaches)
 
@@ -119,16 +123,33 @@ Two profile-scoped mechanics make the differences bite:
 
 ## Components (the shop — each is one interview talking point)
 
-| Purchase | Effect | Trade-off (double edge) |
-|---|---|---|
-| Add indexes | read cost 10u → 1u | write cost +20% |
-| Connection pooler | connections held only for query duration | none — that's the lesson: it's the free win people forget |
-| Bigger primary (tiers 1–6) | 2× query units & connections per tier | price ×2.5 per tier; hard ceiling at tier 6 |
-| Read replica (per shard) | adds a read-serving node | replays all writes; lags when hot → stale reads |
-| Cache node | +hit rate (caps ~92%), +ops capacity | invalidated by writes; herd risk on reboot |
-| KV store node (NoSQL) | LOOKUP traffic offloaded, linear scale | can't serve JOINs — ANALYTICS stays on SQL |
-| Shard split (×2, up to 64) | ~2× write & read capacity | ANALYTICS fan-out ×N; 20s migration at reduced capacity |
-| Write queue | write overflow becomes backlog, not errors | backlog = visible staleness debt |
+| Purchase | Effect | Trade-off (double edge) | Fixed $/s | Marginal |
+|---|---|---|---|---|
+| Add indexes | read cost 10u → 1u | write cost +20% | 0.5 | — |
+| Connection pooler | connections held only for query duration | none — that's the lesson: it's the free win people forget | 2 | — |
+| Bigger primary (tiers 1–6) | 2× query units & connections per tier | price ×2.5 per tier; hard ceiling at tier 6 | 4 | per node, by tier |
+| Read replica (per shard) | adds a read-serving node | replays all writes; lags when hot → stale reads | 3 | nodes billed above |
+| Cache node | +hit rate (caps ~92% × repetition), +ops capacity | invalidated by writes; herd risk on reboot | 8 | 2/node |
+| KV store node (NoSQL) | LOOKUP traffic offloaded, linear scale | can't serve JOINs — ANALYTICS stays on SQL | **28** | 1.5/node |
+| Shard split (×2, up to 64) | ~2× write & read capacity | ANALYTICS fan-out ×N; 20s migration at reduced capacity | 6 | 2/shard |
+| Analytics warehouse (OLAP) | reports leave the transaction path | reports take ~2s; a data team to run it | 24 | — |
+| Write queue | write overflow becomes backlog, not errors | backlog = visible staleness debt | 12 | — |
+
+The fixed column is the point. A KV store costs $28/s before it serves a single
+request, and $1.50 per node after — so "just add Redis for this one feature" is
+a question about headcount, not hosting. Every subsystem can be scaled back
+down (nodes retired, boxes downgraded, whole systems decommissioned) with
+nothing refunded; **sharding is the one-way door** you cannot walk back.
+
+### Money bar
+
+A stacked bar above the charts shows burn broken down per subsystem against a
+revenue marker: segments left of the marker are covered by revenue, anything
+past it is runway being spent. Hovering a segment names what its fixed cost
+actually buys ("a SECOND datastore: new expertise, new oncall, new failure
+modes"). When burn exceeds revenue it shows the runway clock. *Serves: readable
+consequences (you can see which subsystem is eating the company), loss
+aversion (the runway counter).*
 
 ## Events (Variable Reinforcement)
 

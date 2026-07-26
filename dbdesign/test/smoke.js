@@ -73,7 +73,36 @@ const missing = [...refs].filter(id => !htmlIds.has(id) && !dynamicIds.has(id));
 assert(missing.length === 0, 'all referenced DOM ids exist in index.html' +
   (missing.length ? ' (missing: ' + missing.join(', ') + ')' : ''));
 
-// 5. syntax check the DOM-dependent files
+// 5. every subsystem's costs are reachable and scale-down restores them
+const costCheck = vm.runInContext(`
+  (() => {
+    const s = Engine.createState(4);
+    for (let i = 0; i < 30; i++) Engine.tick(s);
+    s.cash = 1e9;
+    for (const item of Content.SHOP) Engine.buy(s, item.key);
+    Engine.tick(s);
+    const full = Engine.costTotals(s);
+    const restored = [];
+    for (const item of Content.SHOP) {
+      if (!item.canScaleDown(s)) continue;
+      const before = Engine.expenses(s);
+      Engine.scaleDown(s, item.key);
+      restored.push({ key: item.key, saved: before - Engine.expenses(s) });
+    }
+    return {
+      fixed: full.fixed, marginal: full.marginal, parts: full.parts.length,
+      restored, negative: restored.filter(x => x.saved <= 0).map(x => x.key),
+    };
+  })()
+`, ctx);
+assert(costCheck.fixed > 0 && costCheck.marginal > 0,
+  `run-rate splits into fixed ($${costCheck.fixed.toFixed(1)}/s) and marginal ($${costCheck.marginal.toFixed(1)}/s)`);
+assert(costCheck.parts === 9, 'money bar has one segment per shop item');
+assert(costCheck.negative.length === 0,
+  'every scale-down lowers the run-rate' +
+  (costCheck.negative.length ? ' (failed: ' + costCheck.negative.join(', ') + ')' : ''));
+
+// 6. syntax check the DOM-dependent files
 for (const f of ['ui.js', 'index.js', 'content.js', 'engine.js']) {
   try {
     execFileSync(process.execPath, ['--check', path.join(root, f)]);

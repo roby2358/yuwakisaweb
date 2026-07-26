@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>HUG OF DEATH — a database scaling game</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗄️</text></svg>">
-<link rel="stylesheet" href="index.css?v=5">
+<link rel="stylesheet" href="index.css?v=6">
 </head>
 <body>
 <div id="topbar">
@@ -44,6 +44,15 @@
   </div>
 </div>
 
+<div id="moneybar">
+  <span id="money-income" title="Revenue: every served request earns money. Failed requests earn nothing.">REVENUE</span>
+  <div id="money-track">
+    <div id="money-segments"></div>
+    <div id="money-marker"></div>
+  </div>
+  <span id="money-net"></span>
+</div>
+
 <div id="charts">
   <div class="chart"><canvas id="chart-rps"></canvas></div>
   <div class="chart"><canvas id="chart-lat"></canvas></div>
@@ -78,8 +87,13 @@
       <span style="color:#b48cff">analytics</span> — into one small SQL box.<br><br>
       Served requests earn money and grow your user base. Errors send users packing —
       fast — and burned reputation rebuilds slowly. Bleed all the way out and you're
-      <span style="color:#f85149">busto</span>. Every component you buy has a run-rate
-      and a trade-off.<br><br>
+      <span style="color:#f85149">busto</span>.<br><br>
+      You start with runway, not revenue. The bar below the map is your
+      <span style="color:#e3b341">burn</span>, broken down by subsystem: each one costs
+      a big <b>fixed</b> amount the moment it exists — the team who knows it, the
+      dashboards, the 3am pages — plus a small amount per node. Your first KV node is
+      expensive; the tenth is cheap. Anything not carrying its weight can be scaled
+      back down with <b>−</b>, and you stop paying for it.<br><br>
       Each run draws a different <span style="color:#e3b341">workload</span> — the bar above
       the map shows your traffic mix (hover it). Architecture that prints money on one
       workload is a cash sink on another. Read the workload before you spend.<br><br>
@@ -93,9 +107,9 @@
   </div>
 </div>
 
-<script src="content.js?v=5"></script>
-<script src="engine.js?v=5"></script>
-<script src="ui.js?v=5"></script>
-<script src="index.js?v=5"></script>
+<script src="content.js?v=6"></script>
+<script src="engine.js?v=6"></script>
+<script src="ui.js?v=6"></script>
+<script src="index.js?v=6"></script>
 </body>
 </html>

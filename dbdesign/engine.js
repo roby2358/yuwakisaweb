@@ -91,10 +91,50 @@ const Engine = (() => {
     return { ok: true };
   }
 
+  // Scale a subsystem back down — retire a node, downgrade a box, decommission
+  // the whole thing. Nothing is refunded: provisioning is a commitment, and the
+  // only thing you get back is the run-rate.
+  function scaleDown(state, key) {
+    if (state.outcome) return { ok: false, msg: 'game over' };
+    const item = shopItem(key);
+    if (!item.canScaleDown(state)) return { ok: false, msg: 'nothing to scale down' };
+    item.scaleDown(state);
+    return { ok: true };
+  }
+
+  // Per-subsystem run-rate: fixed (the team, the pager) + marginal (the nodes).
+  function costBreakdown(state) {
+    return Content.SHOP.map(item => {
+      const on = !!item.owned(state);
+      const fixed = on ? item.fixed : 0;
+      const marginal = on ? item.marginal(state) : 0;
+      return {
+        key: item.key, name: item.name, color: item.color,
+        fixedNote: item.fixedNote,
+        fixed, marginal, total: fixed + marginal,
+      };
+    });
+  }
+
+  // What this subsystem would run at if you bought one more of it — the
+  // number that matters before adding a node, not the sticker price.
+  function costIfBought(state, key) {
+    const item = shopItem(key);
+    if (item.price(state) === null) return 0;
+    const probe = { ...state, infra: { ...state.infra } };
+    item.apply(probe);
+    return item.owned(probe) ? item.fixed + item.marginal(probe) : 0;
+  }
+
+  function costTotals(state) {
+    const parts = costBreakdown(state);
+    let fixed = 0, marginal = 0;
+    for (const p of parts) { fixed += p.fixed; marginal += p.marginal; }
+    return { parts, fixed, marginal, total: fixed + marginal };
+  }
+
   function expenses(state) {
-    let sum = 0;
-    for (const item of Content.SHOP) sum += item.run(state);
-    return sum;
+    return costTotals(state).total;
   }
 
   // --- insights -------------------------------------------------------------
@@ -375,7 +415,8 @@ const Engine = (() => {
     state.peakUsers = Math.max(state.peakUsers, state.users);
 
     const income = servedRps * state.revenue;
-    const spend = expenses(state);
+    const costs = costTotals(state);
+    const spend = costs.total;
     state.cash += (income - spend) * dt;
 
     // ---- report ----
@@ -390,7 +431,8 @@ const Engine = (() => {
         shards: N, replicas: R, nodeCap,
         readOnReplicaFrac: replicaShare,
       },
-      fails, p50, p99, income, spend,
+      fails, p50, p99, income, spend, costs,
+      runway: spend > income ? state.cash / (spend - income) : Infinity,
       backlog: state.backlog,
       event: state.event ? { key: state.event.key, left: state.event.left } : null,
       migration: state.migration ? { left: state.migration.left } : null,
@@ -452,7 +494,10 @@ const Engine = (() => {
     }
   }
 
-  return { createState, tick, buy, expenses, shopItem, failReasonTotals, applyProfile };
+  return {
+    createState, tick, buy, scaleDown, expenses, costBreakdown, costTotals, costIfBought,
+    shopItem, failReasonTotals, applyProfile,
+  };
 })();
 
 if (typeof module !== 'undefined') module.exports = Engine;

@@ -74,10 +74,15 @@
     requestAnimationFrame(frame);
   }
 
-  UI.init(key => {
-    const res = Engine.buy(state, key);
-    if (!res.ok && res.msg) console.log(res.msg);
-  });
+  UI.init(
+    key => {
+      const res = Engine.buy(state, key);
+      if (!res.ok && res.msg) console.log(res.msg);
+    },
+    key => {
+      const res = Engine.scaleDown(state, key);
+      if (!res.ok && res.msg) console.log(res.msg);
+    });
 
   // debug/test hook (used by test/screenshot.js)
   window.HUG = { getState: () => state, cheat: n => { state.cash += n; } };

@@ -19,13 +19,13 @@ Content.SIM = {
                             // in error rate: 30% err stings, 100% err plummets)
   ERR_TOLERANCE: 0.02,      // users forgive errors below 2%
   BUST_USERS: 25,           // fall this low after having grown — busto
-  START_CASH: 300,
+  START_CASH: 3000,         // seed runway — you burn it before revenue arrives
   WIN_RPS: 1000000,
   WIN_HOLD_S: 30,
   WIN_MAX_ERR: 0.01,
   COLLAPSE_PEAK_RPS: 1000,  // collapse-loss only applies after passing this
   COLLAPSE_FRAC: 0.05,
-  BANKRUPT_CASH: -100,
+  BANKRUPT_CASH: -250,      // small overdraft, then the lights go out
   ANALYTICS_UNITS: 60,      // query units per analytics request
   READ_UNITS_RAW: 10,       // unindexed read cost
   READ_UNITS_INDEXED: 1,
@@ -36,14 +36,9 @@ Content.SIM = {
   CACHE_HIT_BASE: 0.50,
   CACHE_HIT_PER_NODE: 0.07,
   CACHE_HIT_MAX: 0.92,
-  CACHE_RUN: 1.0,
   KV_OPS: 50000,            // ops/s per KV node
-  KV_RUN: 0.5,
   KV_LAT_MS: 2,
   WAREHOUSE_LAT_MS: 2000,   // reports are slow but never on the OLTP path
-  WAREHOUSE_RUN: 8,
-  POOLER_RUN: 0.2,
-  QUEUE_RUN: 0.5,
   MIGRATION_S: 20,          // shard split window
   MIGRATION_CAP: 0.6,       // capacity multiplier during migration
   MAX_UTIL: 0.98,           // hockey-stick clamp
@@ -139,27 +134,27 @@ Content.MIX_CLASSES = [
 // the heavier queries those workloads demand.
 Content.PROFILES = {
   feed: {
-    name: 'Social photo feed', repetition: 1.0, revenue: 0.004,
+    name: 'Social photo feed', repetition: 1.0, revenue: 0.006,
     blurb: 'Everyone stares at the same hot content — highly repeated reads. Cache hit ratio is your whole ballgame.',
     mix: { read: 0.70, write: 0.12, lookup: 0.13, analytics: 0.05 },
   },
   shop: {
-    name: 'Flash-sale commerce', repetition: 0.8, revenue: 0.006,
+    name: 'Flash-sale commerce', repetition: 0.8, revenue: 0.009,
     blurb: 'Product pages repeat, but carts and inventory writes don\'t. The cache helps browsing; only sharding scales checkout.',
     mix: { read: 0.46, write: 0.32, lookup: 0.14, analytics: 0.08 },
   },
   iot: {
-    name: 'IoT telemetry ingest', repetition: 0.4, revenue: 0.007,
+    name: 'IoT telemetry ingest', repetition: 0.4, revenue: 0.010,
     blurb: 'A million devices never stop writing, and every read is a unique device query. A cache here is a cash sink.',
     mix: { read: 0.22, write: 0.55, lookup: 0.13, analytics: 0.10 },
   },
   ads: {
-    name: 'Ad-tech exchange', repetition: 0.7, revenue: 0.004,
+    name: 'Ad-tech exchange', repetition: 0.7, revenue: 0.006,
     blurb: 'Bid requests demand a key lookup in single-digit milliseconds. NoSQL was invented for this.',
     mix: { read: 0.32, write: 0.10, lookup: 0.53, analytics: 0.05 },
   },
   saas: {
-    name: 'B2B analytics SaaS', repetition: 0.6, revenue: 0.009,
+    name: 'B2B analytics SaaS', repetition: 0.6, revenue: 0.013,
     blurb: 'Customers live in their own dashboards — reads repeat per tenant, and reports are most of the work. OLTP vs OLAP is the war.',
     mix: { read: 0.47, write: 0.15, lookup: 0.16, analytics: 0.22 },
   },
@@ -169,67 +164,108 @@ Content.MIX_JITTER = 0.4; // each share scaled by 0.8–1.2 before normalizing
 
 // ---------------------------------------------------------------------------
 // Shop — each item is one interview talking point.
-// price(state) returns dollars, or null when owned/maxed.
-// apply(state) mutates infra. run(state) is $/s contributed.
+//
+// Run-rate is deliberately TWO numbers, because that is how operations really
+// bills you:
+//   fixed    — $/s the moment you own ANY of it: the team who knows it, the
+//              dashboards, the alert rotation, the runbooks, the 3am pages.
+//              This is a step function. A second datastore costs a team.
+//   marginal — $/s per additional node. Usually small: once you run the thing,
+//              running more of it is mostly hosting.
+// That gap is the whole lesson: adding your first KV store is expensive,
+// adding its tenth node is cheap.
+//
+// price(state) → dollars, or null when owned/maxed. apply(state) mutates infra.
+// owned(state) gates the fixed cost. scaleDown(state) gives it back.
 Content.SHOP = [
   {
-    key: 'indexes', name: 'Add indexes',
+    key: 'indexes', name: 'Add indexes', color: '#8b96a5',
     blurb: 'Reads cost 10 units → 1. The cheapest 10× you will ever buy.',
     tradeoff: 'Writes get ~20% costlier (index maintenance).',
     price: s => s.infra.indexes ? null : 60,
     apply: s => { s.infra.indexes = true; },
-    run: () => 0,
+    owned: s => s.infra.indexes,
+    fixed: 0.5, fixedNote: 'schema review, bloat monitoring, the occasional REINDEX',
+    marginal: () => 0,
     ownedLabel: s => s.infra.indexes ? 'installed' : null,
+    canScaleDown: s => s.infra.indexes,
+    scaleDown: s => { s.infra.indexes = false; },
+    scaleDownLabel: 'drop indexes (writes get cheaper, reads 10× dearer)',
     insightOnBuy: 'indexes',
   },
   {
-    key: 'pooler', name: 'Connection pooler',
+    key: 'pooler', name: 'Connection pooler', color: '#5fd3c4',
     blurb: 'Connections held only while a query runs, not while clients idle.',
     tradeoff: 'None. That is the lesson — people forget the free win.',
     price: s => s.infra.pooler ? null : 120,
     apply: s => { s.infra.pooler = true; },
-    run: s => s.infra.pooler ? Content.SIM.POOLER_RUN : 0,
+    owned: s => s.infra.pooler,
+    fixed: 2, fixedNote: 'one more hop to monitor, and pool-exhaustion alerts',
+    marginal: () => 0,
     ownedLabel: s => s.infra.pooler ? 'installed' : null,
+    canScaleDown: () => false,
+    scaleDown: null,
+    scaleDownLabel: null,
   },
   {
-    key: 'tier', name: 'Bigger boxes (vertical)',
+    key: 'tier', name: 'Bigger boxes (vertical)', color: '#4ea3ff',
     blurb: '2× query units and more connections on every SQL node.',
     tradeoff: 'Each step costs ~2.5× more. Tier 6 is the biggest box made.',
     price: s => s.infra.tier >= 6 ? null : Content.TIER_PRICES[s.infra.tier - 1],
     apply: s => { s.infra.tier += 1; },
-    run: s => s.infra.shards * (1 + s.infra.replicas) * Content.TIERS[s.infra.tier - 1].run,
+    owned: () => true, // you always have a database
+    fixed: 4, fixedNote: 'DBAs, backups, failover drills, the on-call rotation',
+    marginal: s => s.infra.shards * (1 + s.infra.replicas) * Content.TIERS[s.infra.tier - 1].run,
     ownedLabel: s => 'tier ' + s.infra.tier + ' / 6',
+    canScaleDown: s => s.infra.tier > 1,
+    scaleDown: s => { s.infra.tier -= 1; },
+    scaleDownLabel: 'downgrade to a smaller (cheaper) box',
   },
   {
-    key: 'replica', name: 'Read replica (per shard)',
+    key: 'replica', name: 'Read replica (per shard)', color: '#7bb7ff',
     blurb: 'One more read-serving copy of every shard.',
     tradeoff: 'Each replica replays ALL writes; lags (stale reads) when hot.',
     price: s => s.infra.replicas >= Content.MAX_REPLICAS ? null : 250 * s.infra.shards,
     apply: s => { s.infra.replicas += 1; },
-    run: () => 0, // node run-rate accounted under 'tier'
+    owned: s => s.infra.replicas > 0,
+    fixed: 3, fixedNote: 'lag dashboards, failover runbooks, read-your-writes bugs',
+    marginal: () => 0, // the nodes themselves are billed under the SQL cluster
     ownedLabel: s => s.infra.replicas + ' per shard',
+    canScaleDown: s => s.infra.replicas > 0,
+    scaleDown: s => { s.infra.replicas -= 1; },
+    scaleDownLabel: 'retire one replica per shard',
   },
   {
-    key: 'cache', name: 'Cache node',
+    key: 'cache', name: 'Cache node', color: '#e3b341',
     blurb: 'Serves repeated reads in ~1ms. Hit rate climbs to 92% max.',
     tradeoff: 'Writes invalidate entries; a cold cache is a thundering herd.',
     price: s => s.infra.cacheNodes >= Content.MAX_CACHE ? null : 150,
     apply: s => { s.infra.cacheNodes += 1; },
-    run: s => s.infra.cacheNodes * Content.SIM.CACHE_RUN,
+    owned: s => s.infra.cacheNodes > 0,
+    fixed: 8, fixedNote: 'invalidation bugs, eviction tuning, cold-start incidents',
+    marginal: s => s.infra.cacheNodes * 2,
     ownedLabel: s => s.infra.cacheNodes ? s.infra.cacheNodes + ' nodes' : null,
+    canScaleDown: s => s.infra.cacheNodes > 0,
+    scaleDown: s => { s.infra.cacheNodes -= 1; },
+    scaleDownLabel: 'retire a cache node (all of them = no cache team)',
   },
   {
-    key: 'kv', name: 'NoSQL KV store node',
-    blurb: 'Sessions & flags (LOOKUP) leave SQL forever. Scales linearly, cheap.',
+    key: 'kv', name: 'NoSQL KV store node', color: '#43d17a',
+    blurb: 'Sessions & flags (LOOKUP) leave SQL forever. Scales linearly.',
     tradeoff: 'Key→value only: no joins, no transactions. ANALYTICS stays on SQL.',
     price: s => s.infra.kvNodes >= Content.MAX_KV ? null : 100,
     apply: s => { s.infra.kvNodes += 1; },
-    run: s => s.infra.kvNodes * Content.SIM.KV_RUN,
+    owned: s => s.infra.kvNodes > 0,
+    fixed: 28, fixedNote: 'a SECOND datastore: new expertise, new oncall, new failure modes',
+    marginal: s => s.infra.kvNodes * 1.5,
     ownedLabel: s => s.infra.kvNodes ? s.infra.kvNodes + ' nodes' : null,
+    canScaleDown: s => s.infra.kvNodes > 0,
+    scaleDown: s => { s.infra.kvNodes -= 1; },
+    scaleDownLabel: 'retire a KV node (all of them = one less system to run)',
     insightOnBuy: 'nosql',
   },
   {
-    key: 'shard', name: 'Shard split (×2)',
+    key: 'shard', name: 'Shard split (×2)', color: '#ff9d3c',
     blurb: 'Split every table across twice as many primaries. Writes finally scale.',
     tradeoff: 'ANALYTICS fans out to every shard; 20s migration at 60% capacity.',
     price: s => s.infra.shards >= Content.MAX_SHARDS ? null : 400 * s.infra.shards,
@@ -237,28 +273,43 @@ Content.SHOP = [
       s.infra.shards *= 2;
       s.migration = { left: Content.SIM.MIGRATION_S };
     },
-    run: () => 0, // node run-rate accounted under 'tier'
+    owned: s => s.infra.shards > 1,
+    fixed: 6, fixedNote: 'rebalancing, hot-shard hunts, cross-shard query reviews',
+    marginal: s => 2 * (s.infra.shards - 1),
     ownedLabel: s => s.infra.shards + (s.infra.shards > 1 ? ' shards' : ' shard'),
+    canScaleDown: () => false, // sharding is a one-way door
+    scaleDown: null,
+    scaleDownLabel: null,
     insightOnBuy: 'sharding',
   },
   {
-    key: 'warehouse', name: 'Analytics warehouse (OLAP)',
+    key: 'warehouse', name: 'Analytics warehouse (OLAP)', color: '#b48cff',
     blurb: 'Reports run on a columnar copy, off the transaction path entirely.',
     tradeoff: 'Reports take seconds (batch-fed), and the thing is not cheap to run.',
-    price: s => s.infra.warehouse ? null : 3000,
+    price: s => s.infra.warehouse ? null : 1800,
     apply: s => { s.infra.warehouse = true; },
-    run: s => s.infra.warehouse ? Content.SIM.WAREHOUSE_RUN : 0,
+    owned: s => s.infra.warehouse,
+    fixed: 24, fixedNote: 'a data team, an ETL pipeline, and everything it breaks on',
+    marginal: () => 0,
     ownedLabel: s => s.infra.warehouse ? 'running' : null,
+    canScaleDown: s => s.infra.warehouse,
+    scaleDown: s => { s.infra.warehouse = false; },
+    scaleDownLabel: 'shut down the warehouse (reports go back on SQL)',
     insightOnBuy: 'olap',
   },
   {
-    key: 'queue', name: 'Write queue',
+    key: 'queue', name: 'Write queue', color: '#f0883e',
     blurb: 'Write overflow becomes backlog instead of errors.',
     tradeoff: 'Backlog is staleness debt — users see old data until it drains.',
     price: s => s.infra.writeQueue ? null : 200,
     apply: s => { s.infra.writeQueue = true; },
-    run: s => s.infra.writeQueue ? Content.SIM.QUEUE_RUN : 0,
+    owned: s => s.infra.writeQueue,
+    fixed: 12, fixedNote: 'brokers to run, replay tooling, and backlog pages at 3am',
+    marginal: () => 0,
     ownedLabel: s => s.infra.writeQueue ? 'installed' : null,
+    canScaleDown: s => s.infra.writeQueue,
+    scaleDown: s => { s.infra.writeQueue = false; },
+    scaleDownLabel: 'decommission the queue (overflow errors again)',
   },
 ];
 
@@ -388,6 +439,16 @@ Content.INSIGHTS = {
   herd: {
     title: 'Thundering herd',
     text: 'When a cache dies, every request that would have hit it arrives at the database simultaneously — a load spike equal to your full hit rate. Real mitigations: staggered TTLs, cache warming, request coalescing ("only one miss per key refills"). A cache big enough to save your DB is big enough to kill it.',
+  },
+  opex: {
+    title: 'Every system you add costs a team',
+    text: 'Look at your burn: most of it is not hosting. Each distinct system carries a fixed operational cost the moment it exists — someone has to know it, monitor it, page on it, and be the one who fixes it at 3am. That cost is a step function, not a slope: your first KV node is expensive, your tenth is cheap. This is the real argument against "just add Redis/Kafka/Mongo for this one feature". Interview line: "What is the operational cost of a second datastore, and is this feature worth a team?"',
+    check: (s, r) => r.costs && r.costs.fixed > 0.45 * r.spend && r.spend > 25,
+  },
+  runway: {
+    title: 'Burn rate and runway',
+    text: 'You are spending faster than you earn, and the runway counter is the only thing between you and the door. Idle capacity bills you every second whether traffic uses it or not — over-provisioning is not "safe", it is expensive insurance. The fix is either more served traffic (revenue) or less architecture (burn): shut down what is not carrying its weight.',
+    check: (s, r) => r.spend > r.income && s.cash < 25 * (r.spend - r.income) && s.t > 60,
   },
   hotkey: {
     title: 'Hot keys',
