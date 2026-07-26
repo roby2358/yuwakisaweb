@@ -1,0 +1,114 @@
+// Headless playthrough bot for HUG OF DEATH.
+// Run: node test/sim.js
+// Asserts the teaching beats survive tuning changes:
+//   1. sensible reactive play reaches 1M RPS and wins
+//   2. skipping the pooler causes connection starvation at low CPU
+//   3. the run is deterministic for a fixed seed
+
+const Engine = require('../engine.js');
+const Content = require('../content.js');
+const { botAct } = require('./bot.js');
+
+const S = Content.SIM;
+const MAX_T = 2400;
+
+function step(state, seconds, act) {
+  const ticks = Math.round(seconds / S.DT);
+  for (let i = 0; i < ticks && !state.outcome; i++) {
+    Engine.tick(state);
+    if (act && Math.round(state.t / S.DT) % 10 === 0) act(state);
+  }
+}
+
+function summarize(state) {
+  const i = state.infra;
+  return `tier${i.tier} shards=${i.shards} rep=${i.replicas} cache=${i.cacheNodes} ` +
+    `kv=${i.kvNodes}${i.pooler ? ' pool' : ''}${i.indexes ? ' idx' : ''}` +
+    `${i.warehouse ? ' olap' : ''}${i.writeQueue ? ' q' : ''}`;
+}
+
+function runBot(seed, opts) {
+  const state = Engine.createState(seed);
+  if (opts.profile) Engine.applyProfile(state, opts.profile);
+  let lastLog = 0;
+  while (!state.outcome && state.t < MAX_T) {
+    step(state, 1, s => {
+      botAct(s);
+      if (opts.skipPooler) s.infra.pooler = false; // the bot that "forgets" the pooler
+    });
+    if (!opts.quiet && state.t - lastLog >= 30) {
+      lastLog = state.t;
+      const r = state.report;
+      console.log(
+        `t=${state.t.toFixed(0).padStart(4)}s rps=${r.servedRps.toFixed(0).padStart(8)}` +
+        `/${r.demandRps.toFixed(0).padStart(8)} err=${(100 * r.failRps / Math.max(1, r.demandRps)).toFixed(1).padStart(5)}%` +
+        ` p99=${r.p99.toFixed(0).padStart(5)}ms cash=$${state.cash.toFixed(0).padStart(7)}` +
+        ` rep=${state.reputation.toFixed(0).padStart(3)} util=${(100 * r.sql.primaryUtil).toFixed(0).padStart(3)}%` +
+        ` conn=${(100 * r.sql.connUsed / Math.max(1, r.sql.connCap)).toFixed(0).padStart(3)}%  ${summarize(state)}`);
+    }
+  }
+  return state;
+}
+
+let failures = 0;
+function assert(cond, msg) {
+  if (cond) { console.log('  PASS ' + msg); }
+  else { failures++; console.log('  FAIL ' + msg); }
+}
+
+console.log('=== sensible bot (seed 7) ===');
+const won = runBot(7, {});
+console.log(`profile=${won.profile} outcome=${won.outcome} t=${won.t.toFixed(0)}s insights=${Object.keys(won.insights).length}`);
+assert(won.outcome === 'won', 'sensible play reaches 1M RPS and wins');
+assert(Object.keys(won.insights).length >= 8, `collects >=8 insights (got ${Object.keys(won.insights).length})`);
+assert(won.insights.hockey, 'experiences the latency hockey stick');
+assert(won.insights.replicawrites, 'sees replicas eaten by write replay');
+
+console.log('\n=== every workload profile is winnable (seed 11) ===');
+for (const key of Content.PROFILE_KEYS) {
+  const s = runBot(11, { profile: key, quiet: true });
+  console.log(`  ${key.padEnd(5)} outcome=${s.outcome} t=${s.t.toFixed(0)}s cache=${s.infra.cacheNodes} shards=${s.infra.shards}`);
+  assert(s.outcome === 'won', `profile "${key}" winnable with workload-aware play`);
+}
+
+console.log('\n=== cache on a low-repetition workload is a cash sink (iot) ===');
+{
+  const s = Engine.createState(5);
+  Engine.applyProfile(s, 'iot');
+  s.cash = 1e9;
+  for (const k of ['indexes', 'pooler', 'cache', 'cache', 'cache']) Engine.buy(s, k);
+  step(s, 400, botAct);
+  console.log(`  hitRate=${(s.report.cache.hitRate * 100).toFixed(0)}% cacheroi=${!!s.insights.cacheroi}`);
+  assert(s.report.cache.hitRate < 0.45, 'iot hit rate stays low no matter the node count');
+  assert(s.insights.cacheroi, 'fires the cache-ROI insight');
+}
+
+console.log('\n=== sustained meltdown plummets users to busto ===');
+{
+  const s = Engine.createState(11);
+  Engine.applyProfile(s, 'feed');
+  step(s, 400, botAct); // grow to real scale with sensible play
+  const peak = s.users;
+  // total outage: infrastructure reset to a single tier-1 box, nobody reacts
+  s.infra.tier = 1; s.infra.shards = 1; s.infra.replicas = 0;
+  s.infra.cacheNodes = 0; s.infra.kvNodes = 0; s.infra.warehouse = false;
+  step(s, 400, null);
+  console.log(`  peak=${s.peakUsers.toFixed(0)} users=${s.users.toFixed(0)} outcome=${s.outcome} cause=${s.deathCause}`);
+  assert(s.outcome === 'lost' && s.users <= Math.max(S.BUST_USERS, s.peakUsers * S.COLLAPSE_FRAC),
+    'error churn drains users to bust within minutes');
+}
+
+console.log('\n=== pooler-skipping bot (seed 7) ===');
+const starved = runBot(7, { skipPooler: true });
+console.log(`outcome=${starved.outcome} t=${starved.t.toFixed(0)}s peakRps=${(starved.peakUsers * S.RPS_PER_USER).toFixed(0)}`);
+assert(starved.insights.connstarve, 'hits connection starvation (rejects while CPU < 50%)');
+assert(starved.outcome !== 'won' || starved.t > won.t,
+  'skipping the pooler is punished (no win, or a much slower one)');
+
+console.log('\n=== determinism (seed 7 twice) ===');
+const a = runBot(7, { quiet: true }), b = runBot(7, { quiet: true });
+assert(a.t === b.t && a.cash.toFixed(6) === b.cash.toFixed(6) && a.outcome === b.outcome,
+  'identical seeds produce identical runs');
+
+console.log(failures === 0 ? '\nALL PASS' : `\n${failures} FAILURES`);
+process.exit(failures === 0 ? 0 : 1);

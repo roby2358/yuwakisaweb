@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HUG OF DEATH — a database scaling game</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗄️</text></svg>">
+<link rel="stylesheet" href="index.css?v=5">
+</head>
+<body>
+<div id="topbar">
+  <div id="brand">
+    <div id="title">HUG OF DEATH</div>
+    <div id="subtitle">scale your database to 1,000,000 requests per second</div>
+  </div>
+  <div class="stat big"><div class="stat-label">served RPS</div><div class="stat-value" id="stat-rps">0</div></div>
+  <div class="stat"><div class="stat-label">demand</div><div class="stat-value" id="stat-demand">0</div></div>
+  <div class="stat"><div class="stat-label">errors</div><div class="stat-value" id="stat-err">0%</div></div>
+  <div class="stat"><div class="stat-label">p99</div><div class="stat-value" id="stat-p99">–</div></div>
+  <div class="stat"><div class="stat-label">users</div><div class="stat-value" id="stat-users">0</div></div>
+  <div class="stat"><div class="stat-label">reputation</div><div class="stat-value" id="stat-rep">–</div></div>
+  <div class="stat"><div class="stat-label">cash</div><div class="stat-value" id="stat-cash">$0</div></div>
+  <div id="controls">
+    <button class="speed" data-speed="0">⏸</button><button class="speed sel" data-speed="1">1×</button><button class="speed" data-speed="2">2×</button><button class="speed" data-speed="4">4×</button>
+    <button id="btn-insights">insights <span id="insight-count">0</span>/<span id="insight-total">0</span></button>
+  </div>
+</div>
+
+<div id="mixbar">
+  <span id="mix-profile" title=""></span>
+  <div id="mix-segments"></div>
+</div>
+
+<div id="main">
+  <div id="stage">
+    <div id="winbar" class="hidden"><div id="winbar-fill"></div><div id="winbar-text"></div></div>
+    <canvas id="scene"></canvas>
+    <div id="toasts"></div>
+    <div id="legend"></div>
+  </div>
+  <div id="shop">
+    <div id="shop-header">ARCHITECTURE<span id="stat-income"></span></div>
+    <div id="shop-items"></div>
+  </div>
+</div>
+
+<div id="charts">
+  <div class="chart"><canvas id="chart-rps"></canvas></div>
+  <div class="chart"><canvas id="chart-lat"></canvas></div>
+  <div class="chart"><canvas id="chart-cash"></canvas></div>
+</div>
+
+<div id="modal-backdrop" class="hidden">
+  <div id="insight-card" class="hidden">
+    <div class="card-kicker">INSIGHT UNLOCKED</div>
+    <div class="card-title" id="card-title"></div>
+    <div class="card-text" id="card-text"></div>
+    <button id="card-ok">noted — back to the fire</button>
+  </div>
+  <div id="drawer" class="hidden">
+    <div class="card-kicker">YOUR CRIB SHEET</div>
+    <div id="drawer-list"></div>
+    <button id="drawer-close">close</button>
+  </div>
+  <div id="endscreen" class="hidden">
+    <div class="card-kicker" id="end-kicker"></div>
+    <div class="card-title" id="end-title"></div>
+    <div class="card-text" id="end-text"></div>
+    <div id="end-insights"></div>
+    <button id="btn-restart">run it back</button>
+  </div>
+  <div id="intro">
+    <div class="card-kicker">DAY ONE</div>
+    <div class="card-title">You are the database architect.</div>
+    <div class="card-text">
+      Your startup just launched. Requests flow left to right — <span style="color:#4ea3ff">reads</span>,
+      <span style="color:#ff9d3c">writes</span>, <span style="color:#43d17a">key lookups</span> and
+      <span style="color:#b48cff">analytics</span> — into one small SQL box.<br><br>
+      Served requests earn money and grow your user base. Errors send users packing —
+      fast — and burned reputation rebuilds slowly. Bleed all the way out and you're
+      <span style="color:#f85149">busto</span>. Every component you buy has a run-rate
+      and a trade-off.<br><br>
+      Each run draws a different <span style="color:#e3b341">workload</span> — the bar above
+      the map shows your traffic mix (hover it). Architecture that prints money on one
+      workload is a cash sink on another. Read the workload before you spend.<br><br>
+      Watch the <b>CPU</b> and <b>CONN</b> gauges: databases die of connection starvation
+      before they die of CPU, and latency explodes long before utilization hits 100%.
+      Each disaster you survive mints an <span style="color:#e3b341">insight card</span> —
+      your interview crib sheet.<br><br>
+      Reach <b style="color:#43d17a">1,000,000 requests/second</b> and hold it. Space pauses.
+    </div>
+    <button id="intro-ok">accept the pager</button>
+  </div>
+</div>
+
+<script src="content.js?v=5"></script>
+<script src="engine.js?v=5"></script>
+<script src="ui.js?v=5"></script>
+<script src="index.js?v=5"></script>
+</body>
+</html>
