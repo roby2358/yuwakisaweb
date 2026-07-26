@@ -11,23 +11,37 @@ const UI = (() => {
     panel: '#1c2330',
   };
 
+  const fmt = Fmt.count;   // magnitude-scaled counts — every rate in the game
+  const BANDS = Content.BANDS;
+
+  // Fmt.level turns a reading into a verdict against Content.BANDS; these turn
+  // that verdict into paint. Two renderers, one opinion — before this, the
+  // canvas CPU bar went red at 90% while the probe beside it said 85%.
+  const gaugeColor = (value, band) => COLORS[Fmt.level(value, band)];
+  const vclass = (value, band) => Fmt.level(value, band) + 'v';
+  // same three verdicts as rgb triples, for the node grid's alpha compositing
+  const RGB = { good: '67,209,122', warn: '227,179,65', bad: '248,81,73' };
+  const gaugeRgba = (value, band, alpha) =>
+    'rgba(' + RGB[Fmt.level(value, band)] + ',' + alpha + ')';
+
+  // derived readings the panels keep asking the report for
+  const errFrac = r => (r.demandRps > 0 ? r.failRps / r.demandRps : 0);
+  const goodput = r => (r.demandRps > 0 ? r.servedRps / r.demandRps : 1);
+  const costOf = (r, key) => r.costs.byKey[key].total;
+
   let scene, ctx, W = 0, H = 0, dpr = 1;
   const particles = [];
   const spawnAcc = { read: 0, write: 0, lookup: 0, analytics: 0 };
   let perDot = 1;
 
   // ------------------------------------------------------------------ layout
+  // Boxes come from the COMPONENTS table at the bottom of this file, which is
+  // the single description of what exists in the scene. `on` is what the player
+  // has actually bought — routes, drawing and hit-testing all respect it.
   function layout(state) {
-    const infra = state.infra;
-    return {
-      clients: { x: 70, y: H * 0.5 },
-      pooler: { x: 215, y: H * 0.5, w: 84, h: 44, on: infra.pooler },
-      cache: { x: 385, y: H * 0.22, w: 150, h: 74, on: infra.cacheNodes > 0 },
-      kv: { x: 385, y: H * 0.8, w: 150, h: 64, on: infra.kvNodes > 0 },
-      warehouse: { x: 640, y: H * 0.85, w: 150, h: 50, on: infra.warehouse },
-      sql: { x: 640, y: H * 0.42, w: 220, h: 170 },
-      exit: { x: W - 46, y: H * 0.5 },
-    };
+    const L = {};
+    for (const c of COMPONENTS) L[c.key] = { ...c.box(), on: c.on(state) };
+    return L;
   }
 
   // Routes only pass through components that exist. Returns waypoints plus the
@@ -152,10 +166,6 @@ const UI = (() => {
   }
 
   // ------------------------------------------------------------------ scene
-  function utilColor(u) {
-    return u < 0.7 ? COLORS.good : u < 0.9 ? COLORS.warn : COLORS.bad;
-  }
-
   function drawWire(a, b) {
     ctx.strokeStyle = 'rgba(90,110,140,.18)';
     ctx.lineWidth = 1;
@@ -183,21 +193,19 @@ const UI = (() => {
     return { x, y };
   }
 
-  function utilBar(x, y, w, frac, label) {
+  function utilBar(x, y, w, frac, label, band) {
     ctx.fillStyle = 'rgba(0,0,0,.4)';
     ctx.fillRect(x, y, w, 5);
-    ctx.fillStyle = utilColor(frac);
+    ctx.fillStyle = gaugeColor(frac, band);
     ctx.fillRect(x, y, w * Math.min(1, frac), 5);
-    if (label) {
-      ctx.fillStyle = COLORS.dim;
-      ctx.font = '9px monospace';
-      ctx.textAlign = 'left';
-      ctx.fillText(label + ' ' + Math.round(frac * 100) + '%', x + w + 6, y + 5);
-    }
+    ctx.fillStyle = COLORS.dim;
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(label + ' ' + Fmt.pct(frac), x + w + 6, y + 5);
   }
 
-  function drawClients(L, state, r) {
-    const { x, y } = L.clients;
+  function drawClients(b, state, r) {
+    const { x, y } = b;
     ctx.fillStyle = COLORS.text;
     ctx.font = '10px monospace';
     ctx.textAlign = 'center';
@@ -221,9 +229,7 @@ const UI = (() => {
     ctx.fillText(fmt(apps) + ' app servers', x, y + 34);
   }
 
-  function drawPooler(L, state, r) {
-    const b = L.pooler;
-    if (!b.on) return;
+  function drawPooler(b, state, r) {
     boxFrame(b, true, 'POOLER');
     ctx.textAlign = 'center';
     ctx.font = '9px monospace';
@@ -233,9 +239,7 @@ const UI = (() => {
     ctx.fillText('held: query only', b.x, b.y + 13);
   }
 
-  function drawCache(L, state, r) {
-    const b = L.cache;
-    if (!b.on) return;
+  function drawCache(b, state, r) {
     const { x, y } = boxFrame(b, true, 'CACHE ×' + state.infra.cacheNodes);
     for (let i = 0; i < Math.min(8, state.infra.cacheNodes); i++) {
       ctx.fillStyle = 'rgba(78,163,255,.7)';
@@ -244,16 +248,14 @@ const UI = (() => {
     ctx.fillStyle = COLORS.text;
     ctx.font = 'bold 13px monospace';
     ctx.textAlign = 'left';
-    ctx.fillText(Math.round(r.cache.hitRate * 100) + '% hit', x + 8, y + 36);
+    ctx.fillText(Fmt.pct(r.cache.hitRate) + ' hit', x + 8, y + 36);
     ctx.fillStyle = COLORS.dim;
     ctx.font = '9px monospace';
-    ctx.fillText(fmt(r.cache.hits) + '/s absorbed', x + 8, y + 48);
-    utilBar(x + 8, y + b.h - 12, b.w - 60, r.cache.util, 'ops');
+    ctx.fillText(Fmt.rate(r.cache.hits) + ' absorbed', x + 8, y + 48);
+    utilBar(x + 8, y + b.h - 12, b.w - 60, r.cache.util, 'ops', BANDS.saturation);
   }
 
-  function drawKv(L, state, r) {
-    const b = L.kv;
-    if (!b.on) return;
+  function drawKv(b, state, r) {
     const { x, y } = boxFrame(b, true, 'NoSQL KV ×' + state.infra.kvNodes);
     for (let i = 0; i < Math.min(8, state.infra.kvNodes); i++) {
       ctx.fillStyle = 'rgba(67,209,122,.7)';
@@ -262,22 +264,22 @@ const UI = (() => {
     ctx.fillStyle = COLORS.dim;
     ctx.font = '9px monospace';
     ctx.textAlign = 'left';
-    ctx.fillText(fmt(r.kv.rps) + '/s · no joins, no txns', x + 8, y + 34);
-    utilBar(x + 8, y + b.h - 12, b.w - 60, r.kv.util, 'ops');
+    ctx.fillText(Fmt.rate(r.kv.rps) + ' · no joins, no txns', x + 8, y + 34);
+    utilBar(x + 8, y + b.h - 12, b.w - 60, r.kv.util, 'ops', BANDS.saturation);
   }
 
-  function drawWarehouse(L, state, r) {
-    const b = L.warehouse;
-    if (!b.on) return;
+  function drawWarehouse(b, state, r) {
     boxFrame(b, true, 'OLAP WAREHOUSE');
     ctx.font = '9px monospace';
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#b48cff';
-    ctx.fillText(fmt(r.perType.analytics.served) + '/s reports · ~2s', b.x, b.y + 3);
+    ctx.fillStyle = Content.TYPES.analytics.color;
+    ctx.fillText(Fmt.rate(r.perType.analytics.served) + ' reports · ~' +
+      (S.WAREHOUSE_LAT_MS / 1000).toFixed(0) + 's', b.x, b.y + 3);
   }
 
-  function drawSql(L, state, r) {
-    const b = L.sql;
+  // The only component the player can never buy or lose, so it is also the only
+  // one whose drawing has to handle every shape of cluster.
+  function drawSql(b, state, r) {
     const infra = state.infra;
     const label = 'SQL · db.t' + infra.tier +
       (infra.shards > 1 ? ' · ' + infra.shards + ' shards' : '') +
@@ -294,7 +296,7 @@ const UI = (() => {
         const util = isPrimary ? r.sql.primaryUtil : r.sql.replicaUtil;
         const out = !isPrimary && rr > r.sql.replicas; // event knocked it out
         ctx.fillStyle = out ? 'rgba(139,150,165,.15)'
-          : `rgba(${util < 0.7 ? '67,209,122' : util < 0.9 ? '227,179,65' : '248,81,73'},${0.25 + 0.6 * Math.min(1, util)})`;
+          : gaugeRgba(util, BANDS.cpu, 0.25 + 0.6 * Math.min(1, util));
         ctx.fillRect(gx + c * (cw + 2), y + 10 + rr * (ch + 2), cw, ch);
         if (isPrimary) {
           ctx.strokeStyle = 'rgba(215,222,232,.6)';
@@ -304,13 +306,14 @@ const UI = (() => {
       }
     }
     const barY = y + b.h - 42;
-    utilBar(x + 10, barY, 120, r.sql.primaryUtil, 'CPU');
-    utilBar(x + 10, barY + 12, 120, r.sql.connCap > 0 ? r.sql.connUsed / r.sql.connCap : 0, 'CONN');
+    utilBar(x + 10, barY, 120, r.sql.primaryUtil, 'CPU', BANDS.cpu);
+    utilBar(x + 10, barY + 12, 120, r.sql.connCap > 0 ? r.sql.connUsed / r.sql.connCap : 0,
+      'CONN', BANDS.conns);
     ctx.fillStyle = COLORS.dim;
     ctx.font = '9px monospace';
     ctx.textAlign = 'left';
-    ctx.fillText(fmt(r.sql.connUsed) + '/' + fmt(r.sql.connCap) + ' conns held', x + 10, barY + 34);
-    if (r.sql.staleFrac > 0.02) {
+    ctx.fillText(Fmt.ratio(r.sql.connUsed, r.sql.connCap) + ' conns held', x + 10, barY + 34);
+    if (r.sql.staleFrac > BANDS.staleReads.warn) {
       ctx.fillStyle = COLORS.warn;
       ctx.textAlign = 'right';
       ctx.fillText('REPLICA LAG — stale reads', x + b.w - 10, barY + 34);
@@ -318,7 +321,7 @@ const UI = (() => {
     if (r.sql.replayFrac > 0.05) {
       ctx.fillStyle = COLORS.dim;
       ctx.textAlign = 'right';
-      ctx.fillText('replicas replaying ' + Math.round(r.sql.replayFrac * 100) + '% writes', x + b.w - 10, barY + 12);
+      ctx.fillText('replicas replaying ' + Fmt.pct(r.sql.replayFrac) + ' writes', x + b.w - 10, barY + 12);
     }
     // write-queue backlog
     if (state.backlog > 1) {
@@ -338,8 +341,35 @@ const UI = (() => {
       ctx.fillStyle = COLORS.warn;
       ctx.font = 'bold 12px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('RESHARDING ' + Math.ceil(state.migration.left) + 's — 60% capacity', b.x, b.y);
+      ctx.fillText('RESHARDING ' + Math.ceil(state.migration.left) + 's — ' +
+        Fmt.pct(S.MIGRATION_CAP) + ' capacity', b.x, b.y);
     }
+  }
+
+  function drawExit(b, state, r) {
+    ctx.fillStyle = COLORS.good;
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('200 OK', b.x, b.y - 18);
+    ctx.fillStyle = COLORS.dim;
+    ctx.fillText('+' + Fmt.moneyRate(r.income), b.x, b.y - 6);
+  }
+
+  // The toast fades after a few seconds; this stays for the event's duration.
+  function drawEventBadge(r) {
+    if (!r.event) return;
+    const def = Content.EVENTS[r.event.key];
+    ctx.fillStyle = 'rgba(227,179,65,.12)';
+    ctx.strokeStyle = COLORS.warn;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(10, 10, 300, 30, 6);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = COLORS.warn;
+    ctx.font = 'bold 11px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(def.icon + ' ' + def.name + ' — ' + Math.ceil(r.event.left) + 's', 20, 29);
   }
 
   function drawWires(L, state) {
@@ -366,36 +396,10 @@ const UI = (() => {
     if (!r) return;
     const L = layout(state);
     drawWires(L, state);
-    drawClients(L, state, r);
-    drawPooler(L, state, r);
-    drawCache(L, state, r);
-    drawKv(L, state, r);
-    drawWarehouse(L, state, r);
-    drawSql(L, state, r);
-
-    // active event badge (the toast fades; this stays for the duration)
-    if (r.event) {
-      const def = Content.EVENTS[r.event.key];
-      ctx.fillStyle = 'rgba(227,179,65,.12)';
-      ctx.strokeStyle = COLORS.warn;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.roundRect(10, 10, 300, 30, 6);
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = COLORS.warn;
-      ctx.font = 'bold 11px monospace';
-      ctx.textAlign = 'left';
-      ctx.fillText(def.icon + ' ' + def.name + ' — ' + Math.ceil(r.event.left) + 's', 20, 29);
+    for (const c of COMPONENTS) {
+      if (L[c.key].on) c.draw(L[c.key], state, r);
     }
-
-    // exit / revenue
-    ctx.fillStyle = COLORS.good;
-    ctx.font = '10px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('200 OK', L.exit.x, L.exit.y - 18);
-    ctx.fillStyle = COLORS.dim;
-    ctx.fillText('+$' + (r.income).toFixed(0) + '/s', L.exit.x, L.exit.y - 6);
+    drawEventBadge(r);
 
     if (running) {
       spawnParticles(state, dtFrame);
@@ -496,12 +500,6 @@ const UI = (() => {
   }
 
   // ------------------------------------------------------------------- DOM
-  function fmt(n) {
-    if (n >= 1e6) return (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + 'M';
-    if (n >= 1e3) return (n / 1e3).toFixed(n >= 1e4 ? 0 : 1) + 'k';
-    return Math.round(n).toString();
-  }
-
   function buildShop(onBuy, onScaleDown) {
     const wrap = $('shop-items');
     for (const item of Content.SHOP) {
@@ -526,22 +524,22 @@ const UI = (() => {
   }
 
   function updateShop(state) {
-    const costs = Engine.costBreakdown(state);
+    const costs = Engine.costTotals(state).byKey;
     for (const item of Content.SHOP) {
       const price = item.price(state);
       const btn = $('buy-' + item.key);
       const owned = item.ownedLabel(state);
       $('owned-' + item.key).textContent = owned || '';
 
-      const cost = costs.find(c => c.key === item.key);
+      const cost = costs[item.key];
       const run = $('run-' + item.key);
       if (cost.total > 0) {
-        run.innerHTML = 'runs at <b>$' + cost.total.toFixed(1) + '/s</b> — $' +
-          cost.fixed.toFixed(1) + ' fixed' +
-          (cost.marginal > 0 ? ' + $' + cost.marginal.toFixed(1) + ' nodes' : '');
-        run.title = 'Fixed $' + cost.fixed.toFixed(1) + '/s: ' + cost.fixedNote + '.';
+        run.innerHTML = 'runs at <b>' + Fmt.dollars(cost.total) + '/s</b> — ' +
+          Fmt.dollars(cost.fixed) + ' fixed' +
+          (cost.marginal > 0 ? ' + ' + Fmt.dollars(cost.marginal) + ' nodes' : '');
+        run.title = 'Fixed ' + Fmt.dollars(cost.fixed) + '/s: ' + cost.fixedNote + '.';
       } else {
-        run.innerHTML = 'costs <b>$' + item.fixed.toFixed(1) + '/s</b> the moment you own one';
+        run.innerHTML = 'costs <b>' + Fmt.dollars(item.fixed) + '/s</b> the moment you own one';
         run.title = 'Fixed cost covers: ' + item.fixedNote + '.';
       }
 
@@ -550,7 +548,7 @@ const UI = (() => {
         btn.disabled = true;
         btn.className = '';
       } else {
-        btn.textContent = 'buy — $' + fmt(price);
+        btn.textContent = 'buy — ' + Fmt.money(price);
         btn.disabled = state.cash < price || !!state.outcome;
         btn.className = state.cash >= price ? 'affordable' : '';
       }
@@ -577,62 +575,58 @@ const UI = (() => {
 
   function runwayText(secs) {
     if (!isFinite(secs)) return '';
-    if (secs <= 0) return 'RUNWAY: out';
-    const m = Math.floor(secs / 60), s = Math.round(secs % 60);
-    return 'RUNWAY: ' + (m > 0 ? m + 'm ' + s + 's' : s + 's');
+    return 'RUNWAY: ' + (secs <= 0 ? 'out' : Fmt.dur(secs));
   }
 
   function updateMoneybar(state) {
     const r = state.report;
     if (!r) return;
     const scale = Math.max(r.income, r.spend, 1);
-    $('money-income').textContent = 'REVENUE $' + fmt(r.income) + '/s';
+    $('money-income').textContent = 'REVENUE ' + Fmt.moneyRate(r.income);
     for (const part of r.costs.parts) {
       const seg = costSegs[part.key];
       const frac = part.total / scale;
       seg.style.width = (frac * 100).toFixed(2) + '%';
-      seg.textContent = frac > 0.1 ? '$' + fmt(part.total) : '';
-      seg.title = part.name + ' — $' + part.total.toFixed(1) + '/s = $' +
-        part.fixed.toFixed(1) + ' fixed (' + part.fixedNote + ')' +
-        (part.marginal > 0 ? ' + $' + part.marginal.toFixed(1) + ' per-node hosting' : '') + '.';
+      seg.textContent = frac > 0.1 ? Fmt.money(part.total) : '';
+      seg.title = part.name + ' — ' + Fmt.dollars(part.total) + '/s = ' +
+        Fmt.dollars(part.fixed) + ' fixed (' + part.fixedNote + ')' +
+        (part.marginal > 0 ? ' + ' + Fmt.dollars(part.marginal) + ' per-node hosting' : '') + '.';
     }
     $('money-marker').style.left = (100 * r.income / scale).toFixed(2) + '%';
     const net = r.income - r.spend;
     const el = $('money-net');
-    el.textContent = (net >= 0 ? 'PROFIT +$' : 'BURN −$') + fmt(Math.abs(net)) + '/s' +
+    el.textContent = (net >= 0 ? 'PROFIT +' : 'BURN −') + Fmt.moneyRate(Math.abs(net)) +
       (net < 0 ? '  ·  ' + runwayText(r.runway) : '');
     el.style.color = net >= 0 ? COLORS.good : r.runway < 60 ? COLORS.bad : COLORS.warn;
-    el.title = 'Maintenance $' + r.spend.toFixed(1) + '/s = $' + r.costs.fixed.toFixed(1) +
-      '/s fixed (teams, monitoring, on-call) + $' + r.costs.marginal.toFixed(1) +
+    el.title = 'Maintenance ' + Fmt.dollars(r.spend) + '/s = ' + Fmt.dollars(r.costs.fixed) +
+      '/s fixed (teams, monitoring, on-call) + ' + Fmt.dollars(r.costs.marginal) +
       '/s per-node hosting. Fixed cost is a step function: each new kind of system ' +
       'adds one whether you use it or not.';
+  }
+
+  // Every top-bar reading is "a number, coloured by how bad it is".
+  function stat(id, text, color) {
+    const el = $(id);
+    el.textContent = text;
+    el.style.color = color;
   }
 
   function updateTopbar(state) {
     const r = state.report;
     if (!r) return;
+    const errors = errFrac(r);
+    const net = r.income - r.spend;
+    const fleeing = errors > S.ERR_TOLERANCE + 0.01;
     $('stat-rps').textContent = fmt(r.servedRps);
     $('stat-demand').textContent = fmt(r.demandRps);
-    const errFrac = r.demandRps > 0 ? r.failRps / r.demandRps : 0;
-    const err = $('stat-err');
-    err.textContent = (errFrac * 100).toFixed(1) + '%';
-    err.style.color = errFrac > 0.05 ? COLORS.bad : errFrac > 0.01 ? COLORS.warn : COLORS.good;
-    const p99 = $('stat-p99');
-    p99.textContent = r.p99.toFixed(0) + 'ms';
-    p99.style.color = r.p99 > 500 ? COLORS.bad : r.p99 > 200 ? COLORS.warn : COLORS.good;
-    const users = $('stat-users');
-    const fleeing = errFrac > S.ERR_TOLERANCE + 0.01;
-    users.textContent = (fleeing ? '▼' : '') + fmt(state.users);
-    users.style.color = fleeing ? COLORS.bad : COLORS.text;
-    const rep = $('stat-rep');
-    rep.textContent = Math.round(state.reputation);
-    rep.style.color = state.reputation > 70 ? COLORS.good : state.reputation > 55 ? COLORS.warn : COLORS.bad;
-    const cash = $('stat-cash');
-    cash.textContent = '$' + fmt(Math.max(0, state.cash));
-    cash.style.color = state.cash < 50 ? COLORS.bad : COLORS.text;
-    const net = r.income - r.spend;
-    $('stat-income').textContent = (net >= 0 ? '+$' : '−$') + fmt(Math.abs(net)) + '/s';
-    $('stat-income').style.color = net >= 0 ? COLORS.good : COLORS.bad;
+    stat('stat-err', Fmt.pct1(errors), gaugeColor(errors, BANDS.errRate));
+    stat('stat-p99', Fmt.ms(r.p99), gaugeColor(r.p99, BANDS.p99));
+    stat('stat-users', (fleeing ? '▼' : '') + fmt(state.users), fleeing ? COLORS.bad : COLORS.text);
+    stat('stat-rep', Math.round(state.reputation), gaugeColor(state.reputation, BANDS.reputation));
+    stat('stat-cash', Fmt.money(Math.max(0, state.cash)),
+      state.cash < 50 ? COLORS.bad : COLORS.text);
+    stat('stat-income', (net >= 0 ? '+' : '−') + Fmt.moneyRate(Math.abs(net)),
+      net >= 0 ? COLORS.good : COLORS.bad);
     $('insight-count').textContent = Object.keys(state.insights).length;
     $('insight-total').textContent = Content.INSIGHT_KEYS.length;
     // win progress
@@ -681,9 +675,9 @@ const UI = (() => {
       const now = cls.share(state, live);
       const seg = mixSegs[cls.key];
       seg.style.width = (now * 100).toFixed(1) + '%';
-      seg.textContent = now >= 0.06 ? cls.label + ' ' + Math.round(now * 100) + '%' : '';
-      seg.title = cls.label + ' — ' + Math.round(now * 100) + '% of traffic now (' +
-        Math.round(cls.share(state, base) * 100) + '% baseline). ' + cls.desc;
+      seg.textContent = now >= 0.06 ? cls.label + ' ' + Fmt.pct(now) : '';
+      seg.title = cls.label + ' — ' + Fmt.pct(now) + ' of traffic now (' +
+        Fmt.pct(cls.share(state, base)) + ' baseline). ' + cls.desc;
     }
   }
 
@@ -728,16 +722,15 @@ const UI = (() => {
       sub: fmt(s.users) + ' users · ' + fmt(Math.ceil(r.demandRps / S.RPS_PER_APP_SERVER)) + ' app servers',
       secs: [
         ['TRAFFIC (rate)', Content.TYPE_KEYS.map(k =>
-          [Content.TYPES[k].label, fmt(r.perType[k].demand) + '/s', ''])],
+          [Content.TYPES[k].label, Fmt.rate(r.perType[k].demand), ''])],
         ['ERRORS', [
-          ['failed', fmt(r.failRps) + '/s', r.failRps > 0 ? 'badv' : ''],
-          ['error rate', (100 * (r.demandRps > 0 ? r.failRps / r.demandRps : 0)).toFixed(1) + '%',
-            r.failRps / Math.max(1, r.demandRps) > 0.02 ? 'badv' : 'goodv'],
+          ['failed', Fmt.rate(r.failRps), r.failRps > 0 ? 'badv' : ''],
+          ['error rate', Fmt.pct1(errFrac(r)), vclass(errFrac(r), BANDS.errRate)],
         ]],
         ['LATENCY (what users feel)', [
-          ['p50', r.p50.toFixed(0) + 'ms', r.p50 > 200 ? 'warnv' : 'goodv'],
-          ['p99', r.p99.toFixed(0) + 'ms', r.p99 > 500 ? 'badv' : r.p99 > 200 ? 'warnv' : 'goodv'],
-          ['client timeout', S.TIMEOUT_MS + 'ms', ''],
+          ['p50', Fmt.ms(r.p50), vclass(r.p50, BANDS.p50)],
+          ['p99', Fmt.ms(r.p99), vclass(r.p99, BANDS.p99)],
+          ['client timeout', Fmt.ms(S.TIMEOUT_MS), ''],
         ]],
       ],
       note: 'Rate, Errors, Duration — the RED method, measured at the edge. This is what your users actually experience, and the only view that matters for an SLO.',
@@ -747,13 +740,13 @@ const UI = (() => {
       title: 'Connection pooler',
       sub: 'multiplexing clients onto database connections',
       secs: [
-        ['TRAFFIC', [['queries through', fmt(r.servedRps) + '/s', '']]],
+        ['TRAFFIC', [['queries through', Fmt.rate(r.servedRps), '']]],
         ['SATURATION', [
-          ['conns held', fmt(r.sql.connUsed) + ' / ' + fmt(r.sql.connCap),
-            r.sql.connUsed > 0.9 * r.sql.connCap ? 'badv' : 'goodv'],
-          ['avg hold time', r.p50.toFixed(0) + 'ms', ''],
+          ['conns held', Fmt.ratio(r.sql.connUsed, r.sql.connCap),
+            vclass(r.sql.connUsed / Math.max(1, r.sql.connCap), BANDS.conns)],
+          ['avg hold time', Fmt.ms(r.p50), ''],
         ]],
-        ['COST', [['run-rate', '$' + r.costs.parts.find(p => p.key === 'pooler').total.toFixed(1) + '/s', '']]],
+        ['COST', [['run-rate', Fmt.dollars(costOf(r, 'pooler')) + '/s', '']]],
       ],
       note: 'Little\'s Law: connections = arrival rate × hold time. Without this, app servers hold connections while idle and the database starves at low CPU.',
     }),
@@ -763,19 +756,18 @@ const UI = (() => {
       sub: s.infra.cacheNodes + ' nodes · ' + fmt(s.infra.cacheNodes * S.CACHE_OPS) + ' ops/s capacity',
       secs: [
         ['TRAFFIC', [
-          ['hits (absorbed)', fmt(r.cache.hits) + '/s', 'goodv'],
-          ['misses (to SQL)', fmt(r.cache.misses) + '/s', ''],
+          ['hits (absorbed)', Fmt.rate(r.cache.hits), 'goodv'],
+          ['misses (to SQL)', Fmt.rate(r.cache.misses), ''],
         ]],
         ['SATURATION', [
-          ['hit rate', (100 * r.cache.hitRate).toFixed(0) + '%',
-            r.cache.hitRate < 0.4 ? 'badv' : r.cache.hitRate < 0.7 ? 'warnv' : 'goodv'],
-          ['ceiling (repetition)', (100 * s.repetition * S.CACHE_HIT_MAX).toFixed(0) + '%', ''],
-          ['ops utilization', (100 * r.cache.util).toFixed(0) + '%', r.cache.util > 0.9 ? 'badv' : ''],
+          ['hit rate', Fmt.pct(r.cache.hitRate), vclass(r.cache.hitRate, BANDS.hitRate)],
+          ['ceiling (repetition)', Fmt.pct(s.repetition * S.CACHE_HIT_MAX), ''],
+          ['ops utilization', Fmt.pct(r.cache.util), vclass(r.cache.util, BANDS.saturation)],
         ]],
         ['COST', [
-          ['run-rate', '$' + r.costs.parts.find(p => p.key === 'cache').total.toFixed(1) + '/s', ''],
+          ['run-rate', Fmt.dollars(costOf(r, 'cache')) + '/s', ''],
           ['per DB read saved', '$' + (r.cache.hits > 0
-            ? (r.costs.parts.find(p => p.key === 'cache').total / r.cache.hits * 1000).toFixed(3)
+            ? (costOf(r, 'cache') / r.cache.hits * 1000).toFixed(3)
             : '—') + '/1k', ''],
         ]],
       ],
@@ -786,12 +778,11 @@ const UI = (() => {
       title: 'NoSQL KV store',
       sub: s.infra.kvNodes + ' nodes · ' + fmt(s.infra.kvNodes * S.KV_OPS) + ' ops/s capacity',
       secs: [
-        ['TRAFFIC', [['lookups served', fmt(r.kv.rps) + '/s', '']]],
-        ['SATURATION', [['utilization', (100 * r.kv.util).toFixed(0) + '%',
-          r.kv.util > 0.9 ? 'badv' : r.kv.util > 0.7 ? 'warnv' : 'goodv']]],
-        ['ERRORS', [['dropped', fmt(r.fails.kv) + '/s', r.fails.kv > 0 ? 'badv' : 'goodv']]],
+        ['TRAFFIC', [['lookups served', Fmt.rate(r.kv.rps), '']]],
+        ['SATURATION', [['utilization', Fmt.pct(r.kv.util), vclass(r.kv.util, BANDS.saturation)]]],
+        ['ERRORS', [['dropped', Fmt.rate(r.fails.kv), r.fails.kv > 0 ? 'badv' : 'goodv']]],
         ['LATENCY', [['p50', r.perType.lookup.latencyMs.toFixed(1) + 'ms', 'goodv']]],
-        ['COST', [['run-rate', '$' + r.costs.parts.find(p => p.key === 'kv').total.toFixed(1) + '/s', '']]],
+        ['COST', [['run-rate', Fmt.dollars(costOf(r, 'kv')) + '/s', '']]],
       ],
       note: 'Scales linearly because it refuses to do the hard things: no joins, no multi-row transactions, no ad-hoc queries.',
     }),
@@ -800,11 +791,11 @@ const UI = (() => {
       title: 'Analytics warehouse (OLAP)',
       sub: 'columnar copy, fed off the transaction path',
       secs: [
-        ['TRAFFIC', [['reports served', fmt(r.perType.analytics.served) + '/s', '']]],
+        ['TRAFFIC', [['reports served', Fmt.rate(r.perType.analytics.served), '']]],
         ['LATENCY', [['per report', (S.WAREHOUSE_LAT_MS / 1000).toFixed(1) + 's', 'warnv']]],
-        ['SATURATION', [['work removed from OLTP', fmt(r.perType.analytics.demand * S.ANALYTICS_UNITS) +
-          ' units/s', 'goodv']]],
-        ['COST', [['run-rate', '$' + r.costs.parts.find(p => p.key === 'warehouse').total.toFixed(1) + '/s', '']]],
+        ['SATURATION', [['work removed from OLTP',
+          Fmt.count(r.perType.analytics.demand * S.ANALYTICS_UNITS) + ' units/s', 'goodv']]],
+        ['COST', [['run-rate', Fmt.dollars(costOf(r, 'warehouse')) + '/s', '']]],
       ],
       note: 'Slow on purpose, and nobody minds — reports are not on the checkout path. This deletes load rather than adding nodes to absorb it.',
     }),
@@ -812,11 +803,10 @@ const UI = (() => {
     sql: (s, r) => {
       const u = r.sql.units;
       const cap = r.sql.clusterCapTotal;
-      const unitRow = (label, v) => [label, fmt(v) + ' u/s (' +
-        (cap > 0 ? Math.round(100 * v / cap) : 0) + '%)', ''];
-      const sqlCost = r.costs.parts.find(p => p.key === 'tier').total +
-        r.costs.parts.find(p => p.key === 'shard').total +
-        r.costs.parts.find(p => p.key === 'replica').total;
+      const unitRow = (label, v) => [label,
+        Fmt.count(v) + ' u/s (' + Fmt.pct(cap > 0 ? v / cap : 0) + ')', ''];
+      // the cluster bills across three shop lines; the player sees one machine
+      const sqlCost = costOf(r, 'tier') + costOf(r, 'shard') + costOf(r, 'replica');
       return {
         title: 'SQL cluster',
         sub: 'tier ' + s.infra.tier + ' · ' + s.infra.shards + ' shard' + (s.infra.shards > 1 ? 's' : '') +
@@ -827,27 +817,26 @@ const UI = (() => {
             unitRow('writes', u.write),
             unitRow('analytics', u.analytics),
             unitRow('write replay', u.replay),
-            ['cluster capacity', fmt(cap) + ' u/s', ''],
+            ['cluster capacity', Fmt.count(cap) + ' u/s', ''],
           ]],
           ['SATURATION', [
-            ['primary CPU', (100 * r.sql.primaryUtil).toFixed(0) + '%',
-              r.sql.primaryUtil > 0.85 ? 'badv' : r.sql.primaryUtil > 0.7 ? 'warnv' : 'goodv'],
-            ['replica CPU', s.infra.replicas ? (100 * r.sql.replicaUtil).toFixed(0) + '%' : '—',
-              r.sql.replicaUtil > 0.85 ? 'badv' : ''],
-            ['connections', fmt(r.sql.connUsed) + ' / ' + fmt(r.sql.connCap),
-              r.sql.connUsed > 0.9 * r.sql.connCap ? 'badv' : 'goodv'],
-            ['replication lag', r.sql.staleFrac > 0.01
-              ? (100 * r.sql.staleFrac).toFixed(0) + '% stale reads' : 'none',
-              r.sql.staleFrac > 0.05 ? 'badv' : 'goodv'],
-            ['write backlog', s.backlog > 1 ? fmt(s.backlog) + ' units' : 'none',
+            ['primary CPU', Fmt.pct(r.sql.primaryUtil), vclass(r.sql.primaryUtil, BANDS.cpu)],
+            ['replica CPU', s.infra.replicas ? Fmt.pct(r.sql.replicaUtil) : '—',
+              s.infra.replicas ? vclass(r.sql.replicaUtil, BANDS.cpu) : ''],
+            ['connections', Fmt.ratio(r.sql.connUsed, r.sql.connCap),
+              vclass(r.sql.connUsed / Math.max(1, r.sql.connCap), BANDS.conns)],
+            ['replication lag', r.sql.staleFrac > BANDS.staleReads.warn
+              ? Fmt.pct(r.sql.staleFrac) + ' stale reads' : 'none',
+              vclass(r.sql.staleFrac, BANDS.staleReads)],
+            ['write backlog', s.backlog > 1 ? Fmt.count(s.backlog) + ' units' : 'none',
               s.backlog > 1 ? 'warnv' : 'goodv'],
           ]],
           ['ERRORS (by cause)', [
-            ['connection refused', fmt(r.fails.connections) + '/s', r.fails.connections > 0 ? 'badv' : ''],
-            ['out of capacity', fmt(r.fails.cpu) + '/s', r.fails.cpu > 0 ? 'badv' : ''],
-            ['client timeout', fmt(r.fails.timeout) + '/s', r.fails.timeout > 0 ? 'badv' : ''],
+            ['connection refused', Fmt.rate(r.fails.connections), r.fails.connections > 0 ? 'badv' : ''],
+            ['out of capacity', Fmt.rate(r.fails.cpu), r.fails.cpu > 0 ? 'badv' : ''],
+            ['client timeout', Fmt.rate(r.fails.timeout), r.fails.timeout > 0 ? 'badv' : ''],
           ]],
-          ['COST', [['run-rate (nodes + ops)', '$' + sqlCost.toFixed(1) + '/s', '']]],
+          ['COST', [['run-rate (nodes + ops)', Fmt.dollars(sqlCost) + '/s', '']]],
         ],
         note: 'Utilization, Saturation, Errors — the USE method, per resource. The work breakdown is the first thing to read: it tells you whether a bigger box, more shards, or less work is the answer.',
       };
@@ -858,16 +847,15 @@ const UI = (() => {
       sub: 'the only traffic that earns anything',
       secs: [
         ['TRAFFIC', [
-          ['served', fmt(r.servedRps) + '/s', 'goodv'],
-          ['demanded', fmt(r.demandRps) + '/s', ''],
-          ['goodput', (100 * (r.demandRps > 0 ? r.servedRps / r.demandRps : 1)).toFixed(1) + '%',
-            r.servedRps / Math.max(1, r.demandRps) < 0.95 ? 'warnv' : 'goodv'],
+          ['served', Fmt.rate(r.servedRps), 'goodv'],
+          ['demanded', Fmt.rate(r.demandRps), ''],
+          ['goodput', Fmt.pct1(goodput(r)), vclass(goodput(r), BANDS.goodput)],
         ]],
         ['MONEY', [
-          ['revenue', '$' + fmt(r.income) + '/s', 'goodv'],
-          ['maintenance', '$' + fmt(r.spend) + '/s', 'badv'],
-          ['fixed share', (100 * (r.spend > 0 ? r.costs.fixed / r.spend : 0)).toFixed(0) + '%', ''],
-          ['net', (r.income >= r.spend ? '+$' : '−$') + fmt(Math.abs(r.income - r.spend)) + '/s',
+          ['revenue', Fmt.moneyRate(r.income), 'goodv'],
+          ['maintenance', Fmt.moneyRate(r.spend), 'badv'],
+          ['fixed share', Fmt.pct(r.spend > 0 ? r.costs.fixed / r.spend : 0), ''],
+          ['net', (r.income >= r.spend ? '+' : '−') + Fmt.moneyRate(Math.abs(r.income - r.spend)),
             r.income >= r.spend ? 'goodv' : 'badv'],
         ]],
       ],
@@ -875,22 +863,61 @@ const UI = (() => {
     }),
   };
 
+  // ------------------------------------------------------------- components
+  // The scene, described once. Each component says where it sits, whether the
+  // player owns it yet, how it draws, and what it answers when interrogated.
+  //
+  // These four facts used to live in four separate lists that had to agree with
+  // each other — a layout map, a hand-written draw sequence, this hit-test, and
+  // the probe table. The `on` predicate was written out twice, which is a bug
+  // waiting to happen: a component you can hover but cannot see, or the other
+  // way round. Adding a component is now one row.
+  //
+  // Order is draw order, and (since nothing overlaps) hit-test order too.
+  const COMPONENTS = [
+    {
+      key: 'clients', on: () => true,
+      box: () => ({ x: 70, y: H * 0.5, w: 100, h: 100 }),
+      draw: drawClients, probe: PROBES.clients,
+    },
+    {
+      key: 'pooler', on: s => s.infra.pooler,
+      box: () => ({ x: 215, y: H * 0.5, w: 84, h: 44 }),
+      draw: drawPooler, probe: PROBES.pooler,
+    },
+    {
+      key: 'cache', on: s => s.infra.cacheNodes > 0,
+      box: () => ({ x: 385, y: H * 0.22, w: 150, h: 74 }),
+      draw: drawCache, probe: PROBES.cache,
+    },
+    {
+      key: 'kv', on: s => s.infra.kvNodes > 0,
+      box: () => ({ x: 385, y: H * 0.8, w: 150, h: 64 }),
+      draw: drawKv, probe: PROBES.kv,
+    },
+    {
+      key: 'warehouse', on: s => s.infra.warehouse,
+      box: () => ({ x: 640, y: H * 0.85, w: 150, h: 50 }),
+      draw: drawWarehouse, probe: PROBES.warehouse,
+    },
+    {
+      key: 'sql', on: () => true,
+      box: () => ({ x: 640, y: H * 0.42, w: 220, h: 170 }),
+      draw: drawSql, probe: PROBES.sql,
+    },
+    {
+      key: 'exit', on: () => true,
+      box: () => ({ x: W - 46, y: H * 0.5, w: 90, h: 90 }),
+      draw: drawExit, probe: PROBES.exit,
+    },
+  ];
+
   // Hit-test the scene. Only components that exist can be probed.
   function probeAt(px, py, state) {
-    const L = layout(state);
-    const targets = [
-      { key: 'clients', box: { x: L.clients.x, y: L.clients.y, w: 100, h: 100 }, on: true },
-      { key: 'pooler', box: L.pooler, on: state.infra.pooler },
-      { key: 'cache', box: L.cache, on: state.infra.cacheNodes > 0 },
-      { key: 'kv', box: L.kv, on: state.infra.kvNodes > 0 },
-      { key: 'warehouse', box: L.warehouse, on: state.infra.warehouse },
-      { key: 'sql', box: L.sql, on: true },
-      { key: 'exit', box: { x: L.exit.x, y: L.exit.y, w: 90, h: 90 }, on: true },
-    ];
-    for (const t of targets) {
-      if (!t.on) continue;
-      const b = t.box;
-      if (Math.abs(px - b.x) <= b.w / 2 + 6 && Math.abs(py - b.y) <= b.h / 2 + 6) return t.key;
+    for (const c of COMPONENTS) {
+      if (!c.on(state)) continue;
+      const b = c.box();
+      if (Math.abs(px - b.x) <= b.w / 2 + 6 && Math.abs(py - b.y) <= b.h / 2 + 6) return c.key;
     }
     return null;
   }
@@ -922,11 +949,14 @@ const UI = (() => {
   }
 
   // guru ---------------------------------------------------------------
+  // Shares the request-type palette, so "writes" is the same orange here, in
+  // the mix bar and in the particles. Replay has no request type of its own —
+  // it is work the cluster does to itself.
   const LOAD_KINDS = [
-    { key: 'read', label: 'reads', color: '#4ea3ff' },
-    { key: 'write', label: 'writes', color: '#ff9d3c' },
-    { key: 'analytics', label: 'analytics', color: '#b48cff' },
-    { key: 'replay', label: 'replay', color: '#8b96a5' },
+    { key: 'read', label: 'reads', color: Content.TYPES.read.color },
+    { key: 'write', label: 'writes', color: Content.TYPES.write.color },
+    { key: 'analytics', label: 'analytics', color: Content.TYPES.analytics.color },
+    { key: 'replay', label: 'replay', color: COLORS.dim },
   ];
 
   function updateGuru(state) {
@@ -943,8 +973,8 @@ const UI = (() => {
       const frac = mix[kind.key];
       if (frac <= 0.001) continue;
       bar += '<div class="gl-seg" style="width:' + (frac * 100).toFixed(1) + '%;background:' +
-        kind.color + '" title="' + kind.label + ': ' + Math.round(frac * 100) + '% of cluster work">' +
-        (frac > 0.13 ? kind.label + ' ' + Math.round(frac * 100) + '%' : '') + '</div>';
+        kind.color + '" title="' + kind.label + ': ' + Fmt.pct(frac) + ' of cluster work">' +
+        (frac > 0.13 ? kind.label + ' ' + Fmt.pct(frac) : '') + '</div>';
     }
     bar += '</div>';
     load.innerHTML = mix.total > 0 ? bar : '';
@@ -963,11 +993,12 @@ const UI = (() => {
   }
 
   function toggleGuru(state) {
-    const panel = $('guru-panel');
-    const open = panel.classList.toggle('hidden');
-    $('btn-guru').classList.toggle('sel', !open);
+    // classList.toggle returns whether the class is now PRESENT — and the class
+    // is 'hidden', so the return is the opposite of what the caller wants
+    const hidden = $('guru-panel').classList.toggle('hidden');
+    $('btn-guru').classList.toggle('sel', !hidden);
     updateGuru(state);
-    return !open;
+    return !hidden;
   }
 
   function closeGuru() {
@@ -1003,24 +1034,34 @@ const UI = (() => {
   }
 
   // modal --------------------------------------------------------------
+  // Exactly one panel is visible at a time over a shared backdrop, and this is
+  // the only code that decides which. Each panel used to hide its siblings by
+  // hand — four toggles per open, and one forgotten toggle is a stuck overlay.
+  const MODAL_PANELS = ['intro', 'insight-card', 'drawer', 'endscreen'];
+
+  function showModal(id) {
+    $('modal-backdrop').classList.remove('hidden');
+    for (const p of MODAL_PANELS) $(p).classList.toggle('hidden', p !== id);
+  }
+
+  function hideModal() {
+    $('modal-backdrop').classList.add('hidden');
+    for (const p of MODAL_PANELS) $(p).classList.add('hidden');
+  }
+
   function showInsight(key, onClose) {
     const ins = Content.INSIGHTS[key];
-    $('modal-backdrop').classList.remove('hidden');
-    $('insight-card').classList.remove('hidden');
-    $('drawer').classList.add('hidden');
+    showModal('insight-card');
     $('card-title').textContent = ins.title;
     $('card-text').textContent = ins.text;
     $('card-ok').onclick = () => {
-      $('modal-backdrop').classList.add('hidden');
-      $('insight-card').classList.add('hidden');
+      hideModal();
       onClose();
     };
   }
 
   function showDrawer(state, onClose) {
-    $('modal-backdrop').classList.remove('hidden');
-    $('drawer').classList.remove('hidden');
-    $('insight-card').classList.add('hidden');
+    showModal('drawer');
     const list = $('drawer-list');
     list.innerHTML = '';
     for (const key of Content.INSIGHT_KEYS) {
@@ -1033,8 +1074,7 @@ const UI = (() => {
       list.appendChild(div);
     }
     $('drawer-close').onclick = () => {
-      $('modal-backdrop').classList.add('hidden');
-      $('drawer').classList.add('hidden');
+      hideModal();
       onClose();
     };
   }
@@ -1050,20 +1090,16 @@ const UI = (() => {
   };
 
   function showEnd(state, onRestart) {
-    $('modal-backdrop').classList.remove('hidden');
-    $('endscreen').classList.remove('hidden');
-    $('insight-card').classList.add('hidden');
-    $('drawer').classList.add('hidden');
+    showModal('endscreen');
     const won = state.outcome === 'won';
     $('end-kicker').textContent = won ? 'SUSTAINED 1,000,000 RPS' : 'POST-MORTEM';
     const t = $('end-title');
     t.textContent = won ? 'IPO. You scaled it. 🔔' : 'The startup is dead.';
     t.className = 'card-title ' + (won ? 'won' : 'lost');
-    const mins = Math.floor(state.t / 60), secs = Math.round(state.t % 60);
     $('end-text').textContent = (won
-      ? 'From 20 requests/second to one million in ' + mins + 'm ' + secs + 's. '
-      : (DEATH_TEXT[state.deathCause] || DEATH_TEXT.latency) + ' Survived ' + mins + 'm ' + secs + 's, peaked at ' +
-        fmt(state.peakUsers * S.RPS_PER_USER) + ' RPS. ')
+      ? 'From 20 requests/second to one million in ' + Fmt.dur(state.t) + '. '
+      : (DEATH_TEXT[state.deathCause] || DEATH_TEXT.latency) + ' Survived ' + Fmt.dur(state.t) +
+        ', peaked at ' + fmt(state.peakUsers * S.RPS_PER_USER) + ' RPS. ')
       + 'Insights collected: ' + Object.keys(state.insights).length + '/' + Content.INSIGHT_KEYS.length + '.';
     const list = $('end-insights');
     list.innerHTML = '';
@@ -1140,7 +1176,11 @@ const UI = (() => {
 
   return {
     init, render, toast, memo, clearMemos, toggleGuru, closeGuru,
-    showInsight, showDrawer, showEnd, fmt,
-    probes: PROBES, // exported for tests
+    showInsight, showDrawer, showEnd, showModal, hideModal, fmt,
+    // exported for tests: the component/probe table and the modal panel ids,
+    // so smoke can check they still line up with index.html and each other
+    probes: PROBES,
+    components: COMPONENTS,
+    modalPanels: MODAL_PANELS,
   };
 })();

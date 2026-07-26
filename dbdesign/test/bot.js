@@ -11,8 +11,8 @@ function botBuyOne(state) {
   if (!r) return false;
   const infra = state.infra;
   const buy = k => Engine.buy(state, k).ok;
-  const costs = Engine.costBreakdown(state);
-  const runningCost = k => costs.find(c => c.key === k).total;
+  const costs = Engine.costTotals(state).byKey;
+  const runningCost = k => costs[k].total;
 
   // Every purchase adds run-rate FOREVER, while income is only what traffic is
   // doing this second. So a commitment needs cash reserves to survive the next

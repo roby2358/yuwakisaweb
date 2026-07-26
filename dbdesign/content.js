@@ -71,6 +71,29 @@ Content.SIM = {
   EVENT_CHANCE_PER_S: 1 / 40,
 };
 
+// What counts as bad. Every gauge, probe row and status colour in the game
+// reads its verdict from this table via Fmt.level(value, band) — so "82% CPU"
+// is amber in exactly one place and the canvas can never disagree with the
+// panel beside it. {warn, bad}; when bad > warn the metric is worse high (CPU,
+// errors), when bad < warn it is worse low (hit rate, reputation).
+//
+// The CPU band is deliberately tighter than the point where things actually
+// break: latency ≈ service ÷ (1 − utilization), so 85% is already 6.7× the
+// service time. Amber at 70% is the game telling you to buy BEFORE the cliff,
+// which is the entire lesson.
+Content.BANDS = {
+  cpu: { warn: 0.70, bad: 0.85 },
+  saturation: { warn: 0.70, bad: 0.90 },  // caches, KV — no hockey stick, just full
+  conns: { warn: 0.75, bad: 0.90 },
+  errRate: { warn: 0.01, bad: 0.05 },
+  p50: { warn: 200, bad: 500 },
+  p99: { warn: 200, bad: 500 },
+  staleReads: { warn: 0.01, bad: 0.05 },
+  reputation: { warn: 70, bad: 55 },      // worse when low
+  hitRate: { warn: 0.70, bad: 0.40 },     // worse when low
+  goodput: { warn: 0.99, bad: 0.95 },     // worse when low
+};
+
 // SQL node tiers (applies to primaries and replicas alike)
 Content.TIERS = [
   { cap: 6000,   conns: 200,  run: 0.5 },
@@ -343,6 +366,8 @@ Content.SHOP = [
     scaleDownLabel: 'decommission the queue (overflow errors again)',
   },
 ];
+Content.SHOP_BY_KEY = {};
+for (const item of Content.SHOP) Content.SHOP_BY_KEY[item.key] = item;
 
 // ---------------------------------------------------------------------------
 // Events. Milestone events fire once at a served-RPS threshold; random events

@@ -9,15 +9,12 @@
 
 if (typeof require !== 'undefined' && typeof Content === 'undefined') {
   var Content = require('./memos.js');
+  var Fmt = require('./format.js');
 }
 
 var Guru = (() => {
-  const pct = x => Math.round(100 * x) + '%';
-  const num = n => {
-    if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
-    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k';
-    return Math.round(n).toString();
-  };
+  const pct = Fmt.pct;
+  const num = Fmt.count;
 
   // Fractions of total cluster work, by kind. This is the diagnosis.
   function loadMix(report) {
@@ -56,7 +53,7 @@ var Guru = (() => {
         '/s of revenue. $' + r.costs.fixed.toFixed(0) + '/s of that is fixed cost you pay whether or not it helps.',
       action: (s, r) => {
         const worst = r.costs.parts
-          .filter(p => p.total > 0 && Content.SHOP.find(i => i.key === p.key).canScaleDown(s))
+          .filter(p => p.total > 0 && Content.SHOP_BY_KEY[p.key].canScaleDown(s))
           .sort((a, b) => b.total - a.total)[0];
         return worst
           ? 'Scale something down. Your most expensive removable subsystem is ' + worst.name +
@@ -178,7 +175,7 @@ var Guru = (() => {
       body: (s) => 'Only ' + pct(s.repetition) + ' of this workload’s reads are repeats, so most requests miss and ' +
         'pay for the trip anyway. More nodes will not raise a hit rate the traffic does not support.',
       action: (s, r) => 'Scale the cache down — you are paying $' +
-        r.costs.parts.find(p => p.key === 'cache').total.toFixed(0) + '/s for it.',
+        r.costs.byKey.cache.total.toFixed(0) + '/s for it.',
     },
     {
       key: 'writeWall',

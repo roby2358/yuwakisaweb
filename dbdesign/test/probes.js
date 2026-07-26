@@ -12,7 +12,7 @@ const path = require('path');
 
 const root = path.join(__dirname, '..');
 const ctx = vm.createContext({});
-for (const f of ['flourish.js', 'content.js', 'memos.js', 'engine.js', 'guru.js']) {
+for (const f of ['format.js', 'flourish.js', 'content.js', 'memos.js', 'engine.js', 'guru.js']) {
   vm.runInContext(fs.readFileSync(path.join(root, f), 'utf8'), ctx, { filename: f });
 }
 // ui.js only touches the DOM inside functions, so it loads fine headless

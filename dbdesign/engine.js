@@ -98,7 +98,9 @@ const Engine = (() => {
 
   // --- shop -----------------------------------------------------------------
   function shopItem(key) {
-    return Content.SHOP.find(i => i.key === key);
+    const item = Content.SHOP_BY_KEY[key];
+    if (!item) throw new Error('no shop item: ' + key);
+    return item;
   }
 
   function buy(state, key) {
@@ -164,11 +166,18 @@ const Engine = (() => {
     return expenses(probe);
   }
 
+  // parts is the ordered list the money bar draws; byKey is the same objects
+  // indexed, because every panel that mentions a cost wants exactly one of them.
   function costTotals(state) {
     const parts = costBreakdown(state);
+    const byKey = {};
     let fixed = 0, marginal = 0;
-    for (const p of parts) { fixed += p.fixed; marginal += p.marginal; }
-    return { parts, fixed, marginal, total: fixed + marginal };
+    for (const p of parts) {
+      byKey[p.key] = p;
+      fixed += p.fixed;
+      marginal += p.marginal;
+    }
+    return { parts, byKey, fixed, marginal, total: fixed + marginal };
   }
 
   function expenses(state) {
@@ -277,6 +286,292 @@ const Engine = (() => {
   }
 
   // --- the tick -------------------------------------------------------------
+  //
+  // One step is a request's journey through the architecture, in stages. Each
+  // stage takes what the previous ones produced and returns a concrete object.
+  //
+  // Two things are threaded through and mutated by several stages, because they
+  // are genuinely cumulative: `ledger` (per request type: demanded, served,
+  // failed, latency) and `fails` (failed rps by cause). Everything a request
+  // meets can add to both, and the report reads them at the end.
+
+  // The fixed facts of this step, resolved once: which box, how many nodes, and
+  // whatever the current event is doing to them.
+  function tickContext(state) {
+    const ev = eventDef(state);
+    const infra = state.infra;
+    const tier = Content.TIERS[infra.tier - 1];
+    return {
+      state, infra, ev, tier,
+      dt: S.DT,
+      shards: infra.shards,
+      replicas: Math.max(0, infra.replicas - ((ev && ev.replicaOut) || 0)),
+      nodeCap: tier.cap * (state.migration ? S.MIGRATION_CAP : 1),
+    };
+  }
+
+  function newLedger(perTypeDemand) {
+    const ledger = {};
+    for (const k of Content.TYPE_KEYS) {
+      ledger[k] = {
+        demand: perTypeDemand[k], served: 0, fail: 0,
+        latencyMs: Content.TYPES[k].baseMs,
+      };
+    }
+    return ledger;
+  }
+
+  // ---- offload lanes -------------------------------------------------------
+  // The three ways to keep work off the database. Each absorbs one request type
+  // and reports what still has to reach SQL. This is the cheapest capacity in
+  // the game: load you delete never needs a node to serve it.
+
+  function kvLane(ctx, ledger, fails) {
+    const nodes = ctx.infra.kvNodes;
+    const lookup = ledger.lookup;
+    if (nodes === 0) return { kv: { rps: 0, util: 0, nodes: 0 }, lookupToSql: lookup.demand };
+    const cap = nodes * S.KV_OPS;
+    const served = Math.min(lookup.demand, cap);
+    const over = lookup.demand - served;
+    const util = lookup.demand / cap;
+    lookup.latencyMs = S.KV_LAT_MS * hockey(util);
+    lookup.served = served;
+    lookup.fail += over;
+    fails.kv += over;
+    return { kv: { rps: served, util, nodes }, lookupToSql: 0 };
+  }
+
+  function cacheLane(ctx, ledger) {
+    const nodes = ctx.infra.cacheNodes;
+    const reads = ledger.read.demand;
+    if (nodes === 0) return { hits: 0, misses: reads, hitRate: 0, util: 0, nodes: 0 };
+    const ev = ctx.ev;
+    // repetition caps what any amount of cache can achieve on this workload
+    let hitRate = Math.min(S.CACHE_HIT_MAX, S.CACHE_HIT_BASE + S.CACHE_HIT_PER_NODE * nodes)
+      * ctx.state.repetition;
+    // writes invalidate entries
+    hitRate *= clamp(1 - 0.25 * ledger.write.demand / Math.max(1, reads), 0.5, 1);
+    if (ev && ev.hitZero) hitRate = 0;
+    const nodesEff = (ev && ev.cacheCapOne) ? 1 : nodes;
+    const cap = nodesEff * S.CACHE_OPS;
+    const hits = Math.min(reads * hitRate, cap);
+    return {
+      hits, misses: reads - hits, hitRate, nodes,
+      util: reads > 0 ? (reads * hitRate) / cap : 0,
+    };
+  }
+
+  function warehouseLane(ctx, ledger) {
+    if (!ctx.infra.warehouse) return ledger.analytics.demand;
+    ledger.analytics.served = ledger.analytics.demand;
+    ledger.analytics.latencyMs = S.WAREHOUSE_LAT_MS;
+    return 0;
+  }
+
+  // ---- the cluster ---------------------------------------------------------
+
+  // Query units, not requests, are what fills a database. This conversion is
+  // why a workload that is 3% reports can be 60% of the load.
+  function clusterWork(ctx, ledger, cache, lookupToSql, analyticsToSql) {
+    const infra = ctx.infra;
+    return {
+      readUnits: cache.misses * (infra.indexes ? S.READ_UNITS_INDEXED : S.READ_UNITS_RAW)
+        + lookupToSql * S.LOOKUP_UNITS,
+      writeUnits: ledger.write.demand * S.WRITE_UNITS * (infra.indexes ? S.WRITE_INDEX_TAX : 1),
+      // cross-shard fan-out: coordination overhead per extra shard, not N× work
+      analyticsUnits: analyticsToSql * S.ANALYTICS_UNITS
+        * (1 + S.ANALYTICS_FANOUT * (ctx.shards - 1)),
+      // SQL-bound rps per type — the connection gate applies to these
+      sqlRps: {
+        read: cache.misses,
+        write: ledger.write.demand,
+        lookup: lookupToSql,
+        analytics: analyticsToSql,
+      },
+    };
+  }
+
+  // Gate one: connections. Little's Law — concurrent connections = arrival rate
+  // × hold time. Without a pooler every app server also holds some while idle,
+  // which is how a database refuses queries at 20% CPU.
+  function connectionGate(ctx, ledger, sqlRps, demandRps, fails) {
+    const state = ctx.state, ev = ctx.ev;
+    let connUsed = 0;
+    for (const k of Content.TYPE_KEYS) {
+      connUsed += sqlRps[k] * (Math.min(state.prevLatency[k], S.CONN_HOLD_CAP_MS) / 1000);
+    }
+    if (!ctx.infra.pooler) {
+      const appServers = Math.ceil(demandRps / S.RPS_PER_APP_SERVER);
+      const stormMult = (ev && ev.stormMult) || 1;
+      connUsed += appServers * S.CLIENT_CONNS_PER_APP * stormMult;
+    } else if (ev && ev.stormMult) {
+      connUsed *= 2; // reconnect churn still doubles held conns briefly
+    }
+    // every node accepts its own connections, so widening the cluster raises
+    // the ceiling as well as the capacity
+    const connCap = ctx.shards * (1 + ctx.replicas) * ctx.tier.conns;
+    const admit = connUsed > connCap ? connCap / connUsed : 1;
+    for (const k of Content.TYPE_KEYS) {
+      const rejected = sqlRps[k] * (1 - admit);
+      sqlRps[k] -= rejected;
+      ledger[k].fail += rejected;
+      fails.connections += rejected;
+    }
+    return { connUsed, connCap, admit };
+  }
+
+  // Where the admitted work lands: replicas take reads and reports first, minus
+  // the write replay every one of them owes the primary. The rest is primaries.
+  function placeLoad(ctx, work, admit) {
+    const readUnits = work.readUnits * admit;
+    const analyticsUnits = work.analyticsUnits * admit;
+    const writeUnits = work.writeUnits * admit;
+    const replicaCapTotal = ctx.shards * ctx.replicas * ctx.nodeCap;
+    const replayUnits = work.writeUnits * ctx.replicas; // each replica replays its shard's writes
+    const readWork = readUnits + analyticsUnits;
+    const onReplicas = Math.min(readWork, Math.max(0, replicaCapTotal - replayUnits));
+    return {
+      readUnits, writeUnits, analyticsUnits, replayUnits,
+      replicaCapTotal, primaryCapTotal: ctx.shards * ctx.nodeCap,
+      readWork, onReplicas,
+      primaryLoad: writeUnits + (readWork - onReplicas),
+    };
+  }
+
+  // The write queue turns overload into backlog instead of errors — strictly
+  // better, but it is staleness debt, not capacity.
+  function absorbOverflow(ctx, place) {
+    const state = ctx.state, dt = ctx.dt;
+    let primaryLoad = place.primaryLoad;
+    let overflow = Math.max(0, primaryLoad - place.primaryCapTotal);
+    let queuedUnits = 0;
+    if (overflow > 0 && ctx.infra.writeQueue) {
+      queuedUnits = Math.min(overflow, place.writeUnits);
+      state.backlog += queuedUnits * dt;
+      overflow -= queuedUnits;
+      primaryLoad -= queuedUnits;
+    }
+    const drain = Math.min(state.backlog, Math.max(0, place.primaryCapTotal - primaryLoad) * dt);
+    state.backlog -= drain;
+    state.backlogAge = state.backlog > 1 ? state.backlogAge + dt : 0;
+    return { primaryLoad, overflow, queuedUnits };
+  }
+
+  function saturation(ctx, place, flow) {
+    const primaryUtil = place.primaryCapTotal > 0 ? flow.primaryLoad / place.primaryCapTotal : 0;
+    const replicaUtil = place.replicaCapTotal > 0
+      ? (place.onReplicas + place.replayUnits) / place.replicaCapTotal : 0;
+    const replicaShare = place.readWork > 0 ? place.onReplicas / place.readWork : 0;
+    return {
+      primaryUtil, replicaUtil, replicaShare,
+      replayFrac: place.replicaCapTotal > 0 ? place.replayUnits / place.replicaCapTotal : 0,
+      // a read costs whatever the pool serving it is doing
+      readUtil: replicaShare * replicaUtil + (1 - replicaShare) * primaryUtil,
+      // an overloaded replica serves the past
+      staleFrac: ctx.replicas > 0 ? clamp((replicaUtil - S.STALE_UTIL) * 2, 0, 0.3) : 0,
+    };
+  }
+
+  // Gate two: capacity. Past it, work is dropped proportionally across whatever
+  // was still in flight — except queued writes, which are backlog now, not loss.
+  function dropOverCapacity(ledger, sqlRps, flow, fails) {
+    const cpuLoad = flow.primaryLoad + flow.overflow;
+    const cpuDropFrac = cpuLoad > 0 ? flow.overflow / cpuLoad : 0;
+    for (const k of Content.TYPE_KEYS) {
+      if (k === 'write' && flow.queuedUnits > 0) continue; // queued, not dropped
+      const dropped = sqlRps[k] * cpuDropFrac;
+      sqlRps[k] -= dropped;
+      ledger[k].fail += dropped;
+      fails.cpu += dropped;
+    }
+  }
+
+  // The hockey stick: latency = service time ÷ (1 − utilization). Anything that
+  // crosses client patience is a timeout, on a smooth ramp rather than a cliff.
+  function applyLatency(ctx, ledger, sqlRps, sat, cache, fails) {
+    const latMult = {
+      read: hockey(sat.readUtil), write: hockey(sat.primaryUtil),
+      lookup: hockey(sat.readUtil), analytics: hockey(sat.readUtil),
+    };
+    for (const k of Content.TYPE_KEYS) {
+      if (sqlRps[k] <= 0) continue;
+      const lat = Content.TYPES[k].baseMs * latMult[k];
+      const timeoutFrac = clamp((lat / S.TIMEOUT_MS - 0.5) * 1.2, 0, 1);
+      const timedOut = sqlRps[k] * timeoutFrac;
+      ledger[k].fail += timedOut;
+      fails.timeout += timedOut;
+      ledger[k].served += sqlRps[k] - timedOut;
+      ledger[k].latencyMs = lat;
+    }
+    // cached reads blend into the read latency users actually feel
+    if (cache.hits > 0) {
+      const dbLat = ledger.read.latencyMs;
+      ledger.read.served += cache.hits;
+      ledger.read.latencyMs = (cache.hits * 1 + cache.misses * dbLat)
+        / Math.max(1, ledger.read.demand);
+    }
+    const state = ctx.state;
+    for (const k of Content.TYPE_KEYS) {
+      state.prevLatency[k] += (ledger[k].latencyMs - state.prevLatency[k])
+        * Math.min(1, ctx.dt / S.LAT_EMA_S);
+    }
+  }
+
+  function totals(ctx, ledger) {
+    let servedRps = 0, failRps = 0, latSum = 0;
+    for (const k of Content.TYPE_KEYS) {
+      servedRps += ledger[k].served;
+      failRps += ledger[k].fail;
+      latSum += ledger[k].served * ledger[k].latencyMs;
+    }
+    // a 2s report is not on the checkout path, so warehouse latency is excluded
+    // from the p50/p99 users actually feel
+    const offPath = ctx.infra.warehouse ? ledger.analytics.served : 0;
+    const oltpServed = servedRps - offPath;
+    const oltpLatSum = latSum - offPath * S.WAREHOUSE_LAT_MS;
+    const p50 = oltpServed > 0 ? oltpLatSum / oltpServed : 1;
+    return { servedRps, failRps, p50, p99: Math.min(p50 * 3, 5000) };
+  }
+
+  // Reputation is the slow signal and decides growth; error rate is the fast
+  // one and churns users out NOW. That split is what makes overload self-
+  // limiting: a meltdown sheds the very traffic causing it, so there is always
+  // a way back rather than a runaway you cannot buy your way out of.
+  function updateDemandSide(ctx, tot, sat, place, demandRps) {
+    const state = ctx.state, dt = ctx.dt;
+    const successFrac = demandRps > 0 ? tot.servedRps / demandRps : 1;
+    let repTarget = 100 * Math.pow(successFrac, S.REP_SHARPNESS)
+      - 25 * clamp((tot.p99 - 400) / 1600, 0, 1)
+      - 10 * sat.staleFrac / 0.3
+      - (state.backlog > 1 ? 5 + 10 * clamp(state.backlog / (place.primaryCapTotal * 5), 0, 1) : 0);
+    repTarget = clamp(repTarget, 0, 100);
+    // reputation crashes fast and rebuilds slowly — meltdowns leave scars
+    const repTau = repTarget < state.reputation ? S.REP_TAU_DOWN : S.REP_TAU_UP;
+    state.reputation += (repTarget - state.reputation) * dt / repTau;
+
+    const errFrac = demandRps > 0 ? tot.failRps / demandRps : 0;
+    const churn = S.ERR_CHURN * Math.pow(Math.max(0, errFrac - S.ERR_TOLERANCE), 2);
+    const market = Math.max(0, 1 - state.users / S.MARKET_USERS);
+    let growth = S.GROWTH_RATE
+      * clamp((state.reputation - S.REP_NEUTRAL) / (100 - S.REP_NEUTRAL), -1, 1);
+    if (growth > 0) growth *= market;
+    growth -= churn;
+    state.users = Math.max(1, state.users * Math.exp(growth * dt));
+    state.peakUsers = Math.max(state.peakUsers, state.users);
+    return growth;
+  }
+
+  // Any live customer base means some cash flow — subscriptions, contracts, the
+  // traffic that did get through. Revenue floors while anyone is left.
+  function settleMoney(ctx, servedRps) {
+    const state = ctx.state;
+    const earned = servedRps * state.revenue;
+    const income = state.users > 1 ? Math.max(S.MIN_INCOME, earned) : earned;
+    const costs = costTotals(state);
+    state.cash += (income - costs.total) * ctx.dt;
+    return { income, spend: costs.total, costs };
+  }
+
   function tick(state) {
     if (state.outcome) return state.report;
     const dt = S.DT;
@@ -286,233 +581,56 @@ const Engine = (() => {
       if (state.migration.left <= 0) state.migration = null;
     }
 
-    const ev = eventDef(state);
-    const infra = state.infra;
-    const tier = Content.TIERS[infra.tier - 1];
-    const capMult = state.migration ? S.MIGRATION_CAP : 1;
+    const ctx = tickContext(state);
     const d = demand(state);
-
-    // per-type accounting: served/fail rps and latency
-    const out = {};
-    for (const k of Content.TYPE_KEYS) {
-      out[k] = { demand: d.perType[k], served: 0, fail: 0, latencyMs: Content.TYPES[k].baseMs };
-    }
+    const ledger = newLedger(d.perType);
     const fails = { connections: 0, cpu: 0, timeout: 0, cache: 0, kv: 0 };
 
-    // ---- KV lane (NoSQL) ----
-    let kv = { rps: 0, util: 0, nodes: infra.kvNodes };
-    let lookupToSql = out.lookup.demand;
-    if (infra.kvNodes > 0) {
-      const cap = infra.kvNodes * S.KV_OPS;
-      kv.rps = Math.min(out.lookup.demand, cap);
-      const over = out.lookup.demand - kv.rps;
-      kv.util = out.lookup.demand / cap;
-      out.lookup.latencyMs = S.KV_LAT_MS * hockey(kv.util);
-      out.lookup.served = kv.rps;
-      out.lookup.fail += over;
-      fails.kv += over;
-      lookupToSql = 0;
-    }
+    // keep work off the database wherever it can go somewhere cheaper
+    const { kv, lookupToSql } = kvLane(ctx, ledger, fails);
+    const cache = cacheLane(ctx, ledger);
+    const analyticsToSql = warehouseLane(ctx, ledger);
 
-    // ---- Cache lane (reads) ----
-    const reads = out.read.demand;
-    let cache = { hits: 0, misses: reads, hitRate: 0, util: 0, nodes: infra.cacheNodes };
-    if (infra.cacheNodes > 0) {
-      // repetition caps what any amount of cache can achieve on this workload
-      let hitRate = Math.min(S.CACHE_HIT_MAX, S.CACHE_HIT_BASE + S.CACHE_HIT_PER_NODE * infra.cacheNodes)
-        * state.repetition;
-      // writes invalidate entries
-      hitRate *= clamp(1 - 0.25 * out.write.demand / Math.max(1, reads), 0.5, 1);
-      if (ev && ev.hitZero) hitRate = 0;
-      const nodesEff = (ev && ev.cacheCapOne) ? 1 : infra.cacheNodes;
-      const cap = nodesEff * S.CACHE_OPS;
-      cache.hits = Math.min(reads * hitRate, cap);
-      cache.misses = reads - cache.hits;
-      cache.hitRate = hitRate;
-      cache.util = reads > 0 ? (reads * hitRate) / cap : 0;
-    }
+    // the rest becomes query units, and has to pass two gates to be served
+    const work = clusterWork(ctx, ledger, cache, lookupToSql, analyticsToSql);
+    const conns = connectionGate(ctx, ledger, work.sqlRps, d.rps, fails);
+    const place = placeLoad(ctx, work, conns.admit);
+    const flow = absorbOverflow(ctx, place);
+    const sat = saturation(ctx, place, flow);
+    dropOverCapacity(ledger, work.sqlRps, flow, fails);
+    applyLatency(ctx, ledger, work.sqlRps, sat, cache, fails);
 
-    // ---- Warehouse lane (analytics) ----
-    let analyticsToSql = out.analytics.demand;
-    if (infra.warehouse) {
-      out.analytics.served = out.analytics.demand;
-      out.analytics.latencyMs = S.WAREHOUSE_LAT_MS;
-      analyticsToSql = 0;
-    }
+    // what all that did to the business
+    const tot = totals(ctx, ledger);
+    const growth = updateDemandSide(ctx, tot, sat, place, d.rps);
+    const money = settleMoney(ctx, tot.servedRps);
 
-    // ---- SQL cluster ----
-    const N = infra.shards;
-    const R = Math.max(0, infra.replicas - ((ev && ev.replicaOut) || 0));
-    const nodeCap = tier.cap * capMult;
-    const readUnits = cache.misses * (infra.indexes ? S.READ_UNITS_INDEXED : S.READ_UNITS_RAW)
-      + lookupToSql * S.LOOKUP_UNITS;
-    const writeUnits = out.write.demand * S.WRITE_UNITS * (infra.indexes ? S.WRITE_INDEX_TAX : 1);
-    // cross-shard fan-out: coordination overhead per extra shard, not N× work
-    const analyticsUnits = analyticsToSql * S.ANALYTICS_UNITS * (1 + S.ANALYTICS_FANOUT * (N - 1));
-
-    // SQL-bound rps per type (connection gate applies to these)
-    const sqlRps = {
-      read: cache.misses,
-      write: out.write.demand,
-      lookup: lookupToSql,
-      analytics: analyticsToSql,
-    };
-
-    // connections: Little's law + idle app-server connections when unpooled
-    const sqlTotalRps = Content.TYPE_KEYS.reduce((a, k) => a + sqlRps[k], 0);
-    let connUsed = 0;
-    for (const k of Content.TYPE_KEYS) {
-      connUsed += sqlRps[k] * (Math.min(state.prevLatency[k], S.CONN_HOLD_CAP_MS) / 1000);
-    }
-    if (!infra.pooler) {
-      const appServers = Math.ceil(d.rps / S.RPS_PER_APP_SERVER);
-      const stormMult = (ev && ev.stormMult) || 1;
-      connUsed += appServers * S.CLIENT_CONNS_PER_APP * stormMult;
-    } else if (ev && ev.stormMult) {
-      connUsed *= 2; // reconnect churn still doubles held conns briefly
-    }
-    const connCap = N * (1 + R) * tier.conns;
-    const admit = connUsed > connCap ? connCap / connUsed : 1;
-    for (const k of Content.TYPE_KEYS) {
-      const rejected = sqlRps[k] * (1 - admit);
-      sqlRps[k] -= rejected;
-      out[k].fail += rejected;
-      fails.connections += rejected;
-    }
-
-    // CPU: replicas serve reads/analytics first (minus write replay), rest on primaries
-    const admitReadUnits = readUnits * admit;
-    const admitWriteUnits = writeUnits * admit;
-    const admitAnalyticsUnits = analyticsUnits * admit;
-    const replicaCapTotal = N * R * nodeCap;
-    const replayUnits = writeUnits * R; // every replica replays its shard's writes
-    const replicaAvail = Math.max(0, replicaCapTotal - replayUnits);
-    const readWork = admitReadUnits + admitAnalyticsUnits;
-    const onReplicas = Math.min(readWork, replicaAvail);
-    const primaryCapTotal = N * nodeCap;
-    let primaryLoad = admitWriteUnits + (readWork - onReplicas);
-
-    // write queue absorbs the write share of any overflow
-    let overflow = Math.max(0, primaryLoad - primaryCapTotal);
-    let queuedUnits = 0;
-    if (overflow > 0 && infra.writeQueue) {
-      queuedUnits = Math.min(overflow, admitWriteUnits);
-      state.backlog += queuedUnits * dt;
-      overflow -= queuedUnits;
-      primaryLoad -= queuedUnits;
-    }
-    const drain = Math.min(state.backlog, Math.max(0, primaryCapTotal - primaryLoad) * dt);
-    state.backlog -= drain;
-    state.backlogAge = state.backlog > 1 ? state.backlogAge + dt : 0;
-
-    const primaryUtil = primaryCapTotal > 0 ? primaryLoad / primaryCapTotal : 0;
-    const replicaUtil = replicaCapTotal > 0 ? (onReplicas + replayUnits) / replicaCapTotal : 0;
-    const replayFrac = replicaCapTotal > 0 ? replayUnits / replicaCapTotal : 0;
-
-    // CPU overflow drops requests proportionally (queued writes exempt)
-    const cpuLoad = primaryLoad + overflow;
-    const cpuDropFrac = cpuLoad > 0 ? overflow / cpuLoad : 0;
-    for (const k of Content.TYPE_KEYS) {
-      if (k === 'write' && queuedUnits > 0) continue; // queued, not dropped
-      const dropped = sqlRps[k] * cpuDropFrac;
-      sqlRps[k] -= dropped;
-      out[k].fail += dropped;
-      fails.cpu += dropped;
-    }
-
-    // latency per type from the pool that serves it
-    const replicaShare = readWork > 0 ? onReplicas / readWork : 0;
-    const readUtil = replicaShare * replicaUtil + (1 - replicaShare) * primaryUtil;
-    const latMult = { read: hockey(readUtil), write: hockey(primaryUtil), lookup: hockey(readUtil), analytics: hockey(readUtil) };
-    for (const k of Content.TYPE_KEYS) {
-      if (sqlRps[k] <= 0) continue;
-      let lat = Content.TYPES[k].baseMs * latMult[k];
-      // timeouts: a smooth ramp toward client patience
-      const timeoutFrac = clamp((lat / S.TIMEOUT_MS - 0.5) * 1.2, 0, 1);
-      const timedOut = sqlRps[k] * timeoutFrac;
-      out[k].fail += timedOut;
-      fails.timeout += timedOut;
-      out[k].served += sqlRps[k] - timedOut;
-      out[k].latencyMs = lat;
-    }
-    // cached reads blend into read latency
-    if (cache.hits > 0) {
-      out.read.served += cache.hits;
-      const dbLat = out.read.latencyMs;
-      out.read.latencyMs = (cache.hits * 1 + cache.misses * dbLat) / Math.max(1, reads);
-    }
-    for (const k of Content.TYPE_KEYS) {
-      state.prevLatency[k] += (out[k].latencyMs - state.prevLatency[k]) * Math.min(1, dt / S.LAT_EMA_S);
-    }
-
-    // stale reads from lagging replicas
-    const staleFrac = R > 0 ? clamp((replicaUtil - S.STALE_UTIL) * 2, 0, 0.3) : 0;
-
-    // ---- totals, reputation, money ----
-    let servedRps = 0, failRps = 0, latSum = 0;
-    for (const k of Content.TYPE_KEYS) {
-      servedRps += out[k].served;
-      failRps += out[k].fail;
-      latSum += out[k].served * out[k].latencyMs;
-    }
-    // warehouse latency excluded from the OLTP p50/p99 the users feel
-    const oltpServed = servedRps - (infra.warehouse ? out.analytics.served : 0);
-    const oltpLatSum = latSum - (infra.warehouse ? out.analytics.served * S.WAREHOUSE_LAT_MS : 0);
-    const p50 = oltpServed > 0 ? oltpLatSum / oltpServed : 1;
-    const p99 = Math.min(p50 * 3, 5000);
-
-    const successFrac = d.rps > 0 ? servedRps / d.rps : 1;
-    let repTarget = 100 * Math.pow(successFrac, S.REP_SHARPNESS)
-      - 25 * clamp((p99 - 400) / 1600, 0, 1)
-      - 10 * staleFrac / 0.3
-      - (state.backlog > 1 ? 5 + 10 * clamp(state.backlog / (primaryCapTotal * 5), 0, 1) : 0);
-    repTarget = clamp(repTarget, 0, 100);
-    // reputation crashes fast and rebuilds slowly — meltdowns leave scars
-    const repTau = repTarget < state.reputation ? S.REP_TAU_DOWN : S.REP_TAU_UP;
-    state.reputation += (repTarget - state.reputation) * dt / repTau;
-
-    // errors churn users directly: burned users leave NOW, and rep-driven
-    // growth only wins them back slowly afterward
-    const errFrac = d.rps > 0 ? failRps / d.rps : 0;
-    const churn = S.ERR_CHURN * Math.pow(Math.max(0, errFrac - S.ERR_TOLERANCE), 2);
-    const market = Math.max(0, 1 - state.users / S.MARKET_USERS);
-    let growth = S.GROWTH_RATE * clamp((state.reputation - S.REP_NEUTRAL) / (100 - S.REP_NEUTRAL), -1, 1);
-    if (growth > 0) growth *= market;
-    growth -= churn;
-    state.users = Math.max(1, state.users * Math.exp(growth * dt));
-    state.peakUsers = Math.max(state.peakUsers, state.users);
-
-    // Any live customer base means some cash flow — subscriptions, contracts,
-    // the traffic that did get through. Revenue floors while anyone is left.
-    const earned = servedRps * state.revenue;
-    const income = state.users > 1 ? Math.max(S.MIN_INCOME, earned) : earned;
-    const costs = costTotals(state);
-    const spend = costs.total;
-    state.cash += (income - spend) * dt;
-
-    // ---- report ----
+    // ---- report: the contract with the UI, the guru and the tests ----
     const report = {
-      demandRps: d.rps, servedRps, failRps, perType: out,
+      demandRps: d.rps, servedRps: tot.servedRps, failRps: tot.failRps, perType: ledger,
       cache, kv,
       sql: {
-        primaryUtil: Math.min(1, primaryUtil), replicaUtil: Math.min(1, replicaUtil),
-        replayFrac, staleFrac,
-        connUsed, connCap, rejectRps: fails.connections,
-        primaryCapTotal, analyticsUnits: admitAnalyticsUnits,
+        primaryUtil: Math.min(1, sat.primaryUtil), replicaUtil: Math.min(1, sat.replicaUtil),
+        replayFrac: sat.replayFrac, staleFrac: sat.staleFrac,
+        connUsed: conns.connUsed, connCap: conns.connCap, rejectRps: fails.connections,
+        primaryCapTotal: place.primaryCapTotal, analyticsUnits: place.analyticsUnits,
         // where the cluster's work actually goes — the first question in any
         // capacity conversation, and what the guru reasons over
         units: {
-          read: admitReadUnits,
-          write: admitWriteUnits,
-          analytics: admitAnalyticsUnits,
-          replay: replayUnits,
+          read: place.readUnits,
+          write: place.writeUnits,
+          analytics: place.analyticsUnits,
+          replay: place.replayUnits,
         },
-        clusterCapTotal: primaryCapTotal + replicaCapTotal,
-        shards: N, replicas: R, nodeCap,
-        readOnReplicaFrac: replicaShare,
+        clusterCapTotal: place.primaryCapTotal + place.replicaCapTotal,
+        shards: ctx.shards, replicas: ctx.replicas, nodeCap: ctx.nodeCap,
+        readOnReplicaFrac: sat.replicaShare,
       },
-      fails, p50, p99, income, spend, costs, growthPerS: growth,
-      runway: spend > income ? state.cash / (spend - income) : Infinity,
+      fails, p50: tot.p50, p99: tot.p99,
+      income: money.income, spend: money.spend, costs: money.costs,
+      growthPerS: growth,
+      runway: money.spend > money.income
+        ? state.cash / (money.spend - money.income) : Infinity,
       backlog: state.backlog,
       event: state.event ? { key: state.event.key, left: state.event.left } : null,
       migration: state.migration ? { left: state.migration.left } : null,
@@ -525,7 +643,7 @@ const Engine = (() => {
 
     checkInsights(state, report);
     checkMemos(state, report);
-    updateEvents(state, servedRps, dt);
+    updateEvents(state, tot.servedRps, dt);
     updateHistory(state, report, dt);
     updateOutcome(state, report, dt);
     return report;

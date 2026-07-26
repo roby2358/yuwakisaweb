@@ -2,6 +2,7 @@
 
 (() => {
   const S = Content.SIM;
+  const $ = id => document.getElementById(id);
   let state = Engine.createState((Date.now() ^ (Math.random() * 1e9)) | 0);
   let speed = 1;          // 0 pause, 1, 2, 4
   let memosMuted = false;
@@ -19,12 +20,14 @@
     });
   }
 
-  function openModal() {
+  // A modal freezes the sim and restores whatever speed was running before it.
+  // UI.showModal decides what is on screen; this decides whether time passes.
+  function pauseForModal() {
     pausedForModal = true;
     setSpeed(0, true);
   }
 
-  function closeModal() {
+  function resumeAfterModal() {
     pausedForModal = false;
     setSpeed(speedBeforeModal, true);
   }
@@ -33,9 +36,9 @@
     if (pausedForModal || ended) { if (ended) state.newInsights.length = 0; return; }
     const key = state.newInsights.shift();
     if (!key) return;
-    openModal();
+    pauseForModal();
     UI.showInsight(key, () => {
-      closeModal();
+      resumeAfterModal();
       drainInsights(); // several can queue up in one tick
     });
   }
@@ -58,9 +61,8 @@
     ended = false;
     UI.clearMemos();
     UI.closeGuru();
-    document.getElementById('modal-backdrop').classList.add('hidden');
-    document.getElementById('endscreen').classList.add('hidden');
-    closeModal();
+    UI.hideModal();
+    resumeAfterModal();
     setSpeed(1);
   }
 
@@ -100,12 +102,11 @@
   window.HUG = { getState: () => state, cheat: n => { state.cash += n; } };
 
   // intro: start paused until the player accepts the pager
-  openModal();
-  document.getElementById('modal-backdrop').classList.remove('hidden');
-  document.getElementById('intro-ok').addEventListener('click', () => {
-    document.getElementById('intro').classList.add('hidden');
-    document.getElementById('modal-backdrop').classList.add('hidden');
-    closeModal();
+  pauseForModal();
+  UI.showModal('intro');
+  $('intro-ok').addEventListener('click', () => {
+    UI.hideModal();
+    resumeAfterModal();
     setSpeed(1);
   });
 
@@ -116,21 +117,21 @@
     });
   });
 
-  document.getElementById('btn-guru').addEventListener('click', () => UI.toggleGuru(state));
-  document.getElementById('guru-close').addEventListener('click', () => UI.closeGuru());
+  $('btn-guru').addEventListener('click', () => UI.toggleGuru(state));
+  $('guru-close').addEventListener('click', () => UI.closeGuru());
 
-  document.getElementById('btn-memos').addEventListener('click', e => {
+  $('btn-memos').addEventListener('click', e => {
     memosMuted = !memosMuted;
     e.currentTarget.textContent = memosMuted ? '🔇' : '📣';
     e.currentTarget.title = memosMuted ? 'Unmute management' : 'Mute management';
     if (memosMuted) UI.clearMemos();
   });
 
-  document.getElementById('btn-insights').addEventListener('click', () => {
+  $('btn-insights').addEventListener('click', () => {
     if (ended) return;
     if (pausedForModal) return;
-    openModal();
-    UI.showDrawer(state, closeModal);
+    pauseForModal();
+    UI.showDrawer(state, resumeAfterModal);
   });
 
   window.addEventListener('keydown', e => {

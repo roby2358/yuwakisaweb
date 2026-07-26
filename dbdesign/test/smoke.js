@@ -19,7 +19,7 @@ function assert(cond, msg) {
 // 1. classic-script load order, shared global scope like a browser
 const ctxObj = {};
 const ctx = vm.createContext(ctxObj);
-for (const f of ['flourish.js', 'content.js', 'memos.js', 'engine.js', 'guru.js']) {
+for (const f of ['format.js', 'flourish.js', 'content.js', 'memos.js', 'engine.js', 'guru.js']) {
   vm.runInContext(fs.readFileSync(path.join(root, f), 'utf8'), ctx, { filename: f });
 }
 assert(typeof ctxObj.Content === 'object' || vm.runInContext('typeof Content', ctx) === 'object',
@@ -219,8 +219,104 @@ assert(probeCheck.empty.length === 0,
   `all ${probeCheck.keys.length} probes return complete rows` +
   (probeCheck.empty.length ? ' (bad: ' + probeCheck.empty.slice(0, 3).join(', ') + ')' : ''));
 
-// 9. syntax check the DOM-dependent files
-for (const f of ['ui.js', 'index.js', 'content.js', 'engine.js', 'flourish.js', 'memos.js', 'guru.js']) {
+// 8b. the scene table and the probe table describe the same set of components.
+// A component in one and not the other is either invisible or un-hoverable.
+const wiring = vm.runInContext(`
+  (() => {
+    const comps = UI.components.map(c => c.key);
+    const probes = Object.keys(UI.probes);
+    return {
+      comps, probes,
+      unprobed: comps.filter(k => !probes.includes(k)),
+      unplaced: probes.filter(k => !comps.includes(k)),
+      undrawn: UI.components.filter(c => typeof c.draw !== 'function' ||
+        typeof c.on !== 'function' || typeof c.box !== 'function').map(c => c.key),
+      modal: UI.modalPanels,
+    };
+  })()
+`, ctx);
+assert(wiring.unprobed.length === 0 && wiring.unplaced.length === 0,
+  `every scene component has a probe and vice versa (${wiring.comps.length})` +
+  (wiring.unprobed.length ? ' — unprobed: ' + wiring.unprobed.join(', ') : '') +
+  (wiring.unplaced.length ? ' — unplaced: ' + wiring.unplaced.join(', ') : ''));
+assert(wiring.undrawn.length === 0,
+  'every component has on/box/draw' +
+  (wiring.undrawn.length ? ' (missing on: ' + wiring.undrawn.join(', ') + ')' : ''));
+
+// modal panel ids are referenced through a list, not $('...'), so check 4 misses
+const missingModal = wiring.modal.filter(id => !htmlIds.has(id));
+assert(missingModal.length === 0,
+  `all ${wiring.modal.length} modal panels exist in index.html` +
+  (missingModal.length ? ' (missing: ' + missingModal.join(', ') + ')' : ''));
+
+// 9. boot the whole app against a stub DOM. ui.js + index.js are ~1300 lines
+// that no other test executes — this runs init, the frame loop, the probe
+// hover, the guru panel, the modal stack and a purchase, for real.
+const { makeDom } = require('./domstub.js');
+const boot = (() => {
+  const dom = makeDom(html);
+  const appCtx = vm.createContext({
+    document: dom.document, window: dom.window,
+    performance: dom.performance, requestAnimationFrame: dom.requestAnimationFrame,
+    setTimeout: dom.setTimeout, console,
+  });
+  const trace = { loaded: [], error: null };
+  try {
+    for (const f of ['format.js', 'flourish.js', 'content.js', 'memos.js', 'engine.js',
+      'guru.js', 'ui.js', 'index.js']) {
+      vm.runInContext(fs.readFileSync(path.join(root, f), 'utf8'), appCtx, { filename: f });
+      trace.loaded.push(f);
+    }
+    dom.fire('intro-ok', 'click');            // accept the pager, start the clock
+    for (let i = 0; i < 40; i++) dom.frame(100);
+    const state = vm.runInContext('window.HUG.getState()', appCtx);
+    trace.ticked = state.t > 0;
+    trace.rendered = !!state.report;
+
+    // hover the SQL cluster: layout puts it at x=640, y=0.42×540
+    dom.fireAt('scene', 'mousemove', 640, 227);
+    trace.probeOpen = !dom.byId.get('probe').classList.contains('hidden');
+    trace.probeText = (dom.byId.get('probe').innerHTML || '').includes('SQL cluster');
+    dom.fireAt('scene', 'mouseleave', 0, 0);
+    trace.probeClosed = dom.byId.get('probe').classList.contains('hidden');
+
+    // the guru answers
+    dom.fire('btn-guru', 'click');
+    dom.frame(300);
+    trace.guruOpen = !dom.byId.get('guru-panel').classList.contains('hidden');
+    trace.guruCards = (dom.byId.get('guru-cards').children || []).length > 0;
+    dom.fire('guru-close', 'click');
+    trace.guruClosed = dom.byId.get('guru-panel').classList.contains('hidden');
+
+    // the crib-sheet drawer opens over a backdrop and closes again
+    dom.fire('btn-insights', 'click');
+    trace.drawerOpen = !dom.byId.get('drawer').classList.contains('hidden')
+      && !dom.byId.get('modal-backdrop').classList.contains('hidden')
+      && dom.byId.get('endscreen').classList.contains('hidden');
+    dom.byId.get('drawer-close').onclick();
+    trace.drawerClosed = dom.byId.get('drawer').classList.contains('hidden')
+      && dom.byId.get('modal-backdrop').classList.contains('hidden');
+
+    // and a purchase goes all the way through to the sim
+    dom.fire('buy-indexes', 'click');
+    trace.bought = vm.runInContext('window.HUG.getState().infra.indexes', appCtx);
+    dom.frame(100);
+  } catch (e) {
+    trace.error = e.stack || e.message;
+  }
+  return trace;
+})();
+assert(boot.error === null, 'the app boots and runs against a DOM' +
+  (boot.error ? '\n    ' + String(boot.error).split('\n').slice(0, 4).join('\n    ') : ''));
+assert(boot.ticked && boot.rendered, 'the frame loop advances the sim and renders');
+assert(boot.probeOpen && boot.probeText && boot.probeClosed,
+  'hovering a component opens its probe and leaving closes it');
+assert(boot.guruOpen && boot.guruCards && boot.guruClosed, 'the guru panel opens, fills and closes');
+assert(boot.drawerOpen && boot.drawerClosed, 'the modal stack shows one panel at a time');
+assert(boot.bought === true, 'a shop button reaches the engine');
+
+// 10. syntax check the DOM-dependent files
+for (const f of ['ui.js', 'index.js', 'content.js', 'engine.js', 'format.js', 'flourish.js', 'memos.js', 'guru.js']) {
   try {
     execFileSync(process.execPath, ['--check', path.join(root, f)]);
     console.log('  PASS ' + f + ' parses');

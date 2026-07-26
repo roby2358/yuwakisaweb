@@ -176,6 +176,15 @@ in the game, because "41% of your cluster is write replay" answers *what to
 buy* in a way that a CPU percentage never can. An insight card teaches the
 framework once the system is complex enough to need it.
 
+**What counts as bad is a design decision, not a rendering detail.** Every
+gauge, probe row and status colour classifies its reading against one shared
+table (`Content.BANDS`, applied by `Fmt.level`), so the CPU bar on the canvas
+cannot disagree with the CPU row in the panel beside it. The CPU band is
+deliberately tighter than the point where things break — amber at 70%, red at
+85% — because latency is service ÷ (1 − utilization), so 85% is already 6.7×
+the service time. The game goes amber where you should *buy*, not where you
+have already lost.
+
 `node test/probes.js [component...] [--profile iot]` renders these panels as
 text for eyeballing without a browser.
 
@@ -320,3 +329,8 @@ Every mechanic above reads/writes only these fields.
 - The headless bot in `test/sim.js` must be able to win with sensible play and
   must lose when it skips the pooler — both are asserted, so tuning changes
   that break the teaching beats fail the sim.
+- `node test/trace.js` is the line between *retuning* and *breaking*. It runs a
+  scripted build-out across every profile and diffs the result against
+  `test/trace.golden.txt`. A refactor must leave it byte-identical; a
+  deliberate balance change is `--save`, and the diff in that commit is an
+  exact record of what the change did to the game.
