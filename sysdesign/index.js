@@ -60,13 +60,19 @@
     $('insight-count').textContent = String(Object.keys(state.insights).length);
   }
 
+  // Rerolling the brief goes through the same door the sim tests use; the
+  // picker only shows pre-live, so there is never traffic to contradict.
+  function showBrief() {
+    UI.showIntro(state, resumeAfterModal, key => Engine.applyScenario(state, key));
+  }
+
   function begin() {
     ended = false;
     UI.clearMemos();
     UI.closeGuru();
     setSpeed(1);
     pauseForModal();
-    UI.showIntro(state, resumeAfterModal);
+    showBrief();
   }
 
   function restart() {
@@ -128,7 +134,13 @@
   $('brief-name').addEventListener('click', () => {
     if (pausedForModal || ended) return;
     pauseForModal();
-    UI.showIntro(state, resumeAfterModal);
+    showBrief();
+  });
+
+  $('btn-cheat').addEventListener('click', () => {
+    if (pausedForModal || ended) return;
+    pauseForModal();
+    UI.showCheat(state, resumeAfterModal);
   });
 
   $('btn-guru').addEventListener('click', () => UI.toggleGuru(state));

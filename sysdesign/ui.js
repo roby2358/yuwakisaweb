@@ -665,14 +665,14 @@ var UI = (() => {
   // ---- modals -------------------------------------------------------------
   function showModal(which) {
     $('modal-backdrop').classList.remove('hidden');
-    for (const id of ['intro', 'insight-card', 'drawer', 'endscreen']) {
+    for (const id of ['intro', 'insight-card', 'drawer', 'endscreen', 'cheatsheet']) {
       $(id).classList.toggle('hidden', id !== which);
     }
   }
 
   function hideModal() { $('modal-backdrop').classList.add('hidden'); }
 
-  function showIntro(state, onClose) {
+  function showIntro(state, onClose, onPick) {
     const s = Content.SCENARIOS[state.scenario];
     $('intro-title').textContent = s.icon + '  ' + s.name;
     $('intro-blurb').textContent = s.blurb;
@@ -688,8 +688,55 @@ var UI = (() => {
       chip.title = why;
       nfr.appendChild(chip);
     }
+    // The brief is a choice until traffic exists. Once you are live you run
+    // what you took — rereading it mid-run offers no exits.
+    const pickable = !state.live && !!onPick;
+    $('intro-pick-head').classList.toggle('hidden', !pickable);
+    const pick = $('intro-pick');
+    pick.classList.toggle('hidden', !pickable);
+    pick.innerHTML = '';
+    if (pickable) {
+      for (const key of Content.SCENARIO_KEYS) {
+        const def = Content.SCENARIOS[key];
+        const btn = el('button', key === state.scenario ? 'sel' : null,
+          def.icon + ' ' + def.name);
+        btn.title = def.blurb;
+        btn.addEventListener('click', () => {
+          if (key !== state.scenario) onPick(key);
+          showIntro(state, onClose, onPick);
+        });
+        pick.appendChild(btn);
+      }
+    }
     showModal('intro');
+    $('intro-cheat').onclick = () => showCheat(state, () => showIntro(state, onClose, onPick));
     $('intro-ok').onclick = () => { hideModal(); onClose(); };
+  }
+
+  // The cheatsheet: every brief, and the components its mix implies — read from
+  // the same table the closing review grades against, so studying it and being
+  // graded by it are the same lesson.
+  function showCheat(state, onClose) {
+    const list = $('cheat-list');
+    list.innerHTML = '';
+    for (const key of Content.SCENARIO_KEYS) {
+      const def = Content.SCENARIOS[key];
+      const row = el('div', 'cheat-row' + (key === state.scenario ? ' now' : ''));
+      const name = el('div', 'cheat-name', def.icon + ' ' + def.name);
+      if (key === state.scenario) name.appendChild(el('span', 'cheat-you', '— your brief'));
+      row.appendChild(name);
+      const chips = el('div', 'cheat-chips');
+      for (const e of Content.expectedFor(key)) {
+        const chip = el('span', 'chip', Content.SHOP_BY_KEY[e.item].name);
+        chip.title = e.need;
+        chips.appendChild(chip);
+      }
+      row.appendChild(chips);
+      row.appendChild(el('div', 'cheat-shape', def.winShape));
+      list.appendChild(row);
+    }
+    showModal('cheatsheet');
+    $('cheat-close').onclick = () => { hideModal(); onClose(); };
   }
 
   function showInsight(key, onClose) {
@@ -916,7 +963,7 @@ var UI = (() => {
 
   return {
     init, render, showModal, hideModal, showIntro, showInsight, showDrawer,
-    showEnd, toast, memo, clearMemos, toggleGuru, closeGuru,
+    showCheat, showEnd, toast, memo, clearMemos, toggleGuru, closeGuru,
   };
 })();
 

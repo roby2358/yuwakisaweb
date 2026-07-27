@@ -1069,6 +1069,14 @@ Content.EXPECTED = [
     need: 'realtime faked by polling multiplies every connected client' },
 ];
 
+// The cheatsheet reads the same table the review grades against, from the
+// brief's base mix — what each system expects before the jitter is dealt.
+Content.expectedFor = key => {
+  const mix = Content.SCENARIOS[key].mix;
+  return Content.EXPECTED.filter(e =>
+    e.classes.reduce((sum, k) => sum + (mix[k] || 0), 0) >= e.min);
+};
+
 // The shop's headings: the eight boxes, in the order work reaches them, plus
 // the two things that are not boxes at all.
 Content.BOXES = Content.STATION_KEYS

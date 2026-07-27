@@ -84,6 +84,26 @@ function main() {
     assert(dom.byId.get('modal-backdrop').classList.contains('hidden'), 'modal did not close');
   });
 
+  check('the brief can be swapped before go-live', () => {
+    dom.fire('brief-name', 'click');
+    const pick = dom.byId.get('intro-pick');
+    assert(!pick.classList.contains('hidden'), 'scenario picker hidden before launch');
+    assert(pick.children.length === ctx.Content.SCENARIO_KEYS.length,
+      'picker lists ' + pick.children.length + ' briefs, expected '
+      + ctx.Content.SCENARIO_KEYS.length);
+    const before = state().scenario;
+    const other = pick.children.find(b => b.className !== 'sel');
+    dom.fireNode(other, 'click');
+    assert(state().scenario !== before, 'picking a different brief changed nothing');
+    const total = ctx.Content.CLASS_KEYS.reduce((sum, k) => sum + state().mix[k], 0);
+    assert(Math.abs(total - 1) < 1e-9, 'the new mix does not sum to 1: ' + total);
+    assert(dom.byId.get('intro-title').textContent
+      .includes(ctx.Content.SCENARIOS[state().scenario].name),
+      'the intro did not re-render for the new brief');
+    dom.fire('intro-ok', 'click');
+    return 'was ' + before + ', took ' + state().scenario;
+  });
+
   check('the design phase blocks launch until it can serve anything', () => {
     const s = state();
     dom.frame(120);
@@ -133,6 +153,8 @@ function main() {
     const t = state().t;
     for (let i = 0; i < 5; i++) dom.frame(120);
     assert(state().t === t, 'the sim kept running under the reopened brief');
+    assert(dom.byId.get('intro-pick').classList.contains('hidden'),
+      'the scenario picker offered a way out mid-run');
     dom.fire('intro-ok', 'click');
     assert(dom.byId.get('modal-backdrop').classList.contains('hidden'),
       'the reopened brief did not close');
@@ -235,6 +257,28 @@ function main() {
     assert(!dom.byId.get('drawer').classList.contains('hidden'), 'drawer did not open');
     dom.fire('drawer-close', 'click');
     assert(dom.byId.get('modal-backdrop').classList.contains('hidden'), 'drawer did not close');
+  });
+
+  check('the cheatsheet lists every system and its components', () => {
+    dom.fire('btn-cheat', 'click');
+    assert(!dom.byId.get('cheatsheet').classList.contains('hidden'), 'cheatsheet did not open');
+    const list = dom.byId.get('cheat-list');
+    assert(list.children.length === ctx.Content.SCENARIO_KEYS.length,
+      'expected one row per system, got ' + list.children.length);
+    for (const key of ctx.Content.SCENARIO_KEYS) {
+      assert(ctx.Content.expectedFor(key).length >= 2,
+        key + ' expects only ' + ctx.Content.expectedFor(key).length + ' components');
+    }
+    const t = state().t;
+    for (let i = 0; i < 3; i++) dom.frame(120);
+    assert(state().t === t, 'the sim kept running under the cheatsheet');
+    dom.fire('cheat-close', 'click');
+    assert(dom.byId.get('modal-backdrop').classList.contains('hidden'),
+      'cheatsheet did not close');
+    for (let i = 0; i < 3; i++) dom.frame(120);
+    assert(state().t > t, 'the sim did not resume after the cheatsheet');
+    return ctx.Content.SCENARIO_KEYS
+      .map(k => k + ':' + ctx.Content.expectedFor(k).length).join(' ');
   });
 
   check('an insight card interrupts and resumes', () => {

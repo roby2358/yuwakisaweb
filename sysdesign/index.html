@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LOAD BEARING — a systems architecture simulator</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏗️</text></svg>">
-<link rel="stylesheet" href="index.css?v=8">
+<link rel="stylesheet" href="index.css?v=9">
 </head>
 <body>
 
@@ -40,6 +40,7 @@
   <div class="stat"><div class="stat-label">win</div><div class="stat-value" id="winbar"></div></div>
   <div id="controls">
     <button class="speed" data-speed="0">⏸</button><button class="speed sel" data-speed="1">1×</button><button class="speed" data-speed="2">2×</button><button class="speed" data-speed="4">4×</button>
+    <button id="btn-cheat" title="What each kind of system expects on its board">cheatsheet</button>
     <button id="btn-insights">field notes <span id="insight-count">0</span>/<span id="insight-total">0</span></button>
     <button id="btn-memos" title="Mute management">📣</button>
   </div>
@@ -106,6 +107,8 @@
     <ul id="brief-req" class="card-text"></ul>
     <div class="card-kicker">WHAT IT HAS TO HOLD — hover each</div>
     <div id="brief-nfr"></div>
+    <div class="card-kicker" id="intro-pick-head" style="margin-top:14px">OR TAKE A DIFFERENT BRIEF</div>
+    <div id="intro-pick"></div>
     <div class="card-text" style="margin-top:14px">
       You start with an empty board. Draw the system this workload needs — the
       smallest one that can serve it — and press <b style="color:#43d17a">Go Live</b>.
@@ -133,7 +136,17 @@
       It moves at the speed of a system that is growing, not at the speed of a game.
       Use <b>2×</b> and <b>4×</b> when nothing is happening, and <b>⏸</b> when it is.
     </div>
+    <button id="intro-cheat">component cheatsheet</button>
     <button id="intro-ok">take the pager</button>
+  </div>
+
+  <div id="cheatsheet" class="card hidden">
+    <div class="card-kicker">CHEATSHEET — THE COMPONENTS EACH SYSTEM EXPECTS</div>
+    <div class="card-text" style="margin-top:8px">Every system starts the same two boxes:
+      somewhere to run code and somewhere to keep data. What separates the briefs is the
+      rest. Hover a component for why that workload wants it.</div>
+    <div id="cheat-list"></div>
+    <button id="cheat-close">back to the board</button>
   </div>
 
   <div id="insight-card" class="card hidden">
@@ -165,15 +178,15 @@
 
 </div>
 
-<script src="format.js?v=8"></script>
-<script src="flourish.js?v=8"></script>
-<script src="content.js?v=8"></script>
-<script src="catalog.js?v=8"></script>
-<script src="memos.js?v=8"></script>
-<script src="engine.js?v=8"></script>
-<script src="guru.js?v=8"></script>
-<script src="score.js?v=8"></script>
-<script src="ui.js?v=8"></script>
-<script src="index.js?v=8"></script>
+<script src="format.js?v=9"></script>
+<script src="flourish.js?v=9"></script>
+<script src="content.js?v=9"></script>
+<script src="catalog.js?v=9"></script>
+<script src="memos.js?v=9"></script>
+<script src="engine.js?v=9"></script>
+<script src="guru.js?v=9"></script>
+<script src="score.js?v=9"></script>
+<script src="ui.js?v=9"></script>
+<script src="index.js?v=9"></script>
 </body>
 </html>
