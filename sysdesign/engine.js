@@ -47,20 +47,19 @@ var Engine = (() => {
   const log2 = n => Math.log(n) / Math.LN2;
 
   // --- state ----------------------------------------------------------------
+  // Nothing. Not one box. The design is the first thing you do, and it is done
+  // on a board that is empty because every real one starts that way.
   function startingInfra() {
     return {
       pops: 0, edgeCompute: false,
-      lbNodes: 1, loadShed: false, rateLimit: false,
-      appMax: 1, appNodes: 1, autoscale: false,
-      rtNodes: 0,
+      appMax: 0, appNodes: 0, autoscale: false, push: false,
+      loadShed: false, rateLimit: false,
       cacheNodes: 0, coalesce: false, hotKeySpread: false, semanticCache: false,
-      tier: 1, indexes: false, pooler: false, replicas: 0, shards: 1, multiAz: false,
       streamParts: 0, idempotent: false, cdc: false,
-      kvNodes: 0,
+      tier: 0, indexes: false, pooler: false, replicas: 0, shards: 1,
+      multiAz: false, kvEngine: false,
       objstore: false, directUpload: false,
-      searchNodes: 0,
-      warehouse: false,
-      vectorNodes: 0,
+      derivedNodes: 0, searchEngine: false, olapEngine: false, vectorEngine: false,
       gpuNodes: 0, batching: false, router: false,
       obs: 0, regions: 1,
     };
@@ -84,8 +83,24 @@ var Engine = (() => {
     state.rpsPerUser = def.rpsPerUser;
     state.slo = { ...def.slo, targetRps: def.targetRps };
     state.timeoutMs = def.slo.p99Ms * S.TIMEOUT_SLACK;
-    // the market is finite, and it is sized so the brief's target is reachable
+    // the market is finite, and it is sized so the target is reachable
     state.marketUsers = (def.targetRps / def.rpsPerUser) * 1.6;
+    state.relevant = relevantStations(state);
+    state.report = idleReport(state);
+  }
+
+  // A box is on the board if this workload could plausibly send work to it. A
+  // service with no media does not get a blob store on its diagram, because a
+  // real design would not have drawn one — and a diagram with every box on it
+  // is a catalogue, not a design.
+  function relevantStations(state) {
+    const relevant = {};
+    for (const key of Content.STATION_KEYS) {
+      const share = Content.STATIONS[key].serves
+        .reduce((sum, k) => sum + (state.mix[k] || 0), 0);
+      relevant[key] = share >= S.RELEVANT_SHARE;
+    }
+    return relevant;
   }
 
   function buildDecks() {
@@ -140,6 +155,7 @@ var Engine = (() => {
       memosFired: {},
       memoLast: {},
       lastMemoT: -999,
+      live: false,          // no clock, no traffic, no bill until you say go
       lastBuy: { key: null, t: 0, util: 0 },
       decks: buildDecks(),
       budget: { failed: 0, allowed: 1, spentFrac: 0 },
@@ -376,12 +392,16 @@ var Engine = (() => {
       if (key === 'cache' && eff.cacheCapOne && !infra.hotKeySpread) {
         cap = Math.min(cap, S.CACHE_OPS); // a hot key does not spread across nodes
       }
+      const classMs = {};
+      for (const k of Content.CLASS_KEYS) classMs[k] = def.serviceMs(infra, k);
       stations[key] = {
         key, def, nodes, cap: Math.max(0, cap),
-        inRps: 0, units: 0, asyncUnits: 0,
-        util: 0, admit: 1, serviceMs: def.serviceMs(infra),
+        inRps: 0, units: 0, asyncUnits: 0, classRps: {},
+        util: 0, admit: 1, classMs, serviceMs: classMs[def.serves[0]],
         classUtil: {}, failRps: 0, servedRps: 0, owned: !!def.owned(infra),
+        relevant: !!state.relevant[key],
       };
+      for (const k of Content.CLASS_KEYS) stations[key].classRps[k] = 0;
     }
     return stations;
   }
@@ -411,6 +431,7 @@ var Engine = (() => {
       for (const h of routes[k]) {
         const st = stations[h.at];
         st.inRps += remaining;
+        st.classRps[k] += remaining;
         const units = remaining * h.units;
         if (acked) st.asyncUnits += units;
         else st.units += units;
@@ -424,6 +445,7 @@ var Engine = (() => {
     for (const key of Content.STATION_KEYS) {
       const st = stations[key];
       st.inRps = 0; st.units = 0; st.asyncUnits = 0;
+      for (const k of Content.CLASS_KEYS) st.classRps[k] = 0;
     }
   }
 
@@ -445,12 +467,14 @@ var Engine = (() => {
     // how a database refuses queries while its CPU is idle.
     let connUsed = 0;
     for (const k of Content.CLASS_KEYS) {
-      if (!unitsByClass[k]) continue;
+      // a partitioned key-value engine answers without a session to hold open;
+      // that refusal to do the hard things is exactly why it scales
+      if (k === 'lookup' && infra.kvEngine) continue;
       connUsed += unitsByClass[k].rps * (Math.min(state.prevLatency[k], S.CONN_HOLD_CAP_MS) / 1000);
     }
     if (!infra.pooler) connUsed += infra.appNodes * S.CLIENT_CONNS_PER_APP * eff.stormMult;
     else if (eff.stormMult > 1) connUsed *= 2; // reconnect churn still doubles held conns
-    const connCap = infra.shards * (1 + replicas) * Content.TIERS[infra.tier - 1].conns;
+    const connCap = infra.shards * (1 + replicas) * Content.tierOf(infra).conns;
     const connAdmit = connUsed > connCap ? connCap / connUsed : 1;
 
     // Reads and reports can run on a replica; writes cannot. Every replica also
@@ -490,6 +514,9 @@ var Engine = (() => {
     for (const k of ['read', 'lookup', 'search', 'analytics', 'media']) {
       st.classUtil[k] = Math.min(1, readUtil);
     }
+    // The key-value engine is a different cluster inside the same box, and it
+    // partitions without coordinating — so it is never the thing that is full.
+    if (infra.kvEngine) st.classUtil.lookup = S.KV_UTIL;
     return {
       connUsed, connCap, connAdmit, primaryUtil, replicaUtil, replicaShare,
       primaryCap, replicaCap, replicas,
@@ -516,7 +543,7 @@ var Engine = (() => {
       const cls = Content.CLASSES[k];
       const total = perClass[k];
       const hops = routes[k];
-      const offPath = hops[hops.length - 1].at === 'warehouse';
+      const offPath = hops[hops.length - 1].offPath;
       const entry = { demand: total, served: 0, fail: 0, latencyMs: cls.baseMs, shed: 0, offPath };
       ledger[k] = entry;
       if (total <= 0) continue;
@@ -542,7 +569,7 @@ var Engine = (() => {
           fails[st.key] = (fails[st.key] || 0) + dropped;
           remaining -= dropped;
         }
-        ms += st.serviceMs * hockey(st.classUtil[k] === undefined ? st.util : st.classUtil[k]);
+        ms += st.classMs[k] * hockey(st.classUtil[k]);
         if (h.absorb > 0) {
           const here = remaining * h.absorb;
           remaining -= here;
@@ -564,9 +591,9 @@ var Engine = (() => {
       if (remaining > 0) {
         latSum += remaining * ms;
         entry.served += remaining;
-        // a report that runs in the warehouse is slow on purpose and nobody is
-        // waiting on it — counting it in p99 would punish moving it off the
-        // transaction path, which is the opposite of the lesson
+        // a report that runs on the columnar copy is slow on purpose and nobody
+        // is waiting on it — counting it in p99 would punish moving it off the
+        // request path, which is the opposite of the lesson
         buckets.push({ rps: remaining, ms, offPath });
         bytesOrigin += remaining * cls.bytes;
       }
@@ -646,6 +673,10 @@ var Engine = (() => {
   // which is not fast enough for a burst and is exactly fast enough for a day.
   function updateFleet(state, appUnits, dt) {
     const infra = state.infra;
+    if (infra.appMax === 0) {
+      infra.appNodes = 0;
+      return;
+    }
     if (!infra.autoscale) {
       infra.appNodes = infra.appMax;
       return;
@@ -679,13 +710,21 @@ var Engine = (() => {
   // pick the right component" grade, and it is measured in units of work rather
   // than in purchases, because buying a search cluster you do not route to is
   // not the same as using one.
-  const HOMES = {
-    media: { station: 'objstore', label: 'media on the database' },
-    search: { station: 'search', label: 'search as a table scan' },
-    analytics: { station: 'warehouse', label: 'reports on the primary' },
-    lookup: { station: 'kv', label: 'key lookups on SQL' },
-    realtime: { station: 'realtime', label: 'realtime polled off the service tier' },
-  };
+  // Each line is a query shape sitting on the wrong engine, the switch that
+  // would move it, and how much work that costs while it stays there. One table,
+  // so adding a query shape is one entry rather than a hunt.
+  const HOMES = [
+    { flag: 'objstore', label: 'media served out of the datastore',
+      units: r => r.units.sql.byClass.media },
+    { flag: 'searchEngine', label: 'search running as a table scan',
+      units: r => r.units.sql.byClass.search },
+    { flag: 'olapEngine', label: 'reports on the store of record',
+      units: r => r.units.sql.byClass.analytics },
+    { flag: 'kvEngine', label: 'key lookups on the relational engine',
+      units: r => r.units.sql.byClass.lookup },
+    { flag: 'push', label: 'realtime faked by polling',
+      units: r => r.perClass.realtime.demand * S.POLL_UNITS },
+  ];
 
   function updateRunLog(state, report, dt) {
     const run = state.run;
@@ -710,10 +749,12 @@ var Engine = (() => {
       run.capacityPaid += dt;
       run.capacityUsed += Math.min(1, st.util) * dt;
     }
-    // component fit, in units of work
-    for (const [k, home] of Object.entries(HOMES)) {
-      const units = report.units.sql.byClass[k];
-      if (units <= 0.15 * Math.max(1, report.sql.cap)) continue;
+    // component fit, in units of work. A class that is a rounding error on the
+    // system is not a design mistake, it is a thing you correctly did not build.
+    for (const home of HOMES) {
+      if (state.infra[home.flag]) continue;
+      const units = home.units(report);
+      if (units <= 0.06 * Math.max(1, report.totalUnits)) continue;
       run.misfitUnits += units * dt;
       run.misfits[home.label] = (run.misfits[home.label] || 0) + units * dt;
     }
@@ -740,9 +781,77 @@ var Engine = (() => {
     }
   }
 
+
+  // --- before you go live ---------------------------------------------------
+  // No clock, no traffic, no bill. The board still renders, because what you
+  // are looking at is the design you are drawing — and the money bar still
+  // shows what it will cost, which is the number people discover last.
+  function idleReport(state) {
+    const eff = eventEffects(state);
+    const stations = buildStations(state, eff);
+    for (const key of Content.STATION_KEYS) {
+      for (const k of Content.CLASS_KEYS) stations[key].classUtil[k] = 0;
+    }
+    const perClass = {};
+    for (const k of Content.CLASS_KEYS) {
+      perClass[k] = {
+        demand: 0, served: 0, fail: 0,
+        latencyMs: Content.CLASSES[k].baseMs, shed: 0, offPath: false,
+      };
+    }
+    const byClass = {};
+    for (const k of Content.CLASS_KEYS) byClass[k] = 0;
+    const costs = costTotals(state, 0);
+    let minRedundancy = 99;
+    for (const key of Content.STATION_KEYS) {
+      if (stations[key].owned) minRedundancy = Math.min(minRedundancy, stations[key].nodes);
+    }
+    return {
+      t: 0, demandRps: 0, realRps: 0, junkRps: 0, servedRps: 0, failRps: 0, errRate: 0,
+      perClass, fails: {}, shedFrac: 0, links: [],
+      stations, hits: hitRates(state, eff), worstUtil: 0, minRedundancy,
+      p50: 0, p99: 0, withinSlo: 1,
+      sql: {
+        util: 0, primaryUtil: 0, replicaUtil: 0, replayFrac: 0, staleFrac: 0,
+        replicas: state.infra.replicas, connUsed: 0,
+        connCap: state.infra.shards * (1 + state.infra.replicas) * Content.tierOf(state.infra).conns,
+        rejectRps: 0, cap: stations.sql.cap, replicaCap: 0, readOnReplicaFrac: 0,
+        shards: state.infra.shards,
+      },
+      units: { sql: { byClass, read: 0, write: 0, analytics: 0, search: 0, replay: 0 } },
+      totalUnits: 0, bytesPerS: 0, bytesEdge: 0,
+      usageCost: 0, usage: { egress: 0, api: 0, total: 0 },
+      income: 0, spend: costs.total, costs, margin: -1,
+      runway: costs.total > 0 ? state.cash / costs.total : Infinity,
+      growthPerS: 0, backlog: 0, backlogDrain: 0, budget: state.budget,
+      event: null, migration: null,
+    };
+  }
+
+  // You cannot serve a request with nothing to run it on and nowhere to keep
+  // what it produces. Everything else is a judgement call; these two are not.
+  function launchBlockers(state) {
+    const missing = [];
+    if (state.infra.appMax === 0) missing.push('somewhere to run your code');
+    if (state.infra.tier === 0) missing.push('somewhere to keep your data');
+    return missing;
+  }
+
+  function goLive(state) {
+    if (state.live) return { ok: false, msg: 'already live' };
+    const missing = launchBlockers(state);
+    if (missing.length) return { ok: false, msg: 'you still need ' + missing.join(' and ') };
+    state.live = true;
+    return { ok: true };
+  }
+
   // --- the tick -------------------------------------------------------------
   function tick(state) {
     if (state.outcome) return state.report;
+    if (!state.live) {
+      state.report = idleReport(state);
+      return state.report;
+    }
     const dt = S.DT;
     state.t += dt;
     if (state.migration) {
@@ -947,6 +1056,7 @@ var Engine = (() => {
   return {
     createState, tick, buy, scaleDown, expenses, expensesIfBought,
     costTotals, shopItem, failReasonTotals, applyScenario,
+    goLive, launchBlockers,
   };
 })();
 

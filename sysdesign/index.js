@@ -77,7 +77,7 @@
   function frame(now) {
     const dtFrame = Math.min(0.1, (now - lastFrame) / 1000);
     lastFrame = now;
-    const running = !ended && !pausedForModal && speed > 0;
+    const running = state.live && !ended && !pausedForModal && speed > 0;
     if (running) {
       acc += dtFrame * speed;
       let guard = 0;
@@ -118,6 +118,17 @@
       if (pausedForModal || ended) return;
       setSpeed(Number(b.dataset.speed));
     });
+  });
+
+  $('btn-golive').addEventListener('click', () => {
+    const res = Engine.goLive(state);
+    if (!res.ok && res.msg) console.log(res.msg);
+  });
+
+  $('brief-name').addEventListener('click', () => {
+    if (pausedForModal || ended) return;
+    pauseForModal();
+    UI.showIntro(state, resumeAfterModal);
   });
 
   $('btn-guru').addEventListener('click', () => UI.toggleGuru(state));

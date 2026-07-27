@@ -77,7 +77,7 @@ Content.MEMOS = {
   },
   searchscan: {
     once: false, cooldown: 90,
-    check: (s, r) => s.infra.searchNodes === 0 && r.units.sql.search > 0.25 * r.sql.cap,
+    check: (s, r) => !s.infra.searchEngine && r.units.sql.search > 0.25 * r.sql.cap,
     subjects: ['search is slow', 're: the search box', 'customers are noticing'],
     barbs: [
       'Every search runs a full scan. Users type two letters and we read the entire table.',
@@ -87,7 +87,7 @@ Content.MEMOS = {
   },
   reportsonprod: {
     once: false, cooldown: 100,
-    check: (s, r) => !s.infra.warehouse && r.units.sql.analytics > 0.35 * r.sql.cap,
+    check: (s, r) => !s.infra.olapEngine && r.units.sql.analytics > 0.35 * r.sql.cap,
     subjects: ['sorry about the dashboard', 're: quarter-end', 'my queries'],
     barbs: [
       'I ran one report and the site got slow. I have been asked to stop. I would rather we fixed it.',

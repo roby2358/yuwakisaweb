@@ -90,6 +90,17 @@ async function playFor(page, seconds) {
 
   await page.click('#intro-ok');
   await wait(500);
+  await page.screenshot({ path: shot('design') });
+  // build the opening design the guru advises, then go live
+  await page.evaluate(() => {
+    const s = window.LB.getState();
+    while (!s.live) {
+      const key = Guru.nextBuy(s);
+      if (!key || !Engine.buy(s, key).ok) break;
+    }
+    Engine.goLive(s);
+  });
+  await wait(400);
   await playFor(page, 90);
   await page.screenshot({ path: shot('early') });
 

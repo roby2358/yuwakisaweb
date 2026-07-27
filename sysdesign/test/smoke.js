@@ -58,9 +58,21 @@ function main() {
   const { dom, ctx } = boot();
   const state = () => dom.window.LB.getState();
 
+  // Buying things grants insights, which queue a modal that pauses the sim.
+  // Dismiss whatever is open before testing anything that needs it running.
+  const settle = () => {
+    for (let i = 0; i < 40; i++) {
+      dom.frame(120);
+      if (dom.byId.get('insight-card').classList.contains('hidden')) break;
+      dom.fire('card-ok', 'click');
+    }
+  };
+
   check('boots and exposes state', () => {
     assert(dom.window.LB, 'window.LB missing — index.js did not run');
-    assert(state().report === null, 'the sim should not have ticked before the brief is accepted');
+    assert(state().live === false, 'the service should not be live before you say so');
+    assert(state().report, 'the board needs an idle report to render the design phase');
+    assert(state().report.demandRps === 0, 'no traffic before go-live');
     assert(dom.byId.get('insight-total').textContent === String(ctx.Content.INSIGHT_KEYS.length),
       'insight total not filled in');
   });
@@ -70,6 +82,33 @@ function main() {
     assert(dom.byId.get('brief-nfr').children.length >= 5, 'non-functional requirements not listed');
     dom.fire('intro-ok', 'click');
     assert(dom.byId.get('modal-backdrop').classList.contains('hidden'), 'modal did not close');
+  });
+
+  check('the design phase blocks launch until it can serve anything', () => {
+    const s = state();
+    dom.frame(120);
+    assert(!dom.byId.get('launch').classList.contains('hidden'), 'launch panel not shown');
+    assert(dom.byId.get('btn-golive').disabled, 'Go Live enabled with nothing built');
+    assert(ctx.Engine.launchBlockers(s).length === 2, 'expected two blockers on an empty board');
+    for (let i = 0; i < 40; i++) dom.frame(120);
+    assert(s.t === 0, 'the clock ran before go-live: t=' + s.t);
+    assert(s.cash === ctx.Content.SIM.START_CASH, 'money moved before go-live');
+    return 'blocked on: ' + ctx.Engine.launchBlockers(s).join(', ');
+  });
+
+  check('Go Live starts the clock', () => {
+    const s = state();
+    while (!s.live) {
+      const key = ctx.Guru.nextBuy(s);
+      if (!key || !ctx.Engine.buy(s, key).ok) break;
+    }
+    dom.frame(120);
+    assert(!dom.byId.get('btn-golive').disabled, 'Go Live still disabled after building a design');
+    dom.fire('btn-golive', 'click');
+    settle();
+    assert(state().live, 'clicking Go Live did not launch');
+    assert(dom.byId.get('launch').classList.contains('hidden'), 'launch panel still showing');
+    return 'launched with ' + ctx.Content.SHOP.filter(i => i.owned(s)).length + ' boxes built';
   });
 
   check('renders frames without throwing', () => {
@@ -87,11 +126,57 @@ function main() {
     assert(dom.byId.get('money-net').textContent.length > 0, 'money net empty');
   });
 
+  check('the brief reopens from the top bar', () => {
+    dom.fire('brief-name', 'click');
+    assert(!dom.byId.get('intro').classList.contains('hidden'),
+      'clicking the brief name did not reopen the brief');
+    const t = state().t;
+    for (let i = 0; i < 5; i++) dom.frame(120);
+    assert(state().t === t, 'the sim kept running under the reopened brief');
+    dom.fire('intro-ok', 'click');
+    assert(dom.byId.get('modal-backdrop').classList.contains('hidden'),
+      'the reopened brief did not close');
+    for (let i = 0; i < 3; i++) dom.frame(120);
+    assert(state().t > t, 'the sim did not resume after closing the brief');
+  });
+
+  check('the board only draws what this workload could use', () => {
+    const s = state();
+    const on = ctx.Content.STATION_KEYS.filter(k => s.report.stations[k].relevant);
+    assert(on.length >= 4 && on.length <= 8, on.length + ' boxes on the board: ' + on.join(' '));
+    return s.scenario + ' → ' + on.length + ' boxes: ' + on.join(' ');
+  });
+
   check('shop lists every box and every item', () => {
     const items = dom.byId.get('shop-items');
     assert(items.children.length >= ctx.Content.SHOP.length + ctx.Content.BOXES.length,
       'shop is missing rows: ' + items.children.length);
     return ctx.Content.SHOP.length + ' items in ' + ctx.Content.BOXES.length + ' boxes';
+  });
+
+  // The shop redraws several times a second. If it rebuilds its rows, the
+  // button under the pointer is destroyed between mousedown and mouseup and the
+  // click never lands — the list also scrolls out from under the hand.
+  check('shop rows survive a redraw and still buy', () => {
+    const s = state();
+    s.cash += 20000;
+    const list = dom.byId.get('shop-items');
+    const order = [];
+    for (const box of ctx.Content.BOXES) {
+      for (const item of ctx.Content.SHOP) if (item.box === box.key) order.push(item);
+    }
+    const itemRows = () => list.children.filter(c => c.className === 'item');
+    assert(itemRows().length === order.length,
+      'expected one row per item, got ' + itemRows().length);
+    const at = order.findIndex(i => i.price(s) !== null && i.price(s) <= s.cash);
+    const buy = itemRows()[at].children[1].children[0];
+    for (let i = 0; i < 10; i++) dom.frame(100);
+    assert(itemRows()[at].children[1].children[0] === buy,
+      'the shop rebuilt its rows — no click can survive that');
+    const before = s.cash;
+    dom.fireNode(buy, 'click');
+    assert(s.cash < before, 'clicking the buy button bought nothing');
+    return 'bought ' + order[at].name + ' through its button after 10 redraws';
   });
 
   check('buying and scaling down work through the engine', () => {
@@ -142,16 +227,6 @@ function main() {
     dom.fire('btn-guru', 'click');
     return advice.cards.map(c => c.key).join(', ');
   });
-
-  // Buying thirty things grants insights, which queue a modal. Dismiss whatever
-  // is open before testing anything that needs the game un-paused.
-  const settle = () => {
-    for (let i = 0; i < 40; i++) {
-      dom.frame(120);
-      if (dom.byId.get('insight-card').classList.contains('hidden')) break;
-      dom.fire('card-ok', 'click');
-    }
-  };
 
   check('field notes open and close', () => {
     settle();

@@ -78,8 +78,16 @@ function play(scenario, every, rich) {
     '  ' + '-'.repeat(80),
   ];
 
-  let nextBuy = 0, nextRow = 0;
   const bought = [];
+  // Design first. The bot builds the smallest thing that can serve this
+  // workload — which is what the guru advises before there is any traffic —
+  // and then goes live.
+  while (!state.live) {
+    const key = Guru.nextBuy(state);
+    if (!key || !Engine.buy(state, key).ok) break;
+  }
+  Engine.goLive(state);
+  let nextBuy = 0, nextRow = 0;
   while (!state.outcome && state.t < 1500) {
     Engine.tick(state);
     if (state.t >= nextBuy) {

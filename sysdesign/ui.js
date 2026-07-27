@@ -25,11 +25,17 @@ var UI = (() => {
   let pointer = { x: 0, y: 0 };
   let boxes = {};            // station key → rect, rebuilt on resize
   let guruOpen = false;
+  let lastState = null;      // the pointer handler needs the board it is over
   let shopAcc = 0, guruAcc = 0;
   let dash = 0;
 
   // ---- the map ------------------------------------------------------------
-  const COLS = 7, ROWS = 3;
+  const COLS = 6, ROWS = 3;
+
+  // Only the boxes this workload could need, and only once there is a design
+  // to draw. Everything else stays off the board — a diagram with every
+  // component on it is a catalogue, not a design.
+  const onBoard = state => Content.STATION_KEYS.filter(key => state.report.stations[key].relevant);
 
   function layout(canvas) {
     const w = canvas.width / devicePixelRatio, h = canvas.height / devicePixelRatio;
@@ -112,7 +118,16 @@ var UI = (() => {
     if (!owned) {
       ctx.fillStyle = '#3d4552';
       ctx.font = '9px ui-monospace, monospace';
-      ctx.fillText('not built', box.x + 8, box.y + 30);
+      ctx.fillText(def.idleLabel(state.infra), box.x + 8, box.y + 30);
+      ctx.restore();
+      return;
+    }
+    if (!state.live) {
+      ctx.fillStyle = def.color;
+      ctx.font = '9px ui-monospace, monospace';
+      ctx.fillText('×' + Fmt.count(st.nodes), box.x + 8, box.y + 30);
+      ctx.fillStyle = '#4b5563';
+      ctx.fillText(Fmt.count(st.cap) + ' units/s', box.x + 8, box.y + 42);
       ctx.restore();
       return;
     }
@@ -165,7 +180,7 @@ var UI = (() => {
     ctx.fillText('USERS', c.x + 6, c.y + 15);
     ctx.fillText(Fmt.count(state.users), c.x + 6, c.y + 27);
 
-    for (const key of Content.STATION_KEYS) drawBox(ctx, state, report, key);
+    for (const key of onBoard(state)) drawBox(ctx, state, report, key);
 
     if (report.event) {
       const def = Content.EVENTS[report.event.key];
@@ -193,10 +208,22 @@ var UI = (() => {
       ['connections', Fmt.count(r.sql.connUsed) + ' / ' + Fmt.count(r.sql.connCap),
         verdict(r.sql.connUsed / Math.max(1, r.sql.connCap), 'conns')],
       ['shape', r.sql.shards + ' shards × ' + (1 + r.sql.replicas) + ' nodes, tier ' + state.infra.tier, 'good'],
+      ['lookups', state.infra.kvEngine ? 'key-value engine' : 'relational engine',
+        state.infra.kvEngine ? 'good' : 'warn'],
       ['write replay', Fmt.pct(r.sql.replayFrac) + ' of replica capacity',
         r.sql.replayFrac > 0.4 ? 'warn' : 'good'],
       ['stale reads', Fmt.pct1(r.sql.staleFrac), verdict(r.sql.staleFrac, 'staleReads')],
       ['backlog', Fmt.count(r.backlog) + ' units', r.backlog > 1 ? 'warn' : 'good'],
+    ],
+    derived: (state, r) => [
+      ['inverted index', state.infra.searchEngine ? 'on' : 'off',
+        state.infra.searchEngine ? 'good' : 'warn'],
+      ['columnar copy', state.infra.olapEngine ? 'on' : 'off',
+        state.infra.olapEngine ? 'good' : 'warn'],
+      ['vector index', state.infra.vectorEngine ? 'on' : 'off',
+        state.infra.vectorEngine ? 'good' : 'warn'],
+      ['fed by', state.infra.cdc ? 'change data capture' : 'bespoke pipelines',
+        state.infra.cdc ? 'good' : 'warn'],
     ],
     cache: (state, r) => [
       ['hit rate', Fmt.pct(r.hits.cache) + ' (ceiling ' + Fmt.pct(state.repetition * Content.SIM.CACHE_HIT_MAX) + ')',
@@ -224,8 +251,13 @@ var UI = (() => {
     const cost = r.costs.parts
       .filter(p => p.box === key)
       .reduce((sum, p) => sum + p.total, 0);
+    const arriving = Content.CLASS_KEYS
+      .filter(k => st.classRps[k] > 0.5)
+      .sort((a, b) => st.classRps[b] - st.classRps[a])
+      .map(k => [Content.CLASSES[k].label.toLowerCase(), Fmt.rate(st.classRps[k]), 'good']);
     const sections = [['TRAFFIC', [
       ['arriving', Fmt.rate(st.inRps), 'good'],
+      ...arriving,
       ['capacity', Fmt.count(st.cap) + ' units/s', 'good'],
     ]]];
     if (obs >= 1) {
@@ -239,11 +271,17 @@ var UI = (() => {
       ]]);
     }
     if (obs >= 2) {
-      sections.push(['LATENCY', [
-        ['service time', Fmt.ms(st.serviceMs), 'good'],
-        ['with queueing', Fmt.ms(st.serviceMs / (1 - Math.min(0.98, st.util))),
-          st.util > Content.BANDS.util.warn ? 'warn' : 'good'],
-      ]]);
+      // service time is per class here, because one box can be doing three very
+      // different jobs — a search and a report are not the same request
+      const rows = Content.CLASS_KEYS
+        .filter(k => st.classRps[k] > 0.5)
+        .sort((a, b) => st.classRps[b] - st.classRps[a])
+        .map(k => [Content.CLASSES[k].label.toLowerCase(),
+          Fmt.ms(st.classMs[k]) + ' + queue → '
+          + Fmt.ms(st.classMs[k] / (1 - Math.min(0.98, st.classUtil[k]))),
+          st.classUtil[k] > Content.BANDS.util.warn ? 'warn' : 'good']);
+      sections.push(['LATENCY', rows.length ? rows
+        : [['service time', Fmt.ms(st.serviceMs), 'good']]]);
     }
     sections.push(['COST', [['run-rate', Fmt.dollars(cost) + '/s', 'good']]]);
     return sections;
@@ -277,10 +315,15 @@ var UI = (() => {
   }
 
   // ---- the shop -----------------------------------------------------------
-  function itemRow(state, item) {
-    const price = item.price(state);
-    const owned = item.ownedLabel(state);
-    const node = el('div', 'item' + (price === null && !owned ? ' locked' : ''));
+  // The catalogue never changes, so the shop is built once and then updated in
+  // place. Rebuilding the list on a timer scrolls it out from under the pointer
+  // and — worse — a button destroyed between mousedown and mouseup never fires
+  // a click at all, so buying silently does nothing.
+  let rows = null;      // item key → { node, buy, less, sub }
+  let heads = null;     // box key  → the "n% busy" span in its group header
+
+  function buildRow(item) {
+    const node = el('div', 'item');
 
     const name = el('div', 'item-name');
     const swatch = el('span', 'swatch');
@@ -291,48 +334,66 @@ var UI = (() => {
 
     const buys = el('div', 'item-buys');
     const buy = el('button', 'item-buy');
-    if (price === null) {
-      buy.textContent = owned ? 'maxed' : 'n/a';
-      buy.disabled = true;
-    } else {
-      buy.textContent = Fmt.money(price);
-      buy.disabled = state.cash < price;
-      if (!buy.disabled) buy.classList.add('can');
-      const after = Engine.expensesIfBought(state, item.key);
-      buy.title = item.blurb + '\n\nTRADE-OFF: ' + item.tradeoff
-        + '\n\nRun-rate after this: ' + Fmt.dollars(after) + '/s'
-        + (state.report ? ' against ' + Fmt.dollars(state.report.income) + '/s of revenue' : '');
-      buy.addEventListener('click', () => onBuy(item.key));
-    }
+    buy.addEventListener('click', () => onBuy(item.key));
     buys.appendChild(buy);
-    if (item.canScaleDown(state)) {
-      const less = el('button', 'item-less', '−');
-      less.title = item.scaleDownLabel + '\n\nNothing is refunded. What stops is the run-rate.';
-      less.addEventListener('click', () => onScaleDown(item.key));
-      buys.appendChild(less);
-    }
+    const less = el('button', 'item-less', '−');
+    less.title = item.scaleDownLabel + '\n\nNothing is refunded. What stops is the run-rate.';
+    less.addEventListener('click', () => onScaleDown(item.key));
+    buys.appendChild(less);
     node.appendChild(buys);
 
-    const costs = state.report ? state.report.costs.byKey[item.key] : null;
-    const sub = owned
-      ? owned + (costs && costs.total > 0 ? '  ·  ' + Fmt.dollars(costs.total) + '/s' : '')
-      : item.blurb;
-    node.appendChild(el('div', 'item-sub', sub));
+    const sub = el('div', 'item-sub');
+    node.appendChild(sub);
+
+    rows[item.key] = { node, buy, less, sub };
     return node;
   }
 
-  function drawShop(state) {
+  function buildShop() {
     const list = $('shop-items');
     list.innerHTML = '';
+    rows = {};
+    heads = {};
     for (const box of Content.BOXES) {
-      const items = Content.SHOP.filter(i => i.box === box.key);
       const head = el('div', 'group-head');
       head.appendChild(el('span', null, box.name));
-      const station = state.report && state.report.stations[box.key];
-      head.appendChild(el('span', 'g-owned',
-        station && station.owned ? Fmt.pct(station.util) + ' busy' : ''));
+      heads[box.key] = head.appendChild(el('span', 'g-owned'));
       list.appendChild(head);
-      for (const item of items) list.appendChild(itemRow(state, item));
+      for (const item of Content.SHOP) {
+        if (item.box === box.key) list.appendChild(buildRow(item));
+      }
+    }
+  }
+
+  function syncRow(state, item) {
+    const row = rows[item.key];
+    const price = item.price(state);
+    const owned = item.ownedLabel(state);
+    const affordable = price !== null && state.cash >= price;
+
+    row.node.classList.toggle('locked', price === null && !owned);
+    row.buy.textContent = price === null ? (owned ? 'maxed' : 'n/a') : Fmt.money(price);
+    row.buy.disabled = !affordable;
+    row.buy.classList.toggle('can', affordable);
+    row.buy.title = price === null ? item.blurb
+      : item.blurb + '\n\nTRADE-OFF: ' + item.tradeoff
+        + '\n\nRun-rate after this: ' + Fmt.dollars(Engine.expensesIfBought(state, item.key)) + '/s'
+        + (state.report ? ' against ' + Fmt.dollars(state.report.income) + '/s of revenue' : '');
+    row.less.classList.toggle('hidden', !item.canScaleDown(state));
+
+    const costs = state.report ? state.report.costs.byKey[item.key] : null;
+    row.sub.textContent = owned
+      ? owned + (costs && costs.total > 0 ? '  ·  ' + Fmt.dollars(costs.total) + '/s' : '')
+      : item.blurb;
+  }
+
+  function drawShop(state) {
+    if (!rows) buildShop();
+    for (const item of Content.SHOP) syncRow(state, item);
+    for (const box of Content.BOXES) {
+      const station = state.report && state.report.stations[box.key];
+      heads[box.key].textContent = station && station.owned
+        ? Fmt.pct(station.util) + ' busy' : '';
     }
     const r = state.report;
     $('stat-income').textContent = r
@@ -384,11 +445,16 @@ var UI = (() => {
     const pad = 16;
     let peak = spec.floor;
     for (const point of hist) for (const s of spec.series) peak = Math.max(peak, s.of(point));
-    if (spec.mark) peak = Math.max(peak, spec.mark.at * 1.1);
+    // A target far above today's traffic must not pin the scale — that crushes
+    // every line into the baseline for most of the run. The target line joins
+    // the chart once the data is within reach; until then it lives in the
+    // header as a number.
+    const markShown = spec.mark && spec.mark.at <= peak * 3;
+    if (markShown) peak = Math.max(peak, spec.mark.at * 1.1);
     const px = i => pad + (w - pad - 4) * (i / Math.max(1, Math.max(hist.length - 1, 40)));
     const py = v => h - 14 - (h - 22) * Math.min(1, v / peak);
 
-    if (spec.mark) {
+    if (markShown) {
       ctx.strokeStyle = '#3f4a5a';
       ctx.setLineDash([3, 3]);
       ctx.beginPath();
@@ -409,7 +475,9 @@ var UI = (() => {
     }
     ctx.fillStyle = '#4b5563';
     ctx.font = '9px ui-monospace, monospace';
-    ctx.fillText(spec.title, 4, 10);
+    ctx.fillText(spec.mark && !markShown
+      ? spec.title + '  ·  ' + spec.mark.label + ' ' + spec.top(spec.mark.at)
+      : spec.title, 4, 10);
     ctx.textAlign = 'right';
     ctx.fillText(spec.top(peak), w - 4, 10);
     ctx.textAlign = 'left';
@@ -434,12 +502,11 @@ var UI = (() => {
       ],
     });
     drawChart('chart-cash', state, {
-      title: 'CASH & BURN', floor: 100, top: Fmt.money,
+      title: 'REVENUE & SPEND', floor: 10, top: Fmt.money,
       mark: { at: state.slo.costCeiling, label: 'cost ceiling $/s' },
       series: [
-        { of: p => Math.max(0, p.cash), color: '#43d17a', width: 1.6 },
+        { of: p => p.income, color: '#43d17a', width: 1.6 },
         { of: p => p.spend, color: '#f0883e', width: 1.2 },
-        { of: p => p.income, color: '#4ea3ff', width: 1.2 },
       ],
     });
   }
@@ -526,6 +593,52 @@ var UI = (() => {
   }
 
   // ---- guru ---------------------------------------------------------------
+  // Same rule as the shop, for the same reason: this panel refreshes four times
+  // a second, so the cards are only rebuilt when the advice itself changes.
+  // Their text still updates every pass — the numbers in a diagnosis are live.
+  let guruSig = null, guruCards = null;   // [{ why, act, buy }] in card order
+
+  const signature = cards =>
+    cards.map(c => c.headline + '|' + (c.buy || '') + '|' + (c.undo || '')).join('\n');
+
+  function buildGuruCards(cards) {
+    const holder = $('guru-cards');
+    holder.innerHTML = '';
+    guruCards = cards.map(card => {
+      const node = el('div', 'guru-card');
+      node.appendChild(el('div', 'guru-head2', card.headline));
+      const why = node.appendChild(el('div', 'guru-why'));
+      const act = node.appendChild(el('div', 'guru-act'));
+      let buy = null;
+      if (card.buy) {
+        buy = node.appendChild(el('button'));
+        buy.addEventListener('click', () => onBuy(card.buy));
+      }
+      if (card.undo) {
+        const btn = node.appendChild(
+          el('button', null, 'scale down: ' + Content.SHOP_BY_KEY[card.undo].name));
+        btn.addEventListener('click', () => onScaleDown(card.undo));
+      }
+      holder.appendChild(node);
+      return { why, act, buy };
+    });
+  }
+
+  function syncGuruCards(state, cards) {
+    cards.forEach((card, i) => {
+      const node = guruCards[i];
+      node.why.textContent = card.why;
+      node.act.textContent = card.action;
+      if (!node.buy) return;
+      const item = Content.SHOP_BY_KEY[card.buy];
+      const price = item.price(state);
+      node.buy.textContent = price === null ? item.name : item.name + ' — ' + Fmt.money(price);
+      node.buy.disabled = price === null || state.cash < price;
+      node.buy.title = !card.affordable && !node.buy.disabled
+        ? 'You can pay for it. Carrying its run-rate is the other question.' : '';
+    });
+  }
+
   function drawGuru(state) {
     if (!guruOpen || !state.report) return;
     const { cards, load } = Guru.advise(state);
@@ -541,32 +654,12 @@ var UI = (() => {
     $('guru-loadkey').textContent = load.length
       ? 'database work: ' + load.map(p => p.label + ' ' + Fmt.pct(p.frac)).join('  ·  ')
       : 'nothing is reaching the database yet';
-    const holder = $('guru-cards');
-    holder.innerHTML = '';
-    for (const card of cards) {
-      const node = el('div', 'guru-card');
-      node.appendChild(el('div', 'guru-head2', card.headline));
-      node.appendChild(el('div', 'guru-why', card.why));
-      node.appendChild(el('div', 'guru-act', card.action));
-      if (card.buy) {
-        const item = Content.SHOP_BY_KEY[card.buy];
-        const price = item.price(state);
-        const btn = el('button', null,
-          (price === null ? item.name : item.name + ' — ' + Fmt.money(price)));
-        btn.disabled = price === null || state.cash < price;
-        if (!card.affordable && !btn.disabled) {
-          btn.title = 'You can pay for it. Carrying its run-rate is the other question.';
-        }
-        btn.addEventListener('click', () => onBuy(card.buy));
-        node.appendChild(btn);
-      }
-      if (card.undo) {
-        const btn = el('button', null, 'scale down: ' + Content.SHOP_BY_KEY[card.undo].name);
-        btn.addEventListener('click', () => onScaleDown(card.undo));
-        node.appendChild(btn);
-      }
-      holder.appendChild(node);
+    const sig = signature(cards);
+    if (sig !== guruSig) {
+      guruSig = sig;
+      buildGuruCards(cards);
     }
+    syncGuruCards(state, cards);
   }
 
   // ---- modals -------------------------------------------------------------
@@ -685,7 +778,8 @@ var UI = (() => {
     sql: 'The database was the wall, and you hit it.',
     gpu: 'Inference capacity never caught up with demand.',
     app: 'The service tier could not keep up.',
-    gateway: 'The front door fell over.',
+    derived: 'The derived stores could not keep up.',
+    stream: 'The log backed up and never drained.',
   };
 
   function lossTitle(state) {
@@ -727,6 +821,24 @@ var UI = (() => {
 
   function clearMemos() { $('memos').innerHTML = ''; }
 
+
+  // ---- go live ------------------------------------------------------------
+  // Before launch there is no clock and no traffic — just a design, and the
+  // run-rate it already implies. The button is disabled until there is
+  // somewhere to run code and somewhere to keep data, because those two are
+  // not judgement calls.
+  function drawLaunch(state) {
+    const panel = $('launch');
+    if (state.live) { panel.classList.add('hidden'); return; }
+    panel.classList.remove('hidden');
+    const missing = Engine.launchBlockers(state);
+    const btn = $('btn-golive');
+    btn.disabled = missing.length > 0;
+    $('launch-note').textContent = missing.length
+      ? 'You still need ' + missing.join(' and ') + '.'
+      : 'Costing ' + Fmt.dollars(state.report.spend) + '/s before a single request arrives.';
+  }
+
   // ---- wiring -------------------------------------------------------------
   function init(buyFn, scaleDownFn) {
     onBuy = buyFn;
@@ -735,7 +847,7 @@ var UI = (() => {
     canvas.addEventListener('mousemove', e => {
       const rect = canvas.getBoundingClientRect();
       pointer = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-      hover = Content.STATION_KEYS.find(key => {
+      hover = onBoard(lastState).find(key => {
         const b = boxes[key];
         return b && pointer.x >= b.x && pointer.x <= b.x + b.w
           && pointer.y >= b.y && pointer.y <= b.y + b.h;
@@ -756,7 +868,9 @@ var UI = (() => {
   }
 
   function render(state, dtFrame, running) {
+    lastState = state;
     if (running) dash = (dash + dtFrame * 90) % 500;
+    drawLaunch(state);
     drawStats(state);
     drawBrief(state);
     drawScene(state);

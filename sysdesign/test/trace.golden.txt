@@ -3,47 +3,45 @@
 
      t    demand    served   err     p99     hottest  income   spend    cash  budget
   --------------------------------------------------------------------------------
-     0s      42/s      42/s    0%    55ms     APP 13%      $3      $7   $6.9k     0%
-        $  tier $4  app $2  lb $1
-        ▪  APP:13% SQL:3%
-        +  0s:indexes
-    60s     172/s     172/s    0%    64ms     APP 55%      $3      $9   $6.4k     0%
-        $  tier $4  app $2  pooler $2  lb $1
-        ▪  APP:55% SQL:8%
-        +  2s:pooler
-   120s     752/s     752/s    0%    68ms     APP 60%     $14     $10   $6.3k     0%
-        $  tier $4  app $2  pooler $2  lb $1
-        ▪  APP:60% SQL:35%
-        +  70s:app 99s:app
-   180s    3.2k/s    3.2k/s    0%    74ms     APP 69%     $57     $20   $6.1k     0%
-        $  obs $6  tier $5  app $3  autoscale $2  pooler $2  lb $1
-        ▪  APP:69% SQL:37% GW:2%
-        +  128s:autoscale 129s:app 131s:app 150s:tier 171s:obs 179s:tier
-   240s    4.3k/s    4.3k/s    0%    26ms     APP 40%     $77     $82   $6.4k 14553%
-        $  kv $26  warehouse $20  cache $9  tier $7  obs $6  app $5  replica $3
-        ▪  APP:40% SQL:8% KV:4%
-        +  182s:app 184s:app 187s:lb 189s:replica 190s:warehouse 192s:cache 193s:cache 209s:kv 211s:kv
-   300s     19k/s     19k/s    0%    37ms     APP 65%    $341     $88    $11k  6985%
-        $  kv $26  warehouse $20  app $10  cache $9  tier $7  obs $6  replica $3
-        ▪  APP:65% SQL:34% KV:16% GW:6%
-        +  284s:app
-   360s     58k/s     58k/s    0%    35ms     APP 66%   $1041    $226    $27k  2681%
-        $  tier $67  shard $36  kv $29  app $21  warehouse $20  stream $14  cache $9
-        ▪  APP:66% KV:24% GW:19% SQL:8% STREAM:3% CACHE:3%
-        +  310s:rt 311s:rt 313s:stream 314s:stream 316s:shard 317s:shard 319s:shard 320s:shard 322s:kv 331s:cdn 332s:cdn 341s:app
-   420s    267k/s    267k/s    0%    36ms     APP 62%   $4905    $370   $116k 13294%
-        $  tier $131  app $96  shard $36  kv $34  warehouse $20  stream $14  cache $9
-        ▪  APP:62% KV:54% GW:44% SQL:28% STREAM:23% CACHE:11% RT:6%
-        +  367s:app 388s:lb 389s:app 391s:tier 392s:app 394s:app 397s:kv
-   480s    326k/s    326k/s    0%    29ms     APP 48%   $5875    $437   $517k  4562%
-        $  app $151  tier $131  kv $43  shard $36  warehouse $20  stream $14  cache $9
-        ▪  APP:48% KV:34% GW:27% SQL:24% STREAM:19% CACHE:14% RT:7%
-        +  433s:kv 442s:lb
-   540s    1.3M/s    1.3M/s    0%    38ms      KV 69%  $24178    $941   $1.2M  3836%
-        $  app $502  tier $259  kv $62  shard $36  warehouse $20  stream $16  cache $9
-        ▪  KV:69% APP:59% CACHE:58% GW:55% SQL:49% STREAM:40% RT:29%
-        +  505s:kv 506s:tier 508s:app 509s:app 511s:lb 532s:stream
-   541s    1.4M/s    1.4M/s    0%    38ms      KV 70%  $24498    $948   $1.2M  3775%
+     0s      42/s      42/s    0%    53ms     SVC 13%      $3      $8   $6.7k     0%
+        $  tier $4  app $2  pooler $2
+        ▪  SVC:13%
+    60s     172/s     172/s    0%    62ms     SVC 55%      $3      $8   $6.4k     0%
+        $  tier $4  app $2  pooler $2
+        ▪  SVC:55% DATA:8%
+   120s     758/s     758/s    0%    67ms     SVC 61%     $14     $14   $6.1k     0%
+        $  derived $5  tier $4  app $2  pooler $2
+        ▪  SVC:61% DATA:35%
+        +  70s:app 99s:app 120s:derived
+   180s    3.3k/s    3.3k/s    0%    38ms     SVC 69%     $59     $36   $5.1k     0%
+        $  olapEngine $13  obs $6  derived $5  tier $4  app $3  autoscale $2  pooler $2
+        ▪  SVC:69% DATA:36% DERIVED:5%
+        +  126s:autoscale 128s:app 129s:app 149s:tier 150s:olapEngine 169s:obs 179s:app
+   240s    3.3k/s    3.3k/s    0%    24ms     SVC 42%     $59     $71   $5.0k 20821%
+        $  kvEngine $20  olapEngine $13  cache $9  derived $7  obs $6  tier $5  app $4
+        ▪  SVC:42% DATA:12% DERIVED:3%
+        +  185s:replica 187s:derived 189s:app 190s:kvEngine 211s:cache 213s:cache
+   300s     15k/s     15k/s    0%    38ms     SVC 68%    $261     $75   $8.0k 10457%
+        $  kvEngine $20  olapEngine $13  cache $9  app $8  derived $7  obs $6  tier $5
+        ▪  SVC:68% DATA:54% DERIVED:12%
+        +  295s:app
+   360s     55k/s     55k/s    0%    35ms     SVC 65%    $999    $122    $28k  3495%
+        $  app $21  kvEngine $21  push $17  olapEngine $13  tier $11  cache $9  cdn $7
+        ▪  SVC:65% DERIVED:46% DATA:37% CACHE:2%
+        +  311s:rateLimit 313s:tier 325s:push 334s:cdn 335s:cdn 341s:app 343s:app 359s:tier
+   420s    229k/s    229k/s    0%    34ms     SVC 61%   $4213    $258   $127k 16944%
+        $  app $87  push $52  tier $35  kvEngine $25  derived $14  olapEngine $13  cache $9
+        ▪  SVC:61% DATA:53% DERIVED:46% CACHE:10%
+        +  379s:derived 388s:tier 389s:app 391s:derived 392s:app 394s:tier
+   480s    286k/s    286k/s    0%    26ms     SVC 47%   $5157    $443   $457k  5832%
+        $  app $140  tier $131  push $65  kvEngine $26  derived $25  olapEngine $13  shard $12
+        ▪  SVC:47% DERIVED:29% CACHE:12% DATA:12%
+        +  433s:shard 439s:derived 442s:shard 457s:app
+   540s    1.2M/s    1.2M/s    0%    31ms DERIVED 62%  $21528   $1126   $986k  5065%
+        $  app $459  tier $259  push $253  derived $46  kvEngine $45  shard $20  olapEngine $13
+        ▪  DERIVED:62% SVC:60% CACHE:52% DATA:25%
+        +  511s:derived 512s:shard 514s:app 515s:app
+   550s    1.4M/s    1.4M/s    0%    31ms   CACHE 59%  $24585   $1280   $1.2M  4329%
 
   outcome: won   peak 1.4M/s of 900k/s
 
@@ -51,118 +49,125 @@
 
      t    demand    served   err     p99     hottest  income   spend    cash  budget
   --------------------------------------------------------------------------------
-     0s      39/s      39/s    0%    58ms     APP 29%      $3      $7   $6.9k     0%
-        $  tier $4  app $2  lb $1
-        ▪  APP:29% SQL:14%
-        +  0s:indexes
-    60s     158/s     158/s    0%    70ms     APP 60%      $3      $9   $6.4k     0%
-        $  tier $4  app $2  pooler $2  lb $1
-        ▪  APP:60% SQL:50%
-        +  2s:pooler 40s:app
-   120s     710/s     710/s    0%    72ms     APP 62%     $12     $14   $5.1k     0%
-        $  tier $5  app $3  autoscale $2  pooler $2  lb $1
-        ▪  APP:62% SQL:56%
-        +  67s:app 75s:tier 94s:autoscale 96s:app 97s:app 102s:tier
-   180s    8.0k/s    4.3k/s   46%   453ms    APP 135%     $62     $34   $4.6k 17081%
+     0s      39/s      38/s    0%    56ms     SVC 29%      $3      $8   $6.7k     0%
+        $  tier $4  app $2  pooler $2
+        ▪  SVC:29% DATA:12%
+    60s     158/s     158/s    0%    68ms     SVC 60%      $3      $8   $6.4k     0%
+        $  tier $4  app $2  pooler $2
+        ▪  SVC:60% DATA:50%
+        +  40s:app
+   120s     710/s     710/s    0%    70ms     SVC 62%     $12     $12   $5.1k     0%
+        $  tier $5  app $3  autoscale $2  pooler $2
+        ▪  SVC:62% DATA:56%
+        +  67s:app 75s:tier 96s:autoscale 97s:app 99s:app 102s:tier
+   180s    8.2k/s    4.5k/s   45%   451ms    SVC 124%     $66     $33   $4.6k 16471%
         $  tier $7  cdn $7  obs $6  app $3  replica $3  objstore $3  autoscale $2
-        ▪  APP:135% SQL:49% GPU:5%
-        +  121s:objstore 133s:cdn 171s:obs 176s:cdn 177s:lb 179s:replica
-   240s    5.0k/s    5.0k/s    0%    70ms     APP 54%     $88     $49   $6.3k  6448%
-        $  tier $11  cache $9  cdn $7  obs $6  app $4  replica $3  objstore $3
-        ▪  APP:54% SQL:50% GPU:4%
-        +  181s:app 182s:cache 184s:cache 185s:tier 187s:app
-   300s     22k/s     22k/s    0%    77ms     APP 66%    $388     $93   $8.0k  2795%
-        $  tier $35  search $12  cache $9  app $9  cdn $7  obs $6  usage $4
-        ▪  APP:66% SQL:22% GPU:20% GW:5% CACHE:4% SEARCH:3%
-        +  254s:tier 283s:tier 284s:search 286s:search 290s:app
-   360s     82k/s     82k/s    0%    76ms     APP 64%   $1440    $253    $39k  1299%
-        $  gpu $106  tier $35  app $21  warehouse $20  vector $13  search $12  cache $9
-        ▪  APP:64% GPU:48% SQL:41% GW:18% CACHE:14% SEARCH:9% EDGE:4%
-        +  305s:rt 307s:rt 310s:rateLimit 317s:vector 319s:vector 341s:app 343s:app 353s:warehouse 356s:gpu 358s:semanticCache
-   420s    382k/s    382k/s    0%    78ms     APP 63%   $7091    $592   $201k  4555%
-        $  tier $259  gpu $106  app $95  shard $20  warehouse $20  stream $16  vector $13
-        ▪  APP:63% SQL:63% GPU:60% CACHE:59% STREAM:46% GW:43% SEARCH:40% EDGE:15% VEC:7% RT:7%
-        +  362s:app 364s:router 365s:app 367s:app 370s:shard 371s:stream 373s:stream 374s:shard 376s:shard 409s:stream 412s:lb
-   480s    804k/s    804k/s    0%   379ms  SEARCH 91%  $14154   $1718   $486k  2227%
-        $  tier $1027  gpu $370  app $134  shard $68  warehouse $20  stream $16  vector $13
-        ▪  SEARCH:91% APP:89% CACHE:68% STREAM:59% GW:43% EDGE:35% GPU:34% SQL:21% VEC:17% RT:16%
-        +  427s:shard 428s:gpu 430s:cache 434s:shard 437s:coalesce 478s:gpu 479s:lb
-   511s    1.2M/s    1.2M/s    0%   112ms  SEARCH 68%  $20929   $1896   $810k  1259%
+        ▪  SVC:124% DATA:48%
+        +  121s:objstore 133s:cdn 171s:obs 176s:cdn 177s:replica 179s:app
+   240s    5.5k/s    5.5k/s    0%    69ms     SVC 54%     $97     $62   $4.7k  5317%
+        $  tier $19  cache $9  cdn $7  derived $7  obs $6  app $4  replica $3
+        ▪  SVC:54% DATA:28%
+        +  181s:cache 182s:cache 184s:derived 185s:derived 187s:tier 208s:app 211s:tier
+   300s     24k/s     24k/s    0%    74ms     SVC 66%    $429     $93   $9.1k  2263%
+        $  tier $35  searchEngine $10  app $10  cache $9  cdn $7  derived $7  obs $6
+        ▪  SVC:66% DATA:25% CACHE:4% DERIVED:3%
+        +  278s:tier 280s:searchEngine 287s:app
+   360s    171k/s    119k/s   30%    86ms     SVC 73%   $2020    $177    $10k 13911%
+        $  app $39  push $37  tier $35  olapEngine $13  searchEngine $10  cache $9  derived $9
+        ▪  SVC:73% DERIVED:46% DATA:43% CACHE:26% EDGE:7%
+        +  301s:push 310s:rateLimit 331s:app 344s:olapEngine 353s:app 355s:app 356s:derived 358s:app 359s:app
+   420s    428k/s    428k/s    0%    90ms    DATA 70%   $7925    $558   $247k  4198%
+        $  tier $259  app $109  push $83  shard $20  stream $16  derived $14  olapEngine $13
+        ▪  DATA:70% CACHE:64% SVC:63% DERIVED:57% LOG:51% EDGE:17%
+        +  362s:shard 364s:stream 365s:stream 367s:shard 368s:shard 400s:derived 404s:stream
+   480s    831k/s    831k/s    0%   102ms     SVC 72%  $14601    $999   $432k  2706%
+        $  tier $515  app $176  push $170  shard $36  derived $25  stream $16  olapEngine $13
+        ▪  SVC:72% CACHE:68% LOG:61% DERIVED:61% DATA:44% EDGE:36%
+        +  421s:shard 425s:cache 428s:coalesce 472s:derived 473s:app 475s:app
+   506s    1.1M/s    1.1M/s    0%    78ms    DATA 59%  $20114   $1213   $834k  1705%
 
-  outcome: won   peak 1.2M/s of 700k/s
+  outcome: won   peak 1.1M/s of 700k/s
 
   💬  Chat / messaging — target 600k/s, p99 < 110ms, ceiling $3800/s
 
      t    demand    served   err     p99     hottest  income   spend    cash  budget
   --------------------------------------------------------------------------------
-     0s      98/s      58/s   41%   417ms    APP 168%      $3      $7   $7.0k 82194%
-        $  tier $4  app $2  lb $1
-        ▪  APP:168% SQL:17%
+     0s      98/s      58/s   41%   415ms    SVC 168%      $3      $8   $6.7k 82194%
+        $  tier $4  app $2  pooler $2
+        ▪  SVC:168% DATA:17%
         +  0s:app
-    60s     393/s     393/s    0%    45ms     SQL 67%      $7     $12   $5.9k    65%
-        $  tier $4  app $3  autoscale $2  pooler $2  lb $1
-        ▪  SQL:67% APP:62%
-        +  2s:app 3s:indexes 5s:pooler 25s:autoscale 26s:app 28s:app
-   120s    1.8k/s    1.8k/s    0%    32ms     SQL 56%     $32     $21   $5.1k    12%
-        $  rt $7  tier $5  app $3  autoscale $2  pooler $2  lb $1
-        ▪  SQL:56% APP:25%
-        +  62s:tier 77s:app 89s:tier 104s:rt
-   180s    3.8k/s    3.8k/s    0%    57ms     APP 26%     $68     $71   $2.0k  7753%
-        $  tier $35  rt $8  cdn $7  obs $6  app $3  replica $3  objstore $3
-        ▪  APP:26% SQL:12%
-        +  129s:tier 133s:lb 134s:rt 136s:replica 137s:objstore 139s:cdn 141s:cdn 142s:obs 144s:tier 169s:tier
-   240s     17k/s     17k/s    0%    75ms     APP 67%    $303     $72   $7.2k  3657%
-        $  tier $35  rt $8  cdn $7  obs $6  app $5  replica $3  objstore $3
-        ▪  APP:67% SQL:55% RT:7% GW:3%
-   300s     71k/s     71k/s    0%    76ms     APP 69%   $1280    $200    $36k  1115%
-        $  tier $131  app $12  shard $12  search $12  rt $8  cdn $7  obs $6
-        ▪  APP:69% SQL:47% RT:31% GW:13% SEARCH:4%
-        +  245s:app 246s:app 251s:shard 257s:shard 275s:search 277s:search
-   360s    272k/s    272k/s    0%    65ms     APP 63%   $5154    $653   $148k 11071%
-        $  tier $515  app $56  shard $36  search $12  rt $10  cdn $7  obs $6
-        ▪  APP:63% GW:58% SQL:52% RT:47% SEARCH:13%
-        +  302s:app 304s:app 305s:app 307s:app 308s:shard 323s:shard 349s:rt
-   420s    306k/s    306k/s    0%    68ms      RT 66%   $5496   $2285   $277k  5273%
-        $  tier $2051  shard $132  app $54  search $12  rt $10  cdn $7  obs $6
-        ▪  RT:66% APP:59% GW:28% SQL:23% SEARCH:18%
-        +  370s:lb 374s:shard 376s:shard
-   460s    994k/s    994k/s    0%    91ms     APP 59%  $17861   $2448   $533k  2927%
+    60s     393/s     393/s    0%    43ms    DATA 67%      $7     $11   $5.8k    65%
+        $  tier $4  app $3  autoscale $2  pooler $2
+        ▪  DATA:67% SVC:62%
+        +  2s:app 25s:autoscale 26s:app 28s:app
+   120s    1.8k/s    1.8k/s    0%    33ms    DATA 56%     $32     $26   $4.7k    12%
+        $  push $13  tier $5  app $3  autoscale $2  pooler $2
+        ▪  DATA:56% SVC:40%
+        +  62s:tier 77s:app 89s:tier 104s:push
+   180s    3.4k/s    3.4k/s    0%    56ms     SVC 28%     $62     $69   $2.7k  9860%
+        $  push $20  tier $19  cdn $7  obs $6  app $5  replica $3  objstore $3
+        ▪  SVC:28% DATA:22%
+        +  129s:tier 133s:replica 134s:objstore 136s:loadShed 137s:cdn 139s:cdn 141s:obs 142s:tier 144s:app 173s:obs
+   240s     15k/s     15k/s    0%    77ms     SVC 72%    $274    $136   $1.4k  4716%
+        $  push $69  tier $35  app $8  cdn $7  obs $6  replica $3  objstore $3
+        ▪  SVC:72% DATA:50%
+        +  230s:tier 238s:app
+   300s     65k/s     65k/s    0%    71ms     SVC 66%   $1164    $486    $14k  1447%
+        $  push $273  tier $131  app $29  shard $12  searchEngine $10  cdn $7  derived $7
+        ▪  SVC:66% DATA:42% DERIVED:4%
+        +  256s:shard 262s:shard 263s:app 278s:derived 280s:derived 281s:searchEngine 292s:app
+   360s     44k/s     44k/s    0%    66ms     SVC 61%    $795    $546    $13k 14215%
+        $  tier $259  push $189  app $22  shard $20  stream $16  searchEngine $10  cdn $7
+        ▪  SVC:61% DATA:27% LOG:21% DERIVED:3%
+        +  304s:stream 305s:stream 307s:shard 308s:obs 328s:stream
+   420s    309k/s    309k/s    0%    61ms     SVC 64%   $5864   $3410    $49k 10315%
+        $  tier $2051  push $1029  shard $132  app $130  stream $26  searchEngine $10  cdn $7
+        ▪  SVC:64% DATA:54% LOG:39% DERIVED:14%
+        +  382s:app 383s:shard 388s:shard 389s:stream 404s:app 407s:shard 416s:stream
+   480s    667k/s    590k/s   12%   104ms     SVC 85%  $10611   $5222   $229k  4499%
+        $  push $2763  tier $2051  app $193  shard $132  stream $41  searchEngine $10  cdn $7
+        ▪  SVC:85% DATA:63% LOG:35% DERIVED:34% EDGE:3%
+        +  439s:app 448s:stream
+   540s    449k/s    449k/s    0%    53ms     SVC 30%   $8074   $6742   $293k  6386%
+        $  tier $4099  push $1862  app $408  shard $260  stream $41  derived $25  olapEngine $13
+        ▪  SVC:30% LOG:27% DERIVED:21% DATA:15%
+        +  481s:app 482s:app 487s:shard 488s:olapEngine 490s:obs 491s:derived 493s:obs 494s:derived 529s:derived
+   596s    748k/s    748k/s    0%    66ms     SVC 54%  $13448   $7956   $493k  4453%
 
-  outcome: won   peak 994k/s of 600k/s
+  outcome: won   peak 886k/s of 600k/s
 
   🎬  Video streaming — target 260k/s, p99 < 320ms, ceiling $1750/s
 
      t    demand    served   err     p99     hottest  income   spend    cash  budget
   --------------------------------------------------------------------------------
-     0s      25/s      25/s    0%    29ms     APP 34%      $3      $7   $6.9k     0%
-        $  tier $4  app $2  lb $1
-        ▪  APP:34% SQL:15%
-        +  0s:indexes
-    60s     101/s     101/s    0%    49ms     APP 69%      $3      $9   $6.4k     0%
-        $  tier $4  app $2  pooler $2  lb $1
-        ▪  APP:69% SQL:63%
-        +  2s:pooler 34s:app
-   120s     451/s     451/s    0%    56ms     APP 29%      $8     $16   $4.7k     0%
-        $  tier $5  objstore $3  app $2  autoscale $2  pooler $2  lb $1
-        ▪  APP:29% SQL:4%
+     0s      25/s      25/s    0%    27ms     SVC 34%      $3      $8   $6.7k     0%
+        $  tier $4  app $2  pooler $2
+        ▪  SVC:34% DATA:15%
+    60s     101/s     101/s    0%    47ms     SVC 69%      $3      $8   $6.4k     0%
+        $  tier $4  app $2  pooler $2
+        ▪  SVC:69% DATA:63%
+        +  34s:app
+   120s     451/s     451/s    0%    54ms     SVC 29%      $8     $15   $4.7k     0%
+        $  tier $5  objstore $3  app $2  autoscale $2  pooler $2
+        ▪  SVC:29% DATA:4%
         +  61s:app 66s:tier 89s:autoscale 91s:app 93s:tier 102s:objstore
-   180s    8.1k/s    8.1k/s    0%    73ms     APP 61%    $141     $34   $5.9k     0%
+   180s    8.1k/s    8.1k/s    0%    71ms     SVC 61%    $141     $32   $6.0k     0%
         $  tier $7  cdn $7  obs $6  replica $3  objstore $3  app $3  autoscale $2
-        ▪  APP:61% SQL:46%
-        +  150s:cdn 155s:cdn 157s:lb 158s:replica 160s:obs
-   240s    8.9k/s    8.9k/s    0%    73ms     APP 60%    $157     $38   $9.5k     0%
+        ▪  SVC:61% DATA:46%
+        +  150s:cdn 155s:cdn 157s:replica 158s:obs
+   240s    8.9k/s    8.9k/s    0%    71ms     SVC 60%    $157     $36   $9.8k     0%
         $  tier $11  cdn $7  obs $6  replica $3  objstore $3  app $3  autoscale $2
-        ▪  APP:60% SQL:37%
+        ▪  SVC:60% DATA:37%
         +  192s:app 238s:tier
-   300s    104k/s    104k/s    0%    87ms     APP 76%   $1853     $99    $31k  1692%
-        $  warehouse $20  tier $19  search $12  cache $9  rt $8  cdn $7  app $6
-        ▪  APP:76% SQL:22% EDGE:11% SEARCH:5% GW:5% CACHE:2%
-        +  268s:tier 271s:app 272s:app 278s:cache 280s:cache 293s:search 295s:search 296s:warehouse 298s:rt 299s:rt
-   360s    342k/s    342k/s    0%    79ms     APP 61%   $6105    $128   $230k   268%
-        $  tier $35  warehouse $20  app $19  search $12  cache $9  rt $8  cdn $7
-        ▪  APP:61% EDGE:37% SQL:36% SEARCH:17% GW:16% CACHE:8% RT:2%
-        +  301s:app 302s:app 304s:app 359s:tier
-   404s    438k/s    438k/s    0%    80ms     APP 58%   $7706    $132   $477k   134%
+   300s    101k/s    101k/s    0%    94ms     SVC 81%   $1803    $100    $31k  2232%
+        $  tier $19  olapEngine $13  push $13  searchEngine $10  cache $9  cdn $7  derived $7
+        ▪  SVC:81% DERIVED:33% DATA:21% EDGE:11% CACHE:2%
+        +  268s:tier 271s:app 272s:app 278s:cache 280s:cache 293s:derived 295s:derived 296s:searchEngine 298s:olapEngine 299s:push
+   360s    326k/s    326k/s    0%    76ms    DATA 69%   $5805    $131   $216k   369%
+        $  push $28  app $19  tier $19  olapEngine $13  searchEngine $10  cache $9  derived $9
+        ▪  DATA:69% SVC:61% DERIVED:53% EDGE:36% CACHE:7%
+        +  301s:app 302s:app 304s:app 305s:app 340s:derived
+   406s    438k/s    438k/s    0%    78ms     SVC 58%   $7701    $166   $461k   179%
 
   outcome: won   peak 438k/s of 260k/s
 
@@ -170,165 +175,155 @@
 
      t    demand    served   err     p99     hottest  income   spend    cash  budget
   --------------------------------------------------------------------------------
-     0s      77/s      77/s    0%    60ms     APP 38%      $3      $7   $6.9k     0%
-        $  tier $4  app $2  lb $1
-        ▪  APP:38% SQL:15%
-        +  0s:indexes
-    60s     316/s     316/s    0%    64ms     SQL 57%      $6     $10   $6.4k     0%
-        $  tier $4  app $2  pooler $2  lb $1
-        ▪  SQL:57% APP:39%
-        +  2s:pooler 28s:app 56s:app
-   120s    1.4k/s    1.4k/s    0%    74ms     SQL 63%     $26     $14   $5.5k     0%
-        $  tier $5  app $3  autoscale $2  pooler $2  lb $1
-        ▪  SQL:63% APP:62%
+     0s      77/s      77/s    0%    58ms     SVC 38%      $3      $8   $6.7k     0%
+        $  tier $4  app $2  pooler $2
+        ▪  SVC:38% DATA:14%
+    60s     316/s     316/s    0%    62ms    DATA 57%      $6      $8   $6.4k     0%
+        $  tier $4  app $2  pooler $2
+        ▪  DATA:57% SVC:39%
+        +  28s:app 56s:app
+   120s    1.4k/s    1.4k/s    0%    72ms    DATA 63%     $26     $13   $5.5k     0%
+        $  tier $5  app $3  autoscale $2  pooler $2
+        ▪  DATA:63% SVC:62%
         +  69s:tier 85s:autoscale 86s:app 88s:app 97s:tier
-   180s    2.0k/s    2.0k/s    0%    27ms     APP 19%     $36     $61   $1.9k 16727%
-        $  warehouse $20  tier $19  cdn $7  app $6  replica $3  autoscale $2  pooler $2
-        ▪  APP:19% SQL:18%
-        +  125s:tier 136s:app 139s:lb 141s:replica 142s:app 144s:obs 145s:warehouse 147s:tier 173s:cdn 174s:cdn
-   240s    8.7k/s    8.7k/s    0%    42ms     SQL 75%    $158     $75   $2.4k  8930%
-        $  warehouse $20  tier $19  rt $8  cdn $7  app $6  obs $6  replica $3
-        ▪  SQL:75% APP:41% GW:3%
-        +  190s:obs 235s:rt 237s:rt
-   300s     38k/s     38k/s    0%    61ms     SQL 65%    $682    $150    $11k  2936%
-        $  tier $67  warehouse $20  app $14  search $12  rt $8  shard $8  cdn $7
-        ▪  SQL:65% APP:64% GW:11% SEARCH:6% RT:2%
-        +  246s:search 248s:search 268s:tier 272s:app 274s:app 296s:shard
-   360s    170k/s    170k/s    0%    75ms     APP 73%   $3281    $682    $18k 13259%
-        $  tier $515  app $51  shard $36  warehouse $20  stream $19  search $12  rt $8
-        ▪  APP:73% GW:53% SQL:50% STREAM:40% SEARCH:19% RT:7%
-        +  304s:shard 308s:stream 310s:stream 311s:shard 313s:shard 314s:stream 334s:stream 350s:app 352s:app 356s:app
-   420s    545k/s    545k/s    0%   103ms     APP 68%  $10547   $2445   $260k  3162%
-        $  tier $2051  app $171  shard $132  stream $26  warehouse $20  search $12  rt $8
-        ▪  APP:68% STREAM:64% SEARCH:61% GW:43% SQL:40% RT:23%
-        +  379s:lb 382s:shard 389s:shard 392s:stream 410s:lb
-   480s    920k/s    920k/s    0%    77ms      GW 70%  $16671   $4792   $434k  1545%
-        $  tier $4099  app $319  shard $260  stream $41  search $20  warehouse $20  rt $8
-        ▪  GW:70% RT:61% APP:59% STREAM:44% SEARCH:40% SQL:28% EDGE:3%
-        +  424s:app 449s:shard 451s:search 452s:app 454s:app 463s:stream 472s:search
-   481s    929k/s    929k/s    0%    74ms      RT 62%  $16829   $4800   $443k  1525%
+   180s    2.1k/s    2.1k/s    0%    25ms     SVC 19%     $37     $65   $2.2k 15310%
+        $  tier $19  olapEngine $13  cdn $7  derived $7  app $7  obs $6  replica $3
+        ▪  SVC:19% DATA:19%
+        +  125s:tier 136s:app 139s:replica 141s:app 142s:obs 144s:app 145s:derived 147s:derived 149s:olapEngine 150s:tier 171s:cdn 173s:cdn
+   240s    9.2k/s    9.2k/s    0%    44ms    DATA 79%    $166     $77   $3.0k  8125%
+        $  tier $19  olapEngine $13  push $12  cdn $7  derived $7  app $7  obs $6
+        ▪  DATA:79% SVC:46% DERIVED:6%
+        +  233s:push
+   300s     40k/s     40k/s    0%    71ms    DATA 68%    $718    $171    $13k  2659%
+        $  tier $67  push $31  app $16  olapEngine $13  searchEngine $10  shard $8  cdn $7
+        ▪  DATA:68% SVC:67% DERIVED:32%
+        +  243s:searchEngine 266s:tier 292s:app 295s:shard
+   360s    165k/s    165k/s    0%    78ms     SVC 78%   $3199    $752    $12k 14852%
+        $  tier $515  push $74  app $50  shard $36  stream $19  derived $14  olapEngine $13
+        ▪  SVC:78% DATA:49% LOG:39% DERIVED:22%
+        +  302s:shard 308s:stream 310s:stream 311s:shard 313s:shard 314s:derived 316s:stream 334s:derived 335s:stream 352s:app 353s:app 359s:app
+   420s    516k/s    516k/s    0%   113ms     SVC 69%   $9978   $2658   $231k  3641%
+        $  tier $2051  push $219  app $172  shard $132  stream $26  derived $14  olapEngine $13
+        ▪  SVC:69% DERIVED:67% LOG:61% DATA:38%
+        +  385s:shard 392s:shard 395s:stream
+   480s    892k/s    892k/s    0%    75ms     SVC 59%  $16151   $3231   $449k  1608%
+        $  tier $2051  push $572  app $347  shard $132  derived $46  stream $41  olapEngine $13
+        ▪  SVC:59% DATA:55% DERIVED:45% LOG:43% EDGE:3%
+        +  422s:app 424s:derived 452s:app 454s:app 463s:derived 466s:stream
+   485s    942k/s    942k/s    0%    77ms     SVC 59%  $17061   $3288   $510k  1492%
 
-  outcome: won   peak 929k/s of 550k/s
+  outcome: won   peak 942k/s of 550k/s
 
   📈  Ad exchange — target 1.0M/s, p99 < 45ms, ceiling $6100/s
 
      t    demand    served   err     p99     hottest  income   spend    cash  budget
   --------------------------------------------------------------------------------
-     0s     154/s     154/s    0%    61ms     APP 43%      $3      $7   $6.9k     0%
-        $  tier $4  app $2  lb $1
-        ▪  APP:43% SQL:12%
-        +  0s:indexes
-    60s     568/s     568/s    0%    61ms     APP 40%     $10     $10   $6.5k     0%
-        $  tier $4  app $2  pooler $2  lb $1
-        ▪  APP:40% SQL:25%
-        +  2s:pooler 25s:app 55s:app
-   120s    2.2k/s    2.2k/s    0%    70ms     APP 61%     $37     $13   $6.5k     0%
-        $  tier $4  app $3  autoscale $2  pooler $2  lb $1
-        ▪  APP:61% SQL:48%
-        +  86s:autoscale 88s:app 89s:app 107s:tier
-   180s    8.8k/s    8.8k/s    0%    41ms     APP 70%    $157     $65   $4.6k 12000%
-        $  warehouse $20  cache $9  tier $7  cdn $7  obs $6  app $5  replica $3
-        ▪  APP:70% SQL:45% GW:3%
-        +  128s:obs 137s:tier 145s:app 147s:warehouse 149s:lb 150s:replica 152s:loadShed 153s:cache 155s:cache 174s:cdn 176s:cdn 177s:app 179s:app
-   240s    9.7k/s    9.7k/s    0%    35ms     APP 63%    $165     $91   $6.8k  6468%
-        $  kv $25  warehouse $20  cache $9  tier $7  cdn $7  app $6  obs $6
-        ▪  APP:63% SQL:29% KV:13% GW:3%
-        +  240s:kv
-   300s     42k/s     42k/s    0%    42ms     APP 66%    $726    $108    $18k  2375%
-        $  kv $26  warehouse $20  app $18  tier $11  cache $9  cdn $7  obs $6
-        ▪  APP:66% SQL:64% KV:27% GW:14% CACHE:4%
-        +  241s:kv 277s:tier 286s:app 287s:app
-   360s    220k/s    200k/s    9%    71ms     APP 85%   $3590    $439    $83k 13900%
-        $  tier $259  app $54  kv $29  shard $20  warehouse $20  stream $14  cache $9
-        ▪  APP:85% GW:66% KV:60% SQL:42% STREAM:38% CACHE:19%
-        +  305s:tier 311s:rateLimit 317s:rt 319s:rt 344s:tier 347s:kv 352s:stream 353s:stream 355s:shard 356s:shard 358s:app 359s:shard
-   420s    619k/s    619k/s    0%    42ms     APP 67%  $11129   $2514   $207k  4052%
-        $  tier $2051  app $206  shard $132  kv $43  warehouse $20  stream $16  cache $9
-        ▪  APP:67% CACHE:59% STREAM:58% GW:51% KV:47% SQL:10% RT:5%
-        +  361s:shard 362s:shard 364s:shard 365s:app 368s:lb 376s:kv 398s:stream 404s:lb 409s:kv 415s:app 416s:app
-   480s    1.2M/s    1.2M/s    0%    44ms     APP 70%  $19668   $4878   $448k  3179%
-        $  tier $4099  app $368  shard $260  kv $62  warehouse $20  stream $16  cache $12
-        ▪  APP:70% STREAM:62% CACHE:59% GW:48% KV:47% RT:10% SQL:9%
-        +  472s:cache 473s:app 475s:lb 476s:kv 478s:shard
-   510s    1.7M/s    1.7M/s    0%    37ms      GW 69%  $28438   $5161   $998k  1896%
+     0s     154/s     154/s    0%    58ms     SVC 43%      $3      $8   $6.7k     0%
+        $  tier $4  app $2  pooler $2
+        ▪  SVC:43% DATA:7%
+    60s     574/s     574/s    0%    59ms     SVC 40%     $10      $8   $6.5k     0%
+        $  tier $4  app $2  pooler $2
+        ▪  SVC:40% DATA:25%
+        +  25s:app 55s:app
+   120s    2.3k/s    2.3k/s    0%    32ms     SVC 61%     $39     $30   $5.5k     0%
+        $  olapEngine $13  derived $5  tier $4  app $3  autoscale $2  pooler $2
+        ▪  SVC:61% DATA:27% DERIVED:3%
+        +  74s:derived 85s:autoscale 86s:app 88s:app 105s:tier 107s:olapEngine
+   180s    9.4k/s    9.4k/s    0%    39ms     SVC 68%    $168     $81   $4.3k 11769%
+        $  kvEngine $20  olapEngine $13  cache $9  cdn $7  derived $7  obs $6  app $5
+        ▪  SVC:68% DATA:55% DERIVED:5%
+        +  125s:obs 141s:app 144s:replica 145s:derived 147s:loadShed 149s:cache 150s:cache 152s:kvEngine 171s:cdn 173s:cdn 174s:app 176s:app
+   240s     10k/s     10k/s    0%    38ms     SVC 64%    $177     $82   $5.4k  6592%
+        $  kvEngine $20  olapEngine $13  cache $9  cdn $7  derived $7  app $6  obs $6
+        ▪  SVC:64% DATA:63% DERIVED:7%
+   300s     46k/s     46k/s    0%    41ms    DATA 69%    $778    $102    $19k  2338%
+        $  kvEngine $21  app $19  olapEngine $13  tier $11  cache $9  cdn $7  derived $7
+        ▪  DATA:69% SVC:65% DERIVED:30% CACHE:5%
+        +  245s:tier 274s:tier 283s:app 284s:app
+   360s    232k/s    162k/s   30%    71ms   DATA 100%   $2916    $304    $84k 12962%
+        $  tier $131  app $45  push $24  kvEngine $22  stream $14  olapEngine $13  shard $12
+        ▪  DATA:100% SVC:85% DERIVED:50% LOG:31% CACHE:16%
+        +  301s:tier 311s:push 313s:rateLimit 346s:tier 349s:derived 355s:stream 356s:stream 358s:shard 359s:shard
+   420s    569k/s    569k/s    0%    38ms     SVC 69%  $10241   $1448   $247k  4330%
+        $  tier $1027  app $188  shard $68  push $50  kvEngine $29  derived $25  stream $16
+        ▪  SVC:69% CACHE:54% LOG:54% DERIVED:44% DATA:18%
+        +  361s:app 362s:shard 364s:shard 365s:shard 367s:app 379s:derived 403s:stream 410s:derived 418s:app 419s:app
+   480s    1.1M/s    1.1M/s    0%    52ms     SVC 79%  $19067   $2751   $530k  3281%
+        $  tier $2051  app $320  shard $132  push $99  derived $46  kvEngine $38  stream $16
+        ▪  SVC:79% LOG:60% CACHE:57% DERIVED:46% DATA:18%
+        +  475s:app 476s:cache 478s:derived 479s:shard
+   512s    1.6M/s    1.6M/s    0%    31ms DERIVED 68%  $28036   $5308   $1.1M  1864%
 
-  outcome: won   peak 1.7M/s of 1.0M/s
+  outcome: won   peak 1.6M/s of 1.0M/s
 
   🛒  Flash-sale commerce — target 420k/s, p99 < 240ms, ceiling $2700/s
 
      t    demand    served   err     p99     hottest  income   spend    cash  budget
   --------------------------------------------------------------------------------
-     0s      35/s      35/s    0%    56ms     APP 12%      $3      $7   $6.9k     0%
-        $  tier $4  app $2  lb $1
-        ▪  APP:12% SQL:11%
-        +  0s:indexes
-    60s     144/s     144/s    0%    64ms     APP 49%      $3      $9   $6.4k     0%
-        $  tier $4  app $2  pooler $2  lb $1
-        ▪  APP:49% SQL:36%
-        +  2s:pooler
-   120s     645/s     645/s    0%    66ms     APP 55%     $12     $11   $5.6k     0%
-        $  tier $5  app $2  pooler $2  lb $1
-        ▪  APP:55% SQL:41%
+     0s      35/s      35/s    0%    53ms     SVC 12%      $3      $8   $6.7k     0%
+        $  tier $4  app $2  pooler $2
+        ▪  SVC:12% DATA:9%
+    60s     144/s     144/s    0%    62ms     SVC 49%      $3      $8   $6.4k     0%
+        $  tier $4  app $2  pooler $2
+        ▪  SVC:49% DATA:36%
+   120s     645/s     645/s    0%    64ms     SVC 55%     $12     $10   $5.6k     0%
+        $  tier $5  app $2  pooler $2
+        ▪  SVC:55% DATA:41%
         +  75s:app 88s:tier 104s:app 115s:tier
-   180s    4.4k/s    4.4k/s    0%    68ms     APP 59%     $78     $53   $2.3k 22999%
-        $  tier $19  cache $9  cdn $7  obs $6  app $4  replica $3  autoscale $2
-        ▪  APP:59% SQL:43%
-        +  131s:autoscale 133s:app 134s:app 142s:tier 160s:lb 161s:replica 163s:app 165s:cdn 166s:cdn 168s:cache 169s:obs 171s:tier 174s:cache
-   240s    4.7k/s    4.7k/s    0%    74ms     SQL 64%     $85     $53   $3.0k  9655%
-        $  tier $19  cache $9  cdn $7  obs $6  app $4  replica $3  autoscale $2
-        ▪  SQL:64% APP:61%
-   300s     21k/s     21k/s    0%    62ms     APP 66%    $374     $91   $7.5k  3586%
-        $  warehouse $20  tier $19  search $12  app $10  cache $9  cdn $7  obs $6
-        ▪  APP:66% SQL:50% SEARCH:7% GW:7% CACHE:4%
-        +  241s:search 243s:search 260s:app 287s:app 292s:warehouse
-   360s     65k/s     65k/s    0%    60ms     APP 53%   $1243    $394    $25k 29321%
-        $  tier $259  app $28  shard $20  warehouse $20  stream $14  search $12  cache $9
-        ▪  APP:53% SQL:42% STREAM:38% GW:21% SEARCH:18% CACHE:9%
-        +  310s:rateLimit 316s:tier 317s:app 340s:rt 341s:rt 343s:app 344s:app 347s:stream 349s:stream 350s:shard 352s:shard 353s:shard
-   420s     80k/s     80k/s    0%    59ms     APP 31%   $1441    $696   $125k 10763%
-        $  tier $515  app $56  shard $36  warehouse $20  stream $16  search $12  cache $9
-        ▪  APP:31% SEARCH:28% GW:25% SQL:18% STREAM:15% CACHE:14%
-        +  391s:stream 409s:shard
-   480s    441k/s    419k/s    5%   181ms  STREAM 85%   $7678    $758   $178k 10511%
-        $  tier $515  app $115  shard $36  warehouse $20  stream $16  search $15  cache $9
-        ▪  STREAM:85% APP:84% SEARCH:78% CACHE:75% GW:69% SQL:55% RT:4% EDGE:3%
-        +  466s:search 473s:lb 476s:app 478s:app 479s:app
-   511s    607k/s    607k/s    0%    87ms     SQL 67%  $10986   $1425   $413k  6153%
+   180s    5.0k/s    5.0k/s    0%    68ms     SVC 61%     $88     $55   $2.3k 19505%
+        $  tier $19  cache $9  cdn $7  obs $6  app $4  replica $3  objstore $3
+        ▪  SVC:61% DATA:48%
+        +  131s:autoscale 133s:app 134s:app 142s:tier 160s:replica 161s:objstore 163s:app 165s:cdn 166s:cdn 168s:cache 169s:cache 171s:obs 173s:tier
+   240s    5.4k/s    5.4k/s    0%    66ms     SVC 62%     $97     $71   $2.1k  7860%
+        $  tier $19  searchEngine $10  cache $9  cdn $7  derived $7  obs $6  app $4
+        ▪  SVC:62% DATA:23%
+        +  193s:derived 195s:derived 197s:searchEngine
+   300s     23k/s     23k/s    0%    69ms     SVC 65%    $424     $91   $9.3k  2870%
+        $  tier $19  olapEngine $13  app $11  searchEngine $10  cache $9  cdn $7  derived $7
+        ▪  SVC:65% DATA:55% DERIVED:31% CACHE:4%
+        +  256s:app 283s:app 286s:olapEngine
+   360s     83k/s     83k/s    0%    71ms     SVC 55%   $1602    $405    $22k 23693%
+        $  tier $259  app $35  shard $20  stream $14  olapEngine $13  push $11  searchEngine $10
+        ▪  SVC:55% DATA:53% LOG:49% DERIVED:43% CACHE:11%
+        +  310s:rateLimit 311s:tier 313s:app 314s:app 335s:push 337s:derived 338s:app 340s:app 341s:stream 343s:stream 344s:shard 346s:shard 347s:shard
+   420s    104k/s    104k/s    0%    61ms     SVC 38%   $1886   $1262   $130k  8360%
+        $  tier $1027  shard $68  app $62  stream $19  push $15  derived $14  olapEngine $13
+        ▪  SVC:38% DERIVED:35% CACHE:18% DATA:11% LOG:10%
+        +  379s:stream 383s:derived 397s:shard 404s:shard 409s:stream
+   480s    574k/s    574k/s    0%    80ms     SVC 63%  $10391   $1470   $163k  4377%
+        $  tier $1027  app $197  shard $68  push $53  derived $46  stream $19  olapEngine $13
+        ▪  SVC:63% LOG:55% CACHE:49% DERIVED:48% DATA:38% EDGE:3%
+        +  457s:derived 463s:app 464s:app 466s:app 469s:cache 470s:derived
+   496s    697k/s    697k/s    0%    89ms     LOG 67%  $12627   $1541   $314k  3286%
 
-  outcome: won   peak 607k/s of 420k/s
+  outcome: won   peak 697k/s of 420k/s
 
   🤖  AI assistant (RAG) — target 24k/s, p99 < 2600ms, ceiling $850/s
 
      t    demand    served   err     p99     hottest  income   spend    cash  budget
   --------------------------------------------------------------------------------
-     0s      15/s      15/s    0%   722ms      APP 9%      $3      $7   $6.9k     0%
-        $  tier $4  app $2  lb $1
-        ▪  APP:9% SQL:3%
-        +  0s:indexes
-    60s      63/s      63/s    0%   746ms     APP 38%      $6     $10   $6.5k     0%
-        $  tier $4  app $2  pooler $2  lb $1  usage $1
-        ▪  APP:38% SQL:11% GPU:4%
-        +  2s:pooler
-   120s     208/s     208/s    0%   823ms     APP 21%     $19     $26   $6.5k   251%
-        $  vector $11  tier $4  app $3  usage $2  autoscale $2  pooler $2  lb $1
-        ▪  APP:21% SQL:19% GPU:12%
-        +  78s:app 80s:app 91s:tier 99s:autoscale 101s:app 102s:app 105s:vector
-   180s     916/s     916/s    0%  1497ms     APP 61%     $83     $34   $7.0k   114%
-        $  vector $11  usage $9  tier $5  app $3  autoscale $2  pooler $2  lb $1
-        ▪  APP:61% GPU:52% SQL:41% VEC:4%
-        +  174s:tier
-   240s    6.0k/s    6.0k/s    0%   573ms     APP 97%    $550    $178   $5.3k  2340%
-        $  gpu $106  vector $13  search $12  tier $11  cache $9  obs $6  app $5
-        ▪  APP:97% GPU:64% SQL:47% VEC:8% CACHE:3%
-        +  190s:gpu 192s:cache 193s:semanticCache 203s:tier 206s:app 208s:router 222s:obs 229s:lb 230s:cache 232s:replica 233s:vector 235s:search 237s:search 238s:app 240s:app
-   300s     19k/s     19k/s    0%   278ms     APP 63%   $1729    $467    $32k   599%
-        $  gpu $370  tier $19  app $16  vector $13  search $12  cache $9  cdn $7
-        ▪  APP:63% GPU:50% SQL:49% VEC:25% CACHE:8% GW:6% SEARCH:5%
-        +  241s:app 243s:app 248s:cdn 249s:cdn 251s:gpu 284s:gpu 286s:tier
-   360s     34k/s     34k/s    0%   349ms     APP 59%   $3057    $509    $50k   350%
-        $  gpu $370  app $27  warehouse $20  tier $19  vector $13  search $12  cache $9
-        ▪  APP:59% VEC:50% SQL:33% GPU:31% CACHE:16% GW:11% SEARCH:10%
-        +  341s:warehouse 343s:batching 344s:app 346s:app 347s:app 352s:rt 353s:rt
-   373s     40k/s     40k/s    0%   380ms     VEC 58%   $3600    $514    $87k   279%
+     0s      15/s      15/s    0%   720ms      SVC 9%      $3      $8   $6.7k     0%
+        $  tier $4  app $2  pooler $2
+        ▪  SVC:9% DATA:2%
+    60s      63/s      63/s    0%   744ms     SVC 36%      $6      $9   $6.4k     0%
+        $  tier $4  app $2  pooler $2  usage $1
+        ▪  SVC:36% DATA:10%
+   120s     215/s     215/s    0%   825ms     SVC 22%     $20     $29   $6.3k   208%
+        $  vectorEngine $10  derived $5  tier $4  app $3  usage $2  autoscale $2  pooler $2
+        ▪  SVC:22% DATA:17% DERIVED:2%
+        +  78s:app 80s:app 99s:tier 102s:autoscale 104s:app 105s:derived 107s:vectorEngine
+   180s     945/s     945/s    0%  1568ms     SVC 71%     $87     $37   $6.7k    95%
+        $  vectorEngine $10  usage $10  derived $5  tier $5  app $3  autoscale $2  pooler $2
+        ▪  SVC:71% DATA:37% DERIVED:11%
+        +  179s:tier
+   240s    8.0k/s    8.0k/s    0%   334ms     SVC 73%    $745    $182   $3.1k  1091%
+        $  gpu $106  tier $11  searchEngine $10  vectorEngine $10  cache $9  app $7  derived $7
+        ▪  SVC:73% DATA:41% DERIVED:31% MODEL:27% CACHE:4%
+        +  181s:app 189s:gpu 190s:cache 192s:semanticCache 206s:router 208s:tier 209s:app 211s:app 222s:obs 227s:cache 229s:replica 230s:derived 232s:searchEngine 233s:batching 235s:app 237s:app 238s:app
+   300s     27k/s     27k/s    0%   432ms     SVC 62%   $2510    $316    $72k   225%
+        $  gpu $194  app $23  tier $19  olapEngine $13  searchEngine $10  vectorEngine $10  cache $9
+        ▪  SVC:62% DERIVED:60% MODEL:45% DATA:40% CACHE:12%
+        +  268s:olapEngine 275s:derived 283s:cdn 284s:cdn 287s:gpu 293s:tier
+   352s     40k/s     40k/s    0%   376ms     SVC 58%   $3701    $520    $73k   108%
 
   outcome: won   peak 40k/s of 24k/s

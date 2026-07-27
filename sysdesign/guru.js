@@ -70,27 +70,55 @@ var Guru = (() => {
       if (!s.infra.semanticCache) return 'semanticCache';
       return r.stations.gpu.util > 0.35 ? 'gpu' : null;
     },
-    analytics: () => 'warehouse',
-    search: () => 'search',
+    analytics: s => derivedFix(s, 'olapEngine'),
+    search: s => derivedFix(s, 'searchEngine'),
     media: s => (s.infra.objstore ? 'cdn' : 'objstore'),
     read: s => (s.infra.cacheNodes === 0 ? 'cache' : (s.infra.pops === 0 ? 'cdn' : 'cache')),
-    lookup: s => (s.infra.kvNodes === 0 ? 'kv' : 'kv'),
+    lookup: s => (s.infra.kvEngine ? 'tier' : 'kvEngine'),
     write: s => (s.infra.tier < Content.COMMODITY_TIER ? 'tier' : 'shard'),
-    realtime: s => (s.infra.rtNodes === 0 ? 'rt' : 'rt'),
+    realtime: s => (s.infra.push ? 'app' : 'push'),
   };
 
   // The one place that answers "this box is full — what do I buy?". Every rule
   // that widens a tier routes through here, so a new station is one entry.
   const SCALE_OUT = {
-    edge: 'cdn', gateway: 'lb', app: 'app', realtime: 'rt', cache: 'cache',
-    stream: 'stream', sql: 'replica', kv: 'kv', search: 'search',
-    vector: 'vector', gpu: 'gpu', objstore: null, warehouse: null,
+    edge: 'cdn', app: 'app', cache: 'cache', stream: 'stream',
+    sql: 'replica', derived: 'derived', gpu: 'gpu', objstore: null,
   };
+
+  // A read model is two purchases: the engine that answers the query shape, and
+  // the fleet it runs on. Ask for whichever is missing.
+  const derivedFix = (s, engine) => (s.infra.derivedNodes === 0 ? 'derived' : engine);
 
   // A rule fires on live numbers and names one purchase. `buy` is what the bot
   // clicks and what the card's button does; null means the advice is to stop
   // buying, which is advice too.
   const RULES = [
+    // --- nothing is running yet ---------------------------------------------
+    {
+      key: 'design',
+      when: s => !s.live,
+      headline: 'Nothing is built yet',
+      why: (r, s) => {
+        const top = Content.CLASS_KEYS
+          .filter(k => s.mix[k] >= 0.05)
+          .sort((a, b) => s.mix[b] - s.mix[a])
+          .slice(0, 3);
+        return 'This workload is '
+          + top.map(k => Math.round(100 * s.mix[k]) + '% ' + Content.CLASSES[k].label).join(', ')
+          + '. ' + top.map(k => Content.CLASSES[k].label + ' wants ' + Content.CLASSES[k].wants)
+            .join('; ') + '.';
+      },
+      action: 'Draw the smallest system that can serve this, then go live. You can '
+        + 'add boxes once you know what hurts; you cannot know before there is traffic, '
+        + 'and everything you build now bills from the moment it exists.',
+      buy: s => {
+        if (s.infra.appMax === 0) return 'app';
+        if (s.infra.tier === 0) return 'tier';
+        if (!s.infra.indexes) return 'indexes';
+        return null;
+      },
+    },
     // --- the run ends here, whatever else is wrong ------------------------
     {
       key: 'outOfRunway',
@@ -154,40 +182,40 @@ var Guru = (() => {
     },
     {
       key: 'searchScan',
-      when: (s, r) => s.infra.searchNodes === 0 && sqlShare(r, 'search') > 0.12 && r.perClass.search.demand > 300,
+      when: (s, r) => !s.infra.searchEngine && sqlShare(r, 'search') > 0.12 && r.perClass.search.demand > 300,
       headline: 'Search is a full table scan',
       why: r => 'Text queries are ' + Math.round(100 * sqlShare(r, 'search'))
         + '% of the database. No B-tree can find a word in the middle of a document.',
-      action: 'Stand up a search index. It is a different data structure, not a bigger box.',
-      buy: () => 'search',
+      action: 'Build the inverted index. It is a different data structure, not a bigger box.',
+      buy: s => derivedFix(s, 'searchEngine'),
     },
     {
       key: 'reportsOnProd',
-      when: (s, r) => !s.infra.warehouse && sqlShare(r, 'analytics') > 0.3 && r.demandRps > 4000,
+      when: (s, r) => !s.infra.olapEngine && sqlShare(r, 'analytics') > 0.3 && r.demandRps > 4000,
       headline: 'Reports are competing with transactions',
       why: r => 'Analytics is ' + Math.round(100 * sqlShare(r, 'analytics'))
         + '% of your database load. Row stores answer point queries; reports scan. '
         + 'Sharding makes this worse, because every report then fans out to every shard.',
-      action: 'Move reporting to the lakehouse and let it be seconds behind.',
-      buy: () => 'warehouse',
+      action: 'Move reporting to a columnar copy and let it be seconds behind.',
+      buy: s => derivedFix(s, 'olapEngine'),
     },
     {
       key: 'polling',
-      when: (s, r) => s.infra.rtNodes === 0 && r.perClass.realtime.demand > 600,
+      when: (s, r) => !s.infra.push && r.perClass.realtime.demand > 600,
       headline: 'Realtime traffic is polling your service tier',
       why: r => Math.round(r.perClass.realtime.demand) + ' req/s of live updates are being '
         + 'faked with repeated requests, at twenty units of application capacity each.',
-      action: 'Put a realtime gateway in front. It is sized in sockets, not requests.',
-      buy: () => 'rt',
+      action: 'Turn on push delivery. It is sized in sockets, not requests.',
+      buy: () => 'push',
     },
     {
       key: 'lookupsOnSql',
-      when: (s, r) => s.infra.kvNodes === 0 && sqlShare(r, 'lookup') > 0.25 && r.perClass.lookup.demand > 2500,
+      when: (s, r) => !s.infra.kvEngine && sqlShare(r, 'lookup') > 0.25 && r.perClass.lookup.demand > 2500,
       headline: 'Key lookups are on the relational database',
       why: r => 'Sessions, flags and counters are ' + Math.round(100 * sqlShare(r, 'lookup'))
         + '% of your database. None of them need a join, a transaction or a query planner.',
-      action: 'Move them to the KV store — it partitions without coordinating.',
-      buy: () => 'kv',
+      action: 'Switch them to the key-value engine — it partitions without coordinating.',
+      buy: () => 'kvEngine',
     },
     // --- the database is full, and which fix depends on WHAT filled it -----
     {
@@ -256,15 +284,6 @@ var Guru = (() => {
     },
     // --- everything else that is out of capacity ---------------------------
     {
-      key: 'gatewayFull',
-      when: (s, r) => util(r, 'gateway') > BAD,
-      headline: 'The front door is the bottleneck',
-      why: r => 'The load balancer tier is at ' + Math.round(100 * util(r, 'gateway'))
-        + '%. Everything behind it is waiting on the thing in front of it.',
-      action: 'Double the balancer fleet.',
-      buy: () => 'lb',
-    },
-    {
       key: 'appFull',
       when: (s, r) => r.stations.app.ceilUtil > WARN,
       headline: 'The service tier is saturated',
@@ -284,12 +303,13 @@ var Guru = (() => {
       buy: () => 'cache',
     },
     {
-      key: 'vectorFull',
-      when: (s, r) => s.infra.vectorNodes > 0 && util(r, 'vector') > BAD,
-      headline: 'Retrieval is saturated',
-      why: r => 'The vector index is at ' + Math.round(100 * util(r, 'vector')) + '%.',
-      action: 'Double the vector fleet.',
-      buy: () => 'vector',
+      key: 'derivedFull',
+      when: (s, r) => s.infra.derivedNodes > 0 && util(r, 'derived') > BAD,
+      headline: 'The derived stores are saturated',
+      why: r => 'Your read models are at ' + Math.round(100 * util(r, 'derived'))
+        + '% — search, reports and retrieval share one fleet, and it is full.',
+      action: 'Double the derived fleet.',
+      buy: () => 'derived',
     },
     {
       key: 'apiCeiling',
@@ -370,12 +390,12 @@ var Guru = (() => {
     // --- nothing is broken yet, and this is when the cheap moves are cheap --
     {
       key: 'noRetrieval',
-      when: (s, r) => r.perClass.infer.demand > 250 && s.infra.vectorNodes === 0,
+      when: (s, r) => r.perClass.infer.demand > 250 && !s.infra.vectorEngine,
       headline: 'The model is answering without your data',
       why: () => 'Every inference request is going to the model with no retrieved context. '
         + 'Grounding is a search problem before it is a model problem.',
       action: 'Add a vector index so answers come from your corpus.',
-      buy: () => 'vector',
+      buy: s => derivedFix(s, 'vectorEngine'),
     },
     {
       key: 'edgeOffload',

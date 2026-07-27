@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LOAD BEARING — a systems architecture simulator</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏗️</text></svg>">
-<link rel="stylesheet" href="index.css?v=2">
+<link rel="stylesheet" href="index.css?v=6">
 </head>
 <body>
 
@@ -46,7 +46,7 @@
 </div>
 
 <div id="briefbar">
-  <span id="brief-name"></span>
+  <span id="brief-name" title="reread the brief"></span>
   <span id="brief-chips"></span>
   <div id="mix-segments" title="the traffic mix this brief generates"></div>
 </div>
@@ -57,6 +57,13 @@
     <div id="toasts"></div>
     <div id="memos"></div>
     <div id="probe" class="hidden"></div>
+    <div id="launch">
+      <div id="launch-title">DESIGN THE SYSTEM</div>
+      <div id="launch-sub">Nothing is built and nothing is billing. Draw what this
+        workload needs, then start taking traffic.</div>
+      <button id="btn-golive">Go Live!</button>
+      <div id="launch-note"></div>
+    </div>
     <div id="guru-panel" class="hidden">
       <div id="guru-head">
         <span>🧘 THE GURU SEES</span>
@@ -92,7 +99,7 @@
 <div id="modal-backdrop" class="hidden">
 
   <div id="intro" class="card">
-    <div class="card-kicker">NOW IN PRODUCTION</div>
+    <div class="card-kicker">A NEW SERVICE</div>
     <div class="card-title" id="intro-title"></div>
     <div class="card-text" id="intro-blurb"></div>
     <div class="card-kicker" style="margin-top:14px">WHAT IT HAS TO DO</div>
@@ -100,11 +107,15 @@
     <div class="card-kicker">WHAT IT HAS TO HOLD — hover each</div>
     <div id="brief-nfr"></div>
     <div class="card-text" style="margin-top:14px">
-      This is the system, running, right now. You start with one small server, one
-      balancer and one database, and real traffic is already arriving. It flows left to
-      right through whatever you build; served requests earn money and bring more users,
-      and more users break what worked yesterday. Nothing here is hypothetical — you are
-      not sketching this architecture, you are operating it.<br><br>
+      You start with an empty board. Draw the system this workload needs — the
+      smallest one that can serve it — and press <b style="color:#43d17a">Go Live</b>.
+      Then traffic starts arriving, and it flows left to right through whatever you
+      built: served requests earn money and bring more users, and more users break what
+      worked yesterday.<br><br>
+      A finished design is <b>five to seven boxes</b>. Only the ones this workload could
+      use are on the board, and you will not need all of those. Everything you build
+      bills from the moment it exists, so building it early and building it late are
+      both mistakes — just different ones.<br><br>
       Every box shows how full it is, because latency is service time ÷ (1 − utilization) —
       systems do not slow down gradually, they fall off a cliff. <b>Hover any box</b> to
       interrogate it: traffic, latency, errors, saturation and run-rate. How much of
@@ -152,15 +163,15 @@
 
 </div>
 
-<script src="format.js?v=2"></script>
-<script src="flourish.js?v=2"></script>
-<script src="content.js?v=2"></script>
-<script src="catalog.js?v=2"></script>
-<script src="memos.js?v=2"></script>
-<script src="engine.js?v=2"></script>
-<script src="guru.js?v=2"></script>
-<script src="score.js?v=2"></script>
-<script src="ui.js?v=2"></script>
-<script src="index.js?v=2"></script>
+<script src="format.js?v=6"></script>
+<script src="flourish.js?v=6"></script>
+<script src="content.js?v=6"></script>
+<script src="catalog.js?v=6"></script>
+<script src="memos.js?v=6"></script>
+<script src="engine.js?v=6"></script>
+<script src="guru.js?v=6"></script>
+<script src="score.js?v=6"></script>
+<script src="ui.js?v=6"></script>
+<script src="index.js?v=6"></script>
 </body>
 </html>

@@ -178,7 +178,7 @@ Content.INSIGHTS = {
   fanout: {
     title: 'Cross-shard fan-out',
     text: 'Your reports now touch every shard and merge the results. Each shard scans only its slice, so the bill is not N× the work — it is coordination: fan out, wait for the slowest, merge. That overhead climbs with every split, which is why 64 shards makes a report roughly 8× dearer than one. Sharding made writes cheap and joins expensive.',
-    check: (s, r) => s.infra.shards >= 4 && !s.infra.warehouse && r.perClass.analytics.demand > 0
+    check: (s, r) => s.infra.shards >= 4 && !s.infra.olapEngine && r.perClass.analytics.demand > 0
       && r.units.sql.analytics > 0.25 * r.sql.cap,
   },
   hotkey: {
@@ -199,7 +199,7 @@ Content.INSIGHTS = {
   },
   log: {
     title: 'The log in front of the database',
-    text: 'An append-only log accepts a write in a millisecond and lets every consumer read it at its own pace: the database, the search index, the warehouse, the cache invalidator. It converts overload from errors into backlog, and one write into many derived views. But an acknowledged write is not yet a stored write — that gap is a design decision you must be able to defend.',
+    text: 'An append-only log accepts a write in a millisecond and lets every consumer read it at its own pace: the store of record, the search index, the columnar copy, the cache invalidator. It converts overload from errors into backlog, and one write into many derived views. But an acknowledged write is not yet a stored write — that gap is a design decision you must be able to defend.',
   },
   queuedebt: {
     title: 'A queue is debt, not capacity',
@@ -212,7 +212,7 @@ Content.INSIGHTS = {
   },
   cdc: {
     title: 'Change data capture',
-    text: 'Rather than writing to your database and your search index and your warehouse — and being wrong in a different way in each — write once and tail the database\'s own replication log into a stream. Every derived view is a consumer. This is how you keep four copies of the truth without four chances to lose it.',
+    text: 'Rather than writing to your datastore and your search index and your columnar copy — and being wrong in a different way in each — write once and tail the datastore\'s own replication log into a stream. Every derived view is a consumer. This is how you keep four copies of the truth without four chances to lose it.',
   },
   blob: {
     title: 'Blobs do not go in the database',

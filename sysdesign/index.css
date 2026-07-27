@@ -71,7 +71,8 @@ button.sel { background: var(--accent); color: #06101d; border-color: var(--acce
   padding: 5px 14px; background: #11161f;
   border-bottom: 1px solid var(--line); flex: 0 0 auto; font-size: 11px;
 }
-#brief-name { font-weight: 700; color: var(--gold); white-space: nowrap; }
+#brief-name { font-weight: 700; color: var(--gold); white-space: nowrap; cursor: pointer; }
+#brief-name:hover { text-decoration: underline; }
 .chip {
   padding: 1px 7px; border: 1px solid var(--line); border-radius: 10px;
   color: var(--dim); white-space: nowrap; cursor: default;
@@ -221,3 +222,20 @@ button.sel { background: var(--accent); color: #06101d; border-color: var(--acce
 #wanted { margin: 12px 0 2px; padding: 9px 12px; background: #11161f; border-left: 2px solid var(--gold); }
 #wanted .card-text { font-size: 12px; color: var(--dim); margin-top: 3px; }
 #overall { font-size: 42px; font-weight: 700; float: right; line-height: 1; }
+
+/* ---- go live ----------------------------------------------------------- */
+#launch {
+  position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%);
+  z-index: 25; text-align: center; width: 460px;
+  background: rgba(13,17,23,0.94); border: 1px solid var(--line);
+  border-radius: 8px; padding: 12px 16px;
+}
+#launch-title { font-size: 12px; letter-spacing: 3px; color: var(--gold); }
+#launch-sub { font-size: 11px; color: var(--dim); margin: 5px 0 9px; }
+#btn-golive {
+  font-size: 15px; font-weight: 700; letter-spacing: 1px; padding: 8px 26px;
+  background: var(--good); color: #06120a; border-color: var(--good);
+}
+#btn-golive:hover:not(:disabled) { background: #6ee79a; border-color: #6ee79a; }
+#btn-golive:disabled { background: var(--panel2); color: var(--dim); border-color: var(--line); }
+#launch-note { font-size: 10px; color: var(--faint); margin-top: 7px; }

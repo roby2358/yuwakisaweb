@@ -8,9 +8,11 @@
 // game: it is the game's own advice, executed. If a tuning change makes the
 // advice wrong, the bot stops winning and this file says so.
 //
-// Two things are asserted and must stay true:
-//   1. sensible play wins every brief
+// Three things are asserted and must stay true:
+//   1. sensible play wins every service
 //   2. the same play WITHOUT the connection pooler does not
+//   3. every finished design is five to seven boxes — more than that is a
+//      shopping list, and the whole point of the board is that it is a design
 // Anything else printed here is for eyeballing balance.
 
 const path = require('path');
@@ -27,8 +29,16 @@ const BUY_EVERY = 0.6;      // the bot considers a purchase this often
 function play(scenario, seed, options) {
   const state = Engine.createState(seed);
   Engine.applyScenario(state, scenario);
-  let nextBuy = 0;
   const log = [];
+  // Design first. The bot builds the smallest thing that can serve this
+  // workload — which is what the guru advises before there is any traffic —
+  // and then goes live.
+  while (!state.live) {
+    const key = Guru.nextBuy(state);
+    if (!key || options.skip.includes(key) || !Engine.buy(state, key).ok) break;
+  }
+  Engine.goLive(state);
+  let nextBuy = 0;
   while (!state.outcome && state.t < MAX_T) {
     Engine.tick(state);
     if (state.t < nextBuy) continue;
@@ -59,10 +69,15 @@ function play(scenario, seed, options) {
   return { state, log };
 }
 
+const DESIGN_MAX = 7;   // a finished design is five to seven boxes
+
 function line(state) {
   const card = Score.card(state);
   const s = Content.SCENARIOS[state.scenario];
+  const stations = state.report.stations;
   return {
+    board: Content.STATION_KEYS.filter(k => stations[k].relevant).length,
+    built: Content.STATION_KEYS.filter(k => stations[k].owned),
     scenario: state.scenario,
     outcome: state.outcome || 'timeout',
     cause: state.deathCause || '',
@@ -78,8 +93,8 @@ function line(state) {
 }
 
 function report(rows) {
-  console.log('\n  brief                outcome     time   peak served / target      grade');
-  console.log('  ' + '-'.repeat(76));
+  console.log('\n  service              outcome     time   peak served / target      grade  design');
+  console.log('  ' + '-'.repeat(84));
   for (const r of rows) {
     console.log('  ' + r.name.padEnd(20)
       + r.outcome.padEnd(11)
@@ -87,6 +102,7 @@ function report(rows) {
       + (Fmt.rate(r.peak) + ' / ' + Fmt.rate(r.target)).padStart(22) + '  '
       + (Math.round(100 * r.frac) + '%').padStart(5) + '   '
       + r.grade.padStart(3) + ' (' + Math.round(100 * r.overall) + ')'
+      + ('  ' + r.built.length + '/' + r.board).padStart(7)
       + (r.cause ? '  ← ' + r.cause : ''));
   }
 }
@@ -138,8 +154,16 @@ function main() {
   if (unpooled.peakServed > 0.6 * pooled.peakServed) {
     problems.push('skipping the pooler barely hurt — the connection lesson is not biting');
   }
+  const sprawl = rows.filter(r => r.built.length > DESIGN_MAX);
+  if (sprawl.length) {
+    problems.push('a finished design grew past ' + DESIGN_MAX + ' boxes: '
+      + sprawl.map(r => r.scenario + ' built ' + r.built.length
+        + ' (' + r.built.map(k => Content.STATIONS[k].short).join(' ') + ')').join(', '));
+  }
   if (!problems.length) {
-    console.log('\n  OK — every brief is winnable with the guru\'s own advice.\n');
+    const widest = rows.reduce((a, r) => Math.max(a, r.built.length), 0);
+    console.log('\n  OK — every service is winnable with the guru\'s own advice,'
+      + ' and the widest design is ' + widest + ' boxes.\n');
     return;
   }
   console.log('');

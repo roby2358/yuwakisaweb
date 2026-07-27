@@ -177,6 +177,15 @@ function makeDom(html) {
       for (const h of hits) h.fn(event);
       return hits.length;
     },
+    // dispatch to an element you already hold — the shop's buttons carry no id,
+    // and the point of that test is that the node itself survives a redraw
+    fireNode(el, type) {
+      const hits = listeners.filter(l => l.el === el && l.type === type);
+      if (!hits.length) throw new Error('no ' + type + ' handler on that element');
+      const event = { currentTarget: el, target: el, clientX: 0, clientY: 0, preventDefault() {} };
+      for (const h of hits) h.fn(event);
+      return hits.length;
+    },
     // dispatch to whatever registered on the element, e.g. scene mousemove
     fireAt(id, type, x, y) {
       const el = byId.get(id);
