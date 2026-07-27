@@ -219,6 +219,12 @@ button.sel { background: var(--accent); color: #06101d; border-color: var(--acce
 #scorecard .sc-what { font-size: 11px; color: var(--faint); }
 #scorecard .sc-note { font-size: 11px; color: var(--dim); }
 #verdict { font-size: 15px; color: var(--gold); margin: 4px 0 2px; }
+#end-reqs, #end-subs { margin: 12px 0 2px; }
+.req { display: flex; gap: 8px; align-items: baseline; padding: 2px 0; font-size: 12px; }
+.req-mark { width: 14px; text-align: center; font-weight: 700; flex: 0 0 auto; }
+.req-label { flex: 0 0 auto; min-width: 130px; color: var(--dim); }
+.req-label b { color: var(--ink); }
+.req-why { color: var(--dim); }
 #wanted { margin: 12px 0 2px; padding: 9px 12px; background: #11161f; border-left: 2px solid var(--gold); }
 #wanted .card-text { font-size: 12px; color: var(--dim); margin-top: 3px; }
 #overall { font-size: 42px; font-weight: 700; float: right; line-height: 1; }

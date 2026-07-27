@@ -1041,6 +1041,34 @@ Content.SHOP = [
 Content.SHOP_BY_KEY = {};
 for (const item of Content.SHOP) Content.SHOP_BY_KEY[item.key] = item;
 
+// What a workload's mix implies about the shape of the answer: each entry says
+// "this much of this traffic wants that subsystem". Thresholds are in request
+// share but chosen with the class's unit cost in mind — 3% search is a lot of
+// database, 3% lookups is nothing. The review grades against this table:
+// built-and-needed, needed-and-missing, or built-for-nothing.
+Content.EXPECTED = [
+  { item: 'objstore', classes: ['media'], min: 0.02,
+    need: 'uploads are durable bytes, not rows in a table' },
+  { item: 'cdn', classes: ['media'], min: 0.10,
+    need: 'media at this share is a bandwidth business — serve it from the edge' },
+  { item: 'cache', classes: ['read'], min: 0.35,
+    need: 'reads this hot and repeated should not all reach the datastore' },
+  { item: 'kvEngine', classes: ['lookup'], min: 0.25,
+    need: 'key lookups dominate, and a relational engine is the wrong shape for them' },
+  { item: 'stream', classes: ['write', 'realtime'], min: 0.20,
+    need: 'a write share this heavy arrives in bursts a log can absorb' },
+  { item: 'searchEngine', classes: ['search'], min: 0.03,
+    need: 'text search without an inverted index is a full scan per query' },
+  { item: 'olapEngine', classes: ['analytics'], min: 0.02,
+    need: 'reports cost 60× a read each — they need their own columnar copy' },
+  { item: 'gpu', classes: ['infer'], min: 0.05,
+    need: 'inference at this share cannot live behind a rented rate limit' },
+  { item: 'vectorEngine', classes: ['infer'], min: 0.20,
+    need: 'grounded answers mean retrieving passages, which is a vector index' },
+  { item: 'push', classes: ['realtime'], min: 0.05,
+    need: 'realtime faked by polling multiplies every connected client' },
+];
+
 // The shop's headings: the eight boxes, in the order work reaches them, plus
 // the two things that are not boxes at all.
 Content.BOXES = Content.STATION_KEYS

@@ -732,6 +732,37 @@ var UI = (() => {
     $('overall').textContent = card.letter;
     $('overall').className = card.overall >= 0.7 ? 'good' : (card.overall >= 0.45 ? 'warn' : 'bad');
     $('verdict').textContent = card.verdict;
+
+    // The brief, line by line: every promise the intro named, checked off or
+    // not, each with the measured reason. The rubric below grades the work;
+    // this answers the simpler question first — did it do what it said?
+    const reqs = $('end-reqs');
+    reqs.innerHTML = '';
+    reqs.appendChild(el('div', 'card-kicker', 'THE BRIEF, LINE BY LINE'));
+    for (const r of Score.requirements(state)) {
+      const row = el('div', 'req');
+      row.appendChild(el('span', 'req-mark ' + (r.met ? 'good' : 'bad'), r.met ? '✓' : '✗'));
+      const label = el('span', 'req-label', r.label + ' ');
+      label.appendChild(el('b', null, r.target));
+      row.appendChild(label);
+      row.appendChild(el('span', 'req-why', r.why));
+      reqs.appendChild(row);
+    }
+
+    // ...and the subsystems that shape implied, against the board you drew.
+    const MARK = { met: ['✓', 'good'], missed: ['✗', 'bad'], overbuilt: ['~', 'warn'] };
+    const subs = $('end-subs');
+    subs.innerHTML = '';
+    subs.appendChild(el('div', 'card-kicker', 'THE SUBSYSTEMS IT EXPECTED'));
+    for (const r of Score.subsystems(state)) {
+      const [mark, tone] = MARK[r.status];
+      const row = el('div', 'req');
+      row.appendChild(el('span', 'req-mark ' + tone, mark));
+      row.appendChild(el('span', 'req-label', r.label));
+      row.appendChild(el('span', 'req-why', r.why));
+      subs.appendChild(row);
+    }
+
     // What the workload was always going to need. Naming it at the end is the
     // single most useful sentence in the whole run — it is the answer the board
     // was a four-hundred-second way of asking.

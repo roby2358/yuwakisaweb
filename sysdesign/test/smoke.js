@@ -271,6 +271,22 @@ function main() {
       'scorecard has ' + table.children.length + ' rows, expected ' + ctx.Content.RUBRIC.length);
     assert(dom.byId.get('overall').textContent.length > 0, 'no overall grade');
     assert(dom.byId.get('verdict').textContent.length > 10, 'no verdict line');
+    const reqs = ctx.Score.requirements(s);
+    assert(reqs.length === 6, 'expected 6 brief lines, got ' + reqs.length);
+    for (const r of reqs) {
+      assert(typeof r.met === 'boolean' && r.why.length > 10,
+        'brief line "' + r.label + '" has no verdict or reason');
+    }
+    assert(dom.byId.get('end-reqs').children.length === 1 + reqs.length,
+      'the brief lines did not render');
+    const subs = ctx.Score.subsystems(s);
+    assert(subs.length > 0, 'no subsystem expectations for ' + s.scenario);
+    for (const r of subs) {
+      assert(['met', 'missed', 'overbuilt'].includes(r.status) && r.why.length > 10,
+        'subsystem "' + r.label + '" has no verdict or reason');
+    }
+    assert(dom.byId.get('end-subs').children.length === 1 + subs.length,
+      'the subsystem lines did not render');
     return dom.byId.get('overall').textContent + ' — ' + dom.byId.get('verdict').textContent;
   });
 
