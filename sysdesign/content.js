@@ -29,7 +29,11 @@ var Content = {}; // var, not const — engine.js re-declares it for Node requir
 
 Content.SIM = {
   DT: 0.1,                  // engine step, seconds
-  START_CASH: 7000,         // seed runway — you burn it before revenue arrives
+  START_CASH: 14000,        // seed runway — you burn it before revenue arrives.
+                            // Sized so the opening design is a real choice, not
+                            // a bare-bones one: enough to draw the boxes the
+                            // brief implies AND pay their run-rate while the
+                            // first users trickle in.
   START_USERS: 70,          // skip the stretch where nothing is happening yet
   MIN_INCOME: 3,            // a live customer base always trickles some cash
 
