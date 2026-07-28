@@ -215,7 +215,7 @@ var UI = (() => {
       ['connections', Fmt.count(r.sql.connUsed) + ' / ' + Fmt.count(r.sql.connCap),
         verdict(r.sql.connUsed / Math.max(1, r.sql.connCap), 'conns')],
       ['shape', r.sql.shards + ' shards × ' + (1 + r.sql.replicas) + ' nodes, tier ' + state.infra.tier, 'good'],
-      ['lookups', state.infra.kvEngine ? 'key-value engine' : 'relational engine',
+      ['lookups', state.infra.kvEngine ? 'moved to the key-value store' : 'on the relational engine',
         state.infra.kvEngine ? 'good' : 'warn'],
       ['write replay', Fmt.pct(r.sql.replayFrac) + ' of replica capacity',
         r.sql.replayFrac > 0.4 ? 'warn' : 'good'],
@@ -235,6 +235,11 @@ var UI = (() => {
     cache: (state, r) => [
       ['hit rate', Fmt.pct(r.hits.cache) + ' (ceiling ' + Fmt.pct(state.repetition * Content.SIM.CACHE_HIT_MAX) + ')',
         verdict(r.hits.cache, 'hitRate')],
+    ],
+    kv: (state, r) => [
+      ['scaling', 'partitions itself — capacity is not your problem', 'good'],
+      ['billing', Fmt.dollars(r.costs.byKey.kvEngine.total) + '/s at $'
+        + Content.SIM.KV_PER_KRPS + ' per 1k lookups', 'good'],
     ],
     edge: (state, r) => [
       ['static hit rate', Fmt.pct(r.hits.edgeStatic), verdict(r.hits.edgeStatic, 'hitRate')],

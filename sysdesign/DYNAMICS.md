@@ -59,7 +59,7 @@ out loud. But you get there by running a system, not by drawing one.
   feature", and it is why the guru refuses to adopt a system whose fixed cost is
   more than about a third of current revenue.
 
-## Eight boxes, and no service uses all eight
+## Nine boxes, and no service uses all nine
 
 A finished system design is **five to seven components**. More than that is a
 shopping list, not a design. So the board holds only things that answer a
@@ -71,6 +71,7 @@ question about what the system *does*:
 | **APP SERVERS** | where does our code run? |
 | **CACHE** | what do we remember quickly? |
 | **DATABASE** | what do we remember truthfully? |
+| **KEY-VALUE STORE** | what do we remember at key scale? |
 | **MESSAGE QUEUE** | what happens later rather than now? |
 | **OBJECT STORE** | where do the big files live? |
 | **SEARCH & ANALYTICS** | what answers a query the store of record answers badly? |
@@ -81,15 +82,18 @@ plumbing are real and are **not decisions** — they are folded into the box the
 belong to. A load balancer is how an app tier has more than one instance, not
 a component you choose.
 
-Two things that used to be boxes are now **engines inside** one. A key-value
-store is a query-shape decision inside the database ("do key lookups belong on
-a relational engine?"), and search, analytics and vector retrieval are three
-engines sharing one derived-store fleet ("what needs its own copy of the data,
-shaped differently?"). Drawing those as separate rectangles answers the
-interesting question before it has been asked.
+Search, analytics and vector retrieval remain **engines inside** one read-model
+box — they share a fleet and a feed, and "what needs its own copy of the data,
+shaped differently?" is one question, not three. The key-value store used to be
+an engine inside the database and is now its own box, for the reason a player
+put best: if the cache earns a rectangle, so does the store carrying eighty
+percent of a shortener's requests. In lookup-heavy architectures the rest of
+the board is *its* supporting cast — and its live lesson needs to be visible:
+the box that partitions without coordinating is never the one that is full,
+because its constraint is the bill, not the capacity.
 
 **The board only draws boxes this workload could use**, and a finished design
-uses fewer still. Across the eight services the board is 6–7 boxes and the built
+uses fewer still. Across the eight services the board is 7–8 boxes and the built
 design is 5–7 — measured, not asserted; `test/sim.js` reports both.
 
 ## The design phase
@@ -179,14 +183,15 @@ workload rather than by the clock.
 
 ## Components
 
-Thirty-two purchases across the eight boxes plus two cross-cutting concerns.
+Thirty-two purchases across the nine boxes plus two cross-cutting concerns.
 Each is one decision, and each is double-edged.
 
 **CDN / EDGE** CDN points of presence · edge compute
 **APP SERVERS** instances · autoscaling · push delivery · load shedding · rate limiting
 **CACHE** nodes · request coalescing · hot-key replication · semantic cache
 **MESSAGE QUEUE** queue partitions · idempotent consumers · change data capture
-**DATABASE** indexes · connection pooler · key-value engine · box size (tiers 1–12) · read replicas · shard splits · multi-AZ failover
+**DATABASE** box size (tiers 1–12) · indexes · connection pooler · read replicas · shard splits · multi-AZ failover
+**KEY-VALUE STORE** managed, pay-per-lookup — you switch it on, it sizes itself
 **OBJECT STORE** object storage · pre-signed direct transfer
 **SEARCH & ANALYTICS** fleet nodes · inverted index · columnar copy · vector index
 **INFERENCE** self-hosted accelerators · continuous batching · small-model routing

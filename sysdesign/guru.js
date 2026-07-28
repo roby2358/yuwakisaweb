@@ -84,6 +84,7 @@ var Guru = (() => {
   const SCALE_OUT = {
     edge: 'cdn', app: 'app', cache: 'cache', stream: 'stream',
     sql: 'replica', derived: 'derived', gpu: 'gpu', objstore: null,
+    kv: null, // it sizes itself — there is nothing to widen
   };
 
   // A read model is two purchases: the engine that answers the query shape, and
@@ -214,7 +215,7 @@ var Guru = (() => {
       headline: 'Key lookups are on the relational database',
       why: r => 'Sessions, flags and counters are ' + Math.round(100 * sqlShare(r, 'lookup'))
         + '% of your database. None of them need a join, a transaction or a query planner.',
-      action: 'Switch them to the key-value engine — it partitions without coordinating.',
+      action: 'Switch them to the key-value store — it partitions without coordinating.',
       buy: () => 'kvEngine',
     },
     // --- the database is full, and which fix depends on WHAT filled it -----
@@ -555,7 +556,11 @@ var Guru = (() => {
   function nextScaleDown(state) {
     const r = state.report;
     if (!r) return null;
+    // pay-per-use stores are excluded: their utilization is always low because
+    // the ceiling is not yours to fill — the box is cheap, not idle, and
+    // turning it off dumps its whole workload on something you do own.
     const candidates = Content.SHOP
+      .filter(item => !item.payPerUse)
       .filter(item => item.canScaleDown(state) && r.costs.byKey[item.key].total > 1.5)
       .map(item => ({
         key: item.key,

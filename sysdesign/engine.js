@@ -467,9 +467,6 @@ var Engine = (() => {
     // how a database refuses queries while its CPU is idle.
     let connUsed = 0;
     for (const k of Content.CLASS_KEYS) {
-      // a partitioned key-value engine answers without a session to hold open;
-      // that refusal to do the hard things is exactly why it scales
-      if (k === 'lookup' && infra.kvEngine) continue;
       connUsed += unitsByClass[k].rps * (Math.min(state.prevLatency[k], S.CONN_HOLD_CAP_MS) / 1000);
     }
     if (!infra.pooler) connUsed += infra.appNodes * S.CLIENT_CONNS_PER_APP * eff.stormMult;
@@ -514,9 +511,6 @@ var Engine = (() => {
     for (const k of ['read', 'lookup', 'search', 'analytics', 'media']) {
       st.classUtil[k] = Math.min(1, readUtil);
     }
-    // The key-value engine is a different cluster inside the same box, and it
-    // partitions without coordinating — so it is never the thing that is full.
-    if (infra.kvEngine) st.classUtil.lookup = S.KV_UTIL;
     return {
       connUsed, connCap, connAdmit, primaryUtil, replicaUtil, replicaShare,
       primaryCap, replicaCap, replicas,

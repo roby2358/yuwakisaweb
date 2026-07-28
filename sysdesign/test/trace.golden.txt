@@ -23,25 +23,25 @@
         +  185s:replica 187s:derived 189s:app 190s:kvEngine 211s:cache 213s:cache
    300s     15k/s     15k/s    0%    38ms     APP 68%    $261     $75    $51k 10457%
         $  kvEngine $20  olapEngine $13  cache $9  app $8  derived $7  obs $6  tier $5
-        ▪  APP:68% DB:54% INDEX:12%
+        ▪  APP:68% DB:52% INDEX:12%
         +  295s:app
-   360s     55k/s     55k/s    0%    35ms     APP 65%    $999    $122    $71k  3495%
-        $  app $21  kvEngine $21  push $17  olapEngine $13  tier $11  cache $9  cdn $7
-        ▪  APP:65% INDEX:46% DB:37% CACHE:2%
-        +  311s:rateLimit 313s:tier 325s:push 334s:cdn 335s:cdn 341s:app 343s:app 359s:tier
-   420s    229k/s    229k/s    0%    34ms     APP 61%   $4213    $258   $170k 16944%
-        $  app $87  push $52  tier $35  kvEngine $25  derived $14  olapEngine $13  cache $9
-        ▪  APP:61% DB:53% INDEX:46% CACHE:10%
-        +  379s:derived 388s:tier 389s:app 391s:derived 392s:app 394s:tier
-   480s    286k/s    286k/s    0%    26ms     APP 47%   $5157    $443   $500k  5832%
-        $  app $140  tier $131  push $65  kvEngine $26  derived $25  olapEngine $13  shard $12
-        ▪  APP:47% INDEX:29% CACHE:12% DB:12%
-        +  433s:shard 439s:derived 442s:shard 457s:app
-   540s    1.2M/s    1.2M/s    0%    31ms   INDEX 62%  $21528   $1126   $1.0M  5065%
-        $  app $459  tier $259  push $253  derived $46  kvEngine $45  shard $20  olapEngine $13
-        ▪  INDEX:62% APP:60% CACHE:52% DB:25%
-        +  511s:derived 512s:shard 514s:app 515s:app
-   550s    1.4M/s    1.4M/s    0%    31ms   CACHE 59%  $24585   $1280   $1.2M  4329%
+   360s     55k/s     55k/s    0%    41ms      DB 70%    $999    $118    $72k  3495%
+        $  app $21  kvEngine $21  push $17  olapEngine $13  cache $9  tier $7  cdn $7
+        ▪  DB:70% APP:65% INDEX:46% CACHE:2%
+        +  311s:rateLimit 314s:tier 325s:push 334s:cdn 335s:cdn 341s:app 343s:app
+   420s    240k/s    240k/s    0%    32ms     APP 60%   $4408    $412   $176k 13824%
+        $  tier $131  app $93  push $55  shard $36  kvEngine $25  derived $14  stream $14
+        ▪  APP:60% INDEX:48% DB:42% QUEUE:20% CACHE:10% KV:2%
+        +  361s:tier 379s:derived 389s:app 391s:derived 392s:app 394s:stream 395s:stream 397s:shard 398s:shard 400s:shard 401s:shard
+   480s    296k/s    296k/s    0%    25ms     APP 47%   $5331    $488   $516k  4761%
+        $  app $145  tier $131  push $67  shard $36  kvEngine $26  derived $25  stream $14
+        ▪  APP:47% INDEX:30% DB:22% QUEUE:18% CACHE:13% KV:3%
+        +  437s:derived 455s:app
+   540s    1.2M/s    1.2M/s    0%    33ms   INDEX 64%  $22457   $1190   $1.1M  4203%
+        $  app $480  push $264  tier $259  kvEngine $46  derived $46  shard $36  stream $16
+        ▪  INDEX:64% APP:59% CACHE:54% DB:46% QUEUE:37% KV:13%
+        +  509s:derived 511s:tier 512s:app 514s:app 538s:stream
+   547s    1.4M/s    1.4M/s    0%    34ms   CACHE 59%  $24584   $1310   $1.2M  3770%
 
   outcome: won   peak 1.4M/s of 900k/s
 
@@ -234,28 +234,28 @@
         +  74s:derived 85s:autoscale 86s:app 88s:app 105s:tier 107s:olapEngine
    180s    9.4k/s    9.4k/s    0%    39ms     APP 68%    $168     $81    $47k 11769%
         $  kvEngine $20  olapEngine $13  cache $9  cdn $7  derived $7  obs $6  app $5
-        ▪  APP:68% DB:55% INDEX:5%
+        ▪  APP:68% DB:54% INDEX:5%
         +  125s:obs 141s:app 144s:replica 145s:derived 147s:loadShed 149s:cache 150s:cache 152s:kvEngine 171s:cdn 173s:cdn 174s:app 176s:app
    240s     10k/s     10k/s    0%    38ms     APP 64%    $177     $82    $48k  6592%
         $  kvEngine $20  olapEngine $13  cache $9  cdn $7  derived $7  app $6  obs $6
-        ▪  APP:64% DB:63% INDEX:7%
-   300s     46k/s     46k/s    0%    41ms      DB 69%    $778    $102    $62k  2338%
+        ▪  APP:64% DB:62% INDEX:7%
+   300s     46k/s     46k/s    0%    41ms      DB 68%    $778    $102    $62k  2338%
         $  kvEngine $21  app $19  olapEngine $13  tier $11  cache $9  cdn $7  derived $7
-        ▪  DB:69% APP:65% INDEX:30% CACHE:5%
-        +  245s:tier 274s:tier 283s:app 284s:app
-   360s    232k/s    162k/s   30%    71ms     DB 100%   $2916    $304   $127k 12962%
-        $  tier $131  app $45  push $24  kvEngine $22  stream $14  olapEngine $13  shard $12
+        ▪  DB:68% APP:65% INDEX:30% CACHE:5%
+        +  246s:tier 274s:tier 283s:app 284s:app
+   360s    243k/s    162k/s   33%    71ms     DB 100%   $2916    $305   $128k 12464%
+        $  tier $131  app $45  push $25  kvEngine $22  stream $14  olapEngine $13  shard $12
         ▪  DB:100% APP:85% INDEX:50% QUEUE:31% CACHE:16%
-        +  301s:tier 311s:push 313s:rateLimit 346s:tier 349s:derived 355s:stream 356s:stream 358s:shard 359s:shard
-   420s    569k/s    569k/s    0%    38ms     APP 69%  $10241   $1448   $290k  4330%
-        $  tier $1027  app $188  shard $68  push $50  kvEngine $29  derived $25  stream $16
-        ▪  APP:69% CACHE:54% QUEUE:54% INDEX:44% DB:18%
-        +  361s:app 362s:shard 364s:shard 365s:shard 367s:app 379s:derived 403s:stream 410s:derived 418s:app 419s:app
-   480s    1.1M/s    1.1M/s    0%    52ms     APP 79%  $19067   $2751   $573k  3281%
-        $  tier $2051  app $320  shard $132  push $99  derived $46  kvEngine $38  stream $16
-        ▪  APP:79% QUEUE:60% CACHE:57% INDEX:46% DB:18%
-        +  475s:app 476s:cache 478s:derived 479s:shard
-   512s    1.6M/s    1.6M/s    0%    31ms   INDEX 68%  $28036   $5308   $1.1M  1864%
+        +  302s:tier 311s:push 313s:rateLimit 347s:tier 349s:derived 355s:stream 356s:stream 358s:shard 359s:shard
+   420s    580k/s    580k/s    0%    34ms     APP 63%  $10429    $927   $334k  4260%
+        $  tier $515  app $209  push $51  shard $36  kvEngine $29  derived $25  stream $16
+        ▪  APP:63% CACHE:55% QUEUE:55% INDEX:45% DB:37% KV:4%
+        +  361s:app 362s:shard 364s:app 365s:shard 367s:app 368s:app 377s:derived 401s:stream 410s:derived
+   480s    1.1M/s    1.1M/s    0%    48ms     APP 77%  $19288   $1678   $671k  3190%
+        $  tier $1027  app $333  push $100  shard $68  derived $46  kvEngine $38  stream $16
+        ▪  APP:77% QUEUE:61% CACHE:58% INDEX:47% DB:36% KV:9%
+        +  475s:cache 476s:app 478s:derived 479s:shard
+   511s    1.6M/s    1.6M/s    0%    31ms   INDEX 68%  $28191   $2048   $1.3M  1842%
 
   outcome: won   peak 1.6M/s of 1.0M/s
 

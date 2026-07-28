@@ -8,22 +8,23 @@
 // their answer at that hop and everything after it is asynchronous.
 // Everything else in the game is a consequence of that walk.
 //
-// EIGHT boxes, and no service uses all eight.
+// NINE boxes, and no service uses all nine.
 //
-// A finished system design is five to seven components; more than that is a
+// A finished system design is a handful of components; more than that is a
 // shopping list, not a design. So the board only holds things that answer a
 // question about what the system DOES: where content lives near users, where
-// code runs, what remembers quickly, what remembers truthfully, what happens
-// later, where the big files are, what answers questions the store of record
-// cannot, and what answers with a model.
+// code runs, what remembers quickly, what remembers truthfully, what remembers
+// at key scale, what happens later, where the big files are, what answers
+// questions the store of record cannot, and what answers with a model.
 //
 // Load balancers, DNS, connection routing, socket gateways and the rest of the
 // plumbing are real and are not decisions — they are folded into the box they
 // belong to. A load balancer is how a service tier has more than one instance,
-// not a component you choose. Likewise a key-value store and a search index are
-// engines you turn on inside a box, not new boxes: the interesting question is
-// "does this query shape belong on the store of record?", and drawing it as a
-// separate rectangle answers that question before you have asked it.
+// not a component you choose. Search, analytics and vector retrieval stay
+// engines inside one read-model box — they share a fleet and a feed. The
+// key-value store is its own box because in lookup-heavy architectures it is
+// the centerpiece and everything else is its supporting cast: if the cache
+// earns a rectangle, so does the store carrying eighty percent of the requests.
 
 var Content = {}; // var, not const — engine.js re-declares it for Node require
 
@@ -72,9 +73,10 @@ Content.SIM = {
   WRITE_UNITS: 5,
   WRITE_INDEX_TAX: 1.2,     // indexes make writes 20% costlier
   LOOKUP_UNITS: 1,          // a key lookup on the relational engine
-  KV_LOOKUP_UNITS: 0.02,    // ...and on the partitioned key-value engine
-  KV_UTIL: 0.3,             // a KV engine partitions without coordinating, so it
-                            // is never the thing that is full — it just bills
+  KV_OPS: 8000000,          // the managed key-value store's ceiling — effectively
+                            // bottomless on purpose. It partitions without
+                            // coordinating, so it is never the thing that is
+                            // full; the bill is the constraint, not the box
   KV_PER_KRPS: 0.025,       // $/s per thousand lookups/s. Linear, forever.
   ANALYTICS_UNITS: 60,      // a report on the store of record
   ANALYTICS_FANOUT: 0.12,   // coordination cost per EXTRA shard a report touches
@@ -242,6 +244,16 @@ Content.STATIONS = {
     owned: i => i.tier > 0,
     idleLabel: () => 'not built',
   },
+  kv: {
+    name: 'KEY-VALUE STORE', short: 'KV', color: '#43d17a', col: 3, row: 0,
+    serves: ['lookup'],
+    desc: 'A managed, partitioned key-value store. It refuses joins, transactions and ad-hoc queries, and that refusal is why it partitions without coordinating and is never the thing that is full. You do not size it — you pay per lookup, forever.',
+    cap: i => (i.kvEngine ? Content.SIM.KV_OPS : 0),
+    serviceMs: () => 2,
+    nodes: i => (i.kvEngine ? 3 : 0),
+    owned: i => i.kvEngine,
+    idleLabel: () => 'not built',
+  },
   objstore: {
     name: 'OBJECT STORE', short: 'BLOB', color: '#b0a0ff', col: 4, row: 0,
     serves: ['media'],
@@ -393,7 +405,8 @@ Content.CLASSES = {
     desc: 'Sessions, flags, counters, short-link resolves. Enormous rate, trivial size, no joins ever — the query shape a relational engine is worst at and a partitioned key-value engine is built for.',
     route: ctx => {
       const i = ctx.infra, S = Content.SIM;
-      return [hop('app', 1), hop('sql', i.kvEngine ? S.KV_LOOKUP_UNITS : S.LOOKUP_UNITS)];
+      return [hop('app', 1),
+        i.kvEngine ? hop('kv', 1) : hop('sql', S.LOOKUP_UNITS)];
     },
   },
   media: {
@@ -878,18 +891,6 @@ Content.SHOP = [
     insightOnBuy: 'sharding',
   },
   {
-    key: 'kvEngine', box: 'sql', name: 'Key-value engine', color: '#43d17a',
-    blurb: 'Move sessions, flags and counters onto a partitioned key-value engine. It scales linearly and you never size it — it just bills you per thousand lookups.',
-    tradeoff: 'Key→value only: no joins, no ad-hoc queries. And a second engine to run is a team, whatever the hosting costs.',
-    ...toggle('kvEngine', 380, () => true),
-    fixed: 20, fixedNote: 'a SECOND storage engine: new expertise, new oncall, new failure modes',
-    marginal: s => (s.report
-      ? s.report.perClass.lookup.served / 1000 * Content.SIM.KV_PER_KRPS : 0),
-    ownedLabel: s => (s.infra.kvEngine ? 'lookups partitioned' : null),
-    scaleDownLabel: 'put lookups back on the relational engine',
-    insightOnBuy: 'nosql',
-  },
-  {
     key: 'multiAz', box: 'sql', name: 'Multi-AZ failover', color: '#56d364',
     blurb: 'A synchronous standby in another availability zone, promoted automatically.',
     tradeoff: 'Doubles the primary bill and adds commit latency. Buys you the outage you never have.',
@@ -899,6 +900,22 @@ Content.SHOP = [
     ownedLabel: s => (s.infra.multiAz ? 'standby ready' : null),
     scaleDownLabel: 'drop the standby',
     insightOnBuy: 'failover',
+  },
+  // --- key-value store ------------------------------------------------------
+  {
+    key: 'kvEngine', box: 'kv', name: 'Managed key-value store', color: '#43d17a',
+    blurb: 'Move sessions, flags and counters onto a partitioned key-value store. It scales linearly and you never size it — it just bills you per thousand lookups.',
+    tradeoff: 'Key→value only: no joins, no ad-hoc queries. And a second store to run is a team, whatever the hosting costs.',
+    ...toggle('kvEngine', 380, () => true),
+    // pay-per-use: its utilization is always low because its ceiling is not
+    // yours to fill — low util here means cheap, not idle
+    payPerUse: true,
+    fixed: 20, fixedNote: 'a SECOND storage system: new expertise, new oncall, new failure modes',
+    marginal: s => (s.report
+      ? s.report.perClass.lookup.served / 1000 * Content.SIM.KV_PER_KRPS : 0),
+    ownedLabel: s => (s.infra.kvEngine ? 'lookups partitioned' : null),
+    scaleDownLabel: 'put lookups back on the relational engine',
+    insightOnBuy: 'nosql',
   },
   // --- blob store ---------------------------------------------------------
   {
@@ -1085,7 +1102,7 @@ Content.expectedFor = key => {
 // every design starts with, then what you add as the workload demands it —
 // plus the two things that are not boxes at all. Display order only; the
 // board's layout comes from each station's col/row.
-Content.BOXES = ['app', 'sql', 'cache', 'stream', 'edge', 'objstore', 'derived', 'gpu']
+Content.BOXES = ['app', 'sql', 'cache', 'stream', 'kv', 'edge', 'objstore', 'derived', 'gpu']
   .map(key => ({ key, name: Content.STATIONS[key].name }))
   .concat([{ key: 'cross', name: 'CROSS-CUTTING' }]);
 
