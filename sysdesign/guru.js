@@ -202,9 +202,9 @@ var Guru = (() => {
     {
       key: 'polling',
       when: (s, r) => !s.infra.push && r.perClass.realtime.demand > 600,
-      headline: 'Realtime traffic is polling your service tier',
+      headline: 'Realtime traffic is polling your app servers',
       why: r => Math.round(r.perClass.realtime.demand) + ' req/s of live updates are being '
-        + 'faked with repeated requests, at twenty units of application capacity each.',
+        + 'faked with repeated requests, at ' + S.POLL_UNITS + ' units of app-server capacity each.',
       action: 'Turn on push delivery. It is sized in sockets, not requests.',
       buy: () => 'push',
     },
@@ -227,7 +227,7 @@ var Guru = (() => {
         + '% of primary capacity. Caches cannot absorb a write and replicas cannot '
         + 'serve one — every replica makes it slightly worse by replaying them all.',
       action: (s) => (s.infra.streamParts === 0
-        ? 'Put a log in front to absorb bursts, then split the shards.'
+        ? 'Put a queue in front to absorb bursts, then split the shards.'
         : 'Split the shards. N primaries is N× the write capacity.'),
       buy: (s) => (s.infra.streamParts === 0 ? 'stream' : 'shard'),
     },
@@ -286,7 +286,7 @@ var Guru = (() => {
     {
       key: 'appFull',
       when: (s, r) => r.stations.app.ceilUtil > WARN,
-      headline: 'The service tier is saturated',
+      headline: 'The app servers are saturated',
       why: r => 'Instances are at ' + Math.round(100 * r.stations.app.ceilUtil)
         + '% of the fleet ceiling, and latency is service ÷ (1 − utilization) — the last 15% '
         + 'of a fleet costs more latency than the first 70%.',
@@ -305,10 +305,10 @@ var Guru = (() => {
     {
       key: 'derivedFull',
       when: (s, r) => s.infra.derivedNodes > 0 && util(r, 'derived') > BAD,
-      headline: 'The derived stores are saturated',
+      headline: 'The read models are saturated',
       why: r => 'Your read models are at ' + Math.round(100 * util(r, 'derived'))
         + '% — search, reports and retrieval share one fleet, and it is full.',
-      action: 'Double the derived fleet.',
+      action: 'Double the read-model fleet.',
       buy: () => 'derived',
     },
     {

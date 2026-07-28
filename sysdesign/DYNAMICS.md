@@ -55,7 +55,7 @@ out loud. But you get there by running a system, not by drawing one.
   two parts: a **fixed** amount the moment you own any of it — the team who knows
   it, the dashboards, the on-call rotation — plus a small amount per node. The
   first node of anything is expensive; the tenth is cheap. That step function is
-  the entire argument against "let's just add one more datastore for this one
+  the entire argument against "let's just add one more database for this one
   feature", and it is why the guru refuses to adopt a system whose fixed cost is
   more than about a third of current revenue.
 
@@ -67,22 +67,22 @@ question about what the system *does*:
 
 | box | the question it answers |
 |---|---|
-| **EDGE** | what can be served without reaching us at all? |
-| **SERVICES** | where does our code run? |
+| **CDN / EDGE** | what can be served without reaching us at all? |
+| **APP SERVERS** | where does our code run? |
 | **CACHE** | what do we remember quickly? |
-| **DATASTORE** | what do we remember truthfully? |
-| **STREAM** | what happens later rather than now? |
-| **BLOB STORE** | where do the big files live? |
-| **DERIVED STORES** | what answers a query the store of record answers badly? |
+| **DATABASE** | what do we remember truthfully? |
+| **MESSAGE QUEUE** | what happens later rather than now? |
+| **OBJECT STORE** | where do the big files live? |
+| **SEARCH & ANALYTICS** | what answers a query the store of record answers badly? |
 | **INFERENCE** | what answers with a model? |
 
 Load balancers, DNS, connection routing, socket gateways and the rest of the
 plumbing are real and are **not decisions** — they are folded into the box they
-belong to. A load balancer is how a service tier has more than one instance, not
+belong to. A load balancer is how an app tier has more than one instance, not
 a component you choose.
 
 Two things that used to be boxes are now **engines inside** one. A key-value
-store is a query-shape decision inside the datastore ("do key lookups belong on
+store is a query-shape decision inside the database ("do key lookups belong on
 a relational engine?"), and search, analytics and vector retrieval are three
 engines sharing one derived-store fleet ("what needs its own copy of the data,
 shaped differently?"). Drawing those as separate rectangles answers the
@@ -94,7 +94,7 @@ design is 5–7 — measured, not asserted; `test/sim.js` reports both.
 
 ## The design phase
 
-You start with **nothing built**. No service tier, no datastore, no clock, no
+You start with **nothing built**. No app tier, no database, no clock, no
 traffic, and no bill. You spend seed cash drawing an architecture — and the
 money bar already shows what it will cost, which is the number people discover
 last — and then press **Go Live**.
@@ -149,7 +149,7 @@ as the exception.
 | MEDIA | almost pure bytes | object storage behind a CDN |
 | SEARCH | a scan on a row store, a lookup on an index | inverted index |
 | ANALYTICS | 1% of requests, 60× the work each | columnar lakehouse |
-| REALTIME | sockets, not requests | realtime gateway + log |
+| REALTIME | sockets, not requests | realtime gateway + queue |
 | INFERENCE | two orders of magnitude more expensive than anything else | anything that avoids the call |
 
 Request counts lie; work is what fills a cluster. Analytics is under 3% of
@@ -165,7 +165,7 @@ mechanical.
 |---|---|---|---|---|
 | URL shortener | LOOKUP 82% | 900k/s | 60ms | a redirect is a key lookup with total repetition; cache and KV carry it and the database is nearly a bystander |
 | Social photo feed | READ 44% · MEDIA 30% | 700k/s | 240ms | two workloads in one — bytes on a CDN over object storage, rows in a cache over shards |
-| Chat / messaging | REALTIME 52% · WRITE 24% | 600k/s | 110ms | connections, not requests: push delivery, a log to fan out, key-value lookups for presence |
+| Chat / messaging | REALTIME 52% · WRITE 24% | 600k/s | 110ms | connections, not requests: push delivery, a queue to fan out, key-value lookups for presence |
 | Video streaming | MEDIA 86% | 260k/s | 320ms | almost pure egress — the CDN hit ratio is the P&L, not a performance number |
 | Ride-hailing dispatch | WRITE 52% | 550k/s | 130ms | a write firehose with a geographic key; sharding is mandatory and hot cells are the catch |
 | Ad exchange | LOOKUP 64% | 1.0M/s | 45ms | the deadline is the design: everything must be a key lookup and anything slow must be dropped, not waited for |
@@ -182,13 +182,13 @@ workload rather than by the clock.
 Thirty-two purchases across the eight boxes plus two cross-cutting concerns.
 Each is one decision, and each is double-edged.
 
-**EDGE** CDN points of presence · edge compute
-**SERVICES** instances · autoscaling · push delivery · load shedding · rate limiting
+**CDN / EDGE** CDN points of presence · edge compute
+**APP SERVERS** instances · autoscaling · push delivery · load shedding · rate limiting
 **CACHE** nodes · request coalescing · hot-key replication · semantic cache
-**STREAM** log partitions · idempotent consumers · change data capture
-**DATASTORE** indexes · connection pooler · key-value engine · box size (tiers 1–12) · read replicas · shard splits · multi-AZ failover
-**BLOB STORE** object storage · pre-signed direct transfer
-**DERIVED STORES** fleet nodes · inverted index · columnar copy · vector index
+**MESSAGE QUEUE** queue partitions · idempotent consumers · change data capture
+**DATABASE** indexes · connection pooler · key-value engine · box size (tiers 1–12) · read replicas · shard splits · multi-AZ failover
+**OBJECT STORE** object storage · pre-signed direct transfer
+**SEARCH & ANALYTICS** fleet nodes · inverted index · columnar copy · vector index
 **INFERENCE** self-hosted accelerators · continuous batching · small-model routing
 **CROSS-CUTTING** telemetry · additional regions
 
@@ -390,7 +390,7 @@ sandbox (no libglib), so browser verification is a local step.
   economy becomes a knife-edge where one purchase decides the run.
 - The autoscaler targets ~50% busy and reacts in 12 seconds. Both matter more than
   they look, and both are relative to `GROWTH_RATE`: at a 20-second time constant
-  against 14-second doublings the service tier is permanently behind, which pins
+  against 14-second doublings the app tier is permanently behind, which pins
   the board red and makes every other lesson invisible behind it. Change the pace
   and these two have to move with it.
 - Bump the `?v=` query strings in `index.html` whenever CSS or JS changes, or a
@@ -400,7 +400,7 @@ sandbox (no libglib), so browser verification is a local step.
 
 - **No save/restore.** Prototype: state is not persisted and there is no
   versioning.
-- **Microservices as an axis.** Splitting the service tier into independently
+- **Microservices as an axis.** Splitting the app tier into independently
   scaled services — a real interview topic, with a real cost in hops and
   operational surface — is not modelled.
 - **Multi-region is thin.** Regions currently buy availability and cost; they do

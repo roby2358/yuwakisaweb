@@ -714,7 +714,7 @@ var Engine = (() => {
   // would move it, and how much work that costs while it stays there. One table,
   // so adding a query shape is one entry rather than a hunt.
   const HOMES = [
-    { flag: 'objstore', label: 'media served out of the datastore',
+    { flag: 'objstore', label: 'media served out of the database',
       units: r => r.units.sql.byClass.media },
     { flag: 'searchEngine', label: 'search running as a table scan',
       units: r => r.units.sql.byClass.search },

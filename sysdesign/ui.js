@@ -205,6 +205,13 @@ var UI = (() => {
   // it costs, and nothing about why it hurts.
   const EXTRA = {
     sql: (state, r) => [
+      // the box's utilization is the worst of these two — show both, so a red
+      // bar is attributable to the primary or to the replicas, not to a mystery
+      ['primary', Fmt.pct(r.sql.primaryUtil) + ' of ' + Fmt.count(r.sql.cap) + ' units/s',
+        verdict(r.sql.primaryUtil, 'util')],
+      ['replicas', r.sql.replicas > 0
+        ? Fmt.pct(r.sql.replicaUtil) + ' of ' + Fmt.count(r.sql.replicaCap) + ' units/s'
+        : 'none', r.sql.replicas > 0 ? verdict(r.sql.replicaUtil, 'util') : 'good'],
       ['connections', Fmt.count(r.sql.connUsed) + ' / ' + Fmt.count(r.sql.connCap),
         verdict(r.sql.connUsed / Math.max(1, r.sql.connCap), 'conns')],
       ['shape', r.sql.shards + ' shards × ' + (1 + r.sql.replicas) + ' nodes, tier ' + state.infra.tier, 'good'],
@@ -245,6 +252,13 @@ var UI = (() => {
     ],
   };
 
+  // One unit of work ≈ one indexed point read. Requests are not equal — the
+  // same tooltip everywhere, because "arriving req/s" and "capacity units/s"
+  // sitting side by side with no bridge is how a display stops making sense.
+  const UNIT_TIP = 'Work is measured in capacity units: an indexed read costs 1, '
+    + 'a raw table scan 10, a report 60, a text scan 140. Requests differ, so '
+    + 'the box fills on units of work, not on requests.';
+
   function probeRows(state, r, key) {
     const st = r.stations[key];
     const obs = state.infra.obs;
@@ -256,13 +270,19 @@ var UI = (() => {
       .sort((a, b) => st.classRps[b] - st.classRps[a])
       .map(k => [Content.CLASSES[k].label.toLowerCase(), Fmt.rate(st.classRps[k]), 'good']);
     const sections = [['TRAFFIC', [
-      ['arriving', Fmt.rate(st.inRps), 'good'],
+      ['arriving', Fmt.rate(st.inRps), 'good',
+        'Requests per second reaching this box, before any are refused.'],
       ...arriving,
-      ['capacity', Fmt.count(st.cap) + ' units/s', 'good'],
     ]]];
     if (obs >= 1) {
       sections.push(['SATURATION', [
-        ['utilization', Fmt.pct(st.util), verdict(st.util, 'util')],
+        ['work / capacity',
+          Fmt.count(st.units + st.asyncUnits) + ' / ' + Fmt.count(st.cap) + ' units/s',
+          verdict(st.util, 'util'), UNIT_TIP],
+        ['utilization', Fmt.pct(st.util), verdict(st.util, 'util'),
+          key === 'sql'
+            ? 'The worst of primary and replica utilization — see the rows below.'
+            : 'work ÷ capacity. Every hop multiplies its latency by 1 ÷ (1 − utilization).'],
         ['nodes', String(Fmt.count(st.nodes)), verdict(st.nodes, 'redundancy')],
         ...((EXTRA[key] ? EXTRA[key](state, r) : [])),
       ]]);
@@ -297,8 +317,9 @@ var UI = (() => {
     panel.appendChild(el('div', 'p-desc', def.desc));
     for (const [title, rows] of probeRows(state, state.report, hover)) {
       panel.appendChild(el('div', 'p-sec', title));
-      for (const [label, value, level] of rows) {
+      for (const [label, value, level, tip] of rows) {
         const row = el('div', 'p-row');
+        if (tip) row.title = tip;
         row.appendChild(el('span', null, label));
         row.appendChild(el('span', level, value));
         panel.appendChild(row);
@@ -397,7 +418,7 @@ var UI = (() => {
     }
     const r = state.report;
     $('stat-income').textContent = r
-      ? Fmt.dollars(r.income) + '/s in · ' + Fmt.dollars(r.spend) + '/s out' : '';
+      ? 'revenue ' + Fmt.dollars(r.income) + '/s · spend ' + Fmt.dollars(r.spend) + '/s' : '';
   }
 
   // ---- money --------------------------------------------------------------
@@ -417,7 +438,9 @@ var UI = (() => {
         + (p.marginal > 0 ? 'per node ' + Fmt.dollars(p.marginal) + '/s' : '');
       track.appendChild(seg);
     }
-    $('money-marker').style.left = (100 * r.income / scale) + '%';
+    const marker = $('money-marker');
+    marker.style.left = (100 * r.income / scale) + '%';
+    marker.title = 'revenue ' + Fmt.dollars(r.income) + '/s — profitable while the spend segments stay left of this line';
     const net = r.income - r.spend;
     const label = $('money-net');
     label.textContent = net >= 0
@@ -475,9 +498,20 @@ var UI = (() => {
     }
     ctx.fillStyle = '#4b5563';
     ctx.font = '9px ui-monospace, monospace';
-    ctx.fillText(spec.mark && !markShown
+    const title = spec.mark && !markShown
       ? spec.title + '  ·  ' + spec.mark.label + ' ' + spec.top(spec.mark.at)
-      : spec.title, 4, 10);
+      : spec.title;
+    ctx.fillText(title, 4, 10);
+    // each line named in its own color — a chart with anonymous lines is the
+    // kind of display that "lines up weirdly and inexplicably"
+    let lx = 4 + ctx.measureText(title).width + 10;
+    for (const s of spec.series) {
+      if (!s.label) continue;
+      ctx.fillStyle = s.color;
+      ctx.fillText(s.label, lx, 10);
+      lx += ctx.measureText(s.label).width + 8;
+    }
+    ctx.fillStyle = '#4b5563';
     ctx.textAlign = 'right';
     ctx.fillText(spec.top(peak), w - 4, 10);
     ctx.textAlign = 'left';
@@ -485,28 +519,28 @@ var UI = (() => {
 
   function drawCharts(state) {
     drawChart('chart-rps', state, {
-      title: 'REQUESTS/S', floor: 10, top: Fmt.rate,
+      title: 'THROUGHPUT', floor: 10, top: Fmt.rate,
       mark: { at: state.slo.targetRps, label: 'target' },
       series: [
-        { of: p => p.demand, color: '#3d4552', width: 1 },
-        { of: p => p.served, color: '#43d17a', width: 1.6 },
-        { of: p => p.fail, color: '#f85149', width: 1.2 },
+        { of: p => p.demand, color: '#3d4552', width: 1, label: 'demand' },
+        { of: p => p.served, color: '#43d17a', width: 1.6, label: 'served' },
+        { of: p => p.fail, color: '#f85149', width: 1.2, label: 'failed' },
       ],
     });
     drawChart('chart-lat', state, {
       title: 'LATENCY', floor: state.slo.p99Ms * 1.5, top: Fmt.ms,
       mark: { at: state.slo.p99Ms, label: 'p99 target' },
       series: [
-        { of: p => p.p99, color: '#e3b341', width: 1.6 },
-        { of: p => p.p50, color: '#4ea3ff', width: 1.2 },
+        { of: p => p.p99, color: '#e3b341', width: 1.6, label: 'p99' },
+        { of: p => p.p50, color: '#4ea3ff', width: 1.2, label: 'p50' },
       ],
     });
     drawChart('chart-cash', state, {
-      title: 'REVENUE & SPEND', floor: 10, top: Fmt.money,
+      title: 'MONEY', floor: 10, top: Fmt.money,
       mark: { at: state.slo.costCeiling, label: 'cost ceiling $/s' },
       series: [
-        { of: p => p.income, color: '#43d17a', width: 1.6 },
-        { of: p => p.spend, color: '#f0883e', width: 1.2 },
+        { of: p => p.income, color: '#43d17a', width: 1.6, label: 'revenue' },
+        { of: p => p.spend, color: '#f0883e', width: 1.2, label: 'spend' },
       ],
     });
   }
@@ -562,7 +596,11 @@ var UI = (() => {
     if (segs.dataset.for === state.scenario) return;
     segs.dataset.for = state.scenario;
     segs.innerHTML = '';
-    for (const k of Content.CLASS_KEYS) {
+    // writes lead the bar: the mutation share is the design-deciding number.
+    // Display order only — CLASS_KEYS order feeds the mix jitter's rng draws.
+    const mixOrder = ['write', 'read',
+      ...Content.CLASS_KEYS.filter(k => k !== 'write' && k !== 'read')];
+    for (const k of mixOrder) {
       if (state.mix[k] < 0.002) continue;
       const cls = Content.CLASSES[k];
       const seg = el('div');
@@ -577,7 +615,7 @@ var UI = (() => {
     const slo = state.slo;
     const nines = (1 - slo.availability) * 100;
     return [
-      ['scale', Fmt.rate(slo.targetRps), 'The rate this system has to carry. Hold it, inside everything else here, for 30 seconds.'],
+      ['throughput', Fmt.rate(slo.targetRps), 'The rate this system has to carry. Hold it, inside everything else here, for 30 seconds.'],
       ['p99', slo.p99Ms + 'ms', 'The ninety-ninth percentile users were promised. A tail, not an average.'],
       ['availability', (100 * slo.availability).toFixed(2) + '%',
         'You are allowed to fail ' + nines.toFixed(2) + '% of requests. That allowance is your error budget, and it is spendable.'],
@@ -855,9 +893,9 @@ var UI = (() => {
     shed: 'You shed more load than you served.',
     sql: 'The database was the wall, and you hit it.',
     gpu: 'Inference capacity never caught up with demand.',
-    app: 'The service tier could not keep up.',
-    derived: 'The derived stores could not keep up.',
-    stream: 'The log backed up and never drained.',
+    app: 'The app servers could not keep up.',
+    derived: 'The read models could not keep up.',
+    stream: 'The queue backed up and never drained.',
   };
 
   function lossTitle(state) {

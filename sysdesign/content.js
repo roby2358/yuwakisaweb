@@ -79,7 +79,7 @@ Content.SIM = {
   ANALYTICS_UNITS: 60,      // a report on the store of record
   ANALYTICS_FANOUT: 0.12,   // coordination cost per EXTRA shard a report touches
   SEARCH_SCAN_UNITS: 140,   // "WHERE body LIKE '%...%'" — no index can save you
-  BLOB_IN_DB_UNITS: 40,     // media served out of the datastore. Do not do this.
+  BLOB_IN_DB_UNITS: 40,     // media served out of the database. Do not do this.
   BLOB_IN_APP_UNITS: 6,     // ...and the bytes go through your service tier too
   POLL_UNITS: 12,           // realtime faked by polling the service tier
   PUSH_UNITS: 1.5,          // ...and delivered over a connection already open
@@ -193,7 +193,7 @@ const offPathAt = (at, units) => ({ at, units, absorb: 0, ack: false, offPath: t
 // diagram, because a real design would not have drawn one.
 Content.STATIONS = {
   edge: {
-    name: 'EDGE', short: 'EDGE', color: '#5fd3c4', col: 0, row: 1,
+    name: 'CDN / EDGE', short: 'CDN', color: '#5fd3c4', col: 0, row: 1,
     serves: ['read', 'media'],
     desc: 'Points of presence close to your users. Cached bytes, and — once code runs there — whole responses that never travel to your origin at all. The cheapest capacity in the game is the request you never receive.',
     cap: i => i.pops * Content.SIM.EDGE_OPS,
@@ -203,7 +203,7 @@ Content.STATIONS = {
     idleLabel: () => 'not built',
   },
   app: {
-    name: 'SERVICES', short: 'SVC', color: '#4ea3ff', col: 1, row: 1,
+    name: 'APP SERVERS', short: 'APP', color: '#4ea3ff', col: 1, row: 1,
     serves: Content.CLASS_KEYS,
     desc: 'Your application instances. Stateless is the whole trick: any instance can serve any request, so capacity is a number you can change. Everything about getting traffic to them — balancing, health checks, routing — is a property of this box, not a decision.',
     cap: i => i.appNodes * Content.SIM.APP_UNITS,
@@ -223,9 +223,9 @@ Content.STATIONS = {
     idleLabel: () => 'not built',
   },
   stream: {
-    name: 'STREAM', short: 'LOG', color: '#f0883e', col: 2, row: 2,
+    name: 'MESSAGE QUEUE', short: 'QUEUE', color: '#f0883e', col: 2, row: 2,
     serves: ['write', 'realtime'],
-    desc: 'A partitioned append-only log. It accepts a write in a millisecond and lets everything downstream consume it at its own pace — the datastore, the search index, the analytics copy. One write in, many derived views out.',
+    desc: 'A partitioned append-only log. It accepts a write in a millisecond and lets everything downstream consume it at its own pace — the database, the search index, the analytics copy. One write in, many derived views out.',
     cap: i => i.streamParts * Content.SIM.STREAM_OPS,
     serviceMs: () => 3,
     nodes: i => i.streamParts,
@@ -233,7 +233,7 @@ Content.STATIONS = {
     idleLabel: () => 'not built',
   },
   sql: {
-    name: 'DATASTORE', short: 'DATA', color: '#7bb7ff', col: 3, row: 1,
+    name: 'DATABASE', short: 'DB', color: '#7bb7ff', col: 3, row: 1,
     serves: Content.CLASS_KEYS,
     desc: 'The store of record. Everything here is a decision about a resource you cannot simply clone — indexes, connections, box size, replicas, shards — plus the choice of which query shapes belong on a relational engine at all.',
     cap: i => i.shards * (1 + i.replicas) * Content.tierOf(i).cap,
@@ -243,7 +243,7 @@ Content.STATIONS = {
     idleLabel: () => 'not built',
   },
   objstore: {
-    name: 'BLOB STORE', short: 'BLOB', color: '#b0a0ff', col: 4, row: 0,
+    name: 'OBJECT STORE', short: 'BLOB', color: '#b0a0ff', col: 4, row: 0,
     serves: ['media'],
     desc: 'Durable object storage for media. Cheap, effectively infinite, eleven nines of durability — and an egress bill you will learn to respect, which is exactly what the edge is for.',
     cap: i => (i.objstore ? Content.SIM.OBJ_OPS * 40 : 0),
@@ -253,7 +253,7 @@ Content.STATIONS = {
     idleLabel: () => 'not built',
   },
   derived: {
-    name: 'DERIVED STORES', short: 'DERIVED', color: '#b48cff', col: 4, row: 2,
+    name: 'SEARCH & ANALYTICS', short: 'INDEX', color: '#b48cff', col: 4, row: 2,
     serves: ['search', 'analytics', 'infer'],
     desc: 'Read models built FROM the write path, each shaped for a query the store of record answers badly: an inverted index for text, a columnar copy for reports, a vector index for retrieval. They share a fleet and each costs a pipeline to keep fresh.',
     cap: i => i.derivedNodes * Content.SIM.DERIVED_OPS,
@@ -332,7 +332,7 @@ Content.TIERS = [
 ];
 Content.MAX_TIER = Content.TIERS.length;
 Content.COMMODITY_TIER = 6;
-// Indexed by the tier you have now, so [0] is what it costs to have a datastore
+// Indexed by the tier you have now, so [0] is what it costs to have a database
 // at all. You start with nothing: every box on the board is one you drew.
 Content.TIER_PRICES = [120, 180, 380, 800, 1700, 3600, 9000, 22500, 56000, 140000, 350000, 875000];
 // Tier 0 is not a small box, it is no box. One accessor so nothing else in the
@@ -372,15 +372,15 @@ Content.CLASSES = {
   },
   write: {
     label: 'WRITE',
-    wants: 'primaries — and a log in front if the bursts are spiky', color: '#ff9d3c', bytes: 800, baseMs: 6, revenueMult: 1.4,
-    desc: 'Mutations. Every one is new data, so nothing caches them and no replica can serve one. Only more primaries — or a log in front — scale writes.',
+    wants: 'primaries — and a queue in front if the bursts are spiky', color: '#ff9d3c', bytes: 800, baseMs: 6, revenueMult: 1.4,
+    desc: 'Mutations. Every one is new data, so nothing caches them and no replica can serve one. Only more primaries — or a queue in front — scale writes.',
     route: ctx => {
       const i = ctx.infra, S = Content.SIM;
       const hops = [hop('app', 1)];
       const sqlUnits = S.WRITE_UNITS * (i.indexes ? S.WRITE_INDEX_TAX : 1);
       if (i.streamParts > 0) {
         hops.push(ackAt('stream', 1));      // durable in the log; the user is done
-        hops.push(hop('sql', sqlUnits));    // ...the datastore catches up after
+        hops.push(hop('sql', sqlUnits));    // ...the database catches up after
         return hops;
       }
       hops.push(hop('sql', sqlUnits));
@@ -398,7 +398,7 @@ Content.CLASSES = {
   },
   media: {
     label: 'MEDIA',
-    wants: 'blob storage behind an edge, and nowhere near the datastore', color: '#c9a0ff', bytes: 180000, baseMs: 8, revenueMult: 0.5,
+    wants: 'blob storage behind an edge, and nowhere near the database', color: '#c9a0ff', bytes: 180000, baseMs: 8, revenueMult: 0.5,
     desc: 'Images and video segments. Almost pure bytes: capacity barely matters, egress bills and cache-hit ratio are everything. Belongs nowhere near your store of record.',
     route: ctx => {
       const i = ctx.infra, S = Content.SIM;
@@ -525,7 +525,7 @@ Content.SCENARIOS = {
       'store history, deliver on reconnect',
       'presence: who is online right now',
     ],
-    winShape: 'Connections, not requests. Push delivery holds the sockets, a log fans messages out, and a key-value engine answers presence.',
+    winShape: 'Connections, not requests. Push delivery holds the sockets, a queue fans messages out, and a key-value engine answers presence.',
     mix: { realtime: 0.52, write: 0.24, lookup: 0.13, read: 0.06, media: 0.03, search: 0.01, analytics: 0.01, infer: 0 },
     repetition: 0.45, revenue: 0.01635, rpsPerUser: 1.4,
     targetRps: 600000,
@@ -660,7 +660,7 @@ Content.SHOP = [
   {
     key: 'edgeCompute', box: 'edge', name: 'Edge compute', color: '#7ee6d8',
     blurb: 'Run code in the PoP: personalize, authorize and assemble responses with no origin trip.',
-    tradeoff: 'A second place your logic lives, with milliseconds of CPU and no datastore next to it.',
+    tradeoff: 'A second place your logic lives, with milliseconds of CPU and no database next to it.',
     ...toggle('edgeCompute', 500, s => s.infra.pops > 0),
     fixed: 7, fixedNote: 'a second deploy target, a second set of logs, a second runtime',
     marginal: () => 0,
@@ -672,7 +672,7 @@ Content.SHOP = [
   {
     key: 'app', box: 'app', name: 'Service instances', color: '#4ea3ff',
     blurb: 'Double the stateless fleet. This is the easy axis — use it.',
-    tradeoff: 'Stateless only scales what is stateless. Everything behind it is still one datastore.',
+    tradeoff: 'Stateless only scales what is stateless. Everything behind it is still one database.',
     ...dbl('appMax', 12),
     owned: s => s.infra.appMax > 0,
     fixed: 2, fixedNote: 'deploys, rollbacks, balancing, health checks, and the pager for all of it',
@@ -718,7 +718,7 @@ Content.SHOP = [
   },
   {
     key: 'rateLimit', box: 'app', name: 'Rate limiting', color: '#a5a5ff',
-    blurb: 'Per-client quotas at the front. Abuse and floods stop here rather than at your datastore.',
+    blurb: 'Per-client quotas at the front. Abuse and floods stop here rather than at your database.',
     tradeoff: 'Someone will be limited who should not have been.',
     ...toggle('rateLimit', 180, () => true),
     fixed: 2.5, fixedNote: 'quota policy, false positives, and an appeals inbox',
@@ -771,9 +771,9 @@ Content.SHOP = [
   },
   // --- stream -------------------------------------------------------------
   {
-    key: 'stream', box: 'stream', name: 'Log partitions', color: '#f0883e',
+    key: 'stream', box: 'stream', name: 'Queue partitions', color: '#f0883e',
     blurb: 'Writes become an append to a durable log — acked in milliseconds, applied at leisure.',
-    tradeoff: 'The acknowledged write is not in the datastore yet. That gap is real and users can see it.',
+    tradeoff: 'The acknowledged write is not in the database yet. That gap is real and users can see it.',
     ...dbl('streamParts', 210), ...halve('streamParts'),
     owned: s => s.infra.streamParts > 0,
     fixed: 12, fixedNote: 'brokers, consumer lag, replay tooling, and 3am backlog pages',
@@ -795,7 +795,7 @@ Content.SHOP = [
   },
   {
     key: 'cdc', box: 'stream', name: 'Change data capture', color: '#ffc680',
-    blurb: 'Tail the datastore\'s own replication log into the stream. Every derived store is then one consumer, not one more pipeline — which halves what they cost to run.',
+    blurb: 'Tail the database\'s own replication log into the queue. Every read model is then one consumer, not one more pipeline — which halves what they cost to run.',
     tradeoff: 'A connector nobody owns, and when it stops, nothing downstream says so.',
     ...toggle('cdc', 340, s => s.infra.streamParts > 0),
     fixed: 4, fixedNote: 'schema-change breakage and a connector nobody owns',
@@ -804,7 +804,7 @@ Content.SHOP = [
     scaleDownLabel: 'stop the capture',
     insightOnBuy: 'cdc',
   },
-  // --- datastore ----------------------------------------------------------
+  // --- database ----------------------------------------------------------
   {
     key: 'indexes', box: 'sql', name: 'Add indexes', color: '#8b96a5',
     blurb: 'Reads cost 10 units → 1. The cheapest 10× you will ever buy.',
@@ -831,19 +831,7 @@ Content.SHOP = [
     scaleDownLabel: null,
   },
   {
-    key: 'kvEngine', box: 'sql', name: 'Key-value engine', color: '#43d17a',
-    blurb: 'Move sessions, flags and counters onto a partitioned key-value engine. It scales linearly and you never size it — it just bills you per thousand lookups.',
-    tradeoff: 'Key→value only: no joins, no ad-hoc queries. And a second engine to run is a team, whatever the hosting costs.',
-    ...toggle('kvEngine', 380, () => true),
-    fixed: 20, fixedNote: 'a SECOND storage engine: new expertise, new oncall, new failure modes',
-    marginal: s => (s.report
-      ? s.report.perClass.lookup.served / 1000 * Content.SIM.KV_PER_KRPS : 0),
-    ownedLabel: s => (s.infra.kvEngine ? 'lookups partitioned' : null),
-    scaleDownLabel: 'put lookups back on the relational engine',
-    insightOnBuy: 'nosql',
-  },
-  {
-    key: 'tier', box: 'sql', name: 'Datastore box size', color: '#7bb7ff',
+    key: 'tier', box: 'sql', name: 'Database box size', color: '#7bb7ff',
     blurb: 'Provision the store of record, then make it bigger: 2× query units and connections a rung.',
     tradeoff: 'Fair value to tier 6; past that each rung buys 1.5× the work for 2.5× the money.',
     price: s => (s.infra.tier >= Content.MAX_TIER ? null : Content.TIER_PRICES[s.infra.tier]),
@@ -890,6 +878,18 @@ Content.SHOP = [
     insightOnBuy: 'sharding',
   },
   {
+    key: 'kvEngine', box: 'sql', name: 'Key-value engine', color: '#43d17a',
+    blurb: 'Move sessions, flags and counters onto a partitioned key-value engine. It scales linearly and you never size it — it just bills you per thousand lookups.',
+    tradeoff: 'Key→value only: no joins, no ad-hoc queries. And a second engine to run is a team, whatever the hosting costs.',
+    ...toggle('kvEngine', 380, () => true),
+    fixed: 20, fixedNote: 'a SECOND storage engine: new expertise, new oncall, new failure modes',
+    marginal: s => (s.report
+      ? s.report.perClass.lookup.served / 1000 * Content.SIM.KV_PER_KRPS : 0),
+    ownedLabel: s => (s.infra.kvEngine ? 'lookups partitioned' : null),
+    scaleDownLabel: 'put lookups back on the relational engine',
+    insightOnBuy: 'nosql',
+  },
+  {
     key: 'multiAz', box: 'sql', name: 'Multi-AZ failover', color: '#56d364',
     blurb: 'A synchronous standby in another availability zone, promoted automatically.',
     tradeoff: 'Doubles the primary bill and adds commit latency. Buys you the outage you never have.',
@@ -909,12 +909,12 @@ Content.SHOP = [
     fixed: 3, fixedNote: 'bucket policy, lifecycle rules, and one public bucket incident',
     marginal: () => 0,
     ownedLabel: s => (s.infra.objstore ? 'provisioned' : null),
-    scaleDownLabel: 'decommission (media goes back into the datastore)',
+    scaleDownLabel: 'decommission (media goes back into the database)',
     insightOnBuy: 'blob',
   },
   {
     key: 'directUpload', box: 'objstore', name: 'Pre-signed direct transfer', color: '#c9b8ff',
-    blurb: 'Clients transfer straight to storage. Bytes stop passing through your service tier.',
+    blurb: 'Clients transfer straight to storage. Bytes stop passing through your app servers.',
     tradeoff: 'Signed URLs leak if you get expiry wrong, and you lose a place to inspect the bytes.',
     ...toggle('directUpload', 200, s => s.infra.objstore),
     fixed: 1, fixedNote: 'URL expiry, CORS, and a virus scan you now have to do elsewhere',
@@ -922,9 +922,9 @@ Content.SHOP = [
     ownedLabel: s => (s.infra.directUpload ? 'enabled' : null),
     scaleDownLabel: 'proxy the bytes again',
   },
-  // --- derived stores -----------------------------------------------------
+  // --- read models (search & analytics) ------------------------------------
   {
-    key: 'derived', box: 'derived', name: 'Derived store nodes', color: '#b48cff',
+    key: 'derived', box: 'derived', name: 'Read-model nodes', color: '#b48cff',
     blurb: 'Capacity for whichever read models you have switched on. They share one fleet.',
     tradeoff: 'A second copy of your data, at your expense, that is only as fresh as its feed.',
     ...dbl('derivedNodes', 220), ...halve('derivedNodes'),
@@ -932,7 +932,7 @@ Content.SHOP = [
     fixed: 4, fixedNote: 'reindexing, compaction, and a fleet whose freshness nobody watches',
     marginal: s => s.infra.derivedNodes * 1.3,
     ownedLabel: s => (s.infra.derivedNodes ? s.infra.derivedNodes + ' nodes' : null),
-    scaleDownLabel: 'halve the derived fleet',
+    scaleDownLabel: 'halve the read-model fleet',
   },
   {
     key: 'searchEngine', box: 'derived', name: 'Inverted index', color: '#ffb86b',
@@ -1056,7 +1056,7 @@ Content.EXPECTED = [
   { item: 'cdn', classes: ['media'], min: 0.10,
     need: 'media at this share is a bandwidth business — serve it from the edge' },
   { item: 'cache', classes: ['read'], min: 0.35,
-    need: 'reads this hot and repeated should not all reach the datastore' },
+    need: 'reads this hot and repeated should not all reach the database' },
   { item: 'kvEngine', classes: ['lookup'], min: 0.25,
     need: 'key lookups dominate, and a relational engine is the wrong shape for them' },
   { item: 'stream', classes: ['write', 'realtime'], min: 0.20,
@@ -1081,9 +1081,11 @@ Content.expectedFor = key => {
     e.classes.reduce((sum, k) => sum + (mix[k] || 0), 0) >= e.min);
 };
 
-// The shop's headings: the eight boxes, in the order work reaches them, plus
-// the two things that are not boxes at all.
-Content.BOXES = Content.STATION_KEYS
+// The shop's headings: the eight boxes in the order you build them — the two
+// every design starts with, then what you add as the workload demands it —
+// plus the two things that are not boxes at all. Display order only; the
+// board's layout comes from each station's col/row.
+Content.BOXES = ['app', 'sql', 'cache', 'stream', 'edge', 'objstore', 'derived', 'gpu']
   .map(key => ({ key, name: Content.STATIONS[key].name }))
   .concat([{ key: 'cross', name: 'CROSS-CUTTING' }]);
 

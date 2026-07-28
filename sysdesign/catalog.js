@@ -146,7 +146,7 @@ Content.INSIGHTS = {
   },
   cdn: {
     title: 'Push the bytes to the edge',
-    text: 'A CDN is the cheapest scaling in this entire game and it is barely architecture: static and semi-static responses are served from a PoP near the user, so they never consume origin capacity, never traverse your service tier, and cost a fraction of the egress. Two numbers matter: hit ratio and how long you dare cache. Interview line: "What is cacheable here, and for how long?"',
+    text: 'A CDN is the cheapest scaling in this entire game and it is barely architecture: static and semi-static responses are served from a PoP near the user, so they never consume origin capacity, never traverse your app servers, and cost a fraction of the egress. Two numbers matter: hit ratio and how long you dare cache. Interview line: "What is cacheable here, and for how long?"',
   },
   edgecompute: {
     title: 'Compute at the edge',
@@ -198,7 +198,7 @@ Content.INSIGHTS = {
     text: 'Row stores answer many tiny point queries; column stores scan billions of rows for one aggregate. Running reports against the transaction database is how quarter-end takes down checkout. Ship changes into a columnar store and let reports be seconds behind and seconds slow — nobody joins a table mid-purchase. Interview line: "Analytics gets its own copy. Always."',
   },
   log: {
-    title: 'The log in front of the database',
+    title: 'The queue in front of the database',
     text: 'An append-only log accepts a write in a millisecond and lets every consumer read it at its own pace: the store of record, the search index, the columnar copy, the cache invalidator. It converts overload from errors into backlog, and one write into many derived views. But an acknowledged write is not yet a stored write — that gap is a design decision you must be able to defend.',
   },
   queuedebt: {
@@ -212,11 +212,11 @@ Content.INSIGHTS = {
   },
   cdc: {
     title: 'Change data capture',
-    text: 'Rather than writing to your datastore and your search index and your columnar copy — and being wrong in a different way in each — write once and tail the datastore\'s own replication log into a stream. Every derived view is a consumer. This is how you keep four copies of the truth without four chances to lose it.',
+    text: 'Rather than writing to your database and your search index and your columnar copy — and being wrong in a different way in each — write once and tail the database\'s own replication log into the queue. Every read model is a consumer. This is how you keep four copies of the truth without four chances to lose it.',
   },
   blob: {
     title: 'Blobs do not go in the database',
-    text: 'Media in a relational database consumes the most expensive capacity you own to move bytes that need no transaction, no index and no join. Object storage gives eleven nines of durability for a fraction of the price, and the request never touches your service tier if you hand back a signed URL. Interview line: "Store the object in blob storage and the path in the database."',
+    text: 'Media in a relational database consumes the most expensive capacity you own to move bytes that need no transaction, no index and no join. Object storage gives eleven nines of durability for a fraction of the price, and the request never touches your app servers if you hand back a signed URL. Interview line: "Store the object in blob storage and the path in the database."',
   },
   egress: {
     title: 'Bandwidth is a line item',
@@ -294,7 +294,7 @@ Content.INSIGHTS = {
   },
   opex: {
     title: 'Every system you add costs a team',
-    text: 'Look at your burn: most of it is not hosting. Each distinct system carries a fixed operational cost from the moment it exists — someone has to know it, monitor it, page on it and fix it at 3am. That cost is a step function, not a slope: the first node of anything is expensive, the tenth is cheap. This is the real argument against adding one more datastore for one more feature.',
+    text: 'Look at your burn: most of it is not hosting. Each distinct system carries a fixed operational cost from the moment it exists — someone has to know it, monitor it, page on it and fix it at 3am. That cost is a step function, not a slope: the first node of anything is expensive, the tenth is cheap. This is the real argument against adding one more database for one more feature.',
     check: (s, r) => r.costs.fixed > 0.45 * r.spend && r.spend > 30,
   },
   runway: {

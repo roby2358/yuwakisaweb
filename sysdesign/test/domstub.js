@@ -105,7 +105,8 @@ function makeDom(html) {
   const findIn = (root, sel) => findAllIn(root, sel)[0] || makeElement('div');
 
   // accepts every canvas call, records nothing
-  const ctx2d = new Proxy({}, {
+  // measureText must return a real metrics object — chart legends read .width
+  const ctx2d = new Proxy({ measureText: text => ({ width: 6 * String(text).length }) }, {
     get: (target, prop) => (prop in target ? target[prop] : () => undefined),
     set: (target, prop, value) => { target[prop] = value; return true; },
   });
