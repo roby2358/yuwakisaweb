@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STARLANE — a frontier trading game</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <div id="header">
+    <span id="hd-title">STARLANE</span>
+    <span class="stat" id="hd-captain"></span>
+    <span class="stat" id="hd-day"></span>
+    <span class="stat" id="hd-credits"></span>
+    <span class="stat" id="hd-worth"></span>
+    <span class="stat" id="hd-fuel"></span>
+    <span class="stat" id="hd-cargo"></span>
+    <span class="stat" id="hd-legacy"></span>
+    <span class="spacer"></span>
+    <button class="btn small" id="hd-help">Help</button>
+    <button class="btn small" id="hd-menu">Menu</button>
+  </div>
+
+  <div id="main">
+    <div id="left">
+      <div id="map-wrap">
+        <canvas id="map" width="640" height="640"></canvas>
+      </div>
+      <div id="system-panel"></div>
+    </div>
+    <div id="right">
+      <div id="tab-bar"></div>
+      <div id="tab-body"></div>
+    </div>
+  </div>
+
+  <div id="log"></div>
+</div>
+
+<div id="modal-back">
+  <div id="modal">
+    <div id="modal-title"></div>
+    <div id="modal-body"></div>
+    <div id="modal-choices"></div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<script src="js/data.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
