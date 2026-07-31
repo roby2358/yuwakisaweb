@@ -83,12 +83,58 @@ body {
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  position: relative;
 }
 
 #map {
   max-width: 100%;
   max-height: 100%;
   cursor: crosshair;
+}
+
+#map-tools {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+#map-tools button, #map-tools select { pointer-events: auto; }
+
+#zoom-btns { display: flex; gap: 2px; }
+.zoom-btn.active { border-color: var(--gold); color: var(--gold); }
+
+#good-lens {
+  background: var(--panel2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+#lens-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.lens-bar {
+  width: 70px;
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(90deg,
+    hsl(240, 85%, 55%), hsl(180, 85%, 55%), hsl(120, 85%, 55%),
+    hsl(60, 85%, 55%), hsl(0, 85%, 55%));
 }
 
 #system-panel {

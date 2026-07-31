@@ -5,8 +5,13 @@ var UI = {
   selected: null,   // selected system id on the map
   tab: 'market',
   encounter: null,
-  starfield: null
+  starfield: null,
+  view: { zoom: 2, cx: 50, cy: 50 },  // view width in ship-ranges + world coords at canvas center
+  lens: null,       // good id whose relative price colors the map, or null
+  dragMoved: false
 };
+
+var ZOOM_LEVELS = [1, 2, 5, 10];
 
 function $(id) { return document.getElementById(id); }
 
@@ -82,11 +87,26 @@ function renderHeader() {
 
 // ---------- Map ----------
 
-var MAP_PAD = 30, MAP_SIZE = 640;
+var MAP_SIZE = 640;
+
+// Distance the ship covers on a full tank, in world units (fuel cost ≈ distance).
+function shipRangeWorld() {
+  return shipStat('fuel') / (1 - perkRank('drives') * 0.10);
+}
+
+// Pixels per world unit. The view is ship-centered and the display square
+// circumscribes a circle of N ship-ranges: at 1R a full-tank fuel ring exactly
+// touches the display edges. Scale adapts as tanks, hulls, and perks extend reach.
+function mapScale() {
+  return MAP_SIZE / (shipRangeWorld() * 2 * UI.view.zoom);
+}
 
 function mapXY(sys) {
-  var s = (MAP_SIZE - MAP_PAD * 2) / 100;
-  return { x: MAP_PAD + sys.x * s, y: MAP_PAD + sys.y * s };
+  var s = mapScale();
+  return {
+    x: MAP_SIZE / 2 + (sys.x - UI.view.cx) * s,
+    y: MAP_SIZE / 2 + (sys.y - UI.view.cy) * s
+  };
 }
 
 function renderMap() {
@@ -113,13 +133,19 @@ function renderMap() {
   var here = G.systems[G.cur];
   var hp = mapXY(here);
 
-  // Fuel range ring — the map answers "where can I go right now." (fuel cost ≈ distance)
-  var scale = (MAP_SIZE - MAP_PAD * 2) / 100;
+  // Full-tank range circle — the zoom anchor: at 1R it exactly touches the display edges.
   ctx.beginPath();
-  ctx.arc(hp.x, hp.y, (G.fuel / (1 - perkRank('drives') * 0.10)) * scale, 0, Math.PI * 2);
+  ctx.arc(hp.x, hp.y, shipRangeWorld() * mapScale(), 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(120,160,255,0.12)';
+  ctx.setLineDash([2, 7]);
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Current fuel ring — the map answers "where can I go right now." (fuel cost ≈ distance)
+  ctx.beginPath();
+  ctx.arc(hp.x, hp.y, (G.fuel / (1 - perkRank('drives') * 0.10)) * mapScale(), 0, Math.PI * 2);
   ctx.strokeStyle = 'rgba(120,160,255,0.25)';
   ctx.setLineDash([4, 6]);
-  ctx.lineWidth = 1;
   ctx.stroke();
   ctx.setLineDash([]);
 
@@ -135,12 +161,17 @@ function renderMap() {
     ctx.setLineDash([]);
   }
 
+  var lens = UI.lens ? lensStats(UI.lens) : null;
+  renderLensLegend(lens);
+  var showText = UI.view.zoom < 5;  // wide views show just the dots
+
   for (var s = 0; s < G.systems.length; s++) {
     var sys = G.systems[s];
     if (!sys.charted) continue;
     var p = mapXY(sys);
     var col = FACTIONS[sys.faction].color;
     var r = 3 + sys.wealth * 1.6;
+    var lensP = lens ? lens.prices[sys.id] : undefined;
 
     if (s === G.cur) {
       ctx.beginPath();
@@ -158,8 +189,13 @@ function renderMap() {
     }
     ctx.beginPath();
     ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-    ctx.fillStyle = sys.visited ? col : 'rgba(140,150,170,0.9)';
+    if (lens) {
+      ctx.fillStyle = lensP != null ? lensColor(lensP, lens.min, lens.max) : 'rgba(140,150,170,0.45)';
+    } else {
+      ctx.fillStyle = sys.visited ? col : 'rgba(140,150,170,0.9)';
+    }
     ctx.fill();
+    if (!showText) continue;
     if (!sys.visited) {
       ctx.fillStyle = '#0b0e1a';
       ctx.font = 'bold 8px sans-serif';
@@ -182,7 +218,50 @@ function renderMap() {
     ctx.font = '10px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(sys.name, p.x, p.y + r + 12);
+    if (lensP != null) {
+      ctx.fillStyle = lensColor(lensP, lens.min, lens.max);
+      ctx.font = 'bold 10px sans-serif';
+      ctx.fillText(lensP + ' cr', p.x, p.y + r + 23);
+    }
   }
+}
+
+// ---------- Price lens ----------
+
+// Best price intel the player has for a good: live at the docked system and
+// outposts, last-seen snapshot elsewhere, nothing for unsurveyed markets.
+function lensPrice(sys, good) {
+  if (!canTradeGood(sys, good)) return null;
+  if (sys.id === G.cur || sys.outpost) return priceOf(sys, good);
+  if (sys.lastSeen) return sys.lastSeen.prices[good].buy;
+  return null;
+}
+
+function lensStats(good) {
+  var prices = {}, min = Infinity, max = -Infinity;
+  G.systems.forEach(function (sys) {
+    if (!sys.charted) return;
+    var p = lensPrice(sys, good);
+    if (p == null) return;
+    prices[sys.id] = p;
+    if (p < min) min = p;
+    if (p > max) max = p;
+  });
+  return { prices: prices, min: min, max: max };
+}
+
+// Blue (cheapest known) through the rainbow to red (dearest known).
+function lensColor(p, min, max) {
+  var t = max > min ? (p - min) / (max - min) : 0.5;
+  return 'hsl(' + Math.round(240 * (1 - t)) + ', 85%, 55%)';
+}
+
+function renderLensLegend(lens) {
+  var lg = $('lens-legend');
+  if (!lens || lens.max === -Infinity) { lg.style.display = 'none'; return; }
+  lg.style.display = 'flex';
+  $('lens-min').textContent = lens.min;
+  $('lens-max').textContent = lens.max;
 }
 
 // The player knows about an event if they docked during it, heard a rumor, or own the outpost.
@@ -191,6 +270,7 @@ function eventKnown(sys) {
 }
 
 function mapClick(ev) {
+  if (UI.dragMoved) { UI.dragMoved = false; return; }
   var cv = $('map');
   var rect = cv.getBoundingClientRect();
   var x = (ev.clientX - rect.left) * (cv.width / rect.width);
@@ -203,6 +283,80 @@ function mapClick(ev) {
     if (dx * dx + dy * dy < bestD) { bestD = dx * dx + dy * dy; best = s; }
   }
   if (best != null) { UI.selected = best; renderAll(); }
+}
+
+// Drag to pan away from the ship for a peek; zooming or traveling recenters.
+function bindMapPan(cv) {
+  var drag = null;
+  cv.addEventListener('mousedown', function (ev) {
+    drag = { x: ev.clientX, y: ev.clientY };
+    UI.dragMoved = false;
+  });
+  window.addEventListener('mousemove', function (ev) {
+    if (!drag || !G) return;
+    var dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
+    if (!UI.dragMoved && dx * dx + dy * dy < 16) return;
+    UI.dragMoved = true;
+    var rect = cv.getBoundingClientRect();
+    var k = (cv.width / rect.width) / mapScale();
+    UI.view.cx -= dx * k;
+    UI.view.cy -= dy * k;
+    drag = { x: ev.clientX, y: ev.clientY };
+    renderMap();
+  });
+  window.addEventListener('mouseup', function () { drag = null; });
+}
+
+// ---------- Map toolbar (zoom + price lens) ----------
+
+UI.setZoom = function (z) {
+  if (!G) return;
+  UI.view.zoom = z;
+  centerOn(G.systems[G.cur]);
+  updateZoomBtns();
+  renderMap();
+};
+
+function centerOn(sys) {
+  UI.view.cx = sys.x;
+  UI.view.cy = sys.y;
+}
+
+function updateZoomBtns() {
+  var btns = $('zoom-btns').children;
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].classList.toggle('active', Number(btns[i].dataset.zoom) === UI.view.zoom);
+  }
+}
+
+function buildMapTools() {
+  var zb = $('zoom-btns');
+  ZOOM_LEVELS.forEach(function (z) {
+    var b = document.createElement('button');
+    b.className = 'btn tiny zoom-btn';
+    b.textContent = z + 'R';
+    b.title = 'View spans ' + z + '× your full-tank range';
+    b.dataset.zoom = z;
+    b.onclick = function () { UI.setZoom(z); };
+    zb.appendChild(b);
+  });
+  updateZoomBtns();
+
+  var sel = $('good-lens');
+  var off = document.createElement('option');
+  off.value = '';
+  off.textContent = 'Price lens: off';
+  sel.appendChild(off);
+  GOOD_IDS.forEach(function (g) {
+    var o = document.createElement('option');
+    o.value = g;
+    o.textContent = GOODS[g].name;
+    sel.appendChild(o);
+  });
+  sel.onchange = function () {
+    UI.lens = sel.value || null;
+    if (G) renderMap();
+  };
 }
 
 // ---------- System panel (selection + travel) ----------
@@ -525,7 +679,7 @@ function renderLog() {
 
 // ---------- Actions (called from generated HTML) ----------
 
-UI.select = function (id) { UI.selected = id; renderAll(); };
+UI.select = function (id) { UI.selected = id; centerOn(G.systems[id]); renderAll(); };
 
 UI.buy = function (g, q) {
   var err = buyGood(g, q);
@@ -616,6 +770,7 @@ UI.resolve = function (choice) {
 function afterArrival() {
   var caught = customsScan();
   UI.selected = G.cur;
+  centerOn(G.systems[G.cur]);
   renderAll();
   if (caught) showModal('Customs', '<p>' + esc(caught) + '</p>');
 }
@@ -665,6 +820,7 @@ function showNewGame(firstEver) {
       newGame(seed, name);
       UI.selected = G.cur;
       UI.tab = 'market';
+      centerOn(G.systems[G.cur]);
       renderAll();
       if (firstEver) showHelp();
     } }],
@@ -728,7 +884,9 @@ UI.menu = function () {
 
 window.addEventListener('DOMContentLoaded', function () {
   loadLegacy();
+  buildMapTools();
   $('map').addEventListener('click', mapClick);
+  bindMapPan($('map'));
   $('hd-help').onclick = function () { showHelp(); };
   $('hd-menu').onclick = function () { UI.menu(); };
   $('modal-back').addEventListener('click', function (ev) {
@@ -736,6 +894,7 @@ window.addEventListener('DOMContentLoaded', function () {
   });
   if (loadGame()) {
     UI.selected = G.cur;
+    centerOn(G.systems[G.cur]);
     renderAll();
   } else {
     showNewGame(true);
