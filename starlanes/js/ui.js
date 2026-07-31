@@ -578,7 +578,7 @@ function htmlShipyard() {
   for (var hd in HULLS) {
     var hull = HULLS[hd];
     h += '<div class="card"><b>' + hull.name + '</b> <span class="dim">cargo ' + hull.cargo +
-      ' · fuel ' + hull.fuel + ' · speed ' + hull.speed + '</span> ';
+      ' · fuel ' + hull.fuel + ' · speed ' + hull.speed + ' · cannons ' + hull.cannons + '</span> ';
     if (hd === G.hull) {
       h += '<span class="tag gold">your ship</span>';
     } else {
@@ -590,9 +590,9 @@ function htmlShipyard() {
   return h;
 }
 
-// One active-contract card with a Deliver button when the ship is at the
-// destination with the goods — shared by the Contracts and Market tabs.
-function activeContractCard(ct) {
+// Contract cards dispatch on ct.type — active cards are shared by the
+// Contracts and Market tabs; offer cards by the Contracts tab.
+function activeHaulCard(ct) {
   var destSys = G.systems[ct.dest];
   var left = ct.deadline - G.day;
   var here = ct.dest === G.cur;
@@ -609,6 +609,42 @@ function activeContractCard(ct) {
   return h + '</div>';
 }
 
+function activeHuntCard(ct) {
+  var destSys = G.systems[ct.dest];
+  var left = ct.deadline - G.day;
+  var h = '<div class="card"><b>Hunt ' + esc(ct.gang) + '</b> <span class="risk-hi">' +
+    '☠'.repeat(ct.str) + '</span> → ' + esc(destSys.name) + ' · pays <b>' + fmt(ct.pay) +
+    ' cr</b> +' + ct.rep + ' ' + FACTIONS[ct.faction].name + ' rep · <span class="' +
+    (left <= 2 ? 'risk-hi' : '') + '">' + left + 'd left</span> ';
+  h += ct.dest === G.cur ?
+    '<span class="dim">they slipped you — leave and return to re-engage</span>' :
+    '<span class="dim">fly there; they\'ll find you</span>';
+  return h + '</div>';
+}
+
+var ACTIVE_CARD = { haul: activeHaulCard, hunt: activeHuntCard };
+
+function activeContractCard(ct) { return ACTIVE_CARD[ct.type](ct); }
+
+function offerHaulCard(ct, here) {
+  var destSys = G.systems[ct.dest];
+  return '<div class="card"><b>' + ct.qty + ' ' + GOODS[ct.good].name + '</b> → ' +
+    esc(destSys.name) + ' <span class="dim">(' + Math.round(dist(here, destSys)) +
+    ' ly)</span> · pays <b>' + fmt(ct.pay) + ' cr</b> · due day ' + ct.deadline +
+    ' <button class="btn small" onclick="UI.accept(\'' + ct.id + '\')">Accept</button></div>';
+}
+
+function offerHuntCard(ct, here) {
+  var destSys = G.systems[ct.dest];
+  return '<div class="card"><b>Bounty: ' + esc(ct.gang) + '</b> <span class="risk-hi">' +
+    '☠'.repeat(ct.str) + '</span> at ' + esc(destSys.name) + ' <span class="dim">(' +
+    Math.round(dist(here, destSys)) + ' ly)</span> · pays <b>' + fmt(ct.pay) +
+    ' cr</b> · due day ' + ct.deadline +
+    ' <button class="btn small" onclick="UI.accept(\'' + ct.id + '\')">Accept</button></div>';
+}
+
+var OFFER_CARD = { haul: offerHaulCard, hunt: offerHuntCard };
+
 function htmlContracts() {
   var h = '<h3>Active Contracts <span class="dim">(' + G.active.length + '/3)</span></h3>';
   if (!G.active.length) h += '<div class="dim">None. Accept offers below — deadlines are real.</div>';
@@ -618,13 +654,7 @@ function htmlContracts() {
   h += '<h3>Offers at ' + esc(here.name) + ' <span class="dim">(tier ' +
     contractTier(here.faction) + ' — rep with ' + FACTIONS[here.faction].name + ' unlocks bigger jobs)</span></h3>';
   if (!G.contracts.length) h += '<div class="dim">The board is empty today.</div>';
-  G.contracts.forEach(function (ct) {
-    var destSys = G.systems[ct.dest];
-    h += '<div class="card"><b>' + ct.qty + ' ' + GOODS[ct.good].name + '</b> → ' +
-      esc(destSys.name) + ' <span class="dim">(' + Math.round(dist(here, destSys)) +
-      ' ly)</span> · pays <b>' + fmt(ct.pay) + ' cr</b> · due day ' + ct.deadline +
-      ' <button class="btn small" onclick="UI.accept(\'' + ct.id + '\')">Accept</button></div>';
-  });
+  G.contracts.forEach(function (ct) { h += OFFER_CARD[ct.type](ct, here); });
   return h;
 }
 

@@ -40,6 +40,9 @@ var FACTIONS = {
   syndicate: { name: 'Crimson Syndicate', color: '#ff6b6b', security: 0.2 }
 };
 
+var PIRATE_BANDS = ['Rustknife gang', 'Black Halo raiders', 'the Vulture Pack',
+  'Kessler\'s Own', 'the Red Meridian', 'Howler corsairs'];
+
 var REP_TIERS = [
   { min: -100, name: 'Hostile'   },
   { min: -50,  name: 'Unfriendly'},
@@ -60,10 +63,15 @@ var EVENTS = {
 };
 
 var HULLS = {
-  rustbucket: { name: 'Sparrow "Rustbucket"', cargo: 25,  fuel: 30, speed: 1,   cost: 1500 },
-  mule:       { name: 'Mule Freighter',       cargo: 60,  fuel: 40, speed: 1,   cost: 8000 },
-  falcon:     { name: 'Falcon Courier',       cargo: 35,  fuel: 55, speed: 2,   cost: 14000 },
-  leviathan:  { name: 'Leviathan Hauler',     cargo: 140, fuel: 60, speed: 1.2, cost: 48000 }
+  rustbucket: { name: 'Sparrow "Rustbucket"', cargo: 25,  fuel: 30, speed: 1,   cannons: 1, cost: 1500 },
+  mule:       { name: 'Mule Freighter',       cargo: 60,  fuel: 40, speed: 1,   cannons: 1, cost: 8000 },
+  lighter:    { name: 'Pelican Lighter',      cargo: 70,  fuel: 40, speed: 1,   cannons: 0, cost: 9500 },
+  zephyr:     { name: 'Zephyr Runner',        cargo: 35,  fuel: 55, speed: 2,   cannons: 0, cost: 11000 },
+  falcon:     { name: 'Falcon Courier',       cargo: 35,  fuel: 55, speed: 2,   cannons: 1, cost: 14000 },
+  gunboat:    { name: 'Hornet Gunboat',       cargo: 15,  fuel: 55, speed: 2,   cannons: 4, cost: 22000 },
+  galleon:    { name: 'Galleon Hauler',       cargo: 100, fuel: 60, speed: 1.2, cannons: 4, cost: 46000 },
+  leviathan:  { name: 'Leviathan Hauler',     cargo: 140, fuel: 60, speed: 1.2, cannons: 2, cost: 48000 },
+  manowar:    { name: 'Basilisk Man-o\'-War', cargo: 30,  fuel: 60, speed: 1.5, cannons: 6, cost: 72000 }
 };
 
 var UPGRADES = {

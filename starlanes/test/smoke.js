@@ -158,11 +158,11 @@ var out = vm.runInContext(
   '  r.marketShowsSelected = mh.indexOf(other.name) !== -1 && mh.indexOf("mini-prices") !== -1;' +
   // Active contracts ride along on the market tab, but only when no remote
   // system's intel is up — and a deliverable one keeps its Deliver button.
-  '  G.active.push({ id: "t-far", good: "food", qty: 5, dest: other.id, faction: "guild", pay: 500, deadline: G.day + 9, rep: 5 });' +
+  '  G.active.push({ id: "t-far", type: "haul", good: "food", qty: 5, dest: other.id, faction: "guild", pay: 500, deadline: G.day + 9, rep: 5 });' +
   '  r.marketContractsHidden = htmlMarket().indexOf("Active contracts") === -1;' +
   '  UI.selected = G.cur;' +
   '  r.marketShowsContracts = htmlMarket().indexOf("Active contracts") !== -1;' +
-  '  G.active.push({ id: "t-here", good: "food", qty: 1, dest: G.cur, faction: "guild", pay: 100, deadline: G.day + 5, rep: 4 });' +
+  '  G.active.push({ id: "t-here", type: "haul", good: "food", qty: 1, dest: G.cur, faction: "guild", pay: 100, deadline: G.day + 5, rep: 4 });' +
   '  G.cargo.food = (G.cargo.food || 0) + 1;' +
   '  r.marketDeliverBtn = htmlMarket().indexOf("UI.deliver(\'t-here\')") !== -1;' +
   '  G.cargo.food -= 1; G.active.length = 0;' +
@@ -188,6 +188,52 @@ var out = vm.runInContext(
   '  withdrawGood("ore", 9999);' +
   '  r.whWithdrawBasis = G.cargo.ore === 8 && G.avgCost.ore === 20 && !wsys.warehouse.ore;' +
   '  delete G.cargo.ore; delete G.avgCost.ore; wsys.outpost = false; wsys.warehouse = {};' +
+  // Weapons = hull base cannons + upgrade rank; the Leviathan mounts two stock.
+  '  var hull0 = G.hull, wu0 = G.upgrades.weapons;' +
+  '  G.hull = "rustbucket"; G.upgrades.weapons = 2;' +
+  '  r.cannonsBase = shipStat("weapons") === 3;' +
+  '  G.hull = "leviathan";' +
+  '  r.cannonsLeviathan = shipStat("weapons") === 4;' +
+  '  G.hull = "zephyr"; G.upgrades.weapons = 0;' +
+  '  r.cannonsZero = shipStat("weapons") === 0 && makeEncounter(3).fightOdds === 0;' +
+  '  G.hull = "manowar";' +
+  '  r.cannonsManowar = shipStat("weapons") === 6;' +
+  '  G.hull = hull0; G.upgrades.weapons = wu0;' +
+  '  r.hullsComplete = Object.keys(HULLS).every(function (k) {' +
+  '    var hl = HULLS[k];' +
+  '    return ["cargo", "fuel", "speed", "cannons", "cost"].every(function (s) {' +
+  '      return typeof hl[s] === "number"; }) && typeof hl.name === "string";' +
+  '  });' +
+  // Bounty hunts: guild/colonies boards post them (syndicate never); arriving
+  // at the target forces the named gang at contract strength; a win pays out.
+  '  var here3 = G.systems[G.cur], fac0 = here3.faction;' +
+  '  here3.faction = "colonies";' +
+  '  var sawHunt = false;' +
+  '  for (var t = 0; t < 60 && !sawHunt; t++) { genContracts();' +
+  '    sawHunt = G.contracts.some(function (ct) { return ct.type === "hunt"; }); }' +
+  '  r.huntOffered = sawHunt;' +
+  '  here3.faction = "syndicate";' +
+  '  var synHunt = false;' +
+  '  for (t = 0; t < 30; t++) { genContracts();' +
+  '    if (G.contracts.some(function (ct) { return ct.type === "hunt"; })) synHunt = true; }' +
+  '  r.huntNoSyndicate = !synHunt;' +
+  '  here3.faction = fac0; genContracts();' +
+  '  var hdest = G.cur === 0 ? 1 : 0;' +
+  '  var hct = { id: "hx", type: "hunt", gang: "Smoke Corsairs", str: 3, dest: hdest,' +
+  '    faction: "colonies", pay: 777, deadline: G.day + 30, rep: 6 };' +
+  '  G.active.push(hct);' +
+  '  r.huntCards = htmlContracts().indexOf("Smoke Corsairs") !== -1 &&' +
+  '    activeContractCard(hct).indexOf("☠☠☠") !== -1;' +
+  '  G.fuel = 9999;' +
+  '  var tr = travelTo(hdest);' +
+  '  r.huntForced = !!(tr && tr.encounter) && tr.encounter.str === 3 &&' +
+  '    tr.encounter.name === "Smoke Corsairs" && tr.encounter.hunt === "hx";' +
+  '  tr.encounter.fightOdds = 2;' +
+  '  var cr0 = G.credits;' +
+  '  resolveEncounter(tr.encounter, "fight");' +
+  '  r.huntBounty = G.credits >= cr0 + 777 &&' +
+  '    !G.active.some(function (ct) { return ct.id === "hx"; });' +
+  '  G.fuel = shipStat("fuel");' +
   // Full render with the lens active must not throw.
   '  UI.lens = "food"; UI.setZoom(5); renderAll();' +
   '  r.rendered = true;' +
@@ -219,6 +265,16 @@ check('first deposit takes the ship average as warehouse basis', out.whAvgFirst)
 check('second deposit blends warehouse basis at buy-math weights', out.whAvgBlend);
 check('assets tab shows the warehouse average next to stored qty', out.whAssetsAvg);
 check('withdrawal books warehouse basis back into the hold', out.whWithdrawBasis);
+check('weapons stat is hull cannons plus upgrades', out.cannonsBase);
+check('leviathan mounts two stock cannons', out.cannonsLeviathan);
+check('cannonless hull fights at zero odds', out.cannonsZero);
+check('man-o\'-war mounts six stock cannons', out.cannonsManowar);
+check('every hull defines name, cargo, fuel, speed, cannons, cost', out.hullsComplete);
+check('guild/colonies boards post bounty hunts', out.huntOffered);
+check('syndicate boards never post hunts', out.huntNoSyndicate);
+check('hunt cards show gang name and skull strength', out.huntCards);
+check('arriving at a hunt target forces the named gang at contract strength', out.huntForced);
+check('winning the hunt fight pays the bounty and clears the contract', out.huntBounty);
 check('renderAll with lens + 5x zoom does not throw', out.rendered);
 
 // Text culling: narrow spans label systems; 5R/10R draw just the dots.

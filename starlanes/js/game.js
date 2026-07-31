@@ -186,7 +186,7 @@ function shipStat(stat) {
   if (stat === 'cargo')  return h.cargo + G.upgrades.cargo * UPGRADES.cargo.delta + perkRank('holds') * 8;
   if (stat === 'fuel')   return h.fuel + G.upgrades.fuel * UPGRADES.fuel.delta;
   if (stat === 'speed')  return h.speed + G.upgrades.engine * UPGRADES.engine.delta;
-  if (stat === 'weapons') return 1 + G.upgrades.weapons;
+  if (stat === 'weapons') return h.cannons + G.upgrades.weapons;
   if (stat === 'scanner') return 1 + G.upgrades.scanner;
   return 0;
 }
@@ -421,6 +421,13 @@ function travelTo(id) {
   pendingTravel = { dest: id, days: travelDays(sys) };
   addLog('Departing ' + G.systems[G.cur].name + ' for ' + sys.name + ' (' +
     pendingTravel.days + 'd, ' + cost + ' fuel).');
+  var hunt = huntContractAt(id);
+  if (hunt) {
+    var he = makeEncounter(hunt.str);
+    he.name = hunt.gang;
+    he.hunt = hunt.id;
+    return { encounter: he };
+  }
   if (roll() < risk) {
     var tier = Math.min(4, Math.floor(netWorth() / 25000));
     var str = 1 + tier + (roll() < 0.3 ? 1 : 0);
@@ -431,10 +438,8 @@ function travelTo(id) {
 }
 
 function makeEncounter(str) {
-  var names = ['Rustknife gang', 'Black Halo raiders', 'the Vulture Pack', 'Kessler\'s Own',
-    'the Red Meridian', 'Howler corsairs'];
   var e = {
-    name: names[Math.floor(roll() * names.length)],
+    name: PIRATE_BANDS[Math.floor(roll() * PIRATE_BANDS.length)],
     str: str,
     fightOdds: shipStat('weapons') / (shipStat('weapons') + str),
     fleeOdds: Math.max(0.1, Math.min(0.9, 0.35 + 0.18 * shipStat('speed') - 0.05 * str)),
@@ -453,6 +458,7 @@ function resolveEncounter(e, choice) {
       G.stats.piratesBeaten++;
       msg = 'Your cannons tear through ' + e.name + '. Salvage nets ' + loot +
         ' cr, and the Guild takes note (+3 rep).';
+      if (e.hunt) msg += ' ' + completeHunt(e.hunt);
     } else {
       msg = loseCargo(0.5, e.name + ' outgun you and strip half your hold.');
     }
@@ -589,8 +595,8 @@ function tickDays(n) {
       var ct = G.active[c];
       if (G.day > ct.deadline) {
         G.rep[ct.faction] = clampRep(G.rep[ct.faction] - 8);
-        addLog('Contract FAILED: ' + ct.qty + ' ' + GOODS[ct.good].name + ' to ' +
-          G.systems[ct.dest].name + ' (-8 ' + FACTIONS[ct.faction].name + ' rep).');
+        addLog('Contract FAILED: ' + contractDesc(ct) + ' (-8 ' +
+          FACTIONS[ct.faction].name + ' rep).');
         G.active.splice(c, 1);
       }
     }
@@ -651,6 +657,59 @@ function contractTier(faction) {
   return r >= 50 ? 3 : (r >= 20 ? 2 : 1);
 }
 
+// Each contract carries a type ('haul' | 'hunt'); per-type behavior routes
+// through these tables so adding a type is one entry, not a scavenger hunt.
+var CONTRACT_DESC = {
+  haul: function (ct) {
+    return 'deliver ' + ct.qty + ' ' + GOODS[ct.good].name + ' to ' + G.systems[ct.dest].name;
+  },
+  hunt: function (ct) {
+    return 'clear ' + ct.gang + ' out of ' + G.systems[ct.dest].name;
+  }
+};
+
+function contractDesc(ct) { return CONTRACT_DESC[ct.type](ct); }
+
+function genHaulContract(here, targets, tier, c) {
+  var dest = targets[Math.floor(roll() * targets.length)];
+  // Prefer a good the destination actually consumes — contracts teach the map.
+  var wants = [];
+  for (var g = 0; g < GOOD_IDS.length; g++) {
+    if (econMod(dest, GOOD_IDS[g]) > 1 && canTradeGood(dest, GOOD_IDS[g])) wants.push(GOOD_IDS[g]);
+  }
+  var good = wants.length ? wants[Math.floor(roll() * wants.length)] : 'food';
+  var d = dist(here, dest);
+  var qty = Math.round((4 + roll() * 8) * tier);
+  return {
+    id: G.day + '-' + c + '-' + Math.floor(roll() * 1e6),
+    type: 'haul',
+    good: good, qty: qty, dest: dest.id,
+    faction: here.faction,
+    pay: Math.round(qty * GOODS[good].base * 1.15 + d * 15 + 150 * tier),
+    deadline: G.day + Math.ceil(d / 10) + 5,
+    rep: 4 + tier
+  };
+}
+
+// Guild and Colonies boards post bounties: reaching the target system forces
+// an encounter with the named gang at the named strength; win the fight to
+// collect. Losing or slipping away leaves the bounty open.
+function genHuntContract(here, targets, tier, c) {
+  var dest = targets[Math.floor(roll() * targets.length)];
+  var str = 1 + tier + (roll() < 0.35 ? 1 : 0);
+  var d = dist(here, dest);
+  return {
+    id: G.day + '-h' + c + '-' + Math.floor(roll() * 1e6),
+    type: 'hunt',
+    gang: PIRATE_BANDS[Math.floor(roll() * PIRATE_BANDS.length)],
+    str: str, dest: dest.id,
+    faction: here.faction,
+    pay: Math.round(500 * str + d * 12 + 250 * tier),
+    deadline: G.day + Math.ceil(d / 10) + 8,
+    rep: 5 + tier
+  };
+}
+
 function genContracts() {
   var here = G.systems[G.cur];
   G.contracts = [];
@@ -661,26 +720,34 @@ function genContracts() {
   if (!targets.length) return;
   var tier = contractTier(here.faction);
   var n = 2 + Math.floor(roll() * 2);
-  for (var c = 0; c < n; c++) {
-    var dest = targets[Math.floor(roll() * targets.length)];
-    // Prefer a good the destination actually consumes — contracts teach the map.
-    var wants = [];
-    for (var g = 0; g < GOOD_IDS.length; g++) {
-      if (econMod(dest, GOOD_IDS[g]) > 1 && canTradeGood(dest, GOOD_IDS[g])) wants.push(GOOD_IDS[g]);
-    }
-    var good = wants.length ? wants[Math.floor(roll() * wants.length)] : 'food';
-    var d = dist(here, dest);
-    var qty = Math.round((4 + roll() * 8) * tier);
-    var pay = Math.round(qty * GOODS[good].base * 1.15 + d * 15 + 150 * tier);
-    G.contracts.push({
-      id: G.day + '-' + c + '-' + Math.floor(roll() * 1e6),
-      good: good, qty: qty, dest: dest.id,
-      faction: here.faction,
-      pay: pay,
-      deadline: G.day + Math.ceil(d / 10) + 5,
-      rep: 4 + tier
-    });
+  for (var c = 0; c < n; c++) G.contracts.push(genHaulContract(here, targets, tier, c));
+  if (here.faction !== 'syndicate' && roll() < 0.6) {
+    G.contracts.push(genHuntContract(here, targets, tier, n));
   }
+}
+
+function huntContractAt(dest) {
+  for (var i = 0; i < G.active.length; i++) {
+    var ct = G.active[i];
+    if (ct.type === 'hunt' && ct.dest === dest) return ct;
+  }
+  return null;
+}
+
+function completeHunt(id) {
+  for (var i = 0; i < G.active.length; i++) {
+    var ct = G.active[i];
+    if (ct.id !== id) continue;
+    G.credits += ct.pay;
+    G.rep[ct.faction] = clampRep(G.rep[ct.faction] + ct.rep);
+    G.stats.contractsDone++;
+    G.active.splice(i, 1);
+    checkMilestones();
+    saveGame();
+    return 'Bounty honored: +' + ct.pay + ' cr, +' + ct.rep + ' ' +
+      FACTIONS[ct.faction].name + ' rep.';
+  }
+  return '';
 }
 
 function acceptContract(id) {
@@ -689,9 +756,7 @@ function acceptContract(id) {
     if (G.contracts[i].id === id) {
       G.active.push(G.contracts[i]);
       G.contracts.splice(i, 1);
-      addLog('Contract accepted: deliver ' + G.active[G.active.length - 1].qty + ' ' +
-        GOODS[G.active[G.active.length - 1].good].name + ' to ' +
-        G.systems[G.active[G.active.length - 1].dest].name + '.');
+      addLog('Contract accepted: ' + contractDesc(G.active[G.active.length - 1]) + '.');
       saveGame();
       return null;
     }
