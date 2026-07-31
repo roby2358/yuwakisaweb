@@ -167,7 +167,7 @@ function renderMap() {
 
   for (var s = 0; s < G.systems.length; s++) {
     var sys = G.systems[s];
-    if (!sys.charted) continue;
+    if (!sys.charted) { drawUncharted(ctx, mapXY(sys)); continue; }
     var p = mapXY(sys);
     var col = FACTIONS[sys.faction].color;
     var r = 3 + sys.wealth * 1.6;
@@ -224,6 +224,18 @@ function renderMap() {
       ctx.fillText(lensP + ' cr', p.x, p.y + r + 23);
     }
   }
+}
+
+// Uncharted stars show as faint crosses — something is out there, details unknown.
+function drawUncharted(ctx, p) {
+  ctx.beginPath();
+  ctx.moveTo(p.x - 4, p.y);
+  ctx.lineTo(p.x + 4, p.y);
+  ctx.moveTo(p.x, p.y - 4);
+  ctx.lineTo(p.x, p.y + 4);
+  ctx.strokeStyle = 'rgba(140,150,170,0.45)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
 }
 
 // ---------- Price lens ----------

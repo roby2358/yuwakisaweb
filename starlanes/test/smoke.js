@@ -42,8 +42,10 @@ function makeCtx() {
   var noop = function () {};
   var ctx = {
     fillTextCount: 0,
+    moveToCount: 0,
     clearRect: noop, beginPath: noop, arc: noop, fill: noop, stroke: noop,
-    moveTo: noop, lineTo: noop, setLineDash: noop,
+    lineTo: noop, setLineDash: noop,
+    moveTo: function () { ctx.moveToCount++; },
     fillText: function () { ctx.fillTextCount++; }
   };
   return ctx;
@@ -268,6 +270,18 @@ var row = vm.runInContext(
 
 check('broke+dry: travel row shows distress and cannot-travel inline', row.brokeRow);
 check('with credits: travel row swaps distress for refuel', row.creditRow);
+
+// Uncharted stars render as crosses: two moveTo strokes apiece, nothing else
+// uses moveTo when no route preview is up (selection == current system).
+var cross = vm.runInContext(
+  '(function () {' +
+  '  var uncharted = G.systems.filter(function (s) { return !s.charted; }).length;' +
+  '  return { uncharted: uncharted };' +
+  '})()', sandbox);
+mapCtx.moveToCount = 0;
+vm.runInContext('renderMap();', sandbox);
+check('fresh galaxy leaves stars beyond scanner range', cross.uncharted > 0);
+check('every uncharted star draws a cross (2 moveTo each)', mapCtx.moveToCount === cross.uncharted * 2);
 
 console.log(failures ? failures + ' FAILURE(S)' : 'all checks passed');
 process.exit(failures ? 1 : 0);
