@@ -361,6 +361,31 @@ function buildMapTools() {
 
 // ---------- System panel (selection + travel) ----------
 
+// One-line freshness note for a remote system's market intel.
+function intelNote(sys) {
+  if (!sys.visited) {
+    return '<div class="sys-note">Never visited — no market intel. First docking earns a Guild survey bonus.</div>';
+  }
+  if (sys.outpost) return '<div class="sys-note live">Live price feed from your outpost.</div>';
+  if (sys.lastSeen) {
+    return '<div class="sys-note">Market intel from day ' + sys.lastSeen.day +
+      (G.day - sys.lastSeen.day > 6 ? ' <span class="stale">(stale)</span>' : '') + '</div>';
+  }
+  return '';
+}
+
+// Last-seen buy/sell table for a remote system; empty when there is no intel.
+function intelTable(sys) {
+  if (!sys.lastSeen) return '';
+  var h = '<table class="mini-prices"><tr><th>Good</th><th>Buy</th><th>Sell</th></tr>';
+  GOOD_IDS.forEach(function (g) {
+    if (!canTradeGood(sys, g)) return;
+    var p = sys.lastSeen.prices[g];
+    h += '<tr><td>' + GOODS[g].name + '</td><td>' + p.buy + '</td><td>' + p.sell + '</td></tr>';
+  });
+  return h + '</table>';
+}
+
 function renderSystemPanel() {
   var el = $('system-panel');
   var id = UI.selected != null ? UI.selected : G.cur;
@@ -377,24 +402,7 @@ function renderSystemPanel() {
       EVENTS[sys.event.type].news + ' (~' + sys.event.daysLeft + 'd)</div>';
   }
 
-  if (!sys.visited) {
-    h += '<div class="sys-note">Never visited — no market intel. First docking earns a Guild survey bonus.</div>';
-  } else if (sys.lastSeen && id !== G.cur && !sys.outpost) {
-    h += '<div class="sys-note">Market intel from day ' + sys.lastSeen.day +
-      (G.day - sys.lastSeen.day > 6 ? ' <span class="stale">(stale)</span>' : '') + '</div>';
-  } else if (sys.outpost && id !== G.cur) {
-    h += '<div class="sys-note live">Live price feed from your outpost.</div>';
-  }
-
-  if (sys.lastSeen && id !== G.cur) {
-    h += '<table class="mini-prices"><tr><th>Good</th><th>Buy</th><th>Sell</th></tr>';
-    GOOD_IDS.forEach(function (g) {
-      var p = sys.lastSeen.prices[g];
-      if (!canTradeGood(sys, g)) return;
-      h += '<tr><td>' + GOODS[g].name + '</td><td>' + p.buy + '</td><td>' + p.sell + '</td></tr>';
-    });
-    h += '</table>';
-  }
+  if (id !== G.cur) h += intelNote(sys);
 
   if (id !== G.cur) {
     var cost = fuelCostTo(sys);
@@ -485,6 +493,15 @@ function htmlMarket() {
     h += '</tr>';
   });
   h += '</table>';
+
+  if (UI.selected != null && UI.selected !== G.cur) {
+    var sel = G.systems[UI.selected];
+    h += '<h4>Known prices — <span style="color:' + FACTIONS[sel.faction].color + '">' +
+      esc(sel.name) + '</span></h4>';
+    h += intelNote(sel);
+    h += intelTable(sel);
+  }
+
   h += '<div class="hint">Prices react to your trades unit by unit: big buys cost more per unit, big sells earn less (markets recover ~15%/day). Dealers keep a 10% buy/sell spread — faction rep narrows it in their space (up to +10% on sells at 100 rep).</div>';
   return h;
 }

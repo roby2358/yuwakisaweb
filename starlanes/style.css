@@ -26,7 +26,7 @@ body {
 
 #app {
   display: grid;
-  grid-template-rows: auto 1fr 150px;
+  grid-template-rows: auto 1fr 110px;
   height: 100vh;
   gap: 8px;
   padding: 8px;

@@ -146,6 +146,15 @@ var out = vm.runInContext(
   '  var spice = lensStats("spice");' +
   '  r.spiceGuildNull = G.systems.every(function (s) {' +
   '    return s.faction !== "guild" || spice.prices[s.id] === undefined; });' +
+  // Market panel embeds the selected system's known prices below the local table.
+  '  UI.selected = G.cur;' +
+  '  r.marketNoSelf = htmlMarket().indexOf("Known prices") === -1;' +
+  '  var other = G.systems.filter(function (s) { return s.id !== G.cur; })[0];' +
+  '  other.visited = true; snapshotPrices(other);' +
+  '  UI.selected = other.id;' +
+  '  var mh = htmlMarket();' +
+  '  r.marketShowsSelected = mh.indexOf(other.name) !== -1 && mh.indexOf("mini-prices") !== -1;' +
+  '  UI.selected = G.cur;' +
   // Full render with the lens active must not throw.
   '  UI.lens = "food"; UI.setZoom(5); renderAll();' +
   '  r.rendered = true;' +
@@ -166,6 +175,8 @@ check('max price renders red', out.colorHigh === 'hsl(0, 85%, 55%)');
 check('min price renders blue', out.colorLow === 'hsl(240, 85%, 55%)');
 check('flat market renders midpoint green', out.colorFlat === 'hsl(120, 85%, 55%)');
 check('spice lens skips guild systems', out.spiceGuildNull);
+check('market panel omits Known prices when nothing else selected', out.marketNoSelf);
+check('market panel shows selected system prices below local table', out.marketShowsSelected);
 check('renderAll with lens + 5x zoom does not throw', out.rendered);
 
 // Text culling: narrow spans label systems; 5R/10R draw just the dots.
