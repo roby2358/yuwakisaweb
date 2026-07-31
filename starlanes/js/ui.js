@@ -496,7 +496,7 @@ function htmlMarket() {
     var avg = G.avgCost[g];
     var evUp = eventMult(sys, g) > 1;
     h += '<tr class="' + (legal ? '' : 'illegal') + '">';
-    h += '<td>' + GOODS[g].name + (GOODS[g].illegal ? ' <span class="tag red">illegal in Guild space</span>' : '') +
+    h += '<td>' + priceDot(sys, g) + GOODS[g].name + (GOODS[g].illegal ? ' <span class="tag red">illegal in Guild space</span>' : '') +
       (evUp ? ' <span class="tag orange">event ▲</span>' : '') + '</td>';
     if (legal) {
       var profitCls = (have && sell > avg) ? 'profit' : (have && sell < avg ? 'loss' : '');
@@ -519,10 +519,22 @@ function htmlMarket() {
       esc(sel.name) + '</span></h4>';
     h += intelNote(sel);
     h += intelTable(sel);
+  } else if (G.active.length) {
+    h += '<h4>Active contracts <span class="dim">(' + G.active.length + '/3)</span></h4>';
+    G.active.forEach(function (ct) { h += activeContractCard(ct); });
   }
 
   h += '<div class="hint">Prices react to your trades unit by unit: big buys cost more per unit, big sells earn less (markets recover ~15%/day). Dealers keep a 10% buy/sell spread — faction rep narrows it in their space (up to +10% on sells at 100 rep).</div>';
   return h;
+}
+
+// ROYGBIV dot for a market row: the local buy price against every known price
+// for that good — the table twin of the map's price lens (blue cheap, red dear).
+function priceDot(sys, g) {
+  if (!canTradeGood(sys, g)) return '';
+  var stats = lensStats(g);
+  var col = lensColor(priceOf(sys, g), stats.min, stats.max);
+  return '<span class="price-dot" style="background:' + col + '"></span>';
 }
 
 function qtyBtns(act, g) {
@@ -577,25 +589,29 @@ function htmlShipyard() {
   return h;
 }
 
+// One active-contract card with a Deliver button when the ship is at the
+// destination with the goods — shared by the Contracts and Market tabs.
+function activeContractCard(ct) {
+  var destSys = G.systems[ct.dest];
+  var left = ct.deadline - G.day;
+  var here = ct.dest === G.cur;
+  var enough = (G.cargo[ct.good] || 0) >= ct.qty;
+  var h = '<div class="card"><b>' + ct.qty + ' ' + GOODS[ct.good].name + '</b> → ' +
+    esc(destSys.name) + ' · pays <b>' + fmt(ct.pay) + ' cr</b> +' + ct.rep + ' ' +
+    FACTIONS[ct.faction].name + ' rep · <span class="' + (left <= 2 ? 'risk-hi' : '') + '">' +
+    left + 'd left</span> ';
+  if (here && enough) {
+    h += '<button class="btn small primary" onclick="UI.deliver(\'' + ct.id + '\')">Deliver</button>';
+  } else if (here) {
+    h += '<span class="dim">need ' + (ct.qty - (G.cargo[ct.good] || 0)) + ' more in hold</span>';
+  }
+  return h + '</div>';
+}
+
 function htmlContracts() {
   var h = '<h3>Active Contracts <span class="dim">(' + G.active.length + '/3)</span></h3>';
   if (!G.active.length) h += '<div class="dim">None. Accept offers below — deadlines are real.</div>';
-  G.active.forEach(function (ct) {
-    var destSys = G.systems[ct.dest];
-    var left = ct.deadline - G.day;
-    var here = ct.dest === G.cur;
-    var enough = (G.cargo[ct.good] || 0) >= ct.qty;
-    h += '<div class="card"><b>' + ct.qty + ' ' + GOODS[ct.good].name + '</b> → ' +
-      esc(destSys.name) + ' · pays <b>' + fmt(ct.pay) + ' cr</b> +' + ct.rep + ' ' +
-      FACTIONS[ct.faction].name + ' rep · <span class="' + (left <= 2 ? 'risk-hi' : '') + '">' +
-      left + 'd left</span> ';
-    if (here && enough) {
-      h += '<button class="btn small primary" onclick="UI.deliver(\'' + ct.id + '\')">Deliver</button>';
-    } else if (here) {
-      h += '<span class="dim">need ' + (ct.qty - (G.cargo[ct.good] || 0)) + ' more in hold</span>';
-    }
-    h += '</div>';
-  });
+  G.active.forEach(function (ct) { h += activeContractCard(ct); });
 
   var here = G.systems[G.cur];
   h += '<h3>Offers at ' + esc(here.name) + ' <span class="dim">(tier ' +

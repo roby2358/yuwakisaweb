@@ -156,7 +156,19 @@ var out = vm.runInContext(
   '  UI.selected = other.id;' +
   '  var mh = htmlMarket();' +
   '  r.marketShowsSelected = mh.indexOf(other.name) !== -1 && mh.indexOf("mini-prices") !== -1;' +
+  // Active contracts ride along on the market tab, but only when no remote
+  // system's intel is up — and a deliverable one keeps its Deliver button.
+  '  G.active.push({ id: "t-far", good: "food", qty: 5, dest: other.id, faction: "guild", pay: 500, deadline: G.day + 9, rep: 5 });' +
+  '  r.marketContractsHidden = htmlMarket().indexOf("Active contracts") === -1;' +
   '  UI.selected = G.cur;' +
+  '  r.marketShowsContracts = htmlMarket().indexOf("Active contracts") !== -1;' +
+  '  G.active.push({ id: "t-here", good: "food", qty: 1, dest: G.cur, faction: "guild", pay: 100, deadline: G.day + 5, rep: 4 });' +
+  '  G.cargo.food = (G.cargo.food || 0) + 1;' +
+  '  r.marketDeliverBtn = htmlMarket().indexOf("UI.deliver(\'t-here\')") !== -1;' +
+  '  G.cargo.food -= 1; G.active.length = 0;' +
+  // Every tradeable good gets a lens-colored price dot; customs-blocked rows none.
+  '  var legalGoods = GOOD_IDS.filter(function (g) { return canTradeGood(G.systems[G.cur], g); }).length;' +
+  '  r.marketDots = (htmlMarket().match(/price-dot/g) || []).length === legalGoods;' +
   // Full render with the lens active must not throw.
   '  UI.lens = "food"; UI.setZoom(5); renderAll();' +
   '  r.rendered = true;' +
@@ -179,6 +191,10 @@ check('flat market renders midpoint green', out.colorFlat === 'hsl(120, 85%, 55%
 check('spice lens skips guild systems', out.spiceGuildNull);
 check('market panel omits Known prices when nothing else selected', out.marketNoSelf);
 check('market panel shows selected system prices below local table', out.marketShowsSelected);
+check('market panel hides contracts while remote intel is up', out.marketContractsHidden);
+check('market panel lists active contracts when nothing else selected', out.marketShowsContracts);
+check('deliverable contract keeps its Deliver button on the market tab', out.marketDeliverBtn);
+check('every tradeable good wears a lens-colored price dot', out.marketDots);
 check('renderAll with lens + 5x zoom does not throw', out.rendered);
 
 // Text culling: narrow spans label systems; 5R/10R draw just the dots.

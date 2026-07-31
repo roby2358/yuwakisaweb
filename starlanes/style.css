@@ -233,6 +233,14 @@ table.market td, table.mini-prices td {
 }
 
 tr.illegal td { color: var(--dim); }
+
+.price-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
 td.acts { white-space: nowrap; }
 td.profit { color: var(--green); font-weight: 600; }
 td.loss { color: var(--red); }
