@@ -267,6 +267,16 @@ td.loss { color: var(--red); }
 .travel-box { margin-top: 8px; }
 .travel-stats { margin-bottom: 6px; line-height: 1.6; }
 
+.travel-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.travel-row .sys-note { margin: 0; white-space: nowrap; }
+.travel-row .btn { white-space: nowrap; }
+
 .rep-bar {
   height: 6px;
   background: var(--bg);

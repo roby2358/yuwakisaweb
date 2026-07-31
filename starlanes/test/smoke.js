@@ -231,5 +231,43 @@ check('spacing multiplier runs 1x right edge to 2x left edge', gal.gradient);
 check('starting tank reaches at least 8 systems from home', gal.starterCluster);
 check('long-range ship (56 = 2x LINK_MAX) reaches every system', gal.connected);
 
+// Distress tow offer: low fuel alone is not distress — only being unable to
+// refuel your way to any charted system is.
+var tow = vm.runInContext(
+  '(function () {' +
+  '  var r = {};' +
+  '  G.fuel = 8; G.credits = 5000;' +
+  '  r.quietWithCredits = !strandedHere();' +
+  '  G.credits = 0;' +
+  '  r.firesWhenBroke = strandedHere();' +
+  '  G.fuel = shipStat("fuel"); G.credits = 5000;' +
+  '  return r;' +
+  '})()', sandbox);
+
+check('no distress offer at low fuel while refueling is affordable', tow.quietWithCredits);
+check('distress offer fires when broke and dry', tow.firesWhenBroke);
+
+// The travel row keeps [distress] [refuel] [travel|cannot] on one line.
+var row = vm.runInContext(
+  '(function () {' +
+  '  var r = {};' +
+  '  var other = G.systems.filter(function (s) { return s.id !== G.cur && s.charted; })[0];' +
+  '  UI.selected = other.id;' +
+  '  G.fuel = 5; G.credits = 0;' +
+  '  renderSystemPanel();' +
+  '  var ph = document.getElementById("system-panel").innerHTML;' +
+  '  r.brokeRow = ph.indexOf("travel-row") !== -1 && ph.indexOf("Distress tow") !== -1 &&' +
+  '    ph.indexOf("Not enough fuel") !== -1 && ph.indexOf("Refuel") === -1;' +
+  '  G.credits = 5000;' +
+  '  renderSystemPanel();' +
+  '  ph = document.getElementById("system-panel").innerHTML;' +
+  '  r.creditRow = ph.indexOf("Refuel") !== -1 && ph.indexOf("Distress tow") === -1;' +
+  '  G.fuel = shipStat("fuel"); UI.selected = G.cur; renderSystemPanel();' +
+  '  return r;' +
+  '})()', sandbox);
+
+check('broke+dry: travel row shows distress and cannot-travel inline', row.brokeRow);
+check('with credits: travel row swaps distress for refuel', row.creditRow);
+
 console.log(failures ? failures + ' FAILURE(S)' : 'all checks passed');
 process.exit(failures ? 1 : 0);

@@ -538,11 +538,22 @@ function customsScan() {
 }
 
 // Distress tow — the "never stuck" guarantee.
-function canReachAnywhere() {
+function canReach(fuel) {
   for (var i = 0; i < G.systems.length; i++) {
-    if (i !== G.cur && G.systems[i].charted && fuelCostTo(G.systems[i]) <= G.fuel) return true;
+    if (i !== G.cur && G.systems[i].charted && fuelCostTo(G.systems[i]) <= fuel) return true;
   }
   return false;
+}
+
+// The best tank refueling here on your own credits can buy.
+function bestFuelHere() {
+  var afford = Math.floor(G.credits / fuelPrice(G.systems[G.cur]));
+  return Math.min(shipStat('fuel'), G.fuel + afford);
+}
+
+// Truly pinned: even a maxed-out refuel leaves every charted system out of range.
+function strandedHere() {
+  return !canReach(bestFuelHere());
 }
 
 function distressTow() {

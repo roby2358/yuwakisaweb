@@ -417,22 +417,29 @@ function renderSystemPanel() {
     var need = shipStat('fuel') - G.fuel;
     var fp = fuelPrice(G.systems[G.cur]);
     var fillCost = Math.min(Math.floor(need), Math.floor(G.credits / fp)) * fp;
+    h += '<div class="travel-row">';
+    h += towButton();
     if (need >= 1 && fillCost > 0) {
-      h += '<button class="btn" onclick="UI.refuel()">Refuel (' + fmt(fillCost) + ' cr)</button> ';
+      h += '<button class="btn" onclick="UI.refuel()">Refuel (' + fmt(fillCost) + ' cr)</button>';
     }
     if (cost <= G.fuel) {
       h += '<button class="btn primary" onclick="UI.travel(' + id + ')">Travel to ' + esc(sys.name) + '</button>';
     } else {
-      h += '<div class="sys-note stale">Not enough fuel (' + Math.round(G.fuel) + '/' + cost + ').</div>';
+      h += '<span class="sys-note stale">Not enough fuel (' + Math.round(G.fuel) + '/' + cost + ').</span>';
     }
     h += '</div>';
-  }
-
-  if (!canReachAnywhere() && G.fuel < shipStat('fuel')) {
-    h += '<button class="btn warn" onclick="UI.tow()">☎ Distress call — Guild tow (300 cr)</button>';
+    h += '</div>';
+  } else {
+    h += towButton();
   }
 
   el.innerHTML = h;
+}
+
+// Guild tow offer — rendered wherever the player could be pinned.
+function towButton() {
+  if (!strandedHere() || G.fuel >= shipStat('fuel')) return '';
+  return '<button class="btn warn" onclick="UI.tow()">☎ Distress tow (300 cr)</button>';
 }
 
 // ---------- Tabs ----------
