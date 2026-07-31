@@ -226,14 +226,14 @@ function renderMap() {
   }
 }
 
-// Uncharted stars show as faint crosses — something is out there, details unknown.
+// Uncharted stars show as white crosses — something is out there, go find out what.
 function drawUncharted(ctx, p) {
   ctx.beginPath();
   ctx.moveTo(p.x - 4, p.y);
   ctx.lineTo(p.x + 4, p.y);
   ctx.moveTo(p.x, p.y - 4);
   ctx.lineTo(p.x, p.y + 4);
-  ctx.strokeStyle = 'rgba(140,150,170,0.45)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.85)';
   ctx.lineWidth = 1;
   ctx.stroke();
 }
