@@ -169,6 +169,12 @@ var out = vm.runInContext(
   // Every tradeable good gets a lens-colored price dot; customs-blocked rows none.
   '  var legalGoods = GOOD_IDS.filter(function (g) { return canTradeGood(G.systems[G.cur], g); }).length;' +
   '  r.marketDots = (htmlMarket().match(/price-dot/g) || []).length === legalGoods;' +
+  // Sell buttons occupy their column even with an empty hold (ghosted, not
+  // clickable) so buying never shifts the table layout.
+  '  var held = GOOD_IDS.filter(function (g) { return canTradeGood(G.systems[G.cur], g) && (G.cargo[g] || 0) > 0; }).length;' +
+  '  var mh2 = htmlMarket();' +
+  '  r.marketSellFixed = (mh2.match(/Sell 1/g) || []).length === legalGoods &&' +
+  '    (mh2.match(/class="ghost"/g) || []).length === legalGoods - held;' +
   // Full render with the lens active must not throw.
   '  UI.lens = "food"; UI.setZoom(5); renderAll();' +
   '  r.rendered = true;' +
@@ -195,6 +201,7 @@ check('market panel hides contracts while remote intel is up', out.marketContrac
 check('market panel lists active contracts when nothing else selected', out.marketShowsContracts);
 check('deliverable contract keeps its Deliver button on the market tab', out.marketDeliverBtn);
 check('every tradeable good wears a lens-colored price dot', out.marketDots);
+check('sell buttons hold their column open when the hold is empty', out.marketSellFixed);
 check('renderAll with lens + 5x zoom does not throw', out.rendered);
 
 // Text culling: narrow spans label systems; 5R/10R draw just the dots.

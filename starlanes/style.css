@@ -242,6 +242,8 @@ tr.illegal td { color: var(--dim); }
   margin-right: 6px;
 }
 td.acts { white-space: nowrap; }
+td.acts .ghost { visibility: hidden; }
+td.hold { min-width: 72px; }
 td.profit { color: var(--green); font-weight: 600; }
 td.loss { color: var(--red); }
 

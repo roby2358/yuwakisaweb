@@ -502,9 +502,10 @@ function htmlMarket() {
       var profitCls = (have && sell > avg) ? 'profit' : (have && sell < avg ? 'loss' : '');
       h += '<td>' + buy + '</td><td class="' + profitCls + '">' + sell + '</td>';
       h += '<td>' + sys.mkt[g].stock + '</td>';
-      h += '<td>' + (have ? have + ' <span class="dim">@' + Math.round(avg) + '</span>' : '—') + '</td>';
+      h += '<td class="hold">' + (have ? have + ' <span class="dim">@' + Math.round(avg) + '</span>' : '—') + '</td>';
       h += '<td class="acts">' + qtyBtns('buy', g) + '</td>';
-      h += '<td class="acts">' + (have ? qtyBtns('sell', g) : '') + '</td>';
+      h += '<td class="acts">' + (have ? qtyBtns('sell', g) :
+        '<span class="ghost">' + qtyBtns('sell', g) + '</span>') + '</td>';
     } else {
       h += '<td colspan="5" class="dim">Guild customs — no open trade. ' +
         (have ? 'You are carrying ' + have + '!' : '') + '</td>';
