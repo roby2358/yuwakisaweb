@@ -189,5 +189,47 @@ var textAt5 = mapCtx.fillTextCount;
 vm.runInContext('UI.setZoom(10);', sandbox);
 check('wide views draw just the dots (no text at 5R/10R)', textAt5 === 0 && mapCtx.fillTextCount === textAt5);
 
+// Galaxy generation: on a 200x200 world with 11-21 spacing (scaled up to 2x on
+// the left), every seed must yield a full galaxy where a starting tank opens a
+// real home cluster and a long-range ship (2x LINK_MAX = 56) can reach it all.
+var gal = vm.runInContext(
+  '(function () {' +
+  '  function reach(range) {' +
+  '    var seen = { 0: true }, stack = [0], n = 1;' +
+  '    while (stack.length) {' +
+  '      var cur = G.systems[stack.pop()];' +
+  '      G.systems.forEach(function (b) {' +
+  '        if (seen[b.id] || dist(cur, b) > range) return;' +
+  '        seen[b.id] = true; n++; stack.push(b.id);' +
+  '      });' +
+  '    }' +
+  '    return n;' +
+  '  }' +
+  '  var seeds = ["alpha", "beta", "gamma", "delta", "epsilon"];' +
+  '  var r = { count: true, bounds: true, spacing: true, gradient: true,' +
+  '            starterCluster: true, connected: true };' +
+  '  r.gradient = spaceMult(200) === 1 && spaceMult(0) === 2;' +
+  '  seeds.forEach(function (sd) {' +
+  '    newGame(sd, "Bot");' +
+  '    if (G.systems.length !== 26) r.count = false;' +
+  '    G.systems.forEach(function (a) {' +
+  '      if (a.x < 6 || a.x > 194 || a.y < 6 || a.y > 194) r.bounds = false;' +
+  '      G.systems.forEach(function (b) {' +
+  '        if (a.id < b.id && dist(a, b) < 11) r.spacing = false;' +
+  '      });' +
+  '    });' +
+  '    if (reach(shipStat("fuel")) < 8) r.starterCluster = false;' +
+  '    if (reach(56) !== G.systems.length) r.connected = false;' +
+  '  });' +
+  '  return r;' +
+  '})()', sandbox);
+
+check('5 fresh galaxies all place the full 26 systems', gal.count);
+check('all systems inside the 200x200 world margin', gal.bounds);
+check('no system pair closer than 11', gal.spacing);
+check('spacing multiplier runs 1x right edge to 2x left edge', gal.gradient);
+check('starting tank reaches at least 8 systems from home', gal.starterCluster);
+check('long-range ship (56 = 2x LINK_MAX) reaches every system', gal.connected);
+
 console.log(failures ? failures + ' FAILURE(S)' : 'all checks passed');
 process.exit(failures ? 1 : 0);

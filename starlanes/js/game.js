@@ -98,6 +98,16 @@ function newGame(seedStr, captain) {
   saveGame();
 }
 
+var WORLD_SIZE = 200;  // world units per side
+var WORLD_EDGE = 6;    // stars keep off the rim
+var LINK_MAX = 28;     // widest gap growth may open at 1x spacing; under a Rustbucket tank (30)
+
+// Spacing multiplier: 1x at the right edge rising to 2x at the left. The deep
+// frontier spreads out until only long-range ships can cross it.
+function spaceMult(x) {
+  return 2 - x / WORLD_SIZE;
+}
+
 function genGalaxy(rng) {
   var names = SYSTEM_NAMES.slice(1);
   // shuffle names
@@ -106,15 +116,26 @@ function genGalaxy(rng) {
     var t = names[i]; names[i] = names[j]; names[j] = t;
   }
   var count = 26;
-  var pts = [{ x: 18, y: 50 }]; // home
+  var pts = [{ x: 164, y: 100 }]; // home, right of center — the deep frontier lies leftward
   var tries = 0;
-  while (pts.length < count && tries < 4000) {
+  while (pts.length < count && tries < 8000) {
     tries++;
-    var p = { x: 6 + rng() * 88, y: 6 + rng() * 88 };
+    // Grow from a settled star: each new one lands within LINK_MAX (scaled by
+    // local spacing) of its anchor, so the jump graph stays connected by
+    // construction — at worst 2x LINK_MAX on the far left.
+    var anchor = pts[Math.floor(rng() * pts.length)];
+    var m = spaceMult(anchor.x);
+    var base = 11 + rng() * 10;
+    var ang = rng() * Math.PI * 2;
+    var rad = (base + rng() * (LINK_MAX - base)) * m;
+    var p = { x: anchor.x + Math.cos(ang) * rad, y: anchor.y + Math.sin(ang) * rad };
+    if (p.x < WORLD_EDGE || p.x > WORLD_SIZE - WORLD_EDGE) continue;
+    if (p.y < WORLD_EDGE || p.y > WORLD_SIZE - WORLD_EDGE) continue;
+    var need = base * spaceMult(p.x);
     var ok = true;
     for (var k = 0; k < pts.length; k++) {
       var dx = pts[k].x - p.x, dy = pts[k].y - p.y;
-      if (dx * dx + dy * dy < 11 * 11) { ok = false; break; }
+      if (dx * dx + dy * dy < need * need) { ok = false; break; }
     }
     if (ok) pts.push(p);
   }
