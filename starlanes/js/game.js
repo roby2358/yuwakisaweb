@@ -123,7 +123,7 @@ function genGalaxy(rng) {
     // Grow from a settled star: each new one lands within LINK_MAX (scaled by
     // local spacing) of its anchor, so the jump graph stays connected by
     // construction — at worst 2x LINK_MAX on the far left.
-    var anchor = pts[Math.floor(rng() * pts.length)];
+    var anchor = pick(rng, pts);
     var m = spaceMult(anchor.x);
     var base = 11 + rng() * 10;
     var ang = rng() * Math.PI * 2;
@@ -181,9 +181,15 @@ function dist(a, b) {
 
 // ---------- Ship stats ----------
 
+// Cargo capacity a given hull would have with the current modules and perks —
+// shipStat('cargo') for the flown hull, and the fit check when trading hulls.
+function hullCargoCap(h) {
+  return HULLS[h].cargo + G.upgrades.cargo * UPGRADES.cargo.delta + perkRank('holds') * 8;
+}
+
 function shipStat(stat) {
   var h = HULLS[G.hull];
-  if (stat === 'cargo')  return h.cargo + G.upgrades.cargo * UPGRADES.cargo.delta + perkRank('holds') * 8;
+  if (stat === 'cargo')  return hullCargoCap(G.hull);
   if (stat === 'fuel')   return h.fuel + G.upgrades.fuel * UPGRADES.fuel.delta;
   if (stat === 'speed')  return h.speed + G.upgrades.engine * UPGRADES.engine.delta;
   if (stat === 'weapons') return h.cannons + G.upgrades.weapons;
@@ -369,12 +375,10 @@ function sellGood(good, qty) {
   return null;
 }
 
-function refuel(amount) {
+function refuel() {
   var sys = G.systems[G.cur];
-  var need = shipStat('fuel') - G.fuel;
-  amount = Math.min(amount == null ? need : amount, need);
   var price = fuelPrice(sys);
-  amount = Math.min(amount, Math.floor(G.credits / price));
+  var amount = Math.min(shipStat('fuel') - G.fuel, Math.floor(G.credits / price));
   if (amount <= 0) return;
   G.credits -= amount * price;
   G.fuel += amount;
@@ -385,9 +389,15 @@ function clampRep(v) { return Math.max(-100, Math.min(100, v)); }
 
 // ---------- Travel ----------
 
+// Efficient Drives shrink fuel burn per unit of distance. This one factor also
+// sets the map's range rings (range = fuel / factor), so it lives here alone.
+function fuelPerDist() {
+  return 1 - perkRank('drives') * 0.10;
+}
+
 function fuelCostTo(sys) {
   var d = dist(G.systems[G.cur], sys);
-  return Math.max(1, Math.round(d * (1 - perkRank('drives') * 0.10)));
+  return Math.max(1, Math.round(d * fuelPerDist()));
 }
 
 function travelDays(sys) {
@@ -439,7 +449,7 @@ function travelTo(id) {
 
 function makeEncounter(str) {
   var e = {
-    name: PIRATE_BANDS[Math.floor(roll() * PIRATE_BANDS.length)],
+    name: pick(roll, PIRATE_BANDS),
     str: str,
     fightOdds: shipStat('weapons') / (shipStat('weapons') + str),
     fleeOdds: Math.max(0.1, Math.min(0.9, 0.35 + 0.18 * shipStat('speed') - 0.05 * str)),
@@ -632,11 +642,10 @@ function spawnEvent() {
   var candidates = [];
   for (var i = 0; i < G.systems.length; i++) if (!G.systems[i].event) candidates.push(G.systems[i]);
   if (!candidates.length) return;
-  var sys = candidates[Math.floor(roll() * candidates.length)];
-  var types = Object.keys(EVENTS);
-  var type = types[Math.floor(roll() * types.length)];
+  var sys = pick(roll, candidates);
+  var type = pick(roll, Object.keys(EVENTS));
   var dur = EVENTS[type].dur;
-  sys.event = { type: type, daysLeft: dur[0] + Math.floor(roll() * (dur[1] - dur[0] + 1)), known: false };
+  sys.event = { type: type, daysLeft: randInt(roll, dur[0], dur[1]), known: false };
   if (sys.outpost || sys.id === G.cur) {
     sys.event.known = true;
     addLog((sys.outpost ? 'Outpost report — ' : 'Local news — ') + EVENTS[type].name +
@@ -670,18 +679,22 @@ var CONTRACT_DESC = {
 
 function contractDesc(ct) { return CONTRACT_DESC[ct.type](ct); }
 
+function contractId(tag) {
+  return G.day + '-' + tag + '-' + Math.floor(roll() * 1e6);
+}
+
 function genHaulContract(here, targets, tier, c) {
-  var dest = targets[Math.floor(roll() * targets.length)];
+  var dest = pick(roll, targets);
   // Prefer a good the destination actually consumes — contracts teach the map.
   var wants = [];
   for (var g = 0; g < GOOD_IDS.length; g++) {
     if (econMod(dest, GOOD_IDS[g]) > 1 && canTradeGood(dest, GOOD_IDS[g])) wants.push(GOOD_IDS[g]);
   }
-  var good = wants.length ? wants[Math.floor(roll() * wants.length)] : 'food';
+  var good = wants.length ? pick(roll, wants) : 'food';
   var d = dist(here, dest);
   var qty = Math.round((4 + roll() * 8) * tier);
   return {
-    id: G.day + '-' + c + '-' + Math.floor(roll() * 1e6),
+    id: contractId(c),
     type: 'haul',
     good: good, qty: qty, dest: dest.id,
     faction: here.faction,
@@ -695,13 +708,13 @@ function genHaulContract(here, targets, tier, c) {
 // an encounter with the named gang at the named strength; win the fight to
 // collect. Losing or slipping away leaves the bounty open.
 function genHuntContract(here, targets, tier, c) {
-  var dest = targets[Math.floor(roll() * targets.length)];
+  var dest = pick(roll, targets);
   var str = 1 + tier + (roll() < 0.35 ? 1 : 0);
   var d = dist(here, dest);
   return {
-    id: G.day + '-h' + c + '-' + Math.floor(roll() * 1e6),
+    id: contractId('h' + c),
     type: 'hunt',
-    gang: PIRATE_BANDS[Math.floor(roll() * PIRATE_BANDS.length)],
+    gang: pick(roll, PIRATE_BANDS),
     str: str, dest: dest.id,
     faction: here.faction,
     pay: Math.round(500 * str + d * 12 + 250 * tier),
@@ -734,16 +747,22 @@ function huntContractAt(dest) {
   return null;
 }
 
+// Shared payout for any completed contract: credits, rep, stats, removal.
+function payContract(idx) {
+  var ct = G.active[idx];
+  G.credits += ct.pay;
+  G.rep[ct.faction] = clampRep(G.rep[ct.faction] + ct.rep);
+  G.stats.contractsDone++;
+  G.active.splice(idx, 1);
+  checkMilestones();
+  saveGame();
+  return ct;
+}
+
 function completeHunt(id) {
   for (var i = 0; i < G.active.length; i++) {
-    var ct = G.active[i];
-    if (ct.id !== id) continue;
-    G.credits += ct.pay;
-    G.rep[ct.faction] = clampRep(G.rep[ct.faction] + ct.rep);
-    G.stats.contractsDone++;
-    G.active.splice(i, 1);
-    checkMilestones();
-    saveGame();
+    if (G.active[i].id !== id) continue;
+    var ct = payContract(i);
     return 'Bounty honored: +' + ct.pay + ' cr, +' + ct.rep + ' ' +
       FACTIONS[ct.faction].name + ' rep.';
   }
@@ -767,19 +786,13 @@ function acceptContract(id) {
 function deliverContract(id) {
   for (var i = 0; i < G.active.length; i++) {
     var ct = G.active[i];
-    if (ct.id === id && ct.dest === G.cur && (G.cargo[ct.good] || 0) >= ct.qty) {
-      G.cargo[ct.good] -= ct.qty;
-      if (G.cargo[ct.good] <= 0) { delete G.cargo[ct.good]; delete G.avgCost[ct.good]; }
-      G.credits += ct.pay;
-      G.rep[ct.faction] = clampRep(G.rep[ct.faction] + ct.rep);
-      G.stats.contractsDone++;
-      G.active.splice(i, 1);
-      addLog('Contract delivered: +' + ct.pay + ' cr, +' + ct.rep + ' ' +
-        FACTIONS[ct.faction].name + ' rep.');
-      checkMilestones();
-      saveGame();
-      return null;
-    }
+    if (ct.id !== id || ct.dest !== G.cur || (G.cargo[ct.good] || 0) < ct.qty) continue;
+    G.cargo[ct.good] -= ct.qty;
+    if (G.cargo[ct.good] <= 0) { delete G.cargo[ct.good]; delete G.avgCost[ct.good]; }
+    addLog('Contract delivered: +' + ct.pay + ' cr, +' + ct.rep + ' ' +
+      FACTIONS[ct.faction].name + ' rep.');
+    payContract(i);
+    return null;
   }
   return 'Need the full shipment in your hold, at the destination.';
 }
@@ -797,7 +810,7 @@ function buyRumor() {
   }
   var msg;
   if (evSystems.length && roll() < 0.85) {
-    var sys = evSystems[Math.floor(roll() * evSystems.length)];
+    var sys = pick(roll, evSystems);
     sys.charted = true;
     sys.event.known = true;
     var ev = EVENTS[sys.event.type];
@@ -809,7 +822,7 @@ function buyRumor() {
       if (!G.systems[j].charted) far.push(G.systems[j]);
     }
     if (far.length) {
-      var s2 = far[Math.floor(roll() * far.length)];
+      var s2 = pick(roll, far);
       s2.charted = true;
       msg = 'A drunk navigator sells you coordinates: a system called ' + s2.name +
         ' now marks your charts. Whether it\'s worth the burn is your problem.';
@@ -848,7 +861,7 @@ function buyHull(h) {
   if (h === G.hull) return 'You already fly this hull.';
   var price = hullTradePrice(h);
   if (G.credits < price) return 'Not enough credits.';
-  if (cargoUsed() > HULLS[h].cargo + G.upgrades.cargo * UPGRADES.cargo.delta + perkRank('holds') * 8) {
+  if (cargoUsed() > hullCargoCap(h)) {
     return 'Your cargo won\'t fit in that hull. Sell some first.';
   }
   G.credits -= price;

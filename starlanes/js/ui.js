@@ -91,7 +91,7 @@ var MAP_SIZE = 640;
 
 // Distance the ship covers on a full tank, in world units (fuel cost ≈ distance).
 function shipRangeWorld() {
-  return shipStat('fuel') / (1 - perkRank('drives') * 0.10);
+  return shipStat('fuel') / fuelPerDist();
 }
 
 // Pixels per world unit. The view is ship-centered and the display square
@@ -143,7 +143,7 @@ function renderMap() {
 
   // Current fuel ring — the map answers "where can I go right now." (fuel cost ≈ distance)
   ctx.beginPath();
-  ctx.arc(hp.x, hp.y, (G.fuel / (1 - perkRank('drives') * 0.10)) * mapScale(), 0, Math.PI * 2);
+  ctx.arc(hp.x, hp.y, (G.fuel / fuelPerDist()) * mapScale(), 0, Math.PI * 2);
   ctx.strokeStyle = 'rgba(120,160,255,0.25)';
   ctx.setLineDash([4, 6]);
   ctx.stroke();
@@ -591,16 +591,32 @@ function htmlShipyard() {
 }
 
 // Contract cards dispatch on ct.type — active cards are shared by the
-// Contracts and Market tabs; offer cards by the Contracts tab.
-function activeHaulCard(ct) {
-  var destSys = G.systems[ct.dest];
+// Contracts and Market tabs; offer cards by the Contracts tab. Each type
+// writes only its lead; pay/rep/deadline formatting is shared.
+function skullsHtml(n) {
+  return '<span class="risk-hi">' + '☠'.repeat(n) + '</span>';
+}
+
+function payRepHtml(ct) {
+  return 'pays <b>' + fmt(ct.pay) + ' cr</b> +' + ct.rep + ' ' + FACTIONS[ct.faction].name + ' rep';
+}
+
+function deadlineHtml(ct) {
   var left = ct.deadline - G.day;
+  return '<span class="' + (left <= 2 ? 'risk-hi' : '') + '">' + left + 'd left</span>';
+}
+
+function offerTailHtml(ct, here) {
+  return ' <span class="dim">(' + Math.round(dist(here, G.systems[ct.dest])) +
+    ' ly)</span> · pays <b>' + fmt(ct.pay) + ' cr</b> · due day ' + ct.deadline +
+    ' <button class="btn small" onclick="UI.accept(\'' + ct.id + '\')">Accept</button></div>';
+}
+
+function activeHaulCard(ct) {
   var here = ct.dest === G.cur;
   var enough = (G.cargo[ct.good] || 0) >= ct.qty;
   var h = '<div class="card"><b>' + ct.qty + ' ' + GOODS[ct.good].name + '</b> → ' +
-    esc(destSys.name) + ' · pays <b>' + fmt(ct.pay) + ' cr</b> +' + ct.rep + ' ' +
-    FACTIONS[ct.faction].name + ' rep · <span class="' + (left <= 2 ? 'risk-hi' : '') + '">' +
-    left + 'd left</span> ';
+    esc(G.systems[ct.dest].name) + ' · ' + payRepHtml(ct) + ' · ' + deadlineHtml(ct) + ' ';
   if (here && enough) {
     h += '<button class="btn small primary" onclick="UI.deliver(\'' + ct.id + '\')">Deliver</button>';
   } else if (here) {
@@ -610,12 +626,8 @@ function activeHaulCard(ct) {
 }
 
 function activeHuntCard(ct) {
-  var destSys = G.systems[ct.dest];
-  var left = ct.deadline - G.day;
-  var h = '<div class="card"><b>Hunt ' + esc(ct.gang) + '</b> <span class="risk-hi">' +
-    '☠'.repeat(ct.str) + '</span> → ' + esc(destSys.name) + ' · pays <b>' + fmt(ct.pay) +
-    ' cr</b> +' + ct.rep + ' ' + FACTIONS[ct.faction].name + ' rep · <span class="' +
-    (left <= 2 ? 'risk-hi' : '') + '">' + left + 'd left</span> ';
+  var h = '<div class="card"><b>Hunt ' + esc(ct.gang) + '</b> ' + skullsHtml(ct.str) + ' → ' +
+    esc(G.systems[ct.dest].name) + ' · ' + payRepHtml(ct) + ' · ' + deadlineHtml(ct) + ' ';
   h += ct.dest === G.cur ?
     '<span class="dim">they slipped you — leave and return to re-engage</span>' :
     '<span class="dim">fly there; they\'ll find you</span>';
@@ -627,20 +639,13 @@ var ACTIVE_CARD = { haul: activeHaulCard, hunt: activeHuntCard };
 function activeContractCard(ct) { return ACTIVE_CARD[ct.type](ct); }
 
 function offerHaulCard(ct, here) {
-  var destSys = G.systems[ct.dest];
   return '<div class="card"><b>' + ct.qty + ' ' + GOODS[ct.good].name + '</b> → ' +
-    esc(destSys.name) + ' <span class="dim">(' + Math.round(dist(here, destSys)) +
-    ' ly)</span> · pays <b>' + fmt(ct.pay) + ' cr</b> · due day ' + ct.deadline +
-    ' <button class="btn small" onclick="UI.accept(\'' + ct.id + '\')">Accept</button></div>';
+    esc(G.systems[ct.dest].name) + offerTailHtml(ct, here);
 }
 
 function offerHuntCard(ct, here) {
-  var destSys = G.systems[ct.dest];
-  return '<div class="card"><b>Bounty: ' + esc(ct.gang) + '</b> <span class="risk-hi">' +
-    '☠'.repeat(ct.str) + '</span> at ' + esc(destSys.name) + ' <span class="dim">(' +
-    Math.round(dist(here, destSys)) + ' ly)</span> · pays <b>' + fmt(ct.pay) +
-    ' cr</b> · due day ' + ct.deadline +
-    ' <button class="btn small" onclick="UI.accept(\'' + ct.id + '\')">Accept</button></div>';
+  return '<div class="card"><b>Bounty: ' + esc(ct.gang) + '</b> ' + skullsHtml(ct.str) +
+    ' at ' + esc(G.systems[ct.dest].name) + offerTailHtml(ct, here);
 }
 
 var OFFER_CARD = { haul: offerHaulCard, hunt: offerHuntCard };
