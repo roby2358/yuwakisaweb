@@ -175,6 +175,19 @@ var out = vm.runInContext(
   '  var mh2 = htmlMarket();' +
   '  r.marketSellFixed = (mh2.match(/Sell 1/g) || []).length === legalGoods &&' +
   '    (mh2.match(/class="ghost"/g) || []).length === legalGoods - held;' +
+  // Warehouse cost basis: deposits blend the ship's average in at buy-math
+  // weights, withdrawals blend it back into the hold's books.
+  '  var wsys = G.systems[G.cur];' +
+  '  wsys.outpost = true;' +
+  '  G.cargo.ore = 4; G.avgCost.ore = 10; depositGood("ore", 9999);' +
+  '  r.whAvgFirst = wsys.warehouse.ore.qty === 4 && wsys.warehouse.ore.avg === 10;' +
+  '  G.cargo.ore = 4; G.avgCost.ore = 30; depositGood("ore", 9999);' +
+  '  r.whAvgBlend = wsys.warehouse.ore.qty === 8 && wsys.warehouse.ore.avg === 20;' +
+  '  r.whAssetsAvg = htmlAssets().indexOf("@20") !== -1;' +
+  '  delete G.cargo.ore; delete G.avgCost.ore;' +
+  '  withdrawGood("ore", 9999);' +
+  '  r.whWithdrawBasis = G.cargo.ore === 8 && G.avgCost.ore === 20 && !wsys.warehouse.ore;' +
+  '  delete G.cargo.ore; delete G.avgCost.ore; wsys.outpost = false; wsys.warehouse = {};' +
   // Full render with the lens active must not throw.
   '  UI.lens = "food"; UI.setZoom(5); renderAll();' +
   '  r.rendered = true;' +
@@ -202,6 +215,10 @@ check('market panel lists active contracts when nothing else selected', out.mark
 check('deliverable contract keeps its Deliver button on the market tab', out.marketDeliverBtn);
 check('every tradeable good wears a lens-colored price dot', out.marketDots);
 check('sell buttons hold their column open when the hold is empty', out.marketSellFixed);
+check('first deposit takes the ship average as warehouse basis', out.whAvgFirst);
+check('second deposit blends warehouse basis at buy-math weights', out.whAvgBlend);
+check('assets tab shows the warehouse average next to stored qty', out.whAssetsAvg);
+check('withdrawal books warehouse basis back into the hold', out.whWithdrawBasis);
 check('renderAll with lens + 5x zoom does not throw', out.rendered);
 
 // Text culling: narrow spans label systems; 5R/10R draw just the dots.

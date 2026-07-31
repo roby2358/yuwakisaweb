@@ -671,10 +671,12 @@ function htmlAssets() {
     if (s.id === G.cur) {
       h += '<table class="market"><tr><th>Good</th><th>Stored</th><th></th><th></th></tr>';
       GOOD_IDS.forEach(function (g) {
-        var stored = s.warehouse[g] || 0;
+        var w = s.warehouse[g];
+        var stored = w ? w.qty : 0;
         var have = G.cargo[g] || 0;
         if (!stored && !have) return;
-        h += '<tr><td>' + GOODS[g].name + '</td><td>' + stored + '</td>' +
+        h += '<tr><td>' + GOODS[g].name + '</td><td>' +
+          (stored ? stored + ' <span class="dim">@' + Math.round(w.avg) + '</span>' : '—') + '</td>' +
           '<td class="acts">' + (have ? '<button class="btn tiny" onclick="UI.deposit(\'' + g +
             '\')">Store all</button>' : '') + '</td>' +
           '<td class="acts">' + (stored ? '<button class="btn tiny" onclick="UI.withdraw(\'' + g +
@@ -683,7 +685,9 @@ function htmlAssets() {
       h += '</table>';
     } else {
       var wh = [];
-      for (var g in s.warehouse) wh.push(s.warehouse[g] + ' ' + GOODS[g].name);
+      for (var g in s.warehouse) {
+        wh.push(s.warehouse[g].qty + ' ' + GOODS[g].name + ' @' + Math.round(s.warehouse[g].avg));
+      }
       if (wh.length) h += '<div class="dim">Stored: ' + wh.join(', ') + '</div>';
     }
     h += '</div>';

@@ -157,7 +157,7 @@ function genGalaxy(rng) {
       visited: false,
       event: null,           // {type, daysLeft}
       outpost: false,
-      warehouse: {},         // good -> qty (only used if outpost)
+      warehouse: {},         // good -> { qty, avg paid } (only used if outpost)
       lastSeen: null,        // {day, prices:{good:price}}
       mkt: {}
     };
@@ -217,7 +217,7 @@ function outpostValue() {
     var s = G.systems[i];
     if (s.outpost) {
       v += 5000 * s.wealth;
-      for (var g in s.warehouse) v += s.warehouse[g] * GOODS[g].base * 0.8;
+      for (var g in s.warehouse) v += s.warehouse[g].qty * GOODS[g].base * 0.8;
     }
   }
   return Math.round(v);
@@ -822,10 +822,12 @@ function buyOutpost() {
 
 function warehouseUsed(sys) {
   var n = 0;
-  for (var g in sys.warehouse) n += sys.warehouse[g];
+  for (var g in sys.warehouse) n += sys.warehouse[g].qty;
   return n;
 }
 
+// The warehouse keeps its own cost basis: deposits blend the ship's average
+// in (same weighted math as buying), withdrawals blend it back into the hold.
 function depositGood(good, qty) {
   var sys = G.systems[G.cur];
   if (!sys.outpost) return 'No warehouse here.';
@@ -833,20 +835,26 @@ function depositGood(good, qty) {
   if (qty <= 0) return 'No space or nothing to store.';
   G.cargo[good] -= qty;
   if (G.cargo[good] <= 0) delete G.cargo[good];
-  sys.warehouse[good] = (sys.warehouse[good] || 0) + qty;
+  var w = sys.warehouse[good] || { qty: 0, avg: 0 };
+  var unit = G.avgCost[good] || GOODS[good].base;
+  w.avg = (w.avg * w.qty + unit * qty) / (w.qty + qty);
+  w.qty += qty;
+  sys.warehouse[good] = w;
   saveGame();
   return null;
 }
 
 function withdrawGood(good, qty) {
   var sys = G.systems[G.cur];
-  if (!sys.outpost || !(sys.warehouse[good] > 0)) return 'Nothing stored.';
-  qty = Math.min(qty, sys.warehouse[good], shipStat('cargo') - cargoUsed());
+  var w = sys.warehouse[good];
+  if (!sys.outpost || !w) return 'Nothing stored.';
+  qty = Math.min(qty, w.qty, shipStat('cargo') - cargoUsed());
   if (qty <= 0) return 'No room in your hold.';
-  sys.warehouse[good] -= qty;
-  if (sys.warehouse[good] <= 0) delete sys.warehouse[good];
-  G.cargo[good] = (G.cargo[good] || 0) + qty;
-  if (!G.avgCost[good]) G.avgCost[good] = GOODS[good].base;
+  var had = G.cargo[good] || 0;
+  G.avgCost[good] = ((G.avgCost[good] || 0) * had + w.avg * qty) / (had + qty);
+  w.qty -= qty;
+  if (w.qty <= 0) delete sys.warehouse[good];
+  G.cargo[good] = had + qty;
   saveGame();
   return null;
 }
