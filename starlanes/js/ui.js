@@ -658,8 +658,9 @@ function htmlContracts() {
   var here = G.systems[G.cur];
   h += '<h3>Offers at ' + esc(here.name) + ' <span class="dim">(tier ' +
     contractTier(here.faction) + ' — rep with ' + FACTIONS[here.faction].name + ' unlocks bigger jobs)</span></h3>';
-  if (!G.contracts.length) h += '<div class="dim">The board is empty today.</div>';
-  G.contracts.forEach(function (ct) { h += OFFER_CARD[ct.type](ct, here); });
+  var offers = localOffers();
+  if (!offers.length) h += '<div class="dim">The board is empty today.</div>';
+  offers.forEach(function (ct) { h += OFFER_CARD[ct.type](ct, here); });
   return h;
 }
 

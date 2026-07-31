@@ -207,12 +207,12 @@ var out = vm.runInContext(
   // Bounty hunts: guild/colonies boards post them (syndicate never); arriving
   // at the target forces the named gang at contract strength; a win pays out.
   '  var here3 = G.systems[G.cur], fac0 = here3.faction;' +
-  '  here3.faction = "colonies";' +
+  '  here3.faction = "colonies"; G.contracts.length = 0;' +
   '  var sawHunt = false;' +
   '  for (var t = 0; t < 60 && !sawHunt; t++) { genContracts();' +
   '    sawHunt = G.contracts.some(function (ct) { return ct.type === "hunt"; }); }' +
   '  r.huntOffered = sawHunt;' +
-  '  here3.faction = "syndicate";' +
+  '  here3.faction = "syndicate"; G.contracts.length = 0;' +
   '  var synHunt = false;' +
   '  for (t = 0; t < 30; t++) { genContracts();' +
   '    if (G.contracts.some(function (ct) { return ct.type === "hunt"; })) synHunt = true; }' +
@@ -234,6 +234,47 @@ var out = vm.runInContext(
   '  r.huntBounty = G.credits >= cr0 + 777 &&' +
   '    !G.active.some(function (ct) { return ct.id === "hx"; });' +
   '  G.fuel = shipStat("fuel");' +
+  // Dock-time triage: an active contract fails (-8 rep) only when still open
+  // in dock on deadline+1 or later; listings persist globally, sweep out at
+  // deadline - 2, and the local board tops back up to 2-3 hauls.
+  '  G.active.length = 0; G.contracts.length = 0;' +
+  '  var farSys = G.systems[G.cur === 0 ? 1 : 0];' +
+  '  for (var f = 0; f < G.systems.length; f++) {' +
+  '    if (dist(G.systems[f], G.systems[G.cur]) > dist(farSys, G.systems[G.cur])) farSys = G.systems[f];' +
+  '  }' +
+  '  G.rep.guild = 50;' +
+  '  G.active.push(' +
+  '    { id: "exp-late", type: "haul", good: "food", qty: 1, dest: G.cur, from: G.cur,' +
+  '      faction: "guild", pay: 1, deadline: G.day, rep: 1 },' +
+  '    { id: "exp-edge", type: "haul", good: "food", qty: 1, dest: G.cur, from: G.cur,' +
+  '      faction: "guild", pay: 1, deadline: G.day + 1, rep: 1 },' +
+  '    { id: "exp-far", type: "haul", good: "food", qty: 1, dest: farSys.id, from: G.cur,' +
+  '      faction: "guild", pay: 1, deadline: G.day + 2, rep: 1 });' +
+  '  G.contracts.push(' +
+  '    { id: "off-stale", type: "haul", good: "food", qty: 1, dest: farSys.id, from: G.cur,' +
+  '      faction: "guild", pay: 1, deadline: G.day + 2, rep: 1 },' +
+  '    { id: "off-fresh", type: "haul", good: "food", qty: 1, dest: farSys.id, from: G.cur,' +
+  '      faction: "guild", pay: 1, deadline: G.day + 12, rep: 1 },' +
+  '    { id: "off-away", type: "haul", good: "food", qty: 1, dest: G.cur, from: farSys.id,' +
+  '      faction: "guild", pay: 1, deadline: G.day + 12, rep: 1 });' +
+  '  pendingTravel = { dest: G.cur, days: 1 }; finishTravel();' +
+  '  var ids = G.contracts.map(function (ct) { return ct.id; });' +
+  '  r.actLateFails = !G.active.some(function (ct) { return ct.id === "exp-late"; }) &&' +
+  '    G.rep.guild === 42;' +
+  '  r.actEdgeKept = G.active.some(function (ct) { return ct.id === "exp-edge"; });' +
+  '  r.actFarKept = G.active.some(function (ct) { return ct.id === "exp-far"; });' +
+  '  r.offStaleSwept = ids.indexOf("off-stale") === -1;' +
+  '  r.offFreshKept = ids.indexOf("off-fresh") !== -1;' +
+  '  r.offAwayKept = ids.indexOf("off-away") !== -1 &&' +
+  '    !localOffers().some(function (ct) { return ct.id === "off-away"; });' +
+  '  var lo = localOffers(), lh = 0, lb = 0;' +
+  '  lo.forEach(function (ct) { if (ct.type === "hunt") lb++; else lh++; });' +
+  '  r.boardTopped = lh >= 2 && lh <= 3 && lb <= 1 &&' +
+  '    lo.every(function (ct) { return ct.from === G.cur; });' +
+  '  var genCt = lo.filter(function (ct) { return ct.id !== "off-fresh" && ct.type === "haul"; })[0];' +
+  '  r.deadlinePad7 = !!genCt && genCt.deadline ===' +
+  '    G.day + Math.ceil(dist(G.systems[G.cur], G.systems[genCt.dest]) / 10) + 7;' +
+  '  G.active.length = 0; G.contracts.length = 0;' +
   // Full render with the lens active must not throw.
   '  UI.lens = "food"; UI.setZoom(5); renderAll();' +
   '  r.rendered = true;' +
@@ -275,6 +316,14 @@ check('syndicate boards never post hunts', out.huntNoSyndicate);
 check('hunt cards show gang name and skull strength', out.huntCards);
 check('arriving at a hunt target forces the named gang at contract strength', out.huntForced);
 check('winning the hunt fight pays the bounty and clears the contract', out.huntBounty);
+check('contract still open in dock on deadline+1 fails (-8 rep)', out.actLateFails);
+check('arriving on the deadline itself keeps the contract deliverable', out.actEdgeKept);
+check('doomed-but-not-late contract rides along without penalty', out.actFarKept);
+check('listing sweeps off the board at deadline minus 2', out.offStaleSwept);
+check('fresh listing survives a re-dock', out.offFreshKept);
+check('foreign listing persists globally but stays off the local board', out.offAwayKept);
+check('docking tops the local board up to 2-3 hauls, max 1 bounty', out.boardTopped);
+check('generated deadlines carry the +7 padding', out.deadlinePad7);
 check('renderAll with lens + 5x zoom does not throw', out.rendered);
 
 // Text culling: narrow spans label systems; 5R/10R draw just the dots.

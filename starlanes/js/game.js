@@ -528,6 +528,7 @@ function finishTravel() {
       EVENTS[sys.event.type].news + ' (~' + sys.event.daysLeft + ' days left).');
   }
   snapshotPrices(sys);
+  expireContracts();
   genContracts();
   for (var i = 0; i < arrivalNotes.length; i++) addLog(arrivalNotes[i]);
   addLog('Docked at ' + sys.name + ', day ' + G.day + '.');
@@ -598,16 +599,6 @@ function tickDays(n) {
     for (var j = 0; j < G.systems.length; j++) {
       if (G.systems[j].outpost) {
         G.credits += G.systems[j].wealth * 18;
-      }
-    }
-    // Contract deadlines.
-    for (var c = G.active.length - 1; c >= 0; c--) {
-      var ct = G.active[c];
-      if (G.day > ct.deadline) {
-        G.rep[ct.faction] = clampRep(G.rep[ct.faction] - 8);
-        addLog('Contract FAILED: ' + contractDesc(ct) + ' (-8 ' +
-          FACTIONS[ct.faction].name + ' rep).');
-        G.active.splice(c, 1);
       }
     }
   }
@@ -696,10 +687,10 @@ function genHaulContract(here, targets, tier, c) {
   return {
     id: contractId(c),
     type: 'haul',
-    good: good, qty: qty, dest: dest.id,
+    good: good, qty: qty, dest: dest.id, from: here.id,
     faction: here.faction,
     pay: Math.round(qty * GOODS[good].base * 1.15 + d * 15 + 150 * tier),
-    deadline: G.day + Math.ceil(d / 10) + 5,
+    deadline: G.day + Math.ceil(d / 10) + 7,
     rep: 4 + tier
   };
 }
@@ -715,27 +706,63 @@ function genHuntContract(here, targets, tier, c) {
     id: contractId('h' + c),
     type: 'hunt',
     gang: pick(roll, PIRATE_BANDS),
-    str: str, dest: dest.id,
+    str: str, dest: dest.id, from: here.id,
     faction: here.faction,
     pay: Math.round(500 * str + d * 12 + 250 * tier),
-    deadline: G.day + Math.ceil(d / 10) + 8,
+    deadline: G.day + Math.ceil(d / 10) + 7,
     rep: 5 + tier
   };
 }
 
+// G.contracts is one global offer list; each offer belongs to its issuing
+// system (ct.from). Listings outlive a visit but leave the board 2 days
+// before their deadline — the last stretch is grace for whoever already
+// accepted, not a job worth posting.
+function localOffers() {
+  var out = [];
+  for (var i = 0; i < G.contracts.length; i++) {
+    if (G.contracts[i].from === G.cur) out.push(G.contracts[i]);
+  }
+  return out;
+}
+
+// Docking sweeps expired listings galaxy-wide, then tops the local board
+// back up to 2-3 hauls plus the occasional bounty.
 function genContracts() {
   var here = G.systems[G.cur];
-  G.contracts = [];
+  for (var i = G.contracts.length - 1; i >= 0; i--) {
+    if (G.day > G.contracts[i].deadline - 2) G.contracts.splice(i, 1);
+  }
   var targets = [];
-  for (var i = 0; i < G.systems.length; i++) {
+  for (i = 0; i < G.systems.length; i++) {
     if (i !== G.cur && G.systems[i].charted) targets.push(G.systems[i]);
   }
   if (!targets.length) return;
   var tier = contractTier(here.faction);
+  var local = localOffers(), hauls = 0, hunts = 0;
+  for (i = 0; i < local.length; i++) {
+    if (local[i].type === 'hunt') hunts++; else hauls++;
+  }
   var n = 2 + Math.floor(roll() * 2);
-  for (var c = 0; c < n; c++) G.contracts.push(genHaulContract(here, targets, tier, c));
-  if (here.faction !== 'syndicate' && roll() < 0.6) {
+  for (var c = hauls; c < n; c++) G.contracts.push(genHaulContract(here, targets, tier, c));
+  if (!hunts && here.faction !== 'syndicate' && roll() < 0.6) {
     G.contracts.push(genHuntContract(here, targets, tier, n));
+  }
+}
+
+// Accepted contracts are judged only at the dock: still open on deadline+1
+// or later, one fails and costs faction rep. A doomed contract rides along
+// untouched until then, and arriving at the destination ON the deadline
+// still leaves time to deliver.
+function expireContracts() {
+  for (var c = G.active.length - 1; c >= 0; c--) {
+    var ct = G.active[c];
+    if (G.day > ct.deadline) {
+      G.rep[ct.faction] = clampRep(G.rep[ct.faction] - 8);
+      addLog('Contract FAILED: ' + contractDesc(ct) + ' (-8 ' +
+        FACTIONS[ct.faction].name + ' rep).');
+      G.active.splice(c, 1);
+    }
   }
 }
 
