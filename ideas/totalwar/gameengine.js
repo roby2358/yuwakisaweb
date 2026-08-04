@@ -72,6 +72,8 @@ const GameEngine = (function () {
             const flags = flagsOf(unit);
             if (flags.flies) return 1;
             if (flags.allTerrain) return hex.terrain === TERRAIN.WATER ? Infinity : 1;
+            if (hex.terrain === TERRAIN.CITY || hex.terrain === TERRAIN.CAPITAL)
+                return hex.owner === unit.faction ? 1 : 2;
             return MOVEMENT_COST[hex.terrain] ?? Infinity;
         }
 
@@ -987,8 +989,10 @@ const GameEngine = (function () {
                 cities.push(hex);
                 if (cities.length === CITIES.COUNT) break;
             }
-            for (const hex of cities)
+            for (const hex of cities) {
                 hex.city = { name: this.cityName(), victory: false, homelandOf: null, heldTurns: 0, builtThisTurn: false };
+                hex.terrain = TERRAIN.CITY;
+            }
             s.cityKeys = cities.map(h => Hex.key(h.q, h.r));
 
             const capitals = this.spreadPick(cities, [], FACTIONS.length);
@@ -1002,6 +1006,7 @@ const GameEngine = (function () {
                 capitals[i].city.victory = true;
                 capitals[i].city.homelandOf = s.factions[i].id;
                 capitals[i].owner = s.factions[i].id;
+                capitals[i].terrain = TERRAIN.CAPITAL;
             }
 
             // Homelands: round-robin so no faction hoards all the close cities.

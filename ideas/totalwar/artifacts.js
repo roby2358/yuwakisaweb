@@ -13,7 +13,9 @@ const GameArtifacts = (function () {
         PLAINS: 1,
         HILLS: 2,
         MOUNTAIN: 3,
-        FOREST: 4
+        FOREST: 4,
+        CITY: 5,      // replaces a city hex's underlying terrain at generation
+        CAPITAL: 6,   // ... same, for the four capitals
     };
 
     // Every unit is a parameter set for one template: { atk, def, mp, cost, cap, flags }.
@@ -70,6 +72,8 @@ const GameArtifacts = (function () {
             [TERRAIN.HILLS]: 1.5,
             [TERRAIN.MOUNTAIN]: 2,
             [TERRAIN.FOREST]: 1.5,
+            [TERRAIN.CITY]: 1,      // the city bonus itself comes from CITY_DEF_MULT below
+            [TERRAIN.CAPITAL]: 1,
         },
         CITY_DEF_MULT: 2,
         ENTRENCH_MULT: 1.5,
@@ -121,6 +125,8 @@ const GameArtifacts = (function () {
             [TERRAIN.HILLS]: 2,
             [TERRAIN.MOUNTAIN]: Infinity,
             [TERRAIN.FOREST]: 2,
+            [TERRAIN.CITY]: 2,      // 1 for the hex's owning faction — see unitMoveCost
+            [TERRAIN.CAPITAL]: 2,
         },
         UNITS,
         SHARED_BUILD,

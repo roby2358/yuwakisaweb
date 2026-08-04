@@ -92,9 +92,11 @@ Mechanical Exceptions; Template, Don't Snowflake.)*
 | **Garrison** | 0-2-2 | 2 | *Occupier* — suppresses revolt in its city; cannot attack and cannot leave friendly-controlled territory. |
 | **HQ** | 0-1-3 | 8 (cap 2) | *Command* — projects a radius-4 command web (1-CP activations); no combat value. The empire's answer to distance — and a high-value target. |
 
-MP spends against the baseline terrain costs (plains 1, forest/hills 2). Movement,
-reachability, and ZOC all resolve through the existing BFS — costs are baked into the
-graph, not bolted on as checks.
+MP spends against the baseline terrain costs (plains 1, forest/hills 2). A city or
+capital hex replaces whatever terrain generated there and costs 2 MP to enter — 1 MP
+for the faction that owns it, so your own supply lines move at speed while an invader's
+push into your territory drags. Movement, reachability, and ZOC all resolve through the
+existing BFS — costs are baked into the graph, not bolted on as checks.
 
 ### Faction-unique units
 

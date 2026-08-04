@@ -17,6 +17,8 @@ const GameDisplayArtifacts = (function () {
             [T.HILLS]: '#c4a44a',
             [T.MOUNTAIN]: '#7a7a7a',
             [T.FOREST]: '#2d6e2d',
+            [T.CITY]: '#b6b6c0',
+            [T.CAPITAL]: '#c9a227',
         },
         TERRAIN_NAMES: {
             [T.WATER]: 'Water',
@@ -24,6 +26,8 @@ const GameDisplayArtifacts = (function () {
             [T.HILLS]: 'Hills',
             [T.MOUNTAIN]: 'Mountain',
             [T.FOREST]: 'Forest',
+            [T.CITY]: 'City',
+            [T.CAPITAL]: 'Capital',
         },
         FACTION_COLORS: {
             concord: '#5a76a8',
