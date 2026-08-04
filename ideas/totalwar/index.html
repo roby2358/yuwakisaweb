@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Total War</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <canvas id="game"></canvas>
+    <div id="hud">
+        <span id="faction-info"></span>
+        <span id="turn-info">Turn 1</span>
+        <span id="cp-info"></span>
+        <span id="vc-info"></span>
+        <span id="alert-info"></span>
+        <span id="hover-info"></span>
+        <button id="end-turn">End Turn</button>
+        <button id="new-game">New Game</button>
+    </div>
+    <div id="build-panel" class="hidden"></div>
+    <div id="intro-panel">
+        <h2>TOTAL WAR</h2>
+        <p>Hold 5 of the 9 victory cities (gold rings) for 3 turns to win.
+           Cities pay Command Points; every stack you move costs CP — cheap inside your
+           command web, double beyond it. Conquests revolt unless you leave someone behind.
+           Choose your power:</p>
+        <div id="faction-buttons"></div>
+    </div>
+    <div id="end-panel" class="hidden">
+        <h2>GAME OVER</h2>
+        <p id="end-message"></p>
+        <button id="end-btn">Play Again</button>
+    </div>
+    <!-- NOTE! We want to be able to double-click to run these games, so use plain
+    script includes (globals), not ES module imports. Order = dependency order:
+    artifacts → display artifacts → libs → state → engine → ui → bootstrap. -->
+    <script src="artifacts.js"></script>
+    <script src="displayartifacts.js"></script>
+    <script src="rando.js"></script>
+    <script src="colortheory.js"></script>
+    <script src="hex.js"></script>
+    <script src="sound.js"></script>
+    <script src="gamestate.js"></script>
+    <script src="gameengine.js"></script>
+    <script src="gameui.js"></script>
+    <script src="index.js"></script>
+</body>
+</html>
