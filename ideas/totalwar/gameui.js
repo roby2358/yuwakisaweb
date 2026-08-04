@@ -576,21 +576,13 @@ const GameUI = (function () {
                 ctx.stroke();
             }
 
-            // Body
+            // Body — entrenched units get a silver border instead of black
             this.roundRect(x, y, s, s, r);
             ctx.fillStyle = color;
             ctx.fill();
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 1;
+            ctx.strokeStyle = entrenched ? '#c8c8d2' : '#000';
+            ctx.lineWidth = entrenched ? 1.5 : 1;
             ctx.stroke();
-
-            // Entrenched: an inner earthwork ring
-            if (entrenched) {
-                this.roundRect(x + 2.5, y + 2.5, s - 5, s - 5, 3);
-                ctx.strokeStyle = '#00000088';
-                ctx.lineWidth = 1.5;
-                ctx.stroke();
-            }
 
             // NATO-style unit box + type symbol, in whichever pen contrasts the body
             if (unitType) {
