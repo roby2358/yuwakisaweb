@@ -518,9 +518,10 @@ const GameUI = (function () {
             if (!this.selection || !this.hoveredHex) return;
             const key = Hex.key(this.hoveredHex.q, this.hoveredHex.r);
             let label = null;
+            let odds = null;
             if (this.selection.attackable.has(key)) {
-                const odds = this.engine.computeOdds(this.selection.originKey, key);
-                if (odds) label = `${odds.odds}:1`;
+                odds = this.engine.computeOdds(this.selection.originKey, key);
+                if (odds) label = `${odds.odds}:1  (${odds.atk}/${odds.def})`;
             } else if (this.selection.bombardable.has(key)) {
                 label = 'BMB';
             }
@@ -534,6 +535,43 @@ const GameUI = (function () {
             ctx.fillText(label, x + 1, y - HEX_SIZE - 5);
             ctx.fillStyle = '#ffdd55';
             ctx.fillText(label, x, y - HEX_SIZE - 6);
+
+            if (odds) this.drawContributionStars(odds.contributions);
+        }
+
+        // A large yellow star with a black attack number over every stack (or ranged
+        // support unit) feeding this preview's attack total.
+        drawContributionStars(contributions) {
+            const ctx = this.ctx;
+            for (const [hexKey, atk] of contributions) {
+                const { q, r } = Hex.fromKey(hexKey);
+                const { x, y } = this.hexToScreen(q, r);
+                this.drawStar(x, y, 13, 6);
+                ctx.font = 'bold 12px monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#000';
+                ctx.fillText(String(atk), x, y + 1);
+            }
+        }
+
+        drawStar(cx, cy, outerR, innerR) {
+            const ctx = this.ctx;
+            const spikes = 5;
+            ctx.beginPath();
+            for (let i = 0; i < spikes * 2; i++) {
+                const r = i % 2 === 0 ? outerR : innerR;
+                const angle = (Math.PI / spikes) * i - Math.PI / 2;
+                const px = cx + Math.cos(angle) * r;
+                const py = cy + Math.sin(angle) * r;
+                if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fillStyle = '#ffdd00';
+            ctx.fill();
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 1;
+            ctx.stroke();
         }
 
         roundRect(x, y, w, h, r) {

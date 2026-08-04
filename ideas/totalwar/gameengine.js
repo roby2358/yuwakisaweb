@@ -253,6 +253,11 @@ const GameEngine = (function () {
             let atk = attackers.reduce((sum, u) => sum + stats(u).atk, 0);
             if (atk === 0) return null;
 
+            // Per-hex attack contribution, for the UI to badge each contributing stack.
+            const contributions = new Map();
+            for (const key of [originKey, ...joinKeys])
+                contributions.set(key, this.stackAt(key).reduce((sum, u) => sum + stats(u).atk, 0));
+
             const target = Hex.fromKey(targetKey);
             const attackerIds = new Set(attackers.map(u => u.id));
             const supportIds = [];
@@ -263,6 +268,8 @@ const GameEngine = (function () {
                 if (!range || hexDist(u, target) > range) continue;
                 atk += stats(u).atk;
                 supportIds.push(u.id);
+                const key = Hex.key(u.q, u.r);
+                contributions.set(key, (contributions.get(key) ?? 0) + stats(u).atk);
             }
 
             const hex = s.hexes.get(targetKey);
@@ -272,7 +279,7 @@ const GameEngine = (function () {
                 sum + stats(u).def * (u.entrenched ? COMBAT.ENTRENCH_MULT : 1), 0) * mult;
 
             const odds = Math.min(COMBAT.MAX_ODDS, Math.floor(atk / def));
-            return { odds, atk, def, supportIds, joinKeys };
+            return { odds, atk, def, supportIds, joinKeys, contributions };
         }
 
         // Adjacent hostile hexes this stack could attack right now at >= 1:1,

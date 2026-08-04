@@ -98,6 +98,29 @@ for the faction that owns it, so your own supply lines move at speed while an in
 push into your territory drags. Movement, reachability, and ZOC all resolve through the
 existing BFS — costs are baked into the graph, not bolted on as checks.
 
+### Shared unit mechanics
+
+- **Infantry** — no exception; the stat and cost floor everything else is priced
+  against. Cheap enough to hold a line, unremarkable everywhere else.
+- **Armor** — *Exploit*: when a defending hex empties out from combat, Armor stacked
+  adjacent immediately advances through the gap and gets a free follow-up move, at no
+  CP cost. The blitz unit; see Breakthrough below.
+- **Artillery** — *Support, range 2*: joins one declared attack against a hex within 2
+  of it without moving into the fight. Can't take ground, and the combat's outcome
+  never touches it.
+- **Air Wing** — *Strike, range 6*: based in a friendly city (0 MP, never rebases);
+  adds its attack to one declared combat per turn anywhere within 6 hexes of its base.
+  Killing it means taking the city it's sitting in.
+- **Garrison** — *Occupier*: sits in a conquered city and suppresses its revolt roll;
+  cannot attack, cannot leave friendly-controlled territory. The cheapest way to hold
+  ground you've already taken.
+- **HQ** — *Command, radius 4*: projects a command web around itself, like a mobile
+  extension of the capital — stack activations inside it cost 1 CP instead of 2. No
+  combat value of its own; a logistics unit and a high-value target.
+- **Partisan Militia** (2-2-2, cost 0) — no exception; spawned automatically defending
+  neutral cities at game start and again whenever a conquered city revolts. Hostile to
+  all four factions, including whoever it revolted from.
+
 ### Faction-unique units
 
 Each unique breaks one *core* system, giving its faction a different relationship with
@@ -134,6 +157,36 @@ Factions take turns in fixed order (player first). Each faction turn:
 A stack activation always allows at least a 1-hex move even if terrain costs would
 forbid it. *(Never Let a Unit Feel Stuck.)*
 
+## Movement, ZOC & Ranged Attacks
+
+**Movement.** Each unit spends MP through a BFS-computed reachable set — the same cost
+function runs client-side (`computeStackReachable`) and engine-side (`unitMoveCost`/
+`stackMoveCost`), so the UI never offers a move the engine would reject. Terrain costs:
+plains 1, forest/hills 2, water/mountain impassable. A city or capital hex costs 2 MP to
+enter — 1 MP for the faction that owns it, so supply lines run at speed inside your own
+territory and drag for an invader. Dragon (`flies`) pays 1 MP everywhere, water and
+mountains included, and ignores ZOC; Colossus (`allTerrain`) pays 1 MP on any land
+terrain, mountains included, but water stays impassable. A stack activation always
+allows at least one hex of movement even if the cheapest adjacent hex would otherwise
+cost more than its remaining MP.
+
+**Zones of Control.** Entering a hex adjacent to an enemy unit ends that stack's
+movement immediately — baked into the BFS edge costs, not a separate check. This is what
+turns ordinary maneuver into encirclement: a unit that steps next to an enemy stack
+can't then step past it, so pockets form from movement alone, with no dedicated
+"encircle" action.
+
+**Ranged attacks.** Three ways to project force without standing adjacent to the target:
+
+- *Support* (Artillery, range 2) — adds its attack to one declared combat within 2
+  hexes; never advances into the target hex, never becomes a target itself.
+- *Strike* (Air Wing, range 6 from its base city) — adds its attack to one declared
+  combat per turn anywhere within 6 hexes; the only way to kill it is to take the city
+  it's based in.
+- *Bombard* (Rocket Battery, range 8) — a standalone action against a city or stack,
+  outside the CRT: destroys one stockpiled CP or strips Entrenchment. War on the enemy's
+  economy and preparation, not their line.
+
 ## Combat
 
 Odds-based CRT, the *Third Reich* homage, kept to one d6 table:
@@ -157,9 +210,6 @@ Odds-based CRT, the *Third Reich* homage, kept to one d6 table:
 - **AR**: attacking stacks retreat 1 hex. **EX**: each side eliminates its most expensive
   unit. **DR**: defender retreats 2 hexes — *if no legal retreat path exists (ZOC,
   impassable, occupied), the defender is eliminated instead.* **DE**: defender eliminated.
-- **Zones of Control**: entering a hex adjacent to an enemy unit ends the stack's
-  movement (baked into BFS edge costs).
-
 DR-into-nothing is the pocket rule, and it is where the windfall lives: encirclement
 converts mere retreats into annihilations, so three turns of maneuver can erase a front
 in one combat phase. The player can trace exactly which pincer sealed the pocket.
