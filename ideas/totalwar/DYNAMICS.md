@@ -207,9 +207,10 @@ Odds-based CRT, the *Third Reich* homage, kept to one d6 table:
 | 5 | DR | DE | DE | DE |
 | 6 | DR | DE | DE | DE |
 
-- **AR**: attacking stacks retreat 1 hex. **EX**: each side eliminates its most expensive
-  unit. **DR**: defender retreats 2 hexes — *if no legal retreat path exists (ZOC,
-  impassable, occupied), the defender is eliminated instead.* **DE**: defender eliminated.
+- **AR**: attacking stacks retreat 1 hex. **EX**: each side eliminates its least expensive
+  unit (cannon fodder goes first, not the HQ). **DR**: defender retreats 2 hexes — *if no
+  legal retreat path exists (ZOC, impassable, occupied), the defender is eliminated
+  instead.* **DE**: defender eliminated.
 DR-into-nothing is the pocket rule, and it is where the windfall lives: encirclement
 converts mere retreats into annihilations, so three turns of maneuver can erase a front
 in one combat phase. The player can trace exactly which pincer sealed the pocket.

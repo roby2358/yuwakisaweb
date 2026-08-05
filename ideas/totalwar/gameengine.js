@@ -417,8 +417,8 @@ const GameEngine = (function () {
             if (result === 'AR') {
                 this.retreatStack(stack, targetKey, 1);   // initiator falls back; joiners hold
             } else if (result === 'EX') {
-                this.eliminateUnit(this.mostExpensive(defStack));
-                this.eliminateUnit(this.mostExpensive(attackers));
+                this.eliminateUnit(this.leastExpensive(defStack));
+                this.eliminateUnit(this.leastExpensive(attackers));
             } else if (result === 'DR') {
                 if (!this.retreatStack(defStack, originKey, COMBAT.RETREAT_STEPS))
                     defStack.forEach(u => this.eliminateUnit(u));  // pocketed: no path out
@@ -480,8 +480,8 @@ const GameEngine = (function () {
             return true;
         }
 
-        mostExpensive(stack) {
-            return stack.reduce((best, u) => stats(u).cost > stats(best).cost ? u : best);
+        leastExpensive(stack) {
+            return stack.reduce((best, u) => stats(u).cost < stats(best).cost ? u : best);
         }
 
         eliminateUnit(unit) {
