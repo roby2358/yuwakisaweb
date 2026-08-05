@@ -39,9 +39,9 @@ const GameArtifacts = (function () {
         garrison:  { name: 'Garrison',       atk: 0, def: 2, mp: 2, cost: 2,  cap: Infinity, flags: { occupier: true } },
         hq:        { name: 'HQ',             atk: 0, def: 1, mp: 3, cost: 8,  cap: 2, flags: { command: 4 } },
         rocket:    { name: 'Rocket Battery', atk: 0, def: 1, mp: 2, cost: 7,  cap: 2, flags: { bombard: 8 } },
-        dragon:    { name: 'Dragon',         atk: 5, def: 4, mp: 8, cost: 10, cap: 1, flags: { exploit: true, flies: true } },
-        wardens:   { name: 'Wardens',        atk: 3, def: 3, mp: 4, cost: 5,  cap: 3, flags: { cohesion: true } },
-        colossus:  { name: 'Colossus',       atk: 5, def: 4, mp: 4, cost: 10, cap: 1, flags: { allTerrain: true, siege: true } },
+        dragon:    { name: 'Dragon',         atk: 12, def: 5, mp: 8, cost: 10, cap: 1, flags: { exploit: true, flies: true } },
+        wardens:   { name: 'Wardens',        atk: 3, def: 3, mp: 4, cost: 5,  cap: 12, flags: { cohesion: true } },
+        colossus:  { name: 'Colossus',       atk: 8, def: 8, mp: 4, cost: 10, cap: 1, flags: { allTerrain: true, siege: true } },
         militia:   { name: 'Partisan Militia', atk: 2, def: 2, mp: 2, cost: 0, cap: Infinity, flags: {} },
     };
 

@@ -131,9 +131,9 @@ your artillery, and where it is.)*
 | Faction | Milieu | Unique | Stats | The rule it breaks |
 |---|---|---|---|---|
 | **The Iron Concord** | Dieselpunk industrial WWII | **Rocket Battery** | 0-1-2, cost 7, cap 2 | Breaks *range*: Bombard a city or stack within 8 hexes — destroy 1 stockpiled CP or strip Entrenchment. War against the enemy's economy and preparation, not their line. |
-| **The Thornwood Compact** | High fantasy — elder-forest realms with rifles and wyrms | **Dragon** | 5-4-8, cost 10, cap 1 | Breaks *terrain and ZOC*: flies over everything, has Exploit. Rebuild cost rises +3 each time it dies — grief made mechanical. |
-| **The Grey Marches** | Low fantasy — trench-and-pike grimdark men | **Wardens** | 3-3-4, cost 5, cap 3 | Breaks *cohesion*: a stack containing Wardens always activates for 1 CP, and a city they sit in never revolts. Empire glue as a unit — hard men holding hard ground. |
-| **The Vault Ascendancy** | Retro-futurist bunker technocracy | **Colossus** | 5-4-4, cost 10, cap 1 | Breaks *terrain as defense*: all terrain costs 1 (mountains passable), and defenders it attacks cap their terrain multiplier at ×1.5. The siege-breaker. |
+| **The Thornwood Compact** | High fantasy — elder-forest realms with rifles and wyrms | **Dragon** | 12-5-8, cost 10, cap 1 | Breaks *terrain and ZOC*: flies over everything, has Exploit. Rebuild cost rises +3 each time it dies — grief made mechanical. |
+| **The Grey Marches** | Low fantasy — trench-and-pike grimdark men | **Wardens** | 3-3-4, cost 5, cap 12 | Breaks *cohesion*: a stack containing Wardens always activates for 1 CP, and a city they sit in never revolts. Empire glue as a unit — hard men holding hard ground. |
+| **The Vault Ascendancy** | Retro-futurist bunker technocracy | **Colossus** | 8-8-4, cost 10, cap 1 | Breaks *terrain as defense*: all terrain costs 1 (mountains passable), and defenders it attacks cap their terrain multiplier at ×1.5. The siege-breaker. |
 
 Four factions on the map; the player picks one, the AI runs the rest.
 
@@ -297,8 +297,8 @@ Comedy — the Concord's push stalls because the city they staged in revolted be
   held a full turn, and abandoning it spawns a Partisan militia that must be re-fought
   at city-doubled defense. The farm costs more than it yields.
 - **Unique-unit solo rampage** — dead: the CRT forbids attacks below 1:1, and a lone
-  Dragon (atk 5) against an entrenched city stack (def 3 × 2 × 1.5 = 9) can't declare
-  the attack. Uniques break rules; they don't replace armies.
+  Dragon (atk 12) against two entrenched infantry in a city (def (3+3) × 2 × 1.5 = 18)
+  still can't declare the attack. Uniques break rules; they don't replace armies.
 - **HQ-chain the whole map into command web** — capped: 2 HQs at 8 CP each, radius 4.
   An empire spanning 30 hexes still runs most fronts at 2 CP.
 - **Corner-camp while rivals fight** — the balance-of-power targeting rule redirects
