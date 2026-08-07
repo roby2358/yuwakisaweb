@@ -114,8 +114,9 @@ in `hexToScreen` / `screenToHex`.
 ### Interaction
 
 Click P to select → reachable hexes highlight yellow → click a highlighted hex to move.
-Click P again or a non-highlighted hex to deselect. Right-drag pans. Space/Enter ends the
-turn. Movement auto-ends the turn when MP hits 0.
+Click P again or a non-highlighted hex to deselect. Left-drag pans: a stationary left
+press is a click (select/move), a drag past a few px pans (see `DRAG_THRESHOLD` in
+`gameui.js`). Space/Enter ends the turn. Movement auto-ends the turn when MP hits 0.
 
 ## Conventions
 

@@ -6,7 +6,7 @@ See [DYNAMICS.md](DYNAMICS.md) for game mechanics.
 
 ## UI
 
-- The map is scrolled by right-click drag. The right click must not pull up the context menu
+- The map is scrolled by left-click drag; a press that doesn't move is a click (select/move), a drag pans. Right-click must not pull up the context menu
 - Space or Enter ends the turn
 - Click a friendly counter to select it, showing BFS-reachable hexes highlighted in yellow
 - Click a highlighted hex to move there

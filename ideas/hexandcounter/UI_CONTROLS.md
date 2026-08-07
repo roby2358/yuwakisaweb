@@ -107,9 +107,12 @@ counter was clicked; selecting a different one recomputes the sets for it.
 
 The camera is a **pure render offset**, never part of game-state math.
 
-- **Pan** by right-button drag: on right-press record the pointer position and current
-  offset; on move-while-held set `offset = origin + (pointer − start)`; release ends it.
-  (No edge-scroll or momentum in the reference; zoom is optional.)
+- **Pan** by left-button drag: on left-press record the pointer position and current
+  offset; the press stays a *click candidate* until the pointer moves past a small
+  threshold, at which point it becomes a pan (`offset = origin + (pointer − start)`). A
+  release that never crossed the threshold is the select/act click (1.2) instead. Listen
+  for the release on the window, not the surface, so a drag that ends off-canvas still
+  stops. (No edge-scroll or momentum in the reference; zoom is optional.)
 - Every screen→world hit-test undoes the offset before converting pixels to hexes:
   `worldHex = pixelToHex(screenX − panX, screenY − panY)`.
 - **Hover is separate from drag.** Plain mouse-move (no button) updates a "hovered hex"
@@ -166,8 +169,8 @@ else                  → deselect + close any side panels
 ```
 
 So one key always means "back out of the most specific thing I'm in," with no per-context
-escape to memorize. **Right-click is the narrower mouse synonym** (cancel targeting / stop
-panning) for the same instinct. In a Layer-1/2 game the only live branch is "deselect," and
+escape to memorize. **Right-click is the narrower mouse synonym** (cancel targeting) for
+the same instinct. In a Layer-1/2 game the only live branch is "deselect," and
 it grows automatically as higher layers add flags.
 
 ## 2.3 Twin activators
@@ -269,11 +272,11 @@ rows below them. Keys are swappable defaults.
 | 1 | **Left-click friendly counter** | Select it (compute & show reachable / attackable) |
 | 1 | **Left-click reachable hex** | Move there |
 | 1 | **Left-click the selected hex / elsewhere** | Deselect |
-| 1 | **Right-drag** | Pan the camera |
+| 1 | **Left-drag (past a small threshold)** | Pan the camera |
 | 1 | **Mouse move** | Update hovered-hex readout in the HUD |
 | 2 | **Space / Enter / "End Turn"** | Primary action: interact with location, else end turn |
 | 2 | **Esc** | Back out one modal layer (overlay → targeting → deselect) |
-| 2 | **Right-click** | Narrow cancel: cancel targeting / stop panning |
+| 2 | **Right-click** | Narrow cancel: cancel targeting |
 | 3 | **Left-click attackable hex** | Attack (melee = move-and-strike, ranged = fire) |
 | 4 | **1 … N / R / A** | Activate skill slot / ranged / melee (enter targeting) |
 | 4 | **Left-click while targeting** | Fire at the hex if valid, else cancel |

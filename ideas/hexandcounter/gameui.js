@@ -14,6 +14,10 @@ const GameUI = (function () {
         PLAYER_COLOR, TARGET_COLOR
     } = GameDisplayArtifacts;
 
+    // A left press that stays within this many pixels is a click (select/move);
+    // moving past it turns the gesture into a camera pan.
+    const DRAG_THRESHOLD = 4;
+
     class GameUI {
         constructor(engine, canvas) {
             this.engine = engine;
@@ -26,6 +30,7 @@ const GameUI = (function () {
             this.panX = 0;
             this.panY = 0;
             this.panning = false;
+            this.dragCandidate = false;  // left button down; may become a pan
             this.panStartX = 0;
             this.panStartY = 0;
             this.panOrigX = 0;
@@ -316,7 +321,8 @@ const GameUI = (function () {
         attach() {
             this.canvas.addEventListener('mousedown', e => this.onMouseDown(e));
             this.canvas.addEventListener('mousemove', e => this.onMouseMove(e));
-            this.canvas.addEventListener('mouseup', e => this.onMouseUp(e));
+            // On window, not the canvas: a drag released off-canvas must still end.
+            window.addEventListener('mouseup', e => this.onMouseUp(e));
             this.canvas.addEventListener('contextmenu', e => e.preventDefault());
             window.addEventListener('resize', () => this.resize());
             window.addEventListener('keydown', e => this.onKeyDown(e));
@@ -328,20 +334,30 @@ const GameUI = (function () {
         }
 
         onMouseDown(e) {
-            const s = this.state;
-            // Right button: cancel targeting if active (L2.2), else begin a camera pan (L1.3).
+            // Right button: narrow cancel — cancel targeting if active (L2.2). No pan.
             if (e.button === 2) {
-                if (this.targeting) { this.cancelTargeting(); this.render(); return; }
-                this.panning = true;
-                this.panStartX = e.clientX;
-                this.panStartY = e.clientY;
-                this.panOrigX = this.panX;
-                this.panOrigY = this.panY;
+                if (this.targeting) { this.cancelTargeting(); this.render(); }
                 e.preventDefault();
                 return;
             }
             if (e.button !== 0) return;
 
+            // Left button: arm a click-or-pan (L1.3). The click action is deferred to
+            // mouseup and only fires if the press stayed put; a drag past the threshold
+            // pans instead, so left-click keeps its pure select/act role (L1.2).
+            this.dragCandidate = true;
+            this.panning = false;
+            this.panStartX = e.clientX;
+            this.panStartY = e.clientY;
+            this.panOrigX = this.panX;
+            this.panOrigY = this.panY;
+            e.preventDefault();
+        }
+
+        // L1.2 the stationary-click action: select, then act — a pure lookup against
+        // the cached sets. Reached from mouseup only when the press didn't become a pan.
+        handleClick(e) {
+            const s = this.state;
             if (this.overlay) { this.dismissOverlay(); return; }  // L5 overlay captures & consumes the click
             if (s.gameWon) return;                                // game over: board is view-only
             if (s.phase !== 'player') return;                     // L1.1 map input is live only on the player's turn
@@ -359,7 +375,6 @@ const GameUI = (function () {
                 return;
             }
 
-            // L1.2 select, then act — the handler is a pure lookup against the cached sets.
             if (!this.selection) {
                 if (hex.q === s.player.q && hex.r === s.player.r) this.selectPlayer();
             } else if (hex.q === s.player.q && hex.r === s.player.r) {
@@ -377,6 +392,12 @@ const GameUI = (function () {
         }
 
         onMouseMove(e) {
+            // L1.3 promote a left drag to a pan once it clears the click threshold.
+            if (this.dragCandidate && !this.panning) {
+                const dx = e.clientX - this.panStartX;
+                const dy = e.clientY - this.panStartY;
+                if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) this.panning = true;
+            }
             if (this.panning) {
                 this.panX = this.panOrigX + (e.clientX - this.panStartX);
                 this.panY = this.panOrigY + (e.clientY - this.panStartY);
@@ -393,7 +414,12 @@ const GameUI = (function () {
         }
 
         onMouseUp(e) {
-            if (e.button === 2) this.panning = false;
+            if (e.button !== 0) return;
+            if (!this.dragCandidate) return;    // press didn't start on the board (e.g. a HUD button)
+            const wasPan = this.panning;
+            this.dragCandidate = false;
+            this.panning = false;
+            if (!wasPan) this.handleClick(e);   // a press that never became a pan is a click
         }
 
         onKeyDown(e) {
