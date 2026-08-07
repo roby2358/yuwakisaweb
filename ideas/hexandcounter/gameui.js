@@ -9,7 +9,6 @@
 // In a client/server world this is the client: swap engine calls for messages to a
 // server and re-render from the state it ships back, and the seam is already here.
 const GameUI = (function () {
-    const { PLAYER_MP } = GameArtifacts;
     const {
         HEX_SIZE, COUNTER_SIZE, TERRAIN_COLORS, TERRAIN_NAMES,
         PLAYER_COLOR, TARGET_COLOR
@@ -49,6 +48,10 @@ const GameUI = (function () {
 
         newGame() {
             this.engine.newGame();
+            // Baseline for the "Progress to end" meter: how far P starts from the
+            // target. Progress = how much of that gap has been closed.
+            this.startDist = new Hex(this.state.player.q, this.state.player.r)
+                .distance(this.state.target);
             this.selection = null;
             this.targeting = null;
             this.hoveredHex = null;
@@ -292,12 +295,21 @@ const GameUI = (function () {
         updateHUD() {
             const s = this.state;
             document.getElementById('turn-info').textContent = 'Turn ' + s.turn;
-            document.getElementById('mp-info').textContent = 'MP: ' + s.mp + '/' + PLAYER_MP;
-            // L1.3 hovered-hex readout
+
+            // "Progress to end" meter: fraction of the starting player→target gap closed.
+            const dist = new Hex(s.player.q, s.player.r).distance(s.target);
+            const pct = this.startDist > 0
+                ? Math.max(0, Math.min(1, (this.startDist - dist) / this.startDist))
+                : 1;
+            document.getElementById('progress-fill').style.width = (pct * 100) + '%';
+            document.getElementById('progress-pct').textContent = Math.round(pct * 100) + '%';
+
+            // L1.3 hovered-hex readout — its own bar, so its width never shifts the buttons.
             const hoverEl = document.getElementById('hover-info');
             if (!hoverEl) return;
             const h = this.hoveredHex && s.hexes.get(Hex.key(this.hoveredHex.q, this.hoveredHex.r));
             hoverEl.textContent = h ? `${TERRAIN_NAMES[h.terrain] ?? '?'} (${this.hoveredHex.q},${this.hoveredHex.r})` : '';
+            document.getElementById('hud-hover').classList.toggle('hidden', !h);
         }
 
         // ---- Input handling (dispatch order mirrors UI_CONTROLS.md) ----

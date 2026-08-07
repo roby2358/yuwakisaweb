@@ -8,12 +8,18 @@
 </head>
 <body>
     <canvas id="game"></canvas>
-    <div id="hud">
-        <span id="turn-info">Turn 1</span>
-        <span id="mp-info">MP: 5/5</span>
-        <span id="hover-info"></span>
-        <button id="end-turn">End Turn</button>
-        <button id="new-game">New Game</button>
+    <div id="hud-stack">
+        <div id="hud">
+            <span id="turn-info">Turn 1</span>
+            <span id="progress">
+                <span class="progress-label">Progress to end</span>
+                <span id="progress-bar"><span id="progress-fill"></span></span>
+                <span id="progress-pct">0%</span>
+            </span>
+            <button id="end-turn">End Turn</button>
+            <button id="new-game">New Game</button>
+        </div>
+        <div id="hud-hover" class="hidden"><span id="hover-info"></span></div>
     </div>
     <div id="intro-panel">
         <p>Victory condition: Move your counter (P) to the target. Good luck!</p>
