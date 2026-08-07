@@ -29,7 +29,7 @@ const GameArtifacts = (function () {
             [TERRAIN.GOLD]: 2,
             [TERRAIN.QUARRY]: 2
         },
-        PLAYER_MP: 5,
+        PLAYER_MP: 6,
         MAP_COLS: 60,
         MAP_ROWS: 40,
     };

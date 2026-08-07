@@ -104,7 +104,7 @@ in `hexToScreen` / `screenToHex`.
   mountain) then forests/gold/quarries scattered in; edges forced to water.
   `GameEngine.newGame` regenerates (up to 20 tries) until a path exists from player to
   target (`hasPath`), after seeding `Rando` so the whole map reproduces from `state.seed`.
-- **Player**: `PLAYER_MP` (5) movement points per turn, spendable across multiple moves;
+- **Player**: `PLAYER_MP` (6) movement points per turn, spendable across multiple moves;
   reachability comes from `bfsHexes` treating enemy hexes as impassable.
 - **Enemies**: 2d6 of them, spawned on passable hexes; each moves one random hex per turn.
   Water/mountain are impassable (`MOVEMENT_COST` of `Infinity`).

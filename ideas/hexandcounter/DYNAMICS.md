@@ -22,7 +22,7 @@
 ## Player
 
 - Starts on the left side of the map
-- 5 Movement Points (MP) per turn
+- 6 Movement Points (MP) per turn
 - Can spend MP across multiple moves within a single turn
 - Cannot move onto hexes occupied by enemies
 
