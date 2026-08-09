@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Founders' Road</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <canvas id="game"></canvas>
+    <div id="hud-stack">
+        <div id="hud">
+            <span id="turn-info">Turn 1</span>
+            <span id="res-wood" class="res">Wood 0</span>
+            <span id="res-stone" class="res">Stone 0</span>
+            <span id="res-gold" class="res">Gold 0</span>
+            <span id="progress">
+                <span class="progress-label">Monument</span>
+                <span id="progress-bar"><span id="progress-fill"></span></span>
+                <span id="progress-pct">0%</span>
+            </span>
+            <button id="recruit">Recruit</button>
+            <button id="end-turn">End Turn</button>
+            <button id="new-game">New Game</button>
+        </div>
+        <div id="hud-hover" class="hidden"><span id="hover-info"></span></div>
+        <div id="build-panel" class="hidden"></div>
+        <div id="hud-msg" class="hidden"></div>
+    </div>
+    <div id="intro-panel">
+        <h1>Founders' Road</h1>
+        <p>Lead your crew into the wilderness. Build sawmills on forest, stoneworks
+        on quarries, mines on gold veins; lay roads, raise Halls to recruit, and
+        watchtowers to keep the beasts off your works.</p>
+        <p>Win by raising all three stages of the Monument (&#9650;) far to the east.</p>
+        <p class="controls">Click a worker &middot; move on yellow &middot; shoo beasts on red<br>
+        Tab cycles workers &middot; Space/Enter ends the turn &middot; drag pans</p>
+        <button id="begin-btn">Begin</button>
+    </div>
+    <!-- NOTE! We want to be able to double-click to run these games, so use plain
+    script includes (globals), not ES module imports. Order = dependency order:
+    artifacts → display artifacts → libs → state → engine → ui → bootstrap. -->
+    <script src="artifacts.js"></script>
+    <script src="displayartifacts.js"></script>
+    <script src="rando.js"></script>
+    <script src="colortheory.js"></script>
+    <script src="hex.js"></script>
+    <script src="sound.js"></script>
+    <script src="gamestate.js"></script>
+    <script src="gameengine.js"></script>
+    <script src="gameui.js"></script>
+    <script src="index.js"></script>
+</body>
+</html>
