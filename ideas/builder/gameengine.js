@@ -74,6 +74,32 @@ const GameEngine = (function () {
             return m.q === q && m.r === r;
         }
 
+        // True when an unbroken chain of road/building hexes links the Monument to
+        // EVERY Hall. Each Hall founded is a commitment the network must absorb;
+        // Monument stages may only be built once the whole realm is one supply line.
+        monumentConnected() {
+            const s = this.state;
+            const halls = s.buildings.filter(b => b.type === 'hall');
+            if (halls.length === 0) return false;
+            const reached = new Set();
+            const visited = new Set([Hex.key(s.monument.q, s.monument.r)]);
+            const frontier = [new Hex(s.monument.q, s.monument.r)];
+            while (frontier.length > 0) {
+                for (const n of frontier.pop().neighbors()) {
+                    const key = n.key();
+                    if (visited.has(key)) continue;
+                    const hex = s.hexes.get(key);
+                    if (!hex) continue;
+                    const building = this.buildingAt(n.q, n.r);
+                    if (!hex.road && !building) continue;
+                    if (building && building.type === 'hall') reached.add(building.id);
+                    visited.add(key);
+                    frontier.push(n);
+                }
+            }
+            return reached.size === halls.length;
+        }
+
         // Every hex key within TOWER_RADIUS of a watchtower — beasts may not enter.
         protectedKeys() {
             const keys = new Set();
@@ -381,10 +407,12 @@ const GameEngine = (function () {
 
             if (onMonument && s.monument.stage < MONUMENT_STAGES.length) {
                 const stage = MONUMENT_STAGES[s.monument.stage];
+                const connected = this.monumentConnected();
                 options.push({
                     action: 'monument', type: null, name: stage.name, cost: stage.cost,
                     mp: MONUMENT_MP,
-                    enabled: this.canAfford(stage.cost) && worker.mp >= MONUMENT_MP
+                    enabled: connected && this.canAfford(stage.cost) && worker.mp >= MONUMENT_MP,
+                    note: connected ? null : 'no road link to every Hall'
                 });
             }
 
@@ -394,14 +422,16 @@ const GameEngine = (function () {
                     options.push({
                         action: 'building', type, name: def.name, cost: def.cost,
                         mp: def.mp,
-                        enabled: this.canAfford(def.cost) && worker.mp >= def.mp
+                        enabled: this.canAfford(def.cost) && worker.mp >= def.mp,
+                        note: null
                     });
                 }
                 if (!hex.road) {
                     options.push({
                         action: 'road', type: null, name: 'Road', cost: ROAD.cost,
                         mp: ROAD.mp,
-                        enabled: this.canAfford(ROAD.cost) && worker.mp >= ROAD.mp
+                        enabled: this.canAfford(ROAD.cost) && worker.mp >= ROAD.mp,
+                        note: null
                     });
                 }
             }

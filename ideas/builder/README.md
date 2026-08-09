@@ -3,9 +3,11 @@
 A frontier-building hex-and-counter game, extended from the Hex & Counters
 movement base. Lead a crew of workers into a big procedurally generated
 wilderness: harvest terrain with sawmills, stoneworks, and mines; lace the map
-with roads; recruit at Halls; guard your works with watchtowers against
-wandering beasts — and win by raising the three-stage Monument (▲) on the far
-side of the map.
+with roads (the wilderness is slow — roads are how the map shrinks); recruit at
+Halls; guard your works with watchtowers against wandering beasts — and win by
+raising the three-stage Monument (▲) on the far side of the map, which must
+first be connected to every Hall you've founded by an unbroken supply line of
+roads and buildings.
 
 Double-click `index.html` to play (plain script globals, no build step).
 
@@ -36,4 +38,4 @@ and strategies.
 `node test/sim.js [seed ...]` runs the DOM-free engine headless: an A*-driven
 bot plays whole games while invariants are asserted every turn (non-negative
 stockpile, no stacked workers, beast cap, legal building terrain, map stays
-traversable). All default seeds should win in ~25-30 turns.
+traversable). All default seeds should win in ~50-70 turns.

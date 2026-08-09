@@ -7,10 +7,11 @@
 //
 // Run:  node test/sim.js [seed ...]
 //
-// The bot: build any producer it's standing on, pay Monument stages, otherwise walk
-// toward whatever the economy lacks (forest -> quarry -> gold vein -> Monument),
-// recruiting when affordable. It plays badly but legally — the point is that the
-// rules never crash, never go negative, and remain winnable.
+// The bot: build any producer it's standing on, pay Monument stages, lay road along
+// the Hall->Monument supply line once stone income runs, otherwise walk toward
+// whatever the economy lacks (forest -> quarry -> gold vein -> Monument), recruiting
+// when affordable. It plays badly but legally — the point is that the rules never
+// crash, never go negative, and remain winnable.
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -94,6 +95,31 @@ function stepToward(engine, worker, goals) {
     return true;
 }
 
+// Hexes on the cheapest Hall->Monument paths (one per Hall — every Hall must
+// join the supply line) that still need a road laid. moveCost steers each path
+// onto existing roads/buildings, so the plans share a trunk and extend the
+// network rather than starting over each time.
+function roadPlan(engine) {
+    const s = engine.state;
+    const monument = new Hex(s.monument.q, s.monument.r);
+    const halls = s.buildings.filter(b => b.type === 'hall');
+    const hexAt = (q, r) => s.hexes.get(Hex.key(q, r));
+    const plan = new Map();
+    for (const hall of halls) {
+        const path = findPath(new Hex(hall.q, hall.r), monument,
+            (q, r) => { const h = hexAt(q, r); return h !== undefined && engine.isPassable(h); },
+            (q, r) => engine.moveCost(hexAt(q, r)),
+            Infinity);
+        if (!path) continue;
+        for (const p of path) {
+            if (hexAt(p.q, p.r).road) continue;
+            if (engine.buildingAt(p.q, p.r) || engine.isMonumentHex(p.q, p.r)) continue;
+            plan.set(p.key(), p);
+        }
+    }
+    return [...plan.values()];
+}
+
 function actWorker(engine, worker) {
     while (worker.mp > 0) {
         const options = engine.buildOptions(worker);
@@ -109,6 +135,21 @@ function actWorker(engine, worker) {
         if (producer) {
             assert(engine.build(worker.id, producer.type).ok, 'enabled build refused');
             continue;
+        }
+        // Road duty: once stone income runs, extend the Hall->Monument supply line —
+        // lay road if standing on the plan, otherwise walk to its nearest gap.
+        if (!engine.monumentConnected() && engine.incomePerTurn().stone >= 4) {
+            const plan = roadPlan(engine);
+            if (plan.length > 0) {
+                const onPlan = plan.some(p => p.q === worker.q && p.r === worker.r);
+                const road = options.find(o => o.action === 'road' && o.enabled);
+                if (onPlan && road) {
+                    assert(engine.buildRoad(worker.id).ok, 'enabled road refused');
+                    continue;
+                }
+                if (stepToward(engine, worker, plan)) continue;
+                return;
+            }
         }
         if (!stepToward(engine, worker, goalHex(engine))) return;
     }
@@ -140,6 +181,17 @@ function runSim(seed, maxTurns) {
     if (!state.gameWon)
         assert(engine.hasPath(state.workers[0], state.monument),
             'monument unreachable from worker 1');
+    // The EVERY-Hall rule: a won game is connected by definition, and founding a
+    // stray Hall far from the network must break connectivity again.
+    if (state.gameWon) {
+        assert(engine.monumentConnected(), 'won while disconnected');
+        const stray = engine.beastSpawnCandidates()[0];
+        if (stray) {
+            state.buildings.push({ id: -1, type: 'hall', q: stray.q, r: stray.r });
+            assert(!engine.monumentConnected(), 'stray hall did not break the supply line');
+            state.buildings.pop();
+        }
+    }
     return {
         seed, won: state.gameWon, turns: state.turn,
         workers: state.workers.length, buildings: state.buildings.length,

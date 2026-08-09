@@ -46,16 +46,19 @@ trample what you don't guard.
 
 | Terrain  | Cost      |
 |----------|-----------|
-| Plains   | 1         |
-| Forest   | 2         |
-| Hills    | 2         |
-| Gold     | 2         |
-| Quarry   | 2         |
+| Plains   | 2         |
+| Forest   | 3         |
+| Hills    | 3         |
+| Gold     | 3         |
+| Quarry   | 3         |
 | Water    | Impassable|
 | Mountain | Impassable|
 
 A hex with a **road** or a **building** always costs 1 to enter, whatever its
 terrain. (Cost baked into the movement BFS — no special cases downstream.)
+Wilderness is deliberately slow — 6 MP is only ~3 raw plains hexes — so the
+road network isn't a convenience, it's how the map shrinks (Accumulation:
+every stone spent on road pays out in MP every turn after).
 
 ## Resources
 
@@ -104,7 +107,15 @@ Roads are hex flags, not counters; they render as a connected road network.
 ## The Monument (win condition)
 
 At the far site. A worker standing on the Monument hex builds stages from the
-stockpile (2 MP each):
+stockpile (2 MP each), **but only once the Monument is connected to every Hall
+by an unbroken chain of adjacent road/building hexes** (the supply line —
+checked by `monumentConnected()`; the build button explains itself when grayed).
+The rule makes the road network the spine of the game (Escalating Commitment:
+you must push a physical line of infrastructure across the whole map, and every
+hex of it is exposed frontier). And because *every* Hall counts, founding one
+is itself a commitment: a forward Hall speeds recruiting but adds a settlement
+the network must eventually absorb (chains may pass through buildings, so a
+Hall built on the trunk line connects for free):
 
 1. **Foundation** — 12 stone
 2. **Frame** — 20 wood
@@ -136,8 +147,9 @@ sides. Terrain shades by elevation, so every seed also has its own look.
   Wood income compounds into everything else.
 - **Mid**: a second Hall as a frontier recruit point, stoneworks running,
   watchtowers over the production cluster as beast pressure rises.
-- **Late**: mine a gold vein, road the last stretch, and shuttle workers to the
-  Monument for the three stage payments.
+- **Late**: mine a gold vein, complete the supply line — a forward Hall *on the
+  trunk route* is the strong move: it recruits at the frontier and joins the
+  network for free — and shuttle workers to the Monument for the stage payments.
 - **Recurring tensions**: stone on roads vs. saving for the Foundation; another
   producer (more income, more beast pressure) vs. a tower (safety, no income);
   expand reach vs. tower coverage; shoo a beast now (2 MP) vs. keep walking.
@@ -146,6 +158,10 @@ sides. Terrain shades by elevation, so every seed also has its own look.
     stockpile 12 stone/20 wood/6 gold; growth is mandatory, and growth spawns beasts.
   - *Monument rush from starting stock* — impossible: Foundation needs 12 stone
     vs. 4 at start; an economy must exist first.
+  - *Sprint a lone worker to the Monument* — the supply-line rule means a body
+    on the hex is worthless without a road home; the network has to get there too.
+  - *Hall-spam for recruit convenience* — every Hall founded must join the
+    supply line before the Monument can rise; an off-network Hall is debt.
   - *Worker spam* — recruit cost escalates by +2 wood per existing worker.
   - *Tower-wall the whole map* — towers cost stone, the same resource the
     Foundation and roads want; blanket coverage starves the win condition.

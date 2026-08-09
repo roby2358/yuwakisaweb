@@ -27,7 +27,7 @@ python -m http.server 8000
 **Verify engine changes headless**: `node test/sim.js [seed ...]` bundles the DOM-free
 modules into a Node vm and has an A*-driven bot play whole games, asserting invariants
 every turn (non-negative stockpile, no stacked workers, beast cap, legal building
-terrain, traversable map). Default seeds should all win in ~25-30 turns. UI changes are
+terrain, traversable map). Default seeds should all win in ~50-70 turns. UI changes are
 browser-playtested by the user.
 
 ## Architecture
@@ -108,9 +108,10 @@ not on the hex.
 - **Map**: 96×64 hexes; terrain by elevation percentile (water/plains/hills/mountain)
   with forests + gold veins on plains and quarries on hills; edges forced to water.
   Regenerates (up to 20 tries) until Hall→Monument is traversable.
-- **Movement cost**: plains 1; forest/hills/gold/quarry 2; water/mountain impassable.
+- **Movement cost**: plains 2; forest/hills/gold/quarry 3; water/mountain impassable.
   **A hex with a road or building always costs 1** — baked into `GameEngine.moveCost`
-  so every consumer sees it. Beasts use `rawMoveCost` (roads mean nothing to them).
+  so every consumer sees it; wilderness is deliberately slow so roads matter. Beasts
+  use `rawMoveCost` (roads mean nothing to them — they step, not spend MP).
 - **Economy**: one global stockpile (wood/stone/gold); buildings produce each end-of-turn
   (after beast movement — a smashed building pays nothing). All building rules live in
   the `GameArtifacts.BUILDINGS` table: new building type = new row, not new branches.
@@ -119,7 +120,10 @@ not on the hex.
   Spawn chance scales with building count (escalation tied to progress); spawns are
   ≥ 8 hexes from anything the player owns; hard cap 12.
 - **Win**: a worker on the Monument hex pays for stages Foundation (12s) → Frame (20w)
-  → Crown (6g). **No defeat condition** — losses are smashed buildings, never workers.
+  → Crown (6g) — but only once `monumentConnected()`: an unbroken chain of adjacent
+  road/building hexes must link the Monument to **every Hall** (the supply line;
+  founding a Hall is a commitment the network must absorb). **No defeat condition**
+  — losses are smashed buildings, never workers.
 
 ## Conventions
 

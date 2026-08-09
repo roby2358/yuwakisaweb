@@ -24,12 +24,12 @@ const GameArtifacts = (function () {
         TERRAIN,
         MOVEMENT_COST: {
             [TERRAIN.WATER]: Infinity,
-            [TERRAIN.PLAINS]: 1,
-            [TERRAIN.HILLS]: 2,
+            [TERRAIN.PLAINS]: 2,
+            [TERRAIN.HILLS]: 3,
             [TERRAIN.MOUNTAIN]: Infinity,
-            [TERRAIN.FOREST]: 2,
-            [TERRAIN.GOLD]: 2,
-            [TERRAIN.QUARRY]: 2
+            [TERRAIN.FOREST]: 3,
+            [TERRAIN.GOLD]: 3,
+            [TERRAIN.QUARRY]: 3
         },
         WORKER_MP: 6,
         MAP_COLS: 96,

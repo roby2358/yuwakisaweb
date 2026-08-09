@@ -578,7 +578,8 @@ const GameUI = (function () {
             panel.innerHTML = options.map(o =>
                 `<button data-action="${o.action}" data-type="${o.type ?? ''}"` +
                 `${o.enabled ? '' : ' disabled'}>` +
-                `${o.name} (${costText(o.cost)}, ${o.mp}MP)</button>`
+                `${o.name} (${costText(o.cost)}, ${o.mp}MP)` +
+                `${o.note ? ' — ' + o.note : ''}</button>`
             ).join('');
         }
 
