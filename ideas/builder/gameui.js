@@ -262,6 +262,7 @@ const GameUI = (function () {
             }
 
             this.renderRoads();
+            this.renderGuardZone();
             this.renderMonument();
 
             // L1.2 highlight sets: movement tint (yellow) + shoo tint (red)
@@ -363,6 +364,41 @@ const GameUI = (function () {
                     ctx.beginPath();
                     ctx.moveTo(from.x, from.y);
                     ctx.lineTo(to.x, to.y);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        // Watchtower coverage: white boundary around the union of guarded hexes.
+        // Only edges whose neighbor is unguarded draw, so adjacent tower zones merge
+        // into one outline around the outside (UI Reveals Mechanics).
+        renderGuardZone() {
+            const ctx = this.ctx;
+            const s = this.state;
+            const guarded = new Set();
+            for (const key of this.engine.protectedKeys())
+                if (s.hexes.has(key)) guarded.add(key);   // clip off-map keys
+            if (guarded.size === 0) return;
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            for (const key of guarded) {
+                const hex = Hex.fromKey(key);
+                const { x, y } = this.hexToScreen(hex.q, hex.r);
+                if (x < -HEX_SIZE * 2 || x > this.canvas.width + HEX_SIZE * 2 ||
+                    y < -HEX_SIZE * 2 || y > this.canvas.height + HEX_SIZE * 2) continue;
+                const corners = hexCorners(x, y, HEX_SIZE);
+                const neighbors = hex.neighbors();
+                for (let d = 0; d < 6; d++) {
+                    if (guarded.has(neighbors[d].key())) continue;
+                    // Neighbor direction d shares the edge between corners
+                    // (6-d)%6 and (7-d)%6 (corners sit at 60°·i − 30°).
+                    const a = (6 - d) % 6;
+                    const b = (a + 1) % 6;
+                    ctx.beginPath();
+                    ctx.moveTo(corners[a].x, corners[a].y);
+                    ctx.lineTo(corners[b].x, corners[b].y);
                     ctx.stroke();
                 }
             }

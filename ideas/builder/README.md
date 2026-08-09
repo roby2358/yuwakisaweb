@@ -26,6 +26,8 @@ and strategies.
 - All units are counter-like pieces: square counters for the crew (numbered) and
   buildings (lettered), round counters for beasts. Worker and beast colors come
   from per-game ColorTheory palettes; terrain shades by elevation
+- Watchtower coverage is outlined in white: the boundary of the beast-free
+  zone, drawn around the outside of overlapping tower zones
 - The orange HUD meter tracks Monument progress, including the stockpiled
   fraction of the next stage
 
