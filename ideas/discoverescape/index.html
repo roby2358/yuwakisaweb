@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Waking Isle</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <canvas id="game"></canvas>
+    <div id="hud-stack">
+        <div id="hud">
+            <span id="turn-info">Turn 1</span>
+            <span id="progress">
+                <span class="progress-label">Relics</span>
+                <span id="progress-bar"><span id="progress-fill"></span></span>
+                <span id="progress-pct">0/5</span>
+            </span>
+            <span id="hunter-info">Hunters 0</span>
+            <button id="end-turn">End Turn</button>
+            <button id="new-game">New Game</button>
+        </div>
+        <div id="hud-hover" class="hidden"><span id="hover-info"></span></div>
+    </div>
+    <div id="intro-panel">
+        <p>The isle is silent — for now. Explore the fog, find the relic tombs (✦),
+        and carry your plunder back to the boat (⛵) to escape.</p>
+        <p>Every relic you take wakes hunters — and the more you carry, the farther
+        they smell you. Run far enough and they lose the scent. Hills see farther;
+        standing stones (▲) reveal much. At turn 60, night falls and the isle fully
+        wakes.</p>
+        <p>Escape with one relic and you win. Escape with all five and you're a legend.</p>
+        <button id="begin-btn">Go Ashore</button>
+    </div>
+    <!-- NOTE! We want to be able to double-click to run these games, so use plain
+    script includes (globals), not ES module imports. Order = dependency order:
+    artifacts → display artifacts → libs → state → engine → ui → bootstrap. -->
+    <script src="artifacts.js"></script>
+    <script src="displayartifacts.js"></script>
+    <script src="rando.js"></script>
+    <script src="hex.js"></script>
+    <script src="sound.js"></script>
+    <script src="gamestate.js"></script>
+    <script src="gameengine.js"></script>
+    <script src="gameui.js"></script>
+    <script src="index.js"></script>
+</body>
+</html>
