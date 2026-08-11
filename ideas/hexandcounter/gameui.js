@@ -43,6 +43,9 @@ const GameUI = (function () {
             this.targeting = null;   // L4 modal targeting { what, validHexes: Set<key> } or null
             this.overlay = null;     // L5 input-capturing layer: 'intro' | 'victory' | null
             this.hoveredHex = null;  // L1.3 hex under the cursor, for the HUD readout
+
+            // Baseline for the "Progress to end" meter, set each newGame().
+            this.startDist = 0;
         }
 
         // ---- Lifecycle ----
@@ -55,8 +58,7 @@ const GameUI = (function () {
             this.engine.newGame();
             // Baseline for the "Progress to end" meter: how far P starts from the
             // target. Progress = how much of that gap has been closed.
-            this.startDist = new Hex(this.state.player.q, this.state.player.r)
-                .distance(this.state.target);
+            this.startDist = this.distanceToTarget();
             this.selection = null;
             this.targeting = null;
             this.hoveredHex = null;
@@ -205,16 +207,16 @@ const GameUI = (function () {
                 }
             }
 
-            // Enemies
-            for (let i = 0; i < s.enemies.length; i++) {
-                const { x, y } = this.hexToScreen(s.enemies[i].q, s.enemies[i].r);
-                this.drawCounter(x, y, s.enemyColors[i] || '#cc3333', 'E');
+            // Enemies — each piece draws with its own seeded color and label.
+            for (const e of s.enemies) {
+                const { x, y } = this.hexToScreen(e.q, e.r);
+                this.drawCounter(x, y, e.color, e.label);
             }
 
-            // Player
+            // Player — drawn with the display constant, so its piece color stays null.
             if (s.player) {
                 const { x, y } = this.hexToScreen(s.player.q, s.player.r);
-                this.drawCounter(x, y, PLAYER_COLOR, 'P');
+                this.drawCounter(x, y, PLAYER_COLOR, s.player.label);
                 if (this.selection) {
                     const sz = COUNTER_SIZE + 4;
                     this.roundRect(x - sz / 2, y - sz / 2, sz, sz, 6);
@@ -297,12 +299,18 @@ const GameUI = (function () {
             ctx.fillText(label, cx, cy + 1);
         }
 
+        // Axial distance from the player to the target — the raw quantity behind the
+        // "Progress to end" meter (baselined at newGame, re-read each HUD update).
+        distanceToTarget() {
+            return new Hex(this.state.player.q, this.state.player.r).distance(this.state.target);
+        }
+
         updateHUD() {
             const s = this.state;
             document.getElementById('turn-info').textContent = 'Turn ' + s.turn;
 
             // "Progress to end" meter: fraction of the starting player→target gap closed.
-            const dist = new Hex(s.player.q, s.player.r).distance(s.target);
+            const dist = this.distanceToTarget();
             const pct = this.startDist > 0
                 ? Math.max(0, Math.min(1, (this.startDist - dist) / this.startDist))
                 : 1;
@@ -376,8 +384,8 @@ const GameUI = (function () {
             }
 
             if (!this.selection) {
-                if (hex.q === s.player.q && hex.r === s.player.r) this.selectPlayer();
-            } else if (hex.q === s.player.q && hex.r === s.player.r) {
+                if (s.player.isAt(hex.q, hex.r)) this.selectPlayer();
+            } else if (s.player.isAt(hex.q, hex.r)) {
                 this.deselect();
             } else if (this.selection.attackable.has(key)) {
                 // attack(hex) — no combat yet

@@ -27,12 +27,14 @@
     </div>
     <!-- NOTE! We want to be able to double-click to run these games, so use plain
     script includes (globals), not ES module imports. Order = dependency order:
-    artifacts → display artifacts → libs → state → engine → ui → bootstrap. -->
+    artifacts → display artifacts → libs → piece/board → state → engine → ui → bootstrap. -->
     <script src="artifacts.js"></script>
     <script src="displayartifacts.js"></script>
     <script src="rando.js"></script>
     <script src="colortheory.js"></script>
     <script src="hex.js"></script>
+    <script src="piece.js"></script>
+    <script src="board.js"></script>
     <script src="sound.js"></script>
     <script src="gamestate.js"></script>
     <script src="gameengine.js"></script>

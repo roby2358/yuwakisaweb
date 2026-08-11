@@ -12,33 +12,20 @@
 //    trusting a caller-supplied cost — the "never trust the client" rule, baked in now
 //    so a future command/network layer doesn't have to re-audit every action.
 const GameEngine = (function () {
-    const { TERRAIN, MOVEMENT_COST, PLAYER_MP, MAP_COLS, MAP_ROWS } = GameArtifacts;
+    const { TERRAIN, PLAYER_MP, MAP_COLS, MAP_ROWS } = GameArtifacts;
 
     class GameEngine {
         constructor(state) {
             this.state = state;
         }
 
-        // ---- Terrain passability (single source of truth) ----
-        // A hex is passable iff its terrain has a finite movement cost; water/mountain
-        // are Infinity. Enemy movement, spawning, and placement all route through here.
-        moveCost(hex) {
-            return MOVEMENT_COST[hex.terrain] ?? Infinity;
-        }
+        // Terrain queries (moveCost / isPassable / passableHexes / neighbors / hasPath) live
+        // on this.board — a query layer over state.hexes, rebuilt whenever the map is.
 
-        isPassable(hex) {
-            return this.moveCost(hex) !== Infinity;
-        }
-
-        // All non-edge passable hexes, as a fresh array the caller may sort/filter.
-        passableHexes() {
-            const out = [];
-            for (const [, hex] of this.state.hexes) {
-                if (hex.isEdge) continue;
-                if (!this.isPassable(hex)) continue;
-                out.push(hex);
-            }
-            return out;
+        // Hex keys currently occupied by enemies: the walls the player routes around and the
+        // cells other pieces must avoid. One source for the occupancy sets built below.
+        enemyKeys() {
+            return new Set(this.state.enemies.map(e => e.key()));
         }
 
         // ---- New game / world generation ----
@@ -55,10 +42,11 @@ const GameEngine = (function () {
             let attempts = 0;
             do {
                 s.hexes = this.generateRectGrid();
+                this.board = new Board(s.hexes);   // query layer over the fresh map
                 this.assignTerrain();
                 this.placePlayerAndTarget();
                 attempts++;
-            } while (!this.hasPath(s.player, s.target) && attempts < 20);
+            } while (!this.board.hasPath(s.player, s.target) && attempts < 20);
 
             this.spawnEnemies();
             s.turn = 1;
@@ -173,43 +161,32 @@ const GameEngine = (function () {
 
         // Player on the far-left passable slice, target on the far-right.
         placePlayerAndTarget() {
-            const passable = this.passableHexes();
+            const passable = this.board.passableHexes();
             passable.sort((a, b) => a.col - b.col);
 
             const leftSlice = passable.slice(0, Math.max(5, Math.floor(passable.length * 0.03)));
             const ph = Rando.choice(leftSlice);
-            this.state.player = { q: ph.q, r: ph.r };
+            this.state.player = new Piece(ph.q, ph.r, null, 'P');
 
             const rightSlice = passable.slice(-Math.max(5, Math.floor(passable.length * 0.03)));
             const th = Rando.choice(rightSlice);
-            this.state.target = { q: th.q, r: th.r };
+            this.state.target = new Piece(th.q, th.r, null, '★');
         }
 
-        hasPath(from, to) {
-            if (!from || !to) return false;
-            const costs = bfsHexes(from, this.state.hexes, hex => this.moveCost(hex), Infinity);
-            return costs.has(Hex.key(to.q, to.r));
-        }
-
-        // 2d6 enemies on passable hexes, each given a distinct color for identity.
+        // 2d6 enemies on passable hexes, each a Piece carrying a distinct seeded color.
         spawnEnemies() {
             const s = this.state;
             const count = Rando.int(1, 6) + Rando.int(1, 6);
             s.enemies = [];
-            const occupied = new Set([Hex.key(s.player.q, s.player.r), Hex.key(s.target.q, s.target.r)]);
-            const candidates = this.passableHexes().filter(hex => !occupied.has(Hex.key(hex.q, hex.r)));
+            const occupied = new Set([s.player.key(), s.target.key()]);
+            const candidates = this.board.passableHexes().filter(hex => !occupied.has(Hex.key(hex.q, hex.r)));
             Rando.shuffle(candidates);
+            const scheme = ColorTheory.randomScheme(() => Rando.random());
             for (let i = 0; i < count && i < candidates.length; i++) {
                 const h = candidates[i];
-                s.enemies.push({ q: h.q, r: h.r });
-                occupied.add(Hex.key(h.q, h.r));
-            }
-
-            s.enemyColors = [];
-            const scheme = ColorTheory.randomScheme(() => Rando.random());
-            for (let i = 0; i < s.enemies.length; i++) {
                 const [r, g, b] = scheme[i % scheme.length];
-                s.enemyColors.push(ColorTheory.rgbToHex(r, g, b));
+                s.enemies.push(new Piece(h.q, h.r, ColorTheory.rgbToHex(r, g, b), 'E'));
+                occupied.add(Hex.key(h.q, h.r));
             }
         }
 
@@ -219,12 +196,12 @@ const GameEngine = (function () {
         computeReachable() {
             const s = this.state;
             if (s.mp <= 0) return new Map();
-            const enemyKeys = new Set(s.enemies.map(e => Hex.key(e.q, e.r)));
+            const enemyKeys = this.enemyKeys();
             const costs = bfsHexes(s.player, s.hexes, hex => {
                 if (enemyKeys.has(Hex.key(hex.q, hex.r))) return Infinity;
-                return this.moveCost(hex);
+                return this.board.moveCost(hex);
             }, s.mp);
-            costs.delete(Hex.key(s.player.q, s.player.r));
+            costs.delete(s.player.key());
             return costs;
         }
 
@@ -252,7 +229,7 @@ const GameEngine = (function () {
             const cost = reachable.get(Hex.key(q, r));
             if (cost === undefined) return { ok: false };
 
-            s.player = { q, r };
+            s.player.moveTo(q, r);
             s.mp -= cost;
 
             if (q === s.target.q && r === s.target.r) {
@@ -280,26 +257,20 @@ const GameEngine = (function () {
         // Each enemy steps to one random passable, unoccupied neighbor (or stays put).
         moveEnemies() {
             const s = this.state;
-            const occupied = new Set([Hex.key(s.player.q, s.player.r)]);
-            for (const e of s.enemies) occupied.add(Hex.key(e.q, e.r));
+            const occupied = this.enemyKeys();
+            occupied.add(s.player.key());
 
             for (const enemy of s.enemies) {
-                const neighbors = new Hex(enemy.q, enemy.r).neighbors();
-                const valid = neighbors.filter(n => {
-                    const key = n.key();
-                    const hex = s.hexes.get(key);
-                    if (!hex) return false;
-                    if (!this.isPassable(hex)) return false;
-                    if (occupied.has(key)) return false;
+                const valid = this.board.neighbors(enemy.q, enemy.r).filter(hex => {
+                    if (!this.board.isPassable(hex)) return false;
+                    if (occupied.has(Hex.key(hex.q, hex.r))) return false;
                     return true;
                 });
-                if (valid.length > 0) {
-                    occupied.delete(Hex.key(enemy.q, enemy.r));
-                    const dest = Rando.choice(valid);
-                    enemy.q = dest.q;
-                    enemy.r = dest.r;
-                    occupied.add(Hex.key(enemy.q, enemy.r));
-                }
+                if (valid.length === 0) continue;
+                occupied.delete(enemy.key());
+                const dest = Rando.choice(valid);
+                enemy.moveTo(dest.q, dest.r);
+                occupied.add(enemy.key());
             }
         }
     }

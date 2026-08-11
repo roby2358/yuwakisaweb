@@ -27,7 +27,7 @@ python -m http.server 8000
 
 ### What actually runs
 
-The game is **`index.html` + four game modules + shared libs + `index.css`**. It loads as
+The game is **`index.html` + game modules + shared libs + `index.css`**. It loads as
 **plain `<script>` globals** (no ES modules) so the page runs from `file://` on a
 double-click; `index.html` lists the scripts in dependency order and `index.js` is a thin
 bootstrap that wires them together. The code is factored for an eventual client/server
@@ -37,8 +37,10 @@ split — the seam is drawn so State + Engine could run server-side unchanged:
 |---|---|---|
 | `artifacts.js` | `GameArtifacts` | Static **rules-data** — `TERRAIN`, `MOVEMENT_COST`, `PLAYER_MP`, `MAP_COLS/ROWS`. Server-side; no colors/pixels. Replaced the old `config.js`. |
 | `displayartifacts.js` | `GameDisplayArtifacts` | Client-only **display attrs** — `HEX_SIZE`, `COUNTER_SIZE`, `TERRAIN_COLORS`, `TERRAIN_NAMES`, `PLAYER_COLOR`, `TARGET_COLOR`. Keyed off `GameArtifacts.TERRAIN`; read only by `GameUI` and the pixel helpers in `hex.js`. |
-| `gamestate.js` | `GameState` | Authoritative, **serializable data only** — `seed`, `hexes`, `player`, `target`, `enemies`, `enemyColors`, `turn`, `mp`, `gameWon`, `phase`. No behavior, no DOM, no view/interaction state. |
-| `gameengine.js` | `GameEngine` | **Rules + generation** over a `GameState`. DOM-free and render-free: methods mutate state and *return outcomes*. Owns `newGame`/`diamondSquare`/`assignTerrain`, `computeReachable`, `movePlayer`, `endTurn`, `moveEnemies`. |
+| `piece.js` | `Piece` | Base type for a **positioned token** — `{ q, r, color, label }` plus `key`/`isAt`/`moveTo`. Player, target, and enemies are all `Piece`s; games on this base subclass it (hp, faction). DOM-free (depends only on `Hex`); a light record so state stays snapshot-able. |
+| `board.js` | `Board` | **Query layer over the hex `Map`** — `moveCost`/`isPassable`/`passableHexes`/`neighbors`/`hasPath`. A transient wrapper around `GameState.hexes` (the plain serializable truth), rebuilt whenever the map is. DOM-free; reads `MOVEMENT_COST` from `GameArtifacts`. |
+| `gamestate.js` | `GameState` | Authoritative, **serializable data only** — `seed`, `hexes`, `player`, `target`, `enemies` (each a `Piece`), `turn`, `mp`, `gameWon`, `phase`. No behavior, no DOM, no view/interaction state. |
+| `gameengine.js` | `GameEngine` | **Rules + generation** over a `GameState`, delegating terrain queries to its `board`. DOM-free and render-free: methods mutate state and *return outcomes*. Owns `newGame`/`diamondSquare`/`assignTerrain`, `computeReachable`, `movePlayer`, `endTurn`, `moveEnemies`. |
 | `gameui.js` | `GameUI` | The **client**: canvas rendering, DOM HUD, camera/pan, hover, selection/targeting/overlay modal state, and all input wiring. Drives the engine and re-renders from state. |
 
 Shared libraries the game modules depend on:
@@ -121,8 +123,12 @@ press is a click (select/move), a drag past a few px pans (see `DRAG_THRESHOLD` 
 ## Conventions
 
 - Pure client-side — plain `<script>` globals (no ES modules), no Node/npm, no build step,
-  no bundler, no tests. Each module wraps its definition in an IIFE assigning one global to
-  keep top-level names from colliding across scripts.
+  no bundler. Most modules wrap their definition in an IIFE assigning one global to keep
+  top-level names from colliding across scripts; the single-class value libs (`Hex`,
+  `Piece`) declare the class at top level instead.
+- One DOM-free smoke test: `node test/smoke.js` boots the engine/state/board/piece stack
+  (no canvas, no display artifacts) and checks the pieces/board wiring, reachability, and
+  seed reproducibility. It's the regression net for refactors of this base platform.
 - Color values are 0–1 floats except when converting to `#rrggbb` strings for canvas.
 - Terrain types come from `GameArtifacts.TERRAIN`; movement from `GameArtifacts.MOVEMENT_COST`.
   Colors/labels/geometry come from `GameDisplayArtifacts` (client-only — the engine never reads it).

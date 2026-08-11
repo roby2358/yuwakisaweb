@@ -9,10 +9,9 @@ const GameState = (function () {
         constructor() {
             this.seed = 0;                 // reproducibility anchor for the whole game
             this.hexes = null;             // Map<"q,r", hex>
-            this.player = null;            // { q, r }
-            this.target = null;            // { q, r }
-            this.enemies = [];             // [{ q, r }]
-            this.enemyColors = [];         // ['#rrggbb'] parallel to enemies (piece identity)
+            this.player = null;            // Piece
+            this.target = null;            // Piece (goal marker)
+            this.enemies = [];             // [Piece] — each carries its own seeded identity color
             this.turn = 1;
             this.mp = GameArtifacts.PLAYER_MP;
             this.gameWon = false;
