@@ -42,31 +42,6 @@ const Rando = (function () {
         static int(min, max) {
             return min + Math.floor(_rng() * (max - min + 1));
         }
-
-        static gaussian() {
-            const u1 = _rng();
-            const u2 = _rng();
-            return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-        }
-
-        static float(min, max) {
-            return min + _rng() * (max - min);
-        }
-
-        static bool(probability = 0.5) {
-            return _rng() < probability;
-        }
-
-        static weighted(weighted) {
-            if (weighted.length === 0) return null;
-            const totalWeight = weighted.reduce((sum, w) => sum + w.weight, 0);
-            let roll = _rng() * totalWeight;
-            for (const { item, weight } of weighted) {
-                roll -= weight;
-                if (roll <= 0) return item;
-            }
-            return weighted[weighted.length - 1].item;
-        }
     }
 
     return Rando;

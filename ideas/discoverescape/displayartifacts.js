@@ -32,6 +32,7 @@ const GameDisplayArtifacts = (function () {
         BOAT_COLOR: '#5ad0e0',
         RELIC_COLOR: '#ffd633',
         CAIRN_COLOR: '#cfcfd8',
+        CAIRN_USED_COLOR: '#6a6a72',    // a lit (spent) standing stone dims
         // Hunter counters shade by speed: the bright ones are the fast ones.
         HUNTER_COLORS: { 2: '#7e3030', 3: '#c22b2b', 4: '#ff2d2d' },
     };

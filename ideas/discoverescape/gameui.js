@@ -12,7 +12,7 @@ const GameUI = (function () {
     const {
         HEX_SIZE, COUNTER_SIZE, TERRAIN_COLORS, TERRAIN_NAMES,
         FOG_COLOR, GLIMPSE_ALPHA, NIGHT_TINT, PLAYER_COLOR, BOAT_COLOR,
-        RELIC_COLOR, CAIRN_COLOR, HUNTER_COLORS
+        RELIC_COLOR, CAIRN_COLOR, CAIRN_USED_COLOR, HUNTER_COLORS
     } = GameDisplayArtifacts;
     const { RELIC, NIGHT_TURN } = GameArtifacts;
 
@@ -54,7 +54,9 @@ const GameUI = (function () {
         }
 
         newGame() {
-            this.engine.newGame();
+            // The client rolls the seed (a server would roll its own); the engine
+            // stores it so the game stays reproducible from state.seed.
+            this.engine.newGame((Math.random() * 0x100000000) >>> 0);
             this.selection = null;
             this.targeting = null;
             this.hoveredHex = null;
@@ -171,14 +173,14 @@ const GameUI = (function () {
                     y < -HEX_SIZE * 2 || y > canvas.height + HEX_SIZE * 2) continue;
                 drawHexPath(ctx, x, y, HEX_SIZE);
                 if (hex.explored) {
-                    ctx.fillStyle = TERRAIN_COLORS[hex.terrain] || '#555';
+                    ctx.fillStyle = TERRAIN_COLORS[hex.terrain];
                     ctx.fill();
                     if (s.night) { ctx.fillStyle = NIGHT_TINT; ctx.fill(); }
                 } else if (hex.glimpsed) {
                     ctx.fillStyle = FOG_COLOR;
                     ctx.fill();
                     ctx.globalAlpha = GLIMPSE_ALPHA;
-                    ctx.fillStyle = TERRAIN_COLORS[hex.terrain] || '#555';
+                    ctx.fillStyle = TERRAIN_COLORS[hex.terrain];
                     ctx.fill();
                     ctx.globalAlpha = 1;
                 } else {
@@ -192,29 +194,14 @@ const GameUI = (function () {
 
             // The boat — the landing site and escape point. Always drawn: you know
             // where you came ashore.
-            {
-                const { x, y } = this.hexToScreen(s.boat.q, s.boat.r);
-                drawHexPath(ctx, x, y, HEX_SIZE);
-                ctx.strokeStyle = BOAT_COLOR;
-                ctx.lineWidth = 3;
-                ctx.stroke();
-                ctx.fillStyle = BOAT_COLOR;
-                ctx.font = 'bold 16px monospace';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('⛵', x, y);
-            }
+            this.drawHexRing(s.boat.q, s.boat.r, BOAT_COLOR, 3);
+            this.drawGlyph(s.boat.q, s.boat.r, '⛵', BOAT_COLOR, 16);
 
             // Standing stones (cairns) — visible once their hex is explored; dim when lit.
             for (const c of s.cairns) {
                 const hex = s.hexes.get(Hex.key(c.q, c.r));
                 if (!hex.explored) continue;
-                const { x, y } = this.hexToScreen(c.q, c.r);
-                ctx.fillStyle = c.used ? '#6a6a72' : CAIRN_COLOR;
-                ctx.font = 'bold 15px monospace';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('▲', x, y);
+                this.drawGlyph(c.q, c.r, '▲', c.used ? CAIRN_USED_COLOR : CAIRN_COLOR, 15);
             }
 
             // Relic tombs — the discovery payoff: a glint in a hex you just revealed.
@@ -222,16 +209,8 @@ const GameUI = (function () {
                 if (t.taken) continue;
                 const hex = s.hexes.get(Hex.key(t.q, t.r));
                 if (!hex.explored) continue;
-                const { x, y } = this.hexToScreen(t.q, t.r);
-                drawHexPath(ctx, x, y, HEX_SIZE);
-                ctx.strokeStyle = RELIC_COLOR;
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                ctx.fillStyle = RELIC_COLOR;
-                ctx.font = 'bold 18px monospace';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('✦', x, y);
+                this.drawHexRing(t.q, t.r, RELIC_COLOR, 2);
+                this.drawGlyph(t.q, t.r, '✦', RELIC_COLOR, 18);
             }
 
             // L1.2 highlight sets: movement tint (yellow) + attack tint (red, empty until combat)
@@ -269,7 +248,7 @@ const GameUI = (function () {
             // Hunters — shaded by speed: the bright ones are the fast ones.
             for (const h of s.hunters) {
                 const { x, y } = this.hexToScreen(h.q, h.r);
-                this.drawCounter(x, y, HUNTER_COLORS[h.speed] || '#cc3333', 'H');
+                this.drawCounter(x, y, HUNTER_COLORS[h.speed], 'H');
             }
 
             // L5 end-of-game overlays (canvas-drawn, input-capturing layers)
@@ -296,6 +275,32 @@ const GameUI = (function () {
             ctx.fillText(title, this.canvas.width / 2, this.canvas.height / 2 - 30);
             ctx.font = '20px monospace';
             ctx.fillText(detail, this.canvas.width / 2, this.canvas.height / 2 + 20);
+        }
+
+        // Centered monospace text at a pixel point — the one text primitive every
+        // marker and counter label goes through.
+        glyphAt(x, y, glyph, color, px) {
+            const ctx = this.ctx;
+            ctx.fillStyle = color;
+            ctx.font = 'bold ' + px + 'px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(glyph, x, y);
+        }
+
+        // Map-marker glyph on a hex (boat, cairn, relic).
+        drawGlyph(q, r, glyph, color, px) {
+            const { x, y } = this.hexToScreen(q, r);
+            this.glyphAt(x, y, glyph, color, px);
+        }
+
+        // Colored outline around a hex (boat and relic markers).
+        drawHexRing(q, r, color, width) {
+            const { x, y } = this.hexToScreen(q, r);
+            drawHexPath(this.ctx, x, y, HEX_SIZE);
+            this.ctx.strokeStyle = color;
+            this.ctx.lineWidth = width;
+            this.ctx.stroke();
         }
 
         roundRect(x, y, w, h, r) {
@@ -348,11 +353,7 @@ const GameUI = (function () {
             ctx.stroke();
 
             // Label — pick white or black text for contrast
-            ctx.fillStyle = labelColor;
-            ctx.font = 'bold ' + Math.floor(s * 0.55) + 'px monospace';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(label, cx, cy + 1);
+            this.glyphAt(cx, cy + 1, label, labelColor, Math.floor(s * 0.55));
         }
 
         updateHUD() {
@@ -373,8 +374,8 @@ const GameUI = (function () {
             if (!hoverEl) return;
             const h = this.hoveredHex && s.hexes.get(Hex.key(this.hoveredHex.q, this.hoveredHex.r));
             const name = !h ? ''
-                : h.explored ? (TERRAIN_NAMES[h.terrain] ?? '?')
-                : h.glimpsed ? (TERRAIN_NAMES[h.terrain] ?? '?') + ' (distant)'
+                : h.explored ? TERRAIN_NAMES[h.terrain]
+                : h.glimpsed ? TERRAIN_NAMES[h.terrain] + ' (distant)'
                 : 'Unexplored';
             hoverEl.textContent = h ? `${name} (${this.hoveredHex.q},${this.hoveredHex.r})` : '';
             document.getElementById('hud-hover').classList.toggle('hidden', !h);

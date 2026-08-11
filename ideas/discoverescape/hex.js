@@ -177,19 +177,6 @@ function bfsHexes(startHex, hexes, movementCost, maxCost) {
     return costs;
 }
 
-// All hexes reachable by a unit with given movement points.
-// Returns a Map of hexKey -> cost (excluding the starting hex).
-function getReachableHexes(startHex, hexes, movementPoints, terrainMovement) {
-    const costs = bfsHexes(
-        startHex,
-        hexes,
-        hex => terrainMovement[hex.terrain] ?? Infinity,
-        movementPoints
-    );
-    costs.delete(Hex.key(startHex.q, startHex.r));
-    return costs;
-}
-
 // ---- A* pathfinding over a hex Map ----
 
 // Find the key with lowest fScore in openSet

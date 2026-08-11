@@ -13,7 +13,7 @@ const GameState = (function () {
             this.boat = null;              // { q, r } — landing site; escape point
             this.relics = [];              // [{ q, r, taken }] — the tombs
             this.cairns = [];              // [{ q, r, used }] — one-shot reveal stones
-            this.hunters = [];             // [{ q, r, speed }] — speed = MP per turn
+            this.hunters = [];             // [{ q, r, speed, dormant }] — speed = MP per turn
             this.carried = 0;              // relics taken so far
             this.turn = 1;
             this.mp = GameArtifacts.PLAYER_MP;

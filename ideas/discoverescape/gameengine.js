@@ -45,13 +45,11 @@ const GameEngine = (function () {
 
         // ---- New game / world generation ----
         // Regenerates (up to 20 tries) until every tomb is reachable from the boat.
-        // A seed may be supplied for reproducibility; otherwise one is drawn once and
-        // stored, so the resulting game can always be reproduced from state.seed.
+        // The caller supplies the seed (the UI rolls one, the sim iterates them); it is
+        // stored so the resulting game can always be reproduced from state.seed.
         newGame(seed) {
             const s = this.state;
-            s.seed = (seed === undefined || seed === null)
-                ? Math.floor(Math.random() * 0x100000000)
-                : (seed >>> 0);
+            s.seed = seed >>> 0;
             Rando.seed(s.seed);
 
             let attempts = 0;
@@ -209,6 +207,23 @@ const GameEngine = (function () {
             return true;
         }
 
+        // Greedy spaced placement: shuffle the candidates, then take up to `count`
+        // that keep `spacing` hexes from everything already picked and satisfy
+        // `accept`. Returns { q, r } spots; the caller decides whether a short list
+        // is fatal (relics regenerate the map, cairns are best-effort).
+        pickSpaced(candidates, count, spacing, accept) {
+            Rando.shuffle(candidates);
+            const picked = [];
+            for (const h of candidates) {
+                if (picked.length >= count) break;
+                const hexH = new Hex(h.q, h.r);
+                if (picked.some(p => hexH.distance(p) < spacing)) continue;
+                if (!accept(h)) continue;
+                picked.push({ q: h.q, r: h.r });
+            }
+            return picked;
+        }
+
         // Tombs sit deep in the island: right of MIN_COL_FRAC, pairwise spaced, and
         // each reachable from the boat. Returns false if a full set couldn't be placed
         // (caller regenerates the map).
@@ -216,16 +231,9 @@ const GameEngine = (function () {
             const s = this.state;
             const minCol = Math.floor(MAP_COLS * RELIC.MIN_COL_FRAC);
             const candidates = this.passableHexes().filter(h => h.col >= minCol);
-            Rando.shuffle(candidates);
-
-            s.relics = [];
-            for (const h of candidates) {
-                if (s.relics.length >= RELIC.COUNT) break;
-                const hexH = new Hex(h.q, h.r);
-                if (s.relics.some(t => hexH.distance(t) < RELIC.MIN_SPACING)) continue;
-                if (!this.hasPath(s.boat, h)) continue;
-                s.relics.push({ q: h.q, r: h.r, taken: false });
-            }
+            const spots = this.pickSpaced(candidates, RELIC.COUNT, RELIC.MIN_SPACING,
+                h => this.hasPath(s.boat, h));
+            s.relics = spots.map(p => ({ q: p.q, r: p.r, taken: false }));
             return s.relics.length === RELIC.COUNT;
         }
 
@@ -237,15 +245,9 @@ const GameEngine = (function () {
             const relicKeys = new Set(s.relics.map(t => Hex.key(t.q, t.r)));
             const candidates = this.passableHexes()
                 .filter(h => h.col >= minCol && !relicKeys.has(Hex.key(h.q, h.r)));
-            Rando.shuffle(candidates);
-
-            s.cairns = [];
-            for (const h of candidates) {
-                if (s.cairns.length >= CAIRN.COUNT) break;
-                const hexH = new Hex(h.q, h.r);
-                if (s.cairns.some(c => hexH.distance(c) < CAIRN.MIN_SPACING)) continue;
-                s.cairns.push({ q: h.q, r: h.r, used: false });
-            }
+            const spots = this.pickSpaced(candidates, CAIRN.COUNT, CAIRN.MIN_SPACING,
+                () => true);
+            s.cairns = spots.map(p => ({ q: p.q, r: p.r, used: false }));
         }
 
         hasPath(from, to) {
