@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemrace</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <canvas id="game"></canvas>
+    <div id="hud-stack">
+        <div id="hud">
+            <span id="turn-info">Turn 1</span>
+            <span id="progress">
+                <span class="progress-label">Sunstones</span>
+                <span id="progress-bar"><span id="progress-fill"></span></span>
+                <span id="progress-pct">0/3</span>
+            </span>
+            <button id="end-turn">End Turn</button>
+            <button id="new-game">New Game</button>
+        </div>
+        <div id="effect-bar">No active gem effect</div>
+        <div id="hud-hover" class="hidden"><span id="hover-info"></span></div>
+    </div>
+    <aside id="gem-panel">
+        <h2>Gem inventory</h2>
+        <p class="panel-note">Click a gem to replace the active rule.</p>
+        <div id="inventory"></div>
+        <details open>
+            <summary>Terrain frequency</summary>
+            <div id="frequency-table"></div>
+        </details>
+    </aside>
+    <div id="intro-panel">
+        <p>Collect 3 golden Sunstones, then return to the home hex. Monsters chase within 6 hexes and end the game on contact. Collect colored gems and click them in the inventory to temporarily change one rule.</p>
+        <button id="begin-btn">Begin</button>
+    </div>
+    <!-- NOTE! We want to be able to double-click to run these games, so use plain
+    script includes (globals), not ES module imports. Order = dependency order:
+    artifacts → display artifacts → libs → piece/board → state → engine → ui → bootstrap. -->
+    <script src="artifacts.js"></script>
+    <script src="displayartifacts.js"></script>
+    <script src="rando.js"></script>
+    <script src="colortheory.js"></script>
+    <script src="hex.js"></script>
+    <script src="piece.js"></script>
+    <script src="board.js"></script>
+    <script src="sound.js"></script>
+    <script src="gamestate.js"></script>
+    <script src="gameengine.js"></script>
+    <script src="gameui.js"></script>
+    <script src="index.js"></script>
+</body>
+</html>

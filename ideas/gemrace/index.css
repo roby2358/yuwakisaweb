@@ -1,0 +1,108 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
+#game { display: block; cursor: default; }
+/* Two stacked bars: a static top line (turn / progress / buttons) and a second
+   line for the mouse-over readout, so hover text can never shift the buttons. */
+#hud-stack {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    z-index: 10;
+    user-select: none;
+    font-family: monospace;
+}
+#hud {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.7);
+    color: #eee;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+}
+#hud-hover {
+    background: rgba(0, 0, 0, 0.7);
+    color: #ccc;
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+}
+#hud-hover.hidden { display: none; }
+#effect-bar { background: rgba(20, 12, 35, .9); color: #f0ddff; border: 1px solid #8054a8; padding: 6px 16px; border-radius: 6px; font-size: 13px; }
+/* Yellow "Progress to end" meter — fills as P nears the target hex. */
+#progress { display: flex; align-items: center; gap: 8px; }
+.progress-label { color: #aaa; }
+#progress-bar {
+    display: inline-block;
+    width: 120px;
+    height: 12px;
+    background: #333;
+    border: 1px solid #555;
+    border-radius: 3px;
+    overflow: hidden;
+}
+#progress-fill {
+    display: block;
+    height: 100%;
+    width: 0%;
+    background: #ffd633;
+    transition: width 0.2s ease;
+}
+#progress-pct { color: #ffd633; min-width: 32px; text-align: right; }
+#hud button {
+    background: #444;
+    color: #eee;
+    border: 1px solid #666;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 13px;
+}
+#hud button:hover { background: #555; }
+#intro-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.85);
+    color: #eee;
+    padding: 24px 32px;
+    border-radius: 8px;
+    border: 1px solid #666;
+    font-family: monospace;
+    font-size: 15px;
+    text-align: center;
+    z-index: 20;
+    max-width: 340px;
+}
+#intro-panel.hidden { display: none; }
+#intro-panel p { margin-bottom: 16px; line-height: 1.5; }
+#intro-panel button {
+    background: #444;
+    color: #eee;
+    border: 1px solid #666;
+    padding: 6px 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 14px;
+}
+#intro-panel button:hover { background: #555; }
+#gem-panel { position: fixed; right: 10px; top: 10px; width: 300px; max-height: calc(100vh - 20px); overflow: auto; z-index: 10; padding: 14px; color: #eee; background: rgba(0,0,0,.84); border: 1px solid #555; border-radius: 8px; font: 12px monospace; }
+#gem-panel h2 { font-size: 16px; margin-bottom: 4px; }
+.panel-note { color: #aaa; margin-bottom: 10px; }
+.gem-button { width: 100%; display: grid; grid-template-columns: 18px 65px 24px 1fr; gap: 6px; align-items: center; margin: 5px 0; padding: 6px; background: #252525; border: 1px solid #555; border-radius: 4px; color: #eee; text-align: left; font: 11px monospace; cursor: pointer; }
+.gem-button:disabled { opacity: .55; cursor: default; }
+.gem-swatch { width: 16px; height: 17px; border: 1px solid #fff8; }
+.gem-count { color: #ffd447; font-weight: bold; }
+#gem-panel details { margin-top: 14px; }
+#gem-panel summary { cursor: pointer; color: #ddd; margin-bottom: 8px; }
+#frequency-table table { border-collapse: collapse; width: 100%; font-size: 10px; }
+#frequency-table th, #frequency-table td { padding: 3px; border: 1px solid #444; text-align: center; }
+#frequency-table th:first-child { text-align: left; }
