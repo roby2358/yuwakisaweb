@@ -237,17 +237,16 @@ const GameEngine = (function () {
             return harvest;
         }
 
-        fulfillContract() {
+        fulfillContract(contractId) {
             const s = this.state;
             if (!this.marketAt(s.caravan)) return { ok: false, reason: 'Reach a market first.' };
-            if (!s.caravan.cargo.canAfford(A.CONTRACT_COST)) {
-                return { ok: false, reason: 'A contract needs 1 timber and 1 ore.' };
-            }
-            s.caravan.cargo.spend(A.CONTRACT_COST);
-            s.caravan.cargo.gain(A.CONTRACT_REWARD);
+            const contract = A.CONTRACTS.find(candidate => candidate.id === contractId);
+            if (!contract) return { ok: false, reason: 'Unknown contract.' };
+            if (!s.caravan.cargo.spend(contract.cost)) return { ok: false, reason: 'Not enough cargo for that contract.' };
+            s.caravan.cargo.gain(contract.reward);
             s.influence += A.CONTRACT_INFLUENCE;
             s.unrest = Math.max(0, s.unrest - 1);
-            s.statusMessage = `Contract fulfilled: +${A.CONTRACT_INFLUENCE} influence, +${A.CONTRACT_REWARD.coin} coin, -1 unrest.`;
+            s.statusMessage = `Contract fulfilled: +${A.CONTRACT_INFLUENCE} influence, +${contract.reward.coin} credits, -1 unrest.`;
             this.checkVictory();
             return { ok: true, won: s.outcome === OUTCOME.VICTORY };
         }
@@ -255,9 +254,9 @@ const GameEngine = (function () {
         buySupplies() {
             const s = this.state;
             if (!this.marketAt(s.caravan)) return { ok: false, reason: 'Reach a market first.' };
-            if (!s.caravan.cargo.spend(A.SUPPLY_COST)) return { ok: false, reason: `Supplies cost ${A.SUPPLY_COST.coin} coin.` };
+            if (!s.caravan.cargo.spend(A.SUPPLY_COST)) return { ok: false, reason: `Supplies cost ${A.SUPPLY_COST.coin} credits.` };
             s.caravan.cargo.gain(A.SUPPLY_REWARD);
-            s.statusMessage = `Bought ${A.SUPPLY_REWARD.provisions} provisions for ${A.SUPPLY_COST.coin} coin.`;
+            s.statusMessage = `Bought ${A.SUPPLY_REWARD.provisions} provisions for ${A.SUPPLY_COST.coin} credits.`;
             return { ok: true };
         }
 
@@ -273,7 +272,7 @@ const GameEngine = (function () {
             s.caravan.cargo.gain(A.FORCE_REWARD);
             s.raiders.splice(index, 1);
             s.unrest++;
-            s.statusMessage = `Raider defeated: +${A.FORCE_REWARD.coin} coin, +1 unrest.`;
+            s.statusMessage = `Raider defeated: +${A.FORCE_REWARD.coin} credits, +1 unrest.`;
             this.checkDefeat();
             return { ok: true, lost: s.outcome === OUTCOME.DEFEAT };
         }

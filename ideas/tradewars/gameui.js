@@ -104,11 +104,25 @@ const GameUI = (function () {
             this.render();
         }
 
-        fulfillContract() {
-            const result = this.engine.fulfillContract();
+        openContracts() {
+            if (!this.engine.marketAt(this.state.caravan) || this.state.outcome) return;
+            this.deselect();
+            this.showOverlay('contracts');
+            this.render();
+        }
+
+        fulfillContract(contractId) {
+            const result = this.engine.fulfillContract(contractId);
             if (!result.ok) this.state.statusMessage = result.reason;
             else this.sound.fanfare();
             if (result.won) this.showOverlay('victory');
+            this.render();
+        }
+
+        closeContracts() {
+            if (this.overlay !== 'contracts') return;
+            this.overlay = null;
+            this.syncOverlayDom();
             this.render();
         }
 
@@ -144,6 +158,7 @@ const GameUI = (function () {
 
         syncOverlayDom() {
             document.getElementById('intro-panel').classList.toggle('hidden', this.overlay !== 'intro');
+            document.getElementById('contract-panel').classList.toggle('hidden', this.overlay !== 'contracts');
         }
 
         render() {
@@ -307,7 +322,7 @@ const GameUI = (function () {
             const cargo = s.caravan?.cargo || { provisions: 0, timber: 0, ore: 0, coin: 0 };
             document.getElementById('turn-info').textContent = `Turn ${s.turn}`;
             document.getElementById('mp-info').textContent = `MP ${s.mp}/${CARAVAN_MP}`;
-            document.getElementById('cargo-info').textContent = `Food ${cargo.provisions} · Wood ${cargo.timber} · Ore ${cargo.ore} · Coin ${cargo.coin}`;
+            document.getElementById('cargo-info').textContent = `Food ${cargo.provisions} · Wood ${cargo.timber} · Ore ${cargo.ore} · Credits ${cargo.coin}`;
             const influencePct = Math.min(100, Math.round(s.influence / VICTORY_INFLUENCE * 100));
             document.getElementById('progress-fill').style.width = `${influencePct}%`;
             document.getElementById('influence-info').textContent = `${s.influence}/${VICTORY_INFLUENCE}`;
@@ -317,6 +332,10 @@ const GameUI = (function () {
             const market = s.caravan && this.engine.marketAt(s.caravan);
             document.getElementById('contract').disabled = !market || Boolean(s.outcome);
             document.getElementById('supplies').disabled = !market || Boolean(s.outcome);
+            for (const button of document.querySelectorAll('[data-contract-id]')) {
+                const contract = A.CONTRACTS.find(candidate => candidate.id === button.dataset.contractId);
+                button.disabled = Boolean(s.outcome) || !cargo.canAfford(contract.cost);
+            }
             const hovered = this.hoveredHex && s.hexes.get(Hex.key(this.hoveredHex.q, this.hoveredHex.r));
             const hoverText = hovered
                 ? `${TERRAIN_NAMES[hovered.terrain] || '?'}${hovered.depleted ? ' · depleted' : ''}`
@@ -335,7 +354,11 @@ const GameUI = (function () {
             window.addEventListener('keydown', event => this.onKeyDown(event));
             document.getElementById('end-turn').addEventListener('click', () => this.primaryAction());
             document.getElementById('new-game').addEventListener('click', () => this.newGame());
-            document.getElementById('contract').addEventListener('click', () => this.fulfillContract());
+            document.getElementById('contract').addEventListener('click', () => this.openContracts());
+            for (const button of document.querySelectorAll('[data-contract-id]')) {
+                button.addEventListener('click', () => this.fulfillContract(button.dataset.contractId));
+            }
+            document.getElementById('contract-done').addEventListener('click', () => this.closeContracts());
             document.getElementById('supplies').addEventListener('click', () => this.buySupplies());
             document.getElementById('begin-btn').addEventListener('click', () => this.dismissOverlay());
         }

@@ -44,8 +44,11 @@ const GameArtifacts = (function () {
         VICTORY_INFLUENCE: 15,
         MAX_UNREST: 8,
         TRADING_POST_COUNT: 7,
-        CONTRACT_COST: { timber: 1, ore: 1 },
-        CONTRACT_REWARD: { coin: 2 },
+        CONTRACTS: [
+            { id: 'mixed', cost: { timber: 1, ore: 1 }, reward: { coin: 2 } },
+            { id: 'timber', cost: { timber: 3 }, reward: { coin: 1 } },
+            { id: 'ore', cost: { ore: 2 }, reward: { coin: 3 } }
+        ],
         CONTRACT_INFLUENCE: 5,
         SUPPLY_COST: { coin: 2 },
         SUPPLY_REWARD: { provisions: 3 },

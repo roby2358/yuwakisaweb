@@ -77,12 +77,18 @@ function testResourceStock() {
 function testTradeLoop() {
     const { state, engine } = createGame(23456);
     state.caravan.moveTo(state.tradingPosts[0].q, state.tradingPosts[0].r);
-    state.caravan.cargo.gain({ timber: 1, ore: 1 });
+    state.caravan.cargo.gain({ timber: 4, ore: 3 });
     state.unrest = 2;
-    const contract = engine.fulfillContract();
-    assert.equal(contract.ok, true);
-    assert.equal(state.influence, GameArtifacts.CONTRACT_INFLUENCE);
-    assert.equal(state.unrest, 1);
+    const creditsBefore = state.caravan.cargo.coin;
+    assert.equal(engine.fulfillContract('mixed').ok, true);
+    assert.equal(engine.fulfillContract('timber').ok, true);
+    assert.equal(engine.fulfillContract('ore').ok, true);
+    assert.equal(state.caravan.cargo.coin, creditsBefore + 6);
+    assert.equal(state.caravan.cargo.timber, 0);
+    assert.equal(state.caravan.cargo.ore, 0);
+    assert.equal(state.influence, GameArtifacts.CONTRACT_INFLUENCE * 3);
+    assert.equal(state.unrest, 0);
+    assert.equal(engine.fulfillContract('ore').ok, false);
     const provisionsBefore = state.caravan.cargo.provisions;
     assert.equal(engine.buySupplies().ok, true);
     assert.equal(state.caravan.cargo.provisions, provisionsBefore + GameArtifacts.SUPPLY_REWARD.provisions);

@@ -29,9 +29,17 @@
     <div id="event-log"></div>
     <div id="intro-panel">
         <h1>Caravans &amp; Conquest</h1>
-        <p>Gather timber and ore, trade contracts at markets, and reach the Crown Market with 15 influence. Raiders can be fought for coin, but force raises unrest.</p>
+        <p>Gather timber and ore, trade contracts at markets, and reach the Crown Market with 15 influence. Raiders can be fought for credits, but force raises unrest.</p>
         <p class="hint">Click your caravan to move or attack. Space ends the turn. Left-drag pans the map.</p>
         <button id="begin-btn">Begin</button>
+    </div>
+    <div id="contract-panel" class="hidden">
+        <h2>Contracts</h2>
+        <p>Choose any contracts your caravan can supply.</p>
+        <button class="contract-option" data-contract-id="mixed"><span>1 timber + 1 ore</span><strong>2 credits</strong></button>
+        <button class="contract-option" data-contract-id="timber"><span>3 timber</span><strong>1 credit</strong></button>
+        <button class="contract-option" data-contract-id="ore"><span>2 ore</span><strong>3 credits</strong></button>
+        <button id="contract-done">Done</button>
     </div>
     <!-- NOTE! We want to be able to double-click to run these games, so use plain
     script includes (globals), not ES module imports. Order = dependency order:

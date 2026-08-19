@@ -17,7 +17,16 @@ class GameSound {
 }
 `;
 const bridge = '\n;Object.assign(__exports, { GameState, GameEngine, GameUI, GameDisplayArtifacts, Hex });';
-const context = vm.createContext({ console, __exports: {} });
+const panelVisibility = {};
+const elements = new Map();
+for (const id of ['intro-panel', 'contract-panel']) {
+    elements.set(id, { classList: { toggle: (name, hidden) => { if (name === 'hidden') panelVisibility[id] = hidden; } } });
+}
+const document = {
+    getElementById: id => elements.get(id),
+    querySelectorAll: () => []
+};
+const context = vm.createContext({ console, document, __exports: {} });
 vm.runInContext(preamble + source + bridge, context, { filename: 'gameui-combined.js' });
 
 const { GameState, GameEngine, GameUI, GameDisplayArtifacts, Hex } = context.__exports;
@@ -39,6 +48,17 @@ ui.raiderPalette = palette;
 ui.render = () => {};
 ui.panX = 0;
 ui.panY = 0;
+
+state.caravan.moveTo(state.tradingPosts[0].q, state.tradingPosts[0].r);
+state.caravan.cargo.gain({ timber: 1, ore: 1 });
+ui.openContracts();
+assert.equal(ui.overlay, 'contracts', 'Contract opens the contract panel');
+assert.equal(panelVisibility['contract-panel'], false, 'contract panel is visible');
+assert.equal(ui.fulfillContract('mixed'), undefined);
+assert.equal(ui.overlay, 'contracts', 'fulfilling a contract leaves the panel open');
+ui.closeContracts();
+assert.equal(ui.overlay, null, 'Done closes the contract panel');
+assert.equal(panelVisibility['contract-panel'], true, 'contract panel is hidden after Done');
 
 const caravanPoint = new Hex(state.caravan.q, state.caravan.r).toPixel();
 ui.onClick({ clientX: caravanPoint.x, clientY: caravanPoint.y });

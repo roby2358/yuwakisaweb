@@ -12,10 +12,10 @@ A vulnerable merchant expedition crosses a fractured frontier. Prosperity comes 
 
 ## Key Mechanics
 
-- Entering a resource hex harvests it once: forests provide timber, quarries ore, and gold fields coin.
-- At a trading post or the Crown Market, a contract converts one timber and one ore into influence and coin; coin can instead buy provisions.
-- Attacking an adjacent raider costs one ore and one provision, earns coin, and raises unrest.
-- Ending a turn consumes one provision. Nearby raiders steal cargo or coin, and unrest can attract reinforcements.
+- Entering a resource hex harvests it once: forests provide timber, quarries ore, and gold fields credits.
+- At a trading post or the Crown Market, contracts convert either one timber plus one ore into two credits, three timber into one credit, or two scarce ore into three credits. Every contract also earns influence and calms unrest; credits can instead buy provisions.
+- Attacking an adjacent raider costs one ore and one provision, earns credits, and raises unrest.
+- Ending a turn consumes one provision. Nearby raiders steal cargo or credits, and unrest can attract reinforcements.
 
 ## Victory and Defeat
 
@@ -25,7 +25,7 @@ A vulnerable merchant expedition crosses a fractured frontier. Prosperity comes 
 ## Strategies
 
 - **Trade route:** detour through resource sites and trading posts, avoid most raiders, and buy enough supplies for the final crossing.
-- **Armed caravan:** harvest extra ore, clear direct routes, and use captured coin to resupply before unrest becomes unmanageable.
+- **Armed caravan:** harvest extra ore, clear direct routes, and use captured credits to resupply before unrest becomes unmanageable.
 - **Mixed route:** fulfill early contracts, fight only strategically placed raiders, then race east before escalation peaks.
 - **Anti-strategy — endless farming:** resource sites deplete, provisions drain each turn, and raider pressure grows.
 - **Anti-strategy — kill everything:** each victory raises unrest; unchecked force causes defeat or overwhelming reinforcement.

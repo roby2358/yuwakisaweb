@@ -74,7 +74,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
     z-index: 10;
     pointer-events: none;
 }
-#intro-panel {
+#intro-panel, #contract-panel {
     position: fixed;
     top: 50%;
     left: 50%;
@@ -90,7 +90,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
     z-index: 20;
     max-width: 340px;
 }
-#intro-panel.hidden { display: none; }
+#intro-panel.hidden, #contract-panel.hidden { display: none; }
 #intro-panel p { margin-bottom: 16px; line-height: 1.5; }
 #intro-panel h1 { margin-bottom: 14px; color: #e6bd58; font-size: 22px; }
 #intro-panel .hint { color: #bbb; font-size: 12px; }
@@ -105,3 +105,26 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
     font-size: 14px;
 }
 #intro-panel button:hover { background: #555; }
+#contract-panel h2 { margin-bottom: 8px; color: #e6bd58; font-size: 22px; }
+#contract-panel p { margin-bottom: 16px; color: #bbb; line-height: 1.4; }
+#contract-panel button {
+    background: #444;
+    color: #eee;
+    border: 1px solid #666;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: monospace;
+}
+#contract-panel .contract-option {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 8px;
+    padding: 10px 12px;
+    text-align: left;
+}
+#contract-panel .contract-option strong { color: #e6bd58; }
+#contract-panel button:hover:not(:disabled) { background: #555; }
+#contract-panel button:disabled { opacity: 0.35; cursor: not-allowed; }
+#contract-done { margin-top: 10px; padding: 7px 28px; }
