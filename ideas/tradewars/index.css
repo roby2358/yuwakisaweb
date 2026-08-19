@@ -1,0 +1,107 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
+#game { display: block; cursor: default; }
+#hud-stack {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    z-index: 10;
+    user-select: none;
+    font-family: monospace;
+}
+#hud {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    max-width: calc(100vw - 20px);
+    align-items: center;
+    background: rgba(0, 0, 0, 0.7);
+    color: #eee;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+}
+#hud-hover { background: rgba(0, 0, 0, 0.7); color: #ccc; padding: 6px 16px; border-radius: 6px; font-size: 13px; }
+#hud-hover.hidden { display: none; }
+#progress { display: flex; align-items: center; gap: 8px; }
+.progress-label { color: #aaa; }
+#progress-bar {
+    display: inline-block;
+    width: 100px;
+    height: 12px;
+    background: #333;
+    border: 1px solid #555;
+    border-radius: 3px;
+    overflow: hidden;
+}
+#progress-fill {
+    display: block;
+    height: 100%;
+    width: 0%;
+    background: #e6bd58;
+    transition: width 0.2s ease;
+}
+#influence-info { color: #e6bd58; min-width: 38px; text-align: right; }
+#hud button {
+    background: #444;
+    color: #eee;
+    border: 1px solid #666;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 13px;
+}
+#hud button:hover { background: #555; }
+#hud button:disabled { opacity: 0.35; cursor: not-allowed; }
+#event-log {
+    position: fixed;
+    left: 50%;
+    bottom: 14px;
+    transform: translateX(-50%);
+    max-width: min(760px, calc(100vw - 28px));
+    padding: 8px 14px;
+    border: 1px solid #665a3a;
+    border-radius: 6px;
+    background: rgba(15, 13, 9, 0.86);
+    color: #eadcad;
+    font: 13px/1.35 monospace;
+    text-align: center;
+    z-index: 10;
+    pointer-events: none;
+}
+#intro-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.85);
+    color: #eee;
+    padding: 24px 32px;
+    border-radius: 8px;
+    border: 1px solid #666;
+    font-family: monospace;
+    font-size: 15px;
+    text-align: center;
+    z-index: 20;
+    max-width: 340px;
+}
+#intro-panel.hidden { display: none; }
+#intro-panel p { margin-bottom: 16px; line-height: 1.5; }
+#intro-panel h1 { margin-bottom: 14px; color: #e6bd58; font-size: 22px; }
+#intro-panel .hint { color: #bbb; font-size: 12px; }
+#intro-panel button {
+    background: #444;
+    color: #eee;
+    border: 1px solid #666;
+    padding: 6px 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 14px;
+}
+#intro-panel button:hover { background: #555; }
