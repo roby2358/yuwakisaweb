@@ -38,7 +38,7 @@ Gemrace is a tense expedition and return journey. Readable monster pursuit creat
 - The golden Sunstone is permanent objective progress. Collect 3 and return to the starting hex.
 - The six other palettes are inventory consumables. Clicking one activates its rule and replaces any active effect.
 - Each game assigns the six palettes a random sample from a pool of 12 effects, so the available rules vary by run.
-- Effects last a displayed number of turns. Terrain-dependent relative spawn weights are visible in the side panel.
+- Effects last a displayed number of turns. Terrain-dependent relative spawn weights remain internal tuning data.
 
 ## Monsters
 

@@ -17,7 +17,7 @@ const GameUI = (function () {
     // A left press that stays within this many pixels is a click (select/move);
     // moving past it turns the gesture into a camera pan.
     const DRAG_THRESHOLD = 4;
-    const { GEMS, GEM_EFFECTS, GEM_FREQUENCY, SUNSTONES_REQUIRED } = GameArtifacts;
+    const { GEMS, GEM_EFFECTS, SUNSTONES_REQUIRED } = GameArtifacts;
 
     class GameUI {
         constructor(engine, canvas) {
@@ -41,7 +41,6 @@ const GameUI = (function () {
             this.selection = null;   // L1.2 { reachable: Map<key,cost> }
             this.overlay = null;     // L5 input-capturing layer: 'intro' | 'victory' | null
             this.hoveredHex = null;  // L1.3 hex under the cursor, for the HUD readout
-            this.buildFrequencyTable();
         }
 
         // ---- Lifecycle ----
@@ -361,12 +360,6 @@ const GameUI = (function () {
                 const cut = GEM_CUTS[type].map(([x, y]) => `${(x + 1) * 50}% ${(y + 1) * 50}%`).join(',');
                 return `<button class="gem-button" data-gem="${type}" ${count ? '' : 'disabled'}><span class="gem-swatch" style="background:${gem.color};clip-path:polygon(${cut})"></span><span>${gem.name}</span><span class="gem-count">${count}</span><span>${effect.name}: ${effect.text} (${effect.turns}t)</span></button>`;
             }).join('');
-        }
-
-        buildFrequencyTable() {
-            const names = Object.keys(GEMS);
-            const rows = Object.entries(GEM_FREQUENCY).map(([terrain, weights]) => `<tr><th>${TERRAIN_NAMES[terrain]}</th>${names.map(type => `<td>${weights[type]}</td>`).join('')}</tr>`).join('');
-            document.getElementById('frequency-table').innerHTML = `<table><thead><tr><th>Terrain</th>${names.map(type => `<th title="${GEMS[type].name}">${GEMS[type].name[0]}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table><p class="panel-note">Numbers are relative spawn weights.</p>`;
         }
 
         onMouseDown(e) {

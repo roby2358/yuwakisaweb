@@ -1,108 +1,241 @@
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
-#game { display: block; cursor: default; }
-/* Two stacked bars: a static top line (turn / progress / buttons) and a second
-   line for the mouse-over readout, so hover text can never shift the buttons. */
+:root {
+    --ink: #eee;
+    --muted: #aaa;
+    --canvas: #111;
+    --glass: rgba(0, 0, 0, 0.78);
+    --glass-strong: rgba(0, 0, 0, 0.88);
+    --surface: #252525;
+    --control: #444;
+    --control-hover: #555;
+    --border: #666;
+    --gold: #ffd447;
+    --effect-border: #8054a8;
+    --effect-ink: #f0ddff;
+    --radius: 6px;
+    --ui-gap: 10px;
+    font-family: monospace;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--canvas);
+}
+
+button {
+    padding: 5px 12px;
+    color: var(--ink);
+    font: inherit;
+    background: var(--control);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:not(:disabled):hover {
+    background: var(--control-hover);
+}
+
+.hidden {
+    display: none !important;
+}
+
+#game {
+    display: block;
+    cursor: default;
+}
+
+/* Status stack */
 #hud-stack {
     position: fixed;
-    top: 10px;
-    left: 10px;
+    z-index: 10;
+    top: var(--ui-gap);
+    left: var(--ui-gap);
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
-    z-index: 10;
+    max-width: calc(100vw - 340px);
     user-select: none;
-    font-family: monospace;
 }
+
+#hud,
+#hud-hover,
+#effect-bar {
+    color: var(--ink);
+    background: var(--glass);
+    border-radius: var(--radius);
+}
+
 #hud {
     display: flex;
-    gap: 12px;
     align-items: center;
-    background: rgba(0, 0, 0, 0.7);
-    color: #eee;
+    gap: 12px;
     padding: 8px 16px;
-    border-radius: 6px;
     font-size: 14px;
 }
-#hud-hover {
-    background: rgba(0, 0, 0, 0.7);
-    color: #ccc;
+
+#hud-hover,
+#effect-bar {
     padding: 6px 16px;
-    border-radius: 6px;
     font-size: 13px;
 }
-#hud-hover.hidden { display: none; }
-#effect-bar { background: rgba(20, 12, 35, .9); color: #f0ddff; border: 1px solid #8054a8; padding: 6px 16px; border-radius: 6px; font-size: 13px; }
-/* Yellow "Progress to end" meter — fills as P nears the target hex. */
-#progress { display: flex; align-items: center; gap: 8px; }
-.progress-label { color: #aaa; }
+
+#hud-hover {
+    color: #ccc;
+}
+
+#effect-bar {
+    color: var(--effect-ink);
+    background: rgba(20, 12, 35, 0.9);
+    border: 1px solid var(--effect-border);
+}
+
+#progress {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.progress-label {
+    color: var(--muted);
+}
+
 #progress-bar {
-    display: inline-block;
     width: 120px;
     height: 12px;
-    background: #333;
-    border: 1px solid #555;
-    border-radius: 3px;
     overflow: hidden;
+    background: #333;
+    border: 1px solid var(--control-hover);
+    border-radius: 3px;
 }
+
 #progress-fill {
     display: block;
+    width: 0;
     height: 100%;
-    width: 0%;
-    background: #ffd633;
+    background: var(--gold);
     transition: width 0.2s ease;
 }
-#progress-pct { color: #ffd633; min-width: 32px; text-align: right; }
+
+#progress-pct {
+    min-width: 32px;
+    color: var(--gold);
+    text-align: right;
+}
+
 #hud button {
-    background: #444;
-    color: #eee;
-    border: 1px solid #666;
-    padding: 4px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: monospace;
     font-size: 13px;
 }
-#hud button:hover { background: #555; }
+
+/* Gem inventory */
+#gem-panel {
+    position: fixed;
+    z-index: 10;
+    top: var(--ui-gap);
+    right: var(--ui-gap);
+    width: 300px;
+    max-height: calc(100vh - 20px);
+    padding: 14px;
+    overflow-y: auto;
+    color: var(--ink);
+    font-size: 12px;
+    background: var(--glass-strong);
+    border: 1px solid var(--control-hover);
+    border-radius: 8px;
+}
+
+#gem-panel h2 {
+    margin-bottom: 4px;
+    font-size: 16px;
+}
+
+.panel-note {
+    margin-bottom: 10px;
+    color: var(--muted);
+}
+
+.gem-button {
+    display: grid;
+    grid-template-columns: 18px 65px 24px minmax(0, 1fr);
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    margin-block: 5px;
+    padding: 6px;
+    color: var(--ink);
+    font-size: 11px;
+    text-align: left;
+    background: var(--surface);
+    border-color: var(--control-hover);
+}
+
+.gem-button:disabled {
+    cursor: default;
+    opacity: 0.55;
+}
+
+.gem-swatch {
+    width: 16px;
+    height: 17px;
+    border: 1px solid rgba(255, 255, 255, 0.53);
+}
+
+.gem-count {
+    color: var(--gold);
+    font-weight: bold;
+}
+
+/* Intro */
 #intro-panel {
     position: fixed;
+    z-index: 20;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(0, 0, 0, 0.85);
-    color: #eee;
+    width: min(340px, calc(100vw - 32px));
     padding: 24px 32px;
-    border-radius: 8px;
-    border: 1px solid #666;
-    font-family: monospace;
+    color: var(--ink);
     font-size: 15px;
+    line-height: 1.5;
     text-align: center;
-    z-index: 20;
-    max-width: 340px;
+    background: var(--glass-strong);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transform: translate(-50%, -50%);
 }
-#intro-panel.hidden { display: none; }
-#intro-panel p { margin-bottom: 16px; line-height: 1.5; }
+
+#intro-panel p {
+    margin-bottom: 16px;
+}
+
 #intro-panel button {
-    background: #444;
-    color: #eee;
-    border: 1px solid #666;
-    padding: 6px 24px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: monospace;
+    padding-inline: 24px;
     font-size: 14px;
 }
-#intro-panel button:hover { background: #555; }
-#gem-panel { position: fixed; right: 10px; top: 10px; width: 300px; max-height: calc(100vh - 20px); overflow: auto; z-index: 10; padding: 14px; color: #eee; background: rgba(0,0,0,.84); border: 1px solid #555; border-radius: 8px; font: 12px monospace; }
-#gem-panel h2 { font-size: 16px; margin-bottom: 4px; }
-.panel-note { color: #aaa; margin-bottom: 10px; }
-.gem-button { width: 100%; display: grid; grid-template-columns: 18px 65px 24px 1fr; gap: 6px; align-items: center; margin: 5px 0; padding: 6px; background: #252525; border: 1px solid #555; border-radius: 4px; color: #eee; text-align: left; font: 11px monospace; cursor: pointer; }
-.gem-button:disabled { opacity: .55; cursor: default; }
-.gem-swatch { width: 16px; height: 17px; border: 1px solid #fff8; }
-.gem-count { color: #ffd447; font-weight: bold; }
-#gem-panel details { margin-top: 14px; }
-#gem-panel summary { cursor: pointer; color: #ddd; margin-bottom: 8px; }
-#frequency-table table { border-collapse: collapse; width: 100%; font-size: 10px; }
-#frequency-table th, #frequency-table td { padding: 3px; border: 1px solid #444; text-align: center; }
-#frequency-table th:first-child { text-align: left; }
+
+@media (max-width: 760px) {
+    #hud-stack {
+        right: var(--ui-gap);
+        max-width: none;
+    }
+
+    #hud {
+        flex-wrap: wrap;
+    }
+
+    #gem-panel {
+        top: auto;
+        bottom: var(--ui-gap);
+        left: var(--ui-gap);
+        width: calc(100vw - 20px);
+        max-height: 42vh;
+    }
+}
