@@ -54,15 +54,20 @@ const GameUI = (function () {
             this.engine.newGame();
             this.selection = null;
             this.hoveredHex = null;
+            this.resizeCanvas();
             this.centerOn(this.state.player);
             this.showOverlay('intro');
-            this.resize();   // resize() re-renders
+            this.render();
         }
 
         resize() {
+            this.resizeCanvas();
+            this.render();
+        }
+
+        resizeCanvas() {
             this.canvas.width = window.innerWidth;
             this.canvas.height = window.innerHeight;
-            this.render();
         }
 
         // ---- Coordinate helpers ----
