@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>schflow</title>
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+<div class="page">
+
+  <header class="header">
+    <h1>schflow</h1>
+    <p class="tagline">Schwab Trader API authorization-code helper. Everything here stays in your browser.</p>
+  </header>
+
+  <section id="errorPanel" class="panel panel-error hidden">
+    <h2>Authorization failed</h2>
+    <p id="errorMessage" class="plain"></p>
+    <p id="errorDescription" class="plain muted"></p>
+  </section>
+
+  <section id="codePanel" class="panel hidden">
+    <h2>Authorization code</h2>
+    <p class="muted">Schwab codes expire about 30 seconds after issuance. Copy it now.</p>
+    <div class="code-row">
+      <pre id="codeBlock" class="code-block"></pre>
+      <button id="copyButton" class="btn btn-primary">Copy</button>
+    </div>
+    <p id="copyStatus" class="status"></p>
+    <h3>State</h3>
+    <div class="state-compare">
+      <div class="state-values">
+        <div class="state-line"><span class="state-label">Sent</span><span id="stateSent" class="mono"></span></div>
+        <div class="state-line"><span class="state-label">Got</span><span id="stateGot" class="mono"></span></div>
+      </div>
+      <div id="stateMark" class="state-mark"></div>
+    </div>
+    <p id="stateVerdict" class="status"></p>
+  </section>
+
+  <section class="panel">
+    <h2>Start authorization</h2>
+    <label for="clientId">Client ID (App Key)</label>
+    <input id="clientId" type="text" autocomplete="off" spellcheck="false" >
+
+    <label for="stateInput">State</label>
+    <div class="state-row">
+      <input id="stateInput" type="text" class="mono" autocomplete="off" spellcheck="false" maxlength="15">
+      <button id="regenButton" class="btn">New</button>
+    </div>
+
+    <label for="redirectUri">Redirect URI (must match the one registered in your Schwab app)</label>
+    <input id="redirectUri" type="text" class="mono" autocomplete="off" spellcheck="false">
+
+    <a id="authorizeLink" class="btn btn-primary btn-link disabled" href="#">Authorize with Schwab</a>
+    <p id="authUrl" class="mono muted wrap"></p>
+  </section>
+
+</div>
+<script src="index.js"></script>
+</body>
+</html>

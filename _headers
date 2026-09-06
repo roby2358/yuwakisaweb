@@ -5,3 +5,6 @@
 /queueshard/*
   Cross-Origin-Embedder-Policy: credentialless
   Cross-Origin-Opener-Policy: same-origin
+
+/schflow/*
+  X-Robots-Tag: noindex, nofollow
