@@ -2,6 +2,7 @@
 // Client-side only: nothing on this page talks to any server.
 
 const AUTHORIZE_ENDPOINT = 'https://api.schwabapi.com/v1/oauth/authorize';
+const LITTLEBRAIN_RETURN = 'http://localhost:8767/schwab/oauth-return';
 const CLIENT_ID = 'EuTHVxRHEwAyAyE57b5dDe2eeBl2yWYCCsmrHZoDMQKGGKRM';
 const REDIRECT_URI = 'https://yuwakisa.com/schflow';
 const BASE62 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -98,15 +99,30 @@ function showError(query) {
   el('errorPanel').classList.remove('hidden');
 }
 
+function wireLittlebrainLink(code, verdict) {
+  const link = el('littlebrainLink');
+  const note = el('littlebrainNote');
+  if (verdict === 'bad') {
+    link.classList.add('disabled');
+    link.href = '#';
+    note.textContent = 'Handoff disabled: state mismatch.';
+    return;
+  }
+  link.href = LITTLEBRAIN_RETURN + '?code=' + encodeURIComponent(code);
+  note.textContent = 'Sends only the code to ' + LITTLEBRAIN_RETURN + ' on this machine.';
+}
+
 function showCode(query) {
   const code = query.get('code');
   const returned = query.get('state') || '';
   const generated = stored(STORAGE_STATE);
+  const verdict = compareState(generated, returned);
 
   el('codeBlock').textContent = code;
   el('stateSent').textContent = generated || '(none stored in this browser)';
   el('stateGot').textContent = returned || '(none)';
-  showStateVerdict(compareState(generated, returned));
+  showStateVerdict(verdict);
+  wireLittlebrainLink(code, verdict);
 
   const copyStatus = el('copyStatus');
   el('copyButton').addEventListener('click', () => {
