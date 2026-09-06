@@ -110,6 +110,7 @@ function wireLittlebrainLink(code, verdict) {
   }
   link.href = LITTLEBRAIN_RETURN + '?code=' + encodeURIComponent(code);
   note.textContent = 'Sends only the code to ' + LITTLEBRAIN_RETURN + ' on this machine.';
+  link.addEventListener('click', () => console.log('Going to ' + link.href));
 }
 
 function showCode(query) {

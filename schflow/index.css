@@ -145,4 +145,9 @@ input[type="text"] {
   margin-top: 1.25rem;
   text-decoration: none;
 }
-.btn.disabled { opacity: 0.5; pointer-events: none; }
+.btn.disabled {
+  background: var(--line);
+  border-color: var(--line);
+  color: var(--muted);
+  pointer-events: none;
+}
