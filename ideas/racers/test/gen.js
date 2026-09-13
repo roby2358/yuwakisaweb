@@ -20,7 +20,7 @@ for (var seed = 1; seed <= seeds; seed++) {
     if (cr.some(function (x) { return x.angle < Track.minCrossAngle; })) { count('crossAngle'); continue; }
     Track.elevate(c, arc, cr);
     if (!Track.clearanceOk(c, arc)) { count('clearance'); continue; }
-    ok = true; slow.push(Math.round(Math.sqrt(420 * 1 / kmax))); laps.push(Math.round(arc.total)); count('ok@' + (a + 1));
+    ok = true; slow.push(Math.round(Math.sqrt(871 * 1 / kmax))); laps.push(Math.round(arc.total)); count('ok@' + (a + 1));
   }
   if (!ok) fails++;
 }

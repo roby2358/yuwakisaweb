@@ -5,9 +5,9 @@ var Cars = {
   scale: 2.8,        // toy-car proportion so cars read at track scale
   length: 4.4 * 2.8,
   width: 2.2 * 2.8,
-  accel: 60,          // m/s^2 toward target speed
+  accel: 72,          // m/s^2 toward target speed
   brake: 50,         // m/s^2 when slowing for a corner
-  grip: 420,          // corner limit: vmax = sqrt(grip / curvature)
+  grip: 871,          // corner limit: vmax = sqrt(grip / curvature)
   lookahead: 140,     // m scanned ahead for the tightest upcoming corner
   lookStep: 10,
   slideDecel: 60,    // m/s^2 scrubbed while over the limit

@@ -21,8 +21,8 @@
       return newTrack();
     }
     cars = [
-      Cars.make(0, 160, Track.laneOffset, { body: '#e53935', roof: '#1a1a1a' }),
-      Cars.make(-20, 175, -Track.laneOffset, { body: '#1e88e5', roof: '#1a1a1a' })
+      Cars.make(0, 230, Track.laneOffset, { body: '#e53935', roof: '#1a1a1a' }),
+      Cars.make(-20, 252, -Track.laneOffset, { body: '#1e88e5', roof: '#1a1a1a' })
     ];
     cars.forEach(function (c) { c.v = 0; });
     gridHold = 1.0;
