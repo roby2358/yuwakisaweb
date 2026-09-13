@@ -12,9 +12,5 @@ var Vec = {
   dot: function (a, b) { return a.x * b.x + a.y * b.y + a.z * b.z; },
   lerp: function (a, b, t) {
     return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: a.z + (b.z - a.z) * t };
-  },
-  centroid: function (pts) {
-    var s = pts.reduce(Vec.add, Vec.make(0, 0, 0));
-    return Vec.scale(s, 1 / pts.length);
   }
 };

@@ -1,10 +1,8 @@
-// Scene: builds the list of 3D polygons (road, kerbs, bridge structure, trees, start line).
+// Scene: the scenery polygons for a track (road, kerbs, bridge structure, trees, start line).
 var Scene = {
-  build: function (rnd) {
-    var center = Track.generate(rnd);
-    var half = Track.width / 2;
-    var road = Track.edges(center, half);
-    var kerb = Track.edges(center, half + 1.2);
+  build: function (track, rnd) {
+    var center = track.center, road = track.road;
+    var kerb = Track.edges(center, track.width / 2 + 1.2);
     var n = center.length;
     var polys = [];
 
@@ -22,7 +20,7 @@ var Scene = {
     polys.push.apply(polys, Scene.startLine(road));
     Scene.trees(center, rnd).forEach(function (t) { polys.push.apply(polys, Scene.treePolys(t)); });
 
-    return { polys: polys, center: center, road: road, arc: Track.arcLength(center), curv: Track.curvature(center) };
+    return polys;
   },
 
   // A dark slot groove down the middle of each lane, like a toy slot-car track.
@@ -121,81 +119,6 @@ var Scene = {
       var b1 = Vec.make(p.x + Math.cos(a1) * r, base, p.z + Math.sin(a1) * r);
       polys.push({ pts: [b0, b1, apex], color: color });
     }
-    return polys;
-  },
-
-  // Shade a hex color by a factor (1 = unchanged).
-  shade: function (hex, k) {
-    var n = parseInt(hex.slice(1), 16);
-    var r = Math.min(255, Math.round(((n >> 16) & 255) * k));
-    var g = Math.min(255, Math.round(((n >> 8) & 255) * k));
-    var b = Math.min(255, Math.round((n & 255) * k));
-    return '#' + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
-  },
-
-  // Five faces (no bottom) of a box in car-local coords: f forward, s left, h up.
-  box: function (P, f0, f1, s0, s1, h0, h1, color) {
-    var top = color, side = color, end = color;
-    return [
-      { pts: [P(f1, s0, h1), P(f1, s1, h1), P(f0, s1, h1), P(f0, s0, h1)], color: top },
-      { pts: [P(f1, s0, h0), P(f1, s1, h0), P(f1, s1, h1), P(f1, s0, h1)], color: end },
-      { pts: [P(f0, s1, h0), P(f0, s0, h0), P(f0, s0, h1), P(f0, s1, h1)], color: end },
-      { pts: [P(f1, s1, h0), P(f0, s1, h0), P(f0, s1, h1), P(f1, s1, h1)], color: side },
-      { pts: [P(f0, s0, h0), P(f1, s0, h0), P(f1, s0, h1), P(f0, s0, h1)], color: side }
-    ];
-  },
-
-  // Loft a closed hull through cross-sections {f, w, h0, h1} (half-width w, floor h0, roof h1).
-  loft: function (P, sections, color) {
-    var top = color, end = color, polys = [];
-    for (var i = 0; i < sections.length - 1; i++) {
-      var a = sections[i], b = sections[i + 1];
-      polys.push({ pts: [P(a.f, -a.w, a.h1), P(a.f, a.w, a.h1), P(b.f, b.w, b.h1), P(b.f, -b.w, b.h1)], color: top });
-      polys.push({ pts: [P(a.f, a.w, a.h0), P(a.f, a.w, a.h1), P(b.f, b.w, b.h1), P(b.f, b.w, b.h0)], color: color });
-      polys.push({ pts: [P(a.f, -a.w, a.h0), P(b.f, -b.w, b.h0), P(b.f, -b.w, b.h1), P(a.f, -a.w, a.h1)], color: color });
-    }
-    var f0 = sections[0], fn = sections[sections.length - 1];
-    polys.push({ pts: [P(f0.f, -f0.w, f0.h0), P(f0.f, f0.w, f0.h0), P(f0.f, f0.w, f0.h1), P(f0.f, -f0.w, f0.h1)], color: end });
-    polys.push({ pts: [P(fn.f, fn.w, fn.h0), P(fn.f, -fn.w, fn.h0), P(fn.f, -fn.w, fn.h1), P(fn.f, fn.w, fn.h1)], color: end });
-    return polys;
-  },
-
-  // Low wedge supercar for a given position, heading, side vector and paint colors.
-  carPolys: function (pos, dir, side, scale, paint) {
-    function P(f, s, h) {
-      return Vec.add(Vec.add(Vec.add(pos, Vec.scale(dir, f * scale)), Vec.scale(side, s * scale)), Vec.make(0, h * scale, 0));
-    }
-    function S(f, w, h0, h1) { return { f: f, w: w, h0: h0, h1: h1 }; }
-    var glass = '#3a4a5a', tire = '#111';
-    var B = function () { return Scene.box.apply(null, [P].concat([].slice.call(arguments))); };
-
-    var hull = Scene.loft(P, [
-      S(2.5, 0.75, 0.25, 0.35),   // knife-edge nose
-      S(1.8, 1.05, 0.22, 0.5),
-      S(0.7, 1.15, 0.22, 0.68),   // hood meets windshield
-      S(-2.0, 1.15, 0.22, 0.82),  // rear deck kicks up
-      S(-2.5, 1.05, 0.3, 0.78)
-    ], paint.body);
-
-    var cabin = Scene.loft(P, [
-      S(0.7, 0.9, 0.68, 0.7),     // windshield base
-      S(-0.3, 0.85, 0.68, 1.12),  // raked windshield to roof
-      S(-1.0, 0.8, 0.7, 1.12),
-      S(-1.7, 0.7, 0.78, 0.86)    // engine window slope
-    ], glass);
-
-    var shadow = { pts: [P(2.4, -1.2, 0), P(2.4, 1.2, 0), P(-2.7, 1.2, 0), P(-2.7, -1.2, 0)], color: '#34373c', ground: true, lift: 0.015 };
-    var polys = [].concat(
-      [shadow], hull, cabin,
-      B(-2.6, -2.3, -1.0, 1.0, 0.08, 0.3, paint.roof),      // diffuser
-      B(-2.56, -2.45, 0.5, 0.95, 0.5, 0.7, '#ff3d00'),       // tail lights
-      B(-2.56, -2.45, -0.95, -0.5, 0.5, 0.7, '#ff3d00')
-    );
-    // Only the bottom of each wheel shows, fully under the hull floor like a slot car.
-    [1.6, -1.6].forEach(function (f) {
-      polys.push.apply(polys, B(f - 0.3, f + 0.3, 0.6, 0.9, 0, 0.2, tire));
-      polys.push.apply(polys, B(f - 0.3, f + 0.3, -0.9, -0.6, 0, 0.2, tire));
-    });
     return polys;
   }
 };

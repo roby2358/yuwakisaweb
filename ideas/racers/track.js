@@ -1,5 +1,7 @@
 // Track: a closed Catmull-Rom loop through control points (with elevation), sampled into segments
-// and parameterized by arc length.
+// and parameterized by arc length. Track.build returns the track record every other module reads:
+//   { center, road, arc, curv, width } — sampled centerline points, edge records per point,
+//   cumulative arc length, signed curvature per point, and road width in m.
 var Track = {
   // The bridge is a fixed X at the origin on the diagonals: a ground leg SW->NE and a bridge
   // leg SE->NW, with its four ports on a grid lattice. A random third of the remaining lattice
@@ -10,6 +12,13 @@ var Track = {
   pickFraction: 1 / 3,   // share of the free cells that become control points
   maxTurn: 1.9,          // radians between successive control-polygon edges
   minTurnRadius: 8,      // m; tighter sampled curvature anywhere is a hairpin, reject
+  minCrossAngle: 0.6,    // radians; shallower crossings make endless overlapping decks
+  attempts: 3000,        // generation tries before giving up
+  bridgeHeight: 9,
+  bridgeHalfSpan: 50,
+  width: 18,
+  laneOffset: 4.5,       // lanes sit this far either side of the centerline
+  samplesPerSpan: 10,
 
   ports: function () {
     var a = Track.gridStep;
@@ -110,24 +119,28 @@ var Track = {
     return true;
   },
 
-  bridgeHeight: 9,
-  bridgeHalfSpan: 50,
-  minCrossAngle: 0.6,  // radians; shallower crossings make endless overlapping decks
+  // One generation try: the finished centerline, or the reason it was rejected.
+  attempt: function (rnd) {
+    var cp = Track.randomControlPoints(rnd);
+    if (!Track.turnsOk(cp)) return { reject: 'turn' };
+    var center = Track.centerline(cp);
+    var arc = Track.arcLength(center);
+    var curv = Track.curvature(center);
+    if (curv.some(function (k) { return Math.abs(k) > 1 / Track.minTurnRadius; })) return { reject: 'curvature' };
+    var crossings = Track.crossings(center, arc);
+    if (crossings.length !== 1) return { reject: 'crossings=' + crossings.length };
+    if (crossings.some(function (c) { return c.angle < Track.minCrossAngle; })) return { reject: 'crossAngle' };
+    Track.elevate(center, arc, crossings);
+    if (!Track.clearanceOk(center, arc)) return { reject: 'clearance' };
+    var road = Track.edges(center, Track.width / 2);
+    return { track: { center: center, road: road, arc: arc, curv: curv, width: Track.width } };
+  },
 
-  // Keep generating until a loop has at least one clean overpass and no near-misses.
-  generate: function (rnd) {
-    for (var attempt = 0; attempt < 3000; attempt++) {
-      var cp = Track.randomControlPoints(rnd);
-      if (!Track.turnsOk(cp)) continue;
-      var center = Track.centerline(cp);
-      var arc = Track.arcLength(center);
-      if (Track.curvature(center).some(function (k) { return Math.abs(k) > 1 / Track.minTurnRadius; })) continue;
-      var crossings = Track.crossings(center, arc);
-      if (crossings.length !== 1) continue;
-      if (crossings.some(function (c) { return c.angle < Track.minCrossAngle; })) continue;
-      Track.elevate(center, arc, crossings);
-      if (!Track.clearanceOk(center, arc)) continue;
-      return center;
+  // Keep trying until a loop has exactly one clean overpass and no near-misses.
+  build: function (rnd) {
+    for (var attempt = 0; attempt < Track.attempts; attempt++) {
+      var got = Track.attempt(rnd);
+      if (got.track) return got.track;
     }
     throw new Error('could not generate a track');
   },
@@ -187,10 +200,6 @@ var Track = {
     return true;
   },
 
-  width: 18,
-  laneOffset: 4.5, // lanes sit this far either side of the centerline
-  samplesPerSpan: 10,
-
   // Catmull-Rom interpolation between p1 and p2.
   catmull: function (p0, p1, p2, p3, t) {
     var t2 = t * t, t3 = t2 * t;
@@ -242,14 +251,19 @@ var Track = {
     });
   },
 
-  // Curvature of a lane offset lat (m, + = left) from the centerline at arc length s.
-  laneCurvature: function (geom, s, lat) {
-    var cum = geom.arc.cum, n = geom.center.length;
-    s = ((s % geom.arc.total) + geom.arc.total) % geom.arc.total;
+  // Segment index i, next index j and fraction f along it at arc length s (wraps the loop).
+  locate: function (track, s) {
+    var cum = track.arc.cum, n = track.center.length;
+    s = ((s % track.arc.total) + track.arc.total) % track.arc.total;
     var i = 0;
     while (i < n - 1 && cum[i + 1] <= s) i++;
-    var f = (s - cum[i]) / (cum[i + 1] - cum[i]);
-    var k = geom.curv[i] + (geom.curv[(i + 1) % n] - geom.curv[i]) * f;
+    return { i: i, j: (i + 1) % n, f: (s - cum[i]) / (cum[i + 1] - cum[i]) };
+  },
+
+  // Curvature of a lane offset lat (m, + = left) from the centerline at arc length s.
+  laneCurvature: function (track, s, lat) {
+    var at = Track.locate(track, s);
+    var k = track.curv[at.i] + (track.curv[at.j] - track.curv[at.i]) * at.f;
     return k / (1 - k * lat);
   },
 
@@ -263,15 +277,10 @@ var Track = {
   },
 
   // Position, heading and side vector at arc-length s (wraps around the loop).
-  at: function (geom, s) {
-    var center = geom.center, cum = geom.arc.cum, n = center.length;
-    s = ((s % geom.arc.total) + geom.arc.total) % geom.arc.total;
-    var i = 0;
-    while (i < n - 1 && cum[i + 1] <= s) i++;
-    var f = (s - cum[i]) / (cum[i + 1] - cum[i]);
-    var j = (i + 1) % n;
-    var dir = Vec.norm(Vec.sub(center[j], center[i]));
-    var side = Vec.lerp(geom.road[i].side, geom.road[j].side, f);
-    return { pos: Vec.lerp(center[i], center[j], f), dir: dir, side: Vec.norm(side) };
+  at: function (track, s) {
+    var l = Track.locate(track, s), center = track.center;
+    var dir = Vec.norm(Vec.sub(center[l.j], center[l.i]));
+    var side = Vec.lerp(track.road[l.i].side, track.road[l.j].side, l.f);
+    return { pos: Vec.lerp(center[l.i], center[l.j], l.f), dir: dir, side: Vec.norm(side) };
   }
 };

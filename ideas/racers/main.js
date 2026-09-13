@@ -5,27 +5,28 @@
   var cam = new Camera(1, 1);
   var keys = {};
   var follow = false;
-  var scene, cars;
+  var track, scenery, cars;
 
-  function seededRandom(seed) {
-    return function () { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  var startHold = 0; // seconds the cars sit on the start line before launching
+
+  function buildTrack(rnd) {
+    for (var tries = 0; tries < 10; tries++) {
+      try {
+        return Track.build(rnd);
+      } catch (err) {
+        console.error('track generation failed, retrying', err);
+      }
+    }
+    throw new Error('track generation kept failing');
   }
 
-  var gridHold = 0; // seconds the cars sit on the grid before launching
-
   function newTrack() {
-    try {
-      scene = Scene.build(seededRandom(1 + Math.floor(Math.random() * 2147483000)));
-    } catch (err) {
-      console.error('track generation failed, retrying', err);
-      return newTrack();
-    }
-    cars = [
-      Cars.make(0, 230, Track.laneOffset, { body: '#e53935', roof: '#1a1a1a' }),
-      Cars.make(-20, 252, -Track.laneOffset, { body: '#1e88e5', roof: '#1a1a1a' })
-    ];
+    var rnd = Rng.make(1 + Math.floor(Math.random() * 2147483000));
+    track = buildTrack(rnd);
+    scenery = Scene.build(track, rnd);
+    cars = Cars.field();
     cars.forEach(function (c) { c.v = 0; });
-    gridHold = 1.0;
+    startHold = 1.0;
   }
   newTrack();
 
@@ -94,9 +95,9 @@
   }
 
   function stepCars(dt) {
-    if (gridHold > 0) { gridHold -= dt; return; }
-    cars.forEach(function (c) { Cars.step(c, dt, scene, Track.width / 2); });
-    Cars.bump(cars[0], cars[1], scene.arc.total);
+    if (startHold > 0) { startHold -= dt; return; }
+    cars.forEach(function (c) { Cars.step(c, dt, track); });
+    Cars.bump(cars[0], cars[1], track.arc.total);
   }
 
   var last = performance.now();
@@ -106,11 +107,11 @@
     applyKeys();
     stepCars(dt);
     if (follow) {
-      var lead = Track.at(scene, cars[0].s).pos;
+      var lead = Track.at(track, cars[0].s).pos;
       cam.target = Vec.make(lead.x, lead.y + 1, lead.z);
     }
-    var polys = scene.polys.slice();
-    cars.forEach(function (c) { polys.push.apply(polys, Cars.polys(c, scene)); });
+    var polys = scenery.slice();
+    cars.forEach(function (c) { polys.push.apply(polys, Cars.polys(c, track)); });
     Render.draw(ctx, cam, polys);
     requestAnimationFrame(frame);
   }

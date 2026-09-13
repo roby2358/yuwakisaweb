@@ -1,4 +1,7 @@
 // Render: project polygons, sort far-to-near, light by surface normal, fill.
+// A poly is { pts: [Vec...], color: '#rrggbb', ground: bool, lift: m }. ground marks a flat tile
+// that sorts by its farthest vertex so things resting on it draw later; lift raises it slightly
+// so overlapping ground tiles (slots, start line, shadows) win against the road.
 var Render = {
   skyTop: '#4a8ad6',
   skyHorizon: '#d9e8f6',
@@ -59,9 +62,8 @@ var Render = {
     var projected = [];
     for (var i = 0; i < polys.length; i++) {
       var poly = polys[i];
-      var lift = poly.lift || 0;
       var scr = poly.pts.map(function (p) {
-        return cam.project(basis, lift ? Vec.add(p, Vec.make(0, lift, 0)) : p);
+        return cam.project(basis, poly.lift ? Vec.add(p, Vec.make(0, poly.lift, 0)) : p);
       });
       if (scr.some(function (s) { return s.depth < 0.5; })) continue;
       var depth = Render.sortDepth(scr, poly.ground);
