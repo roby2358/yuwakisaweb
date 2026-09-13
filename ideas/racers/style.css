@@ -1,0 +1,8 @@
+html, body { margin: 0; height: 100%; overflow: hidden; background: #1b2430; font-family: system-ui, sans-serif; }
+#view { display: block; width: 100vw; height: 100vh; cursor: grab; }
+#view.dragging { cursor: grabbing; }
+#help {
+  position: fixed; left: 12px; bottom: 12px; padding: 8px 12px;
+  background: rgba(0,0,0,.55); color: #eee; font-size: 13px; border-radius: 6px;
+  pointer-events: none;
+}

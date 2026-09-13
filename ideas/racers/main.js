@@ -1,0 +1,118 @@
+// Main: wires input, steps the cars, renders each frame.
+(function () {
+  var canvas = document.getElementById('view');
+  var ctx = canvas.getContext('2d');
+  var cam = new Camera(1, 1);
+  var keys = {};
+  var follow = false;
+  var scene, cars;
+
+  function seededRandom(seed) {
+    return function () { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  }
+
+  var gridHold = 0; // seconds the cars sit on the grid before launching
+
+  function newTrack() {
+    try {
+      scene = Scene.build(seededRandom(1 + Math.floor(Math.random() * 2147483000)));
+    } catch (err) {
+      console.error('track generation failed, retrying', err);
+      return newTrack();
+    }
+    cars = [
+      Cars.make(0, 160, Track.laneOffset, { body: '#e53935', roof: '#1a1a1a' }),
+      Cars.make(-20, 175, -Track.laneOffset, { body: '#1e88e5', roof: '#1a1a1a' })
+    ];
+    cars.forEach(function (c) { c.v = 0; });
+    gridHold = 1.0;
+  }
+  newTrack();
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    cam.width = canvas.width;
+    cam.height = canvas.height;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // Mouse orbit.
+  var drag = null;
+  canvas.addEventListener('mousedown', function (e) { drag = { x: e.clientX, y: e.clientY }; canvas.classList.add('dragging'); });
+  window.addEventListener('mouseup', function () { drag = null; canvas.classList.remove('dragging'); });
+  window.addEventListener('mousemove', function (e) {
+    if (!drag) return;
+    cam.orbit(e.clientX - drag.x, e.clientY - drag.y);
+    drag = { x: e.clientX, y: e.clientY };
+  });
+  canvas.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    cam.zoom(e.deltaY > 0 ? 1.1 : 0.9);
+  }, { passive: false });
+
+  // Touch: one finger orbits, two fingers pinch-zoom.
+  var touch = null;
+  function touchDist(e) {
+    var dx = e.touches[0].clientX - e.touches[1].clientX, dy = e.touches[0].clientY - e.touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+  canvas.addEventListener('touchstart', function (e) {
+    e.preventDefault();
+    touch = e.touches.length === 2 ? { dist: touchDist(e) } : { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }, { passive: false });
+  canvas.addEventListener('touchmove', function (e) {
+    e.preventDefault();
+    if (!touch) return;
+    if (e.touches.length === 2 && touch.dist) {
+      var d = touchDist(e);
+      cam.zoom(touch.dist / d);
+      touch.dist = d;
+      return;
+    }
+    if (touch.x === undefined) return;
+    cam.orbit(e.touches[0].clientX - touch.x, e.touches[0].clientY - touch.y);
+    touch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }, { passive: false });
+  canvas.addEventListener('touchend', function () { touch = null; });
+
+  window.addEventListener('keydown', function (e) {
+    keys[e.key.toLowerCase()] = true;
+    if (e.key === 'r') { cam.reset(); follow = false; }
+    if (e.key === 'n') newTrack();
+    if (e.key === ' ') { follow = !follow; if (follow) cam.dist = Math.min(cam.dist, 70); e.preventDefault(); }
+  });
+  window.addEventListener('keyup', function (e) { keys[e.key.toLowerCase()] = false; });
+
+  function applyKeys() {
+    var fwd = (keys.w || keys.arrowup ? 1 : 0) - (keys.s || keys.arrowdown ? 1 : 0);
+    var right = (keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0);
+    if (fwd || right) { cam.pan(fwd, right); follow = false; }
+    if (keys.q) cam.raise(-1);
+    if (keys.e) cam.raise(1);
+  }
+
+  function stepCars(dt) {
+    if (gridHold > 0) { gridHold -= dt; return; }
+    cars.forEach(function (c) { Cars.step(c, dt, scene, Track.width / 2); });
+    Cars.bump(cars[0], cars[1], scene.arc.total);
+  }
+
+  var last = performance.now();
+  function frame(now) {
+    var dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    applyKeys();
+    stepCars(dt);
+    if (follow) {
+      var lead = Track.at(scene, cars[0].s).pos;
+      cam.target = Vec.make(lead.x, lead.y + 1, lead.z);
+    }
+    var polys = scene.polys.slice();
+    cars.forEach(function (c) { polys.push.apply(polys, Cars.polys(c, scene)); });
+    Render.draw(ctx, cam, polys);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
