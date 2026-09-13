@@ -8,9 +8,10 @@ var Render = {
   grass: '#5a9e3f',
   light: Vec.norm(Vec.make(0.45, 1, 0.3)),
   ambient: 0.4,
-  skyBands: 32,
+  skyBands: 96,
 
   rgb: function (hex) {
+    if (hex.length === 4) hex = '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
     var n = parseInt(hex.slice(1), 16);
     return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
   },
@@ -67,6 +68,8 @@ var Render = {
       });
       if (scr.some(function (s) { return s.depth < 0.5; })) continue;
       var depth = Render.sortDepth(scr, poly.ground);
+      if (scr.every(function (s) { return s.x < -2; }) || scr.every(function (s) { return s.x > cam.width + 2; }) ||
+          scr.every(function (s) { return s.y < -2; }) || scr.every(function (s) { return s.y > cam.height + 2; })) continue;
       projected.push({ scr: scr, depth: depth, color: Render.lit(poly.pts, poly.color) });
     }
     projected.sort(function (a, b) { return b.depth - a.depth; });

@@ -91,22 +91,64 @@ var Scene = {
         return Math.sqrt(d.x * d.x + d.z * d.z) < Track.width + 3;
       });
       if (tooClose) continue;
-      out.push({ pos: p, h: 6 + rnd() * 5, r: 2.2 + rnd() * 1.8, color: (rnd() < 0.5) ? '#2f7d33' : '#3c8f3a' });
+      out.push({ pos: p, h: 20 + rnd() * 12, r: 6 + rnd() * 3, phase: rnd() * Math.PI * 2, color: (rnd() < 0.5) ? '#2f7d33' : '#3c8f3a' });
     }
-    return out;
+    // Keep every other tree to halve foliage rendering while preserving its distribution.
+    return out.filter(function (_, i) { return i % 2 === 0; });
   },
 
-  // A tree is a trunk box under two stacked foliage cones.
+  // Tapered trunks and branches support irregular, overlapping leafy crowns.
   treePolys: function (t) {
-    var polys = [], sides = 7, p = t.pos, trunkTop = t.h * 0.25;
-    polys.push.apply(polys, Scene.cone(p, trunkTop, t.h * 0.7, t.r, sides, t.color));
-    polys.push.apply(polys, Scene.cone(p, t.h * 0.5, t.h, t.r * 0.72, sides, t.color));
-    var tr = t.r * 0.18;
-    for (var s = 0; s < 4; s++) {
-      var a0 = (s / 4) * Math.PI * 2, a1 = ((s + 1) / 4) * Math.PI * 2;
-      var t0 = Vec.make(p.x + Math.cos(a0) * tr, 0, p.z + Math.sin(a0) * tr);
-      var t1 = Vec.make(p.x + Math.cos(a1) * tr, 0, p.z + Math.sin(a1) * tr);
-      polys.push({ pts: [t0, t1, Vec.add(t1, Vec.make(0, trunkTop, 0)), Vec.add(t0, Vec.make(0, trunkTop, 0))], color: '#5d4037' });
+    var polys = [], p = t.pos, phase = t.phase || 0;
+    var shadow = [];
+    for (var k = 0; k < 10; k++) {
+      var a = k * Math.PI / 5;
+      shadow.push(Vec.make(p.x - t.h * 0.2 + Math.cos(a) * t.r * 1.45, 0, p.z - t.h * 0.13 + Math.sin(a) * t.r));
+    }
+    polys.push({ pts: shadow, color: '#467e32', ground: true, lift: 0.008 });
+    var fork = Vec.add(p, Vec.make(Math.cos(phase) * t.r * 0.12, t.h * 0.57, Math.sin(phase) * t.r * 0.12));
+    polys.push.apply(polys, Scene.branch(p, fork, t.r * 0.12, t.r * 0.045));
+    for (var s = 0; s < 3; s++) {
+      var angle = phase + s * Math.PI * 2 / 3;
+      var crown = Vec.add(p, Vec.make(Math.cos(angle) * t.r * 0.43, t.h * (0.62 + s * 0.045), Math.sin(angle) * t.r * 0.43));
+      polys.push.apply(polys, Scene.branch(Vec.lerp(p, fork, 0.7), crown, t.r * 0.055, t.r * 0.02));
+      polys.push.apply(polys, Scene.crown(crown, t.r * 0.76, t.h * 0.24, angle, t.color));
+    }
+    polys.push.apply(polys, Scene.crown(Vec.add(p, Vec.make(0, t.h * 0.82, 0)), t.r * 0.68, t.h * 0.18, phase + 1, t.color));
+    return polys;
+  },
+
+  branch: function (a, b, r0, r1) {
+    var axis = Vec.norm(Vec.sub(b, a));
+    var u = Vec.norm(Vec.cross(axis, Vec.make(0, 0, 1))), v = Vec.cross(axis, u);
+    function ring(p, r, angle) { return Vec.add(p, Vec.add(Vec.scale(u, Math.cos(angle) * r), Vec.scale(v, Math.sin(angle) * r))); }
+    var polys = [];
+    for (var s = 0; s < 6; s++) {
+      var x = s * Math.PI / 3, y = (s + 1) * Math.PI / 3;
+      polys.push({ pts: [ring(a, r0, x), ring(a, r0, y), ring(b, r1, y), ring(b, r1, x)], color: s % 2 ? '#69452d' : '#805536' });
+    }
+    return polys;
+  },
+
+  crown: function (p, radius, height, phase, color) {
+    var rings = [], polys = [], sides = 8;
+    for (var row = 0; row < 5; row++) {
+      var latitude = -Math.PI / 2 + row * Math.PI / 4, ring = [];
+      for (var s = 0; s < sides; s++) {
+        var angle = s * Math.PI * 2 / sides + phase;
+        var ripple = 1 + 0.13 * Math.sin(s * 2.7 + phase + row * 1.9);
+        ring.push(Vec.add(p, Vec.make(Math.cos(angle) * Math.cos(latitude) * radius * ripple,
+          Math.sin(latitude) * height, Math.sin(angle) * Math.cos(latitude) * radius * ripple)));
+      }
+      rings.push(ring);
+    }
+    for (var j = 0; j < 4; j++) for (var i = 0; i < sides; i++) {
+      var next = (i + 1) % sides;
+      var pts = j === 0 ? [rings[0][i], rings[1][next], rings[1][i]] :
+        j === 3 ? [rings[3][i], rings[3][next], rings[4][i]] :
+        [rings[j][i], rings[j][next], rings[j + 1][next], rings[j + 1][i]];
+      var tint = 0.9 + 0.12 * (0.5 + 0.5 * Math.sin(i * 3.1 + j + phase));
+      polys.push({ pts: pts, color: Render.hex(Render.rgb(color).map(function (c) { return c * tint; })) });
     }
     return polys;
   },

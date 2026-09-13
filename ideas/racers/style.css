@@ -1,8 +1,6 @@
-html, body { margin: 0; height: 100%; overflow: hidden; background: #1b2430; font-family: system-ui, sans-serif; }
-#view { display: block; width: 100vw; height: 100vh; cursor: grab; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #819568; font-family: 'Segoe UI', system-ui, sans-serif; }
+#view { display: block; width: 100vw; height: 100vh; cursor: grab; touch-action: none; }
 #view.dragging { cursor: grabbing; }
-#help {
-  position: fixed; left: 12px; bottom: 12px; padding: 8px 12px;
-  background: rgba(0,0,0,.55); color: #eee; font-size: 13px; border-radius: 6px;
-  pointer-events: none;
-}
+#help { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); width: max-content; max-width: calc(100vw - 48px); box-sizing: border-box; padding: 14px 20px; background: #1f3030dc; color: #e3e8df; font-size: 12px; line-height: 1.8; border: 1px solid #ffffff24; border-radius: 12px; box-shadow: 0 8px 32px #13282424; backdrop-filter: blur(14px); pointer-events: none; }
+#help b { color: #fff9e9; font-size: 15px; letter-spacing: -.03em; margin-right: 8px; }
+@media (max-width: 760px) { #help { bottom: 14px; padding: 10px 14px; text-align: center; } }

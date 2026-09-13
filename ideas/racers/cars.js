@@ -108,42 +108,89 @@ var Cars = {
     return Cars.mesh(pos, at.dir, at.side, Cars.scale, car.paint);
   },
 
-  // Low wedge supercar for a given position, heading, side vector and paint colors.
+  // Plain molded sports coupe: rounded shoulders, dark glazing and inset silver wheels.
   mesh: function (pos, dir, side, scale, paint) {
     function P(f, s, h) {
+      // Compress the upper cabin while keeping tire clearance and ride height intact.
+      if (h > .9) h = .9 + (h - .9) * .78;
       return Vec.add(Vec.add(Vec.add(pos, Vec.scale(dir, f * scale)), Vec.scale(side, s * scale)), Vec.make(0, h * scale, 0));
     }
-    function S(f, w, h0, h1) { return { f: f, w: w, h0: h0, h1: h1 }; }
-    var glass = '#3a4a5a', tire = '#111';
-    var B = function () { return Mesh.box.apply(null, [P].concat([].slice.call(arguments))); };
-
-    var hull = Mesh.loft(P, [
-      S(2.5, 0.75, 0.25, 0.35),   // knife-edge nose
-      S(1.8, 1.05, 0.22, 0.5),
-      S(0.7, 1.15, 0.22, 0.68),   // hood meets windshield
-      S(-2.0, 1.15, 0.22, 0.82),  // rear deck kicks up
-      S(-2.5, 1.05, 0.3, 0.78)
-    ], paint.body);
-
-    var cabin = Mesh.loft(P, [
-      S(0.7, 0.9, 0.68, 0.7),     // windshield base
-      S(-0.3, 0.85, 0.68, 1.12),  // raked windshield to roof
-      S(-1.0, 0.8, 0.7, 1.12),
-      S(-1.7, 0.7, 0.78, 0.86)    // engine window slope
-    ], glass);
-
-    var shadow = { pts: [P(2.4, -1.2, 0), P(2.4, 1.2, 0), P(-2.7, 1.2, 0), P(-2.7, -1.2, 0)], color: '#34373c', ground: true, lift: 0.015 };
-    var polys = [].concat(
-      [shadow], hull, cabin,
-      B(-2.6, -2.3, -1.0, 1.0, 0.08, 0.3, paint.roof),      // diffuser
-      B(-2.56, -2.45, 0.5, 0.95, 0.5, 0.7, '#ff3d00'),       // tail lights
-      B(-2.56, -2.45, -0.95, -0.5, 0.5, 0.7, '#ff3d00')
-    );
-    // Only the bottom of each wheel shows, fully under the hull floor like a slot car.
-    [1.6, -1.6].forEach(function (f) {
-      polys.push.apply(polys, B(f - 0.3, f + 0.3, 0.6, 0.9, 0, 0.2, tire));
-      polys.push.apply(polys, B(f - 0.3, f + 0.3, -0.9, -0.6, 0, 0.2, tire));
+    var polys = [], glass = '#101d23', tire = '#171b20';
+    function face(pts, color) { polys.push({ pts: pts, color: color }); }
+    function box() { polys.push.apply(polys, Mesh.box.apply(null, [P].concat([].slice.call(arguments)))); }
+    // Several beveled cross sections give the nose and fenders a rounded silhouette.
+    var sections = [[2.2,.80,.49],[2.02,.94,.62],[1.72,1.02,.77],[1.42,1.04,.85],
+      [1.12,1.02,.83],[.88,.96,.78],[.45,.92,.76],[-.5,.93,.80],[-.88,1.02,.86],
+      [-1.12,1.05,.90],[-1.42,1.05,.92],[-1.72,1.03,.88],[-2.02,.96,.79],[-2.2,.86,.66]];
+    var rings = sections.map(function (s) {
+      var f=s[0], w=s[1], h=s[2], bottom=.25;
+      [1.42,-1.42].forEach(function (axle) {
+        var d=Math.abs(f-axle);
+        if(d<.51) bottom=Math.max(bottom,.43+Math.sqrt(.51*.51-d*d));
+      });
+      return [P(f,-w,bottom),P(f,-w,Math.max(bottom,h-.14)),P(f,-w*.78,h),
+        P(f,w*.78,h),P(f,w,Math.max(bottom,h-.14)),P(f,w,bottom)];
     });
+    for(var i=0;i<rings.length-1;i++) for(var j=0;j<5;j++) {
+      face([rings[i][j],rings[i][j+1],rings[i+1][j+1],rings[i+1][j]],paint.body);
+    }
+    face(rings[0],paint.body); face(rings[rings.length-1],paint.body);
+    var cabin=[{f:1.12,w:.74,h0:.83,h1:.85},{f:.60,w:.64,h0:.82,h1:1.19},
+      {f:-.86,w:.63,h0:.82,h1:1.10},{f:-2.02,w:.72,h0:.79,h1:.81}];
+    var cabinPolys = Mesh.loft(P,cabin,glass);
+    // Solid fastback bodywork flows from the roof to the tail, without rear glazing.
+    for (var panel = 6; panel < 9; panel++) cabinPolys[panel].color = paint.body;
+    cabinPolys[cabinPolys.length - 1].color = paint.body;
+    polys.push.apply(polys,cabinPolys);
+    // Body-colored roof and slim pillars, leaving broad black window areas.
+    face([P(.60,-.65,1.20),P(.60,.65,1.20),P(-.86,.64,1.11),P(-.86,-.64,1.11)],paint.body);
+    // One center stripe follows the painted panels; the glass stays clear.
+    function stripe(f0, h0, f1, h1) {
+      face([P(f0,-.14,h0+.012),P(f0,.14,h0+.012),P(f1,.14,h1+.012),P(f1,-.14,h1+.012)],'#ffffff');
+    }
+    stripe(.60,1.20,-.86,1.11);
+    stripe(-.86,1.11,-2.02,.82);
+    stripe(-2.02,.82,-2.2,.66);
+    for(var i=0;i<sections.length-1;i++) {
+      var a=sections[i], b=sections[i+1];
+      if(b[0]>=1.12) stripe(a[0],a[2],b[0],b[2]);
+    }
+    [-1,1].forEach(function (sideSign) {
+      face([P(1.12,sideSign*.75,.86),P(1.01,sideSign*.75,.86),P(.51,sideSign*.65,1.20),P(.60,sideSign*.65,1.20)],paint.body);
+      face([P(-.79,sideSign*.64,1.115),P(-.89,sideSign*.64,1.10),P(-.89,sideSign*.64,.83),P(-.79,sideSign*.64,.83)],paint.body);
+      // Simple swept headlamps on the hood.
+      face([P(2.02,sideSign*.64,.632),P(1.97,sideSign*.73,.657),P(1.69,sideSign*.79,.790),P(1.76,sideSign*.68,.762)],'#e8f0ed');
+      // Dark side skirts emphasize the tucked waist and wide rear haunches.
+      face([P(.87,sideSign*.97,.27),P(.44,sideSign*.94,.21),P(-.86,sideSign*1.03,.23),P(-.64,sideSign*.97,.34)],tire);
+      box(-2.21,-2.19,sideSign>0?.43:-.72,sideSign>0?.72:-.43,.46,.58,'#c92228');
+    });
+    box(2.19,2.205,-.47,.47,.29,.44,glass);
+    // A thin splitter and rear diffuser give a planted stance without an oversized wing.
+    box(2.06,2.23,-.83,.83,.20,.245,tire);
+    box(-2.215,-2.10,-.67,.67,.20,.34,tire);
+    // Twelve-sided tires and plain silver hubs keep the geometry inexpensive.
+    [1.42,-1.42].forEach(function (f) {
+      [-1,1].forEach(function (sign) {
+        function W(angle,r,s) {return P(f+Math.cos(angle)*r,s,.43+Math.sin(angle)*r);}
+        var rim=[];
+        for(var k=0;k<12;k++) {
+          var a=k*Math.PI/6,b=(k+1)*Math.PI/6;
+          face([W(a,.43,sign*.87),W(b,.43,sign*.87),W(b,.43,sign*1.09),W(a,.43,sign*1.09)],tire);
+          face([W(a,.43,sign*1.095),W(b,.43,sign*1.095),W(b,.29,sign*1.095),W(a,.29,sign*1.095)],tire);
+          rim.push(W(a,.29,sign*1.10));
+        }
+        face(rim,'#82959f');
+        // Five simple spokes read clearly even when the cars are small on screen.
+        for(var spoke=0;spoke<5;spoke++) {
+          var angle=spoke*Math.PI*2/5;
+          face([W(angle-.20,.11,sign*1.112),W(angle-.10,.27,sign*1.112),
+            W(angle+.10,.27,sign*1.112),W(angle+.20,.11,sign*1.112)],'#e0e7e9');
+        }
+        var hub=[];for(var k=0;k<8;k++) hub.push(W(k*Math.PI/4,.10,sign*1.105));
+        face(hub,'#657782');
+      });
+    });
+    polys.push({pts:[P(2.25,-1.1,0),P(2.25,1.1,0),P(-2.25,1.1,0),P(-2.25,-1.1,0)],color:'#34373c',ground:true,lift:.015});
     return polys;
   }
 };

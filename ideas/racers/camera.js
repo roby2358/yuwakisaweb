@@ -44,7 +44,48 @@ Camera.prototype.orbit = function (dx, dy) {
 };
 
 Camera.prototype.zoom = function (factor) {
-  this.dist = Math.min(1200, Math.max(8, this.dist * factor));
+  this.dist = Math.min(Math.max(1200, this.overviewDist || 0) * 2, Math.max(8, this.dist * factor));
+};
+
+// Fit the actual track's projected diagonal to 90% of the shorter dimension.
+Camera.prototype.fitGrid = function (track) {
+  if (!track) return;
+  var points = [];
+  Track.edges(track.center, track.width / 2 + 1.2).forEach(function (e) { points.push(e.left, e.right); });
+  var camera = this, min = Vec.make(Infinity, Infinity, Infinity), max = Vec.make(-Infinity, -Infinity, -Infinity);
+  points.forEach(function (p) {
+    ['x','y','z'].forEach(function (k) { min[k] = Math.min(min[k], p[k]); max[k] = Math.max(max[k], p[k]); });
+  });
+  this.target = Vec.lerp(min, max, 0.5);
+  var desired = 0.9 * Math.max(1, Math.min(this.width, this.height));
+  var focal = (this.height / 2) / Math.tan(this.fov / 2);
+  function bounds() {
+    var basis = camera.basis(), box = { x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity, valid: true };
+    points.forEach(function (p) {
+      var s = camera.project(basis, p);
+      if (s.depth < 0.5) box.valid = false;
+      box.x0 = Math.min(box.x0, s.x); box.x1 = Math.max(box.x1, s.x);
+      box.y0 = Math.min(box.y0, s.y); box.y1 = Math.max(box.y1, s.y);
+    });
+    box.span = box.valid ? Math.hypot(box.x1 - box.x0, box.y1 - box.y0) : Infinity;
+    return box;
+  }
+  // Recenter after each distance solve to compensate for perspective asymmetry.
+  for (var pass = 0; pass < 12; pass++) {
+    var low = 0.5, high = Math.max(100, Vec.len(Vec.sub(max, min)));
+    this.dist = high;
+    while (bounds().span > desired) { high *= 2; this.dist = high; }
+    for (var step = 0; step < 40; step++) {
+      this.dist = (low + high) / 2;
+      if (bounds().span > desired) low = this.dist; else high = this.dist;
+    }
+    this.dist = high;
+    var box = bounds(), basis = this.basis();
+    var dx = (box.x0 + box.x1 - this.width) / 2, dy = (box.y0 + box.y1 - this.height) / 2;
+    if (Math.abs(dx) + Math.abs(dy) < 0.001) break;
+    this.target = Vec.add(this.target, Vec.add(Vec.scale(basis.right, dx * this.dist / focal), Vec.scale(basis.up, -dy * this.dist / focal)));
+  }
+  this.overviewDist = this.dist;
 };
 
 // Pan along the ground relative to the current view heading.

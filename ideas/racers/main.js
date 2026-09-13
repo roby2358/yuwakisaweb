@@ -27,14 +27,18 @@
     cars = Cars.field();
     cars.forEach(function (c) { c.v = 0; });
     startHold = 1.0;
+    if (!follow) cam.fitGrid(track);
   }
   newTrack();
 
   function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    cam.width = canvas.width;
-    cam.height = canvas.height;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(window.innerWidth * dpr);
+    canvas.height = Math.round(window.innerHeight * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cam.width = window.innerWidth;
+    cam.height = window.innerHeight;
+    if (!follow) cam.fitGrid(track);
   }
   window.addEventListener('resize', resize);
   resize();
@@ -80,9 +84,9 @@
 
   window.addEventListener('keydown', function (e) {
     keys[e.key.toLowerCase()] = true;
-    if (e.key === 'r') { cam.reset(); follow = false; }
+    if (e.key === 'r') { cam.reset(); cam.fitGrid(track); follow = false; }
     if (e.key === 'n') newTrack();
-    if (e.key === ' ') { follow = !follow; if (follow) cam.dist = Math.min(cam.dist, 70); e.preventDefault(); }
+    if (e.key === ' ') { follow = !follow; if (follow) cam.dist = Math.min(cam.dist, 70); else cam.fitGrid(track); e.preventDefault(); }
   });
   window.addEventListener('keyup', function (e) { keys[e.key.toLowerCase()] = false; });
 
