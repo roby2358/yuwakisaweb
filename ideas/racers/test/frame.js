@@ -1,5 +1,5 @@
 // Renders one frame headlessly to test/frame.png using a scanline stub of the canvas API.
-// Usage: node test/frame.js [seed] [dist]
+// Usage: node test/frame.js [seed] [dist] [follow] [pitch]
 var fs = require('fs'), zlib = require('zlib'), path = require('path');
 var names = { vec: 'Vec', track: 'Track', scene: 'Scene', camera: 'Camera', render: 'Render', cars: 'Cars' };
 for (var f in names) eval(fs.readFileSync(path.join(__dirname, '..', f + '.js'), 'utf8') + ';global.' + names[f] + '=' + names[f]);
@@ -12,7 +12,10 @@ function color(hex) {
 }
 var pathPts = [], ctx = {
   fillStyle: '#000', strokeStyle: '#000', lineWidth: 1,
-  fillRect: function () { var c = color(this.fillStyle); for (var i = 0; i < W * H; i++) { buf[i * 3] = c[0]; buf[i * 3 + 1] = c[1]; buf[i * 3 + 2] = c[2]; } },
+  fillRect: function (x, y, w, h) {
+    var c = color(this.fillStyle), x0 = Math.max(0, Math.round(x)), x1 = Math.min(W, Math.round(x + w)), y0 = Math.max(0, Math.round(y)), y1 = Math.min(H, Math.round(y + h));
+    for (var yy = y0; yy < y1; yy++) for (var xx = x0; xx < x1; xx++) { var o = (yy * W + xx) * 3; buf[o] = c[0]; buf[o + 1] = c[1]; buf[o + 2] = c[2]; }
+  },
   beginPath: function () { pathPts = []; }, moveTo: function (x, y) { pathPts.push([x, y]); }, lineTo: function (x, y) { pathPts.push([x, y]); },
   closePath: function () {}, stroke: function () {},
   fill: function () {
@@ -37,7 +40,7 @@ var pathPts = [], ctx = {
 
 function rng(s) { return function () { s = (s * 16807) % 2147483647; return s / 2147483647; }; }
 var scene = Scene.build(rng(seed));
-var cam = new Camera(W, H); cam.dist = dist;
+var cam = new Camera(W, H); cam.dist = dist; if (process.argv[5]) cam.pitch = +process.argv[5];
 if (follow) { var lead = Track.at(scene, 0).pos; cam.target = Vec.make(lead.x, lead.y + 1, lead.z); }
 var cars = [Cars.make(0, 58, Track.laneOffset, { body: '#e53935', roof: '#1a1a1a' }), Cars.make(-20, 64, -Track.laneOffset, { body: '#1e88e5', roof: '#1a1a1a' })];
 var polys = scene.polys.slice();
@@ -46,7 +49,7 @@ Render.draw(ctx, cam, polys);
 
 // Count car-colored pixels so the check is scriptable.
 var red = 0, blue = 0;
-for (var i = 0; i < W * H; i++) { if (buf[i * 3] === 0xe5 && buf[i * 3 + 1] === 0x39) red++; if (buf[i * 3] === 0x1e && buf[i * 3 + 1] === 0x88) blue++; }
+for (var i = 0; i < W * H; i++) { var r = buf[i * 3], g = buf[i * 3 + 1], b = buf[i * 3 + 2]; if (r > 140 && g < 90 && b < 90) red++; if (b > 150 && r < 90 && g < 150) blue++; }
 console.log('red px', red, 'blue px', blue);
 
 function png() {

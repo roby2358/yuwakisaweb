@@ -2,41 +2,102 @@
 // and parameterized by arc length.
 var Track = {
   // The bridge is a fixed X at the origin on the diagonals: a ground leg SW->NE and a bridge
-  // leg SE->NW. A figure 8 through a right-angle X can only put its lobes in the two opposite
-  // wedges between the legs, so random points are dropped in an east lobe and a west lobe,
-  // one per angular sector, with a random-walk radius so the sweep stays smooth.
-  portReach: 45,
-  innerRadius: 140,
-  outerRadius: 260,
-  lobeHalfAngle: 0.95,   // radians either side of the lobe axis
-  pointsPerLobe: 6,
-  radiusStep: 90,        // max radius change between neighboring points
+  // leg SE->NW, with its four ports on a grid lattice. A random third of the remaining lattice
+  // cells become control points, and one closed tour threads all of them plus the ports:
+  // nearest-neighbor order, then 2-opt to untangle, with the two legs held as unbreakable edges.
+  gridStep: 128,         // m between lattice cells; the ports sit one cell out on the diagonals
+  gridHalf: 3,           // cells from the origin to the edge; the course spans (2*gridHalf+1)^2 cells
+  pickFraction: 1 / 3,   // share of the free cells that become control points
   maxTurn: 1.9,          // radians between successive control-polygon edges
   minTurnRadius: 8,      // m; tighter sampled curvature anywhere is a hairpin, reject
 
   ports: function () {
-    var a = Track.portReach;
+    var a = Track.gridStep;
     return { sw: Vec.make(-a, 0, -a), ne: Vec.make(a, 0, a), se: Vec.make(a, 0, -a), nw: Vec.make(-a, 0, a) };
   },
 
-  // Points sweeping from angle a0 to a1 around the origin, one per sector.
-  lobePoints: function (rnd, a0, a1) {
-    var pts = [], count = Track.pointsPerLobe, span = (a1 - a0) / count;
-    var r = Track.innerRadius + rnd() * (Track.outerRadius - Track.innerRadius);
-    for (var k = 0; k < count; k++) {
-      var t = a0 + (k + 0.15 + rnd() * 0.7) * span;
-      r = Math.min(Track.outerRadius, Math.max(Track.innerRadius, r + (rnd() - 0.5) * 2 * Track.radiusStep));
-      pts.push(Vec.make(r * Math.cos(t), 0, r * Math.sin(t)));
-    }
-    return pts;
+  cellPoint: function (c) {
+    return Vec.make(c[0] * Track.gridStep, 0, c[1] * Track.gridStep);
   },
 
-  // SW -> NE (ground), east lobe clockwise, SE -> NW (bridge), west lobe counterclockwise, back to SW.
+  // Every lattice cell except the bridge center and the four port cells.
+  freeCells: function () {
+    var cells = [], h = Track.gridHalf;
+    for (var col = -h; col <= h; col++) {
+      for (var row = -h; row <= h; row++) {
+        if (Math.abs(col) <= 1 && Math.abs(row) <= 1 && Math.abs(col) === Math.abs(row)) continue;
+        cells.push([col, row]);
+      }
+    }
+    return cells;
+  },
+
+  // A random subset of the cells, pickFraction of them.
+  pickCells: function (rnd, cells) {
+    var pool = cells.slice(), out = [], want = Math.round(cells.length * Track.pickFraction);
+    while (out.length < want) out.push(pool.splice(Math.floor(rnd() * pool.length), 1)[0]);
+    return out;
+  },
+
+  planar: function (a, b) {
+    var dx = a.x - b.x, dz = a.z - b.z;
+    return Math.sqrt(dx * dx + dz * dz);
+  },
+
+  // Closed tour through the free points and the legs. Each leg is a pair that must stay
+  // adjacent in the tour, in either direction. Greedy nearest neighbor from the first leg,
+  // crossing a leg as a unit when its near end is reached, then 2-opt that never reverses
+  // across a leg edge.
+  spanningTour: function (legs, free) {
+    var tour = legs[0].slice(), left = free.slice();
+    var pending = legs.slice(1);
+    var cur = tour[tour.length - 1];
+    while (left.length || pending.length) {
+      var best = null, bestD = Infinity;
+      left.forEach(function (p, i) { var d = Track.planar(cur, p); if (d < bestD) { bestD = d; best = { free: i }; } });
+      pending.forEach(function (leg, i) {
+        leg.forEach(function (p, end) { var d = Track.planar(cur, p); if (d < bestD) { bestD = d; best = { leg: i, end: end }; } });
+      });
+      if (best.leg !== undefined) {
+        var leg = pending.splice(best.leg, 1)[0];
+        var ordered = best.end === 0 ? leg : [leg[1], leg[0]];
+        tour.push(ordered[0], ordered[1]);
+      } else {
+        tour.push(left.splice(best.free, 1)[0]);
+      }
+      cur = tour[tour.length - 1];
+    }
+    return Track.twoOpt(tour, legs);
+  },
+
+  twoOpt: function (tour, legs) {
+    var n = tour.length;
+    var fixed = function (a, b) {
+      return legs.some(function (leg) { return (leg[0] === a && leg[1] === b) || (leg[0] === b && leg[1] === a); });
+    };
+    var improved = true;
+    while (improved) {
+      improved = false;
+      for (var a = 0; a < n - 1; a++) {
+        for (var b = a + 2; b < n; b++) {
+          var a1 = tour[a + 1], b1 = tour[(b + 1) % n];
+          if (a === 0 && b === n - 1) continue;
+          if (fixed(tour[a], a1) || fixed(tour[b], b1)) continue;
+          var before = Track.planar(tour[a], a1) + Track.planar(tour[b], b1);
+          var after = Track.planar(tour[a], tour[b]) + Track.planar(a1, b1);
+          if (after >= before - 1e-9) continue;
+          tour = tour.slice(0, a + 1).concat(tour.slice(a + 1, b + 1).reverse(), tour.slice(b + 1));
+          improved = true;
+        }
+      }
+    }
+    return tour;
+  },
+
   randomControlPoints: function (rnd) {
-    var p = Track.ports(), h = Track.lobeHalfAngle;
-    var east = Track.lobePoints(rnd, h, -h);
-    var west = Track.lobePoints(rnd, Math.PI - h, Math.PI + h);
-    return [p.sw, p.ne].concat(east, [p.se, p.nw], west);
+    var p = Track.ports();
+    var free = Track.pickCells(rnd, Track.freeCells()).map(Track.cellPoint);
+    return Track.spanningTour([[p.sw, p.ne], [p.se, p.nw]], free);
   },
 
   turnsOk: function (cp) {
@@ -55,7 +116,7 @@ var Track = {
 
   // Keep generating until a loop has at least one clean overpass and no near-misses.
   generate: function (rnd) {
-    for (var attempt = 0; attempt < 500; attempt++) {
+    for (var attempt = 0; attempt < 3000; attempt++) {
       var cp = Track.randomControlPoints(rnd);
       if (!Track.turnsOk(cp)) continue;
       var center = Track.centerline(cp);
@@ -93,7 +154,7 @@ var Track = {
     if (Math.abs(den) < 1e-9) return null;
     var qp = { x: q.x - p.x, z: q.z - p.z };
     var t = (qp.x * s.z - qp.z * s.x) / den, u = (qp.x * r.z - qp.z * r.x) / den;
-    if (t < 0 || t > 1 || u < 0 || u > 1) return null;
+    if (t < 0 || t >= 1 || u < 0 || u >= 1) return null;  // half-open so a hit on a shared sample counts once
     return { t: t, u: u };
   },
 

@@ -9,7 +9,7 @@ Camera.prototype.reset = function () {
   this.target = Vec.make(0, 0, 0);
   this.yaw = 0.6;
   this.pitch = 1.05;
-  this.dist = 380;
+  this.dist = 950;
   this.fov = 1.1;
 };
 
@@ -44,7 +44,7 @@ Camera.prototype.orbit = function (dx, dy) {
 };
 
 Camera.prototype.zoom = function (factor) {
-  this.dist = Math.min(800, Math.max(8, this.dist * factor));
+  this.dist = Math.min(1200, Math.max(8, this.dist * factor));
 };
 
 // Pan along the ground relative to the current view heading.

@@ -13,7 +13,7 @@ var Scene = {
       var kerbColor = (i % 2 === 0) ? '#dd3333' : '#eeeeee';
       polys.push({ pts: [kerb[i].left, kerb[j].left, road[j].left, road[i].left], color: kerbColor, ground: true });
       polys.push({ pts: [road[i].right, road[j].right, kerb[j].right, kerb[i].right], color: kerbColor, ground: true });
-      var asphalt = (i % 2 === 0) ? '#4a4d52' : '#4d5055';
+      var asphalt = (i % 2 === 0) ? '#484b50' : '#4c4f54';
       polys.push({ pts: [road[i].left, road[j].left, road[j].right, road[i].right], color: asphalt, ground: true });
       polys.push.apply(polys, Scene.bridgePolys(center, kerb, i, j));
     }
@@ -43,9 +43,12 @@ var Scene = {
     var raised = Math.min(center[i].y, center[j].y) > 0.6;
     if (!raised) return [];
     var deck = 1.0, drop = Vec.make(0, -deck, 0);
+    var rail = Vec.make(0, 0.9, 0), railColor = (i % 2 === 0) ? '#d7dbe0' : '#c3c8ce';
     var polys = [
       { pts: [kerb[i].left, kerb[j].left, Vec.add(kerb[j].left, drop), Vec.add(kerb[i].left, drop)], color: '#7a7f86' },
-      { pts: [kerb[j].right, kerb[i].right, Vec.add(kerb[i].right, drop), Vec.add(kerb[j].right, drop)], color: '#7a7f86' }
+      { pts: [kerb[j].right, kerb[i].right, Vec.add(kerb[i].right, drop), Vec.add(kerb[j].right, drop)], color: '#7a7f86' },
+      { pts: [kerb[i].left, kerb[j].left, Vec.add(kerb[j].left, rail), Vec.add(kerb[i].left, rail)], color: railColor },
+      { pts: [kerb[j].right, kerb[i].right, Vec.add(kerb[i].right, rail), Vec.add(kerb[j].right, rail)], color: railColor }
     ];
     if (i % 4 === 0) polys.push.apply(polys, Scene.pillar(center[i], center[i].y - deck));
     return polys;
@@ -83,31 +86,40 @@ var Scene = {
     var xs = center.map(function (p) { return p.x; }), zs = center.map(function (p) { return p.z; });
     var x0 = Math.min.apply(null, xs) - 30, x1 = Math.max.apply(null, xs) + 30;
     var z0 = Math.min.apply(null, zs) - 30, z1 = Math.max.apply(null, zs) + 30;
-    for (var k = 0; k < 140; k++) {
+    for (var k = 0; k < 360; k++) {
       var p = Vec.make(x0 + rnd() * (x1 - x0), 0, z0 + rnd() * (z1 - z0));
       var tooClose = center.some(function (c) {
         var d = Vec.sub(c, p);
         return Math.sqrt(d.x * d.x + d.z * d.z) < Track.width + 3;
       });
       if (tooClose) continue;
-      out.push({ pos: p, h: 5 + rnd() * 4, r: 2 + rnd() * 1.5 });
+      out.push({ pos: p, h: 6 + rnd() * 5, r: 2.2 + rnd() * 1.8, color: (rnd() < 0.5) ? '#2f7d33' : '#3c8f3a' });
     }
     return out;
   },
 
-  // A tree is a brown trunk box and a green cone made of triangles.
+  // A tree is a trunk box under two stacked foliage cones.
   treePolys: function (t) {
-    var polys = [], sides = 6, p = t.pos;
-    var top = Vec.make(p.x, t.h, p.z), trunkTop = t.h * 0.3;
-    for (var s = 0; s < sides; s++) {
-      var a0 = (s / sides) * Math.PI * 2, a1 = ((s + 1) / sides) * Math.PI * 2;
-      var b0 = Vec.make(p.x + Math.cos(a0) * t.r, trunkTop, p.z + Math.sin(a0) * t.r);
-      var b1 = Vec.make(p.x + Math.cos(a1) * t.r, trunkTop, p.z + Math.sin(a1) * t.r);
-      polys.push({ pts: [b0, b1, top], color: (s % 2 === 0) ? '#2e7d32' : '#388e3c' });
-      var tr = t.r * 0.2;
+    var polys = [], sides = 7, p = t.pos, trunkTop = t.h * 0.25;
+    polys.push.apply(polys, Scene.cone(p, trunkTop, t.h * 0.7, t.r, sides, t.color));
+    polys.push.apply(polys, Scene.cone(p, t.h * 0.5, t.h, t.r * 0.72, sides, t.color));
+    var tr = t.r * 0.18;
+    for (var s = 0; s < 4; s++) {
+      var a0 = (s / 4) * Math.PI * 2, a1 = ((s + 1) / 4) * Math.PI * 2;
       var t0 = Vec.make(p.x + Math.cos(a0) * tr, 0, p.z + Math.sin(a0) * tr);
       var t1 = Vec.make(p.x + Math.cos(a1) * tr, 0, p.z + Math.sin(a1) * tr);
       polys.push({ pts: [t0, t1, Vec.add(t1, Vec.make(0, trunkTop, 0)), Vec.add(t0, Vec.make(0, trunkTop, 0))], color: '#5d4037' });
+    }
+    return polys;
+  },
+
+  cone: function (p, base, top, r, sides, color) {
+    var polys = [], apex = Vec.make(p.x, top, p.z);
+    for (var s = 0; s < sides; s++) {
+      var a0 = (s / sides) * Math.PI * 2, a1 = ((s + 1) / sides) * Math.PI * 2;
+      var b0 = Vec.make(p.x + Math.cos(a0) * r, base, p.z + Math.sin(a0) * r);
+      var b1 = Vec.make(p.x + Math.cos(a1) * r, base, p.z + Math.sin(a1) * r);
+      polys.push({ pts: [b0, b1, apex], color: color });
     }
     return polys;
   },
@@ -123,7 +135,7 @@ var Scene = {
 
   // Five faces (no bottom) of a box in car-local coords: f forward, s left, h up.
   box: function (P, f0, f1, s0, s1, h0, h1, color) {
-    var top = Scene.shade(color, 1.15), side = color, end = Scene.shade(color, 0.75);
+    var top = color, side = color, end = color;
     return [
       { pts: [P(f1, s0, h1), P(f1, s1, h1), P(f0, s1, h1), P(f0, s0, h1)], color: top },
       { pts: [P(f1, s0, h0), P(f1, s1, h0), P(f1, s1, h1), P(f1, s0, h1)], color: end },
@@ -134,9 +146,8 @@ var Scene = {
   },
 
   // Loft a closed hull through cross-sections {f, w, h0, h1} (half-width w, floor h0, roof h1).
-  // Top faces are lit, sides flat, end caps dark.
   loft: function (P, sections, color) {
-    var top = Scene.shade(color, 1.15), end = Scene.shade(color, 0.7), polys = [];
+    var top = color, end = color, polys = [];
     for (var i = 0; i < sections.length - 1; i++) {
       var a = sections[i], b = sections[i + 1];
       polys.push({ pts: [P(a.f, -a.w, a.h1), P(a.f, a.w, a.h1), P(b.f, b.w, b.h1), P(b.f, -b.w, b.h1)], color: top });
@@ -173,8 +184,9 @@ var Scene = {
       S(-1.7, 0.7, 0.78, 0.86)    // engine window slope
     ], glass);
 
+    var shadow = { pts: [P(2.4, -1.2, 0), P(2.4, 1.2, 0), P(-2.7, 1.2, 0), P(-2.7, -1.2, 0)], color: '#34373c', ground: true, lift: 0.015 };
     var polys = [].concat(
-      hull, cabin,
+      [shadow], hull, cabin,
       B(-2.6, -2.3, -1.0, 1.0, 0.08, 0.3, paint.roof),      // diffuser
       B(-2.56, -2.45, 0.5, 0.95, 0.5, 0.7, '#ff3d00'),       // tail lights
       B(-2.56, -2.45, -0.95, -0.5, 0.5, 0.7, '#ff3d00')
