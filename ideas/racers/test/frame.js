@@ -47,6 +47,8 @@ var rnd = Rng.make(seed), track = Track.build(rnd), scenery = Scene.build(track,
 var cam = new Camera(W, H); cam.dist = dist; if (process.argv[5]) cam.pitch = +process.argv[5];
 if (follow) { var lead = Track.at(track, 0).pos; cam.target = Vec.make(lead.x, lead.y + 1, lead.z); }
 var cars = Cars.field();
+Render.setTime(+(process.argv[6] || 0));
+Render.lamps = cars.reduce(function (lamps, car) { return lamps.concat(Cars.lamps(car, track)); }, []);
 var polys = scenery.slice();
 cars.forEach(function (c) { polys.push.apply(polys, Cars.polys(c, track)); });
 Render.draw(ctx, cam, polys);

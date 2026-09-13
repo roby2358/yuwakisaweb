@@ -9,6 +9,58 @@ var Render = {
   light: Vec.norm(Vec.make(0.45, 1, 0.3)),
   ambient: 0.4,
   skyBands: 96,
+  daylight: 1,
+  headlights: 0,
+  lamps: [],
+
+  // A complete noon -> dusk -> midnight -> dawn -> noon cycle lasts five minutes.
+  setTime: function (seconds) {
+    var sun = Math.cos(seconds * Math.PI * 2 / 300);
+    var t = Math.max(0, Math.min(1, (sun + 0.25) / 0.75));
+    Render.daylight = t * t * (3 - 2 * t);
+    Render.headlights = 1 - Render.daylight;
+    var dusk = Math.max(0, 1 - Math.abs(sun - 0.1) / 0.4);
+    Render.skyTop = Render.hex(Render.mix([8, 14, 32], [74, 138, 214], Render.daylight));
+    var horizon = Render.mix([22, 30, 53], [217, 232, 246], Render.daylight);
+    Render.skyHorizon = Render.hex(Render.mix(horizon, [214, 126, 91], dusk * 0.65));
+    Render.grass = Render.hex(Render.mix([17, 32, 27], [90, 158, 63], Render.daylight));
+  },
+
+  // Twin forward cones illuminate surfaces near the cars, including elevated road decks.
+  lampStrength: function (p) {
+    if (Render.headlights < 0.01) return 0;
+    var total = 0;
+    for (var i = 0; i < Render.lamps.length; i++) {
+      var lamp = Render.lamps[i], delta = Vec.sub(p, lamp.pos);
+      var forward = Vec.dot(delta, lamp.dir);
+      if (forward < 0 || forward > 85) continue;
+      var sideways = Math.abs(Vec.dot(delta, lamp.side));
+      var width = 1.8 + forward * 0.20;
+      var vertical = Math.abs(delta.y - lamp.dir.y * forward);
+      if (sideways >= width || vertical > 6) continue;
+      var edge = 1 - sideways / width;
+      total += edge * edge * Math.pow(1 - forward / 85, 1.4) * (1 - vertical / 6);
+    }
+    return Math.min(1, total) * Render.headlights;
+  },
+
+  // Only subdivide nearby road tiles at night, keeping the extra rendering work local.
+  lightTiles: function (poly) {
+    if (!poly.ground || poly.pts.length !== 4 || Render.headlights < 0.01) return [poly];
+    var p = poly.pts, center = Vec.scale(Vec.add(Vec.add(p[0], p[1]), Vec.add(p[2], p[3])), 0.25);
+    if (!Render.lamps.some(function (lamp) { return Vec.len(Vec.sub(center, lamp.pos)) < 115; })) return [poly];
+    var rows = Math.min(24, Math.ceil(Math.max(Vec.len(Vec.sub(p[1], p[0])), Vec.len(Vec.sub(p[2], p[3]))) / 5));
+    var cols = Math.min(12, Math.ceil(Math.max(Vec.len(Vec.sub(p[3], p[0])), Vec.len(Vec.sub(p[2], p[1]))) / 4));
+    if (rows * cols <= 1) return [poly];
+    function point(u, v) { return Vec.lerp(Vec.lerp(p[0], p[1], u), Vec.lerp(p[3], p[2], u), v); }
+    var tiles = [];
+    for (var r = 0; r < rows; r++) for (var c = 0; c < cols; c++) {
+      tiles.push({ pts: [point(r / rows, c / cols), point((r + 1) / rows, c / cols),
+        point((r + 1) / rows, (c + 1) / cols), point(r / rows, (c + 1) / cols)],
+        color: poly.color, ground: true, lift: poly.lift });
+    }
+    return tiles;
+  },
 
   rgb: function (hex) {
     if (hex.length === 4) hex = '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
@@ -37,10 +89,20 @@ var Render = {
   },
 
   // Lambert shading normalised so an upward face keeps its base color.
-  lit: function (pts, color) {
+  lit: function (pts, color, emissive) {
     var n = Render.normal(pts);
     var k = Render.ambient + (1 - Render.ambient) * Math.abs(Vec.dot(n, Render.light)) / Render.light.y;
-    return Render.hex(Render.rgb(color).map(function (v) { return v * k; }));
+    var base = Render.rgb(color);
+    var night = Render.mix([0.15, 0.20, 0.30], [1, 1, 1], Render.daylight);
+    var center = Vec.make(0, 0, 0);
+    if (Render.headlights > 0.01) pts.forEach(function (p) { center = Vec.add(center, p); });
+    var beam = Render.lampStrength(Vec.scale(center, 1 / pts.length));
+    return Render.hex(base.map(function (v, i) {
+      var shaded = v * k * night[i];
+      var illuminated = Math.min(255, v * 1.35 + [90, 83, 57][i]);
+      var glow = emissive ? Render.headlights : 0;
+      return (shaded + (illuminated - shaded) * beam) * (1 - glow) + v * glow;
+    }));
   },
 
   // Flat tiles sort by their farthest vertex so objects resting on them always draw later;
@@ -59,6 +121,11 @@ var Render = {
     var basis = cam.basis();
     Render.drawSky(ctx, cam);
     Render.drawGround(ctx, cam, basis);
+    if (Render.headlights > 0.01) {
+      var tiles = [];
+      polys.forEach(function (poly) { tiles.push.apply(tiles, Render.lightTiles(poly)); });
+      polys = tiles;
+    }
 
     var projected = [];
     for (var i = 0; i < polys.length; i++) {
@@ -70,7 +137,7 @@ var Render = {
       var depth = Render.sortDepth(scr, poly.ground);
       if (scr.every(function (s) { return s.x < -2; }) || scr.every(function (s) { return s.x > cam.width + 2; }) ||
           scr.every(function (s) { return s.y < -2; }) || scr.every(function (s) { return s.y > cam.height + 2; })) continue;
-      projected.push({ scr: scr, depth: depth, color: Render.lit(poly.pts, poly.color) });
+      projected.push({ scr: scr, depth: depth, color: Render.lit(poly.pts, poly.color, poly.emissive) });
     }
     projected.sort(function (a, b) { return b.depth - a.depth; });
 

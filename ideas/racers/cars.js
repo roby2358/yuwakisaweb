@@ -108,6 +108,15 @@ var Cars = {
     return Cars.mesh(pos, at.dir, at.side, Cars.scale, car.paint);
   },
 
+  lamps: function (car, track) {
+    var at = Track.at(track, car.s);
+    return [-0.7, 0.7].map(function (off) {
+      return { pos: Vec.add(Vec.add(at.pos, Vec.scale(at.side, car.lat + off * Cars.scale)),
+        Vec.add(Vec.scale(at.dir, 2.05 * Cars.scale), Vec.make(0, 0.6 * Cars.scale, 0))),
+        dir: at.dir, side: at.side };
+    });
+  },
+
   // Plain molded sports coupe: rounded shoulders, dark glazing and inset silver wheels.
   mesh: function (pos, dir, side, scale, paint) {
     function P(f, s, h) {
@@ -160,9 +169,11 @@ var Cars = {
       face([P(-.79,sideSign*.64,1.115),P(-.89,sideSign*.64,1.10),P(-.89,sideSign*.64,.83),P(-.79,sideSign*.64,.83)],paint.body);
       // Simple swept headlamps on the hood.
       face([P(2.02,sideSign*.64,.632),P(1.97,sideSign*.73,.657),P(1.69,sideSign*.79,.790),P(1.76,sideSign*.68,.762)],'#e8f0ed');
+      polys[polys.length - 1].emissive = true;
       // Dark side skirts emphasize the tucked waist and wide rear haunches.
       face([P(.87,sideSign*.97,.27),P(.44,sideSign*.94,.21),P(-.86,sideSign*1.03,.23),P(-.64,sideSign*.97,.34)],tire);
       box(-2.21,-2.19,sideSign>0?.43:-.72,sideSign>0?.72:-.43,.46,.58,'#c92228');
+      for (var lightFace = polys.length - 5; lightFace < polys.length; lightFace++) polys[lightFace].emissive = true;
     });
     box(2.19,2.205,-.47,.47,.29,.44,glass);
     // A thin splitter and rear diffuser give a planted stance without an oversized wing.

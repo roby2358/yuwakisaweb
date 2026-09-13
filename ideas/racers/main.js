@@ -105,11 +105,15 @@
   }
 
   var last = performance.now();
+  var cycleStart = last;
   function frame(now) {
     var dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     applyKeys();
     stepCars(dt);
+    Render.setTime((now - cycleStart) / 1000);
+    Render.lamps = [];
+    if (Render.headlights > 0.01) cars.forEach(function (car) { Render.lamps.push.apply(Render.lamps, Cars.lamps(car, track)); });
     if (follow) {
       var lead = Track.at(track, cars[0].s).pos;
       cam.target = Vec.make(lead.x, lead.y + 1, lead.z);
