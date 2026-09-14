@@ -4,12 +4,14 @@
 //   cumulative arc length, signed curvature per point, and road width in m.
 var Track = {
   // The bridge is a fixed X at the origin on the diagonals: a ground leg SW->NE and a bridge
-  // leg SE->NW, with its four ports on a grid lattice. A random third of the remaining lattice
-  // cells become control points, and one closed tour threads all of them plus the ports:
-  // nearest-neighbor order, then 2-opt to untangle, with the two legs held as unbreakable edges.
+  // leg SE->NW, with its four ports on a grid lattice. The pigtail is a fixed chain of six cells
+  // stamped in one corner of the lattice: an entry, a ring of four, and an exit that crosses the
+  // entry leg. A random quarter of the remaining cells become control points, and one closed tour
+  // threads all of them plus the fixed chains: nearest-neighbor order, then 2-opt to untangle,
+  // with every chain held as a run of unbreakable edges.
   gridStep: 128,         // m between lattice cells; the ports sit one cell out on the diagonals
-  gridHalf: 3,           // cells from the origin to the edge; the course spans (2*gridHalf+1)^2 cells
-  pickFraction: 1 / 3,   // share of the free cells that become control points
+  gridHalf: 4,           // cells from the origin to the edge; the course spans (2*gridHalf+1)^2 cells
+  pickFraction: 1 / 4,   // share of the free cells that become control points
   maxTurn: 1.9,          // radians between successive control-polygon edges
   minTurnRadius: 8,      // m; tighter sampled curvature anywhere is a hairpin, reject
   minCrossAngle: 0.6,    // radians; shallower crossings make endless overlapping decks
@@ -20,6 +22,10 @@ var Track = {
   laneOffset: 4.5,       // lanes sit this far either side of the centerline
   samplesPerSpan: 10,
 
+  // Pigtail cells in tour order for the NW corner, ring outermost so both ends face the interior;
+  // rotated a quarter turn per orientation.
+  pigtailCells: [[-2, 3], [-3, 3], [-4, 3], [-4, 4], [-3, 4], [-2, 1]],
+
   ports: function () {
     var a = Track.gridStep;
     return { sw: Vec.make(-a, 0, -a), ne: Vec.make(a, 0, a), se: Vec.make(a, 0, -a), nw: Vec.make(-a, 0, a) };
@@ -29,12 +35,36 @@ var Track = {
     return Vec.make(c[0] * Track.gridStep, 0, c[1] * Track.gridStep);
   },
 
-  // Every lattice cell except the bridge center and the four port cells.
-  freeCells: function () {
+  rotateCell: function (c, quarters) {
+    for (var q = 0; q < quarters; q++) c = [-c[1], c[0]];
+    return c;
+  },
+
+  // The pigtail chain in a random one of its four orientations.
+  pigtail: function (rnd) {
+    var quarters = Math.floor(rnd() * 4);
+    return Track.pigtailCells.map(function (c) { return Track.rotateCell(c, quarters); });
+  },
+
+  // Every cell inside the bounding box of the given cells.
+  blockOf: function (cells) {
+    var cols = cells.map(function (c) { return c[0]; }), rows = cells.map(function (c) { return c[1]; });
+    var out = [];
+    for (var col = Math.min.apply(null, cols); col <= Math.max.apply(null, cols); col++) {
+      for (var row = Math.min.apply(null, rows); row <= Math.max.apply(null, rows); row++) out.push([col, row]);
+    }
+    return out;
+  },
+
+  // Every lattice cell except the bridge center, the four port cells and the reserved block.
+  freeCells: function (reserved) {
+    var taken = {};
+    reserved.forEach(function (c) { taken[c.join(',')] = true; });
     var cells = [], h = Track.gridHalf;
     for (var col = -h; col <= h; col++) {
       for (var row = -h; row <= h; row++) {
         if (Math.abs(col) <= 1 && Math.abs(row) <= 1 && Math.abs(col) === Math.abs(row)) continue;
+        if (taken[col + ',' + row]) continue;
         cells.push([col, row]);
       }
     }
@@ -53,36 +83,44 @@ var Track = {
     return Math.sqrt(dx * dx + dz * dz);
   },
 
-  // Closed tour through the free points and the legs. Each leg is a pair that must stay
-  // adjacent in the tour, in either direction. Greedy nearest neighbor from the first leg,
-  // crossing a leg as a unit when its near end is reached, then 2-opt that never reverses
-  // across a leg edge.
-  spanningTour: function (legs, free) {
-    var tour = legs[0].slice(), left = free.slice();
-    var pending = legs.slice(1);
+  // Closed tour through the free points and the chains. Each chain is a run of points that
+  // must stay consecutive in the tour, in either direction. Greedy nearest neighbor from the
+  // first chain, walking a chain as a unit when either end is reached, then 2-opt that never
+  // reverses across a chain edge.
+  spanningTour: function (chains, free) {
+    var tour = chains[0].slice(), left = free.slice();
+    var pending = chains.slice(1);
     var cur = tour[tour.length - 1];
     while (left.length || pending.length) {
       var best = null, bestD = Infinity;
       left.forEach(function (p, i) { var d = Track.planar(cur, p); if (d < bestD) { bestD = d; best = { free: i }; } });
-      pending.forEach(function (leg, i) {
-        leg.forEach(function (p, end) { var d = Track.planar(cur, p); if (d < bestD) { bestD = d; best = { leg: i, end: end }; } });
+      pending.forEach(function (chain, i) {
+        [chain[0], chain[chain.length - 1]].forEach(function (p, end) {
+          var d = Track.planar(cur, p);
+          if (d < bestD) { bestD = d; best = { chain: i, end: end }; }
+        });
       });
-      if (best.leg !== undefined) {
-        var leg = pending.splice(best.leg, 1)[0];
-        var ordered = best.end === 0 ? leg : [leg[1], leg[0]];
-        tour.push(ordered[0], ordered[1]);
+      if (best.chain !== undefined) {
+        var chain = pending.splice(best.chain, 1)[0];
+        var ordered = best.end === 0 ? chain : chain.slice().reverse();
+        tour.push.apply(tour, ordered);
       } else {
         tour.push(left.splice(best.free, 1)[0]);
       }
       cur = tour[tour.length - 1];
     }
-    return Track.twoOpt(tour, legs);
+    return Track.twoOpt(tour, chains);
   },
 
-  twoOpt: function (tour, legs) {
+  twoOpt: function (tour, chains) {
     var n = tour.length;
     var fixed = function (a, b) {
-      return legs.some(function (leg) { return (leg[0] === a && leg[1] === b) || (leg[0] === b && leg[1] === a); });
+      return chains.some(function (chain) {
+        for (var k = 0; k + 1 < chain.length; k++) {
+          if ((chain[k] === a && chain[k + 1] === b) || (chain[k] === b && chain[k + 1] === a)) return true;
+        }
+        return false;
+      });
     };
     var improved = true;
     while (improved) {
@@ -105,8 +143,9 @@ var Track = {
 
   randomControlPoints: function (rnd) {
     var p = Track.ports();
-    var free = Track.pickCells(rnd, Track.freeCells()).map(Track.cellPoint);
-    return Track.spanningTour([[p.sw, p.ne], [p.se, p.nw]], free);
+    var pig = Track.pigtail(rnd);
+    var free = Track.pickCells(rnd, Track.freeCells(Track.blockOf(pig))).map(Track.cellPoint);
+    return Track.spanningTour([[p.sw, p.ne], [p.se, p.nw], pig.map(Track.cellPoint)], free);
   },
 
   turnsOk: function (cp) {
@@ -128,7 +167,7 @@ var Track = {
     var curv = Track.curvature(center);
     if (curv.some(function (k) { return Math.abs(k) > 1 / Track.minTurnRadius; })) return { reject: 'curvature' };
     var crossings = Track.crossings(center, arc);
-    if (crossings.length !== 1) return { reject: 'crossings=' + crossings.length };
+    if (crossings.length !== 2) return { reject: 'crossings=' + crossings.length };
     if (crossings.some(function (c) { return c.angle < Track.minCrossAngle; })) return { reject: 'crossAngle' };
     Track.elevate(center, arc, crossings);
     if (!Track.clearanceOk(center, arc)) return { reject: 'clearance' };
@@ -136,7 +175,7 @@ var Track = {
     return { track: { center: center, road: road, arc: arc, curv: curv, width: Track.width } };
   },
 
-  // Keep trying until a loop has exactly one clean overpass and no near-misses.
+  // Keep trying until a loop has exactly two clean overpasses (the X and the pigtail) and no near-misses.
   build: function (rnd) {
     for (var attempt = 0; attempt < Track.attempts; attempt++) {
       var got = Track.attempt(rnd);
