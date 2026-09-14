@@ -1,5 +1,6 @@
 // Renders one frame headlessly to test/frame.png using a scanline stub of the canvas API.
-// Usage: node test/frame.js [seed] [dist] [follow] [pitch]
+// Usage: node test/frame.js [seed] [dist] [follow|jump] [pitch] [time]
+// 'follow' aims at the start line; 'jump' aims at the lip with the red car in the air.
 var fs = require('fs'), zlib = require('zlib'), path = require('path');
 require('./load');
 
@@ -45,8 +46,14 @@ var pathPts = [], ctx = {
 
 var rnd = Rng.make(seed), track = Track.build(rnd), scenery = Scene.build(track, rnd);
 var cam = new Camera(W, H); cam.dist = dist; if (process.argv[5]) cam.pitch = +process.argv[5];
-if (follow) { var lead = Track.at(track, 0).pos; cam.target = Vec.make(lead.x, lead.y + 1, lead.z); }
 var cars = Cars.field();
+var jump = process.argv[4] === 'jump';
+if (jump) {
+  cars[0].s = track.jump.take + 15;
+  cars[0].flight = { y: track.jump.height + 1.5, vy: cars[0].v * track.jump.slope };
+}
+var aimS = jump ? track.jump.take : 0;
+if (follow || jump) { var lead = Track.at(track, aimS).pos; cam.target = Vec.make(lead.x, lead.y + 1, lead.z); }
 Render.setTime(+(process.argv[6] || 0));
 Render.lamps = cars.reduce(function (lamps, car) { return lamps.concat(Cars.lamps(car, track)); }, []);
 var polys = scenery.slice();

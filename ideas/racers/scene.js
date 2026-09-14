@@ -7,6 +7,7 @@ var Scene = {
     var polys = [];
 
     for (var i = 0; i < n; i++) {
+      if (i >= track.jump.takeIndex && i < track.jump.landIndex) continue;
       var j = (i + 1) % n;
       var kerbColor = (i % 2 === 0) ? '#dd3333' : '#eeeeee';
       polys.push({ pts: [kerb[i].left, kerb[j].left, road[j].left, road[i].left], color: kerbColor, ground: true });
@@ -15,7 +16,8 @@ var Scene = {
       polys.push({ pts: [road[i].left, road[j].left, road[j].right, road[i].right], color: asphalt, ground: true });
       polys.push.apply(polys, Scene.bridgePolys(center, kerb, i, j));
     }
-    polys.push.apply(polys, Scene.slots(center));
+    polys.push.apply(polys, Scene.slots(track));
+    polys.push.apply(polys, Scene.lip(kerb, track.jump.takeIndex));
 
     polys.push.apply(polys, Scene.startLine(road));
     Scene.trees(center, rnd).forEach(function (t) { polys.push.apply(polys, Scene.treePolys(t)); });
@@ -24,16 +26,23 @@ var Scene = {
   },
 
   // A dark slot groove down the middle of each lane, like a toy slot-car track.
-  slots: function (center) {
-    var polys = [], n = center.length, w = 0.25;
+  slots: function (track) {
+    var center = track.center, polys = [], n = center.length, w = 0.25;
     [-Track.laneOffset, Track.laneOffset].forEach(function (off) {
       var inner = Track.edges(center, off - w), outer = Track.edges(center, off + w);
       for (var i = 0; i < n; i++) {
+        if (i >= track.jump.takeIndex && i < track.jump.landIndex) continue;
         var j = (i + 1) % n;
         polys.push({ pts: [outer[i].left, outer[j].left, inner[j].left, inner[i].left], color: '#2b2d31', ground: true, lift: 0.01 });
       }
     });
     return polys;
+  },
+
+  // The ramp's end face, from the lip down to the ground.
+  lip: function (kerb, takeIndex) {
+    var l = kerb[takeIndex].left, r = kerb[takeIndex].right;
+    return [{ pts: [r, l, Vec.make(l.x, 0, l.z), Vec.make(r.x, 0, r.z)], color: '#6d7279' }];
   },
 
   // Raised segments get a deck skirt on each side and a pillar every few samples.

@@ -1,14 +1,17 @@
 // Track: a closed Catmull-Rom loop through control points (with elevation), sampled into segments
 // and parameterized by arc length. Track.build returns the track record every other module reads:
-//   { center, road, arc, curv, width } — sampled centerline points, edge records per point,
-//   cumulative arc length, signed curvature per point, and road width in m.
+//   { center, road, arc, curv, width, jump } — sampled centerline points, edge records per point,
+//   cumulative arc length, signed curvature per point, road width in m, and the jump record
+//   { takeIndex, landIndex, take, land, height, slope }: the gap in the road runs from sample
+//   takeIndex to landIndex (arc lengths take to land), off a lip `height` m up a ramp of `slope`.
 var Track = {
   // The bridge is a fixed X at the origin on the diagonals: a ground leg SW->NE and a bridge
   // leg SE->NW, with its four ports on a grid lattice. The pigtail is a fixed chain of six cells
   // stamped in one corner of the lattice: an entry, a ring of four, and an exit that crosses the
   // entry leg. A random quarter of the remaining cells become control points, and one closed tour
   // threads all of them plus the fixed chains: nearest-neighbor order, then 2-opt to untangle,
-  // with every chain held as a run of unbreakable edges.
+  // with every chain held as a run of unbreakable edges. The jump is found, not stamped: the
+  // straight run of three free points farthest from both crossings gets a ramp and a gap.
   gridStep: 128,         // m between lattice cells; the ports sit one cell out on the diagonals
   gridHalf: 4,           // cells from the origin to the edge; the course spans (2*gridHalf+1)^2 cells
   pickFraction: 1 / 4,   // share of the free cells that become control points
@@ -21,6 +24,10 @@ var Track = {
   width: 18,
   laneOffset: 4.5,       // lanes sit this far either side of the centerline
   samplesPerSpan: 10,
+  rampSamples: 4,        // centerline segments climbing to the lip
+  gapLength: 50,         // m of road cut out between lip and landing, rounded up to a sample
+  rampHeight: 5,         // m, lip height above the landing
+  jumpClear: 130,        // m the jump keeps from every crossing along the track
 
   // Pigtail cells in tour order for the NW corner, ring outermost so both ends face the interior;
   // rotated a quarter turn per orientation.
@@ -141,11 +148,52 @@ var Track = {
     return tour;
   },
 
+  // The tour and the fixed chains it threads: the X's two legs and the pigtail.
   randomControlPoints: function (rnd) {
-    var p = Track.ports();
-    var pig = Track.pigtail(rnd);
+    var p = Track.ports(), pig = Track.pigtail(rnd);
+    var chains = [[p.sw, p.ne], [p.se, p.nw], pig.map(Track.cellPoint)];
     var free = Track.pickCells(rnd, Track.freeCells(Track.blockOf(pig))).map(Track.cellPoint);
-    return Track.spanningTour([[p.sw, p.ne], [p.se, p.nw], pig.map(Track.cellPoint)], free);
+    return { cp: Track.spanningTour(chains, free), chains: chains };
+  },
+
+  // Indices of control points that sit between two others in a straight line, none of them fixed.
+  straights: function (cp, chains) {
+    var fixed = [];
+    chains.forEach(function (c) { fixed.push.apply(fixed, c); });
+    var n = cp.length, out = [];
+    for (var i = 0; i < n; i++) {
+      var a = cp[(i - 1 + n) % n], b = cp[i], c = cp[(i + 1) % n];
+      if (fixed.indexOf(a) >= 0 || fixed.indexOf(b) >= 0 || fixed.indexOf(c) >= 0) continue;
+      var u = Vec.sub(b, a), v = Vec.sub(c, b);
+      if (Math.abs(u.x * v.z - u.z * v.x) > 1e-6 || u.x * v.x + u.z * v.z <= 0) continue;
+      out.push(i);
+    }
+    return out;
+  },
+
+  // Distance along the loop between two arc lengths, the short way round.
+  around: function (total, a, b) {
+    var d = Math.abs(a - b) % total;
+    return Math.min(d, total - d);
+  },
+
+  // The jump centered on the straight farthest from every crossing, or null when none has room.
+  jump: function (cp, chains, arc, crossings) {
+    var n = arc.cum.length - 1, best = null, bestRoom = Track.jumpClear;
+    Track.straights(cp, chains).forEach(function (i) {
+      var mid = i * Track.samplesPerSpan, takeIndex = mid - 1, landIndex = takeIndex + 1;
+      while (landIndex < n && arc.cum[landIndex] - arc.cum[takeIndex] < Track.gapLength) landIndex++;
+      if (takeIndex - Track.rampSamples < 0 || landIndex >= n) return;
+      var room = Infinity;
+      crossings.forEach(function (c) {
+        room = Math.min(room, Track.around(arc.total, arc.cum[mid], c.sUnder), Track.around(arc.total, arc.cum[mid], c.sOver));
+      });
+      if (room <= bestRoom) return;
+      bestRoom = room;
+      best = { takeIndex: takeIndex, landIndex: landIndex, take: arc.cum[takeIndex], land: arc.cum[landIndex],
+        height: Track.rampHeight, slope: Track.rampHeight / (arc.cum[takeIndex] - arc.cum[takeIndex - Track.rampSamples]) };
+    });
+    return best;
   },
 
   turnsOk: function (cp) {
@@ -160,7 +208,7 @@ var Track = {
 
   // One generation try: the finished centerline, or the reason it was rejected.
   attempt: function (rnd) {
-    var cp = Track.randomControlPoints(rnd);
+    var tour = Track.randomControlPoints(rnd), cp = tour.cp;
     if (!Track.turnsOk(cp)) return { reject: 'turn' };
     var center = Track.centerline(cp);
     var arc = Track.arcLength(center);
@@ -169,13 +217,15 @@ var Track = {
     var crossings = Track.crossings(center, arc);
     if (crossings.length !== 2) return { reject: 'crossings=' + crossings.length };
     if (crossings.some(function (c) { return c.angle < Track.minCrossAngle; })) return { reject: 'crossAngle' };
-    Track.elevate(center, arc, crossings);
+    var jump = Track.jump(cp, tour.chains, arc, crossings);
+    if (!jump) return { reject: 'nojump' };
+    Track.elevate(center, arc, crossings, jump);
     if (!Track.clearanceOk(center, arc)) return { reject: 'clearance' };
     var road = Track.edges(center, Track.width / 2);
-    return { track: { center: center, road: road, arc: arc, curv: curv, width: Track.width } };
+    return { track: { center: center, road: road, arc: arc, curv: curv, width: Track.width, jump: jump } };
   },
 
-  // Keep trying until a loop has exactly two clean overpasses (the X and the pigtail) and no near-misses.
+  // Keep trying until a loop has exactly two clean overpasses (the X and the pigtail), a jump, and no near-misses.
   build: function (rnd) {
     for (var attempt = 0; attempt < Track.attempts; attempt++) {
       var got = Track.attempt(rnd);
@@ -210,17 +260,19 @@ var Track = {
     return { t: t, u: u };
   },
 
-  // Raise a smooth hump centered on the later pass of each crossing.
-  elevate: function (center, arc, crossings) {
+  // Raise a smooth hump centered on the later pass of each crossing, and the ramp up to the lip.
+  elevate: function (center, arc, crossings, jump) {
     center.forEach(function (p, i) {
       var y = 0;
       crossings.forEach(function (c) {
-        var d = Math.abs(arc.cum[i] - c.sOver);
-        d = Math.min(d, arc.total - d);
+        var d = Track.around(arc.total, arc.cum[i], c.sOver);
         if (d < Track.bridgeHalfSpan) y = Math.max(y, Track.bridgeHeight * (0.5 + 0.5 * Math.cos(Math.PI * d / Track.bridgeHalfSpan)));
       });
       p.y = y;
     });
+    for (var k = 0; k <= Track.rampSamples; k++) {
+      center[jump.takeIndex - Track.rampSamples + k].y = jump.height * k / Track.rampSamples;
+    }
   },
 
   // Any two points far apart along the track but close in the plane must differ in height.
@@ -288,6 +340,17 @@ var Track = {
       var len = (Math.sqrt(a.x * a.x + a.z * a.z) + Math.sqrt(b.x * b.x + b.z * b.z)) / 2;
       return -angle / len;
     });
+  },
+
+  // Arc length from s0 forward to s1, in [0, total).
+  ahead: function (track, s0, s1) {
+    var total = track.arc.total;
+    return (((s1 - s0) % total) + total) % total;
+  },
+
+  // Whether arc length s lies in the jump's gap, past the lip and short of the landing.
+  inGap: function (track, s) {
+    return Track.ahead(track, track.jump.take, s) < track.jump.land - track.jump.take;
   },
 
   // Segment index i, next index j and fraction f along it at arc length s (wraps the loop).

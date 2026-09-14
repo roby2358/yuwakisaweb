@@ -1,6 +1,7 @@
 // Cars: arc-length position s (m), speed v (m/s), lateral offset lat (m, + = left).
-// Each car chases its cruise speed but brakes for corners it sees ahead. A slowly drifting
-// judgment factor makes it misjudge; exceeding the corner limit triggers a slide.
+// Each car chases its cruise speed but brakes for corners it sees ahead and speeds up for the
+// jump. A slowly drifting judgment factor makes it misjudge; exceeding the corner limit triggers
+// a slide, and leaving the lip too slow drops the car into the gap for a hard landing.
 var Cars = {
   scale: 2.8,        // toy-car proportion so cars read at track scale
   length: 4.4 * 2.8,
@@ -20,9 +21,13 @@ var Cars = {
   shove: 6,          // lateral m/s imparted by a bump
   latSpring: 3,      // pull back toward the lane center
   latDamp: 2.5,
+  jumpGravity: 100,  // m/s^2; toy-scale gravity keeps a hop near the landing
+  jumpMargin: 1.15,  // cars aim this far above the speed that just clears the gap
+  shortLoss: 0.4,    // speed kept after landing in the gap
+  landLoss: 0.92,    // speed kept after a clean landing
 
   make: function (s, cruise, lane, paint) {
-    return { s: s, v: cruise, cruise: cruise, lane: lane, lat: lane, latV: 0, judge: 1, sliding: false, paint: paint };
+    return { s: s, v: cruise, cruise: cruise, lane: lane, lat: lane, latV: 0, judge: 1, sliding: false, flight: null, paint: paint };
   },
 
   // The two-car starting field.
@@ -47,16 +52,42 @@ var Cars = {
     return v * car.judge;
   },
 
+  // Speed that just carries a car from the lip to the landing.
+  clearSpeed: function (jump) {
+    return Math.sqrt(Cars.jumpGravity * (jump.land - jump.take) / (2 * jump.slope));
+  },
+
+  // Speed the car drives toward: cruise, held down by corners ahead, held up by the jump ahead.
+  target: function (car, track) {
+    var target = Math.min(car.cruise, Cars.perceivedLimit(car, track));
+    if (Track.ahead(track, car.s, track.jump.take) > Cars.lookahead) return target;
+    return Math.max(target, Cars.clearSpeed(track.jump) * Cars.jumpMargin * car.judge);
+  },
+
   // Ornstein-Uhlenbeck wander around 1.
   driftJudgment: function (car, dt) {
     var noise = (Math.random() * 2 - 1) * Math.sqrt(dt);
     car.judge += (1 - car.judge) * Cars.judgeRate * dt + noise * Cars.judgeSpread * Math.sqrt(2 * Cars.judgeRate);
   },
 
+  // Airborne: height follows gravity while s coasts. Touching down short of the landing
+  // means the car dropped into the gap; it is set on the landing at a fraction of its speed.
+  fly: function (car, dt, track) {
+    car.flight.vy -= Cars.jumpGravity * dt;
+    car.flight.y += car.flight.vy * dt;
+    car.s += car.v * dt;
+    if (car.flight.y > 0) return;
+    car.flight = null;
+    if (!Track.inGap(track, car.s)) { car.v *= Cars.landLoss; return; }
+    car.s = track.jump.land;
+    car.v *= Cars.shortLoss;
+  },
+
   step: function (car, dt, track) {
     Cars.driftJudgment(car, dt);
+    if (car.flight) { Cars.fly(car, dt, track); return; }
     var k = Track.laneCurvature(track, car.s, car.lat);
-    var target = Math.min(car.cruise, Cars.perceivedLimit(car, track));
+    var target = Cars.target(car, track);
     var rate = target < car.v ? Cars.brake : Cars.accel;
     car.v += Math.max(-rate * dt, Math.min(rate * dt, target - car.v));
 
@@ -67,6 +98,7 @@ var Cars = {
     }
 
     car.s += car.v * dt;
+    if (Track.inGap(track, car.s)) car.flight = { y: track.jump.height, vy: car.v * track.jump.slope };
     car.latV += ((car.lane - car.lat) * Cars.latSpring - car.latV * Cars.latDamp) * dt;
     car.lat += car.latV * dt;
     var lim = track.width / 2 - Cars.width / 2;
@@ -102,14 +134,22 @@ var Cars = {
     b.latV += dir * Cars.shove;
   },
 
-  polys: function (car, track) {
+  // Where the car sits in the world: on the road, or in the air at its flight height and pitch.
+  place: function (car, track) {
     var at = Track.at(track, car.s);
+    if (!car.flight) return { pos: at.pos, dir: at.dir, side: at.side };
+    var flat = Vec.norm(Vec.make(at.dir.x, 0, at.dir.z));
+    return { pos: Vec.make(at.pos.x, car.flight.y, at.pos.z), dir: Vec.norm(Vec.make(flat.x, car.flight.vy / car.v, flat.z)), side: at.side };
+  },
+
+  polys: function (car, track) {
+    var at = Cars.place(car, track);
     var pos = Vec.add(at.pos, Vec.scale(at.side, car.lat));
     return Cars.mesh(pos, at.dir, at.side, Cars.scale, car.paint);
   },
 
   lamps: function (car, track) {
-    var at = Track.at(track, car.s);
+    var at = Cars.place(car, track);
     return [-0.7, 0.7].map(function (off) {
       return { pos: Vec.add(Vec.add(at.pos, Vec.scale(at.side, car.lat + off * Cars.scale)),
         Vec.add(Vec.scale(at.dir, 2.05 * Cars.scale), Vec.make(0, 0.6 * Cars.scale, 0))),
