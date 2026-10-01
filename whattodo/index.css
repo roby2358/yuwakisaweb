@@ -44,6 +44,16 @@ h2 {
   font-size: 1.3rem;
 }
 
+h3 {
+  margin: 18px 0 8px;
+  font-size: 1rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+h2 + h3 { margin-top: 0; }
+
 .header { margin-bottom: 28px; }
 .tagline { margin: 0; font-size: 1.1rem; }
 .updated, .muted { color: var(--muted); font-size: 0.92rem; }
