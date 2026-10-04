@@ -1,0 +1,17 @@
+Priority:   40
+Status: ToDo
+ID: wordtells-sqmu
+Created: 2026-10-04T02:15:52Z
+Updated: 2026-10-04T02:15:52Z
+
+Even out wording "tells" in the rampup prep quizzes (cloudflare/quiz.js, cloudformation/quiz.js), so a statement's grade (good/neutral/bad) can't be guessed from its word choice. Statement lengths are already balanced and checked by `node test/quizzes.js`; keep them that way.
+
+Measured 2026-10-04: the number of turns (out of 100) per quiz where each grade's statement contains the words, shown as Cloudflare / CloudFormation:
+- dashboard|console: good 3/4, neutral 36/23, bad 6/6. Mentioning a UI location signals neutral.
+- docs|documentation, common|commonly|often|many teams: these appear almost only in neutral statements.
+- always|never|just|only: good 12/11, neutral 2/2, bad 32/42. Absolute wording signals bad.
+
+To do:
+1. Add a word-tell check to test/quizzes.js. For each tell-word group, count how many turns contain it per grade, and fail when one grade has much more than its share (e.g. more than 2x the average of the other two, with a minimum count so rare words don't trip it).
+2. Rewrite statements so tell words are spread across grades or removed. Neutral stays true but shallow without leaning on UI locations or docs. Bad stays a plausible misconception without leaning on absolutes. Good may use "only" or "always" where that's accurate.
+3. Keep each turn's statements balanced in length (the test enforces this) and keep every statement accurate. One way to parallelize: split each quiz into 25-turn chunks with one rewriter per chunk, then rejoin.

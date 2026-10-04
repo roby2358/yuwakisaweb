@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prep Quiz</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="scorebar">
+    <div class="stat"><span class="label">Turn</span><span id="turn" class="value"></span></div>
+    <div class="stat"><span class="label">Rolling (last <span id="window"></span>)</span><span id="rolling" class="value"></span></div>
+    <div class="stat"><span class="label">Overall</span><span id="overall" class="value"></span></div>
+    <div class="progress"><div id="progress-fill" class="progress-fill"></div></div>
+  </header>
+
+  <main>
+    <section id="play">
+      <h1 id="topic" class="topic"></h1>
+      <p id="hint" class="hint"></p>
+      <div id="statements" class="choices"></div>
+    </section>
+
+    <section id="results" class="hidden">
+      <h1>Done</h1>
+      <p id="final" class="final"></p>
+      <h2 id="missed-heading">Worth another look</h2>
+      <ul id="missed" class="missed"></ul>
+      <button id="restart" class="btn">Start over</button>
+    </section>
+  </main>
+
+  <script src="engine.js"></script>
+</body>
+</html>
