@@ -77,7 +77,7 @@ var QUIZ = { title: "React", turns: [
     bad: "React shallow-compares props before rendering each child; children whose props didn't change are skipped by default." },
   { topic: "Reconciliation",
     good: "Reconciliation diffs the new element tree against the old one, so a different type at the same position remounts that subtree.",
-    neutral: "Reconciliation is the name for React's diffing step, and the Fiber rewrite in React 16 changed how that work is scheduled.",
+    neutral: "Reconciliation runs after every render, and for small and medium component trees it usually finishes well within a single frame.",
     bad: "Reconciliation reads the live DOM back, such as each node's attributes, compares it with the new JSX and patches any difference." },
   { topic: "Index keys",
     good: "Index keys break on inserts and reorders: state and input values stay with the position, not with the item.",
@@ -211,7 +211,7 @@ var QUIZ = { title: "React", turns: [
   // --- Newer hooks ---
   { topic: "useId",
     good: "useId produces an ID that matches between server and client renders, so it safely links a label to an input.",
-    neutral: "useId was added in React 18, and the exact format of the strings it returns has changed between React versions.",
+    neutral: "useId takes no arguments and returns a string, and its exact format isn't something application code should depend on.",
     bad: "useId is a handy key generator for list items, handing out a fresh unique ID for each item as the list renders." },
   { topic: "useSyncExternalStore",
     good: "useSyncExternalStore subscribes to a store outside React and reads a consistent snapshot, avoiding tearing (mismatched UI).",
@@ -223,7 +223,7 @@ var QUIZ = { title: "React", turns: [
     bad: "startTransition runs the update in a Web Worker, which is why the main thread stays free for typing." },
   { topic: "useDeferredValue",
     good: "useDeferredValue lets a slow part of the UI lag a fast-changing value: it renders the stale value first, then catches up in the background.",
-    neutral: "useDeferredValue arrived in React 18 with useTransition and the other concurrent rendering features, not as a separate add-on.",
+    neutral: "useDeferredValue usually sits next to a search box or filter input, wrapping the text the user is typing into that field.",
     bad: "useDeferredValue debounces on a fixed timer, waiting a set number of milliseconds (around 300) after the last change." }
 ,
 
@@ -272,7 +272,7 @@ var QUIZ = { title: "React", turns: [
   // --- Error boundaries, portals, refs ---
   { topic: "Error boundaries",
     good: "Error boundaries are still class components (getDerivedStateFromError or componentDidCatch); react-error-boundary wraps one for you.",
-    neutral: "Error boundaries arrived in React 16; before that, a render error could leave the UI in a corrupted, half-updated state.",
+    neutral: "Error boundaries usually wrap large regions of a page, a sidebar or a feed or a dashboard panel, and show a fallback in their place.",
     bad: "Any function component can act as an error boundary by wrapping its returned JSX in a try/catch, instead of needing a class component." },
   { topic: "What error boundaries miss",
     good: "Boundaries catch errors thrown while rendering below them, but not errors in event handlers or async code like a setTimeout.",
@@ -288,7 +288,7 @@ var QUIZ = { title: "React", turns: [
     bad: "Updating ref.current triggers a rerender, which makes a ref a handy place for values that should show up on screen right away." },
   { topic: "ref as a prop in React 19",
     good: "In React 19 a function component receives ref as a plain prop and can pass it to a DOM node, without wrapping in forwardRef.",
-    neutral: "forwardRef came in React 16.3; it wraps a render function that receives props and a ref as its second argument.",
+    neutral: "forwardRef wraps a render function that receives props and a ref as its second argument; older component libraries use it widely.",
     bad: "React 19 strips ref out of props entirely, so a function component cannot accept one and a parent must use useImperativeHandle." },
   { topic: "Imperative handles",
     good: "useImperativeHandle lets a component expose a small custom API on its ref, like focus() or scrollToTop(), in place of the raw node.",
@@ -297,7 +297,7 @@ var QUIZ = { title: "React", turns: [
   // --- Concurrency and loading ---
   { topic: "Suspense and React.lazy",
     good: "React.lazy loads a component through dynamic import(), and a Suspense boundary above it shows a fallback until the chunk arrives.",
-    neutral: "Suspense shipped in React 16.6 alongside lazy, and its role later grew to cover data fetching in frameworks such as Next.js and Remix.",
+    neutral: "Suspense takes a fallback prop, often a spinner or a skeleton, and a single boundary can sit above several lazy components at once.",
     bad: "React.lazy preloads every lazy component in the background right at startup; Suspense fallbacks show up only on slow network connections." },
   { topic: "Concurrent rendering",
     good: "Concurrent rendering makes render interruptible: React can pause a low-priority startTransition update to handle a keystroke sooner.",
@@ -326,11 +326,11 @@ var QUIZ = { title: "React", turns: [
     bad: "A Redux store is just a context underneath, so every connected component rerenders whenever any part of the store changes." },
   { topic: "Server-state caches",
     good: "TanStack Query treats server data as a keyed cache, handling dedupe, refetch, and staleness instead of copying it to a store.",
-    neutral: "TanStack Query was called React Query before it added adapters for other frameworks such as Vue, Solid, and Svelte.",
+    neutral: "TanStack Query hooks return status flags, isLoading and isError among them, which components use to pick between a spinner and data.",
     bad: "Server data belongs in a global client store, as a query cache cannot share one result across many components at once." },
   { topic: "Derived data",
     good: "Compute values like a filtered list during render from existing state; a stored copy needs syncing and can drift out of date.",
-    neutral: "Derived state is an old term from the class era, when getDerivedStateFromProps let a component copy props into its own state.",
+    neutral: "Derived values show up everywhere in UI code: counts, totals, filtered lists, and labels built from a couple of other fields.",
     bad: "A filtered list belongs in its own state, synced by a useEffect, because computing it in render repeats work on each pass." }
 ,
 
@@ -397,7 +397,7 @@ var QUIZ = { title: "React", turns: [
   // --- Frameworks ---
   { topic: "Next.js App Router",
     good: "In the Next.js App Router, files under app/ are Server Components by default, and a \"use client\" file marks where client code begins.",
-    neutral: "Next.js is built by Vercel; its App Router became stable in Next.js 13.4, released in the middle of 2023.",
+    neutral: "Next.js App Router projects keep routes in an app directory, where each folder maps to a URL segment and holds a page file.",
     bad: "The App Router is a client-side routing add-on for Next.js; pages under app/ run as a plain SPA unless they export getServerSideProps." },
   { topic: "Vite vs Create React App",
     good: "Create React App was deprecated in early 2025; Vite is the usual replacement for a client-only SPA, and frameworks for full apps.",
@@ -445,7 +445,7 @@ var QUIZ = { title: "React", turns: [
     bad: "Class components were removed in React 19, and legacy code needs a rewrite to hooks before the app can upgrade." },
   { topic: "React Native vs React DOM",
     good: "React Native shares the core react package but swaps the renderer, mapping components to native views like View and Text.",
-    neutral: "React Native was released by Facebook in 2015, a couple of years after React itself was open-sourced in 2013.",
+    neutral: "React Native apps use components, props, state, and hooks as web React apps do, and many state libraries work in both places.",
     bad: "React Native runs your React DOM components inside a hidden WebView, which is why div-based code works on phones." },
   { topic: "Document metadata",
     good: "React 19 hoists <title>, <meta>, and <link> rendered anywhere in the tree into the head of the document.",
