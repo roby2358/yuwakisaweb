@@ -4,6 +4,7 @@ Intermediate, conversational familiarity drills. Open `index.html` directly in a
 
 - `cloudflare/`: Cloudflare (DNS, TLS, caching, security, Workers and storage, Zero Trust)
 - `cloudformation/`: AWS CloudFormation (templates, updates and change sets, rollback, protection policies, cross-stack, extensibility, drift, tooling)
+- `react/`: React (JSX and rendering, hooks, performance and architecture, Server Components and React 19, ecosystem)
 
 Every quiz works the same way:
 
@@ -16,6 +17,8 @@ Every quiz works the same way:
 The engine (`quiz.html`, `engine.js`, `styles.css`) lives at the top level. Each quiz is a directory holding only a `quiz.js` that defines `var QUIZ = { title, turns: [{ topic, good, neutral, bad }, ...] }`. `quiz.html?quiz=<dir>` loads `<dir>/quiz.js` with a plain `<script>` tag, so it still works from `file://`. To add a quiz, create a directory with its `quiz.js` and add a `quiz.html?quiz=<dir>` link (text = `QUIZ.title`) to `index.html`.
 
 `node test/quizzes.js` checks every quiz: 100 complete turns, a matching link in `index.html`, and that length gives nothing away. No grade may be the longest or the shortest statement in more than 45% of turns, and in every turn the shortest statement must be at least 60% as long as the longest.
+
+`node test/tells.js [dir ...]` checks that wording gives nothing away either. For each style feature (semicolons, parentheses, "so/because", absolutes like "always", history and naming trivia, "such as", and so on), it counts the turns where each grade's statement shows that feature. It fails when one grade shows a feature at least twice as often as the other two, with an excess of more than 8% of turns. `react/` passes. `cloudflare/` and `cloudformation/` still fail, and their cleanup is pending.
 
 ## Reusable prompt
 
