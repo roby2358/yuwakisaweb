@@ -57,7 +57,7 @@ var QUIZ = { title: "Object-Oriented Programming", turns: [
     bad: "Entities should compare every field in equals: two Customer objects with different addresses can't possibly be the same customer." },
   { topic: "Records and data classes",
     good: "Java records, C# records, and Python dataclasses generate equality from fields, which suits value objects better than entities.",
-    neutral: "Java added records in version 16 in 2021, and C# 9 shipped its own record types a few months before that, in late 2020.",
+    neutral: "Records cut a lot of boilerplate: the constructor, the accessors, and a readable string form come free with the declaration.",
     bad: "Java records are mutable by default. Their generated setters let you update fields, and you add final to lock them down." },
   // --- Immutability ---
   { topic: "Immutability",
@@ -91,7 +91,7 @@ var QUIZ = { title: "Object-Oriented Programming", turns: [
     bad: "Making fields protected hides them from outside code while giving subclasses what they need, so it's the best default for fields." },
   { topic: "Python privacy",
     good: "Python has no enforced private members: a single leading underscore is a convention, and double underscore only mangles the name.",
-    neutral: "Python code often uses leading underscores on attribute names, and the PEP 8 style guide discusses them in its section on naming.",
+    neutral: "Leading underscores show up all over Python classes, and a reader skimming one can spot the internal names at a glance.",
     bad: "Python's double-underscore prefix makes an attribute truly private, with no way for code outside the class to read or write it." },
   // --- Static, self, lifecycle ---
   { topic: "Static vs instance",
@@ -140,7 +140,7 @@ var QUIZ = { title: "Object-Oriented Programming", turns: [
     bad: "Prefer abstract classes over interfaces, as Java and C# let one class extend several abstract classes at once and mix their code." },
   { topic: "Default interface methods",
     good: "Java 8 default methods let an interface grow a method without breaking existing implementers (they still can't hold instance state).",
-    neutral: "Java interfaces are allowed to contain method bodies marked default, and C# 8 added a similar feature for its interfaces.",
+    neutral: "Default methods give an interface method a body, and implementers can override that body or simply leave the default in place.",
     bad: "With Java 8 default methods, interfaces also gained instance fields, and now an interface can do whatever an abstract class can." },
   { topic: "Deep hierarchies",
     good: "In a deep hierarchy, learning what one method does means reading up through every ancestor, and an edit near the root reaches all below.",
@@ -204,7 +204,7 @@ var QUIZ = { title: "Object-Oriented Programming", turns: [
   // --- Variance and typing ---
   { topic: "Covariant return types",
     good: "An override may return a narrower type, like clone() returning Dog. That is safe, since callers expecting an Animal still get one.",
-    neutral: "Java has allowed covariant return types on overrides since version 5, and C# 9 added the same support for class overrides.",
+    neutral: "Covariant returns show up mostly on copy and factory methods, where a subclass hands back an instance of its own type.",
     bad: "An override must return exactly the parent's declared type (narrowing it to a subtype breaks substitution for callers of the base method)." },
   { topic: "Generic variance",
     good: "Producers can be covariant and consumers contravariant. C# marks this with out and in; Java uses ? extends and ? super at the use site.",
@@ -222,7 +222,7 @@ var QUIZ = { title: "Object-Oriented Programming", turns: [
   // --- Closing hierarchies ---
   { topic: "Sealed and final classes",
     good: "Sealed classes list their permitted subclasses, letting a switch check exhaustiveness; final forbids subclassing to protect invariants.",
-    neutral: "Check your Java version before writing sealed classes, since the permits clause only became a standard feature in Java 17.",
+    neutral: "Sealed hierarchies tend to be small, often a handful of record types that each describe one case of the same overall concept.",
     bad: "Marking classes final is mainly a speed trick for old JVMs. On a modern runtime it is a style choice with zero design effect." }
 ,
   // --- SOLID ---
@@ -439,7 +439,7 @@ var QUIZ = { title: "Object-Oriented Programming", turns: [
     bad: "Functional code avoids the expression problem entirely: functions over sum types extend in both directions freely." },
   { topic: "Patterns in a functional style",
     good: "Several GoF patterns shrink in FP: Strategy is a function argument, Command a closure, Visitor a match. The intent still holds.",
-    neutral: "Peter Norvig argued that many design patterns become simpler or invisible in dynamic languages with first-class functions.",
+    neutral: "Functional code still has recurring shapes and techniques; they just tend to show up as functions and types instead of classes.",
     bad: "Design patterns are an OOP workaround with no meaning in functional code, and once you adopt FP the ideas simply stop applying there." },
   { topic: "Refactoring toward patterns",
     good: "Introduce a pattern when duplication or a growing conditional asks for it, in small steps under tests, rather than designing it in up front.",
