@@ -1,5 +1,6 @@
 // Checks that a statement's grade can't be guessed from its wording: for each
-// style feature (punctuation, causal "so", history trivia, absolutes, ...),
+// style feature (punctuation, causal "so", history trivia, absolutes, talk about
+// the concept instead of the concept, false reassurance, "X is a ..." openers, ...),
 // counts the turns where each grade's statement shows it, and fails when one
 // grade shows it far more than the other two.
 // Run: node test/tells.js [dir ...]   (default: every quiz directory)
@@ -27,6 +28,9 @@ var FEATURES = {
   naming: /\b(name|named|names|called|stands for|acronym|nickname)\b/i,
   examples: /\b(such as|e\.g\.|for example|like)\b/i,
   reference: /\b(docs|documentation|devtools|dashboard|console|common|commonly|popular|many teams)\b/i,
+  meta: /\b(interviews?|interviewers?|reviewers?|code reviews?|comes? up|mentioned|you'll hear|textbook|classic|well-known|books?|IDEs?|slogan|phrase|catalog|credited|named after|people|developers|discussions?)\b/i,
+  reassurance: /\b(safe|safely|fine|harmless|guaranteed|cleaner|works well)\b/i,
+  definition: /^[^,;:.]{0,40}\b(is|are) (a|an|the|one)\b/i,
   manyCommas: /,[^,]*,[^,]*,/
 };
 

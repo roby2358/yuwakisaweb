@@ -11,6 +11,7 @@
   --neutral-bg: #fdf3e1;
   --bad: #c53030;
   --bad-bg: #fbe7e7;
+  --chart-overall: #3b6fd4;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,6 +24,7 @@
     --good-bg: #173524;
     --neutral-bg: #3a2e16;
     --bad-bg: #3d1c1c;
+    --chart-overall: #7aa2f7;
   }
 }
 
@@ -50,6 +52,20 @@ body {
 .stat { display: flex; flex-direction: column; }
 .label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
 .value { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.value.rolling { color: var(--accent); }
+.value.overall { color: var(--chart-overall); }
+
+.chart {
+  flex-basis: 100%;
+  height: 56px;
+  background: var(--bg);
+  border-radius: 6px;
+}
+.chart-mid { stroke: var(--border); stroke-dasharray: 2 2; vector-effect: non-scaling-stroke; }
+.chart-line { fill: none; stroke-width: 2; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.chart-line.rolling { stroke: var(--accent); }
+.chart-line.overall { stroke: var(--chart-overall); }
 
 .progress {
   position: absolute;
@@ -129,5 +145,6 @@ a.choice { text-decoration: none; }
   cursor: pointer;
 }
 .review-button { margin-left: auto; align-self: center; padding: 6px 14px; }
+.home-button { align-self: center; padding: 6px 14px; text-decoration: none; }
 
 .hidden { display: none; }

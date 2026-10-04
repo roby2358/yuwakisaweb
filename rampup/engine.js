@@ -51,10 +51,38 @@ function currentTurn() {
   return turns[run.deck[run.position]];
 }
 
+function score(points) {
+  var sum = points.reduce(function (s, p) { return s + p; }, 0);
+  return sum / points.length / MAX_POINTS;
+}
+
 function formatScore(points) {
   if (points.length === 0) return "—";
-  var sum = points.reduce(function (s, p) { return s + p; }, 0);
-  return (sum / points.length / MAX_POINTS).toFixed(2);
+  return score(points).toFixed(2);
+}
+
+// Rolling and overall score after each scored turn, for the chart.
+function scoreHistory(points) {
+  return points.map(function (_, i) {
+    return {
+      rolling: score(points.slice(Math.max(0, i + 1 - ROLLING_WINDOW), i + 1)),
+      overall: score(points.slice(0, i + 1))
+    };
+  });
+}
+
+// SVG polyline points in a 0–100 box: x spans the scored turns, y is score 1 (top) to 0 (bottom).
+function chartLine(history, key) {
+  var span = Math.max(1, history.length - 1);
+  return history.map(function (h, i) {
+    return (100 * i / span).toFixed(2) + "," + (100 * (1 - h[key])).toFixed(2);
+  }).join(" ");
+}
+
+function renderChart() {
+  var history = scoreHistory(run.points);
+  el("chart-rolling").setAttribute("points", chartLine(history, "rolling"));
+  el("chart-overall").setAttribute("points", chartLine(history, "overall"));
 }
 
 function renderScorebar() {
@@ -63,6 +91,7 @@ function renderScorebar() {
   el("rolling").textContent = formatScore(run.points.slice(-ROLLING_WINDOW));
   el("overall").textContent = formatScore(run.points);
   el("review-count").textContent = run.missed.length;
+  renderChart();
   var done = run.position + (run.revealed ? 1 : 0);
   el("progress-fill").style.width = (100 * done / turns.length) + "%";
 }

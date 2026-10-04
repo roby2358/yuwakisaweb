@@ -10,9 +10,15 @@
   <header class="scorebar">
     <div class="stat"><span class="label">Pass</span><span id="pass" class="value"></span></div>
     <div class="stat"><span class="label">Turn</span><span id="turn" class="value"></span></div>
-    <div class="stat"><span class="label">Rolling (last <span id="window"></span>)</span><span id="rolling" class="value"></span></div>
-    <div class="stat"><span class="label">Overall</span><span id="overall" class="value"></span></div>
+    <div class="stat"><span class="label">Rolling (last <span id="window"></span>)</span><span id="rolling" class="value rolling"></span></div>
+    <div class="stat"><span class="label">Overall</span><span id="overall" class="value overall"></span></div>
     <button id="review-button" class="btn review-button">Review <span id="review-count">0</span></button>
+    <a href="index.html" class="btn home-button">Home</a>
+    <svg class="chart" viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="Rolling and overall score by turn">
+      <line class="chart-mid" x1="0" y1="50" x2="100" y2="50"></line>
+      <polyline id="chart-overall" class="chart-line overall"></polyline>
+      <polyline id="chart-rolling" class="chart-line rolling"></polyline>
+    </svg>
     <div class="progress"><div id="progress-fill" class="progress-fill"></div></div>
   </header>
 
