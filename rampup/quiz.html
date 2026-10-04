@@ -8,9 +8,11 @@
 </head>
 <body>
   <header class="scorebar">
+    <div class="stat"><span class="label">Pass</span><span id="pass" class="value"></span></div>
     <div class="stat"><span class="label">Turn</span><span id="turn" class="value"></span></div>
     <div class="stat"><span class="label">Rolling (last <span id="window"></span>)</span><span id="rolling" class="value"></span></div>
     <div class="stat"><span class="label">Overall</span><span id="overall" class="value"></span></div>
+    <button id="review-button" class="btn review-button">Review <span id="review-count">0</span></button>
     <div class="progress"><div id="progress-fill" class="progress-fill"></div></div>
   </header>
 
@@ -21,12 +23,11 @@
       <div id="statements" class="choices"></div>
     </section>
 
-    <section id="results" class="hidden">
-      <h1>Done</h1>
-      <p id="final" class="final"></p>
-      <h2 id="missed-heading">Worth another look</h2>
+    <section id="review" class="hidden">
+      <h1>Worth another look</h1>
+      <p id="review-empty" class="hint">Nothing missed yet.</p>
       <ul id="missed" class="missed"></ul>
-      <button id="restart" class="btn">Start over</button>
+      <button id="review-back" class="btn">Back to quiz</button>
     </section>
   </main>
 

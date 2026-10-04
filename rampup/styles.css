@@ -114,7 +114,6 @@ a.choice { text-decoration: none; }
 }
 .choice.revealed.good .tag { color: var(--good); }
 
-.final { font-size: 20px; }
 .missed { padding-left: 20px; }
 .missed li { margin-bottom: 12px; }
 .missed em { color: var(--muted); font-style: normal; font-size: 14px; }
@@ -129,5 +128,6 @@ a.choice { text-decoration: none; }
   color: #fff;
   cursor: pointer;
 }
+.review-button { margin-left: auto; align-self: center; padding: 6px 14px; }
 
 .hidden { display: none; }

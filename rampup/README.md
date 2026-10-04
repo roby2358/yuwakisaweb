@@ -7,11 +7,11 @@ Intermediate, conversational familiarity drills. Open `index.html` directly in a
 
 Every quiz works the same way:
 
-- **100 turns.** Each turn shows a topic and three related statements: one **good**, one **neutral**, and one **bad**, in shuffled order.
+- **Continuous play.** The 100 turns come in a shuffled order. After all 100, they're reshuffled for another pass, and so on until you stop. Each turn shows a topic and three related statements: one **good**, one **neutral**, and one **bad**, in shuffled order.
 - **First click scores the turn:** good = 2, neutral = 1, bad = 0. Then all three statements are labeled and the good one is highlighted.
 - **Clicking the good statement advances** to the next turn. Keys `1`–`3` click the statements.
-- **The score bar across the top** shows the turn, a rolling average of the last 20 turns, and the overall average (both scaled to 0–1 by dividing by 2).
-- **At the end** you see the final score and a list of every turn you missed, each with its good statement.
+- **Review** (in the score bar, with a count) lists every turn you've missed, most recent first, with how many times you missed it and its good statement.
+- **The score bar across the top** shows the pass, the turn within it, a rolling average of the last 20 turns, and the overall average across all passes (both scaled to 0–1 by dividing by 2). The progress bar tracks the current pass.
 
 The engine (`quiz.html`, `engine.js`, `styles.css`) lives at the top level. Each quiz is a directory holding only a `quiz.js` that defines `var QUIZ = { title, turns: [{ topic, good, neutral, bad }, ...] }`. `quiz.html?quiz=<dir>` loads `<dir>/quiz.js` with a plain `<script>` tag, so it still works from `file://`. To add a quiz, create a directory with its `quiz.js` and add a `quiz.html?quiz=<dir>` link (text = `QUIZ.title`) to `index.html`.
 
@@ -32,6 +32,6 @@ Swap in a new topic, level, and focus to generate the same kind of quiz for some
 >
 > **Play.** Shuffle the three statements on each turn. The first click scores the turn (good 2, neutral 1, bad 0), then labels all three and highlights the good one. Clicking the good statement advances to the next turn. Number keys 1–3 click the statements.
 >
-> **Score.** A sticky bar across the top shows the turn number (n / 100), a rolling average over the last 20 turns and the overall average (both scaled to 0–1 by dividing by 2, two decimals), and a progress bar. The end screen shows the final score, a list of missed turns with their good statements, and a restart button. Support both light and dark mode, and make it readable on a phone.
+> **Score.** Play is continuous: shuffle the turns, and after every turn has been seen, reshuffle and keep going until the player leaves. A sticky bar across the top shows the pass number, the turn within the pass (n / 100), a rolling average over the last 20 turns and the overall average (both scaled to 0–1 by dividing by 2, two decimals), and a progress bar for the current pass. A Review button in the bar lists missed turns (most recent first, with a miss count and the good statement) and returns to play. Support both light and dark mode, and make it readable on a phone.
 >
 > Summarize the form of the test in README.md as a reusable prompt.
