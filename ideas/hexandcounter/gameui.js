@@ -122,7 +122,7 @@ const GameUI = (function () {
             if (loc) {
                 // openLocation(loc) — wire up when interactive locations exist
             } else {
-                this.engine.endTurn();
+                if (!this.engine.endTurn().ok) return;   // game over: nothing to end
                 this.sound.endTurn();
                 this.deselect();
                 this.render();

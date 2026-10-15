@@ -12,7 +12,13 @@
 //    trusting a caller-supplied cost — the "never trust the client" rule, baked in now
 //    so a future command/network layer doesn't have to re-audit every action.
 const GameEngine = (function () {
-    const { TERRAIN, PLAYER_MP, MAP_COLS, MAP_ROWS } = GameArtifacts;
+    const {
+        TERRAIN, PLAYER_MP, MAP_COLS, MAP_ROWS,
+        GEN_MAX_ATTEMPTS, KNOWN_GOOD_SEED, HEIGHTMAP_SIZE, HEIGHTMAP_ROUGHNESS,
+        WATER_PCT, HILLS_PCT, MOUNTAIN_PCT,
+        FOREST_FRAC, SCRUB_FRAC, SCRUB_MIN, ROUGH_FRAC, ROUGH_MIN,
+        PLACE_SLICE_FRAC, PLACE_SLICE_MIN, ENEMY_DICE_COUNT, ENEMY_DICE_SIDES
+    } = GameArtifacts;
 
     class GameEngine {
         constructor(state) {
@@ -29,30 +35,41 @@ const GameEngine = (function () {
         }
 
         // ---- New game / world generation ----
-        // Regenerates (up to 20 tries) until a path exists from player to target.
         // A seed may be supplied for reproducibility; otherwise one is drawn once and
         // stored, so the resulting game can always be reproduced from state.seed.
+        // If GEN_MAX_ATTEMPTS maps from the seed all lack a player→target path, the game
+        // falls back to KNOWN_GOOD_SEED (and records it), so every game is winnable.
         newGame(seed) {
             const s = this.state;
             s.seed = (seed === undefined || seed === null)
                 ? Math.floor(Math.random() * 0x100000000)
                 : (seed >>> 0);
-            Rando.seed(s.seed);
-
-            let attempts = 0;
-            do {
-                s.hexes = this.generateRectGrid();
-                this.board = new Board(s.hexes);   // query layer over the fresh map
-                this.assignTerrain();
-                this.placePlayerAndTarget();
-                attempts++;
-            } while (!this.board.hasPath(s.player, s.target) && attempts < 20);
+            if (!this.generateMap(s.seed, GEN_MAX_ATTEMPTS)) {
+                s.seed = KNOWN_GOOD_SEED;
+                this.generateMap(s.seed, 1);
+            }
 
             this.spawnEnemies();
             s.turn = 1;
             s.mp = PLAYER_MP;
             s.phase = 'player';
             s.gameWon = false;
+            return { ok: true };
+        }
+
+        // Seed Rando and build up to `attempts` maps, stopping at the first with a
+        // player→target path. Returns whether one was found (the last map is kept either way).
+        generateMap(seed, attempts) {
+            const s = this.state;
+            Rando.seed(seed);
+            for (let i = 0; i < attempts; i++) {
+                s.hexes = this.generateRectGrid();
+                this.board = new Board(s.hexes);   // query layer over the fresh map
+                this.assignTerrain();
+                this.placePlayerAndTarget();
+                if (this.board.hasPath(s.player, s.target)) return true;
+            }
+            return false;
         }
 
         // Diamond-square heightmap over a (size x size) grid, normalized to [0, 100].
@@ -98,29 +115,26 @@ const GameEngine = (function () {
         // flagged. Elevation sampled from a fresh heightmap. Terrain filled in later.
         generateRectGrid() {
             const hexes = new Map();
-            const hm = this.diamondSquare(129, 0.55);
+            const hm = this.diamondSquare(HEIGHTMAP_SIZE, HEIGHTMAP_ROUGHNESS);
+            const last = HEIGHTMAP_SIZE - 1;
 
             for (let row = 0; row < MAP_ROWS; row++) {
                 const qOffset = -Math.floor(row / 2);
                 for (let col = 0; col < MAP_COLS; col++) {
                     const q = col + qOffset;
                     const r = row;
-                    const gx = Math.round(col / (MAP_COLS - 1) * 128);
-                    const gy = Math.round(row / (MAP_ROWS - 1) * 128);
-                    const elevation = hm[gy * 129 + gx];
+                    const gx = Math.round(col / (MAP_COLS - 1) * last);
+                    const gy = Math.round(row / (MAP_ROWS - 1) * last);
+                    const elevation = hm[gy * HEIGHTMAP_SIZE + gx];
                     const isEdge = row === 0 || row === MAP_ROWS - 1 || col === 0 || col === MAP_COLS - 1;
 
-                    hexes.set(Hex.key(q, r), {
-                        q, r, col, row, elevation, isEdge,
-                        terrain: null, resource: null,
-                        units: [], controlled: false
-                    });
+                    hexes.set(Hex.key(q, r), { q, r, col, row, elevation, isEdge, terrain: null });
                 }
             }
             return hexes;
         }
 
-        // Base terrain by elevation percentile, then forests/gold on plains and quarries
+        // Base terrain by elevation percentile, then forest/scrub on plains and rough
         // on hills scattered in; edges forced to water.
         assignTerrain() {
             const inner = [];
@@ -134,29 +148,29 @@ const GameEngine = (function () {
             // Base terrain by elevation percentile
             for (let i = 0; i < n; i++) {
                 const pct = i / n;
-                if (pct < 0.25) inner[i].terrain = TERRAIN.WATER;
-                else if (pct < 0.85) inner[i].terrain = TERRAIN.PLAINS;
-                else if (pct < 0.95) inner[i].terrain = TERRAIN.HILLS;
+                if (pct < WATER_PCT) inner[i].terrain = TERRAIN.WATER;
+                else if (pct < HILLS_PCT) inner[i].terrain = TERRAIN.PLAINS;
+                else if (pct < MOUNTAIN_PCT) inner[i].terrain = TERRAIN.HILLS;
                 else inner[i].terrain = TERRAIN.MOUNTAIN;
             }
 
-            // Scatter forests among plains (~10% of total)
+            // Scatter forest and scrub among plains
             const plains = inner.filter(h => h.terrain === TERRAIN.PLAINS);
             Rando.shuffle(plains);
-            const forestCount = Math.round(n * 0.10);
-            const goldCount = Math.max(3, Math.round(n * 0.01));
+            const forestCount = Math.round(n * FOREST_FRAC);
+            const scrubCount = Math.max(SCRUB_MIN, Math.round(n * SCRUB_FRAC));
             let idx = 0;
             for (let i = 0; i < forestCount && idx < plains.length; i++, idx++)
                 plains[idx].terrain = TERRAIN.FOREST;
-            for (let i = 0; i < goldCount && idx < plains.length; i++, idx++)
-                plains[idx].terrain = TERRAIN.GOLD;
+            for (let i = 0; i < scrubCount && idx < plains.length; i++, idx++)
+                plains[idx].terrain = TERRAIN.SCRUB;
 
-            // Scatter quarries among hills (~2% of total)
+            // Scatter rough among hills
             const hills = inner.filter(h => h.terrain === TERRAIN.HILLS);
             Rando.shuffle(hills);
-            const quarryCount = Math.max(2, Math.round(n * 0.02));
-            for (let i = 0; i < quarryCount && i < hills.length; i++)
-                hills[i].terrain = TERRAIN.QUARRY;
+            const roughCount = Math.max(ROUGH_MIN, Math.round(n * ROUGH_FRAC));
+            for (let i = 0; i < roughCount && i < hills.length; i++)
+                hills[i].terrain = TERRAIN.ROUGH;
         }
 
         // Player on the far-left passable slice, target on the far-right.
@@ -164,19 +178,22 @@ const GameEngine = (function () {
             const passable = this.board.passableHexes();
             passable.sort((a, b) => a.col - b.col);
 
-            const leftSlice = passable.slice(0, Math.max(5, Math.floor(passable.length * 0.03)));
+            const sliceLen = Math.max(PLACE_SLICE_MIN, Math.floor(passable.length * PLACE_SLICE_FRAC));
+            const leftSlice = passable.slice(0, sliceLen);
             const ph = Rando.choice(leftSlice);
             this.state.player = new Piece(ph.q, ph.r, null, 'P');
 
-            const rightSlice = passable.slice(-Math.max(5, Math.floor(passable.length * 0.03)));
+            const rightSlice = passable.slice(-sliceLen);
             const th = Rando.choice(rightSlice);
             this.state.target = new Piece(th.q, th.r, null, '★');
         }
 
-        // 2d6 enemies on passable hexes, each a Piece carrying a distinct seeded color.
+        // ENEMY_DICE_COUNT d ENEMY_DICE_SIDES enemies on passable hexes, each a Piece
+        // carrying a distinct seeded color.
         spawnEnemies() {
             const s = this.state;
-            const count = Rando.int(1, 6) + Rando.int(1, 6);
+            let count = 0;
+            for (let i = 0; i < ENEMY_DICE_COUNT; i++) count += Rando.int(1, ENEMY_DICE_SIDES);
             s.enemies = [];
             const occupied = new Set([s.player.key(), s.target.key()]);
             const candidates = this.board.passableHexes().filter(hex => !occupied.has(Hex.key(hex.q, hex.r)));
@@ -217,14 +234,17 @@ const GameEngine = (function () {
 
         // ---- Actions (mutate state, return an outcome; no rendering) ----
 
+        // Every action returns { ok, ... }: ok:false means illegal and nothing changed.
+
         // Move the player to (q, r) if legal. Re-derives legality here rather than
         // trusting a caller-supplied cost. Returns:
-        //   { ok:false }                 illegal, nothing changed
+        //   { ok:false }                 illegal (unreachable, or the game is over), nothing changed
         //   { ok:true }                  moved, player's turn continues
         //   { ok:true, won:true }        moved onto the target
         //   { ok:true, endedTurn:true }  moved and spent the last MP (turn auto-ended)
         movePlayer(q, r) {
             const s = this.state;
+            if (s.gameWon) return { ok: false };
             const reachable = this.computeReachable();
             const cost = reachable.get(Hex.key(q, r));
             if (cost === undefined) return { ok: false };
@@ -244,14 +264,16 @@ const GameEngine = (function () {
         }
 
         // Resolve the enemy phase and advance to the player's next turn.
+        // { ok:false } once the game is won (nothing changes), else { ok:true }.
         endTurn() {
             const s = this.state;
-            if (s.gameWon) return;
+            if (s.gameWon) return { ok: false };
             s.phase = 'enemy';
             this.moveEnemies();
             s.phase = 'player';
             s.turn++;
             s.mp = PLAYER_MP;
+            return { ok: true };
         }
 
         // Each enemy steps to one random passable, unoccupied neighbor (or stays put).

@@ -8,7 +8,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 for future board-wargame-style games. The current build is a movement puzzle: move the
 player counter (P) across a procedurally generated terrain map to a target hex to win.
 
-Authoritative gameplay docs live in `README.md` (intent + UI) and `DYNAMICS.md` (rules).
+Design docs follow the ontology-spec format: **`ONTOLOGY.md`** is the implementation
+reference (purpose/goals `G-n`, entities, invariants, rules as pseudocode, numbers,
+commands); **`CRITERIA.md`** turns each rule into a row `R-n` that owns `test/R-n/`;
+**`RATIONALE.md`** holds the why (`D-n`); **`ARCHITECTURE_LOG.md`** is the dated history.
+`DYNAMICS.md` is why the puzzle works; `README.md` is intent + UI. Cite stable IDs
+(`R-12`, `D-9`), never section numbers, and reconcile ONTOLOGY + CRITERIA + RATIONALE + log
+in the same change as the code.
+
 The codebase began as an extraction from the [Realm](../realm/) project, and `README.md`
 notes the ongoing goal of stripping out Realm artifacts (danger points, resources,
 installations) so they don't leak into new games.
@@ -35,7 +42,7 @@ split — the seam is drawn so State + Engine could run server-side unchanged:
 
 | Module | Global | Role |
 |---|---|---|
-| `artifacts.js` | `GameArtifacts` | Static **rules-data** — `TERRAIN`, `MOVEMENT_COST`, `PLAYER_MP`, `MAP_COLS/ROWS`. Server-side; no colors/pixels. Replaced the old `config.js`. |
+| `artifacts.js` | `GameArtifacts` | Static **rules-data** — `TERRAIN`, `MOVEMENT_COST`, `PLAYER_MP`, `MAP_COLS/ROWS`, and every generation constant (`GEN_MAX_ATTEMPTS`, `KNOWN_GOOD_SEED`, elevation cuts, scatter fractions, enemy dice). Server-side; no colors/pixels. |
 | `displayartifacts.js` | `GameDisplayArtifacts` | Client-only **display attrs** — `HEX_SIZE`, `COUNTER_SIZE`, `TERRAIN_COLORS`, `TERRAIN_NAMES`, `PLAYER_COLOR`, `TARGET_COLOR`. Keyed off `GameArtifacts.TERRAIN`; read only by `GameUI` and the pixel helpers in `hex.js`. |
 | `piece.js` | `Piece` | Base type for a **positioned token** — `{ q, r, color, label }` plus `key`/`isAt`/`moveTo`. Player, target, and enemies are all `Piece`s; games on this base subclass it (hp, faction). DOM-free (depends only on `Hex`); a light record so state stays snapshot-able. |
 | `board.js` | `Board` | **Query layer over the hex `Map`** — `moveCost`/`isPassable`/`passableHexes`/`neighbors`/`hasPath`. A transient wrapper around `GameState.hexes` (the plain serializable truth), rebuilt whenever the map is. DOM-free; reads `MOVEMENT_COST` from `GameArtifacts`. |
@@ -96,16 +103,17 @@ in `hexToScreen` / `screenToHex`.
 ### Hex object shape (as built in `gameengine.js`)
 
 ```javascript
-{ q, r, col, row, elevation, isEdge, terrain, resource, units: [], controlled }
+{ q, r, col, row, elevation, isEdge, terrain }
 ```
-`resource`, `units`, and `controlled` are currently inert placeholders.
+`elevation` is generation-only. Forks add their own per-hex fields when a rule needs them.
 
 ## Game Model (see DYNAMICS.md)
 
 - **Map**: 60×40 hex grid; terrain assigned by elevation percentile (water/plains/hills/
-  mountain) then forests/gold/quarries scattered in; edges forced to water.
-  `GameEngine.newGame` regenerates (up to 20 tries) until a path exists from player to
-  target (`hasPath`), after seeding `Rando` so the whole map reproduces from `state.seed`.
+  mountain) then forest/scrub/rough scattered in; edges forced to water.
+  `GameEngine.newGame` seeds `Rando` and regenerates (up to `GEN_MAX_ATTEMPTS`) until a
+  path exists from player to target (`hasPath`); failing that it falls back to
+  `KNOWN_GOOD_SEED` and records it, so every game is winnable and reproduces from `state.seed`.
 - **Player**: `PLAYER_MP` (6) movement points per turn, spendable across multiple moves;
   reachability comes from `bfsHexes` treating enemy hexes as impassable.
 - **Enemies**: 2d6 of them, spawned on passable hexes; each moves one random hex per turn.
@@ -126,9 +134,12 @@ press is a click (select/move), a drag past a few px pans (see `DRAG_THRESHOLD` 
   no bundler. Most modules wrap their definition in an IIFE assigning one global to keep
   top-level names from colliding across scripts; the single-class value libs (`Hex`,
   `Piece`) declare the class at top level instead.
-- One DOM-free smoke test: `node test/smoke.js` boots the engine/state/board/piece stack
-  (no canvas, no display artifacts) and checks the pieces/board wiring, reachability, and
-  seed reproducibility. It's the regression net for refactors of this base platform.
+- Tests: `node test/run.js` (`-v` for every check). DOM-free: `test/helpers/load.js` boots
+  the engine/state/board/piece stack in a vm (no canvas, no display artifacts). Each
+  `CRITERIA.md` R-row owns `test/R-n/` (one rule per test); `test/integration/smoke.js` is a
+  happy-path walkthrough; `test/coverage.js` fails if CRITERIA and the `R-n` dirs disagree.
+  It's the regression net for refactors of this base platform.
+- Every engine command returns `{ ok, ... }`; `ok:false` means illegal and nothing changed.
 - Color values are 0–1 floats except when converting to `#rrggbb` strings for canvas.
 - Terrain types come from `GameArtifacts.TERRAIN`; movement from `GameArtifacts.MOVEMENT_COST`.
   Colors/labels/geometry come from `GameDisplayArtifacts` (client-only — the engine never reads it).
