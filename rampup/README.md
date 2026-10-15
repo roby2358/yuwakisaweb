@@ -8,6 +8,7 @@ Beginner-to-intermediate, conversational familiarity drills: the level of an ord
 - `oop/`: Object-Oriented Programming (objects and encapsulation, inheritance and polymorphism, design principles, design patterns and testing)
 - `fp/`: Functional Programming, language-neutral (purity and immutability, collections and composition, algebraic types and errors, functors/monads and practice)
 - `aws/`: Deploying on AWS, general and acronym-heavy on purpose (accounts, IAM and networking, where code runs, pipelines and rollouts, monitoring and operations; ALB/NLB, ASG, SG/NACL, STS, KMS, SQS/SNS, SLO/RTO/RPO and the like)
+- `awslookalikes/`: AWS Lookalikes, telling near-identical names apart (ALB vs NLB, CloudWatch vs CloudTrail, SNS vs SQS vs SES, EBS vs EFS, SCP vs IAM policy...); most bads are a true fact about the twin under the wrong name
 
 Every quiz works the same way:
 
