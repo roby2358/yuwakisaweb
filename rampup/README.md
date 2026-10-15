@@ -7,6 +7,7 @@ Beginner-to-intermediate, conversational familiarity drills: the level of an ord
 - `react/`: React (JSX and rendering, hooks, performance and architecture, Server Components and React 19, ecosystem)
 - `oop/`: Object-Oriented Programming (objects and encapsulation, inheritance and polymorphism, design principles, design patterns and testing)
 - `fp/`: Functional Programming, language-neutral (purity and immutability, collections and composition, algebraic types and errors, functors/monads and practice)
+- `aws/`: Deploying on AWS, general and acronym-heavy on purpose (accounts, IAM and networking, where code runs, pipelines and rollouts, monitoring and operations; ALB/NLB, ASG, SG/NACL, STS, KMS, SQS/SNS, SLO/RTO/RPO and the like)
 
 Every quiz works the same way:
 
