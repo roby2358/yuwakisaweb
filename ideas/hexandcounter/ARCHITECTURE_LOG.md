@@ -2,6 +2,14 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-10-15 — CSS cleanup and UI polish
+`index.css` now uses `:root` tokens and shared `.panel`, `.btn` and `.hidden` classes
+instead of duplicated per-id blocks. Text moved from monospace to the system UI font. The
+intro card gained a title and a key legend, and End Turn is styled as the primary button.
+On the canvas: a glow on the target, and a victory card in the
+panel style that fixes the "1 turns" plural. New display constants `BG_COLOR`, `UI_FONT`
+and `REACH_COLOR` mirror the CSS tokens. No rule changed; U-12 still holds.
+
 ### 2026-10-15 — X-5 retired
 X-5 asked whether enemies force re-routes without locking the path. The designer ruled it
 not worth a sim harness: worst case the player waits. Recorded in D-13 and under

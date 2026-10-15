@@ -31,5 +31,9 @@ const GameDisplayArtifacts = (function () {
         },
         PLAYER_COLOR: '#daa520',
         TARGET_COLOR: '#ff6600',
+        // Canvas chrome — mirror --bg and --font in index.css so drawn text matches the HUD.
+        BG_COLOR: '#0e1116',
+        UI_FONT: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+        REACH_COLOR: '255, 214, 51',   // rgb of --accent; tinted per use
     };
 })();

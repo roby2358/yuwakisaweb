@@ -11,7 +11,7 @@
 const GameUI = (function () {
     const {
         HEX_SIZE, COUNTER_SIZE, TERRAIN_COLORS, TERRAIN_NAMES,
-        PLAYER_COLOR, TARGET_COLOR
+        PLAYER_COLOR, TARGET_COLOR, BG_COLOR, UI_FONT, REACH_COLOR
     } = GameDisplayArtifacts;
 
     // A left press that stays within this many pixels is a click (select/move);
@@ -159,7 +159,7 @@ const GameUI = (function () {
             const canvas = this.canvas;
             const s = this.state;
 
-            ctx.fillStyle = '#111';
+            ctx.fillStyle = BG_COLOR;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             // Terrain
@@ -170,7 +170,7 @@ const GameUI = (function () {
                 drawHexPath(ctx, x, y, HEX_SIZE);
                 ctx.fillStyle = TERRAIN_COLORS[hex.terrain] || '#555';
                 ctx.fill();
-                ctx.strokeStyle = '#00000044';
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.22)';
                 ctx.lineWidth = 1;
                 ctx.stroke();
             }
@@ -178,15 +178,19 @@ const GameUI = (function () {
             // Target marker
             if (s.target && !s.gameWon) {
                 const { x, y } = this.hexToScreen(s.target.q, s.target.r);
-                drawHexPath(ctx, x, y, HEX_SIZE);
+                ctx.save();
+                ctx.shadowColor = TARGET_COLOR;
+                ctx.shadowBlur = 12;
+                drawHexPath(ctx, x, y, HEX_SIZE - 1.5);
                 ctx.strokeStyle = TARGET_COLOR;
                 ctx.lineWidth = 3;
                 ctx.stroke();
                 ctx.fillStyle = TARGET_COLOR;
-                ctx.font = 'bold 16px monospace';
+                ctx.font = `bold 18px ${UI_FONT}`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText('★', x, y);
+                ctx.fillText('★', x, y + 1);
+                ctx.restore();
             }
 
             // L1.2 highlight sets: movement tint (yellow) + attack tint (red, empty until combat)
@@ -195,7 +199,7 @@ const GameUI = (function () {
                     const { q, r } = Hex.fromKey(key);
                     const { x, y } = this.hexToScreen(q, r);
                     drawHexPath(ctx, x, y, HEX_SIZE);
-                    ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+                    ctx.fillStyle = `rgba(${REACH_COLOR}, 0.32)`;
                     ctx.fill();
                 }
                 for (const key of this.selection.attackable) {
@@ -227,19 +231,42 @@ const GameUI = (function () {
             }
 
             // L5 victory overlay (canvas-drawn, input-capturing layer)
-            if (this.overlay === 'victory') {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#fff';
-                ctx.font = 'bold 48px monospace';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('VICTORY!', canvas.width / 2, canvas.height / 2 - 30);
-                ctx.font = '20px monospace';
-                ctx.fillText('Reached target in ' + s.turn + ' turns', canvas.width / 2, canvas.height / 2 + 20);
-            }
+            if (this.overlay === 'victory') this.drawVictory();
 
             this.updateHUD();
+        }
+
+        // A centered card in the same style as the DOM panels (see .panel in index.css).
+        drawVictory() {
+            const ctx = this.ctx;
+            const cx = this.canvas.width / 2, cy = this.canvas.height / 2;
+            const turns = this.state.turn;
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+            const w = 340, h = 170;
+            ctx.save();
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+            ctx.shadowBlur = 24;
+            this.roundRect(cx - w / 2, cy - h / 2, w, h, 10);
+            ctx.fillStyle = 'rgba(16, 20, 26, 0.94)';
+            ctx.fill();
+            ctx.restore();
+            ctx.strokeStyle = TARGET_COLOR;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = TARGET_COLOR;
+            ctx.font = `bold 44px ${UI_FONT}`;
+            ctx.fillText('VICTORY!', cx, cy - 32);
+            ctx.fillStyle = '#e8e6e1';
+            ctx.font = `17px ${UI_FONT}`;
+            ctx.fillText(`Reached the target in ${turns} turn${turns === 1 ? '' : 's'}`, cx, cy + 14);
+            ctx.fillStyle = '#9aa0a8';
+            ctx.font = `13px ${UI_FONT}`;
+            ctx.fillText('Click or press Space to view the board', cx, cy + 50);
         }
 
         roundRect(x, y, w, h, r) {
@@ -293,7 +320,7 @@ const GameUI = (function () {
 
             // Label — pick white or black text for contrast
             ctx.fillStyle = labelColor;
-            ctx.font = 'bold ' + Math.floor(s * 0.55) + 'px monospace';
+            ctx.font = `bold ${Math.floor(s * 0.55)}px ${UI_FONT}`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(label, cx, cy + 1);

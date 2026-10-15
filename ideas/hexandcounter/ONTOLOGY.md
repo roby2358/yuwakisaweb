@@ -139,7 +139,7 @@ outcomes*; never renders. Holds `state` and `board`.
 - **GameArtifacts** (server-side rules data): `TERRAIN`, `MOVEMENT_COST`, and every
   tunable number in the Numbers table. *Serves:* G-2.
 - **GameDisplayArtifacts** (client-only): `HEX_SIZE`, `COUNTER_SIZE`, `TERRAIN_COLORS`,
-  `TERRAIN_NAMES`, `PLAYER_COLOR`, `TARGET_COLOR`, keyed off `GameArtifacts.TERRAIN`.
+  `TERRAIN_NAMES`, `PLAYER_COLOR`, `TARGET_COLOR`, canvas chrome `BG_COLOR`/`UI_FONT`/`REACH_COLOR`, keyed off `GameArtifacts.TERRAIN`.
   *Serves:* G-2, board-wargame feel.
 
 ---
