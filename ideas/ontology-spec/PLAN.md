@@ -150,7 +150,70 @@ a codebase is ever cut, because nothing can be *shown* to be dead.
 
 ---
 
-## §2 What it costs, and when not to do this [P]
+## §2 Prior art, and what the lineage teaches [P]
+
+"Ontology" is not a term we are borrowing fresh from philosophy. It has been a
+load-bearing word in computer science for thirty years, and a reviewer who knows that
+literature will arrive with specific expectations. Better to meet them deliberately.
+
+**The computer-science lineage.** Tom Gruber pinned the term down in 1993: *an ontology
+is an explicit specification of a conceptualization.* Behind that sit the AI
+knowledge-representation traditions — Minsky's frames, semantic networks, KL-ONE, Cyc.
+In front of it sits the Semantic Web stack: RDF, then OWL as a W3C recommendation in
+2004, grounded in description logics. Around it sit the upper ontologies (SUMO, DOLCE,
+BFO) and the applied ones that actually got used (Gene Ontology, SNOMED CT, FOAF,
+schema.org).
+
+**It is already a borrowing, and a lossy one.** Philosophical ontology asks what
+exists — singular, mind-independent, one question. Computer science pluralized and
+relativized it: *an* ontology, engineered, scoped to a domain and a purpose. Gruber
+knew he was doing this. The nearer philosophical ancestor is Quine's *ontological
+commitment* — what must exist for your statements to be true — rather than Aristotle's
+categories. And it is a genuine two-way street: Barry Smith is a working philosopher
+who went into biomedical informatics and co-built BFO and the formal spine of the Gene
+Ontology.
+
+**The difference that matters is the consumer, not the formalism.** The claim earlier in
+this document — that we take OWL's stance and not its standard — is true but too weak.
+The sharper statement: those ontologies exist to be **computed over**. Subsumption
+reasoning, automatic classification, inference over triples. ONTOLOGY.md exists to be
+**read, and crossed by a model.** That is a difference in kind, and it is why OWL's
+ceilings (no time, no action, no arithmetic, open-world assumption, no defaults) are
+*irrelevant to us* rather than constraints to work around. We are not building a
+degraded reasoner. We are building the highest-quality input to an analogical mapping.
+
+**The convergence worth knowing about.** The Gene Ontology is the field's great success
+— tens of thousands of terms, three decades, in continuous real use — and it succeeded
+on curation discipline rather than expressiveness: identifiers that are never reused,
+terms obsoleted with `replaced_by` pointers instead of deleted, and every assertion
+carrying an evidence code saying how it is known. That is, almost line for line, the
+policy in this practice: stable IDs, `retired` tombstones, `Measured by:` evidence. We
+arrived at it independently, which makes it the strongest prior-art argument available
+— the one case that scaled did so on *process*, and the process matches.
+
+**The failure case rhymes with UML.** The heavyweight upper ontologies largely did not
+get adopted for application development, and for the reason given earlier about UML:
+the formalism cost exceeded the payoff, and expressiveness in the formalism did not
+convert into usefulness downstream. The lesson is not "ontologies don't work." It is
+that the formal apparatus was never the part doing the work.
+
+**The nearest living relative is DDD.** Eric Evans' domain-driven design (2003) —
+ubiquitous language, model-driven design, the domain model as the primary artifact —
+made substantially this argument twenty years early, without a model to cross the gap.
+Two things follow. Its known failure mode is the model drifting from the code, which is
+exactly the risk named in the cost section below, so that risk is empirically real
+rather than theoretical. And DDD never produced a crisp answer to Q-3 either, which
+should lower our confidence that one is easy to find.
+
+**The objection this creates.** G-1 now has a second skeptic standing next to the one
+who thinks this is UML with extra steps: the one who thinks it is OWL with extra steps.
+The answer is the consumer argument above, and it is a *better* answer than the UML one,
+because it is a difference in kind rather than a difference in discipline. Worth
+rehearsing in those terms rather than improvising it.
+
+---
+
+## §3 What it costs, and when not to do this [P]
 
 A value proposition that won't name its price isn't one.
 
@@ -174,7 +237,7 @@ behavior. That's the honest boundary.
 
 ---
 
-## §3 What consolidation produces [P]
+## §4 What consolidation produces [P]
 
 Open for direction — the value proposition above was the ask, and this part
 shouldn't be settled unilaterally.
@@ -195,7 +258,7 @@ settled why.
 
 ---
 
-## §4 Open questions
+## §5 Open questions
 
 - **Q-1** Which app becomes the reference example? Converting something already
   built tests the format harder than authoring fresh, but it also risks
@@ -209,3 +272,11 @@ settled why.
 - **Q-4** Does the practice need a short "reading an ontology doc set" page for
   someone encountering one for the first time, or is the format self-evident
   enough to skip it?
+- **Q-10** Does the name stay `ONTOLOGY.md`? It carries unwanted freight from the
+  Semantic Web lineage — a reader primed by that literature expects RDF and a
+  reasoner — and `DOMAIN.md` or `MODEL.md` would arrive without the baggage.
+  *Recommendation:* keep it. The stance really is the ontological one (what exists,
+  what must hold, in the domain's own words), the alternatives are blander and
+  commoner, and the prior-art section above is a cheaper fix than a rename. But the
+  objection should be answered on purpose rather than improvised.
+  (Q-5…Q-9 are in TOOLING.md; one namespace across the project.)

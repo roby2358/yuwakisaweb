@@ -1,11 +1,11 @@
 # TOOLING.md — Tools for an Ontology-Driven Development Cycle
 
-**Scope.** PLAN §3 says explicitly: no tooling until the markdown practice is solid.
+**Scope.** PLAN.md says explicitly: no tooling until the markdown practice is solid.
 This document does not reverse that. It is the candidate catalog — what tooling
 *would* be relevant, what failure each piece prevents, and what it costs — so that
 when the practice is solid there is a ranked list instead of a brainstorm.
 Everything here is **[P]** unless marked otherwise. Q-numbers continue PLAN.md's
-namespace (PLAN uses Q-1…Q-4; this doc starts at Q-5).
+namespace (PLAN holds Q-1…Q-4 and Q-10; this doc holds Q-5…Q-9).
 
 **Organizing principle.** A tool earns its place by catching a *specific named
 failure* the practice is already known to have. The `ontology_spec` skill's
@@ -15,7 +15,7 @@ pitfall is tooling for its own sake.
 
 **The boundary that matters most.** Models do the analogical crossing from problem
 space to code space; tools do the *bookkeeping* around it. Nothing here generates
-implementation from docs. That would re-commit the error PLAN §1 identifies — baking
+implementation from docs. That would re-commit the error PLAN's problem-space claim identifies — baking
 one analogy into a pipeline — and it would take the one job the model is best at and
 hand it to a worse mechanism. Tools check consistency, project a single source into
 derived views, and re-run measurements. They do not write code.
@@ -136,7 +136,7 @@ which is the argument for doing 2.2 first and well.
 
 ### 3.3 What not to build
 - **No code generation from ONTOLOGY.** See the boundary note above.
-- **No OWL emission.** PLAN §3 settled this; the markdown practice isn't solid yet,
+- **No OWL emission.** PLAN settled this; the markdown practice isn't solid yet,
   and OWL can't express rules, commands or events anyway.
 - **No doc-site build.** Rendering markdown prettier does not catch a single pitfall.
 
@@ -161,7 +161,7 @@ Two generic gaps:
 
 ### 4.1 Evidence re-runner
 **Catches:** silent drift between a RATIONALE claim and current behavior — precisely
-the failure PLAN §2 names as the one that reintroduces the UML problem.
+the failure PLAN's cost section names as the one that reintroduces the UML problem.
 **Checks:** parse every `Measured by: <command> → <result>` line, run the command,
 flag lines whose result has changed. A RATIONALE entry then either still holds or
 fails out loud.

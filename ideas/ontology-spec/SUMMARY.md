@@ -112,3 +112,9 @@ one person or session touches it, or when it outlives your memory of writing it.
 - Is "models cross the gap for free" load-bearing, or does it only hold for domains
   that already resemble their frameworks?
 - What's the smallest honest evidence this works? "It feels better" isn't a claim.
+- Is this OWL with extra steps? "Ontology" has been a computer-science term since
+  Gruber in 1993, with a whole Semantic Web stack behind it, so the comparison is
+  owed an answer rather than a dismissal. Mine: those ontologies exist to be
+  *computed over* — subsumption, classification, inference — and this one exists to
+  be *read and crossed by a model*. Different consumer, so OWL's ceilings are beside
+  the point rather than obstacles. Is that a real distinction or a convenient one?
