@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The doc set — Ontology-driven design docs</title>
+<meta name="description" content="Four documents, four readers, four paces, and the four properties that carry the value if you'd rather keep one file.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <span class="home"><a href="../index.html">Yuwakisa</a></span>
+  <a href="index.html">The case</a>
+  <span class="here">The doc set</span>
+  <a href="prompts.html">Prompts</a>
+  <a href="objections.html">Objections &amp; costs</a>
+</nav>
+
+<div class="head">
+  <h1>The doc set</h1>
+  <p class="standfirst">Three documents, each with its own reader and its own pace. The
+  value comes from four properties rather than from the file count, so if you'd rather
+  keep one file, the properties are the part to copy.</p>
+</div>
+
+<h2>The documents</h2>
+
+<table>
+  <tr><th>Document</th><th>Answers</th><th>Reader</th><th>Pace</th></tr>
+  <tr>
+    <td><b>ONTOLOGY.md</b></td>
+    <td>What exists, what each thing carries, how things relate, the rules, the interface</td>
+    <td>Implementer</td>
+    <td>The working spec, read constantly</td>
+  </tr>
+  <tr>
+    <td><b>CRITERIA.md</b></td>
+    <td>How you know it's correct, readable and good</td>
+    <td>Tester, tuner</td>
+    <td>Written with the rules; each row owns its tests</td>
+  </tr>
+  <tr>
+    <td><b>ARCHITECTURE_LOG.md</b></td>
+    <td>What changed, when, why, what it replaced, and the alternatives you turned down</td>
+    <td>Next maintainer</td>
+    <td>A dated entry in the same change</td>
+  </tr>
+</table>
+
+<p>Purpose goes at the top of ONTOLOGY as §0, so the tiebreaker sits on the document
+people actually open rather than in a file of its own.</p>
+
+<p>One rule holds across both of the first two: describe the current state only. No
+"formerly", no "originally named", no before-and-after tuning notes. All of that lives
+in the log, along with the reasoning for each change and the alternatives you turned
+down. Otherwise a reader has to subtract the history to find out what the system
+does.</p>
+
+<h2>The four properties</h2>
+
+<div class="cards two">
+  <div class="card">
+    <h3>Tagged provenance</h3>
+    <p>You can tell your decisions from the model's guesses.
+    <span class="tag">[D]</span> means you decided it, and only you can mark something
+    that way. <span class="tag p">[P]</span> means the model proposed it and it's
+    awaiting review. <span class="tag t">[T]</span> means a number that's expected to
+    move once something measures it.</p>
+  </div>
+  <div class="card">
+    <h3>Decisions with alternatives</h3>
+    <p>Each log entry records what else you considered and why this won. Writing the
+    alternatives down turns out to find more bugs than reviewing the decision does. A
+    number that came from a model rather than a measurement says so.</p>
+  </div>
+  <div class="card">
+    <h3>Criteria as tables</h3>
+    <p>Rules arrive with their test cases as <code>Given → Expect → Instrument</code>
+    rows, which makes writing the tests closer to transcription. If a criterion has no
+    instrument yet, it's marked <code>not yet covered</code> rather than left looking
+    covered.</p>
+  </div>
+  <div class="card">
+    <h3>Stable IDs</h3>
+    <p>Goals are <code>G-n</code>, decisions <code>D-n</code>, open questions
+    <code>Q-n</code>, criteria <code>R-n</code>. Code, tests, commits and docs all cite
+    them, and they're never reused or renumbered. A retired criterion leaves a tombstone
+    row behind so its number can't come back meaning something else.</p>
+  </div>
+</div>
+
+<h2>Two mechanisms worth the trouble</h2>
+
+<h3>Serves tags</h3>
+
+<p>Every entity and rule carries a <code>Serves:</code> line naming what it's there for:
+a goal from §0, a named quality, a driver. You can read it in both directions. Something
+that serves nothing is a candidate for removal, and a goal that nothing serves probably
+isn't being met.</p>
+
+<p>The second reading is a question code can't answer at all. The first is why dead code
+survives in most projects: with no stated purpose, you can't show that a thing is no
+longer needed, so nobody takes it out.</p>
+
+<h3>A criteria row owns a test directory</h3>
+
+<p>An <code>automated</code> rule row owns <code>test/R-n/</code>, and the directory is
+the only link between them. Test files aren't listed in the criteria table, because two
+lists drift apart. Each test asserts one rule, so a failure points at one place.</p>
+
+<p>A small coverage test then runs with the suite. It fails when an
+<code>automated</code> row has no tests, when a <code>test/R-n/</code> directory exists
+for a row that isn't automated, or when an instrument cell isn't one of the four allowed
+forms.</p>
+
+<p class="pull">That coverage test is 41 lines with no dependencies, and it's the piece
+I'd keep if I could only keep one.</p>
+
+<h2>When to skip it</h2>
+
+<p>Five entities and two rules don't need three files. For small CRUD work, write one
+<code>SPEC.md</code> and borrow the four properties above as sections — they compress
+into one file without losing much. The full set starts paying when the thing will be
+tuned, when the numbers are uncertain, when more than one person or session touches it,
+or when it'll outlive your memory of writing it.</p>
+
+<div class="exit">
+  <p>That's the shape of it. <a href="prompts.html">The prompts</a> cover how the cycle
+  runs in practice: what order to write things in, and what to ask for at each step.</p>
+</div>
+
+<div class="footer">
+  <p>This page is a reference card rather than a tutorial. The full format — field
+  tables, pseudocode conventions, the four instrument forms, the teleology review —
+  lives in the <code>ontology_spec</code> skill.</p>
+  <p><a href="../index.html">Yuwakisa</a></p>
+</div>
+
+</body>
+</html>

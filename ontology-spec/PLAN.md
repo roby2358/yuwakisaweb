@@ -133,8 +133,8 @@ today, and it is the one most likely to convince a skeptic.
 **Touchstone — adjudication.** When two readings are possible, there's one place
 that settles it, and the tags say who gets to settle it. CRITERIA is what keeps
 this from being rhetoric: every rule arrives with `input → expect` rows, so
-"is this right?" is answered by running something rather than by arguing. RATIONALE
-keeps settled questions settled — the alternatives considered are written down, so
+"is this right?" is answered by running something rather than by arguing. The log
+keeps settled questions settled — each entry records the alternatives considered, so
 "why not X?" has an answer on file instead of a re-litigation. This is the function
 that saves the most time on a long project and the one people most reliably skip,
 because its value is invisible until the sixth month.
@@ -263,9 +263,11 @@ settled why.
 - **Q-1** Which app becomes the reference example? Converting something already
   built tests the format harder than authoring fresh, but it also risks
   documenting accidents as if they were decisions.
-- **Q-2** Does PLAN.md live here permanently as the practice's rationale, or does
-  it fold into a RATIONALE.md once the doc set exists? Keeping both risks two
-  places making the same argument.
+- **Q-2** Does PLAN.md live here permanently as the practice's rationale, or does it
+  fold into the doc set once that set exists? With reasoning now carried by
+  ARCHITECTURE_LOG entries, there's no RATIONALE.md for it to become, so the choice is
+  between keeping it as a standing argument and retiring it into dated entries. Keeping
+  both risks two places making the same argument.
 - **Q-3** What's the smallest honest evidence that this works? "It feels better"
   is not a claim. Candidates: tokens-to-orientation for a cold session, or count
   of design bugs caught during doc-writing rather than during implementation.

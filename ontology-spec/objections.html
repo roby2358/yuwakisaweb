@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Objections and costs — Ontology-driven design docs</title>
+<meta name="description" content="What this costs, when to skip it, and the three arguments against it — including the one I think is right.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <span class="home"><a href="../index.html">Yuwakisa</a></span>
+  <a href="index.html">The case</a>
+  <a href="practice.html">The doc set</a>
+  <a href="prompts.html">Prompts</a>
+  <span class="here">Objections &amp; costs</span>
+</nav>
+
+<div class="head">
+  <h1>Objections and costs</h1>
+  <p class="standfirst">Three arguments against this, put the way the people who raise
+  them would put it. I think the third one is right, which is worth saying up front: if
+  a method's defenders have an answer for everything, that's usually a sign they're
+  selling it.</p>
+</div>
+
+<h2>"This is UML with extra steps" <span class="tag">answered</span></h2>
+
+<p>The strong version of this isn't that UML was bad. It's that UML was this same idea —
+a model of the domain, kept beside the code, meant to be the authoritative description —
+and it died anyway. So it's fair to ask what's different.</p>
+
+<p>Two things, I think. UML diagrams were drawn in code vocabulary, which made them a
+restatement of the code and left no way to check them on their own terms. A claim like
+"a song has exactly one credited artist" isn't like that; you can review it knowing
+nothing about the repository, and refactoring can't touch it.</p>
+
+<p>The other difference is cost. UML's real expense was the hand translation into code,
+paid once and lossily. That translation is cheap now, and you can run it again, which is
+most of why this seems worth trying in 2026 and wasn't in 2005.</p>
+
+<h2>"This is OWL with extra steps" <span class="tag">answered</span></h2>
+
+<p>This is the better-informed objection. "Ontology" has been a computer science term
+since Tom Gruber defined it in 1993 as an explicit specification of a conceptualization,
+with AI knowledge representation behind it and the Semantic Web stack in front: RDF,
+then OWL as a W3C recommendation in 2004, built on description logics. If you know that
+literature, you arrive expecting triples and a reasoner, and you're owed an explanation
+of what this adds.</p>
+
+<p>The difference is who reads it. Those ontologies are built to be computed over, by a
+reasoner doing classification and inference. This one is built to be read, by a person
+and then by a model.</p>
+
+<p>That's why OWL's limits — no time, no actions, no arithmetic, the open-world
+assumption — don't really bite here. The goal isn't a weaker reasoner; it's a good input
+to a translation.</p>
+
+<p>The lineage does have two lessons, though. The big upper ontologies like SUMO and
+DOLCE never saw much application use, for roughly UML's reason: the formal apparatus
+cost more than it returned. Meanwhile the field's clearest success, the Gene Ontology,
+has been in continuous use for about three decades, and what carried it was curation
+discipline rather than expressiveness — identifiers that are never reused, terms
+obsoleted with pointers instead of deleted, every assertion carrying a code for how it's
+known. That's close to the policy here, which I'd treat as encouraging: the case that
+scaled did it on process.</p>
+
+<h2>"All documents rot, and this one will too" <span class="tag t">conceded</span></h2>
+
+<p>I think this one is right. The defense is supposed to be that criteria rows own test
+directories and code cites stable IDs, so a divergence shows up as a failing test rather
+than a stale diagram. But that's a practice, not a property, and where it isn't enforced
+the UML problem comes straight back.</p>
+
+<p>A small example from this site. Adding one section to <code>PLAN.md</code> renumbered
+the sections after it and quietly broke four cross-document citations — in a document
+that argues against citing section numbers, written a few days earlier. They were fixed
+within minutes, but only because someone happened to look.</p>
+
+<p>So the parts I'd trust are the mechanical ones: stable IDs, a coverage test that
+fails the build, a criteria row that owns a directory. The parts that rely on remembering
+will decay at the speed of everyone's attention.</p>
+
+<h2>What it costs</h2>
+
+<div class="cards two">
+  <div class="card">
+    <h3>Overhead, paid up front</h3>
+    <p>All of it comes before anything runs. There's no version where the first day is
+    faster.</p>
+  </div>
+  <div class="card">
+    <h3>Wrong for small work</h3>
+    <p>Five entities and two rules don't need four files. Use one
+    <code>SPEC.md</code> and borrow the properties as sections.</p>
+  </div>
+  <div class="card">
+    <h3>Quiet failure when docs and code diverge</h3>
+    <p>This is the failure that returns you to UML, and the reason the mechanical checks
+    matter more than the prose does.</p>
+  </div>
+  <div class="card">
+    <h3>Provenance needs enforcing</h3>
+    <p>A <span class="tag p">[P]</span> that slips into being a rule has undone the one
+    thing that made the document trustworthy.</p>
+  </div>
+</div>
+
+<p>It starts paying when the thing will be tuned, when the numbers are uncertain, when
+more than one person or session touches it, or when it'll outlive your memory of writing
+it. Games, rule engines, protocols, simulations. That's about where I'd draw the
+line.</p>
+
+<h2>Still open</h2>
+
+<p>Four questions this hasn't settled, left visible rather than tidied away.</p>
+
+<table>
+  <tr><th>Question</th><th>Where it stands</th></tr>
+  <tr>
+    <td><b>What's the smallest honest evidence that this works?</b></td>
+    <td>Unanswered. "It feels better" isn't a claim. Candidates: how many tokens it
+    takes to orient a cold session, or how many design bugs get caught while writing
+    docs rather than while implementing. Domain-driven design made a similar argument in
+    2003, without a model to do the translation, and never answered this either.</td>
+  </tr>
+  <tr>
+    <td><b>Does the argument live in too many places?</b></td>
+    <td>Probably. There's a working plan, a short summary, and now this site, all making
+    overlapping cases. The reasoning is that each suits a different reader and the detail
+    stays in one place. That's a defense rather than a proof.</td>
+  </tr>
+  <tr>
+    <td><b>Should the file keep the name <code>ONTOLOGY.md</code>?</b></td>
+    <td>Open. The word carries freight from the Semantic Web, and
+    <code>DOMAIN.md</code> wouldn't. For now it stays, because the stance really is the
+    ontological one: what exists, and what has to hold, in the domain's own words.</td>
+  </tr>
+  <tr>
+    <td><b>Which tools should maintain the cycle?</b></td>
+    <td>Catalogued, but only the coverage test is built. They're ranked by value divided
+    by the chance the tool gets abandoned, since abandonment is what killed UML.</td>
+  </tr>
+</table>
+
+<div class="exit">
+  <p>If the conceded one is the part you find most convincing, that seems like the right
+  reaction. <a href="prompts.html">The prompts</a> are where the mechanical pieces turn
+  into something you can type.</p>
+  <p>Or go back to <a href="index.html">the case</a>, which is short.</p>
+</div>
+
+<div class="footer">
+  <p>The working versions, with the prior art and the open questions in full, are in
+  <code>PLAN.md</code> and <code>TOOLING.md</code> beside this site.</p>
+  <p><a href="../index.html">Yuwakisa</a></p>
+</div>
+
+</body>
+</html>

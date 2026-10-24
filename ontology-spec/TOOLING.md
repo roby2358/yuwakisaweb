@@ -42,7 +42,7 @@ trivial cost.** Forty-one lines closes the "test lists in two places" and
 normal test command* rather than by asking anyone to remember.
 
 It is also worth naming what it doesn't do: it checks the table against the
-directory tree, and nothing about ONTOLOGY, RATIONALE, or the log.
+directory tree, and nothing about ONTOLOGY or the log.
 
 ---
 
@@ -88,7 +88,7 @@ language-specificity leaks in. See Q-8.
 is a cut candidate (the skill's claim that nothing in a codebase can be *shown* to
 be dead without this). A goal nothing serves is an unmet goal.
 **Checks:** every entity and rule has a `Serves:` line; every Serves target resolves
-to a §0 goal, a named quality, or a DYNAMICS driver; every goal and quality is named
+to a §0 goal or a named quality; every goal and quality is named
 by at least one Serves.
 **Cost:** small. This is the highest insight-per-line checker on the list — it
 answers a question no codebase can answer, which is PLAN's "map" claim made
@@ -105,8 +105,8 @@ anything here.
 
 ### 2.7 Log-entry-per-change check
 **Catches:** the log written after the fact, which the skill says isn't a log.
-**Checks:** if a commit touches `ONTOLOGY.md`, `CRITERIA.md` or `RATIONALE.md` and
-doesn't touch `ARCHITECTURE_LOG.md`, fail.
+**Checks:** if a commit touches `ONTOLOGY.md` or `CRITERIA.md` and doesn't touch
+`ARCHITECTURE_LOG.md`, fail.
 **Cost:** small; the design question is where it runs. See Q-7.
 
 ### 2.8 Unbuilt-tag check
@@ -152,7 +152,7 @@ the full `sim`/`trace --golden`/`smoke` + `domstub` set; `alienbadlands` and `fi
 carry `sim.js` plus bot and screenshot drivers; `hexandcounter` carries the R-row
 suite and its integration walkthrough behind one `run.js`.
 
-They matter here because they are the **only source of RATIONALE Evidence lines.**
+They matter here because they are the **only source of the log's Evidence lines.**
 The rule is already in force: a harness that produced a finding gets committed to the
 project's `test/` directory and re-run across sessions. It is never a scratchpad
 script, because the finding is only as durable as the thing that produced it.
@@ -160,10 +160,10 @@ script, because the finding is only as durable as the thing that produced it.
 Two generic gaps:
 
 ### 4.1 Evidence re-runner
-**Catches:** silent drift between a RATIONALE claim and current behavior — precisely
+**Catches:** silent drift between a logged claim and current behavior — precisely
 the failure PLAN's cost section names as the one that reintroduces the UML problem.
 **Checks:** parse every `Measured by: <command> → <result>` line, run the command,
-flag lines whose result has changed. A RATIONALE entry then either still holds or
+flag lines whose result has changed. A log entry then either still holds or
 fails out loud.
 **Cost:** medium, and the risk isn't the code — it's whether those commands stay
 runnable for months. See Q-6. If they do, this is the most valuable unbuilt tool on
@@ -193,7 +193,7 @@ properties that aren't mechanical.
 - **Provenance can't be automated.** The `[D]`/`[P]` distinction is an authority
   claim. A tool can check that a tag *exists* (2.5's sibling check) but not that it's
   honest, and a tool that guessed would destroy the property it was checking.
-- **Rationale quality can't be automated.** "Writing down the alternatives is what
+- **Reasoning quality can't be automated.** "Writing down the alternatives is what
   finds bugs" is a claim about the writing, not the artifact. A checker that demanded
   an `Alternatives:` line would get a line, not an alternative.
 
@@ -209,7 +209,7 @@ properties that aren't mechanical.
 | 4 | Serves orphan check (2.5) | dead items survive; goals go unmet | small | — |
 | 5 | Log-entry check (2.7) | the log stops being a log | small | — |
 | 6 | Citation linter (2.3) | §-references rot silently | small | — |
-| 7 | Evidence re-runner (4.1) | RATIONALE claims go stale unnoticed | medium | — |
+| 7 | Evidence re-runner (4.1) | logged claims go stale unnoticed | medium | — |
 | 8 | Constants single-source (2.4 / 3.1) | tuning becomes a hunt | medium | — |
 | 9 | ID index (3.2) | change requests don't resolve to files | medium | — |
 | 10 | Sweep runner (4.2) | confounded attribution | medium | per-project |
@@ -242,7 +242,7 @@ So, a budget, and it is the real content of this section:
 ## §8 Open questions
 
 - **Q-5** Do the checkers live per-project (copied, drifts) or once in
-  `ideas/ontology-spec/tools/` with each project's `test/run.js` requiring them
+  `ontology-spec/tools/` with each project's `test/run.js` requiring them
   (shared, couples 38 prototypes to one directory)? *Recommendation:* shared, with
   the per-project `run.js` passing in paths — the checkers are about the format, and
   the format is the thing being consolidated. Copies would each drift into a

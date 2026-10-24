@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prompts — Ontology-driven design docs</title>
+<meta name="description" content="The cycle as things you type: nine prompts, each with what a good answer looks like and the mistake it heads off.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <span class="home"><a href="../index.html">Yuwakisa</a></span>
+  <a href="index.html">The case</a>
+  <a href="practice.html">The doc set</a>
+  <span class="here">Prompts</span>
+  <a href="objections.html">Objections &amp; costs</a>
+</nav>
+
+<div class="head">
+  <h1>Prompts</h1>
+  <p class="standfirst">The cycle as things you type. Each one comes with what a good
+  answer looks like, so you can judge the reply, and the mistake it's meant to head off.
+  They're in rough order of use. If you only take two, take the cold start and the
+  reconcile prompt.</p>
+</div>
+
+<div class="prompt">
+  <div class="phase">Orient</div>
+  <h3>Cold start: read the doc, not the codebase</h3>
+  <div class="promptbox">
+    <button type="button">Copy</button>
+    <pre>Read ONTOLOGY.md in &lt;app&gt;/ and tell me what this system is for, what its
+main entities are, and where you think the design risk sits. Don't read the
+implementation yet.</pre>
+  </div>
+  <p class="meta"><b>A good answer</b> summarizes the system in the domain's own words
+  and names a risk. If it can't, the document isn't pulling its weight, and you found
+  that out in one call.</p>
+  <p class="meta prevents"><b>Heads off</b> a session that greps its way to a guess.</p>
+</div>
+
+<div class="prompt">
+  <div class="phase">Start</div>
+  <h3>Purpose before entities</h3>
+  <div class="promptbox">
+    <button type="button">Copy</button>
+    <pre>/ontology_spec new app: &lt;one-line idea&gt;
+
+Ask me the §0 questions first — what this is for, the qualities a user should
+feel, the goals in priority order, and the non-goals. Don't write entities
+until I've answered.</pre>
+  </div>
+  <p class="meta"><b>A good answer</b> is a short batch of questions, not a draft
+  spec.</p>
+  <p class="meta prevents"><b>Heads off</b> a document whose purpose was inferred. §0
+  breaks ties for everything that comes after, so if it's a guess, the ties break the
+  model's way.</p>
+</div>
+
+<div class="prompt">
+  <div class="phase">Start</div>
+  <h3>Rules and their test cases together</h3>
+  <div class="promptbox">
+    <button type="button">Copy</button>
+    <pre>Write ONTOLOGY's entities and rules alongside the CRITERIA rows — each rule
+next to its Given/Expect case. Keep every rule under ten lines of pseudocode,
+mark every number [T], and tag [D] or [P] honestly.</pre>
+  </div>
+  <p class="meta"><b>A good answer</b> keeps the rules inside ten lines. If one won't
+  fit, that's useful to know: it's probably too vague to implement yet.</p>
+  <p class="meta prevents"><b>Heads off</b> criteria written afterwards, which tend to
+  justify the rules rather than test them.</p>
+</div>
+
+<div class="prompt">
+  <div class="phase">Convert</div>
+  <h3>Map an existing spec before touching it</h3>
+  <div class="promptbox">
+    <button type="button">Copy</button>
+    <pre>/ontology_spec convert docs/SPEC.md
+
+Map first, no edits: old section → new ID. Where the spec and the code
+disagree, the code wins and the discrepancy goes in a list for me to rule on.
+Show me the map before you rewrite anything.</pre>
+  </div>
+  <p class="meta"><b>A good answer</b> is a mapping table and a list of discrepancies,
+  with nothing rewritten yet. Anything that has no home in the map is usually the
+  interesting part.</p>
+  <p class="meta prevents"><b>Heads off</b> drift being quietly resolved in whichever
+  direction the model guessed.</p>
+</div>
+
+<div class="prompt">
+  <div class="phase">Build</div>
+  <h3>Contract first, UI last</h3>
+  <div class="promptbox">
+    <button type="button">Copy</button>
+    <pre>/implement &lt;app&gt;
+
+Contract first — the commands and events table — then the headless core with
+seeded, DOM-free tests, then tune against a committed harness, then the UI.</pre>
+  </div>
+  <p class="meta"><b>A good answer</b> settles the commands and events before any engine
+  code exists, with each command checking its own legality.</p>
+  <p class="meta prevents"><b>Heads off</b> an interface invented during implementation,
+  which is where most of them come from and why they're hard to animate or network
+  later.</p>
+</div>
+
+<div class="prompt">
+  <div class="phase">Review</div>
+  <h3>Questions in one batch</h3>
+  <div class="promptbox">
+    <button type="button">Copy</button>
+    <pre>Collect every open question as Q-n with its options and your recommendation,
+and send them to me in one message. Stop on anything blocking rather than
+picking for me.</pre>
+  </div>
+  <p class="meta"><b>A good answer</b> is one message, numbered, each question carrying a
+  recommendation you can take or override in a sentence.</p>
+  <p class="meta prevents"><b>Heads off</b> the drip: one question per turn, each answered
+  without the others in view.</p>
+</div>
+
+<div class="prompt">
+  <div class="phase">Reconcile</div>
+  <h3>Four things move together</h3>
+  <div class="promptbox">
+    <button type="button">Copy</button>
+    <pre>For this change, update together: the ONTOLOGY rule, the CRITERIA row,
+test/R-n/, and a dated ARCHITECTURE_LOG entry carrying the reasoning. Don't
+hand it back until all four have moved.</pre>
+  </div>
+  <p class="meta"><b>A good answer</b> is one diff touching all four. A missing log entry
+  means the change isn't finished, since a log written later isn't really a log.</p>
+  <p class="meta prevents"><b>Heads off</b> docs drifting from code, which is how you end
+  up back at the UML problem. Probably the prompt that earns the most here.</p>
+</div>
+
+<div class="prompt">
+  <div class="phase">Measure</div>
+  <h3>No claim without evidence</h3>
+  <div class="promptbox">
+    <button type="button">Copy</button>
+    <pre>No balance or performance claim enters the log without an Evidence line:
+"Measured by: &lt;command&gt; → &lt;result&gt;", or "Modeled by: &lt;sim&gt; (unverified)".
+Change one named constant at a time so the attribution isn't confounded.</pre>
+  </div>
+  <p class="meta"><b>A good answer</b> declines to assert a tuning outcome that nothing
+  ran, and labels modeled numbers as modeled.</p>
+  <p class="meta prevents"><b>Heads off</b> confident predictions. One simulation here
+  predicted 4&ndash;8 shots per encounter; the real game gave 2.</p>
+</div>
+
+<div class="prompt">
+  <div class="phase">Audit</div>
+  <h3>Does each thing still do what it's for?</h3>
+  <div class="promptbox">
+    <button type="button">Copy</button>
+    <pre>/ontology_spec teleology
+
+For each entity and rule, does it still do what its Serves tag says? Measure,
+don't read — toggle it, halve it, double it — and name the command behind every
+finding. Recommend, but leave design fixes to me.</pre>
+  </div>
+  <p class="meta"><b>A good answer</b> is a table of verdicts — Served, Half drifted,
+  Drifted, Unverified — plus the reverse check: goals nothing serves, purposes with no
+  state behind them.</p>
+  <p class="meta prevents"><b>Heads off</b> mechanics that have quietly started serving
+  something other than their stated purpose.</p>
+</div>
+
+<div class="exit">
+  <p>These assume the documents they're driving. If something here is unfamiliar —
+  <code>Serves:</code>, the four instrument forms, <code>test/R-n/</code> —
+  <a href="practice.html">the doc set</a> is the reference card.</p>
+  <p>And if you'd rather know the cost before adopting any of it, that's on
+  <a href="objections.html">objections and costs</a>.</p>
+</div>
+
+<div class="footer">
+  <p>The slash commands come from the <code>ontology_spec</code> and
+  <code>implement</code> skills, but the prompts work without them. They're asking for a
+  shape, not calling a tool.</p>
+  <p><a href="../index.html">Yuwakisa</a></p>
+</div>
+
+<script>
+// The site's one action: copy(prompt). If the clipboard is unavailable the text
+// is still selectable, so this stays an affordance and never a requirement.
+document.querySelectorAll('.promptbox button').forEach(function (button) {
+  button.addEventListener('click', function () {
+    var text = button.parentElement.querySelector('pre').textContent;
+    var revert = function (label) {
+      button.textContent = label;
+      setTimeout(function () { button.textContent = 'Copy'; }, 1400);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { revert('Copied'); },
+                                              function () { revert('Select it'); });
+    } else {
+      revert('Select it');
+    }
+  });
+});
+</script>
+
+</body>
+</html>

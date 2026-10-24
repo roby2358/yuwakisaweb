@@ -1,0 +1,197 @@
+/* Ontology-spec site — Yuwakisa house style.
+   Constants are named in ONTOLOGY.md §6: COLUMN, ACCENT_FROM, ACCENT_TO, PAGE_BG. */
+
+:root {
+  --accent-from: #32CD32;
+  --accent-to: #00BFFF;
+  --page-bg: #fafafa;
+  --ink: #222;
+  --ink-strong: #111;
+  --ink-soft: #52514e;
+  --ink-softer: #666;
+  --rule: #e4e4e1;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 0 1rem 4rem;
+  color: var(--ink);
+  background: var(--page-bg);
+  line-height: 1.6;
+}
+
+/* Nav — identical on every page; the current page is plain text, not a link. */
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 1.1rem;
+  padding: 1.1rem 0 0.9rem;
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.92rem;
+}
+.nav a { color: #0a6ebd; text-decoration: none; }
+.nav a:hover { text-decoration: underline; }
+.nav .here { font-weight: 600; color: var(--ink-strong); }
+.nav .home { margin-right: auto; font-weight: 600; letter-spacing: 0.02em; }
+.nav .home a { color: var(--ink-strong); }
+
+/* Page head */
+.head { margin: 2.6rem 0 2rem; }
+.head h1 {
+  font-size: 2rem;
+  line-height: 1.15;
+  font-weight: 700;
+  margin: 0 0 0.7rem;
+  color: var(--ink-strong);
+}
+.standfirst {
+  font-size: 1.12rem;
+  color: #444;
+  max-width: 44rem;
+  margin: 0;
+  line-height: 1.5;
+}
+
+h2 {
+  font-size: 1.25rem;
+  line-height: 1.25;
+  color: var(--ink-strong);
+  margin: 2.6rem 0 0.8rem;
+}
+h3 { font-size: 1.02rem; margin: 1.8rem 0 0.4rem; color: var(--ink-strong); }
+p { max-width: 46rem; }
+a { color: #0a6ebd; }
+
+/* Cards, the house motif: white, gradient left edge */
+.card {
+  background: #fff;
+  border-left: 4px solid transparent;
+  border-image: linear-gradient(180deg, var(--accent-from), var(--accent-to)) 1;
+  border-radius: 4px;
+  padding: 1.2rem 1.5rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  margin: 1.2rem 0;
+}
+.card h3 { margin-top: 0; }
+.card p:last-child { margin-bottom: 0; }
+.cards { display: grid; grid-template-columns: 1fr; gap: 1.1rem; margin: 1.4rem 0; }
+
+/* Pull-quote for the load-bearing sentence of a page */
+.pull {
+  font-size: 1.18rem;
+  line-height: 1.5;
+  color: var(--ink-strong);
+  border-left: 4px solid transparent;
+  border-image: linear-gradient(180deg, var(--accent-from), var(--accent-to)) 1;
+  padding: 0.2rem 0 0.2rem 1.2rem;
+  margin: 1.8rem 0;
+  max-width: 44rem;
+}
+
+table { border-collapse: collapse; width: 100%; margin: 1.2rem 0; font-size: 0.94rem; }
+th, td { text-align: left; padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { color: var(--ink-strong); font-weight: 600; background: #f3f3f1; }
+
+code {
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 0.92em;
+  background: #f0f0ee;
+  padding: 0.1em 0.32em;
+  border-radius: 3px;
+}
+
+.tag {
+  display: inline-block;
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 0.12rem 0.45rem;
+  border-radius: 3px;
+  background: #eef6ec;
+  color: #2b6b2b;
+  vertical-align: 0.1em;
+}
+.tag.p { background: #eef2f8; color: #2b4e7b; }
+.tag.t { background: #f7f2e8; color: #7b5a2b; }
+
+/* Prompts page */
+.prompt { margin: 1.5rem 0 2.2rem; }
+.prompt .phase {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.prompt h3 { margin: 0.15rem 0 0.6rem; }
+.promptbox {
+  position: relative;
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-left: 4px solid transparent;
+  border-image: linear-gradient(180deg, var(--accent-from), var(--accent-to)) 1;
+  border-radius: 4px;
+  padding: 0.95rem 5.6rem 0.95rem 1.1rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+.promptbox pre {
+  margin: 0;
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #1c1c1c;
+}
+.promptbox button {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #fff;
+  background-image: linear-gradient(45deg, var(--accent-from), var(--accent-to));
+  border: none;
+  border-radius: 3px;
+  padding: 0.33rem 0.7rem;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.promptbox button:hover { opacity: 0.86; }
+.meta { margin: 0.7rem 0 0; font-size: 0.93rem; color: #3b3b3b; max-width: 46rem; }
+.meta b { color: var(--ink-strong); }
+.meta.prevents { color: var(--ink-soft); }
+
+/* Exit — the named reason to go to a specific next page */
+.exit {
+  margin: 3rem 0 0;
+  padding: 1.2rem 1.5rem;
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+}
+.exit p { margin: 0; max-width: 46rem; }
+.exit p + p { margin-top: 0.6rem; }
+
+.footer {
+  margin-top: 3.5rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.88rem;
+  color: var(--ink-softer);
+}
+.footer p { margin: 0.25rem 0; max-width: none; }
+
+.note { color: var(--ink-soft); }
+.small { font-size: 0.9rem; }
+
+@media (min-width: 46rem) {
+  .cards.two { grid-template-columns: 1fr 1fr; }
+  .cards.three { grid-template-columns: repeat(3, 1fr); }
+}

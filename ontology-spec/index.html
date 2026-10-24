@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The case — Ontology-driven design docs</title>
+<meta name="description" content="Design docs work better when they describe the problem instead of the code. The thing that used to make that impractical has changed.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <span class="home"><a href="../index.html">Yuwakisa</a></span>
+  <span class="here">The case</span>
+  <a href="practice.html">The doc set</a>
+  <a href="prompts.html">Prompts</a>
+  <a href="objections.html">Objections &amp; costs</a>
+</nav>
+
+<div class="head">
+  <h1>Design docs describe the problem, not the code</h1>
+  <p class="standfirst">Write a design doc that describes your code and you end up with
+  a second copy of your program, less precise than the real one. Write one that
+  describes the problem instead and you get something different. For a long time that
+  wasn't practical, because somebody had to translate it into code by hand. That part
+  has changed.</p>
+</div>
+
+<h2>What happened to UML</h2>
+
+<p>A UML class diagram is meant to describe a domain. In practice it gets drawn in code
+vocabulary: classes, fields, visibility modifiers, multiplicities that are really
+foreign keys. You end up with a picture of the code you're about to write, and that
+causes two problems.</p>
+
+<div class="cards two">
+  <div class="card">
+    <h3>It repeats the code</h3>
+    <p>Once the code exists, it says everything the diagram says, and says it more
+    precisely. Keeping both in step is extra work for no new information. So people
+    stopped, and they were right to.</p>
+  </div>
+  <div class="card">
+    <h3>You can't check it</h3>
+    <p>There's no way to ask whether the diagram is true. You can only ask whether the
+    code matches it. When it doesn't, nothing tells you which one to fix.</p>
+  </div>
+</div>
+
+<p>An ontology makes claims about the problem instead. "A song has exactly one credited
+artist" is a statement about music. You can agree or disagree with it without reading
+any code, and no refactor will make it false.</p>
+
+<p>That buys you a few things. Someone who doesn't read code can review it. It survives
+refactoring, since refactoring changes the code and leaves the problem alone. And when
+two parts of a system contradict each other, you usually have one disagreement about the
+domain rather than two bugs, so you can settle it once.</p>
+
+<h2>What changed</h2>
+
+<p>The gap between the problem and the code was always there. It just cost too much to
+cross. Somebody had to translate by hand, slowly, once. Given that, you may as well
+write the spec in code terms and skip a step, and for thirty years that was a reasonable
+trade.</p>
+
+<p>Models happen to be good at this particular translation. Hand one "a duet is a song
+with two or more performers, and the credit line lists them in billing order" and you
+get back the struct, the validation, a test case, and a sensible UI control, in whatever
+framework you name. It isn't compiling. It's closer to analogy: take the shape of the
+problem, find the matching shape in the framework.</p>
+
+<p>Two things follow from that. The translation can be run again, so one problem-space
+doc can land on vanilla JS, on Spring Boot, on something that doesn't exist yet. A
+code-space spec can't be re-aimed, because it already picked one framework and threw the
+source away. And if you write the spec in code terms, you've done the easy part for the
+model while leaving the hard parts vague: what the thing is for, which numbers matter,
+what must never happen.</p>
+
+<p>People often assume AI coding makes specs less important, since code is cheap now. I
+think it goes the other way.</p>
+
+<p class="pull">If code is cheap to regenerate, it stops being the thing you own and
+becomes build output. The spec takes its place.</p>
+
+<h2>Three jobs it does</h2>
+
+<div class="cards three">
+  <div class="card">
+    <h3>A map</h3>
+    <p>Code tells you what exists. It's poor at telling you where anything is, or why
+    it's arranged that way. The practical version: this is the document you read
+    <em>instead of</em> the codebase. A few thousand tokens gets you oriented. Grepping
+    for the same understanding takes much longer.</p>
+  </div>
+  <div class="card">
+    <h3>A touchstone</h3>
+    <p>When two readings are possible, one place settles it. Pairing each rule with its
+    test cases is what keeps that from being talk, since you can run something instead
+    of arguing. And writing down the alternatives means "why not X?" already has an
+    answer.</p>
+  </div>
+  <div class="card">
+    <h3>A guide for changes</h3>
+    <p>With stable IDs, a change arrives as "D-17 is wrong," and that ID points at the
+    rule, its tests, and the code citing it. Tagging what each piece serves is also how
+    things get removed later, since you can show something is no longer needed.</p>
+  </div>
+</div>
+
+<h2>A small worked example</h2>
+
+<p>These four pages have an <code>ONTOLOGY.md</code> sitting next to them, and it's the
+touchstone for the presentation you're reading. It says what each page owes you, what
+has to hold across all four, the few numbers involved, and the single action on the
+prompts page. The rule about keeping this tone gentle is in there too, which is why it
+reads the way it does.</p>
+
+<p>It's short, and a static site is about as simple as a specified thing gets. If you'd
+like to see the format at small scale before trying it on something that matters, that's
+probably the cheapest place to look.</p>
+
+<p><a href="ONTOLOGY.md"><b>Read ONTOLOGY.md</b></a> &mdash; the doc behind this
+site.</p>
+
+<div class="exit">
+  <p>If you'd like to try it, <a href="prompts.html">the prompts</a> are the cycle as
+  things you type — nine of them, each with the mistake it's meant to head off. That
+  page reads on its own.</p>
+  <p>If you're not sold, <a href="objections.html">objections and costs</a> has the two
+  strongest arguments against this, and the one I think is right.</p>
+</div>
+
+<div class="footer">
+  <p>The longer versions sit beside this site as markdown: <code>PLAN.md</code> for the
+  argument and the prior art, <code>SUMMARY.md</code> for the short form,
+  <code>TOOLING.md</code> for the tools that would maintain it, and
+  <code>ONTOLOGY.md</code> for this site itself.</p>
+  <p><a href="../index.html">Yuwakisa</a></p>
+</div>
+
+</body>
+</html>

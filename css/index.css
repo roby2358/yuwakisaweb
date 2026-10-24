@@ -92,11 +92,13 @@ body {
 /* Benchmarks & Consulting */
 
 .benchmarks,
+.practices,
 .consulting {
   margin-bottom: 56px;
 }
 
 .benchmarks h2,
+.practices h2,
 .consulting h2 {
   font-size: 1.3rem;
   font-weight: 600;
@@ -105,12 +107,14 @@ body {
 }
 
 .benchmarks ul,
+.practices ul,
 .consulting ul {
   list-style: none;
   padding: 0;
 }
 
 .benchmarks li,
+.practices li,
 .consulting li {
   position: relative;
   padding-left: 20px;
@@ -120,6 +124,7 @@ body {
 }
 
 .benchmarks li::before,
+.practices li::before,
 .consulting li::before {
   content: '\2014';
   position: absolute;
@@ -127,13 +132,15 @@ body {
   color: #32CD32;
 }
 
-.benchmarks a {
+.benchmarks a,
+.practices a {
   color: #0077B5;
   font-weight: 600;
   text-decoration: none;
 }
 
-.benchmarks a:hover {
+.benchmarks a:hover,
+.practices a:hover {
   text-decoration: underline;
 }
 
