@@ -43,6 +43,7 @@ const STRATEGIES = {
 function run(name) {
   const g = E.newGame(seed);
   STRATEGIES[name](g);
+  const nextAt = g.purchase.indexOf('nextLevel');   // a wipe pulls Next Level; the sim puts it back here
   const rows = [];
   const chests = { xp: 0, ambush: 0, bonus: 0 };
   let deaths = 0, stuckReported = false, last = { x: 0, y: 0, kills: -1 };
@@ -53,6 +54,7 @@ function run(name) {
     for (const e of g.events) {
       if (e.type === 'heroDied') deaths++;
       if (e.type === 'chestOpened') chests[e.outcome]++;
+      if (e.type === 'wiped' && e.pulled && nextAt >= 0) E.queue(g, 'nextLevel', Math.min(nextAt, g.purchase.length));
     }
     g.events = [];
     // Stuck detector: a full minute with no kills and the leader barely moving.

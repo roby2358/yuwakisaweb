@@ -35,7 +35,7 @@
     levelEntered: e => {
       cam.snap = true;
       effects = [];
-      if (e.reason !== 'load') banner = { text: 'DEPTH ' + e.depth, sub: e.reason === 'wipe' ? 'back to the entrance' : '', t: 0, life: 2.2, color: '#ddd' };
+      if (e.reason !== 'load') banner = { text: 'DEPTH ' + e.depth, sub: e.reason === 'wipe' ? 'back to the entrance; the foes remember' : '', t: 0, life: 2.2, color: '#ddd' };
     },
     chestOpened: e => {
       effects.push({ kind: 'lid', x: e.x, y: e.y, t: 0, life: 1.2 });

@@ -211,7 +211,7 @@
   const LOG = {
     heroDied: e => ['death', `${e.by} felled the ${CLS[e.cls]}`],
     revived: e => ['rise', `The Priest raised the ${CLS[e.cls]}`],
-    wiped: e => ['death', `The party fell on depth ${e.depth}`],
+    wiped: e => ['death', `The party fell on depth ${e.depth}` + (e.pulled ? '; Next Level is back in Available' : '')],
     levelEntered: e => (e.reason === 'descend' ? ['depth', `Descended to depth ${e.depth}`] : null),
     offline: e => ['rise', `While you were away (${fmtTime(e.seconds)}): +${fmt(e.xp)} XP`],
     purchased: e => ['', `Bought ${label(e.id)} → Lv ${e.level}`],
@@ -225,7 +225,7 @@
     bonus: e => ['rise', `A chest held ★ Party ${ID.BONUSES[e.kind].label} (queued 2nd)`],
   };
   // Events that change what the lists show.
-  const RELIST = new Set(['purchased', 'bonusBought', 'chestOpened']);
+  const RELIST = new Set(['purchased', 'bonusBought', 'chestOpened', 'wiped']);
 
   function log(cls, text) {
     const div = document.createElement('div');

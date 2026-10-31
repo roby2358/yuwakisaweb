@@ -26,6 +26,7 @@ const seen = {};
 for (let f = 0; f < 60 * 60 * 6; f++) {      // six minutes at 60 fps
   const res = E.tick(g, 1 / 60);
   for (const e of res.events) seen[e.type] = (seen[e.type] || 0) + 1;
+  if (res.events.some(e => e.type === 'wiped')) E.queue(g, 'nextLevel', 0);   // a wipe pulls it; put it back
   R.addEvents(res.events);
   R.draw(g, 1 / 60);
 }
@@ -40,6 +41,7 @@ check(g.available.length + g.purchase.length === ID.CATALOG.length, 'every upgra
 const save = JSON.parse(JSON.stringify(E.serialize(g, 1000000)));
 // Head the queue with Next Level and zero the XP so the 60 s credit can't buy anything.
 save.purchase = ['nextLevel'].concat(save.purchase.filter(id => id !== 'nextLevel'));
+save.available = save.available.filter(id => id !== 'nextLevel');
 save.xp = 0;
 const res = E.load(save, 1000000 + 60000);
 check(res.ok, 'load succeeds');
@@ -78,6 +80,20 @@ if (opened) {
 // Commands refuse illegal moves.
 check(!E.queue(g2, 'nope', 0).ok, 'queue unknown id refused');
 check(!E.unqueue(g2, g2.available[0] || 'nope').ok, 'unqueue of non-queued refused');
+
+// Wipe: Next Level leaves the queue, the party regroups, and the monsters keep their wounds.
+const g5 = E.newGame(5);
+E.queue(g5, 'nextLevel', 0);
+g5.level.monsters[0].hp = g5.level.monsters[0].maxHp / 2;
+const wounded = { id: g5.level.monsters[0].id, hp: g5.level.monsters[0].hp };
+for (const h of g5.heroes) { h.alive = false; h.hp = 0; }
+E.step(g5);
+check(g5.events.some(e => e.type === 'wiped' && e.pulled), 'wipe reports Next Level pulled');
+check(!g5.purchase.includes('nextLevel') && g5.available.includes('nextLevel'), 'wipe moves Next Level to available');
+for (let n = 0; n < Math.ceil(ID.N.WIPE_DELAY / ID.N.TICK) + 1; n++) E.step(g5);
+const m5 = g5.level.monsters.find(m => m.id === wounded.id);
+check(g5.heroes.every(h => h.alive && h.hp === h.maxHp), 'party regroups at full HP');
+check(m5 && m5.hp <= wounded.hp, 'monsters keep their wounds after a wipe');
 
 console.log(failures ? `${failures} failure(s)` : 'smoke ok');
 process.exit(failures ? 1 : 0);

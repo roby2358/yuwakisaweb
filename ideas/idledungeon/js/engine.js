@@ -122,19 +122,7 @@
     L.projectiles = [];
     L.respawnTimer = N.RESPAWN_INTERVAL;
     L.visited = new Float64Array(L.rooms.length).fill(-1e9);
-    L.goalRoom = -1;
-    L.goalField = null;
-    L.goalBest = Infinity;
-    L.goalSince = 0;
-    L.flow = null;
-    g.fieldCell = -1;
-    for (const h of g.heroes) {
-      const [fx, fy] = FORMATION[h.cls];
-      Object.assign(h, { x: L.entrance.x + fx * N.FORMATION_DIST * CELL * 0.6, y: L.entrance.y + fy * N.FORMATION_DIST * CELL * 0.6,
-        alive: true, cooldown: 0, reviveCooldown: 0, targetId: null, facing: 0, flash: 0, corpseField: null, corpseFor: null });
-      h.maxHp = stat(g, h.cls + '.hp');
-      h.hp = h.maxHp;
-    }
+    resetParty(g);
     while (L.monsters.length < N.MONSTER_CAP && spawnMonster(g, true));
     L.chests = [];
     L.chestTimers = [];
@@ -142,8 +130,34 @@
     for (let n = Math.round(N.CHEST_FRAC * L.rooms.length); n > 0 && rooms.length; n--)
       placeChest(g, rooms.splice(g.rng.int(0, rooms.length - 1), 1)[0]);
     rememberPositions(g);
-    g.wipeTimer = null;
     emit(g, 'levelEntered', { depth: d, reason });
+  }
+
+  // Everyone back at the entrance in formation, alive and at full HP, with a fresh wander goal.
+  function resetParty(g) {
+    const L = g.level;
+    L.goalRoom = -1;
+    L.goalField = null;
+    L.goalBest = Infinity;
+    L.goalSince = 0;
+    L.flow = null;
+    L.projectiles = [];
+    g.fieldCell = -1;
+    g.wipeTimer = null;
+    for (const h of g.heroes) {
+      const [fx, fy] = FORMATION[h.cls];
+      Object.assign(h, { x: L.entrance.x + fx * N.FORMATION_DIST * CELL * 0.6, y: L.entrance.y + fy * N.FORMATION_DIST * CELL * 0.6,
+        alive: true, cooldown: 0, reviveCooldown: 0, targetId: null, facing: 0, flash: 0, corpseField: null, corpseFor: null });
+      h.maxHp = stat(g, h.cls + '.hp');
+      h.hp = h.maxHp;
+    }
+  }
+
+  // After a wipe the level stays as it was (monsters keep their wounds, chests stay put): a shot at revenge.
+  function regroup(g) {
+    resetParty(g);
+    rememberPositions(g);
+    emit(g, 'levelEntered', { depth: g.depth, reason: 'wipe' });
   }
 
   function spawnMonster(g, initial) {
@@ -539,7 +553,7 @@
     autoPurchase(g);
     if (g.wipeTimer !== null) {
       g.wipeTimer -= T;
-      if (g.wipeTimer <= 0) enterLevel(g, g.depth, 'wipe');
+      if (g.wipeTimer <= 0) regroup(g);
       return;
     }
     const L = g.level, lead = leader(g);
@@ -575,7 +589,10 @@
     if (!g.heroes.some(h => h.alive)) {
       g.wipeTimer = N.WIPE_DELAY;
       g.wipes++;
-      emit(g, 'wiped', { depth: g.depth });
+      // A wipe pulls Next Level out of the queue, so the party doesn't dive again straight away.
+      const pulled = g.purchase.includes('nextLevel');
+      if (pulled) toAvailable(g, 'nextLevel');
+      emit(g, 'wiped', { depth: g.depth, pulled });
     }
   }
 
@@ -624,11 +641,15 @@
     return ok(g);
   }
 
-  function unqueue(g, id) {
-    if (!g.purchase.includes(id)) return FAIL;
+  function toAvailable(g, id) {
     g.purchase = g.purchase.filter(x => x !== id);
     g.available.push(id);
     sortAvailable(g);
+  }
+
+  function unqueue(g, id) {
+    if (!g.purchase.includes(id)) return FAIL;
+    toAvailable(g, id);
     return ok(g);
   }
 

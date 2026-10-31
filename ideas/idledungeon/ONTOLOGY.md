@@ -211,7 +211,7 @@ plus whatever behaviour hook they need.
 | monsters | Monster[] | |
 | projectiles | Projectile[] | |
 | respawnTimer | float s | Until the next spawn attempt. |
-| chests | Chest[] | Closed chests. Not saved; a load or wipe rolls fresh chests. |
+| chests | Chest[] | Closed chests. Not saved; a load rolls fresh chests (a wipe keeps them). |
 | chestTimers | float s[] | One per opened chest: until its replacement appears. |
 | flow | Int16Array | BFS distance field from the leader's cell; rebuilt when the leader changes cell. [P] |
 | visited | float[] per room | Last time the leader stood in each room (wander prefers stale rooms). |
@@ -234,7 +234,8 @@ plus whatever behaviour hook they need.
 - `level.monsters.length ≤ MONSTER_CAP` except right after an ambush, which ignores the cap;
   regular spawns wait until the count drops back under it.
 - Dead heroes take no actions and are not targeted.
-- The level map is a pure function of `(seed, depth)`: a wipe returns the party to the same map. [D]
+- The level map is a pure function of `(seed, depth)`. A wipe keeps the live level as it is:
+  same map, same monsters with the same HP, same chests. [D]
 - **Determinism:** same seed + same commands at the same ticks ⇒ same state. The renderer and
   the UI only read state. [P]
 - The engine never touches the DOM; it runs headless in Node. [P]
@@ -424,7 +425,7 @@ separate: push apart every overlapping pair of living units (heroes and monsters
 
 ### Monster spawning [D respawn, P details]
 *Serves: G-2 (endless XP source), Greed has a price.*
-*Measured with chests (test/sim.js, 30 min, seed 1, Numbers as listed): queueing only Next Level
+*Measured with chests, before wipes kept the level and pulled Next Level (test/sim.js, 30 min, seed 1, Numbers as listed): queueing only Next Level
 reaches depth 3 with 34 wipes; queueing everything reaches depth 5 with 89 hero deaths and 14 wipes;
 Next Level at the head of everything reaches depth 4 with 16 wipes. About one chest a minute.*
 
@@ -459,9 +460,16 @@ avgKillXp = MONSTER_XP × mean roster xpMult × DEPTH_MULT^(depth−1) × stat('
 *Serves: Greed has a price.*
 
 ```
-if no hero alive and wipeTimer == null: wipeTimer = WIPE_DELAY; emit wiped
-if wipeTimer counts to 0: enterLevel(depth)          // same map, same stats, XP kept
+if no hero alive and wipeTimer == null:
+  wipeTimer = WIPE_DELAY
+  if nextLevel in purchase: move it to available       // no straight re-dive
+  emit wiped(depth, pulled)
+if wipeTimer counts to 0: regroup
+regroup: heroes back at the entrance in formation, alive, full HP, cooldowns 0;
+         projectiles cleared; monsters, their HP, and chests untouched   // a shot at revenge
+         same stats, XP kept; emit levelEntered(depth, 'wipe')
 ```
+[D]
 
 ### Enter level [D]
 *Serves: G-2.*
@@ -664,7 +672,7 @@ There is no delete; dragging out of the purchase list means dropping it on Avail
 | `killed` | monsterId, name, xp, x, y | Floater "+xp". |
 | `heroDied` | cls, by, x, y | `by` is the monster's name, for the log. |
 | `revived` | cls, x, y | Gold pillar. |
-| `wiped` | depth | Status bar message during WIPE_DELAY. |
+| `wiped` | depth, pulled | Banner during WIPE_DELAY; `pulled` = Next Level went back to Available (log, re-render lists). |
 | `levelEntered` | depth, reason (`start`/`descend`/`wipe`/`load`) | Banner; camera snap. |
 | `swing` | x, y | Warrior slash mark. |
 | `blast` | x, y, r | Mage blast ring. |
@@ -691,6 +699,8 @@ Settled with the designer:
 - **Chests** At room centres, a quarter of the rooms at level start; XP 1–5 kills, ambush of 3–10,
   or a one-time ×1.1 party bonus queued 2nd; each opened chest is replaced in a random room after
   20–80 s; the leader detours for one when no monsters are near.
+- **Wipes** keep the level (wounded monsters stay wounded, for revenge) and send Next Level back to
+  Available.
 
 Open: FOE_MULT's value (1.1 chosen by Claude); bonus price and armor size (BONUS_COST_KILLS,
 BONUS_ARMOR_FRAC, Claude's guesses). Candidates for after playtest: more abilities
