@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Idle Dungeon</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <div id="mapwrap"><canvas id="map"></canvas></div>
+  <div id="side">
+    <div id="status">
+      <div class="stats">
+        <span>Depth <b id="depth">1</b><small id="best"></small></span>
+        <span>XP <b id="xp">0</b></span>
+        <span><b id="rate">0</b>/s</span>
+        <span id="foes"></span>
+      </div>
+      <div id="next"></div>
+    </div>
+    <div id="lists">
+      <section class="list" id="purchaseBox">
+        <h2>Purchase queue <small>buys from the top</small></h2>
+        <ol id="purchase"></ol>
+      </section>
+      <section class="list" id="availableBox">
+        <h2>Available <small>drag into the queue</small></h2>
+        <ul id="available"></ul>
+      </section>
+    </div>
+    <div id="log"></div>
+    <div id="foot"><button id="restart" type="button">new dungeon</button></div>
+  </div>
+</div>
+<script src="js/rng.js"></script>
+<script src="js/data.js"></script>
+<script src="js/names.js"></script>
+<script src="js/map.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/render.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
