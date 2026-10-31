@@ -49,6 +49,32 @@ check(JSON.stringify(g2.purchase) === JSON.stringify(save.purchase), 'queue orde
 check(res.events.some(e => e.type === 'offline' && Math.abs(e.xp - E.stat(g2, 'party.xpRate') * 60) < 1e-6), 'offline XP = passive rate × 60s');
 check(!E.load({ seed: 1, available: [], purchase: [] }, 0).ok, 'malformed save refused');
 
+// Chests: a bonus is queued 2nd, survives save → load, and is spent (not requeued) when bought.
+check(seen.chestOpened > 0, 'chests were opened');
+const g3 = E.newGame(11);
+check(g3.level.chests.length === Math.round(ID.N.CHEST_FRAC * g3.level.rooms.length), 'CHEST_FRAC of rooms start with a chest');
+let opened = null;
+for (let n = 0; n < 50 && !opened; n++) {
+  g3.level.chests.push({ room: 0, x: g3.heroes[0].x, y: g3.heroes[0].y });
+  E.step(g3);
+  opened = g3.events.find(e => e.type === 'chestOpened' && e.outcome === 'bonus');
+  g3.events = [];
+}
+check(opened && g3.purchase[1] === opened.id, 'bonus queued 2nd');
+if (opened) {
+  const s3 = JSON.parse(JSON.stringify(E.serialize(g3, 0)));
+  s3.xp = 0;
+  const r3 = E.load(s3, 0);
+  check(r3.ok && r3.game.purchase.includes(opened.id), 'bonus survives save/load');
+  const g4 = r3.game;
+  E.reorder(g4, opened.id, 0);
+  g4.xp = E.cost(g4, opened.id);
+  const before = E.stat(g4, 'warrior.hp');
+  E.step(g4);
+  check(!g4.purchase.includes(opened.id) && !g4.available.includes(opened.id), 'bought bonus is gone');
+  check(g4.boons[opened.kind] > 0, 'bonus applied');
+}
+
 // Commands refuse illegal moves.
 check(!E.queue(g2, 'nope', 0).ok, 'queue unknown id refused');
 check(!E.unqueue(g2, g2.available[0] || 'nope').ok, 'unqueue of non-queued refused');

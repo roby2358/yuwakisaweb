@@ -10,13 +10,25 @@
     let v = N.BASE[name];
     const ups = ID.STAT_UPGRADES[name];
     if (ups) for (const def of ups) v = ID.EFFECTS[def.effect](v, g.upgrades[def.id].level);
+    const kind = ID.BONUS_BY_STAT[name];
+    if (kind) v = ID.EFFECTS[ID.BONUSES[kind].effect](v, g.boons[kind], N.BONUS_MULT);
     return v;
   }
 
-  function cost(g, id) {
-    const def = ID.CATALOG_BY_ID[id];
-    return def.baseCost * Math.pow(def.costMult, g.upgrades[id].level);
+  // Anything that can sit in a list: a catalog upgrade, or a one-time bonus found in a chest.
+  function item(g, id) {
+    if (ID.CATALOG_BY_ID[id]) return ID.CATALOG_BY_ID[id];
+    const b = g.bonuses[id];
+    return b && { id, label: ID.BONUSES[b.kind].label, owner: 'bonus', kind: b.kind, amount: b.amount,
+      stat: null, foeMult: 1, action: null, buy: 'bonus' };
   }
+
+  // What the next purchase of an item costs.
+  const COST = {
+    upgrade: (g, def) => def.baseCost * Math.pow(def.costMult, g.upgrades[def.id].level),
+    bonus: (g, def) => g.bonuses[def.id].cost,
+  };
+  function cost(g, id) { const def = item(g, id); return COST[def.buy](g, def); }
 
   function emit(g, type, fields) { g.events.push(Object.assign({ type }, fields)); }
   function drain(g) { const e = g.events; g.events = []; return e; }
@@ -28,6 +40,15 @@
   const depthScale = g => Math.pow(N.DEPTH_MULT, g.depth - 1);
   // Upgrades with a foeMult (XP per kill) toughen every monster, at every depth.
   const foeScale = g => ID.CATALOG.reduce((k, d) => k * Math.pow(d.foeMult, g.upgrades[d.id].level), 1);
+  // XP for killing an average roster monster right now.
+  const avgKillXp = g => N.MONSTER_XP * g.roster.reduce((s, sp) => s + sp.xpMult, 0) / g.roster.length *
+    depthScale(g) * stat(g, 'party.xpKill');
+
+  function pickWeighted(rng, odds) {
+    let r = rng.next() * Object.values(odds).reduce((a, b) => a + b, 0);
+    for (const k in odds) if ((r -= odds[k]) < 0) return k;
+    return Object.keys(odds)[0];
+  }
 
   function gainXp(g, amount) { g.xp += amount; g.earned += amount; }
 
@@ -80,6 +101,7 @@
     const g = {
       seed: seed >>> 0, rng: null, time: 0, ticks: 0, acc: 0, xp: 0, earned: 0, depth: 1, best: 1,
       upgrades: {}, available: [], purchase: N.START_QUEUE.slice(),
+      bonuses: {}, nextBonus: 1, boons: { damage: 0, hp: 0, armor: 0, speed: 0 },
       roster: ID.makeRoster(seed >>> 0), level: null, heroes: CLASSES.map(makeHero),
       wipeTimer: null, events: [], nextId: 1, fieldCell: -1, kills: 0, wipes: 0,
     };
@@ -114,6 +136,11 @@
       h.hp = h.maxHp;
     }
     while (L.monsters.length < N.MONSTER_CAP && spawnMonster(g, true));
+    L.chests = [];
+    L.chestTimers = [];
+    const rooms = L.rooms.map((_, i) => i).slice(1);
+    for (let n = Math.round(N.CHEST_FRAC * L.rooms.length); n > 0 && rooms.length; n--)
+      placeChest(g, rooms.splice(g.rng.int(0, rooms.length - 1), 1)[0]);
     rememberPositions(g);
     g.wipeTimer = null;
     emit(g, 'levelEntered', { depth: d, reason });
@@ -128,18 +155,99 @@
     }
     if (!rooms.length) return false;
     const room = g.rng.pick(rooms);
-    const spIdx = g.rng.int(0, g.roster.length - 1), sp = g.roster[spIdx];
     const p = M.randomPointInRoom(L, g.rng, room);
-    const k = depthScale(g) * foeScale(g);
-    const maxHp = N.MONSTER_HP * sp.hpMult * k;
-    L.monsters.push({
-      id: g.nextId++, sp: spIdx, x: p.x, y: p.y, size: sp.size, hp: maxHp, maxHp,
-      damage: N.MONSTER_DMG * sp.dmgMult * k, speed: N.MONSTER_SPEED * sp.speedMult,
-      cooldown: g.rng.range(0, N.MONSTER_INTERVAL), homeRoom: room, aggro: false,
-      wanderTo: null, pause: g.rng.range(0, 2), flash: 0, dead: false, facing: 0,
-    });
+    addMonster(g, p.x, p.y, room, false);
     return true;
   }
+
+  function addMonster(g, x, y, room, aggro) {
+    const spIdx = g.rng.int(0, g.roster.length - 1), sp = g.roster[spIdx];
+    const k = depthScale(g) * foeScale(g);
+    const maxHp = N.MONSTER_HP * sp.hpMult * k;
+    const m = {
+      id: g.nextId++, sp: spIdx, x, y, px: x, py: y, size: sp.size, hp: maxHp, maxHp,
+      damage: N.MONSTER_DMG * sp.dmgMult * k, speed: N.MONSTER_SPEED * sp.speedMult,
+      cooldown: g.rng.range(0, N.MONSTER_INTERVAL), homeRoom: room, aggro,
+      wanderTo: null, pause: g.rng.range(0, 2), flash: 0, dead: false, facing: 0,
+    };
+    g.level.monsters.push(m);
+    return m;
+  }
+
+  // ---------- chests ----------
+
+  // A bonus's size: one step of its effect, or for armor a flat share of a base monster hit here.
+  const BONUS_AMOUNT = {
+    damage: () => 1, hp: () => 1, speed: () => 1,
+    armor: g => N.BONUS_ARMOR_FRAC * N.MONSTER_DMG * depthScale(g) * foeScale(g),
+  };
+
+  // Spots on a circle around the opener, pulled inward until they land in the chest's room.
+  function ambushSpots(g, c, at, n) {
+    const L = g.level, spots = [], a0 = g.rng.range(0, Math.PI * 2);
+    for (let i = 0; i < n; i++) {
+      const a = a0 + i * Math.PI * 2 / n;
+      for (let r = N.AMBUSH_RADIUS; r >= 1.5; r -= 0.5) {
+        const x = at.x + Math.cos(a) * r * CELL, y = at.y + Math.sin(a) * r * CELL;
+        if (L.roomOf[M.cellIndex(L, x, y)] === c.room && !M.circleHits(L, x, y, 6)) { spots.push({ x, y }); break; }
+      }
+    }
+    return spots;
+  }
+
+  const CHEST = {
+    xp(g, c) {
+      const xp = g.rng.int(N.CHEST_XP_MIN, N.CHEST_XP_MAX) * avgKillXp(g);
+      gainXp(g, xp);
+      return { xp };
+    },
+    ambush(g, c, opener) {
+      const spots = ambushSpots(g, c, opener, g.rng.int(N.AMBUSH_MIN, N.AMBUSH_MAX));
+      for (const p of spots) addMonster(g, p.x, p.y, c.room, true);
+      return { spots };
+    },
+    bonus(g) {
+      const kind = g.rng.pick(Object.keys(ID.BONUSES)), id = 'bonus.' + g.nextBonus++;
+      g.bonuses[id] = { kind, amount: BONUS_AMOUNT[kind](g), cost: N.BONUS_COST_KILLS * avgKillXp(g) };
+      g.purchase.splice(Math.min(1, g.purchase.length), 0, id);
+      return { id, kind };
+    },
+  };
+
+  // A chest sits on the centre cell of its room.
+  function placeChest(g, room) {
+    const c = M.roomCenter(g.level, room);
+    g.level.chests.push({ room, x: (Math.floor(c.x / CELL) + 0.5) * CELL, y: (Math.floor(c.y / CELL) + 0.5) * CELL });
+  }
+
+  function openChest(g, c, opener) {
+    const L = g.level;
+    L.chests = L.chests.filter(o => o !== c);
+    L.chestTimers.push(g.rng.range(N.CHEST_RESPAWN_MIN, N.CHEST_RESPAWN_MAX));
+    const outcome = pickWeighted(g.rng, N.CHEST_ODDS);
+    emit(g, 'chestOpened', Object.assign({ outcome, x: c.x, y: c.y }, CHEST[outcome](g, c, opener)));
+  }
+
+  // Each opened chest's replacement appears, after its jitter, in a random room without a chest
+  // and away from the party.
+  function updateChests(g) {
+    const L = g.level, lead = leader(g), leadRoom = L.roomOf[M.cellIndex(L, lead.x, lead.y)];
+    for (const c of L.chests.slice()) {
+      const opener = g.heroes.find(h => h.alive && dist(h, c) <= N.HERO_R + N.CHEST_R);
+      if (opener) openChest(g, c, opener);
+    }
+    L.chestTimers = L.chestTimers.map(t => t - T).filter(t => {
+      if (t > 0) return true;
+      const free = L.rooms.map((_, i) => i).filter(i => i !== leadRoom && !L.chests.some(c => c.room === i));
+      if (!free.length) return true;
+      placeChest(g, g.rng.pick(free));
+      return false;
+    });
+  }
+
+  // The nearest chest the leader can see within CHEST_SIGHT.
+  const chestInSight = (g, h) => nearest(g.level.chests, h, N.CHEST_SIGHT * CELL,
+    c => M.losWide(g.level, h.x, h.y, c.x, c.y, N.HERO_R + 1));
 
   // ---------- damage ----------
 
@@ -244,6 +352,8 @@
     const L = g.level, speed = stat(g, 'party.move');
     const room = L.roomOf[M.cellIndex(L, h.x, h.y)];
     if (room >= 0) L.visited[room] = g.time;
+    const chest = chestInSight(g, h);
+    if (chest) { L.goalSince = g.time; moveToward(g, h, chest.x, chest.y, speed, N.HERO_R); return; }
     const goal = L.goalRoom >= 0 ? M.roomCenter(L, L.goalRoom) : null;
     // Safety valve: no progress toward the goal for STUCK_TIME means pick another.
     const d = goal ? dist(h, goal) : 0;
@@ -370,17 +480,29 @@
 
   const ACTIONS = { descend: g => enterLevel(g, g.depth + 1, 'descend') };
 
+  // Buying the head: an upgrade levels up and rejoins the end of the queue; a bonus is spent and gone.
+  const BUY = {
+    upgrade(g, def, c) {
+      g.upgrades[def.id].level++;
+      g.purchase.push(def.id);
+      emit(g, 'purchased', { id: def.id, level: g.upgrades[def.id].level, cost: c });
+    },
+    bonus(g, def, c) {
+      g.boons[def.kind] += def.amount;
+      delete g.bonuses[def.id];
+      emit(g, 'bonusBought', { id: def.id, kind: def.kind, amount: def.amount, cost: c });
+    },
+  };
+
   function autoPurchase(g) {
     for (let guard = 0; g.purchase.length && guard < 1000; guard++) {
-      const id = g.purchase[0], c = cost(g, id);
+      const def = item(g, g.purchase[0]), c = cost(g, def.id);
       if (g.xp < c) break;
       g.xp -= c;
-      g.upgrades[id].level++;
-      g.purchase.push(g.purchase.shift());
-      emit(g, 'purchased', { id, level: g.upgrades[id].level, cost: c });
+      g.purchase.shift();
+      BUY[def.buy](g, def, c);
       refreshHeroes(g);
-      const act = ID.CATALOG_BY_ID[id].action;
-      if (act) ACTIONS[act](g);
+      if (def.action) ACTIONS[def.action](g);
     }
   }
 
@@ -441,6 +563,7 @@
       PROJECTILES[p.kind](g, p);
     }
     separate(g);
+    updateChests(g);
     L.monsters = L.monsters.filter(liveMonster);
     L.projectiles = L.projectiles.filter(p => !p.dead);
 
@@ -479,9 +602,11 @@
     return ok(g);
   }
 
+  // Catalog order first, then bonuses in the order they were found.
   function sortAvailable(g) {
     const set = new Set(g.available);
-    g.available = ID.CATALOG.map(d => d.id).filter(id => set.has(id));
+    const found = Object.keys(g.bonuses).sort((a, b) => a.split('.')[1] - b.split('.')[1]);
+    g.available = ID.CATALOG.map(d => d.id).concat(found).filter(id => set.has(id));
   }
 
   function queue(g, id, index) {
@@ -511,18 +636,21 @@
     const levels = {};
     for (const id in g.upgrades) levels[id] = g.upgrades[id].level;
     return { seed: g.seed, xp: g.xp, earned: g.earned, depth: g.depth, best: g.best, kills: g.kills, wipes: g.wipes,
-      time: g.time, levels, available: g.available.slice(), purchase: g.purchase.slice(), savedAt: now };
+      time: g.time, levels, available: g.available.slice(), purchase: g.purchase.slice(),
+      bonuses: JSON.parse(JSON.stringify(g.bonuses)), nextBonus: g.nextBonus, boons: Object.assign({}, g.boons), savedAt: now };
   }
 
   // Rebuild from a save; returns { ok, game, events }. A save that doesn't fit the catalog is refused.
   function load(save, now) {
-    const ids = ID.CATALOG.map(d => d.id);
+    const catalog = ID.CATALOG.map(d => d.id), bonuses = save.bonuses || {};
+    const ids = catalog.concat(Object.keys(bonuses));
     const listed = (save.available || []).concat(save.purchase || []);
     if (listed.length !== ids.length || !ids.every(id => listed.includes(id))) return FAIL;
     const g = newGame(save.seed);
-    for (const id of ids) g.upgrades[id].level = (save.levels && save.levels[id]) | 0;
+    for (const id of catalog) g.upgrades[id].level = (save.levels && save.levels[id]) | 0;
     Object.assign(g, { xp: save.xp, earned: save.earned || 0, best: save.best || 1, kills: save.kills || 0,
-      wipes: save.wipes || 0, time: save.time || 0, available: save.available.slice(), purchase: save.purchase.slice() });
+      wipes: save.wipes || 0, time: save.time || 0, available: save.available.slice(), purchase: save.purchase.slice(),
+      bonuses: JSON.parse(JSON.stringify(bonuses)), nextBonus: save.nextBonus || 1, boons: Object.assign(g.boons, save.boons) });
     g.events = [];
     enterLevel(g, save.depth, 'load');
     const gone = (now - save.savedAt) / 1000;
@@ -532,6 +660,6 @@
 
   ID.Engine = {
     newGame, tick, away, queue, reorder, unqueue, serialize, load,
-    stat, cost, leader, step, foeScale,
+    stat, cost, item, leader, step, foeScale,
   };
 })(this.ID = this.ID || {});

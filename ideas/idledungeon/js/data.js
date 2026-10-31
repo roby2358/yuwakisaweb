@@ -27,6 +27,17 @@
     MONSTER_CAP: 20, RESPAWN_INTERVAL: 3, SPAWN_MIN_DIST: 12,
     MONSTER_AGGRO: 6, TANK_AGGRO: 8,
 
+    CHEST_FRAC: 0.25,        // share of rooms (never the entrance) that start the level with a chest
+    CHEST_RESPAWN_MIN: 20, CHEST_RESPAWN_MAX: 80,   // s after a chest is opened until a new one appears in a random room
+    CHEST_SIGHT: 10,         // cells; an idle leader walks to a chest it can see this close
+    CHEST_R: 9,              // touch radius beyond the hero's own
+    CHEST_ODDS: { xp: 0.5, ambush: 0.25, bonus: 0.25 },
+    CHEST_XP_MIN: 1, CHEST_XP_MAX: 5,               // × an average kill's XP
+    AMBUSH_MIN: 3, AMBUSH_MAX: 10, AMBUSH_RADIUS: 3,
+    BONUS_COST_KILLS: 10,    // bonus price in average kills at the depth it was found
+    BONUS_MULT: 1.1,         // a bonus's step: weaker than an upgrade's EFFECT_MULT, but cheap and no downside
+    BONUS_ARMOR_FRAC: 0.06,  // Party Armor adds this fraction of a base monster hit (the ×1.1-sized step)
+
     HERO_R: 10, MELEE_PAD: 6,
     FACING_MIN: 4,           // units; shorter moves keep the current facing
     FORMATION_DIST: 1.5, KITE_DIST: 2,
@@ -48,17 +59,18 @@
     'party.xpRate': 1, 'party.xpKill': 1, 'party.move': 80,
   };
 
-  // How an upgrade's level transforms its stat. Speed effects taper: super fast is possible, just very expensive.
+  // How a level L transforms a stat, with step k (EFFECT_MULT for upgrades, BONUS_MULT for bonuses).
+  // Speed effects taper: super fast is possible, just very expensive.
   ID.EFFECTS = {
-    mul: (b, L) => b * Math.pow(N.EFFECT_MULT, L),
-    div: (b, L) => b / Math.pow(N.EFFECT_MULT, L),
+    mul: (b, L, k = N.EFFECT_MULT) => b * Math.pow(k, L),
+    div: (b, L, k = N.EFFECT_MULT) => b / Math.pow(k, L),
     add: (b, L) => b + L,
-    faster: (b, L) => b * Math.pow(N.EFFECT_MULT, Math.pow(L, N.SPEED_TAPER)),
-    quicker: (b, L) => b / Math.pow(N.EFFECT_MULT, Math.pow(L, N.SPEED_TAPER)),
+    faster: (b, L, k = N.EFFECT_MULT) => b * Math.pow(k, Math.pow(L, N.SPEED_TAPER)),
+    quicker: (b, L, k = N.EFFECT_MULT) => b / Math.pow(k, Math.pow(L, N.SPEED_TAPER)),
   };
 
   const up = (id, label, owner, baseCost, effect, stat) =>
-    ({ id, label, owner, baseCost, effect, stat, costMult: N.COST_MULT, action: null, foeMult: 1 });
+    ({ id, label, owner, baseCost, effect, stat, costMult: N.COST_MULT, action: null, foeMult: 1, buy: 'upgrade' });
 
   ID.CATALOG = [
     up('warrior.hp', 'Max HP', 'warrior', 10, 'mul', 'warrior.hp'),
@@ -86,6 +98,15 @@
     leviathan: { title: 'the Leviathan', hp: 3, dmg: 3, size: 2, xp: 3, labelColor: '#e06a6a' },
   };
 
+  // One-time chest bonuses: each raises a stat of every hero by one BONUS_MULT step of its effect.
+  // A bonus's amount is 1 step, except armor which is a flat number fixed when found.
+  ID.BONUSES = {
+    damage: { label: 'Damage', effect: 'mul', stats: ['warrior.damage', 'archer.damage', 'mage.damage'] },
+    hp: { label: 'Max HP', effect: 'mul', stats: ['warrior.hp', 'archer.hp', 'mage.hp', 'priest.hp'] },
+    armor: { label: 'Armor', effect: 'add', stats: ['warrior.armor', 'archer.armor', 'mage.armor', 'priest.armor'] },
+    speed: { label: 'Attack speed', effect: 'quicker', stats: ['warrior.interval', 'archer.interval', 'mage.interval', 'priest.interval'] },
+  };
+
   N.START_QUEUE = ['warrior.hp', 'archer.damage', 'mage.damage', 'priest.heal'];
 
   // Big-number formatting: separators below a million, then suffixes, then e-notation.
@@ -98,6 +119,9 @@
     if (e < SUFFIX.length) return (n / Math.pow(1000, e)).toFixed(2) + SUFFIX[e];
     return n.toExponential(2).replace('+', '');
   };
+
+  ID.BONUS_BY_STAT = {};
+  for (const kind in ID.BONUSES) for (const st of ID.BONUSES[kind].stats) ID.BONUS_BY_STAT[st] = kind;
 
   ID.CATALOG_BY_ID = {};
   ID.STAT_UPGRADES = {};

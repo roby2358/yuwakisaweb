@@ -7,6 +7,7 @@
   const OWNER = {
     warrior: ['Warrior', '#8a9099'], archer: ['Archer', '#3f8f4a'], mage: ['Mage', '#3d5fd6'],
     priest: ['Priest', '#e8d27a'], party: ['Party', '#a46fd6'], dungeon: ['Dungeon', '#d65a3d'],
+    bonus: ['★ Party', '#ffd84a'],
   };
   const CLS = { warrior: 'Warrior', archer: 'Archer', mage: 'Mage', priest: 'Priest' };
 
@@ -35,10 +36,9 @@
     revive: v => one(v) + 's', xpRate: v => one(v) + '/s', xpKill: v => '×' + one(v), move: v => fmt(v),
   };
 
-  function previewText(id) {
-    const def = ID.CATALOG_BY_ID[id];
+  function upgradePreview(def) {
     if (!def.stat) return `depth ${g.depth} → ${g.depth + 1}, foes ×${N.DEPTH_MULT}`;
-    const u = g.upgrades[id], f = STAT_FMT[def.stat.split('.')[1]];
+    const u = g.upgrades[def.id], f = STAT_FMT[def.stat.split('.')[1]];
     const now = E.stat(g, def.stat);
     u.level++;
     const next = E.stat(g, def.stat);
@@ -46,14 +46,33 @@
     return `${f(now)} → ${f(next)}` + (def.foeMult !== 1 ? `, foes ×${def.foeMult}` : '');
   }
 
-  const label = id => { const d = ID.CATALOG_BY_ID[id]; return `${OWNER[d.owner][0]} ${d.label}`; };
+  // A bonus reads as its change to every hero, keyed by how its effect works.
+  const BONUS_FMT = {
+    mul: (now, next) => '×' + (next / now).toFixed(2),
+    quicker: (now, next) => '×' + (now / next).toFixed(2),
+    add: (now, next) => '+' + one(next - now),
+  };
+
+  function bonusPreview(def) {
+    const eff = ID.BONUSES[def.kind].effect, n = g.boons[def.kind];
+    const now = ID.EFFECTS[eff](1, n, N.BONUS_MULT), next = ID.EFFECTS[eff](1, n + def.amount, N.BONUS_MULT);
+    return `one-time · all ${def.label.toLowerCase()} ${BONUS_FMT[eff](now, next)}`;
+  }
+
+  // The second line of a row.
+  const META = {
+    upgrade: def => `Lv ${g.upgrades[def.id].level} · ${upgradePreview(def)}`,
+    bonus: bonusPreview,
+  };
+
+  const label = id => { const d = E.item(g, id); return `${OWNER[d.owner][0]} ${d.label}`; };
 
   // ---------- lists ----------
 
   function makeRow(id, queued) {
-    const def = ID.CATALOG_BY_ID[id];
+    const def = E.item(g, id);
     const li = document.createElement('li');
-    li.className = 'row';
+    li.className = 'row ' + def.buy;
     li.dataset.id = id;
     li.style.setProperty('--owner', OWNER[def.owner][1]);
     li.innerHTML =
@@ -64,7 +83,7 @@
       (queued ? `<div class="fill"></div>` : '');
     const r = { li, cost: li.querySelector('.cost'), lv: li.querySelector('.lv'), eta: li.querySelector('.eta'), fill: li.querySelector('.fill') };
     r.cost.textContent = fmt(E.cost(g, id));
-    r.lv.textContent = `Lv ${g.upgrades[id].level} · ${previewText(id)}`;
+    r.lv.textContent = META[def.buy](def);
     if (flashIds.has(id)) li.classList.add('bought');
     rows[id] = r;
     return li;
@@ -196,7 +215,17 @@
     levelEntered: e => (e.reason === 'descend' ? ['depth', `Descended to depth ${e.depth}`] : null),
     offline: e => ['rise', `While you were away (${fmtTime(e.seconds)}): +${fmt(e.xp)} XP`],
     purchased: e => ['', `Bought ${label(e.id)} → Lv ${e.level}`],
+    bonusBought: e => ['rise', `Bought ★ Party ${ID.BONUSES[e.kind].label}`],
+    chestOpened: e => CHEST_LOG[e.outcome](e),
   };
+
+  const CHEST_LOG = {
+    xp: e => ['rise', `A chest held ${fmt(e.xp)} XP`],
+    ambush: e => ['death', `Ambush! ${e.spots.length} foes burst from a chest`],
+    bonus: e => ['rise', `A chest held ★ Party ${ID.BONUSES[e.kind].label} (queued 2nd)`],
+  };
+  // Events that change what the lists show.
+  const RELIST = new Set(['purchased', 'bonusBought', 'chestOpened']);
 
   function log(cls, text) {
     const div = document.createElement('div');
@@ -212,7 +241,8 @@
     for (const e of events) {
       const entry = LOG[e.type] && LOG[e.type](e);
       if (entry) log(entry[0], entry[1]);
-      if (e.type === 'purchased') { relist = true; flashIds.add(e.id); }
+      if (RELIST.has(e.type)) relist = true;
+      if (e.type === 'purchased') flashIds.add(e.id);
       if (e.type === 'offline') samples = [];
     }
     R.addEvents(events);

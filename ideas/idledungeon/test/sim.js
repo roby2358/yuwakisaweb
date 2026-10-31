@@ -44,12 +44,16 @@ function run(name) {
   const g = E.newGame(seed);
   STRATEGIES[name](g);
   const rows = [];
+  const chests = { xp: 0, ambush: 0, bonus: 0 };
   let deaths = 0, stuckReported = false, last = { x: 0, y: 0, kills: -1 };
   const steps = Math.round(minutes * 60 / ID.N.TICK);
   const report = Math.round(Math.max(1, minutes / 6) * 60 / ID.N.TICK);
   for (let i = 1; i <= steps; i++) {
     E.step(g);
-    for (const e of g.events) if (e.type === 'heroDied') deaths++;
+    for (const e of g.events) {
+      if (e.type === 'heroDied') deaths++;
+      if (e.type === 'chestOpened') chests[e.outcome]++;
+    }
     g.events = [];
     // Stuck detector: a full minute with no kills and the leader barely moving.
     if (i % Math.round(60 / ID.N.TICK) === 0) {
@@ -68,7 +72,8 @@ function run(name) {
     }
   }
   const lv = Object.entries(g.upgrades).filter(([, u]) => u.level).map(([id, u]) => `${id}:${u.level}`).join(' ');
-  console.log(`== ${name}\n${rows.join('\n')}\n  levels: ${lv}`);
+  const boons = Object.entries(g.boons).map(([k, v]) => `${k}:${+v.toFixed(1)}`).join(' ');
+  console.log(`== ${name}\n${rows.join('\n')}\n  levels: ${lv}\n  chests: ${JSON.stringify(chests)}  boons: ${boons}`);
 }
 
 const t0 = Date.now();

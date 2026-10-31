@@ -58,8 +58,11 @@ is a bet on which exponential to feed next.
 | xp | float | Unspent XP. ≥ 0. |
 | depth | int ≥ 1 | Current dungeon level. |
 | upgrades | map id → Upgrade | The catalog, with levels. |
-| available | id[] | Upgrades not queued. Kept in catalog order. [P] |
-| purchase | id[] | The queue; index 0 is the head. |
+| available | id[] | Items not queued: catalog order, then bonuses in the order found. [P] |
+| purchase | id[] | The queue; index 0 is the head. Holds upgrade ids and bonus ids. |
+| bonuses | map id → Bonus | One-time bonuses found in chests and not yet bought. Ids are `bonus.n`. [D] |
+| nextBonus | int | Counter for bonus ids. |
+| boons | {damage, hp, armor, speed} | What bought bonuses add up to: steps for damage/hp/speed, flat points for armor. Permanent. [D] |
 | roster | Species[] | ~ROSTER_SIZE monster species, generated once at new game. [D] |
 | level | Level | The current map and its live contents. |
 | heroes | Hero[4] | Warrior, Archer, Mage, Priest — fixed order. |
@@ -91,6 +94,31 @@ is a bet on which exponential to feed next.
 | Priest | Heal power (`mul`), Heal speed (`quicker` interval), Revive cooldown (`div`) |
 | Party | XP per second (`mul`), XP per kill (`mul`), Move speed (`faster`) |
 | Dungeon | Next Level |
+
+### Bonus [D]
+*Serves: Anticipation (a lucky find jumps the queue), G-1 (it still has to be placed).*
+
+| Field | Type | Notes |
+|---|---|---|
+| kind | `damage` \| `hp` \| `armor` \| `speed` | Party Damage, Party HP, Party Armor, Party Attack Speed. [D] |
+| amount | float | 1 BONUS_MULT step, or for armor a flat BONUS_ARMOR_FRAC × MONSTER_DMG × depth scale × foeScale, fixed when found. [D step, P armor] |
+| cost | float | BONUS_COST_KILLS × an average kill's XP at the depth where it was found. [P] |
+
+A bonus is a list item like an upgrade (dragged, reordered, unqueued), but bought once: it is spent
+instead of rejoining the queue. Its step is BONUS_MULT, smaller than an upgrade's EFFECT_MULT: weaker,
+but cheap and with no downside. [D] Two of the same kind are two rows. Kind → stats is the `BONUSES`
+table in code: damage → warrior/archer/mage damage (`mul`); hp → every hero's max HP (`mul`);
+armor → every hero's armor (`add`); speed → every hero's attack/heal interval (`quicker`).
+
+### Chest [D]
+*Serves: G-3 (a reason to cross the room), Anticipation, Greed has a price (some bite).*
+
+| Field | Type | Notes |
+|---|---|---|
+| room | int | At most one chest per room. |
+| x, y | float | Centre of the room's centre cell. [D] |
+
+A chest exists only while closed; opening removes it and starts a replacement timer.
 
 ### Hero
 *Serves: G-3, Recognition (of your own party), Crude charm.*
@@ -183,6 +211,8 @@ plus whatever behaviour hook they need.
 | monsters | Monster[] | |
 | projectiles | Projectile[] | |
 | respawnTimer | float s | Until the next spawn attempt. |
+| chests | Chest[] | Closed chests. Not saved; a load or wipe rolls fresh chests. |
+| chestTimers | float s[] | One per opened chest: until its replacement appears. |
 | flow | Int16Array | BFS distance field from the leader's cell; rebuilt when the leader changes cell. [P] |
 | visited | float[] per room | Last time the leader stood in each room (wander prefers stale rooms). |
 | goalRoom, goalField | int, Int16Array | The leader's wander destination and its BFS field. |
@@ -192,7 +222,8 @@ plus whatever behaviour hook they need.
 
 ## §2 Relations and invariants
 
-- Every upgrade id is in **exactly one** of `available` or `purchase`. [D]
+- Every upgrade id and every unbought bonus id is in **exactly one** of `available` or
+  `purchase`. A bought bonus is in neither and is gone from `bonuses`. [D]
 - `xp ≥ 0` always; buying never drives it negative.
 - `cost(u) = u.baseCost × COST_MULT^u.level` for every upgrade except `nextLevel`, whose cost
   is `NEXT_LEVEL_BASE × NEXT_LEVEL_MULT^u.level`. [D]
@@ -200,7 +231,8 @@ plus whatever behaviour hook they need.
   the formation and the flow field all follow the leader. [P]
 - `0 ≤ hp ≤ maxHp` for every hero and monster; a hero with `alive = false` has `hp = 0`.
 - No unit's center is ever inside a wall cell.
-- `level.monsters.length ≤ MONSTER_CAP`.
+- `level.monsters.length ≤ MONSTER_CAP` except right after an ambush, which ignores the cap;
+  regular spawns wait until the count drops back under it.
 - Dead heroes take no actions and are not targeted.
 - The level map is a pure function of `(seed, depth)`: a wipe returns the party to the same map. [D]
 - **Determinism:** same seed + same commands at the same ticks ⇒ same state. The renderer and
@@ -256,6 +288,9 @@ everything else is wall; entrance = center of rooms[0]
   - `stack` — three blocks of decreasing size piled up, slightly askew
 
   The name floats above in small gray text. [D: name/color/shape; P: templates]
+- **Chests** are a squat brown box with a gold band and lock at the room centre; on opening, an
+  open box with its lid up fades out. An ambush flashes a red "AMBUSH!" banner and a red ring where
+  each foe appears; XP and bonus finds float "+N XP" / "★ Party Damage". [D look, P details]
 - **Display effects** (owned by the renderer, spawned from events): "+N" XP floaters on kills,
   "Archer down" floaters, blast rings, warrior slash marks, a gold pillar on revive, and a
   centered banner for "DEPTH n" and "THE PARTY HAS FALLEN". [P]
@@ -271,7 +306,8 @@ everything else is wall; entrance = center of rooms[0]
 - **List rows:** owner + label, cost, level, and a preview of the stat now → after the next buy
   (e.g. `Lv 3 · 9.4 → 11.7`), tinted by owner. Purchase rows also show an ETA: cumulative cost
   down to that row ÷ the measured XP/s (30 s window, never below passive). The head row has a
-  fill bar. [P]
+  fill bar. [P] Bonus rows read `★ Party <stat>` with a gold outline, and preview their change to
+  every hero (`one-time · all damage ×1.25`). [D]
 - **Event log** under the lists: last 8 notable lines (who killed whom, revives, wipes, descents,
   purchases, time-away credit). Names the monster that felled a hero, for Recognition. [P]
 - **Drag:** mouse drags anywhere on a row; touch drags by the ⋮⋮ grip so the lists still scroll.
@@ -312,9 +348,11 @@ stat(name) = base(name) applied with each upgrade u whose u.stat == name:
   add:     base + L
   faster:  base × EFFECT_MULT^(L^SPEED_TAPER)     // speed tapers: super fast is possible,
   quicker: base / EFFECT_MULT^(L^SPEED_TAPER)     // but costs grow far faster than the speed
+then, if a bonus kind covers name:  apply BONUSES[kind].effect with L = boons[kind], step BONUS_MULT
 ```
 The effects are a lookup table, not a branch per upgrade. Speed upgrades (attack, cast, heal,
-move) taper; everything else compounds fully. [D]
+move) taper; everything else compounds fully. [D] Bonuses stack on top of upgrades with their own
+L, so a speed bonus tapers separately from the class's speed upgrades.
 
 ### Auto-purchase [D]
 *Serves: G-1, Anticipation.*
@@ -322,11 +360,10 @@ move) taper; everything else compounds fully. [D]
 ```
 each tick:
   while purchase nonempty and xp ≥ cost(head):
-    u = purchase.shift()
-    xp -= cost(u); u.level += 1
-    purchase.push(u.id)                   // back to the end of the queue
+    u = purchase.shift(); xp -= cost(u)
+    upgrade: u.level += 1; purchase.push(u.id); emit purchased   // back to the end of the queue
+    bonus:   boons[kind] += amount; delete bonuses[u.id]; emit bonusBought   // spent, gone
     if u.id == 'nextLevel': enterLevel(depth + 1)
-    emit purchased(u.id, u.level)
 ```
 A head the player can't yet afford blocks everything behind it. [D]
 
@@ -351,7 +388,7 @@ The status bar shows `foes ×N` once it's above 1; the XP-per-kill row's preview
 *Serves: G-3.*
 
 ```
-hero hit by monster:  taken = max(1, damage − stat(cls + '.armor'))   // flat; only the warrior has armor > 0
+hero hit by monster:  taken = max(1, damage − stat(cls + '.armor'))   // flat; others start at 0 (Party Armor adds)
                       hp -= taken; if hp ≤ 0: hp = 0, alive = false, emit heroDied
 monster hit:          hp -= damage; if hp ≤ 0: remove, award kill XP, emit killed
 heal:                 hp = min(maxHp, hp + stat('priest.heal'))
@@ -387,9 +424,9 @@ separate: push apart every overlapping pair of living units (heroes and monsters
 
 ### Monster spawning [D respawn, P details]
 *Serves: G-2 (endless XP source), Greed has a price.*
-*Measured (test/sim.js, 30 min, seed 1, Numbers as listed): queueing only Next Level wipes 27 times
-by depth 3; queueing everything reaches depth 5 with ~100 hero deaths and 13 wipes; Next Level at
-the head of everything reaches depth 4 with 18 wipes.*
+*Measured with chests (test/sim.js, 30 min, seed 1, Numbers as listed): queueing only Next Level
+reaches depth 3 with 34 wipes; queueing everything reaches depth 5 with 89 hero deaths and 14 wipes;
+Next Level at the head of everything reaches depth 4 with 16 wipes. About one chest a minute.*
 
 ```
 respawnTimer -= dt
@@ -399,6 +436,24 @@ if respawnTimer ≤ 0 and monsters < MONSTER_CAP:
   spawn at a random floor cell in that room; respawnTimer = RESPAWN_INTERVAL
 ```
 On level entry, fill to MONSTER_CAP immediately, excluding the entrance room.
+
+### Chests [D]
+*Serves: G-3, Anticipation, Greed has a price.*
+
+```
+enterLevel: round(CHEST_FRAC × rooms) distinct rooms, never the entrance, get a chest
+each tick:
+  a living hero within HERO_R + CHEST_R of a chest opens it: remove it,
+    push timer uniform(CHEST_RESPAWN_MIN, CHEST_RESPAWN_MAX)
+  a timer at ≤ 0 places a chest in a random room without one and without the leader
+open: outcome by CHEST_ODDS
+  xp:     xp += int(CHEST_XP_MIN..CHEST_XP_MAX) × avgKillXp
+  ambush: int(AMBUSH_MIN..AMBUSH_MAX) monsters on a circle AMBUSH_RADIUS around the opener,
+          each spot pulled inward until it lands in the chest's room (else skipped); aggro at once
+  bonus:  random kind; insert into purchase at index 1 (2nd), or index 0 if the queue is empty
+emit chestOpened(outcome, x, y, …)
+avgKillXp = MONSTER_XP × mean roster xpMult × DEPTH_MULT^(depth−1) × stat('party.xpKill')
+```
 
 ### Party wipe [D]
 *Serves: Greed has a price.*
@@ -435,8 +490,8 @@ which may include Next Level. [P]
 
 ```
 every SAVE_INTERVAL and on page hide: localStorage[SAVE_KEY] = {seed, xp, earned, depth, best,
-  kills, wipes, time, levels: {id: level}, available, purchase, savedAt: now}
-a save whose lists don't hold every catalog id exactly once is refused (fresh game instead)
+  kills, wipes, time, levels: {id: level}, available, purchase, bonuses, nextBonus, boons, savedAt: now}
+a save whose lists don't hold every catalog id and every saved bonus id exactly once is refused
 ```
 The roster and map regenerate from the seed. Mid-level positions are not saved; a load
 starts at the current depth's entrance. [P] No versioning. [D]
@@ -452,6 +507,7 @@ wander choice, which knows the room list.
 ### The leader [D warrior leads, P behavior]
 ```
 if any monster within TANK_AGGRO with LOS: target the nearest; close to reach × LEAD_CLOSE[cls]
+else if a chest within CHEST_SIGHT with body-wide LOS: walk straight to the nearest one
 else: if no goal, goal reached, or no progress for STUCK_TIME:
         goal = one of the 3 least-recently-visited rooms ≠ current; goalField = BFS(goal centre)
       navigate to the goal's centre on goalField
@@ -526,6 +582,17 @@ else: drift to a random point in homeRoom, pause, repeat
 | REVIVE_HP_FRAC | 0.5 | | |
 | ROSTER_SIZE | 100 | | [D] |
 | ROSTER_ABILITIES | beast 4, leviathan 1 | names | [D] |
+| CHEST_FRAC | 0.25 | | Share of rooms with a chest at level entry (entrance excluded). [D] |
+| CHEST_RESPAWN_MIN / MAX | 20 / 80 | s | After an opening, until a chest appears in a random room. [D] |
+| CHEST_SIGHT | 10 | cells | An idle leader heads for a chest it can see within this. [P] |
+| CHEST_R | 9 | units | Touch radius beyond HERO_R. |
+| CHEST_ODDS | xp 0.5, ambush 0.25, bonus 0.25 | weights | [D] |
+| CHEST_XP_MIN / MAX | 1 / 5 | × avg kill XP | [D] |
+| AMBUSH_MIN / MAX | 3 / 10 | monsters | [D] |
+| AMBUSH_RADIUS | 3 | cells | [P] |
+| BONUS_COST_KILLS | 10 | avg kills | Bonus price. [P] |
+| BONUS_MULT | 1.1 | × per bonus | Damage/HP step; speed tapers like upgrades. [D] |
+| BONUS_ARMOR_FRAC | 0.06 | × base monster hit | Party Armor's flat amount, scaled to the ×1.1 step. [P] |
 | SAVE_INTERVAL | 10 | s | |
 | SAVE_KEY | `idledungeon.save` | | |
 
@@ -572,7 +639,7 @@ Every command re-checks legality; illegal → `{ ok: false }` and no change. Leg
 | `load(save, now)` | save parses | Restore lists/levels/xp/depth, enter current depth, apply offline XP. |
 | `queue(id, index)` | id in available; 0 ≤ index ≤ purchase.length | Move id from available into purchase at index. [D] |
 | `reorder(id, index)` | id in purchase | Move id within purchase to index. [D] |
-| `unqueue(id)` | id in purchase | Move id back to available (catalog order). [D] |
+| `unqueue(id)` | id in purchase | Move id back to available (catalog order, bonuses after). [D] |
 | `tick(dt)` | dt > 0 | Advance the sim by whole TICKs (accumulator); returns events. |
 
 There is no delete; dragging out of the purchase list means dropping it on Available. [D]
@@ -580,6 +647,7 @@ There is no delete; dragging out of the purchase list means dropping it on Avail
 - `away(seconds)` — legal when seconds > 0: credit passive XP, run auto-purchase, emit `offline`.
 
 ### Read-only queries
+- `item(id)` — the catalog def, or a def-shaped view of a bonus (`owner: 'bonus'`, `buy: 'bonus'`).
 - `cost(id)`, `stat(name)` — the same functions the rules use, so the UI shows real values (the
   list preview bumps a level, reads `stat`, and restores it).
 - `leader()` — who the camera follows.
@@ -591,6 +659,8 @@ There is no delete; dragging out of the purchase list means dropping it on Avail
 | Event | Fields | Used for |
 |---|---|---|
 | `purchased` | id, level, cost | Flash the row; re-render lists. |
+| `bonusBought` | id, kind, amount, cost | Log; re-render lists. |
+| `chestOpened` | outcome (`xp`/`ambush`/`bonus`), x, y, + xp \| spots \| id, kind | Lid effect, floater or AMBUSH banner, log; re-render lists. |
 | `killed` | monsterId, name, xp, x, y | Floater "+xp". |
 | `heroDied` | cls, by, x, y | `by` is the monster's name, for the log. |
 | `revived` | cls, x, y | Gold pillar. |
@@ -618,6 +688,10 @@ Settled with the designer:
 
 - **Grind** Monster HP doubled; XP per kill toughens all foes (FOE_MULT); Next Level grows ×2.
 - **First abilities** Beast and Leviathan, flat 2× / 3× kill XP, titled names.
+- **Chests** At room centres, a quarter of the rooms at level start; XP 1–5 kills, ambush of 3–10,
+  or a one-time ×1.1 party bonus queued 2nd; each opened chest is replaced in a random room after
+  20–80 s; the leader detours for one when no monsters are near.
 
-Open: FOE_MULT's value (1.1 chosen by Claude). Candidates for after playtest: more abilities
+Open: FOE_MULT's value (1.1 chosen by Claude); bonus price and armor size (BONUS_COST_KILLS,
+BONUS_ARMOR_FRAC, Claude's guesses). Candidates for after playtest: more abilities
 (archers, fire breathers, freezers), arena mode, packs instead of single spawns, a bestiary.

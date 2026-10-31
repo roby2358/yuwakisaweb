@@ -37,7 +37,21 @@
       effects = [];
       if (e.reason !== 'load') banner = { text: 'DEPTH ' + e.depth, sub: e.reason === 'wipe' ? 'back to the entrance' : '', t: 0, life: 2.2, color: '#ddd' };
     },
+    chestOpened: e => {
+      effects.push({ kind: 'lid', x: e.x, y: e.y, t: 0, life: 1.2 });
+      CHEST_FX[e.outcome](e);
+    },
     wiped: () => { banner = { text: 'THE PARTY HAS FALLEN', sub: '', t: 0, life: N.WIPE_DELAY, color: '#e04040' }; },
+  };
+
+  const BONUS_NAME = kind => '★ Party ' + ID.BONUSES[kind].label;
+  const CHEST_FX = {
+    xp: e => effects.push({ kind: 'floater', x: e.x, y: e.y - 16, text: '+' + ID.fmt(e.xp) + ' XP', t: 0, life: 1.8 }),
+    ambush: e => {
+      banner = { text: 'AMBUSH!', sub: e.spots.length + ' foes', t: 0, life: 1.6, color: '#e04040' };
+      for (const p of e.spots) effects.push({ kind: 'puff', x: p.x, y: p.y, t: 0, life: 0.5 });
+    },
+    bonus: e => effects.push({ kind: 'floater', x: e.x, y: e.y - 16, text: BONUS_NAME(e.kind), t: 0, life: 2.2, color: '#ffd84a' }),
   };
 
   R.addEvents = function (events) { for (const e of events) if (FROM_EVENT[e.type]) FROM_EVENT[e.type](e); };
@@ -175,6 +189,22 @@
     labels.push({ x: p.x, y: p.y + top - 6, text: sp.name, aggro: m.aggro, color: sp.labelColor });
   }
 
+  // ---------- chests ----------
+
+  // A squat brown box with a gold band and lock; open, the lid stands up behind it.
+  function chestBox(x, y, open) {
+    rect(x - 10, y - 4, 20, 11, '#6b4423');
+    rect(x - 10, y + 5, 20, 2, '#4a2e17');
+    if (open) {
+      rect(x - 10, y - 15, 20, 9, '#5a381c');
+      rect(x - 8, y - 5, 16, 2, '#ffd84a');
+    } else {
+      rect(x - 11, y - 9, 22, 6, '#7d5129');
+      rect(x - 11, y - 4, 22, 2, '#c9a94a');
+      rect(x - 2, y - 5, 4, 5, '#ffd84a');
+    }
+  }
+
   // ---------- projectiles and effects ----------
 
   const PROJ = {
@@ -220,6 +250,16 @@
     slash(e, k) {
       ctx.globalAlpha = 1 - k;
       rect(e.x - 10, e.y - 10 + k * 8, 20, 3, '#fff');
+    },
+    lid(e, k) {
+      ctx.globalAlpha = 1 - k * k;
+      chestBox(e.x, e.y, true);
+    },
+    puff(e, k) {
+      ctx.globalAlpha = 1 - k;
+      ctx.strokeStyle = '#e04040';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(e.x, e.y, 6 + k * 18, 0, Math.PI * 2); ctx.stroke();
     },
     pillar(e, k) {
       ctx.globalAlpha = (1 - k) * 0.6;
@@ -274,6 +314,7 @@
     drawWalls(L, x0, y0, x1, y1, s);
 
     const onScreen = o => Math.abs(o.x - cam.x) < halfW + 60 && Math.abs(o.y - cam.y) < halfH + 60;
+    for (const c of L.chests) if (onScreen(c)) chestBox(c.x, c.y, false);
     g.heroes.forEach((h, i) => { if (!h.alive) drawHero(h, t, i); });
     const labels = [];
     for (const m of L.monsters) if (onScreen(m)) drawMonster(g, m, t, labels);
