@@ -246,7 +246,8 @@
       }
     }
     ctx.strokeStyle = '#8c8c8c';
-    ctx.lineWidth = 1.5 * dpr / s;
+    ctx.lineWidth = N.WALL_PX * dpr / s;
+    ctx.lineCap = 'square';      // thick segments meet cleanly at corners
     ctx.stroke();
   }
 

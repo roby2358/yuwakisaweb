@@ -225,8 +225,8 @@ everything else is wall; entrance = center of rooms[0]
 ### §3.2 Drawing [D]
 *Serves: Crude charm, G-3.*
 
-- **Background** black. **Walls** are gray lines drawn on every edge between a floor cell and a
-  wall cell (no filled walls). A faint dark grid on floors is optional. [P]
+- **Background** black. **Walls** are gray lines WALL_PX screen pixels wide, drawn on every edge
+  between a floor cell and a wall cell (no filled walls). A faint dark grid on floors is optional. [P]
 - **Camera** centered on the leader (the warrior while it lives), smoothed but never trailing more
   than CAM_LAG cells; the shorter screen side shows VIEW_CELLS cells, cropped. [D]
 - **Motion** is interpolated between ticks (units carry display-only `px, py`, the position at the
@@ -276,7 +276,8 @@ everything else is wall; entrance = center of rooms[0]
   purchases, time-away credit). Names the monster that felled a hero, for Recognition. [P]
 - **Drag:** mouse drags anywhere on a row; touch drags by the ⋮⋮ grip so the lists still scroll.
   Double-click is a shortcut for queue-at-end / unqueue. [P]
-- **New dungeon** button (with confirm) wipes the save and starts fresh. [P]
+- **Start over** button pinned to the screen's top-right corner (with confirm) wipes the save and
+  starts a fresh dungeon. [D]
 
 ### §3.4 Code layout [D: script tags, no modules]
 
@@ -500,6 +501,7 @@ else: drift to a random point in homeRoom, pause, repeat
 | EXTRA_LINKS | 2 | | |
 | VIEW_CELLS | 16 | cells | Shown along the shorter screen side. |
 | CAM_LAG | 2 | cells | Max camera trail behind the leader. |
+| WALL_PX | 11 | screen px | Wall line width. [D] |
 | FACING_MIN | 4 | units | Shorter moves keep the current facing. |
 | XP_RATE | 1 | XP/s | Passive base. |
 | MONSTER_HP / MONSTER_DMG | 60 / 6 | | Depth 1 base before species mults. [D: HP doubled for grind] |

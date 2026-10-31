@@ -262,7 +262,7 @@
     document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
     window.addEventListener('pagehide', save);
     $('restart').addEventListener('click', () => {
-      if (!confirm('Abandon this dungeon and start a new one? All progress is lost.')) return;
+      if (!confirm('Start over in a new dungeon? All progress is lost.')) return;
       try { localStorage.removeItem(N.SAVE_KEY); } catch (err) { /* ignore */ }
       start(true);
     });

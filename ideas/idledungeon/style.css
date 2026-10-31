@@ -107,9 +107,21 @@ html, body {
 #log .rise { color: #c9b45a; }
 #log .depth { color: #ddd; }
 
-#foot { padding: 4px 10px; text-align: right; }
-#foot button { background: none; border: none; color: #444; font: inherit; font-size: 11px; cursor: pointer; }
-#foot button:hover { color: var(--red); }
+#restart {
+  position: fixed;
+  top: 6px;
+  right: 8px;
+  z-index: 5;
+  background: #111;
+  border: 1px solid #3a3a3a;
+  color: #888;
+  font: inherit;
+  font-size: 11px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+#restart:hover { color: var(--red); border-color: var(--red); }
+#status { padding-right: 96px; }
 
 @media (max-width: 760px) {
   #app { flex-direction: column; }
@@ -125,4 +137,5 @@ html, body {
   .row .meta { grid-column: 2; }
   .row.ghost { width: 46vw; }
   #log { height: 52px; }
+  #status { padding-right: 10px; }
 }

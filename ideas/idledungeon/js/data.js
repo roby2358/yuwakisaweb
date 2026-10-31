@@ -18,6 +18,7 @@
     ROOM_COUNT: 9, ROOM_MIN: 8, ROOM_MAX: 16, ROOM_MARGIN: 2,
     CORRIDOR_W: 3, EXTRA_LINKS: 2,
     VIEW_CELLS: 16,          // cells visible along the shorter screen side
+    WALL_PX: 11,             // wall line width in screen pixels
     CAM_LAG: 2,              // cells the smoothed camera may trail the leader
 
     MONSTER_HP: 60, MONSTER_DMG: 6, MONSTER_INTERVAL: 1.2,
