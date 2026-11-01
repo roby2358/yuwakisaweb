@@ -3,7 +3,7 @@
 
 const AUTHORIZE_ENDPOINT = 'https://api.schwabapi.com/v1/oauth/authorize';
 const LITTLEBRAIN_RETURN = 'http://localhost:8767/schwab/oauth-return';
-const CLIENT_ID = 'EuTHVxRHEwAyAyE57b5dDe2eeBl2yWYCCsmrHZoDMQKGGKRM';
+const CLIENT_ID = '';
 const REDIRECT_URI = 'https://yuwakisa.com/schflow/';
 const BASE62 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 const STATE_GROUPS = 4;
