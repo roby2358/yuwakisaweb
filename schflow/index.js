@@ -112,7 +112,6 @@ function wireLittlebrainLink(code, state) {
   link.href = littlebrainUrl(code, state);
   el('littlebrainNote').textContent =
     'Sends the code and state to ' + LITTLEBRAIN_RETURN + ' on this machine.';
-  link.addEventListener('click', () => console.log('Going to ' + link.href));
 }
 
 function showCode(query) {
@@ -187,5 +186,8 @@ function wireStartForm() {
 
 // ---------- boot ----------
 
-renderResult(new URLSearchParams(location.search));
+// Read the code once, then drop it from the address bar and history.
+const query = new URLSearchParams(location.search);
+history.replaceState(null, '', location.pathname);
+renderResult(query);
 wireStartForm();
