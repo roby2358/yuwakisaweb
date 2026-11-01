@@ -72,15 +72,18 @@ function setStatus(node, text, cls) {
 
 // ---------- state comparison ----------
 
+// The form below is only one way in. littlebrain starts its own sign-ins with
+// its own state and checks that state itself, so a mismatch here is expected
+// for those and doesn't block the handoff.
 const STATE_VERDICTS = {
   unknown: { mark: '?', text: 'No sent state in this browser to compare against; eyeball it.' },
-  ok:      { mark: '\u2713', text: 'State matches.' },
-  bad:     { mark: '\u2715', text: 'State does NOT match what was sent.' },
+  ok:      { mark: '\u2713', text: 'State matches what this page sent.' },
+  other:   { mark: '\u2260', text: 'Not the state this page sent. If littlebrain started this sign-in, it checks the state itself.' },
 };
 
 function compareState(sent, got) {
   if (!sent) return 'unknown';
-  return sent === got ? 'ok' : 'bad';
+  return sent === got ? 'ok' : 'other';
 }
 
 function showStateVerdict(kind) {
@@ -99,17 +102,16 @@ function showError(query) {
   el('errorPanel').classList.remove('hidden');
 }
 
-function wireLittlebrainLink(code, verdict) {
+function littlebrainUrl(code, state) {
+  const params = new URLSearchParams({ code: code, state: state });
+  return LITTLEBRAIN_RETURN + '?' + params.toString();
+}
+
+function wireLittlebrainLink(code, state) {
   const link = el('littlebrainLink');
-  const note = el('littlebrainNote');
-  if (verdict === 'bad') {
-    link.classList.add('disabled');
-    link.href = '#';
-    note.textContent = 'Handoff disabled: state mismatch.';
-    return;
-  }
-  link.href = LITTLEBRAIN_RETURN + '?code=' + encodeURIComponent(code);
-  note.textContent = 'Sends only the code to ' + LITTLEBRAIN_RETURN + ' on this machine.';
+  link.href = littlebrainUrl(code, state);
+  el('littlebrainNote').textContent =
+    'Sends the code and state to ' + LITTLEBRAIN_RETURN + ' on this machine.';
   link.addEventListener('click', () => console.log('Going to ' + link.href));
 }
 
@@ -123,7 +125,7 @@ function showCode(query) {
   el('stateSent').textContent = generated || '(none stored in this browser)';
   el('stateGot').textContent = returned || '(none)';
   showStateVerdict(verdict);
-  wireLittlebrainLink(code, verdict);
+  wireLittlebrainLink(code, returned);
 
   const copyStatus = el('copyStatus');
   el('copyButton').addEventListener('click', () => {

@@ -100,8 +100,8 @@ body {
   color: #fff;
 }
 .state-mark.ok { background: var(--ok); }
-.state-mark.bad { background: var(--bad); }
 .state-mark.unknown { background: var(--muted); }
+.state-mark.other { background: var(--muted); }
 
 .status { min-height: 1.5rem; margin: 0.5rem 0 0; }
 .status.ok { color: var(--ok); }
