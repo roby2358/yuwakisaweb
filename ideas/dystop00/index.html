@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RADIO FREE SECTOR 9</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap">
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <canvas id="game"></canvas>
+
+    <div id="hud-stack">
+        <div id="hud" class="panel">
+            <div class="panel-title">RADIO FREE SECTOR 9</div>
+            <div class="row"><span id="turn-info">TURN 01</span><span id="mp-info">MP ■■■■■■</span><span id="exposure" class="hidden-ok">HIDDEN</span></div>
+            <div class="row meter-row">
+                <span class="label">WAKE</span>
+                <span id="wake-bar" class="bar"><span id="wake-fill"></span><span id="wake-goal"></span></span>
+                <span id="wake-pct">0%</span>
+            </div>
+            <div class="row meter-row">
+                <span class="label">ALERT</span>
+                <span id="alert-level">GREEN</span>
+                <span id="alert-count" class="dim">0 SWEEPERS</span>
+            </div>
+            <div class="row buttons">
+                <button id="plant-btn" class="btn">[T]RANSMIT</button>
+                <button id="retrieve-btn" class="btn">[R]ETRIEVE</button>
+                <button id="end-turn" class="btn primary">[SPACE] END TURN</button>
+                <button id="new-game" class="btn">NEW</button>
+            </div>
+        </div>
+        <div id="hud-hover" class="panel hidden"><span id="hover-info"></span></div>
+    </div>
+
+    <div id="roster" class="panel">
+        <div class="panel-title">TRANSMITTERS</div>
+        <ul id="rig-list"></ul>
+    </div>
+
+    <div id="log" class="panel">
+        <div class="panel-title">SIGNAL LOG</div>
+        <ul id="log-list"></ul>
+    </div>
+
+    <div id="boot" class="overlay">
+        <pre id="boot-text"></pre>
+        <div id="title-card" class="hidden">
+            <div class="publisher">BITROT SOFTWORKS PRESENTS</div>
+            <h1>RADIO FREE<br>SECTOR 9</h1>
+            <div class="subtitle">AN INSURRECTION SIMULATION</div>
+            <p class="brief">The city sleeps under forty years of state broadcast.
+                You are <b class="y">@</b>, a pirate operator with five hand-built
+                transmitters. Wake <b class="m">half the tenement blocks</b> at once
+                and the Ministry falls.</p>
+            <dl class="keys">
+                <dt>CLICK @</dt><dd>select, then click a yellow hex to move</dd>
+                <dt>T</dt><dd>transmit: plant a rig here (2 MP)</dd>
+                <dt>R</dt><dd>retrieve the rig here (2 MP)</dd>
+                <dt>SPACE</dt><dd>end turn &mdash; broadcast!</dd>
+                <dt>DRAG</dt><dd>pan the city</dd>
+            </dl>
+            <ul class="rules">
+                <li>A rig wakes gray blocks near it, reaching <b>farther</b> each turn it
+                    stays on air. Woken blocks wake neighbors that touch <b>two</b> of them.</li>
+                <li>A woken block with fewer than two woken neighbors drifts back to sleep,
+                    unless a rig is holding it up.</li>
+                <li>Every woken block raises the Alert. Sweepers jam the air around them,
+                    smash rigs, and arrest you on contact.</li>
+                <li>Sweepers can't see you on a woken block. Their number is their MP.</li>
+            </ul>
+            <div class="press blink">PRESS ANY KEY</div>
+            <div class="legal">&copy; 1987 BITROT SOFTWORKS &middot; v1.03 &middot; DISK 1 OF 2 &middot; DO NOT COPY THIS DISK</div>
+        </div>
+    </div>
+
+    <div id="endcard" class="overlay hidden">
+        <div class="endbox panel">
+            <div id="end-title"></div>
+            <pre id="end-body"></pre>
+            <div class="press blink">PRESS ANY KEY TO VIEW THE CITY</div>
+        </div>
+    </div>
+
+    <div id="crt"></div>
+
+    <!-- NOTE! We want to be able to double-click to run these games, so use plain
+    script includes (globals), not ES module imports. Order = dependency order:
+    artifacts → display artifacts → libs → piece/board → state → engine → ui → bootstrap. -->
+    <script src="artifacts.js"></script>
+    <script src="displayartifacts.js"></script>
+    <script src="rando.js"></script>
+    <script src="hex.js"></script>
+    <script src="piece.js"></script>
+    <script src="board.js"></script>
+    <script src="sound.js"></script>
+    <script src="gamestate.js"></script>
+    <script src="gameengine.js"></script>
+    <script src="gameui.js"></script>
+    <script src="index.js"></script>
+</body>
+</html>

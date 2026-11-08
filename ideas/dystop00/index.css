@@ -1,0 +1,212 @@
+/* RADIO FREE SECTOR 9 — a 1987 MS-DOS release, more or less.
+   EGA palette, VT323 terminal font, DOS double-line panels, CRT scanlines.
+   --bg and --font are mirrored by GameDisplayArtifacts.BG_COLOR / UI_FONT for canvas text. */
+:root {
+    --bg: #000000;
+    --panel: rgba(0, 0, 170, 0.92);          /* EGA blue, the color of every setup screen */
+    --panel-edge: #AAAAAA;
+    --text: #FFFFFF;
+    --text-dim: #AAAAAA;
+    --yellow: #FFFF55;
+    --cyan: #55FFFF;
+    --magenta: #FF55FF;
+    --red: #FF5555;
+    --green: #55FF55;
+    --font: "VT323", "Courier New", monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font: 20px/1.1 var(--font);
+}
+#game { display: block; cursor: crosshair; }
+.hidden { display: none !important; }
+.dim { color: var(--text-dim); }
+
+/* DOS double-line box. */
+.panel {
+    background: var(--panel);
+    border: 4px double var(--panel-edge);
+    padding: 4px 10px 6px;
+    box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.75);   /* hard drop shadow, no blur in 1987 */
+}
+.panel-title {
+    margin: -4px -10px 4px;
+    padding: 0 10px;
+    background: var(--panel-edge);
+    color: #000;
+    text-align: center;
+    letter-spacing: 0.08em;
+}
+
+#hud-stack {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    z-index: 10;
+    user-select: none;
+    max-width: calc(100vw - 20px);
+}
+#hud .row { display: flex; align-items: center; gap: 14px; margin: 2px 0; }
+#mp-info { color: var(--yellow); letter-spacing: 0.05em; }
+#exposure.hidden-ok { color: var(--magenta); }
+#exposure.seen { color: #000; background: var(--red); padding: 0 6px; animation: blink 0.6s steps(1) infinite; }
+.label { width: 52px; color: var(--text-dim); }
+.bar {
+    position: relative;
+    display: inline-block;
+    width: 180px;
+    height: 14px;
+    background: #000;
+    border: 1px solid var(--panel-edge);
+}
+#wake-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--magenta); }
+#wake-goal { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--yellow); }
+#wake-pct { color: var(--magenta); min-width: 74px; }
+#alert-level { min-width: 64px; }
+.alert-green { color: var(--green); }
+.alert-amber { color: var(--yellow); }
+.alert-red { color: var(--red); }
+.alert-black { color: #000; background: var(--red); padding: 0 4px; }
+#hud-hover { padding: 2px 10px; color: var(--cyan); }
+
+.buttons { flex-wrap: wrap; gap: 6px !important; }
+.btn {
+    font: inherit;
+    font-size: 18px;
+    color: #000;
+    background: var(--panel-edge);
+    border: none;
+    padding: 1px 8px;
+    cursor: pointer;
+    box-shadow: 3px 3px 0 #000;
+}
+.btn:hover { background: var(--text); }
+.btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
+.btn:disabled { color: #555; background: #777; cursor: default; }
+.btn:focus-visible { outline: 2px solid var(--yellow); outline-offset: 2px; }
+.btn.primary { background: var(--cyan); }
+.btn.primary:hover { background: var(--text); }
+
+#roster {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    width: 230px;
+    z-index: 10;
+    user-select: none;
+}
+#rig-list, #log-list { list-style: none; }
+#rig-list li { display: flex; justify-content: space-between; }
+.rig-carried { color: var(--yellow); }
+.rig-planted { color: var(--cyan); }
+.rig-silent { color: var(--text-dim); }
+.rig-smashed { color: var(--red); text-decoration: line-through; }
+
+#log {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    width: min(460px, calc(100vw - 20px));
+    z-index: 10;
+    user-select: none;
+    font-size: 18px;
+}
+#log-list li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#log-list li:not(:first-child) { color: var(--text-dim); }
+.log-wake { color: var(--magenta) !important; }
+.log-fade { color: var(--text-dim) !important; }
+.log-bad { color: var(--red) !important; }
+.log-alert { color: var(--yellow) !important; }
+
+/* Boot / title / end overlays. */
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    background: #000;
+    color: #AAAAAA;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+#boot-text {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    right: 16px;
+    font: inherit;
+    white-space: pre-wrap;
+}
+#title-card {
+    width: min(640px, 100%);
+    text-align: center;
+    color: var(--text);
+    max-height: 100%;
+    overflow-y: auto;
+}
+.publisher { color: var(--cyan); letter-spacing: 0.3em; }
+#title-card h1 {
+    font-weight: normal;
+    font-size: clamp(48px, 11vw, 92px);
+    line-height: 0.9;
+    margin: 10px 0 6px;
+    color: var(--magenta);
+    text-shadow: 4px 4px 0 #0000AA, 8px 8px 0 #000;
+    letter-spacing: 0.04em;
+}
+.subtitle { color: var(--yellow); letter-spacing: 0.2em; margin-bottom: 14px; }
+.brief { color: var(--text-dim); margin: 0 auto 12px; max-width: 520px; }
+.y { color: var(--yellow); font-weight: normal; }
+.m { color: var(--magenta); font-weight: normal; }
+#title-card .keys {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0 14px;
+    width: fit-content;
+    margin: 0 auto 10px;
+    text-align: left;
+}
+.keys dt { color: var(--cyan); }
+.keys dd { color: var(--text-dim); }
+.rules { list-style: none; color: var(--text-dim); max-width: 540px; margin: 0 auto 14px; text-align: left; }
+.rules li::before { content: '> '; color: var(--green); }
+.press { color: var(--text); margin: 10px 0; }
+.legal { color: #555; font-size: 16px; }
+.blink { animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+#endcard { background: rgba(0, 0, 0, 0.6); }
+.endbox { width: min(560px, 100%); text-align: center; padding: 10px 18px 12px; }
+#end-title { font-size: clamp(36px, 8vw, 60px); margin: 6px 0; }
+#end-title.won { color: var(--magenta); }
+#end-title.lost { color: var(--red); }
+#end-body { font: inherit; color: var(--text); white-space: pre-wrap; text-align: left; margin: 8px auto; width: fit-content; }
+
+/* CRT: scanlines + vignette over everything, never catching input. */
+#crt {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 100;
+    background:
+        repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0) 0, rgba(0, 0, 0, 0) 2px, rgba(0, 0, 0, 0.22) 3px),
+        radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.55) 100%);
+}
+
+@media (max-width: 760px) {
+    html, body { font-size: 17px; }
+    #roster { top: auto; bottom: 10px; right: 10px; width: 170px; }
+    #log { display: none; }
+    .bar { width: 110px; }
+}

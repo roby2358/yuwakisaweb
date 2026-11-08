@@ -1,0 +1,23 @@
+Priority:   30
+Status: ToDo
+ID: hovercache-c6tf
+Created: 2026-11-08T08:37:00Z
+Updated: 2026-11-08T08:37:00Z
+
+RADIO FREE SECTOR 9 (ideas/dystop00): cut repeated rule work during hover. Each mouse move re-renders, and one frame runs pullPreview() twice (render tint + updateHover readout), each calling engine.planBroadcast twice — ~4 full broadcast plans per mouse move — plus previewKeys() twice and engine.jammedKeys() 4-5 times (render jam tint, previewKeys, updateRoster, updateHover). Fix: in gameui.js render(), compute jam, previewKeys and pullPreview once per frame and pass them to the tint passes, updateRoster and updateHover. Only worth doing if hover feels sluggish in play. No rule change; node test/run.js must stay green (integration/ui_boot.js boots the UI).
+----
+Priority:   15
+Status: ToDo
+ID: uidispatch-h38u
+Created: 2026-11-08T08:37:03Z
+Updated: 2026-11-08T08:37:03Z
+
+RADIO FREE SECTOR 9 (ideas/dystop00): optionally turn the last two kind-branching if-chains in gameui.js into lookup tables, matching EVENT_LOG / END_CARDS: (1) updateRoster's rig status label/class (carried / smashed / jammed / on air with range); (2) finishTurn's sound choice by event priority (captured|deadair → defeat, won → victory, smashed → smash, spawned → alarm) as an ordered list. Low value: each chain lives in one place, so /coding's "don't over-apply" says plain ifs are acceptable. No rule change; node test/run.js stays green.
+----
+Priority:   10
+Status: ToDo
+ID: statesave-jtyj
+Created: 2026-11-08T08:37:06Z
+Updated: 2026-11-08T08:37:06Z
+
+RADIO FREE SECTOR 9 (ideas/dystop00): GameState (de)serialization, listed as deferred in CLAUDE.md. Needed only for saved games or the client/server split. Serialize seed, hexes (with awake), player, stations, rigs (id/name/status/airtime/position), sweepers (id/kind/mp/prefers/target/position), nextSweeperId, turn, mp, phase, outcome; rebuild Piece/Rig/Sweeper instances and engine.board on load. Add an ONTOLOGY invariant (round-trip yields an identical snapshot and identical play from there) with a CRITERIA R-row and test/R-n/. No save versioning or migration while prototyping. Don't start until saves or a server are actually wanted.
