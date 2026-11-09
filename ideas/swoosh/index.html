@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Swoosh</title>
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <aside id="placard" class="placard">
+    <h1 id="placard-title"></h1>
+    <p id="placard-medium"></p>
+    <p id="placard-count"></p>
+    <p id="explanation" class="explanation" aria-live="polite" hidden></p>
+    <button id="explain" type="button">explain</button>
+    <button id="palette" class="tool palette" type="button" title="Copy palette" aria-label="Copy palette hex values to clipboard">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><path d="M3 2.5h10v7.5H3zM8 1v1.5M6 10l-2 5M10 10l2 5M8 10v4"/></svg>
+    </button>
+    <button id="pause" class="tool pause" type="button"></button>
+    <button id="snapshot" class="tool snapshot" type="button" title="Copy picture" aria-label="Copy picture to clipboard">&#x1F4F8;</button>
+  </aside>
+
+  <script src="colortheory.js"></script>
+  <script src="index.js"></script>
+</body>
+</html>
