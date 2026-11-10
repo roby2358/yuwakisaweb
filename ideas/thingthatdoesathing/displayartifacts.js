@@ -12,6 +12,13 @@ const GameDisplayArtifacts = (function () {
         HOP_MS: 140,                 // ms per animated hop in a tick
         RUN_GAP_MS: 250,             // Go: pause between ticks, so a card can still be picked
         MILESTONE_MS: 3500,          // how long the milestone banner stays up
+        // New Game menu note per GameArtifacts.MAP_SIZES key.
+        MAP_SIZE_NOTES: {
+            small:  'fits the screen',
+            medium: 'drag to pan',
+            large:  'drag to pan',
+            huge:   'drag to pan',
+        },
         TERRAIN_COLORS: {
             [T.WATER]: '#2a6faa',
             [T.PLAINS]: '#7db344',
@@ -28,7 +35,8 @@ const GameDisplayArtifacts = (function () {
         // its tile covers.
         THING_LOOK: {
             BELT:    { name: 'Belt',    does: 'moves what is on it 1 hex',                fill: '#3a3f47', ink: '#ffd633', inset: 0.84 },
-            SPRING:  { name: 'Spring',  does: 'flings what is on it 3 hexes',             fill: '#4a3a2a', ink: '#ff9a3c', inset: 0.84 },
+            SPRING:  { name: 'Spring',  does: 'flings what is on it 3 hexes, over lakes', fill: '#4a3a2a', ink: '#ff9a3c', inset: 0.84 },
+            ROCKET:  { name: 'Rocket',  does: 'blasts what is on it up to 8 hexes, over lakes; splats gremlins', fill: '#4a2234', ink: '#ff5c8a', inset: 0.84 },
             PULLER:  { name: 'Puller',  does: 'pulls what is 2 hexes ahead 1 hex closer', fill: '#1f4a4a', ink: '#5ef0d8', inset: 0.84 },
             WALL:    { name: 'Wall',    does: 'nothing gets in',                          fill: '#8a5a3c', ink: '#5c3a24', inset: 1 },
             BRIDGE:  { name: 'Bridge',  does: 'water you can cross (build on water)',     fill: '#a07a4a', ink: '#6b4f2c', inset: 0.84 },
@@ -45,6 +53,7 @@ const GameDisplayArtifacts = (function () {
             blue:   { top: '#8ec4ff', left: '#3d7fe0', right: '#204a8e' },
             yellow: { top: '#fff08a', left: '#e8c230', right: '#9a7a12' },
         },
+        SPLAT_BLOTS: 8,              // drops in a splat burst
         SOURCE_COLOR: '#4ce08a',
         TARGET_COLOR: '#ff6600',
         // Canvas chrome — mirror --bg and --font in index.css.

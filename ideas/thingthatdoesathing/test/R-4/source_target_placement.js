@@ -5,7 +5,7 @@
 const { check, done } = require('../helpers/check');
 const { newGame, SEEDS } = require('../helpers/load');
 for (const seed of SEEDS) {
-    const { g, state, engine } = newGame(seed);
+    const { g, state, engine } = newGame(seed, 'small');
     const A = g.GameArtifacts;
     const passable = engine.board.passableHexes().sort((a, b) => a.col - b.col);
     const len = Math.max(A.PLACE_SLICE_MIN, Math.floor(passable.length * A.PLACE_SLICE_FRAC));

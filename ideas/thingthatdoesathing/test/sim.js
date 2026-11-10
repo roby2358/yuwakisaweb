@@ -1,16 +1,18 @@
-// test/sim.js — tuning harness:  node test/sim.js [games]
+// test/sim.js — tuning harness:  node test/sim.js <games> <size>   (size: a MAP_SIZES key)
 //
 // A greedy builder bot: lay belts along the shortest land path from source to target,
 // facing each one at the next hex. A spring stands in for a belt on a straight run of 3.
-// Pullers, walls and bridges are discarded (the bot doesn't plan pulls).
-// Walls and bridges are dumped somewhere harmless (a discard). Reports turns to the first
+// Every other card (Puller, Rocket, Wall, Bridge, and a Spring off a straight run) is
+// thrown away with discard() (the bot doesn't plan pulls or flights). Reports turns to the first
 // milestone (FIRST_MILESTONE crates). Not a test (no pass/fail); it's the evidence behind
 // FIRST_MILESTONE, SOURCE_INTERVAL and friends.
 'use strict';
 
 const { newGame } = require('./helpers/load');
 
-const GAMES = Number(process.argv[2]) || 200;
+const GAMES = Number(process.argv[2]);
+const SIZE = process.argv[3];
+if (!(GAMES > 0) || !SIZE) { console.error('usage: node test/sim.js <games> <size>'); process.exit(2); }
 const CAP = 400;
 
 function shortestPath(engine, g, from, to) {
@@ -40,7 +42,7 @@ function dirTo(g, a, b) {
 const results = [];
 let lostTotal = 0;
 for (let i = 0; i < GAMES; i++) {
-    const { g, state, engine } = newGame(5000 + i);
+    const { g, state, engine } = newGame(5000 + i, SIZE);
     const goal = g.GameArtifacts.FIRST_MILESTONE;
     const path = shortestPath(engine, g, state.source, state.target);
     let res = { ok: true };
@@ -66,31 +68,9 @@ for (let i = 0; i < GAMES; i++) {
                 res = engine.place(any, h.q, h.r, f); continue;
             }
         }
-        // Discard: a bridge on far water, a wall/other off-path, else wait.
-        const onPath = new Set(path.map(p => g.Hex.key(p.q, p.r)));
-        let done = false;
-        for (let slot = 0; slot < state.hand.length && !done; slot++) {
-            const kind = state.hand[slot];
-            if (kind === 'BELT' && todo >= 0) continue;   // keep belts for the path
-            // A discarded puller must not reach the path: pick a spot and facing whose
-            // near and far hexes are both off it.
-            const reachesPath = (k, f) => {
-                if (kind !== 'PULLER') return false;
-                const { q, r } = g.Hex.fromKey(k), d = g.NEIGHBOR_DIRS[f];
-                return onPath.has(g.Hex.key(q + d.q, r + d.r)) || onPath.has(g.Hex.key(q + 2 * d.q, r + 2 * d.r));
-            };
-            let pickSpot = null;
-            for (const k of engine.legalPlacements(kind)) {
-                if (onPath.has(k)) continue;
-                const f = [0, 1, 2, 3, 4, 5].find(f => !reachesPath(k, f));
-                if (f !== undefined) { pickSpot = { k, f }; break; }
-            }
-            if (!pickSpot) continue;
-            const { q, r } = g.Hex.fromKey(pickSpot.k);
-            res = engine.place(slot, q, r, pickSpot.f);
-            done = res.ok;
-        }
-        if (!done) res = engine.wait();
+        // While building, discard a card the path can't use; otherwise wait.
+        const slot = todo >= 0 ? state.hand.findIndex(kind => kind !== 'BELT') : -1;
+        res = slot >= 0 ? engine.discard(slot) : engine.wait();
     }
     results.push(state.delivered >= goal ? state.turn : CAP);
     lostTotal += state.lost;
@@ -99,5 +79,5 @@ for (let i = 0; i < GAMES; i++) {
 results.sort((a, b) => a - b);
 const q = p => results[Math.floor(p * (results.length - 1))];
 const wins = results.filter(t => t < CAP).length;
-console.log(`games ${GAMES}  reached first milestone ${wins}  turns p10 ${q(0.1)}  median ${q(0.5)}  p90 ${q(0.9)}  ` +
+console.log(`${SIZE}  games ${GAMES}  reached first milestone ${wins}  turns p10 ${q(0.1)}  median ${q(0.5)}  p90 ${q(0.9)}  ` +
     `crates lost/game ${(lostTotal / GAMES).toFixed(2)}`);

@@ -4,7 +4,7 @@
 const { check, done } = require('../helpers/check');
 const { newGame, snapshot, SEEDS } = require('../helpers/load');
 for (const seed of SEEDS.slice(0, 4)) {
-    const a = newGame(seed), b = newGame(seed);
+    const a = newGame(seed, 'small'), b = newGame(seed, 'small');
     let same = true;
     for (let i = 0; i < 60; i++) {
         // A scripted mix of commands, chosen from a's state (b must agree anyway).

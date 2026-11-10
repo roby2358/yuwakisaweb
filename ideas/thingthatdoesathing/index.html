@@ -31,7 +31,12 @@
         <div id="milestone-title"></div>
         <div id="milestone-sub"></div>
     </div>
-    <div id="hand" class="panel"></div>
+    <div id="hand" class="panel">
+        <div id="cards"></div>
+        <button id="discard" class="card discard" title="Pick a card, then click here to throw it away (ticks)">
+            <span class="bin">🗑</span><span class="name">Discard</span><kbd>X</kbd>
+        </button>
+    </div>
     <div id="intro-panel" class="panel">
         <h1>Thing Factory</h1>
         <p>Crates come out of the <strong class="src">source</strong>. Build a contraption that
@@ -44,11 +49,19 @@
             <dt><kbd>Click</kbd></dt><dd>place it (yellow hexes); the world ticks</dd>
             <dt><kbd>Click</kbd> a mover</dt><dd>turn a placed one clockwise; ticks</dd>
             <dt><kbd>D</kbd></dt><dd>remove the Thing under the cursor (ticks)</dd>
+            <dt><kbd>X</kbd> / Discard</dt><dd>throw away the picked card (ticks)</dd>
             <dt><kbd>Space</kbd></dt><dd>wait one tick</dd>
             <dt><kbd>Go</kbd></dt><dd>keep ticking until Pause</dd>
             <dt><kbd>Esc</kbd></dt><dd>put the card back</dd>
         </dl>
-        <button id="begin-btn" class="btn primary">Begin</button>
+        <p class="pick-size">Pick a board to begin</p>
+        <div class="sizes" id="intro-sizes"></div>
+    </div>
+    <div id="size-panel" class="panel hidden">
+        <h1>New Game</h1>
+        <p class="pick-size">Pick a board</p>
+        <div class="sizes" id="new-sizes"></div>
+        <button id="size-cancel" class="btn">Keep playing <kbd>Esc</kbd></button>
     </div>
     <!-- NOTE! We want to be able to double-click to run these games, so use plain
     script includes (globals), not ES module imports. Order = dependency order:

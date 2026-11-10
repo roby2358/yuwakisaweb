@@ -1,5 +1,7 @@
 // R-14: a piece that enters bare ICE keeps going in the same direction, free, until it
-// reaches a non-ice hex or is blocked; ice covered by a Thing does not slide.
+// reaches a non-ice hex or is blocked; ice covered by a Thing does not slide. A flying push
+// (Spring, Rocket) is airborne: ice under the flight counts toward its range. A Spring that
+// comes down on bare ice slides on; a Rocket doesn't.
 'use strict';
 const { check, done } = require('../helpers/check');
 const { flatGame, DIR } = require('../helpers/load');
@@ -26,10 +28,32 @@ const { flatGame, DIR } = require('../helpers/load');
 }
 {
     const { engine, put, piece, terrain, T } = flatGame();
-    // A spring's distance doesn't count ice: 1 plains step, 2 ice (free), then 2 more steps.
-    put('SPRING', -1, 4, DIR.E); terrain(1, 4, T.ICE); terrain(2, 4, T.ICE);
+    // Airborne over 0 and 1 (counted), down on ice at 2, then it skids across 3 and 4 to 5.
+    put('SPRING', -1, 4, DIR.E); for (let q = 0; q <= 4; q++) terrain(q, 4, T.ICE);
     const c = piece('crate', -1, 4);
     engine.wait();
-    check('ice hexes are free inside a spring push', c.isAt(4, 4));
+    check('a Spring counts ice under its throw, then skids on from an ice landing', c.isAt(5, 4));
+}
+{
+    const { engine, put, piece, terrain, T } = flatGame();
+    put('SPRING', -1, 4, DIR.E); terrain(0, 4, T.ICE); terrain(1, 4, T.ICE);
+    const c = piece('crate', -1, 4);
+    engine.wait();
+    check('ice under a Spring\'s flight is no shortcut: a plains landing stays put', c.isAt(2, 4));
+}
+{
+    const { state, engine, put, piece, terrain, T } = flatGame();
+    put('SPRING', -1, 4, DIR.E); terrain(2, 4, T.ICE); terrain(3, 4, T.WATER);
+    const c = piece('crate', -1, 4);
+    engine.wait();
+    check('a skid off a Spring landing is on the ground: it slides into a lake and sinks',
+        !state.pieces.includes(c) && state.lost === 1);
+}
+{
+    const { engine, put, piece, terrain, T } = flatGame();
+    put('ROCKET', -1, 4, DIR.E); for (let q = 0; q <= 11; q++) terrain(q, 4, T.ICE);
+    const c = piece('crate', -1, 4);
+    engine.wait();
+    check('a Rocket landing on ice does not skid', c.isAt(7, 4));
 }
 done();

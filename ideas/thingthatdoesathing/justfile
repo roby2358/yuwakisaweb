@@ -6,6 +6,7 @@ default:
 cc-test *flags:
     node test/run.js {{flags}}
 
-# Tuning harness: the greedy builder bot plays N games and prints win rate and turn spread
-cc-sim games:
-    node test/sim.js {{games}}
+# Tuning harness: the greedy builder bot plays N games on one board size (small, medium,
+# large, huge) and prints how many reach the first milestone and the turn spread
+cc-sim games size:
+    node test/sim.js {{games}} {{size}}

@@ -10,9 +10,12 @@
 const GameUI = (function () {
     const {
         HEX_SIZE, COUNTER_SIZE, HOP_MS, RUN_GAP_MS, MILESTONE_MS, TERRAIN_COLORS, TERRAIN_NAMES, THING_LOOK,
-        PIECE_LOOK, CRATE_SHADES, SOURCE_COLOR, TARGET_COLOR, BG_COLOR, UI_FONT, REACH_COLOR
+        PIECE_LOOK, CRATE_SHADES, SPLAT_BLOTS, SOURCE_COLOR, TARGET_COLOR, BG_COLOR, UI_FONT, REACH_COLOR, MAP_SIZE_NOTES
     } = GameDisplayArtifacts;
-    const { TERRAIN, HAND_SIZE, aims, nextMilestone } = GameArtifacts;
+    const { TERRAIN, HAND_SIZE, MAP_SIZES, aims, nextMilestone } = GameArtifacts;
+    const SIZE_KEYS = Object.keys(MAP_SIZES);
+    const END_CUES = ['deliver', 'splat', 'sink'];   // the one sound a tick's endings play, by priority
+    const OVERLAY_PANELS = { intro: 'intro-panel', size: 'size-panel' };   // L5 overlay → its panel
 
     const DRAG_THRESHOLD = 4;
 
@@ -70,6 +73,25 @@ const GameUI = (function () {
             ctx.lineTo(s * 0.4, 0);
             ctx.lineTo(s * 0.55, s * 0.16);
             ctx.stroke();
+        },
+        ROCKET(ctx, s) {
+            // A body with a pointed nose, two fins at the back, and exhaust: it flies far.
+            ctx.beginPath();
+            ctx.moveTo(s * 0.55, 0);
+            ctx.lineTo(s * 0.25, -s * 0.16);
+            ctx.lineTo(-s * 0.3, -s * 0.16);
+            ctx.lineTo(-s * 0.3, s * 0.16);
+            ctx.lineTo(s * 0.25, s * 0.16);
+            ctx.closePath();
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(-s * 0.15, -s * 0.16); ctx.lineTo(-s * 0.4, -s * 0.36); ctx.lineTo(-s * 0.3, -s * 0.16);
+            ctx.moveTo(-s * 0.15, s * 0.16); ctx.lineTo(-s * 0.4, s * 0.36); ctx.lineTo(-s * 0.3, s * 0.16);
+            ctx.stroke();
+            ctx.lineWidth = Math.max(1, s * 0.06);
+            for (const yy of [-0.08, 0.08]) {
+                ctx.beginPath(); ctx.moveTo(-s * 0.42, yy * s); ctx.lineTo(-s * 0.7, yy * s * 1.6); ctx.stroke();
+            }
         },
         WALL(ctx, s) {
             ctx.lineWidth = Math.max(1, s * 0.05);
@@ -131,7 +153,7 @@ const GameUI = (function () {
 
             this.picked = null;      // L1.2 { slot, legal: Set<key> } — the card being placed
             this.facing = 0;         // ghost facing; remembered between placements
-            this.overlay = null;     // L5 'intro' | null
+            this.overlay = null;     // L5 'intro' | 'size' | null (both pick a board size)
             this.hoveredHex = null;  // L1.3
             this.anim = null;        // { t0, dur, tracks: Map<id, track>, hidden: Set<id>, milestone }
             this.running = false;    // Go/Pause: tick on its own after each animation
@@ -141,30 +163,40 @@ const GameUI = (function () {
         }
 
         // ---- Lifecycle ----
+        // No board until a size is picked from the intro.
         start() {
             this.attach();
-            this.newGame();
+            this.showOverlay('intro');
+            this.resize();
         }
 
+        // New Game: the size picker over the current game (Esc goes back to it).
         newGame() {
-            this.engine.newGame(Math.floor(Math.random() * 0x100000000));
+            this.unpick();
+            this.showOverlay('size');
+        }
+
+        startGame(size) {
+            this.engine.newGame(Math.floor(Math.random() * 0x100000000), size);
             this.picked = null;
             this.anim = null;
             this.hoveredHex = null;
             this.setRunning(false);
             document.getElementById('milestone').classList.add('hidden');
-            this.showOverlay('intro');
+            this.dismissOverlay();
+            this.sound.fanfare();
             this.resize();
         }
 
         resize() {
             this.canvas.width = window.innerWidth;
             this.canvas.height = window.innerHeight;
-            this.centerMap();
+            if (this.state.hexes) this.centerMap();
             this.render();
         }
 
-        // Center the whole (small) map, nudged down a little to clear the HUD.
+        // Center the whole map when it fits the window, nudged down a little to clear the
+        // HUD; a bigger map centers on the source instead, and you drag to pan.
         centerMap() {
             let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
             for (const [, h] of this.state.hexes) {
@@ -172,8 +204,12 @@ const GameUI = (function () {
                 minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
                 minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
             }
-            this.panX = this.canvas.width / 2 - (minX + maxX) / 2;
-            this.panY = this.canvas.height / 2 - (minY + maxY) / 2 + 10;
+            const fits = maxX - minX + 2 * HEX_SIZE <= this.canvas.width && maxY - minY + 2 * HEX_SIZE <= this.canvas.height;
+            const src = new Hex(this.state.source.q, this.state.source.r).toPixel();
+            const cx = fits ? (minX + maxX) / 2 : src.x;
+            const cy = fits ? (minY + maxY) / 2 : src.y;
+            this.panX = this.canvas.width / 2 - cx;
+            this.panY = this.canvas.height / 2 - cy + 10;
         }
 
         hexToScreen(q, r) {
@@ -233,6 +269,13 @@ const GameUI = (function () {
             this.commit(() => this.engine.remove(q, r), () => this.sound.sink());
         }
 
+        // Throw the picked card away (the Discard spot or X); it ticks like any command.
+        discardPicked() {
+            if (this.overlay || this.anim || !this.picked) return;
+            const slot = this.picked.slot;
+            this.commit(() => this.engine.discard(slot), () => this.sound.discard());
+        }
+
         // L2.1 the primary action (Wait button, Space, Enter).
         primaryAction() {
             if (this.overlay || this.anim) return;
@@ -273,27 +316,31 @@ const GameUI = (function () {
         startAnim(before, res) {
             const tracks = new Map();
             const hidden = new Set();
-            let hops = 0, sank = false, delivered = false, milestone = 0;
+            let hops = 0, milestone = 0;
+            const ends = new Set();
             for (const e of res.events) {
                 if (e.type === 'move') {
                     const b = before.get(e.id);
                     tracks.set(e.id, { ...b, pts: [{ q: b.q, r: b.r }, ...e.path], end: null });
                     hops = Math.max(hops, e.path.length);
-                } else if (e.type === 'sink' || e.type === 'deliver') {
-                    // A piece that ends without moving (its Bridge removed) fades where it stood.
+                } else if (e.type === 'sink' || e.type === 'deliver' || e.type === 'splat') {
+                    // A piece that ends without moving (its Bridge removed, or splatted where
+                    // it stood) fades where it stood; one hit by a flier waits for it to land.
                     const b = before.get(e.id);
                     const t = tracks.get(e.id) || { ...b, pts: [{ q: b.q, r: b.r }], end: null };
+                    const by = e.by && tracks.get(e.by);
+                    while (by && t.pts.length < by.pts.length) t.pts.push(t.pts[t.pts.length - 1]);
                     t.end = e.type;
                     tracks.set(e.id, t);
-                    if (e.type === 'sink') sank = true; else delivered = true;
+                    ends.add(e.type);
                 } else if (e.type === 'spawn') {
                     hidden.add(e.id);
                 } else if (e.type === 'milestone') {
                     milestone = e.count;
                 }
             }
-            this.anim = { t0: performance.now(), dur: Math.max(1, hops + (sank || delivered ? 1 : 0)) * HOP_MS,
-                tracks, before, hidden, milestone, sank, delivered };
+            this.anim = { t0: performance.now(), dur: Math.max(1, hops + (ends.size ? 1 : 0)) * HOP_MS,
+                tracks, before, hidden, milestone, ends };
             const frame = now => {
                 if (!this.anim) return;
                 if (now - this.anim.t0 >= this.anim.dur) { this.finishAnim(); return; }
@@ -306,8 +353,8 @@ const GameUI = (function () {
         finishAnim() {
             const a = this.anim;
             this.anim = null;
-            if (a.delivered) this.sound.deliver();
-            else if (a.sank) this.sound.sink();
+            const cue = END_CUES.find(type => a.ends.has(type));
+            if (cue) this.sound[cue]();
             if (a.milestone) { this.sound.fanfare(); this.showMilestone(a.milestone); }
             this.render();
             this.scheduleRun();
@@ -342,16 +389,31 @@ const GameUI = (function () {
         }
 
         // ---- L5 Overlays ----
+        // Both overlays are size pickers; only a size (or Esc on New Game) closes them.
         showOverlay(name) {
             this.overlay = name;
-            document.getElementById('intro-panel').classList.toggle('hidden', name !== 'intro');
+            for (const [n, id] of Object.entries(OVERLAY_PANELS))
+                document.getElementById(id).classList.toggle('hidden', n !== name);
         }
 
         dismissOverlay() {
-            if (this.overlay === 'intro') this.sound.fanfare();
             this.overlay = null;
-            document.getElementById('intro-panel').classList.add('hidden');
+            for (const id of Object.values(OVERLAY_PANELS)) document.getElementById(id).classList.add('hidden');
             this.render();
+            this.scheduleRun();
+        }
+
+        // One button per MAP_SIZES row, in each picker, keyed 1…n.
+        buildSizeButtons(el) {
+            SIZE_KEYS.forEach((size, i) => {
+                const { cols, rows } = MAP_SIZES[size];
+                const b = document.createElement('button');
+                b.className = 'btn size';
+                b.innerHTML = `<span class="dims">${cols} × ${rows}</span>` +
+                    `<span class="note">${MAP_SIZE_NOTES[size]}</span><kbd>${i + 1}</kbd>`;
+                b.addEventListener('click', () => this.startGame(size));
+                el.appendChild(b);
+            });
         }
 
         // ---- Rendering ----
@@ -362,6 +424,7 @@ const GameUI = (function () {
             const s = this.state;
             ctx.fillStyle = BG_COLOR;
             ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            if (!s.hexes) return;
 
             for (const [, hex] of s.hexes) {
                 const { x, y } = this.hexToScreen(hex.q, hex.r);
@@ -426,6 +489,7 @@ const GameUI = (function () {
             // rest sit still; crates spawned this tick wait for the end.
             for (const [id, t] of a.tracks) {
                 const pose = this.trackPose(t, now);
+                if (t.end === 'splat' && pose.alpha < 1) this.drawSplat(pose.x, pose.y, t.color, 1 - pose.alpha);
                 this.drawPiece(pose.x, pose.y, t, pose.alpha, pose.scale);
             }
             for (const p of this.state.pieces) {
@@ -500,6 +564,22 @@ const GameUI = (function () {
             const g = parseInt(hexColor.slice(3, 5), 16) / 255;
             const b = parseInt(hexColor.slice(5, 7), 16) / 255;
             return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.4 ? '#000' : '#fff';
+        }
+
+        // A burst of blots in the splatted piece's color, flying out as `k` goes 0 → 1.
+        drawSplat(x, y, color, k) {
+            const ctx = this.ctx;
+            ctx.save();
+            ctx.globalAlpha = 1 - k * 0.7;
+            ctx.fillStyle = color;
+            for (let i = 0; i < SPLAT_BLOTS; i++) {
+                const a = i / SPLAT_BLOTS * Math.PI * 2 + i;
+                const d = COUNTER_SIZE * (0.3 + 0.6 * k) * (i % 2 ? 0.7 : 1);
+                ctx.beginPath();
+                ctx.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, COUNTER_SIZE * (0.14 - 0.06 * k), 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
         }
 
         drawPiece(x, y, p, alpha, scale) {
@@ -593,8 +673,9 @@ const GameUI = (function () {
         // The hand: one card per slot, each with a little canvas of the Thing. Redrawn only
         // when what it shows changes, not on every animation frame or mouse move.
         renderHand() {
-            const el = document.getElementById('hand');
+            const el = document.getElementById('cards');
             const s = this.state;
+            document.getElementById('discard').classList.toggle('armed', !!this.picked);
             const shown = JSON.stringify([s.hand, this.picked && this.picked.slot, this.facing]);
             if (shown === this.handDrawn && el.children.length === HAND_SIZE) return;
             this.handDrawn = shown;
@@ -639,7 +720,10 @@ const GameUI = (function () {
             document.getElementById('end-turn').addEventListener('click', () => this.primaryAction());
             document.getElementById('go').addEventListener('click', () => this.toggleRun());
             document.getElementById('new-game').addEventListener('click', () => this.newGame());
-            document.getElementById('begin-btn').addEventListener('click', () => this.dismissOverlay());
+            document.getElementById('discard').addEventListener('click', () => this.discardPicked());
+            document.getElementById('size-cancel').addEventListener('click', () => this.dismissOverlay());
+            this.buildSizeButtons(document.getElementById('intro-sizes'));
+            this.buildSizeButtons(document.getElementById('new-sizes'));
         }
 
         onMouseDown(e) {
@@ -660,7 +744,7 @@ const GameUI = (function () {
         }
 
         handleClick(e) {
-            if (this.overlay) { this.dismissOverlay(); return; }   // L5 captures & consumes
+            if (this.overlay) return;                               // L5 captures & consumes
             if (this.anim) return;                                  // L1.1 input waits for the tick
             const hex = this.screenToHex(e.clientX, e.clientY);
             const key = Hex.key(hex.q, hex.r);
@@ -701,16 +785,21 @@ const GameUI = (function () {
         }
 
         onKeyDown(e) {
-            if (this.overlay && (e.key === ' ' || e.key === 'Enter' || e.key === 'Escape')) {
-                e.preventDefault();
-                this.dismissOverlay();
-                return;
-            }
+            if (this.overlay) { this.onOverlayKey(e); return; }
             if (e.key === 'Escape') { if (this.picked) this.unpick(); return; }   // L2.2
             if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); this.primaryAction(); return; }
             if (e.key >= '1' && e.key <= String(HAND_SIZE)) { this.pick(Number(e.key) - 1); return; }
             if ((e.key === 'r' || e.key === 'R') && this.picked) { this.turnGhost(e.shiftKey ? -1 : 1); return; }
-            if (e.key === 'd' || e.key === 'D') this.removeHovered();
+            if (e.key === 'd' || e.key === 'D') { this.removeHovered(); return; }
+            if (e.key === 'x' || e.key === 'X') this.discardPicked();
+        }
+
+        // L5: a size picker takes only its number keys, and Esc when there's a game behind it.
+        onOverlayKey(e) {
+            e.preventDefault();
+            const i = Number(e.key) - 1;
+            if (Number.isInteger(i) && i >= 0 && i < SIZE_KEYS.length) { this.startGame(SIZE_KEYS[i]); return; }
+            if (e.key === 'Escape' && this.overlay === 'size') this.dismissOverlay();
         }
     }
 

@@ -31,12 +31,12 @@ function load() {
     return ctx.__exports;
 }
 
-// A fresh engine with a game already generated from `seed`.
-function newGame(seed) {
+// A fresh engine with a game already generated from `seed` at board `size`.
+function newGame(seed, size) {
     const g = load();
     const state = new g.GameState();
     const engine = new g.GameEngine(state);
-    engine.newGame(seed);
+    engine.newGame(seed, size);
     return { g, state, engine };
 }
 
@@ -56,7 +56,7 @@ function snapshot(state) {
 // and the spawn timer held back so no crate appears mid-test. Middle row r=4 runs
 // q = -2 … 13 (col 0 … 15); its inner hexes are q = -1 … 12.
 function flatGame(seed = 7) {
-    const ctx = newGame(seed);
+    const ctx = newGame(seed, 'small');
     const { g, state, engine } = ctx;
     for (const [, hex] of state.hexes) hex.terrain = hex.isEdge ? g.GameArtifacts.TERRAIN.WATER : g.GameArtifacts.TERRAIN.PLAINS;
     state.pieces = [];

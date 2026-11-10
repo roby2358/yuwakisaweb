@@ -2,6 +2,64 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-10 — Spring landings skid on ice again
+The designer wanted flying Springs to keep sliding on ice. `THINGS` gained `skids` (Spring
+yes, Rocket no): a flying push that runs its full range onto bare ice slides on, on the
+ground (so a skid into a lake sinks). Ice under the flight still counts toward the range.
+D-17 rewritten, R-14 updated; `isBareIce` factored out of the push. Small boards: 187/200,
+median 51, p90 76, 0.17 lost (was p90 75, 0.14 lost with dead landings).
+
+### 2026-11-10 — Springs fly; Bridges drawn half as often
+At the designer's request `SPRING` got `flies: true` (**D-17**): a Spring's throw now
+clears inland water, counts ice hexes, and doesn't skid on landing (it used to sink in any
+water, get free ice hexes, and slide on landing). Bridge weight went from 2 to 1 (D-7).
+R-14 and R-15 updated (R-15 gained `flying_over_water.js`). Controlled steps on small
+boards: before 187/200, median 52, p90 73, 0.17 lost; flying Springs 186/200, median 53,
+p90 74, 0.12 lost; plus Bridge weight 1, 187/200, median 51, p90 75, 0.14 lost. Other sizes
+in RATIONALE D-3.
+
+### 2026-11-10 — Rocket range capped at 8
+The designer found unlimited flight felt like cheating: `THINGS.ROCKET.push` went from
+`Infinity` to 8. A flying push now counts every hex and doesn't slide on ice (with a finite
+range, free ice hexes would have stretched it). D-15 and R-32 updated. The sim is unchanged,
+since the bot discards Rockets.
+
+### 2026-11-10 — Rocket flights cross inland water
+At the designer's request only the outer sea stops a Rocket's flight; it used to sink in any
+open water. `THINGS` gained `flies` (Rocket only). `step` takes `flies` and lets a flying
+piece over inland open water; `push(piece, dir, n, splat)` became `push(piece, dir, how)`
+with `how = {n, splat, flies}` (gremlin wandering uses a `WANDER` constant). A flight stopped
+above inland water comes down and sinks. D-15 and R-32 updated. The sim is unchanged, since
+the bot discards Rockets.
+
+### 2026-11-10 — The Rocket (with splats) and a Discard spot
+The designer asked for a Rocket card that blasts a crate as far as it will go and splats
+gremlins, choosing splats both ways (the gremlin a flier hits, and a gremlin it launches)
+and re-emergence for splatted gremlins (**D-15**). `THINGS` gained `splat` and the
+`ROCKET` row (`push: Infinity`, weight 1); `PIECES` gained `splats` (gremlin yes).
+`push(piece, dir, n)` became `push(piece, dir, n, splat)`, and a new `splat{id, by}` event
+feeds `emerge` alongside `sink`. The designer also asked for a Discard spot that throws away
+the picked card and ticks (**D-16**, settling **Q-3**): new `discard(slot)` command, a
+Discard button after the cards, and `X`. Added R-32 (flight), R-33 (splats), R-34
+(discard), U-15, U-16; R-31 now covers splats; R-25, R-26 and the smoke walkthrough cover
+the new command and event.
+`test/sim.js` now throws unusable cards away with `discard` instead of building them
+somewhere harmless. Controlled steps on small boards: Rockets off, old bot 187/200, median
+50, p90 69 (unchanged); discarding bot 187/200, median 51, p90 76; with Rockets (weight 1)
+187/200, median 52, p90 73. Other sizes moved too (RATIONALE D-3).
+
+### 2026-11-10 — Board size picked at New Game: 16×10, 20×20, 30×30, 60×60
+The designer asked for a size panel on New Game. `MAP_COLS`/`MAP_ROWS`, `HEIGHTMAP_SIZE` and
+`KNOWN_GOOD_SEED` were replaced by `MAP_SIZES` rows (`cols`, `rows`, `heightmap`,
+`knownGoodSeed`); 60 × 60 samples a 65 heightmap and the others keep 33. `newGame(seed)`
+became `newGame(seed, size)`, recording `state.size`; an unknown size is `ok:false`. D-3
+rewritten (it was one small board that always fits); D-11 now falls back per size.
+R-1, R-2, R-5 and R-23 now run at every size; R-25 checks the size argument; U-2 updated,
+U-14 added. On the client the intro's Begin button became the size picker, New Game opens
+a second picker that Esc closes, and a board too big for the window opens centered on the
+source. `test/sim.js` and `just cc-sim` take the size; the small board reproduces its
+figures exactly (187/200, median 50). Opened Q-5 (gremlins don't scale with size).
+
 ### 2026-11-10 — Drowned gremlins re-emerge on the shore
 The designer asked that a gremlin falling into the ocean be replaced by a new one on an
 edge hex. This settles **Q-4** as **D-14**. `PIECES` gained `reemerges` (gremlin yes,

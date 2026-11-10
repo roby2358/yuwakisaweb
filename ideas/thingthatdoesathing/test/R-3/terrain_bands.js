@@ -4,7 +4,7 @@
 const { check, done } = require('../helpers/check');
 const { newGame, SEEDS } = require('../helpers/load');
 for (const seed of SEEDS) {
-    const { g, state } = newGame(seed);
+    const { g, state } = newGame(seed, 'small');
     const A = g.GameArtifacts, T = A.TERRAIN;
     const inner = [...state.hexes.values()].filter(h => !h.isEdge).sort((a, b) => a.elevation - b.elevation);
     const n = inner.length;

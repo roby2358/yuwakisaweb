@@ -91,6 +91,8 @@ const GameSound = (function () {
         place() { this.phrase([SCALE[1], STEP_NOTE]); }          // a Thing clunks down
         deliver() { this.phrase([SCALE[4], SCALE[6], SCALE[7]]); } // a crate arrives: rising
         sink() { this.phrase([SCALE[3], SCALE[0]]); }            // something goes in the drink
+        splat() { this.phrase([SCALE[7], SCALE[0], SCALE[0]]); } // a gremlin goes splat
+        discard() { this.phrase([SCALE[2], SCALE[1]]); }         // a card goes in the bin
     }
 
     return GameSound;

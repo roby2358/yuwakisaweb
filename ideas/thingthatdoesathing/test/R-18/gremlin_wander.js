@@ -4,7 +4,7 @@
 const { check, done } = require('../helpers/check');
 const { newGame, flatGame, SEEDS } = require('../helpers/load');
 for (const seed of SEEDS.slice(0, 5)) {
-    const { g, state, engine } = newGame(seed);
+    const { g, state, engine } = newGame(seed, 'small');
     const T = g.GameArtifacts.TERRAIN;
     let ok = true, distinct = true, moves = 0;
     for (let t = 0; t < 40; t++) {

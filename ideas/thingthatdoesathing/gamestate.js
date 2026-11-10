@@ -6,6 +6,7 @@ const GameState = (function () {
     class GameState {
         constructor() {
             this.seed = 0;            // reproducibility anchor
+            this.size = null;         // key of GameArtifacts.MAP_SIZES
             this.hexes = null;        // Map<"q,r", hex>
             this.source = null;       // {q, r} — crates appear here
             this.target = null;       // {q, r} — crates are delivered here

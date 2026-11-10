@@ -1,9 +1,9 @@
 // test/integration/uiboot.js — boot the real UI against a stub DOM (runs with the suite).
 //
 // Loads every script index.html loads, in order, into a vm with a fake document, canvas,
-// and requestAnimationFrame, then drives the UI through clicks and keys: dismiss the intro,
-// pick each card, turn the ghost, place, rotate, wait, run tick animations to completion,
-// and play until a win. Catches runtime errors in rendering and input wiring without a
+// and requestAnimationFrame, then drives the UI through clicks and keys: pick a board size
+// from the intro, pick each card, turn the ghost, place, rotate, wait, run tick animations to completion,
+// and play to the first milestone. Catches runtime errors in rendering and input wiring without a
 // browser. It can't judge how anything looks; that stays manual (U-rows).
 'use strict';
 
@@ -133,7 +133,31 @@ const run = (label, fn) => {
     try { fn(); check(label, true); } catch (e) { check(label + ': ' + e.stack, false); }
 };
 
-run('intro dismisses with Space', () => { key(' '); if (ui.overlay) throw new Error('overlay still up'); });
+run('the intro waits for a size: no board, and clicks and Space do nothing', () => {
+    if (ui.overlay !== 'intro' || ui.state.hexes) throw new Error('expected the intro and no board');
+    canvas.fire('mousedown', { button: 0, clientX: 10, clientY: 10 });
+    windowListeners.mouseup.forEach(fn => fn({ button: 0, clientX: 10, clientY: 10, preventDefault() {} }));
+    key(' '); key('Escape');
+    if (ui.overlay !== 'intro') throw new Error('the intro closed without a size');
+});
+run('every size button builds its board; key 1 picks the first size', () => {
+    const sizes = vm.runInContext('GameArtifacts.MAP_SIZES', ctx);
+    const keys = Object.keys(sizes);
+    if (els['intro-sizes'].children.length !== keys.length || els['new-sizes'].children.length !== keys.length)
+        throw new Error('one button per size in each picker');
+    keys.forEach((size, i) => {
+        els['new-sizes'].children[i].fire('click');
+        const { cols, rows } = sizes[size];
+        if (ui.overlay || ui.state.size !== size || ui.state.hexes.size !== cols * rows) throw new Error('bad board for ' + size);
+        ui.render();
+        els['new-game'].fire('click');
+        if (ui.overlay !== 'size') throw new Error('New Game did not open the size picker');
+    });
+    key('Escape');
+    if (ui.overlay) throw new Error('Esc did not go back to the game');
+    els['new-game'].fire('click'); key('1');
+    if (ui.overlay || ui.state.size !== keys[0]) throw new Error('key 1 did not start a ' + keys[0] + ' game');
+});
 run('each card picks, the ghost turns, Esc puts it back', () => {
     for (const k of ['1', '2', '3']) {
         key(k);
@@ -165,7 +189,7 @@ run('D removes the hovered Thing and ticks', () => {
     if (s.turn !== turn + 1) throw new Error('no tick');
 });
 run('a hand card button click picks it', () => {
-    const btn = els.hand.children[1];
+    const btn = els.cards.children[1];
     btn.fire('click');
     if (!ui.picked || ui.picked.slot !== 1) throw new Error('button did not pick');
     canvas.fire('mousedown', { button: 2 });
@@ -187,9 +211,47 @@ run('input is ignored mid-animation', () => {
 });
 
 // Play a full game through the UI: the sim bot's plan, executed with clicks.
+run('the Discard spot throws away the picked card and ticks; X does too', () => {
+    const s = ui.state;
+    const things = s.things.length;
+    let turn = s.turn;
+    els.discard.fire('click');
+    if (s.turn !== turn) throw new Error('Discard with no card picked must do nothing');
+    key('2');
+    if (!els.discard.classList.set.has('armed')) throw new Error('Discard not armed while a card is picked');
+    els.discard.fire('click');
+    if (s.turn !== turn + 1 || ui.picked || s.things.length !== things) throw new Error('Discard click did not discard');
+    settle();
+    turn = s.turn;
+    key('1'); key('x');
+    if (s.turn !== turn + 1 || ui.picked) throw new Error('X did not discard');
+    settle();
+});
+run('a Rocket card draws, places, and its flight and splat animate', () => {
+    const s = ui.state;
+    s.hand[0] = 'ROCKET';
+    ui.render();
+    key('1');
+    const [k] = [...ui.picked.legal];
+    clickHex(...k.split(',').map(Number));
+    if (!s.things.some(t => t.kind === 'ROCKET')) throw new Error('Rocket not placed');
+    settle();
+    // Hand-feed an animation with a flight that splats a gremlin, as the engine reports it.
+    const crate = s.pieces.find(p => p.kind === 'crate');
+    const gremlin = s.pieces.find(p => p.kind === 'gremlin');
+    if (crate && gremlin) {
+        const before = new Map([crate, gremlin].map(p => [p.id, { q: p.q, r: p.r, color: p.color, label: p.label, kind: p.kind }]));
+        ui.startAnim(before, { events: [
+            { type: 'move', id: crate.id, path: [{ q: crate.q + 1, r: crate.r }, { q: crate.q + 2, r: crate.r }] },
+            { type: 'splat', id: gremlin.id, by: crate.id },
+        ] });
+        if (ui.anim.tracks.get(gremlin.id).pts.length !== 3) throw new Error('the hit gremlin must wait for the flier');
+        settle();
+    }
+});
 run('a game plays through the UI to the first milestone banner', () => {
     // Fresh board: earlier steps dropped random Things that this bot can't plan around.
-    els['new-game'].fire('click'); key(' ');
+    els['new-game'].fire('click'); key('1');
     const s = ui.state, e = ui.engine;
     const goal = vm.runInContext('GameArtifacts.FIRST_MILESTONE', ctx);
     for (let i = 0; i < 2000 && s.delivered < goal; i++) {
@@ -243,7 +305,7 @@ run('a game plays through the UI to the first milestone banner', () => {
     if (!banner.has('hidden')) throw new Error('banner never hid');
 });
 run('Go ticks on its own, holds while a card is picked, and Pause stops it', () => {
-    els['new-game'].fire('click'); key(' ');
+    els['new-game'].fire('click'); key('1');
     const s = ui.state;
     els.go.fire('click');
     if (els.go.textContent !== 'Pause') throw new Error('button did not flip to Pause');
@@ -264,8 +326,11 @@ run('Go ticks on its own, holds while a card is picked, and Pause stops it', () 
     advance(2000);
     if (s.turn !== paused || els.go.textContent !== 'Go') throw new Error('Pause did not stop it');
 });
-run('New Game resets', () => {
+run('New Game asks for a size, then resets', () => {
+    key(' '); settle();
     els['new-game'].fire('click');
-    if (ui.state.turn !== 1 || ui.overlay !== 'intro') throw new Error('not reset');
+    if (ui.overlay !== 'size' || ui.state.turn === 1) throw new Error('the picker must not reset the game yet');
+    key('2');
+    if (ui.state.turn !== 1 || ui.overlay) throw new Error('not reset');
 });
 done();

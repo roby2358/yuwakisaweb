@@ -8,13 +8,14 @@
 // command runs exactly one tick. All randomness goes through the seeded Rando.
 const GameEngine = (function () {
     const {
-        TERRAIN, THINGS, PIECES, CRATE_COLORS, aims, nextMilestone, MAP_COLS, MAP_ROWS, SOURCE_INTERVAL, HAND_SIZE,
+        TERRAIN, THINGS, PIECES, CRATE_COLORS, aims, nextMilestone, MAP_SIZES, SOURCE_INTERVAL, HAND_SIZE,
         GREMLIN_DICE_COUNT, GREMLIN_DICE_SIDES,
-        GEN_MAX_ATTEMPTS, KNOWN_GOOD_SEED, HEIGHTMAP_SIZE, HEIGHTMAP_ROUGHNESS,
+        GEN_MAX_ATTEMPTS, HEIGHTMAP_ROUGHNESS,
         WATER_PCT, MOUNTAIN_PCT, ICE_FRAC, PLACE_SLICE_FRAC, PLACE_SLICE_MIN
     } = GameArtifacts;
 
     const KINDS = Object.keys(THINGS);
+    const WANDER = { n: 1, splat: false, flies: false, skids: false };   // a gremlin's own step, as a push
     const isLand = t => t === TERRAIN.PLAINS || t === TERRAIN.ICE;
     // Where a Thing may be built, keyed by its template's `on`.
     const BUILDS_ON = {
@@ -53,13 +54,16 @@ const GameEngine = (function () {
         }
 
         // ---- New game / generation ----
-        // The caller picks the seed (the client rolls one; tests and replays pass theirs).
-        newGame(seed) {
+        // The caller picks the seed (the client rolls one; tests and replays pass theirs)
+        // and the board size, a key of MAP_SIZES.
+        newGame(seed, size) {
             if (!Number.isInteger(seed) || seed < 0) return { ok: false };
+            if (!Object.hasOwn(MAP_SIZES, size)) return { ok: false };
             const s = this.state;
             s.seed = seed >>> 0;
+            s.size = size;
             if (!this.generateMap(s.seed, GEN_MAX_ATTEMPTS)) {
-                s.seed = KNOWN_GOOD_SEED;
+                s.seed = MAP_SIZES[size].knownGoodSeed;
                 this.generateMap(s.seed, 1);
             }
             s.things = [];
@@ -131,17 +135,18 @@ const GameEngine = (function () {
 
         generateRectGrid() {
             const hexes = new Map();
-            const hm = this.diamondSquare(HEIGHTMAP_SIZE, HEIGHTMAP_ROUGHNESS);
-            const last = HEIGHTMAP_SIZE - 1;
-            for (let row = 0; row < MAP_ROWS; row++) {
+            const { cols, rows, heightmap } = MAP_SIZES[this.state.size];
+            const hm = this.diamondSquare(heightmap, HEIGHTMAP_ROUGHNESS);
+            const last = heightmap - 1;
+            for (let row = 0; row < rows; row++) {
                 const qOffset = -Math.floor(row / 2);
-                for (let col = 0; col < MAP_COLS; col++) {
+                for (let col = 0; col < cols; col++) {
                     const q = col + qOffset;
                     const r = row;
-                    const gx = Math.round(col / (MAP_COLS - 1) * last);
-                    const gy = Math.round(row / (MAP_ROWS - 1) * last);
-                    const elevation = hm[gy * HEIGHTMAP_SIZE + gx];
-                    const isEdge = row === 0 || row === MAP_ROWS - 1 || col === 0 || col === MAP_COLS - 1;
+                    const gx = Math.round(col / (cols - 1) * last);
+                    const gy = Math.round(row / (rows - 1) * last);
+                    const elevation = hm[gy * heightmap + gx];
+                    const isEdge = row === 0 || row === rows - 1 || col === 0 || col === cols - 1;
                     hexes.set(Hex.key(q, r), { q, r, col, row, elevation, isEdge, terrain: null });
                 }
             }
@@ -214,11 +219,11 @@ const GameEngine = (function () {
                 this.board.neighbors(h.q, h.r).some(n => n.isEdge));
         }
 
-        // For each sunk kind that reemerges, a new one (fresh color, new id) climbs out on a
+        // For each sunk or splatted kind that reemerges, a new one (fresh color, new id) climbs out on a
         // random shore hex. None if the shore is full. Returns the spawn events.
-        emerge(sunkKinds) {
+        emerge(goneKinds) {
             const events = [];
-            for (const kind of sunkKinds.filter(k => PIECES[k].reemerges)) {
+            for (const kind of goneKinds.filter(k => PIECES[k].reemerges)) {
                 const shore = this.shoreHexes();
                 if (!shore.length) break;
                 const h = Rando.choice(shore);
@@ -250,6 +255,11 @@ const GameEngine = (function () {
             return !this.pieceAt(hex.q, hex.r);
         }
 
+        // Is this hex ice with nothing built on it (so a piece slides across it)?
+        isBareIce(hex) {
+            return hex.terrain === TERRAIN.ICE && !this.thingAt(hex.q, hex.r);
+        }
+
         // Is this hex wet — water with nothing built over it?
         isOpenWater(hex) {
             return hex.terrain === TERRAIN.WATER && !this.thingAt(hex.q, hex.r);
@@ -272,8 +282,9 @@ const GameEngine = (function () {
             return this.board.get(at.q + d.q, at.r + d.r);
         }
 
-        // One hex in `dir`. Returns 'moved' | 'blocked' | 'sank' | 'delivered'.
-        step(piece, dir) {
+        // One hex in `dir`. Returns 'moved' | 'blocked' | 'sank' | 'delivered'. A flying
+        // piece passes over inland open water (only the outer sea takes it).
+        step(piece, dir, flies) {
             const s = this.state;
             const cargo = PIECES[piece.kind].cargo;
             const hex = this.neighborHex(piece, dir);
@@ -284,7 +295,7 @@ const GameEngine = (function () {
                 s.delivered++;
                 return 'delivered';
             }
-            if (this.isOpenWater(hex)) {
+            if (this.isOpenWater(hex) && !(flies && !hex.isEdge)) {
                 this.sink(piece);
                 return 'sank';
             }
@@ -292,25 +303,56 @@ const GameEngine = (function () {
         }
 
         // Shove `piece` up to n hexes in `dir`. Bare ice is free: the piece slides on.
-        // Returns this push's events: one move (if it moved), then a sink/deliver if it
-        // ended so.
-        push(piece, dir, n) {
+        // `how` is { n, splat, flies, skids } (from the Thing's template, or WANDER).
+        // A splatting push (the Rocket) that's stopped by a piece that splats destroys it and
+        // lands on its hex; then, if the launched piece itself splats, it does too.
+        // A flying push counts every hex (ice is no shortcut mid-air), crosses inland water,
+        // and sinks only if it comes down on water; if it skids, coming down on bare ice
+        // slides on as usual.
+        // Returns this push's events: one move (if it moved), a splat for a piece it hit
+        // (`by` the mover), then a sink/deliver/splat if the mover ended so.
+        push(piece, dir, how) {
+            const { n, splat, flies, skids } = how;
             const events = [];
             const path = [];
-            let left = n, res = 'moved';
+            let left = n, res = 'moved', hit = null;
             while (left > 0) {
-                res = this.step(piece, dir);
+                res = this.step(piece, dir, flies);
+                if (res === 'blocked' && splat) hit = this.splatVictim(piece, dir);
+                if (hit) res = this.step(piece, dir, flies);
                 if (res === 'blocked') break;
                 path.push({ q: piece.q, r: piece.r });
-                if (res !== 'moved') break;
-                const hex = this.board.get(piece.q, piece.r);
-                if (hex.terrain === TERRAIN.ICE && !this.thingAt(hex.q, hex.r)) continue;
+                if (res !== 'moved' || hit) break;
+                if (!flies && this.isBareIce(this.board.get(piece.q, piece.r))) continue;
                 left--;
             }
+            // A skidding throw that ran its full range onto bare ice slides on, on the ground.
+            while (skids && res === 'moved' && !hit && this.isBareIce(this.board.get(piece.q, piece.r))) {
+                res = this.step(piece, dir, false);
+                if (res === 'blocked') break;
+                path.push({ q: piece.q, r: piece.r });
+            }
+            if (flies && (res === 'moved' || res === 'blocked') && this.isOpenWater(this.board.get(piece.q, piece.r))) {
+                this.sink(piece);   // came down on inland water
+                res = 'sank';
+            }
+            const splatsToo = splat && res !== 'sank' && res !== 'delivered' && PIECES[piece.kind].splats;
+            if (splatsToo) this.removePiece(piece);
             if (path.length) events.push({ type: 'move', id: piece.id, path });
+            if (hit) events.push({ type: 'splat', id: hit.id, by: piece.id });
             if (res === 'sank') events.push({ type: 'sink', id: piece.id });
             if (res === 'delivered') events.push({ type: 'deliver', id: piece.id });
+            if (splatsToo) events.push({ type: 'splat', id: piece.id, by: null });
             return events;
+        }
+
+        // The piece in the way of `piece` going `dir`, if it splats; removed from the board.
+        splatVictim(piece, dir) {
+            const hex = this.neighborHex(piece, dir);
+            const victim = hex && this.pieceAt(hex.q, hex.r);
+            if (!victim || !PIECES[victim.kind].splats) return null;
+            this.removePiece(victim);
+            return victim;
         }
 
         // The piece a Thing acts on this tick, and which way and how far it goes.
@@ -318,10 +360,12 @@ const GameEngine = (function () {
         // the near hex and pull the piece on the far hex back into the near one.
         actionOf(thing) {
             const tpl = THINGS[thing.kind];
-            if (tpl.push) return { piece: this.pieceAt(thing.q, thing.r), dir: thing.facing, n: tpl.push };
+            if (tpl.push) return { piece: this.pieceAt(thing.q, thing.r), dir: thing.facing,
+                how: { n: tpl.push, splat: tpl.splat, flies: tpl.flies, skids: tpl.skids } };
             if (tpl.pull) {
                 const d = NEIGHBOR_DIRS[thing.facing];
-                return { piece: this.pieceAt(thing.q + 2 * d.q, thing.r + 2 * d.r), dir: Hex.opposite(thing.facing), n: tpl.pull };
+                return { piece: this.pieceAt(thing.q + 2 * d.q, thing.r + 2 * d.r), dir: Hex.opposite(thing.facing),
+                    how: { n: tpl.pull, splat: tpl.splat, flies: tpl.flies, skids: tpl.skids } };
             }
             return null;
         }
@@ -347,14 +391,14 @@ const GameEngine = (function () {
                 const act = this.actionOf(thing);
                 if (!act || !act.piece || moved.has(act.piece.id)) continue;
                 moved.add(act.piece.id);
-                events.push(...this.push(act.piece, act.dir, act.n));
+                events.push(...this.push(act.piece, act.dir, act.how));
             }
 
-            // Only a push removes a piece, and pushed pieces are in `moved`, so every
-            // wanderer here is still on the board.
+            // Pieces a push removed are off s.pieces already, so every wanderer here is
+            // still on the board.
             for (const p of s.pieces.filter(p => PIECES[p.kind].wanders && !moved.has(p.id))) {
                 const dirs = this.wanderDirs(p);
-                if (dirs.length) events.push(...this.push(p, Rando.choice(dirs), 1));
+                if (dirs.length) events.push(...this.push(p, Rando.choice(dirs), WANDER));
             }
 
             s.spawnTimer++;
@@ -364,8 +408,8 @@ const GameEngine = (function () {
                 events.push({ type: 'spawn', id: c.id, q: c.q, r: c.r });
             }
 
-            const drowned = events.filter(e => e.type === 'sink').map(e => kindOf.get(e.id));
-            events.push(...this.emerge(drowned));
+            const gone = events.filter(e => e.type === 'sink' || e.type === 'splat').map(e => kindOf.get(e.id));
+            events.push(...this.emerge(gone));
 
             // One milestone event per milestone this tick's deliveries reached.
             for (let m = nextMilestone(deliveredBefore); m <= s.delivered; m = nextMilestone(m)) {
@@ -412,6 +456,14 @@ const GameEngine = (function () {
             if (adrift) res.events.unshift({ type: 'sink', id: piece.id });
             if (adrift) res.events.push(...this.emerge([piece.kind]));
             return res;
+        }
+
+        // Throw away a hand card: the slot gets a fresh draw, and the world ticks.
+        discard(slot) {
+            const s = this.state;
+            if (!Number.isInteger(slot) || slot < 0 || slot >= s.hand.length) return { ok: false };
+            s.hand[slot] = this.draw();
+            return this.tick();
         }
 
         wait() {

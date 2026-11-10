@@ -4,7 +4,7 @@
 const { check, done } = require('../helpers/check');
 const { flatGame, newGame, SEEDS } = require('../helpers/load');
 for (const seed of SEEDS.slice(0, 5)) {
-    const { g, state, engine } = newGame(seed);
+    const { g, state, engine } = newGame(seed, 'small');
     const A = g.GameArtifacts, T = A.TERRAIN;
     // Give the board some Things and pieces to exclude.
     for (let i = 0; i < 6; i++) engine.wait();

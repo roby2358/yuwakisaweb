@@ -155,8 +155,8 @@ html, body {
 #milestone-title { font-size: 26px; font-weight: 700; color: #ff6600; letter-spacing: 0.02em; }
 #milestone-sub { color: var(--text-dim); font-size: 13px; margin-top: 2px; }
 
-/* Intro card. */
-#intro-panel {
+/* Intro card and the New Game size picker. */
+#intro-panel, #size-panel {
     position: fixed;
     top: 50%;
     left: 50%;
@@ -166,7 +166,7 @@ html, body {
     text-align: center;
     z-index: 20;
 }
-#intro-panel h1 {
+#intro-panel h1, #size-panel h1 {
     font-size: 22px;
     font-weight: 700;
     letter-spacing: 0.02em;
@@ -193,14 +193,27 @@ kbd {
     border-radius: 4px;
     padding: 2px 6px;
 }
-#intro-panel .btn { padding: 7px 28px; font-size: 14px; }
+#intro-panel .btn, #size-panel .btn { font-size: 14px; }
+.pick-size { color: var(--text); font-weight: 600; margin-bottom: 8px; }
+.sizes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }
+.btn.size {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 6px;
+}
+.btn.size .dims { font-weight: 700; font-variant-numeric: tabular-nums; }
+.btn.size .note { font-size: 11px; color: var(--text-dim); }
+.btn.size kbd { position: absolute; top: 4px; right: 5px; font-size: 10px; padding: 1px 4px; }
+#size-cancel { margin-top: 12px; padding: 5px 14px; }
 
 #lost-info { color: #ff8a7a; font-size: 13px; font-variant-numeric: tabular-nums; }
 #intro-panel .src { color: #4ce08a; }      /* SOURCE_COLOR */
 #intro-panel .tgt { color: #ff6600; }      /* TARGET_COLOR */
 #intro-panel { width: min(420px, calc(100vw - 32px)); }
 
-/* The hand: three cards along the bottom. */
+/* The hand: three cards along the bottom, then the Discard spot. */
 #hand {
     position: fixed;
     bottom: 14px;
@@ -212,6 +225,7 @@ kbd {
     z-index: 10;
     user-select: none;
 }
+#cards { display: flex; gap: 8px; }
 .card {
     position: relative;
     display: grid;
@@ -235,6 +249,19 @@ kbd {
 .card kbd { position: absolute; top: 4px; right: 6px; font-size: 10px; padding: 1px 4px; }
 .card:hover { background: var(--btn-hover); }
 .card.picked { border-color: var(--accent); transform: translateY(-4px); background: var(--btn-hover); }
+.card.discard {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 2px;
+    width: 84px;
+    padding: 6px;
+    border: 2px dashed var(--panel-border);
+    color: var(--text-dim);
+}
+.card.discard .bin { font-size: 26px; line-height: 1; }
+.card.discard.armed { border-color: #ff8a7a; color: var(--text); }
 .card:disabled { opacity: 0.5; cursor: default; }
 .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 

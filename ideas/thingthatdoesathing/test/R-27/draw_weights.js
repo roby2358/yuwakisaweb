@@ -3,7 +3,7 @@
 'use strict';
 const { check, done } = require('../helpers/check');
 const { newGame } = require('../helpers/load');
-const { g, engine } = newGame(21);
+const { g, engine } = newGame(21, 'small');
 const { THINGS } = g.GameArtifacts;
 const N = 20000, count = {};
 for (let i = 0; i < N; i++) { const k = engine.draw(); count[k] = (count[k] || 0) + 1; }

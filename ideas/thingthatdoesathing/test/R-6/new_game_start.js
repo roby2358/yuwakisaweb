@@ -5,7 +5,7 @@
 const { check, done } = require('../helpers/check');
 const { newGame, SEEDS } = require('../helpers/load');
 for (const seed of SEEDS) {
-    const { g, state, engine } = newGame(seed);
+    const { g, state, engine } = newGame(seed, 'small');
     const A = g.GameArtifacts;
     const crates = state.pieces.filter(p => p.kind === 'crate');
     const grem = state.pieces.filter(p => p.kind === 'gremlin');
