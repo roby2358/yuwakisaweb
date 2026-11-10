@@ -81,15 +81,23 @@ everything; G-2 beats G-1 (a funny interaction that can't be read is a bug, not 
 
 ### Piece — a crate or gremlin
 *Serves:* G-1 (the things the machine moves), comedy (gremlins).
-`Piece` from the base, with two fields set by the engine.
+`Piece` from the base, with two fields set by the engine. Each kind is a row of `PIECES`.
 
 | Field | Type | Notes |
 |---|---|---|
 | `q`, `r` | int | Position. |
 | `id` | int | Unique, from `nextId`; events refer to it. |
-| `kind` | `'crate' \| 'gremlin'` | |
-| `label` | string | `'C'` or `'G'`. |
+| `kind` | `'crate' \| 'gremlin'` | Key into `PIECES`. |
+| `label` | string | `PIECES[kind].label`: `'C'` or `'G'`. |
 | `color` | `#rrggbb` \| null | Gremlins get a seeded palette color; crates null. |
+
+`PIECES[kind]` is the template:
+
+| Field | crate | gremlin | Meaning |
+|---|---|---|---|
+| `label` | `'C'` | `'G'` | The counter's glyph. |
+| `cargo` | yes | no | Delivered on entering the target; counted in `lost` when it sinks. |
+| `wanders` | no | yes | Takes a random step on a tick when no Thing moved it. |
 
 ### Thing — a placed fixture (plain object)
 *Serves:* G-1, G-2. Templates over snowflakes: every kind is a row of `THINGS` (§6).
@@ -158,10 +166,12 @@ walls you didn't have to spend a card on. [P]
 
 ## §4 Rules
 
-### Generate — `newGame(seed?)` [P]
-*Serves:* G-3, a fresh puzzle every board.
+### Generate — `newGame(seed)` [P]
+*Serves:* G-3, a fresh puzzle every board. The caller supplies the seed: the client rolls
+one with `Math.random`, and tests and replays pass theirs. The engine never rolls one.
 ```
-state.seed = seed ?? floor(Math.random() * 2^32)
+legal: seed is a non-negative integer
+state.seed = seed
 if not generateMap(seed, GEN_MAX_ATTEMPTS): seed = KNOWN_GOOD_SEED; generateMap(seed, 1)
     # generateMap: Rando.seed; build grid; assignTerrain; placeSourceAndTarget; hasPath?
 things = []; pieces = []; spawn crate on source; spawnGremlins()
@@ -195,11 +205,12 @@ on shuffled passable hexes other than source, target, and the first crate
 return a kind chosen by Rando with probability THINGS[kind].weight / total weight
 ```
 
-### Placement legality — `legalPlacements(kind)` [P]
-*Serves:* G-2 (the highlight *is* the rule).
+### Placement legality — `canPlace(kind, hex)` [P]
+*Serves:* G-2 (the highlight *is* the rule). `place` calls it; `legalPlacements(kind)` is
+the set of hexes where it holds.
 ```
 hex exists, no Thing there, not the target
-THINGS[kind].on == 'water' ? terrain == WATER : terrain in {PLAINS, ICE}
+terrain fits THINGS[kind].on:  'land' → PLAINS or ICE;  'water' → WATER
 THINGS[kind].blocks ⇒ no piece on hex
 ```
 
@@ -209,8 +220,8 @@ THINGS[kind].blocks ⇒ no piece on hex
 next = piece + DIR[dir]
 if next off-map or MOUNTAIN or a blocking Thing or a piece there: return 'blocked'
 piece.moveTo(next)
-if piece is a crate and next == target: remove; delivered += 1; return 'delivered'
-if next is WATER and no Thing there: remove; if crate: lost += 1; return 'sank'
+if PIECES[kind].cargo and next == target: remove; delivered += 1; return 'delivered'
+if next is WATER and no Thing there: remove; if cargo: lost += 1; return 'sank'
 return 'moved'
 ```
 
@@ -233,9 +244,9 @@ for thing in things (placement order):
     pusher: p = piece on thing's hex;  dir = facing;            n = push
     puller: p = piece on hex 2 ahead;  dir = opposite(facing);  n = pull
     if p and p.id not in moved: moved += p; push(p, dir, n)
-for gremlin not in moved (creation order):
+for piece with PIECES[kind].wanders, not in moved (creation order):
     dirs = directions whose neighbor is land or a bridge, empty, no blocking Thing
-    if dirs: push(gremlin, Rando.choice(dirs), 1)
+    if dirs: push(piece, Rando.choice(dirs), 1)
 spawnTimer += 1
 if spawnTimer >= SOURCE_INTERVAL and no piece on source: spawn crate; spawnTimer = 0
 turn += 1; gameWon = delivered >= DELIVER_GOAL; phase = 'player'
@@ -248,7 +259,7 @@ Puller and stops on it (a Thing covers its hex).
 ### Commands
 ```
 place(slot, q, r, facing):
-    legal: !gameWon, 0 <= slot < HAND_SIZE, (q,r) in legalPlacements(hand[slot]),
+    legal: !gameWon, 0 <= slot < HAND_SIZE, canPlace(hand[slot], hex at (q,r)),
            facing in 0..5 for Things with push or pull (ignored, stored null, for fixtures)
     things.push({kind, q, r, facing}); hand[slot] = draw(); tick()
 rotate(q, r):  legal: !gameWon and a Thing with a facing (push or pull) stands at (q,r)
@@ -301,7 +312,7 @@ The code constant in `GameArtifacts` is the single source.
 
 | Command | Legal when | Effect | Result |
 |---|---|---|---|
-| `newGame(seed?)` | always | regenerate | `{ok:true}` |
+| `newGame(seed)` | `seed` is a non-negative integer | regenerate | `{ok:true}` |
 | `place(slot, q, r, facing)` | see Commands rule | build, redraw slot, tick | `{ok, events, won?}` |
 | `rotate(q, r)` | a Belt, Spring, or Puller is there | turn clockwise, tick | `{ok, events, won?}` |
 | `wait()` | `!gameWon` | tick | `{ok, events, won?}` |
@@ -309,7 +320,8 @@ The code constant in `GameArtifacts` is the single source.
 Illegal → `{ ok:false }` and nothing changed (hand and `Rando` included).
 
 ### Queries
-- `legalPlacements(kind)` → `Set<key>` — the same check `place` enforces.
+- `canPlace(kind, hex)` → bool — the check `place` enforces.
+- `legalPlacements(kind)` → `Set<key>` — every hex where `canPlace` holds.
 - `thingAt(q, r)`, `pieceAt(q, r)`.
 - `board.*`.
 

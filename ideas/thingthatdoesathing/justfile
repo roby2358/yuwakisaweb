@@ -1,0 +1,11 @@
+# List available commands
+default:
+    @just --list
+
+# Run every test: R-n rules, integration walkthroughs, coverage (pass -v for every check)
+cc-test *flags:
+    node test/run.js {{flags}}
+
+# Tuning harness: the greedy builder bot plays N games and prints win rate and turn spread
+cc-sim games:
+    node test/sim.js {{games}}

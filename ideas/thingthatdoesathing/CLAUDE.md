@@ -40,16 +40,16 @@ headless; `GameUI` is the only browser-coupled code.
 
 | Module | Global | Role |
 |---|---|---|
-| `artifacts.js` | `GameArtifacts` | Rules data: `TERRAIN`, `THINGS` (the Thing templates: `push`, `pull`, `blocks`, `on`, `weight`), `MOVEMENT_COST`, and every tunable number. |
-| `displayartifacts.js` | `GameDisplayArtifacts` | Client-only: `HEX_SIZE`, `COUNTER_SIZE`, `HOP_MS`, terrain colors/names, `THING_LOOK` (name, verb line, colors), port colors. |
+| `artifacts.js` | `GameArtifacts` | Rules data: `TERRAIN`, `THINGS` (the Thing templates: `push`, `pull`, `blocks`, `on`, `weight`), `PIECES` (the piece templates: `label`, `cargo`, `wanders`), `aims(kind)`, `MOVEMENT_COST`, and every tunable number. |
+| `displayartifacts.js` | `GameDisplayArtifacts` | Client-only: `HEX_SIZE`, `COUNTER_SIZE`, `HOP_MS`, terrain colors/names, `THING_LOOK` (name, verb line, colors, inset), `PIECE_LOOK` (hover name, crate color), port colors. |
 | `piece.js` | `Piece` | A positioned token. Crates and gremlins are `Piece`s with engine-set `id` and `kind`. |
 | `board.js` | `Board` | Query layer over the hex `Map` (passable = land). |
 | `gamestate.js` | `GameState` | Serializable data: `source`, `target`, `pieces`, `things`, `hand`, `turn`, `delivered`, `lost`, `spawnTimer`, `nextId`, `gameWon`, `phase`. |
-| `gameengine.js` | `GameEngine` | Generation + rules. Commands `place`/`rotate`/`wait` each run one `tick()` and return `{ ok, events, won? }`. One `step()` handles every movement (movers, springs, ice slides, gremlins). |
+| `gameengine.js` | `GameEngine` | Generation + rules. `newGame(seed)` takes the seed from the caller (the UI rolls it). Commands `place`/`rotate`/`wait` each run one `tick()` and return `{ ok, events, won? }`. One `step()` handles every movement (movers, springs, ice slides, gremlins). |
 | `gameui.js` | `GameUI` | Canvas, HUD, the hand, input, and the tick animation, which is driven only by the events the engine returns. |
 
-Libs: `hex.js` (axial math, `NEIGHBOR_DIRS` = facing order E, NE, NW, W, SW, SE; clockwise
-is `(f+5)%6`), `rando.js` (seeded RNG), `colortheory.js` (gremlin colors), `sound.js`
+Libs: `hex.js` (axial math, `NEIGHBOR_DIRS` = facing order E, NE, NW, W, SW, SE;
+`Hex.clockwise` is `(f+5)%6`, plus `Hex.counterClockwise`, `Hex.opposite`, `Hex.same`), `rando.js` (seeded RNG), `colortheory.js` (gremlin colors), `sound.js`
 (client-only cues; `Math.random`, never `Rando`).
 
 ### Input architecture (see `UI_CONTROLS.md`)
@@ -95,7 +95,7 @@ in `hexToScreen` / `screenToHex`.
   wander, the source spawns every `SOURCE_INTERVAL` if clear.
 - **Step:** blocked by off-map / mountain / Wall / piece; open water sinks; bare ice slides
   free; a crate on the target is delivered.
-- **Tuning harness:** `node test/sim.js [games]` (greedy builder bot; lays belts and
+- **Tuning harness:** `just cc-sim 200`, which runs `node test/sim.js 200` (greedy builder bot; lays belts and
   springs, discards pullers facing away from its path).
 
 ## Conventions
@@ -104,7 +104,8 @@ in `hexToScreen` / `screenToHex`.
   no bundler. Most modules wrap their definition in an IIFE assigning one global to keep
   top-level names from colliding across scripts; the single-class value libs (`Hex`,
   `Piece`) declare the class at top level instead.
-- Tests: `node test/run.js` (`-v` for every check). DOM-free: `test/helpers/load.js` boots
+- Tests: `just cc-test`, which runs `node test/run.js` (`-v` for every check). The recipes are
+  described in the project-local `thingfactory-tools` skill. DOM-free: `test/helpers/load.js` boots
   the engine/state/board/piece stack in a vm (no canvas, no display artifacts). Each
   `CRITERIA.md` R-row owns `test/R-n/` (one rule per test); `flatGame()` in the helpers gives
   a controlled all-plains board for rule tests; `test/integration/smoke.js` plays random legal

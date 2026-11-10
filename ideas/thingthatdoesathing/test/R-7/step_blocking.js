@@ -9,7 +9,6 @@ const tryStep = (setup, expect, label) => {
     c.moveTo(3, 4); engine.state.things = []; terrain(4, 4, T.PLAINS);
     engine.state.pieces = [c];
     setup();
-    engine.events = [];
     const res = engine.step(c, DIR.E);
     check(label + ' → ' + res, res === expect && (expect === 'blocked' ? c.isAt(3, 4) : c.isAt(4, 4)));
 };

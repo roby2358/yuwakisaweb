@@ -7,7 +7,7 @@ ONTOLOGY.md, cited by name. Constants are cited by name, never by value.
 a human checks>`, `not yet covered`, or `retired`. An `automated` R-row owns `test/R-n/`. Each
 test there asserts that one rule, with its cases commented in the test itself.
 
-**Test command:** `node test/run.js` (add `-v` for every check). It runs each `test/R-n/`
+**Test command:** `just cc-test`, which runs `node test/run.js` (add `-v` for every check). It runs each `test/R-n/`
 file, the integration tests (`smoke.js`: random legal play with invariant checks;
 `uiboot.js`: the real UI booted on a stub DOM and played to a win by simulated clicks), and
 `test/coverage.js`. **Tuning harness:**
@@ -40,10 +40,10 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | R-19 | ticks | `spawnTimer` counts up; at `SOURCE_INTERVAL` with the source empty a crate spawns and the timer resets; while occupied it waits | automated |
 | R-20 | the tick that reaches `DELIVER_GOAL` | `gameWon`, result `{ok:true, won:true}`; every command afterward `{ok:false}`, unchanged | automated |
 | R-21 | two games, same seed | identical terrain, source, target, pieces, hand; different seeds differ | automated |
-| R-22 | two engines, same seed and commands | identical state and events after every command; `Math.random` only draws the seed | automated |
+| R-22 | two engines, same seed and commands | identical state and events after every command; the engine never calls `Math.random` | automated |
 | R-23 | `GEN_MAX_ATTEMPTS` pathless maps | falls back to `KNOWN_GOOD_SEED`, records it, equals `newGame(KNOWN_GOOD_SEED)`; that seed has a path on attempt 1 | automated |
 | R-24 | the engine-side modules | load and play with no DOM, canvas, or `GameDisplayArtifacts`, and never reference them | automated |
-| R-25 | any command | a boolean `ok`; `ok:true` from place/rotate/wait carries `events[]`; `ok:false` carries nothing else | automated |
+| R-25 | any command | a boolean `ok`; `newGame` without a non-negative integer seed is `ok:false`; `ok:true` from place/rotate/wait carries `events[]`; `ok:false` carries nothing else | automated |
 | R-26 | a tick's events | `move` paths list every hex entered and end where the piece is or vanished; `sink`/`deliver` follow their `move`; `spawn` reports the new crate; replaying events reproduces every position | automated |
 | R-27 | many draws | only known kinds; each kind's share ≈ `weight / total` | automated |
 | R-28 | a Puller during a tick | the piece on the far hex (two ahead) is pulled one step back into the near hex by the ordinary step rule (blocked → stays, water → sinks, ice → slides onto the Puller); pieces on the Puller or the near hex are left alone; a piece already moved this tick isn't pulled | automated |

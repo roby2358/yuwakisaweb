@@ -1,10 +1,14 @@
-// R-25: every command returns an object with a boolean ok; newGame returns {ok:true}; every
-// ok:true from place/rotate/wait carries an events array.
+// R-25: every command returns an object with a boolean ok; newGame returns {ok:true} for a
+// seed and {ok:false} (state untouched) without one; every ok:true from place/rotate/wait
+// carries an events array.
 'use strict';
 const { check, done } = require('../helpers/check');
-const { newGame, flatGame, DIR } = require('../helpers/load');
+const { newGame, DIR, snapshot } = require('../helpers/load');
 const { state, engine } = newGame(11);
 check('newGame → {ok:true}', engine.newGame(11).ok === true);
+const fresh = snapshot(state);
+check('newGame with no seed → {ok:false}, unchanged',
+    [undefined, null, -1, 1.5].every(seed => engine.newGame(seed).ok === false) && snapshot(state) === fresh);
 const shapes = [];
 shapes.push(engine.wait());
 const [key] = engine.legalPlacements(state.hand[0]);

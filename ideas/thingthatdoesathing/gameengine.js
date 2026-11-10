@@ -8,7 +8,7 @@
 // command runs exactly one tick. All randomness goes through the seeded Rando.
 const GameEngine = (function () {
     const {
-        TERRAIN, THINGS, MAP_COLS, MAP_ROWS, DELIVER_GOAL, SOURCE_INTERVAL, HAND_SIZE,
+        TERRAIN, THINGS, PIECES, aims, MAP_COLS, MAP_ROWS, DELIVER_GOAL, SOURCE_INTERVAL, HAND_SIZE,
         GREMLIN_DICE_COUNT, GREMLIN_DICE_SIDES,
         GEN_MAX_ATTEMPTS, KNOWN_GOOD_SEED, HEIGHTMAP_SIZE, HEIGHTMAP_ROUGHNESS,
         WATER_PCT, MOUNTAIN_PCT, ICE_FRAC, PLACE_SLICE_FRAC, PLACE_SLICE_MIN
@@ -16,15 +16,15 @@ const GameEngine = (function () {
 
     const KINDS = Object.keys(THINGS);
     const isLand = t => t === TERRAIN.PLAINS || t === TERRAIN.ICE;
-    const clockwise = facing => (facing + 5) % 6;
-    const opposite = facing => (facing + 3) % 6;
-    // A Thing that has a facing: it pushes (Belt, Spring) or pulls (Puller).
-    const aims = kind => THINGS[kind].push > 0 || THINGS[kind].pull > 0;
+    // Where a Thing may be built, keyed by its template's `on`.
+    const BUILDS_ON = {
+        land: isLand,
+        water: t => t === TERRAIN.WATER,
+    };
 
     class GameEngine {
         constructor(state) {
             this.state = state;
-            this.events = null;   // collector for the tick in progress
         }
 
         // ---- Queries ----
@@ -36,29 +36,28 @@ const GameEngine = (function () {
             return this.state.pieces.find(p => p.isAt(q, r)) || null;
         }
 
-        // The hexes `kind` may be built on — the same check place() enforces, so the
-        // UI's highlight is the rule.
-        legalPlacements(kind) {
+        // May `kind` be built on `hex`? The one placement rule: place() checks it, and
+        // legalPlacements() filters the board with it, so the UI's highlight is the rule.
+        canPlace(kind, hex) {
             const tpl = THINGS[kind];
-            const out = new Set();
-            if (!tpl) return out;
-            const s = this.state;
-            for (const [key, hex] of s.hexes) {
-                if (hex.q === s.target.q && hex.r === s.target.r) continue;
-                if (this.thingAt(hex.q, hex.r)) continue;
-                if (tpl.on === 'water' ? hex.terrain !== TERRAIN.WATER : !isLand(hex.terrain)) continue;
-                if (tpl.blocks && this.pieceAt(hex.q, hex.r)) continue;
-                out.add(key);
-            }
-            return out;
+            if (!tpl || !hex) return false;
+            if (Hex.same(hex, this.state.target)) return false;
+            if (this.thingAt(hex.q, hex.r)) return false;
+            if (!BUILDS_ON[tpl.on](hex.terrain)) return false;
+            return !(tpl.blocks && this.pieceAt(hex.q, hex.r));
+        }
+
+        legalPlacements(kind) {
+            const keys = [...this.state.hexes].filter(([, hex]) => this.canPlace(kind, hex)).map(([key]) => key);
+            return new Set(keys);
         }
 
         // ---- New game / generation ----
+        // The caller picks the seed (the client rolls one; tests and replays pass theirs).
         newGame(seed) {
+            if (!Number.isInteger(seed) || seed < 0) return { ok: false };
             const s = this.state;
-            s.seed = (seed === undefined || seed === null)
-                ? Math.floor(Math.random() * 0x100000000)
-                : (seed >>> 0);
+            s.seed = seed >>> 0;
             if (!this.generateMap(s.seed, GEN_MAX_ATTEMPTS)) {
                 s.seed = KNOWN_GOOD_SEED;
                 this.generateMap(s.seed, 1);
@@ -183,7 +182,7 @@ const GameEngine = (function () {
 
         addPiece(kind, q, r, color) {
             const s = this.state;
-            const p = new Piece(q, r, color, kind === 'crate' ? 'C' : 'G');
+            const p = new Piece(q, r, color, PIECES[kind].label);
             p.id = s.nextId++;
             p.kind = kind;
             s.pieces.push(p);
@@ -194,8 +193,7 @@ const GameEngine = (function () {
             const s = this.state;
             let count = 0;
             for (let i = 0; i < GREMLIN_DICE_COUNT; i++) count += Rando.int(1, GREMLIN_DICE_SIDES);
-            const taken = new Set([Hex.key(s.source.q, s.source.r), Hex.key(s.target.q, s.target.r)]);
-            const candidates = this.board.passableHexes().filter(h => !taken.has(Hex.key(h.q, h.r)));
+            const candidates = this.board.passableHexes().filter(h => !Hex.same(h, s.source) && !Hex.same(h, s.target));
             Rando.shuffle(candidates);
             const scheme = ColorTheory.randomScheme(() => Rando.random());
             for (let i = 0; i < count && i < candidates.length; i++) {
@@ -235,29 +233,37 @@ const GameEngine = (function () {
             s.pieces.splice(s.pieces.indexOf(piece), 1);
         }
 
+        // The board hex one step from `at` in `dir` (undefined off the map).
+        neighborHex(at, dir) {
+            const d = NEIGHBOR_DIRS[dir];
+            return this.board.get(at.q + d.q, at.r + d.r);
+        }
+
         // One hex in `dir`. Returns 'moved' | 'blocked' | 'sank' | 'delivered'.
         step(piece, dir) {
             const s = this.state;
-            const d = NEIGHBOR_DIRS[dir];
-            const hex = this.board.get(piece.q + d.q, piece.r + d.r);
+            const cargo = PIECES[piece.kind].cargo;
+            const hex = this.neighborHex(piece, dir);
             if (!this.canEnter(hex)) return 'blocked';
             piece.moveTo(hex.q, hex.r);
-            if (piece.kind === 'crate' && hex.q === s.target.q && hex.r === s.target.r) {
+            if (cargo && Hex.same(hex, s.target)) {
                 this.removePiece(piece);
                 s.delivered++;
                 return 'delivered';
             }
             if (this.isOpenWater(hex)) {
                 this.removePiece(piece);
-                if (piece.kind === 'crate') s.lost++;
+                if (cargo) s.lost++;
                 return 'sank';
             }
             return 'moved';
         }
 
         // Shove `piece` up to n hexes in `dir`. Bare ice is free: the piece slides on.
-        // Emits one move event (if it moved) and then a sink/deliver event if it ended so.
+        // Returns this push's events: one move (if it moved), then a sink/deliver if it
+        // ended so.
         push(piece, dir, n) {
+            const events = [];
             const path = [];
             let left = n, res = 'moved';
             while (left > 0) {
@@ -269,9 +275,10 @@ const GameEngine = (function () {
                 if (hex.terrain === TERRAIN.ICE && !this.thingAt(hex.q, hex.r)) continue;
                 left--;
             }
-            if (path.length) this.events.push({ type: 'move', id: piece.id, path });
-            if (res === 'sank') this.events.push({ type: 'sink', id: piece.id });
-            if (res === 'delivered') this.events.push({ type: 'deliver', id: piece.id });
+            if (path.length) events.push({ type: 'move', id: piece.id, path });
+            if (res === 'sank') events.push({ type: 'sink', id: piece.id });
+            if (res === 'delivered') events.push({ type: 'deliver', id: piece.id });
+            return events;
         }
 
         // The piece a Thing acts on this tick, and which way and how far it goes.
@@ -282,48 +289,50 @@ const GameEngine = (function () {
             if (tpl.push) return { piece: this.pieceAt(thing.q, thing.r), dir: thing.facing, n: tpl.push };
             if (tpl.pull) {
                 const d = NEIGHBOR_DIRS[thing.facing];
-                return { piece: this.pieceAt(thing.q + 2 * d.q, thing.r + 2 * d.r), dir: opposite(thing.facing), n: tpl.pull };
+                return { piece: this.pieceAt(thing.q + 2 * d.q, thing.r + 2 * d.r), dir: Hex.opposite(thing.facing), n: tpl.pull };
             }
             return null;
+        }
+
+        // Directions a wandering piece may take: enterable, and not into open water.
+        wanderDirs(piece) {
+            return NEIGHBOR_DIRS.map((_, dir) => dir).filter(dir => {
+                const hex = this.neighborHex(piece, dir);
+                return this.canEnter(hex) && !this.isOpenWater(hex);
+            });
         }
 
         // ---- The tick: every Thing does its thing ----
         tick() {
             const s = this.state;
             s.phase = 'tick';
-            this.events = [];
+            const events = [];
             const moved = new Set();
 
             for (const thing of s.things) {
                 const act = this.actionOf(thing);
                 if (!act || !act.piece || moved.has(act.piece.id)) continue;
                 moved.add(act.piece.id);
-                this.push(act.piece, act.dir, act.n);
+                events.push(...this.push(act.piece, act.dir, act.n));
             }
 
-            for (const g of s.pieces.filter(p => p.kind === 'gremlin' && !moved.has(p.id))) {
-                if (!s.pieces.includes(g)) continue;
-                const dirs = [];
-                for (let dir = 0; dir < 6; dir++) {
-                    const d = NEIGHBOR_DIRS[dir];
-                    const hex = this.board.get(g.q + d.q, g.r + d.r);
-                    if (this.canEnter(hex) && !this.isOpenWater(hex)) dirs.push(dir);
-                }
-                if (dirs.length) this.push(g, Rando.choice(dirs), 1);
+            // Only a push removes a piece, and pushed pieces are in `moved`, so every
+            // wanderer here is still on the board.
+            for (const p of s.pieces.filter(p => PIECES[p.kind].wanders && !moved.has(p.id))) {
+                const dirs = this.wanderDirs(p);
+                if (dirs.length) events.push(...this.push(p, Rando.choice(dirs), 1));
             }
 
             s.spawnTimer++;
             if (s.spawnTimer >= SOURCE_INTERVAL && !this.pieceAt(s.source.q, s.source.r)) {
                 const c = this.addPiece('crate', s.source.q, s.source.r, null);
                 s.spawnTimer = 0;
-                this.events.push({ type: 'spawn', id: c.id, q: c.q, r: c.r });
+                events.push({ type: 'spawn', id: c.id, q: c.q, r: c.r });
             }
 
             s.turn++;
             s.gameWon = s.delivered >= DELIVER_GOAL;
             s.phase = 'player';
-            const events = this.events;
-            this.events = null;
             return s.gameWon ? { ok: true, events, won: true } : { ok: true, events };
         }
 
@@ -336,7 +345,7 @@ const GameEngine = (function () {
             const kind = s.hand[slot];
             const aimed = aims(kind);
             if (aimed && !(Number.isInteger(facing) && facing >= 0 && facing < 6)) return { ok: false };
-            if (!this.legalPlacements(kind).has(Hex.key(q, r))) return { ok: false };
+            if (!this.canPlace(kind, this.board.get(q, r))) return { ok: false };
             s.things.push({ kind, q, r, facing: aimed ? facing : null });
             s.hand[slot] = this.draw();
             return this.tick();
@@ -346,7 +355,7 @@ const GameEngine = (function () {
             if (this.state.gameWon) return { ok: false };
             const thing = this.thingAt(q, r);
             if (!thing || !aims(thing.kind)) return { ok: false };
-            thing.facing = clockwise(thing.facing);
+            thing.facing = Hex.clockwise(thing.facing);
             return this.tick();
         }
 

@@ -2,6 +2,35 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-10 — Coding-conventions pass: templates for pieces, no default parameters
+A review against the coding conventions found kind checks scattered through the code,
+default parameters, and duplicated helpers. This was a refactor with no rule changes:
+`just cc-sim 200` gives the same 189/200 and median 36 as before.
+- **Pieces became templates.** `GameArtifacts.PIECES` (`label`, `cargo`, `wanders`)
+  replaced the `kind === 'crate'` checks in `addPiece`, `step`, and the tick's wander loop.
+  On the client, `GameDisplayArtifacts.PIECE_LOOK` (hover name, display color) replaced
+  `CRATE_COLOR`.
+- **Thing glyphs are a dispatch table.** `GLYPHS[kind]` in `gameui.js` replaced the
+  `if/else` chain in `drawThing`, and the Wall's full-size tile is now `THING_LOOK.inset`.
+- **`newGame(seed)` requires its seed.** It used to roll one with `Math.random` when the
+  seed was missing; now that's `{ok:false}`, and the UI rolls the seed. R-22 now says the
+  engine never calls `Math.random`, and R-25 checks the seedless call.
+- **One placement rule.** `canPlace(kind, hex)` is used by both `place` and
+  `legalPlacements`.
+- **Events are returned, not collected.** `push()` returns its events and `tick()` gathers
+  them, so `engine.events` is gone.
+- **Shared helpers.** `aims` moved to `GameArtifacts`. `clockwise`, `counterClockwise`,
+  `opposite`, and `same` became static on `Hex`. The neighbour lookup became
+  `neighborHex`, and the gremlin-direction scan became `wanderDirs`. An unreachable guard
+  in the wander loop was removed.
+- **Client:** `render()` reads the clock itself. `drawThing` and `drawCounter` no longer
+  take default arguments. `renderHand` redraws only when the hand, the picked card, the
+  facing, or the won state changes.
+- **Tests and tools:** `uiboot.js` seeds the page's `Math.random`. Its whole-game check had
+  been failing on about one board in eight; it now plays the same boards every run. Added
+  the `just cc-test` / `just cc-sim N` recipes and the project-local `thingfactory-tools`
+  skill.
+
 ### 2026-11-10 — Spinner replaced by the Puller
 The Spinner (a belt that turned clockwise every tick) was mostly a hazard. Crates arrive
 about every `SOURCE_INTERVAL` (3) ticks, so it pushed every other crate backwards. The

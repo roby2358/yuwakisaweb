@@ -22,15 +22,21 @@ const GameDisplayArtifacts = (function () {
             [T.MOUNTAIN]: 'Mountain — blocks',
             [T.ICE]: 'Ice — pieces slide across',
         },
-        // Per-Thing look: name, short verb line, base fill and accent.
+        // Per-Thing look: name, short verb line, base fill, accent, and how much of the hex
+        // its tile covers.
         THING_LOOK: {
-            BELT:    { name: 'Belt',    does: 'moves what is on it 1 hex',              fill: '#3a3f47', ink: '#ffd633' },
-            SPRING:  { name: 'Spring',  does: 'flings what is on it 3 hexes',           fill: '#4a3a2a', ink: '#ff9a3c' },
-            PULLER:  { name: 'Puller',  does: 'pulls what is 2 hexes ahead 1 hex closer', fill: '#1f4a4a', ink: '#5ef0d8' },
-            WALL:    { name: 'Wall',    does: 'nothing gets in',                        fill: '#8a5a3c', ink: '#5c3a24' },
-            BRIDGE:  { name: 'Bridge',  does: 'water you can cross (build on water)',   fill: '#a07a4a', ink: '#6b4f2c' },
+            BELT:    { name: 'Belt',    does: 'moves what is on it 1 hex',                fill: '#3a3f47', ink: '#ffd633', inset: 0.84 },
+            SPRING:  { name: 'Spring',  does: 'flings what is on it 3 hexes',             fill: '#4a3a2a', ink: '#ff9a3c', inset: 0.84 },
+            PULLER:  { name: 'Puller',  does: 'pulls what is 2 hexes ahead 1 hex closer', fill: '#1f4a4a', ink: '#5ef0d8', inset: 0.84 },
+            WALL:    { name: 'Wall',    does: 'nothing gets in',                          fill: '#8a5a3c', ink: '#5c3a24', inset: 1 },
+            BRIDGE:  { name: 'Bridge',  does: 'water you can cross (build on water)',     fill: '#a07a4a', ink: '#6b4f2c', inset: 0.84 },
         },
-        CRATE_COLOR: '#d8b07a',
+        // Per-piece look: hover name, and a display color for pieces with none of their own
+        // (gremlins carry a seeded color in state; crates don't).
+        PIECE_LOOK: {
+            crate:   { name: 'Crate',             color: '#d8b07a' },
+            gremlin: { name: 'Gremlin — wanders', color: null },
+        },
         SOURCE_COLOR: '#4ce08a',
         TARGET_COLOR: '#ff6600',
         // Canvas chrome — mirror --bg and --font in index.css.

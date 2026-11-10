@@ -10,15 +10,15 @@
 const GameUI = (function () {
     const {
         HEX_SIZE, COUNTER_SIZE, HOP_MS, TERRAIN_COLORS, TERRAIN_NAMES, THING_LOOK,
-        CRATE_COLOR, SOURCE_COLOR, TARGET_COLOR, BG_COLOR, UI_FONT, REACH_COLOR
+        PIECE_LOOK, SOURCE_COLOR, TARGET_COLOR, BG_COLOR, UI_FONT, REACH_COLOR
     } = GameDisplayArtifacts;
-    const { TERRAIN, THINGS, DELIVER_GOAL, HAND_SIZE } = GameArtifacts;
+    const { TERRAIN, DELIVER_GOAL, HAND_SIZE, aims } = GameArtifacts;
 
     const DRAG_THRESHOLD = 4;
-    const clockwise = f => (f + 5) % 6;
-    const counterClockwise = f => (f + 1) % 6;
-    // Has a facing the player can turn: pushers (Belt, Spring) and pullers.
-    const aims = kind => THINGS[kind].push > 0 || THINGS[kind].pull > 0;
+
+    // A piece's own color (gremlins), else its kind's display color (crates). Works on a
+    // live Piece or the animation's pre-tick snapshot of one.
+    const pieceColor = p => p.color || PIECE_LOOK[p.kind].color;
 
     // Screen angle of a facing (pointy-top axial direction → pixels).
     function facingAngle(facing) {
@@ -27,12 +27,71 @@ const GameUI = (function () {
         return Math.atan2(p.y, p.x);
     }
 
+    // A chevron pointing +x with its tip at (cx, 0), half-height w.
+    function chevron(ctx, cx, w) {
+        ctx.beginPath();
+        ctx.moveTo(cx - w, -w);
+        ctx.lineTo(cx, 0);
+        ctx.lineTo(cx - w, w);
+        ctx.stroke();
+    }
+
+    // Each Thing kind's glyph, drawn in the Thing's ink at the origin with hex radius s.
+    // Facing glyphs are drawn pointing +x; drawThing has already rotated to the facing.
+    const GLYPHS = {
+        BELT(ctx, s) {
+            chevron(ctx, -s * 0.12, s * 0.26);
+            chevron(ctx, s * 0.28, s * 0.26);
+        },
+        SPRING(ctx, s) {
+            // A coil, then a big arrowhead: it throws far.
+            ctx.beginPath();
+            const n = 5, x0 = -s * 0.55, x1 = s * 0.05, h = s * 0.22;
+            ctx.moveTo(x0, 0);
+            for (let i = 0; i < n; i++) ctx.lineTo(x0 + (x1 - x0) * (i + 0.5) / n, i % 2 ? h : -h);
+            ctx.lineTo(x1, 0);
+            ctx.stroke();
+            chevron(ctx, s * 0.5, s * 0.3);
+        },
+        PULLER(ctx, s) {
+            // A horseshoe magnet opening toward its facing, with a chevron pointing back
+            // at itself: it reaches out that way and pulls things in.
+            ctx.beginPath();
+            ctx.arc(-s * 0.1, 0, s * 0.3, Math.PI * 0.5, Math.PI * 1.5);
+            ctx.lineTo(s * 0.35, -s * 0.3);
+            ctx.moveTo(-s * 0.1, s * 0.3);
+            ctx.lineTo(s * 0.35, s * 0.3);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(s * 0.55, -s * 0.16);
+            ctx.lineTo(s * 0.4, 0);
+            ctx.lineTo(s * 0.55, s * 0.16);
+            ctx.stroke();
+        },
+        WALL(ctx, s) {
+            ctx.lineWidth = Math.max(1, s * 0.05);
+            for (const yy of [-0.3, 0, 0.3]) {
+                ctx.beginPath(); ctx.moveTo(-s * 0.8, yy * s); ctx.lineTo(s * 0.8, yy * s); ctx.stroke();
+            }
+            for (const [xx, y0] of [[-0.25, -0.3], [0.3, -0.3], [0, 0], [-0.5, 0], [0.5, 0], [-0.25, 0.3], [0.3, 0.3]]) {
+                ctx.beginPath(); ctx.moveTo(xx * s, y0 * s); ctx.lineTo(xx * s, (y0 + 0.3) * s); ctx.stroke();
+            }
+        },
+        BRIDGE(ctx, s) {
+            ctx.lineWidth = Math.max(1, s * 0.06);
+            for (let i = -3; i <= 3; i++) {
+                ctx.beginPath(); ctx.moveTo(i * s * 0.18, -s * 0.55); ctx.lineTo(i * s * 0.18, s * 0.55); ctx.stroke();
+            }
+        },
+    };
+
     // Draw a Thing centered at (x, y) with hex radius s. Shared by the board and the hand.
-    function drawThing(ctx, x, y, s, kind, facing, alpha = 1) {
+    // `facing` is null for kinds that don't aim.
+    function drawThing(ctx, x, y, s, kind, facing, alpha) {
         const look = THING_LOOK[kind];
         ctx.save();
         ctx.globalAlpha = alpha;
-        drawHexPath(ctx, x, y, kind === 'WALL' ? s : s * 0.84);
+        drawHexPath(ctx, x, y, s * look.inset);
         ctx.fillStyle = look.fill;
         ctx.fill();
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
@@ -45,58 +104,8 @@ const GameUI = (function () {
         ctx.lineJoin = 'round';
         ctx.lineWidth = Math.max(2, s * 0.1);
         ctx.translate(x, y);
-
-        const chevron = (cx, w) => {
-            ctx.beginPath();
-            ctx.moveTo(cx - w, -w);
-            ctx.lineTo(cx, 0);
-            ctx.lineTo(cx - w, w);
-            ctx.stroke();
-        };
-
-        if (kind === 'BELT') {
-            ctx.rotate(facingAngle(facing));
-            chevron(-s * 0.12, s * 0.26);
-            chevron(s * 0.28, s * 0.26);
-        } else if (kind === 'SPRING') {
-            ctx.rotate(facingAngle(facing));
-            // A coil, then a big arrowhead: it throws far.
-            ctx.beginPath();
-            const n = 5, x0 = -s * 0.55, x1 = s * 0.05, h = s * 0.22;
-            ctx.moveTo(x0, 0);
-            for (let i = 0; i < n; i++) ctx.lineTo(x0 + (x1 - x0) * (i + 0.5) / n, i % 2 ? h : -h);
-            ctx.lineTo(x1, 0);
-            ctx.stroke();
-            chevron(s * 0.5, s * 0.3);
-        } else if (kind === 'PULLER') {
-            // A horseshoe magnet opening toward its facing, with a chevron pointing back
-            // at itself: it reaches out that way and pulls things in.
-            ctx.rotate(facingAngle(facing));
-            ctx.beginPath();
-            ctx.arc(-s * 0.1, 0, s * 0.3, Math.PI * 0.5, Math.PI * 1.5);
-            ctx.lineTo(s * 0.35, -s * 0.3);
-            ctx.moveTo(-s * 0.1, s * 0.3);
-            ctx.lineTo(s * 0.35, s * 0.3);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(s * 0.55, -s * 0.16);
-            ctx.lineTo(s * 0.4, 0);
-            ctx.lineTo(s * 0.55, s * 0.16);
-            ctx.stroke();
-        } else if (kind === 'WALL') {
-            ctx.lineWidth = Math.max(1, s * 0.05);
-            for (const yy of [-0.3, 0, 0.3]) {
-                ctx.beginPath(); ctx.moveTo(-s * 0.8, yy * s); ctx.lineTo(s * 0.8, yy * s); ctx.stroke();
-            }
-            for (const [xx, y0] of [[-0.25, -0.3], [0.3, -0.3], [0, 0], [-0.5, 0], [0.5, 0], [-0.25, 0.3], [0.3, 0.3]]) {
-                ctx.beginPath(); ctx.moveTo(xx * s, y0 * s); ctx.lineTo(xx * s, (y0 + 0.3) * s); ctx.stroke();
-            }
-        } else if (kind === 'BRIDGE') {
-            ctx.lineWidth = Math.max(1, s * 0.06);
-            for (let i = -3; i <= 3; i++) {
-                ctx.beginPath(); ctx.moveTo(i * s * 0.18, -s * 0.55); ctx.lineTo(i * s * 0.18, s * 0.55); ctx.stroke();
-            }
-        }
+        if (aims(kind)) ctx.rotate(facingAngle(facing));
+        GLYPHS[kind](ctx, s);
         ctx.restore();
     }
 
@@ -122,6 +131,7 @@ const GameUI = (function () {
             this.overlay = null;     // L5 'intro' | 'victory' | null
             this.hoveredHex = null;  // L1.3
             this.anim = null;        // { t0, dur, tracks: Map<id, track>, hidden: Set<id>, won }
+            this.handDrawn = null;   // what renderHand last drew, so it redraws only on change
         }
 
         // ---- Lifecycle ----
@@ -131,7 +141,7 @@ const GameUI = (function () {
         }
 
         newGame() {
-            this.engine.newGame();
+            this.engine.newGame(Math.floor(Math.random() * 0x100000000));
             this.picked = null;
             this.anim = null;
             this.hoveredHex = null;
@@ -183,7 +193,7 @@ const GameUI = (function () {
         }
 
         turnGhost(dir) {
-            this.facing = dir > 0 ? clockwise(this.facing) : counterClockwise(this.facing);
+            this.facing = dir > 0 ? Hex.clockwise(this.facing) : Hex.counterClockwise(this.facing);
             this.render();
         }
 
@@ -238,7 +248,7 @@ const GameUI = (function () {
             const frame = now => {
                 if (!this.anim) return;
                 if (now - this.anim.t0 >= this.anim.dur) { this.finishAnim(); return; }
-                this.render(now);
+                this.render();
                 requestAnimationFrame(frame);
             };
             requestAnimationFrame(frame);
@@ -255,8 +265,7 @@ const GameUI = (function () {
 
         // Where a tracked piece is drawn at time `now`, and how opaque.
         trackPose(t, now) {
-            // rAF's timestamp is the frame start, which can precede t0 (taken with
-            // performance.now() mid-frame) — clamp so the first frame isn't at hop -1.
+            // Never before hop 0, even if `now` came from a clock that precedes t0.
             const k = Math.max(0, (now - this.anim.t0) / HOP_MS);
             const last = t.pts.length - 1;
             if (k >= last) {
@@ -283,7 +292,9 @@ const GameUI = (function () {
         }
 
         // ---- Rendering ----
-        render(now = performance.now()) {
+        // Draws the board as of now: animated pieces are posed by the current clock.
+        render() {
+            const now = performance.now();
             const ctx = this.ctx;
             const s = this.state;
             ctx.fillStyle = BG_COLOR;
@@ -306,7 +317,7 @@ const GameUI = (function () {
 
             for (const t of s.things) {
                 const { x, y } = this.hexToScreen(t.q, t.r);
-                drawThing(ctx, x, y, HEX_SIZE, t.kind, t.facing);
+                drawThing(ctx, x, y, HEX_SIZE, t.kind, t.facing, 1);
             }
 
             // L1.2 legal placements for the picked card, plus a ghost under the cursor.
@@ -345,7 +356,7 @@ const GameUI = (function () {
             if (!a) {
                 for (const p of this.state.pieces) {
                     const { x, y } = this.hexToScreen(p.q, p.r);
-                    this.drawCounter(x, y, p.color || CRATE_COLOR, p.label);
+                    this.drawCounter(x, y, pieceColor(p), p.label, 1, 1);
                 }
                 return;
             }
@@ -353,12 +364,12 @@ const GameUI = (function () {
             // rest sit still; crates spawned this tick wait for the end.
             for (const [id, t] of a.tracks) {
                 const pose = this.trackPose(t, now);
-                this.drawCounter(pose.x, pose.y, t.color || CRATE_COLOR, t.label, pose.alpha, pose.scale);
+                this.drawCounter(pose.x, pose.y, pieceColor(t), t.label, pose.alpha, pose.scale);
             }
             for (const p of this.state.pieces) {
                 if (a.tracks.has(p.id) || a.hidden.has(p.id)) continue;
                 const { x, y } = this.hexToScreen(p.q, p.r);
-                this.drawCounter(x, y, p.color || CRATE_COLOR, p.label);
+                this.drawCounter(x, y, pieceColor(p), p.label, 1, 1);
             }
         }
 
@@ -461,7 +472,7 @@ const GameUI = (function () {
             return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.4 ? '#000' : '#fff';
         }
 
-        drawCounter(cx, cy, color, label, alpha = 1, scale = 1) {
+        drawCounter(cx, cy, color, label, alpha, scale) {
             const ctx = this.ctx;
             const s = COUNTER_SIZE * scale;
             const x = cx - s / 2, y = cy - s / 2;
@@ -504,21 +515,25 @@ const GameUI = (function () {
             const h = this.hoveredHex && s.hexes.get(Hex.key(this.hoveredHex.q, this.hoveredHex.r));
             if (!h) { document.getElementById('hud-hover').classList.add('hidden'); return; }
             const parts = [TERRAIN_NAMES[h.terrain]];
-            if (s.source.q === h.q && s.source.r === h.r) parts.push('Source — crates appear here');
-            if (s.target.q === h.q && s.target.r === h.r) parts.push('Target — deliver crates here');
+            if (Hex.same(h, s.source)) parts.push('Source — crates appear here');
+            if (Hex.same(h, s.target)) parts.push('Target — deliver crates here');
             const t = this.engine.thingAt(h.q, h.r);
             if (t) parts.push(`${THING_LOOK[t.kind].name}: ${THING_LOOK[t.kind].does}` +
                 (aims(t.kind) && !this.picked ? ' (click to turn)' : ''));
             const p = this.engine.pieceAt(h.q, h.r);
-            if (p) parts.push(p.kind === 'crate' ? 'Crate' : 'Gremlin — wanders');
+            if (p) parts.push(PIECE_LOOK[p.kind].name);
             hoverEl.textContent = parts.join(' · ');
             document.getElementById('hud-hover').classList.remove('hidden');
         }
 
-        // The hand: one card per slot, each with a little canvas of the Thing.
+        // The hand: one card per slot, each with a little canvas of the Thing. Redrawn only
+        // when what it shows changes, not on every animation frame or mouse move.
         renderHand() {
             const el = document.getElementById('hand');
             const s = this.state;
+            const shown = JSON.stringify([s.hand, this.picked && this.picked.slot, this.facing, s.gameWon]);
+            if (shown === this.handDrawn && el.children.length === HAND_SIZE) return;
+            this.handDrawn = shown;
             if (el.children.length !== HAND_SIZE) {
                 el.innerHTML = '';
                 for (let i = 0; i < HAND_SIZE; i++) {
@@ -540,7 +555,7 @@ const GameUI = (function () {
                 b.querySelector('.does').textContent = look.does;
                 const c = b.querySelector('canvas'), cx = c.getContext('2d');
                 cx.clearRect(0, 0, c.width, c.height);
-                drawThing(cx, 32, 32, 26, kind, aims(kind) ? (picked ? this.facing : 0) : null);
+                drawThing(cx, 32, 32, 26, kind, aims(kind) ? (picked ? this.facing : 0) : null, 1);
             });
         }
 

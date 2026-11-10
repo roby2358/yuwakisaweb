@@ -27,9 +27,23 @@ const GameArtifacts = (function () {
         BRIDGE:  { push: 0, pull: 0, blocks: false, on: 'water', weight: 2 },
     };
 
+    // Piece templates, keyed by Piece.kind:
+    //   label   — the counter's glyph
+    //   cargo   — delivered on reaching the target; counted as lost when it sinks
+    //   wanders — takes a random step on a tick when no Thing moved it
+    const PIECES = {
+        crate:   { label: 'C', cargo: true,  wanders: false },
+        gremlin: { label: 'G', cargo: false, wanders: true },
+    };
+
+    // Does this kind of Thing have a facing (it pushes or pulls)? Only those can be turned.
+    const aims = kind => THINGS[kind].push > 0 || THINGS[kind].pull > 0;
+
     return {
         TERRAIN,
         THINGS,
+        PIECES,
+        aims,
         // Passability for Board: land is enterable, water and mountain are not. Water
         // still *accepts* a pushed piece (it sinks); that's the step rule, not this table.
         MOVEMENT_COST: {

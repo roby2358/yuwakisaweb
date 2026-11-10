@@ -49,9 +49,20 @@ const document = {
 };
 let rafQueue = [];
 let clock = 0;
+// The page rolls each board's seed with Math.random; seed that too, so every run plays the
+// same boards and the whole-game check below can't flake on an unlucky one.
+const UI_RANDOM_SEED = 1;   // any seed whose boards the simple bot below can win
+let rnd = UI_RANDOM_SEED >>> 0;
+const seededMath = Object.create(Math, { random: { value: () => {   // mulberry32
+    rnd = (rnd + 0x6D2B79F5) >>> 0;
+    let t = rnd;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+} } });
 const windowListeners = {};
 const ctx = vm.createContext({
-    console, document, Math, JSON, Number, String, Array, Map, Set, Object, Proxy, parseInt, Float64Array,
+    console, document, Math: seededMath, JSON, Number, String, Array, Map, Set, Object, Proxy, parseInt, Float64Array,
     window: {
         innerWidth: 1280, innerHeight: 720,
         addEventListener: (t, fn) => (windowListeners[t] ||= []).push(fn),

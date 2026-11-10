@@ -62,6 +62,24 @@ class Hex {
         return `${q},${r}`;
     }
 
+    // Do two coordinate-bearing objects name the same hex?
+    static same(a, b) {
+        return a.q === b.q && a.r === b.r;
+    }
+
+    // Facings index NEIGHBOR_DIRS (E, NE, NW, W, SW, SE): turning and reversing them.
+    static clockwise(facing) {
+        return (facing + 5) % 6;
+    }
+
+    static counterClockwise(facing) {
+        return (facing + 1) % 6;
+    }
+
+    static opposite(facing) {
+        return (facing + 3) % 6;
+    }
+
     static fromKey(key) {
         const [q, r] = key.split(',').map(Number);
         return new Hex(q, r);
