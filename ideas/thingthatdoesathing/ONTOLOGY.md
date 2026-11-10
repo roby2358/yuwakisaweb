@@ -17,8 +17,9 @@ section numbers.
 
 Thing Factory is **a small hex board where you build a contraption one Thing at a time
 while it runs**. Each Thing does exactly one thing, every tick. Crates come
-out of a source; get enough of them to the target. [D: place-then-tick, deliver N, no time
-limit, board size picked at New Game]
+out of a source; get enough of them to the target. Bigger boards open more colors as you
+pass milestones, each with its own target. [D: place-then-tick, deliver N, no time limit,
+board size picked at New Game, colors opened by milestones]
 
 **Qualities**
 - **Tinkerer's delight** — the fun is setting something up and watching it go. [P]
@@ -59,16 +60,16 @@ everything; G-2 beats G-1 (a funny interaction that can't be read is a bug, not 
 | `seed` | uint32 | Reproducibility anchor. |
 | `size` | key of `MAP_SIZES` | The board size this game was generated at. |
 | `hexes` | `Map<"q,r", Hex>` | The map; `Board` wraps it. |
-| `source` | `{q, r}` | Where crates appear. Things may sit on it. |
-| `target` | `{q, r}` | Where crates are delivered. Nothing may be built on it. |
+| `sources` | `[{q, r, colors}]` | Where crates appear; each makes the crates of its `colors` (one or more). Things may sit on one. [D] |
+| `targets` | `[{q, r, color, delivered}]` | One per open color, in the order they opened: it takes only `color` crates, and `delivered` counts them. Nothing may be built on one. [D] |
 | `pieces` | `Piece[]` | Every crate and gremlin, in creation order. |
 | `things` | `Thing[]` | Every placed Thing, in placement order (the order they act). |
 | `hand` | `ThingKind[]` | Length `HAND_SIZE`. |
 | `turn` | int ≥ 1 | Goes up by 1 per tick. |
-| `delivered` | int | Crates that reached the target. |
+| `delivered` | int | Crates delivered, all colors together (milestones count this). |
 | `lost` | int | Crates that sank or were wrecked by a gremlin. |
 | `exGremlins` | int | Gremlins gone: sunk, splatted, or trapped (Tick rule). Shown in the tally. [D] |
-| `spawnTimer` | int | Ticks since the source last spawned. |
+| `spawnTimer` | int | Ticks since a source last spawned (one timer for the board). |
 | `nextId` | int | Next piece id. |
 | `phase` | `'player' \| 'tick'` | `'tick'` only while a tick resolves inside a command. |
 
@@ -91,14 +92,14 @@ A `Piece` (position, color, label) with two fields set by the engine. Each kind 
 | `id` | int | Unique, from `nextId`; events refer to it. |
 | `kind` | `'crate' \| 'gremlin'` | Key into `PIECES`. |
 | `label` | string | `PIECES[kind].label`: `'📦'` or `'👹'`. |
-| `color` | `#rrggbb` \| `CRATE_COLORS` name | Gremlins get a seeded palette color; a crate gets `Rando.choice(CRATE_COLORS)` when it spawns. No rule reads a crate's color yet; the client draws it as a shaded isometric box. [P] |
+| `color` | `#rrggbb` \| `CRATE_COLORS` name | Gremlins get a seeded palette color; a crate gets the open color the spawn rolled. Only its color's target takes it (Step rule); the client draws it as a shaded isometric box. [D] |
 
 `PIECES[kind]` is the template:
 
 | Field | crate | gremlin | Meaning |
 |---|---|---|---|
 | `label` | `'📦'` | `'👹'` | The counter's glyph (the client draws crates as a box instead). |
-| `cargo` | yes | no | Delivered on entering the target; counted in `lost` when it sinks. |
+| `cargo` | yes | no | Delivered on entering its color's target, blocked by other colors' targets; counted in `lost` when it sinks. |
 | `wanders` | no | yes | Takes a random step on a tick when no Thing moved it. |
 | `splats` | no | yes | A Rocket's flight destroys it: the piece the flier lands on, and the launched piece once it lands; so does coming onto a Trap (Step and Push rules). [D] |
 | `wrecks` | no | yes | Its own wandering step into a cargo piece's hex destroys that piece (counted in `lost`) and takes the hex; pushed, pulled or flung into one, it's just blocked (Push rule). [D] |
@@ -138,7 +139,7 @@ A `Piece` (position, color, label) with two fields set by the engine. Each kind 
 | `facing` | 0…5 — the ghost's facing, remembered between placements. |
 | `overlay` | `'intro'` \| `'size'` \| null. Both are size pickers; picking a size starts a game. `'size'` (New Game) also closes on Esc, back to the game. [D] |
 | `hoveredHex`, `panX/Y`, drag fields | The hex under the cursor, the screen-space pan offset, and left-drag tracking (`DRAG_THRESHOLD`). |
-| `anim` | `{ t0, dur, tracks, before, hidden, milestone, ends }` \| null — tick animation; input waits while it runs (picking a card doesn't). |
+| `anim` | `{ t0, dur, tracks, before, hidden, milestone, opened, ends }` \| null — tick animation; input waits while it runs (picking a card doesn't). |
 | `running` | bool — Go/Pause. While true, the client calls `wait()` `RUN_GAP_MS` after each animation ends, and holds while a card is picked. [D] |
 | `sound` | `GameSound`, `Math.random` only. |
 
@@ -147,9 +148,12 @@ A `Piece` (position, color, label) with two fields set by the engine. Each kind 
 ## §2 Relations and invariants
 
 - `hexes.size === cols × rows` of `MAP_SIZES[size]`; every edge hex is `WATER`. [D]
-- Source and target are on passable non-edge hexes, source in the leftmost placement slice,
-  target in the rightmost, with a land path between them. [P]
-- At most one Thing per hex. No Thing on the target. Bridges only on water; every other
+- Sources and targets are on passable non-edge hexes, sources in the leftmost placement
+  slice, targets in the rightmost, each target with a land path from its color's source. No
+  two share a hex. [P; colors D]
+- Each open color has exactly one target and comes out of exactly one source;
+  `targets.length <= MAP_SIZES[size].colors`, and the targets' colors are distinct `CRATE_COLORS`. [D]
+- At most one Thing per hex. No Thing on a target. Bridges only on water; every other
   kind only on land. [P]
 - At most one piece per hex. No piece on a Wall, on mountain, or on unbridged water. [P]
 - `hand.length === HAND_SIZE` whenever a command returns. [P]
@@ -183,11 +187,12 @@ The player picks the size (D-3).
 ```
 legal: seed is a non-negative integer; size is a key of MAP_SIZES
 state.seed = seed; state.size = size
-if not generateMap(seed, GEN_MAX_ATTEMPTS): seed = MAP_SIZES[size].knownGoodSeed; generateMap(seed, 1)
+ends = generateMap(seed, GEN_MAX_ATTEMPTS) or (seed = knownGoodSeed; generateMap(seed, 1))
     # generateMap: Rando.seed; build cols×rows grid sampling a heightmap-side
-    #   diamond-square grid; assignTerrain; placeSourceAndTarget; hasPath?
-things = []; pieces = []; spawnCrate(); spawnGremlins()
-    # spawnCrate: add a crate on source with color = Rando.choice(CRATE_COLORS)
+    #   diamond-square grid; assignTerrain; placeSourceAndTarget; hasPath? → {source, target}
+color = Rando.choice(CRATE_COLORS)
+sources = [{ends.source, colors: [color]}]; targets = [{ends.target, color, delivered: 0}]
+things = []; pieces = []; a crate of color on the source; spawnGremlins()
 hand = HAND_SIZE draws; turn = 1; delivered = lost = exGremlins = spawnTimer = 0
 ```
 
@@ -205,17 +210,34 @@ slice = max(PLACE_SLICE_MIN, floor(PLACE_SLICE_FRAC * len))
 source = Rando.choice(first slice); target = Rando.choice(last slice)
 ```
 
-### Spawn gremlins [P]
+### Open a color — `openColor()` [D; placement P]
+*Serves:* escalating commitment (each milestone asks for a second line), comedy (crossing
+lines of different colors). Runs once per milestone reached, from the Tick rule.
+```
+if targets.length >= MAP_SIZES[size].colors: nothing
+color = Rando.choice(CRATE_COLORS not yet open)
+if Rando.random() < ENHANCE_CHANCE: src = Rando.choice(sources)        # it adds this color
+else: src = Rando.choice(free hexes in the left slice)                  # a new source
+tgt = Rando.choice(free hexes in the right slice with a land path from src)
+if no src or no tgt: nothing                                            # the next milestone tries again
+add color to src (or add {src, colors: [color]}); add {tgt, color, delivered: 0}
+emit open{color, source, target}
+```
+A free hex has no Thing, no piece, and no source or target. The slices are the Place source
+and target rule's.
+
+### Spawn gremlins [P; scales with area D]
 *Serves:* comedy; moving obstacles.
 ```
-count = sum of GREMLIN_DICE_COUNT rolls of d GREMLIN_DICE_SIDES
-on shuffled passable hexes other than source, target, and the first crate
+dice = gremlinDice(size) = max(1, round(cols * rows / GREMLIN_HEXES_PER_DIE))
+count = sum of dice rolls of d GREMLIN_DICE_SIDES
+on shuffled passable hexes other than the source, the target, and the first crate
 ```
 
 ### Emerge — `emerge(goneKinds)` [D]
 *Serves:* comedy, routes going stale (the board never goes quiet).
 ```
-shoreHexes = passable hexes with an edge-hex neighbor, canEnter, not source or target
+shoreHexes = passable hexes with an edge-hex neighbor, canEnter, not a source or target
 for each sunk or splatted kind with PIECES[kind].reemerges (in event order):
     if shoreHexes is empty: stop                 # a walled-off shore keeps it drowned
     h = Rando.choice(shoreHexes); color = Rando.choice(a random palette)
@@ -234,7 +256,7 @@ return a kind chosen by Rando with probability THINGS[kind].weight / total weigh
 *Serves:* G-2 (the highlight *is* the rule). `place` calls it; `legalPlacements(kind)` is
 the set of hexes where it holds.
 ```
-hex exists, no Thing there, not the target
+hex exists, no Thing there, not a target
 terrain fits THINGS[kind].on:  'land' → PLAINS or ICE;  'water' → WATER
 THINGS[kind].blocks ⇒ no piece on hex
 ```
@@ -244,8 +266,9 @@ THINGS[kind].blocks ⇒ no piece on hex
 ```
 next = piece + DIR[dir]
 if next off-map or MOUNTAIN or a blocking Thing or a piece there: return 'blocked'
+if not flies and next is a target of another color than this cargo: return 'blocked'
 piece.moveTo(next)
-if PIECES[kind].cargo and next == target: remove; delivered += 1; return 'delivered'
+if PIECES[kind].cargo and next is the target of its color: remove; that target's delivered += 1; delivered += 1; return 'delivered'
 if not flies and a Thing with traps is there and PIECES[kind].splats: remove; return 'trapped'
 if next is WATER and no Thing there and not (flies and next is inland):
     remove; if cargo: lost += 1; return 'sank'
@@ -266,14 +289,15 @@ while left > 0:
     if not flies and piece's hex is ICE with no Thing: continue    # sliding is free
     left -= 1
 if skids and it ran its full range onto bare ice: slide on with step(piece, dir, false)
+if flies and it came down on a target of another color: back to the hex before (the start if none)
 if flies and piece is still on the board, on open water: sink it      # came down on inland water
 elif flies and it came down on a Trap and PIECES[piece.kind].splats: remove it; res = 'trapped'
 if res == 'trapped': emit splat{id, by: null}
 if splat and piece didn't sink or deliver and PIECES[piece.kind].splats: remove piece; emit splat{id, by: null}
 ```
 A slide or a flight always ends: a straight line reaches the water edge. A Rocket's flight
-(`flies`, range `THINGS.ROCKET.push`) crosses movers, Bridges, ice and inland water, delivers
-on the target, and sinks in the outer sea, or in inland water if it comes down there. A
+(`flies`, range `THINGS.ROCKET.push`) crosses movers, Bridges, ice, inland water and other
+colors' targets, delivers on its color's target, and sinks in the outer sea, or in inland water if it comes down there. A
 Spring's throw (`flies`, `skids`) does the same over its 3 hexes, then skids on if it lands
 on bare ice. Splatted pieces aren't `lost`. A gremlin dies on a Trap however it comes onto it
 (a wander, a push, a slide, a landing), but not when a flight carries it over one, and not
@@ -291,11 +315,13 @@ for piece with PIECES[kind].wanders, not in moved (creation order):
     dirs = directions whose neighbor is land or a bridge, no blocking Thing, and empty or holding cargo it wrecks
     if dirs: push(piece, Rando.choice(dirs), {n: 1, splat: false, flies: false, skids: false, wrecks: PIECES[kind].wrecks})
 spawnTimer += 1
-if spawnTimer >= SOURCE_INTERVAL and no piece on source: spawnCrate(); spawnTimer = 0
+if spawnTimer >= SOURCE_INTERVAL:
+    color = Rando.choice(open colors); src = the source that makes color
+    if no piece on src: a crate of color on src; spawnTimer = 0      # else the next tick rolls again
 gone = kinds of the command's own sink (remove) and this tick's sunk and splatted pieces
 exGremlins += count of 'gremlin' in gone
 emerge(gone)
-for each milestone m with deliveredBefore < m <= delivered: emit milestone{count: m}
+for each milestone m with deliveredBefore < m <= delivered: emit milestone{count: m}; openColor()
 turn += 1; phase = 'player'
 ```
 Each piece moves at most once per tick. Gremlins never step into water on purpose, but a
@@ -309,7 +335,8 @@ Puller and stops on it (a Thing covers its hex).
 milestones = FIRST_MILESTONE × (1, 2, 5) × 10^k for k = 0, 1, 2, …   # 10, 20, 50, 100, 200, 500, 1000, …
 nextMilestone(n) = the smallest milestone > n                        # there is no last one
 ```
-Reaching a milestone ends nothing; the client shows a banner and play goes on.
+Reaching a milestone ends nothing: it may open a color (Open a color rule), the client shows
+a banner, and play goes on.
 
 ### Commands
 ```
@@ -351,16 +378,18 @@ The code constant in `GameArtifacts` is the single source.
 | `MAP_SIZES` small / medium / large / huge | 16 × 10 / 20 × 20 / 30 × 30 / 60 × 60 | cols × rows (D-3) |
 | `MAP_SIZES.*.heightmap` | 33 / 33 / 33 / 65 | diamond-square grid side (2ⁿ+1, ≥ the longer side) |
 | `MAP_SIZES.*.knownGoodSeed` | 1 at every size | seed (must pass R-23) |
+| `MAP_SIZES.*.colors` | 1 / 2 / 3 / 4 | most colors the board opens [D] |
+| `ENHANCE_CHANCE` | 0.5 | chance a new color comes out of an existing source [D] |
 | `FIRST_MILESTONE` | 10 | crates (then the 1-2-5 series, forever) |
-| `SOURCE_INTERVAL` | 3 | ticks |
+| `SOURCE_INTERVAL` | 3 | ticks between crates, board-wide, shared by every color [D] |
 | `HAND_SIZE` | 3 | cards |
-| `CRATE_COLORS` | red, green, blue, yellow | crate colors |
+| `CRATE_COLORS` | red, green, blue, yellow | the colors a game can open [D] |
 | `THINGS.SPRING.push` | 3 | hexes |
 | `THINGS.BELT.push` | 1 | hexes |
 | `THINGS.ROCKET.push` | 8 | hexes (its range) [D] |
 | `THINGS.PULLER.pull` | 1 | hexes |
 | `THINGS.*.weight` BELT/SPRING/ROCKET/PULLER/WALL/TRAP/BRIDGE | 6 / 2 / 1 / 2 / 2 / 1 / 1 | relative (TRAP [D]: as ROCKET) |
-| `GREMLIN_DICE_COUNT` / `GREMLIN_DICE_SIDES` | 1 / 4 | gremlins = count d sides |
+| `GREMLIN_HEXES_PER_DIE` / `GREMLIN_DICE_SIDES` | 160 / 4 | hexes of board area per die (the small board's area) [D] / sides; gremlins = `gremlinDice(size)` d sides |
 | `GEN_MAX_ATTEMPTS` | 10 | tries per seed |
 | `HEIGHTMAP_ROUGHNESS` | 0.55 | — |
 | `WATER_PCT` | 0.18 | elevation percentile |
@@ -393,7 +422,7 @@ Illegal → `{ ok:false }` and nothing changed (hand and `Rando` included).
 ### Queries
 - `canPlace(kind, hex)` → bool — the check `place` enforces.
 - `legalPlacements(kind)` → `Set<key>` — every hex where `canPlace` holds.
-- `thingAt(q, r)`, `pieceAt(q, r)`.
+- `thingAt(q, r)`, `pieceAt(q, r)`, `targetAt(q, r)`, `sourceOf(color)`, `openColors()`, `isEndpoint(hex)`.
 - `board.*`.
 
 ### Events (in the order they happened during the tick)
@@ -404,8 +433,9 @@ Illegal → `{ ok:false }` and nothing changed (hand and `Rando` included).
 | `sink` | `id` (the piece is gone after its last `move`, or where it stood if its Bridge was removed) |
 | `deliver` | `id` |
 | `splat` | `id, by` — a piece destroyed by a Rocket's flight, a Trap, or a gremlin's step: `by` is the flier or gremlin that landed on it, or null for the launched piece itself or a trapped piece (after its `move`) |
-| `spawn` | `id, q, r` — a new crate on the source, or a gremlin climbing out on the shore |
+| `spawn` | `id, q, r` — a new crate on a source, or a gremlin climbing out on the shore |
 | `milestone` | `count` — a milestone this tick's deliveries reached (after the tick's other events) |
+| `open` | `color, source: {q,r}, target: {q,r}` — the color that milestone opened, right after its `milestone` |
 
 A piece pushed into water gets a `move` whose path ends on the water hex, then `sink`.
 

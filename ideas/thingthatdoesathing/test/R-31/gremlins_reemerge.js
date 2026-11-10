@@ -11,7 +11,7 @@ const onShore = (engine, state, p) => {
     const h = engine.board.get(p.q, p.r);
     return engine.board.isPassable(h) && !h.isEdge &&
         engine.board.neighbors(p.q, p.r).some(n => n.isEdge) &&
-        !(p.q === state.source.q && p.r === state.source.r) && !(p.q === state.target.q && p.r === state.target.r);
+        !engine.isEndpoint(p);
 };
 {
     const { state, engine, put, piece, terrain, T } = flatGame();

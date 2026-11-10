@@ -51,7 +51,8 @@ const GameArtifacts = (function () {
         gremlin: { label: '👹', cargo: false, wanders: true,  splats: true,  wrecks: true,  reemerges: true },
     };
 
-    // A crate's color, rolled when it spawns. No rule reads it; the display draws it.
+    // The colors a game can open, one at a time. Each open color has one target, which
+    // takes only its color's crates, and comes out of one source (a source may make several).
     const CRATE_COLORS = ['red', 'green', 'blue', 'yellow'];
 
     // The next milestone above `delivered`: 10, 20, 50, 100, 200, 500, 1000, … (the 1-2-5
@@ -65,6 +66,23 @@ const GameArtifacts = (function () {
         }
     };
 
+    // Board sizes offered at New Game, in menu order. `heightmap` is the diamond-square
+    // grid side (2^n + 1, at least the board's longer side); `knownGoodSeed` has a
+    // source→target path on its first attempt at that size (R-23); `colors` is how many
+    // CRATE_COLORS the board can open, one more per milestone (R-38).
+    const MAP_SIZES = {
+        small:  { cols: 16, rows: 10, heightmap: 33, knownGoodSeed: 1, colors: 1 },
+        medium: { cols: 20, rows: 20, heightmap: 33, knownGoodSeed: 1, colors: 2 },
+        large:  { cols: 30, rows: 30, heightmap: 33, knownGoodSeed: 1, colors: 3 },
+        huge:   { cols: 60, rows: 60, heightmap: 65, knownGoodSeed: 1, colors: 4 },
+    };
+
+    const GREMLIN_HEXES_PER_DIE = 160;   // one die of gremlins per this many board hexes (the small board's area)
+
+    // How many dice of gremlins a board size starts with: one per GREMLIN_HEXES_PER_DIE of
+    // its area, rounded, at least one. Small 1, medium 3, large 6, huge 23.
+    const gremlinDice = size => Math.max(1, Math.round(MAP_SIZES[size].cols * MAP_SIZES[size].rows / GREMLIN_HEXES_PER_DIE));
+
     // Does this kind of Thing have a facing (it pushes or pulls)? Only those can be turned.
     const aims = kind => THINGS[kind].push > 0 || THINGS[kind].pull > 0;
 
@@ -75,6 +93,7 @@ const GameArtifacts = (function () {
         CRATE_COLORS,
         aims,
         nextMilestone,
+        gremlinDice,
         // Passability for Board: land is enterable, water and mountain are not. Water
         // still *accepts* a pushed piece (it sinks); that's the step rule, not this table.
         MOVEMENT_COST: {
@@ -83,20 +102,13 @@ const GameArtifacts = (function () {
             [TERRAIN.MOUNTAIN]: Infinity,
             [TERRAIN.ICE]: 1
         },
-        // Board sizes offered at New Game, in menu order. `heightmap` is the diamond-square
-        // grid side (2^n + 1, at least the board's longer side); `knownGoodSeed` has a
-        // source→target path on its first attempt at that size (R-23).
-        MAP_SIZES: {
-            small:  { cols: 16, rows: 10, heightmap: 33, knownGoodSeed: 1 },
-            medium: { cols: 20, rows: 20, heightmap: 33, knownGoodSeed: 1 },
-            large:  { cols: 30, rows: 30, heightmap: 33, knownGoodSeed: 1 },
-            huge:   { cols: 60, rows: 60, heightmap: 65, knownGoodSeed: 1 },
-        },
+        MAP_SIZES,
 
         FIRST_MILESTONE,
-        SOURCE_INTERVAL: 3,          // ticks between crates (if the source is clear)
+        SOURCE_INTERVAL: 3,          // ticks between crates, board-wide (if the rolled color's source is clear)
+        ENHANCE_CHANCE: 0.5,         // a newly opened color comes out of an existing source, else a new one
         HAND_SIZE: 3,
-        GREMLIN_DICE_COUNT: 1,       // gremlins = count d sides
+        GREMLIN_HEXES_PER_DIE,
         GREMLIN_DICE_SIDES: 4,
 
         // ---- Map generation ----

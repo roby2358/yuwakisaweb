@@ -2,6 +2,32 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-10 — Colors: each milestone opens a new crate color with its own target (D-21)
+`GameState.source`/`target` became `sources` (`{q, r, colors}`) and `targets`
+(`{q, r, color, delivered}`). `MAP_SIZES` rows gained `colors` (1/2/3/4) and GameArtifacts
+gained `ENHANCE_CHANCE` (0.5). `CRATE_COLORS` used to be cosmetic; now the first color is
+rolled at New Game (the same random call that used to color the first crate), and each
+milestone runs `openColor()`, emitting the new `open` event. A spawn rolls an open color
+every ready tick (it used to roll only when the source was clear), so the random stream
+after a jam differs from before. `step` blocks a crate at another color's target on the ground
+and delivers only at its own; `push` drops a flight one hex short of a wrong target.
+`placeSourceAndTarget` returns the hexes and `endSlice`/`freeEndHexes` share the slice
+logic with `openColor`. UI: targets ringed in their color (`TARGET_COLOR` removed), source
+pips, `#color-info` per-color tally, the banner names opened colors. New R-38, R-39, U-19;
+R-4, R-5, R-6, R-8, R-16, R-19, R-26, R-30, R-32 reworded. `just cc-sim 200 small` 183 →
+185/200, median 65 unchanged (the random stream moved; the bot stops at the first milestone,
+before any color opens).
+
+### 2026-11-10 — Gremlins scale with board area (Q-5 settled by D-20)
+`GREMLIN_DICE_COUNT` (1 on every size) became `GREMLIN_HEXES_PER_DIE` (160, the small
+board's area) and `gremlinDice(size)` in GameArtifacts, which rolls one die per that many
+hexes, rounded: 1, 3, 6, 23 dice for small, medium, large, huge. `MAP_SIZES` moved out of
+the GameArtifacts return literal into a const so `gremlinDice` can read it. Small boards are
+unchanged roll for roll (the sim matches exactly). R-6 now checks every size. Measured one
+change at a time with `just cc-sim`: medium 195/200, median 65 → 183/200, median 84;
+large 196/200, median 81 → 187/200, median 110; huge 50/50, median 142 → 42/50, median
+226 (lost per game 5.0 → 13.2, 2.4 → 14.4, 1.6 → 30.6).
+
 ### 2026-11-10 — Turning a mover no longer ticks (Q-2 settled by D-19)
 `rotate` used to turn the facing and then run a tick like every other command; now it
 returns `{ok: true, events: []}` and changes nothing else. Q-2 ("clicking a mover spends the

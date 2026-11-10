@@ -43,7 +43,7 @@ for (const seed of SEEDS.slice(0, 6)) {
         if (new Set(thingKeys).size !== thingKeys.length) fail('two Things share a hex');
         if (state.hand.length !== A.HAND_SIZE) fail('hand size changed');
         if (state.phase !== 'player') fail('phase left as tick');
-        if (thingKeys.includes(state.target.q + ',' + state.target.r)) fail('a Thing on the target');
+        if (state.targets.some(t => thingKeys.includes(t.q + ',' + t.r))) fail('a Thing on the target');
         for (const p of state.pieces) {
             const h = engine.board.get(p.q, p.r);
             const t = engine.thingAt(p.q, p.r);

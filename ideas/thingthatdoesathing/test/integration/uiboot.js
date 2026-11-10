@@ -269,8 +269,8 @@ run('a game plays through the UI to the first milestone banner', () => {
     const goal = vm.runInContext('GameArtifacts.FIRST_MILESTONE', ctx);
     for (let i = 0; i < 2000 && s.delivered < goal; i++) {
         // Lay belts toward the target along a BFS path, else wait.
-        const prev = new Map([[s.source.q + ',' + s.source.r, null]]);
-        const queue = [s.source];
+        const prev = new Map([[s.sources[0].q + ',' + s.sources[0].r, null]]);
+        const queue = [s.sources[0]];
         while (queue.length) {
             const c = queue.shift();
             for (const n of e.board.neighbors(c.q, c.r)) {
@@ -280,7 +280,7 @@ run('a game plays through the UI to the first milestone banner', () => {
             }
         }
         const pathHexes = [];
-        for (let c = s.target; c; c = prev.get(c.q + ',' + c.r)) pathHexes.unshift(c);
+        for (let c = s.targets[0]; c; c = prev.get(c.q + ',' + c.r)) pathHexes.unshift(c);
         let acted = false;
         for (let j = 0; j < pathHexes.length - 1 && !acted; j++) {
             const a = pathHexes[j], b = pathHexes[j + 1];
@@ -307,7 +307,7 @@ run('a game plays through the UI to the first milestone banner', () => {
         if (!acted) key(' ');
         settle();
     }
-    if (s.delivered < goal) throw new Error('no milestone in 2000 commands: ' + JSON.stringify({ src: s.source, tgt: s.target, things: s.things, pieces: s.pieces.map(p => [p.kind, p.q, p.r]), d: s.delivered, turn: s.turn, hand: s.hand }));
+    if (s.delivered < goal) throw new Error('no milestone in 2000 commands: ' + JSON.stringify({ src: s.sources, tgt: s.targets, things: s.things, pieces: s.pieces.map(p => [p.kind, p.q, p.r]), d: s.delivered, turn: s.turn, hand: s.hand }));
     const banner = els.milestone.classList.set;
     if (banner.has('hidden') || els['milestone-title'].textContent !== 'IT DOES THE THING') throw new Error('no milestone banner');
     if (ui.overlay) throw new Error('a milestone must not stop play');

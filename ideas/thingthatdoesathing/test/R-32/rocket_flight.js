@@ -85,7 +85,7 @@ const RANGE = load().GameArtifacts.THINGS.ROCKET.push;
 }
 {
     const { state, engine, put, piece } = flatGame();
-    put('ROCKET', 0, 4, DIR.E); state.target = { q: 6, r: 4 };
+    put('ROCKET', 0, 4, DIR.E); state.targets[0].q = 6; state.targets[0].r = 4;
     const c = piece('crate', 0, 4);
     engine.wait();
     check('crossing the target delivers it', !state.pieces.includes(c) && state.delivered === 1);

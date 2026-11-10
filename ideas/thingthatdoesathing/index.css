@@ -67,8 +67,8 @@ html, body {
 }
 #hover-info { font-variant-numeric: tabular-nums; }
 
-/* The tally, top right: the delivered meter (fills toward the next milestone), gremlins
-   done in, and crates lost. */
+/* The tally, top right: the delivered meter (fills toward the next milestone), per-color
+   counts once a second color opens, gremlins done in, and crates lost. */
 #tally {
     position: fixed;
     top: 12px;
@@ -84,7 +84,8 @@ html, body {
 .tally-row { justify-content: space-between; }
 .tally-label { color: var(--text-dim); font-size: 13px; }
 #ex-info { color: #c9a0ff; font-variant-numeric: tabular-nums; }
-#lost-info:empty { display: none; }
+#lost-info:empty, #color-info:empty { display: none; }
+#color-info { font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; }
 #progress-bar {
     width: 120px;
     height: 8px;

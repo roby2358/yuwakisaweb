@@ -43,10 +43,10 @@ ARCHITECTURE_LOG.md.
   path. A board too big for the window opens centered on the source, where building starts,
   and left-drag pans as it always has.
 - **Evidence:** R-1, R-2, R-5, R-23 at every size; U-2, U-14 (manual).
-  `Measured by: just cc-sim 200 <size>` → small 183/200 reach the first milestone, median 65
-  turns (11.5 crates lost per game); medium 195/200, median 65 (5.0 lost); large 196/200,
-  median 81 (2.4 lost); huge (50 games) 50/50, median 142 (1.6 lost). Gremlins stay at `GREMLIN_DICE_COUNT`d`GREMLIN_DICE_SIDES` on every size, so the big
-  boards are much emptier of them (see Q-5).
+  `Measured by: just cc-sim 200 <size>` (turn cap 400) → small 183/200 reach the first
+  milestone, median 65 turns (11.5 crates lost per game); medium 183/200, median 84 (13.2
+  lost); large 187/200, median 110 (14.4 lost); huge (50 games) 42/50, median 226 (30.6 lost).
+  Gremlin density is the same on every size (D-20), so big boards are as busy as small.
 
 ### D-19 Turning a placed mover is free: it doesn't tick — *Decided*
 - **Alternatives:** turning spends a turn like every other command (a stray click costs a
@@ -60,6 +60,42 @@ ARCHITECTURE_LOG.md.
 - **Evidence:** R-10. `Measured by: just cc-sim 200 small` → identical to ticking turns
   (183/200, median 65): the bot lays belts already aimed, so this is a feel change for
   players, not a pacing change the bot can see.
+
+### D-20 Gremlins scale with board area: one die per small board's worth of hexes — *Decided (scale with area, the small board's density), Proposed (rounded dice count)*
+- **Alternatives:** the same 1d4 on every size; a hand-set count per `MAP_SIZES` row; a
+  density per land hex (water and mountains vary by seed); multiplying one roll by the
+  area ratio.
+- **Why:** the designer likes the small board's gremlin density and asked for it to hold on
+  every size. `gremlinDice(size)` rolls one d`GREMLIN_DICE_SIDES` per `GREMLIN_HEXES_PER_DIE`
+  hexes of area (the small board's 16 × 10), rounded: 1, 3, 6 and 23 dice. Rolling more
+  dice rather than scaling one roll keeps the big boards near the average density instead
+  of swinging between empty and swarming. It counts the whole rectangle, not land, so it
+  depends only on the size, not the seed. Small boards are unchanged, roll for roll.
+- **Evidence:** R-6. `Measured by: just cc-sim 200 <size>`, one change at a time: medium
+  went from 195/200, median 65, 5.0 lost to 183/200, median 84, 13.2 lost; large from
+  196/200, median 81, 2.4 lost to 187/200, median 110, 14.4 lost; huge (50 games) from
+  50/50, median 142, 1.6 lost to 42/50, median 226, 30.6 lost. The bot doesn't guard its
+  line (it discards Walls, Traps and Rockets), and a huge board's line is long, so these
+  are a floor on how a player fares, not a forecast.
+
+### D-21 Milestones open more colors on bigger boards, each with its own target — *Decided (one color per milestone up to 1/2/3/4 by size, 50% from an existing source, own target per color, random color per spawn, wrong-color targets solid on the ground but flown over), Proposed (placement in the end slices on free hexes, a flight drops short of a wrong target, nothing opens when there's no free hex)*
+- **Alternatives:** a second color on a timer instead of at milestones; every color with its
+  own source (no shared source); a round-robin spawn order instead of a random color; a
+  per-color spawn clock instead of one for the board; a wrong-color crate passing over a
+  target, or being destroyed by it; a jammed color holding every spawn until it clears.
+- **Why:** the designer asked for it. Opening a color at a milestone is escalation tied to
+  progress: the factory you just got working has to share the board with a second line. A
+  shared source (half the time) is the harder case, because one line has to split by color,
+  which is what colored pushers (tracked separately) would be for. A random color keeps the
+  stream lumpy; one board clock means the crate rate doesn't grow with colors, so each line
+  gets slower as colors open. A wrong target is solid on the ground so a mis-sorted crate
+  jams where you can see it (G-2), but a Rocket flies over it, so long shots stay
+  possible. Rerolling the next tick means a jammed color mostly lets the others through.
+  Small boards stay one color: the whole contraption still fits the screen.
+- **Evidence:** R-38, R-39, R-19, U-19 (manual). The bot measures only the first milestone,
+  which comes before any color opens, so `just cc-sim` can't see this yet:
+  `Measured by: just cc-sim 200 small` → 185/200, median 65 (the spawn's extra reroll
+  shifts the random stream; the bot plays the same way); medium 186/200, median 84.
 
 ### D-12 `D` removes a placed Thing; it ticks, and the card is spent — *Decided (remove), Proposed (tick, no refund)*
 - **Alternatives:** no removal (permanence as the puzzle); undo of the last command;
@@ -239,10 +275,6 @@ ARCHITECTURE_LOG.md.
 - **Q-1 Chain pushes?** A belt pushing a crate into another crate is blocked today.
   Sokoban-style chains would make jams clear themselves, and also make spectacular
   pile-ups. *Recommendation:* leave blocked until playtest shows jams are annoying.
-- **Q-5 Gremlins on big boards.** The gremlin count doesn't scale with board size, so a
-  60 × 60 board has the same one to four as the 16 × 10 one. Options: a gremlin count per
-  `MAP_SIZES` row; a density (gremlins per land hex); leave it. *Recommendation:* a
-  per-size dice count once you've played a big board and know how busy it should feel.
 
 ## Deliberately left out
 - Undo, and getting a removed Thing's card back (D-12: removal costs the card and a turn).

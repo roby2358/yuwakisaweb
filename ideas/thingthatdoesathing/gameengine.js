@@ -7,8 +7,8 @@
 // Every command re-checks its own legality; every legal command but rotate runs exactly one tick. All randomness goes through the seeded Rando.
 const GameEngine = (function () {
     const {
-        TERRAIN, THINGS, PIECES, CRATE_COLORS, aims, nextMilestone, MAP_SIZES, SOURCE_INTERVAL, HAND_SIZE,
-        GREMLIN_DICE_COUNT, GREMLIN_DICE_SIDES,
+        TERRAIN, THINGS, PIECES, CRATE_COLORS, aims, nextMilestone, MAP_SIZES, SOURCE_INTERVAL, ENHANCE_CHANCE, HAND_SIZE,
+        gremlinDice, GREMLIN_DICE_SIDES,
         GEN_MAX_ATTEMPTS, HEIGHTMAP_ROUGHNESS,
         WATER_PCT, MOUNTAIN_PCT, ICE_FRAC, PLACE_SLICE_FRAC, PLACE_SLICE_MIN
     } = GameArtifacts;
@@ -19,6 +19,11 @@ const GameEngine = (function () {
     // What a command did before its tick: events to report first, and the kinds of pieces it
     // sank (for emerge). Most commands do nothing first.
     const NOTHING_FIRST = Object.freeze({ events: [], gone: [] });
+    // An end slice of the col-sorted passable hexes.
+    const SLICE_OF = {
+        left: (sorted, len) => sorted.slice(0, len),
+        right: (sorted, len) => sorted.slice(-len),
+    };
     const isLand = t => t === TERRAIN.PLAINS || t === TERRAIN.ICE;
     // Where a Thing may be built, keyed by its template's `on`.
     const BUILDS_ON = {
@@ -40,12 +45,38 @@ const GameEngine = (function () {
             return this.state.pieces.find(p => p.isAt(q, r)) || null;
         }
 
+        targetAt(q, r) {
+            return this.state.targets.find(t => t.q === q && t.r === r) || null;
+        }
+
+        // Is this hex a source or a target?
+        isEndpoint(hex) {
+            const s = this.state;
+            return [...s.sources, ...s.targets].some(e => Hex.same(e, hex));
+        }
+
+        // The colors open so far, in the order they opened.
+        openColors() {
+            return this.state.targets.map(t => t.color);
+        }
+
+        sourceOf(color) {
+            return this.state.sources.find(src => src.colors.includes(color));
+        }
+
+        // Is `hex` a target for another color than this cargo piece's? (Solid to it on the
+        // ground; a flight passes over but can't come down there.)
+        wrongTarget(piece, hex) {
+            const t = PIECES[piece.kind].cargo && this.targetAt(hex.q, hex.r);
+            return !!t && t.color !== piece.color;
+        }
+
         // May `kind` be built on `hex`? The one placement rule: place() checks it, and
         // legalPlacements() filters the board with it.
         canPlace(kind, hex) {
             const tpl = THINGS[kind];
             if (!tpl || !hex) return false;
-            if (Hex.same(hex, this.state.target)) return false;
+            if (this.targetAt(hex.q, hex.r)) return false;
             if (this.thingAt(hex.q, hex.r)) return false;
             if (!BUILDS_ON[tpl.on](hex.terrain)) return false;
             return !(tpl.blocks && this.pieceAt(hex.q, hex.r));
@@ -65,14 +96,18 @@ const GameEngine = (function () {
             const s = this.state;
             s.seed = seed >>> 0;
             s.size = size;
-            if (!this.generateMap(s.seed, GEN_MAX_ATTEMPTS)) {
+            let ends = this.generateMap(s.seed, GEN_MAX_ATTEMPTS);
+            if (!ends) {
                 s.seed = MAP_SIZES[size].knownGoodSeed;
-                this.generateMap(s.seed, 1);
+                ends = this.generateMap(s.seed, 1);
             }
+            const color = Rando.choice(CRATE_COLORS);
+            s.sources = [{ q: ends.source.q, r: ends.source.r, colors: [color] }];
+            s.targets = [{ q: ends.target.q, r: ends.target.r, color, delivered: 0 }];
             s.things = [];
             s.pieces = [];
             s.nextId = 1;
-            this.spawnCrate();
+            this.spawnCrate(color, s.sources[0]);
             this.spawnGremlins();
             s.hand = Array.from({ length: HAND_SIZE }, () => this.draw());
             s.turn = 1;
@@ -85,7 +120,7 @@ const GameEngine = (function () {
         }
 
         // Seed Rando and build up to `attempts` maps, stopping at the first with a
-        // source→target land path.
+        // source→target land path. Returns that {source, target} pair of hexes, or null.
         generateMap(seed, attempts) {
             const s = this.state;
             Rando.seed(seed);
@@ -93,10 +128,10 @@ const GameEngine = (function () {
                 s.hexes = this.generateRectGrid();
                 this.board = new Board(s.hexes);
                 this.assignTerrain();
-                this.placeSourceAndTarget();
-                if (this.board.hasPath(s.source, s.target)) return true;
+                const ends = this.placeSourceAndTarget();
+                if (this.board.hasPath(ends.source, ends.target)) return ends;
             }
-            return false;
+            return null;
         }
 
         diamondSquare(size, roughness) {
@@ -178,14 +213,40 @@ const GameEngine = (function () {
             for (let i = 0; i < iceCount && i < plains.length; i++) plains[i].terrain = TERRAIN.ICE;
         }
 
-        placeSourceAndTarget() {
+        // The passable hexes at the left ('left') or right ('right') end of the board, by col.
+        endSlice(end) {
             const passable = this.board.passableHexes();
             passable.sort((a, b) => a.col - b.col);
             const sliceLen = Math.max(PLACE_SLICE_MIN, Math.floor(passable.length * PLACE_SLICE_FRAC));
-            const sh = Rando.choice(passable.slice(0, sliceLen));
-            const th = Rando.choice(passable.slice(-sliceLen));
-            this.state.source = { q: sh.q, r: sh.r };
-            this.state.target = { q: th.q, r: th.r };
+            return SLICE_OF[end](passable, sliceLen);
+        }
+
+        placeSourceAndTarget() {
+            return { source: Rando.choice(this.endSlice('left')), target: Rando.choice(this.endSlice('right')) };
+        }
+
+        // Hexes in an end slice where a new source or target may open: no Thing, no piece,
+        // not already a source or target.
+        freeEndHexes(end) {
+            return this.endSlice(end).filter(h => !this.thingAt(h.q, h.r) && !this.pieceAt(h.q, h.r) && !this.isEndpoint(h));
+        }
+
+        // Open the next color, if the board has room for one (R-38): ENHANCE_CHANCE that it
+        // comes out of an existing source, else a new source on the left; its target goes on
+        // the right, with a land path from its source. Returns the open event, or null.
+        openColor() {
+            const s = this.state;
+            if (s.targets.length >= MAP_SIZES[s.size].colors) return null;
+            const color = Rando.choice(CRATE_COLORS.filter(c => !this.openColors().includes(c)));
+            const enhance = Rando.random() < ENHANCE_CHANCE;
+            const src = enhance ? Rando.choice(s.sources) : Rando.choice(this.freeEndHexes('left'));
+            const reachable = src ? this.freeEndHexes('right').filter(h => this.board.hasPath(src, h)) : [];
+            const tgt = Rando.choice(reachable);
+            if (!tgt) return null;
+            if (enhance) src.colors.push(color);
+            else s.sources.push({ q: src.q, r: src.r, colors: [color] });
+            s.targets.push({ q: tgt.q, r: tgt.r, color, delivered: 0 });
+            return { type: 'open', color, source: { q: src.q, r: src.r }, target: { q: tgt.q, r: tgt.r } };
         }
 
         addPiece(kind, q, r, color) {
@@ -197,16 +258,15 @@ const GameEngine = (function () {
             return p;
         }
 
-        spawnCrate() {
-            const s = this.state;
-            return this.addPiece('crate', s.source.q, s.source.r, Rando.choice(CRATE_COLORS));
+        spawnCrate(color, src) {
+            return this.addPiece('crate', src.q, src.r, color);
         }
 
         spawnGremlins() {
             const s = this.state;
             let count = 0;
-            for (let i = 0; i < GREMLIN_DICE_COUNT; i++) count += Rando.int(1, GREMLIN_DICE_SIDES);
-            const candidates = this.board.passableHexes().filter(h => !Hex.same(h, s.source) && !Hex.same(h, s.target));
+            for (let i = 0; i < gremlinDice(s.size); i++) count += Rando.int(1, GREMLIN_DICE_SIDES);
+            const candidates = this.board.passableHexes().filter(h => !this.isEndpoint(h));
             Rando.shuffle(candidates);
             const scheme = ColorTheory.randomScheme(() => Rando.random());
             for (let i = 0; i < count && i < candidates.length; i++) {
@@ -217,9 +277,8 @@ const GameEngine = (function () {
 
         // Land hexes next to the outer water (an edge hex) that a piece could stand on.
         shoreHexes() {
-            const s = this.state;
             return this.board.passableHexes().filter(h =>
-                this.canEnter(h) && !Hex.same(h, s.source) && !Hex.same(h, s.target) &&
+                this.canEnter(h) && !this.isEndpoint(h) &&
                 this.board.neighbors(h.q, h.r).some(n => n.isEdge));
         }
 
@@ -293,16 +352,18 @@ const GameEngine = (function () {
         }
 
         // One hex in `dir`. Returns 'moved' | 'blocked' | 'sank' | 'delivered' | 'trapped'.
-        // A flying piece passes over inland open water (only the outer sea takes it) and over
-        // Traps.
+        // A flying piece passes over inland open water (only the outer sea takes it), over
+        // Traps, and over targets of other colors; on the ground those targets are solid.
         step(piece, dir, flies) {
             const s = this.state;
-            const cargo = PIECES[piece.kind].cargo;
             const hex = this.neighborHex(piece, dir);
             if (!this.canEnter(hex)) return 'blocked';
+            if (!flies && this.wrongTarget(piece, hex)) return 'blocked';
             piece.moveTo(hex.q, hex.r);
-            if (cargo && Hex.same(hex, s.target)) {
+            const goal = PIECES[piece.kind].cargo && this.targetAt(hex.q, hex.r);
+            if (goal && goal.color === piece.color) {
                 this.removePiece(piece);
+                goal.delivered++;
                 s.delivered++;
                 return 'delivered';
             }
@@ -333,6 +394,7 @@ const GameEngine = (function () {
             const { n, splat, flies, skids, wrecks } = how;
             const events = [];
             const path = [];
+            const start = { q: piece.q, r: piece.r };
             let left = n, res = 'moved', hit = null;
             while (left > 0) {
                 res = this.step(piece, dir, flies);
@@ -353,6 +415,12 @@ const GameEngine = (function () {
                 path.push({ q: piece.q, r: piece.r });
             }
             const landed = flies && (res === 'moved' || res === 'blocked');
+            // A flight can't come down on another color's target: it drops one hex short.
+            if (landed && this.wrongTarget(piece, piece)) {
+                path.pop();
+                const back = path.length ? path[path.length - 1] : start;
+                piece.moveTo(back.q, back.r);
+            }
             const here = this.board.get(piece.q, piece.r);
             if (landed && this.isOpenWater(here)) {
                 this.sink(piece);   // came down on inland water
@@ -435,9 +503,13 @@ const GameEngine = (function () {
                 if (dirs.length) events.push(...this.push(p, Rando.choice(dirs), wanderOf(p)));
             }
 
+            // When the timer is ready, roll an open color; its source makes the crate if it's
+            // clear, else nothing this tick (the next tick rolls again).
             s.spawnTimer++;
-            if (s.spawnTimer >= SOURCE_INTERVAL && !this.pieceAt(s.source.q, s.source.r)) {
-                const c = this.spawnCrate();
+            const color = s.spawnTimer >= SOURCE_INTERVAL ? Rando.choice(this.openColors()) : null;
+            const src = color && this.sourceOf(color);
+            if (src && !this.pieceAt(src.q, src.r)) {
+                const c = this.spawnCrate(color, src);
                 s.spawnTimer = 0;
                 events.push({ type: 'spawn', id: c.id, q: c.q, r: c.r });
             }
@@ -446,9 +518,12 @@ const GameEngine = (function () {
             s.exGremlins += gone.filter(kind => kind === 'gremlin').length;
             events.push(...this.emerge(gone));
 
-            // One milestone event per milestone this tick's deliveries reached.
+            // One milestone event per milestone this tick's deliveries reached; each opens the
+            // next color, if the board has room.
             for (let m = nextMilestone(deliveredBefore); m <= s.delivered; m = nextMilestone(m)) {
                 events.push({ type: 'milestone', count: m });
+                const open = this.openColor();
+                if (open) events.push(open);
             }
 
             s.turn++;

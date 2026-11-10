@@ -10,7 +10,7 @@
 const GameUI = (function () {
     const {
         HEX_SIZE, COUNTER_SIZE, HOP_MS, RUN_GAP_MS, MILESTONE_MS, TERRAIN_COLORS, TERRAIN_NAMES, THING_LOOK,
-        PIECE_LOOK, CRATE_SHADES, SPLAT_BLOTS, SOURCE_COLOR, TARGET_COLOR, BG_COLOR, UI_FONT, REACH_COLOR, MAP_SIZE_NOTES
+        PIECE_LOOK, CRATE_SHADES, SPLAT_BLOTS, SOURCE_COLOR, BG_COLOR, UI_FONT, REACH_COLOR, MAP_SIZE_NOTES
     } = GameDisplayArtifacts;
     const { TERRAIN, HAND_SIZE, MAP_SIZES, aims, nextMilestone } = GameArtifacts;
     const SIZE_KEYS = Object.keys(MAP_SIZES);
@@ -228,7 +228,7 @@ const GameUI = (function () {
                 minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
             }
             const fits = maxX - minX + 2 * HEX_SIZE <= this.canvas.width && maxY - minY + 2 * HEX_SIZE <= this.canvas.height;
-            const src = new Hex(this.state.source.q, this.state.source.r).toPixel();
+            const src = new Hex(this.state.sources[0].q, this.state.sources[0].r).toPixel();
             const cx = fits ? (minX + maxX) / 2 : src.x;
             const cy = fits ? (minY + maxY) / 2 : src.y;
             this.panX = this.canvas.width / 2 - cx;
@@ -343,6 +343,7 @@ const GameUI = (function () {
             const tracks = new Map();
             const hidden = new Set();
             let hops = 0, milestone = 0;
+            const opened = [];
             const ends = new Set();
             for (const e of res.events) {
                 if (e.type === 'move') {
@@ -363,10 +364,12 @@ const GameUI = (function () {
                     hidden.add(e.id);
                 } else if (e.type === 'milestone') {
                     milestone = e.count;
+                } else if (e.type === 'open') {
+                    opened.push(e.color);
                 }
             }
             this.anim = { t0: performance.now(), dur: Math.max(1, hops + (ends.size ? 1 : 0)) * HOP_MS,
-                tracks, before, hidden, milestone, ends };
+                tracks, before, hidden, milestone, opened, ends };
             const frame = now => {
                 if (!this.anim) return;
                 if (now - this.anim.t0 >= this.anim.dur) { this.finishAnim(); return; }
@@ -381,7 +384,7 @@ const GameUI = (function () {
             this.anim = null;
             const cue = END_CUES.find(type => a.ends.has(type));
             if (cue) this.sound[cue]();
-            if (a.milestone) { this.sound.fanfare(); this.showMilestone(a.milestone); }
+            if (a.milestone) { this.sound.fanfare(); this.showMilestone(a.milestone, a.opened); }
             this.render();
             this.scheduleRun();
         }
@@ -401,13 +404,15 @@ const GameUI = (function () {
             return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, alpha: 1, scale: 1 };
         }
 
-        // A banner that doesn't stop play: the milestone reached and the next one.
-        showMilestone(count) {
+        // A banner that doesn't stop play: the milestone reached, the next one, and any
+        // color it opened.
+        showMilestone(count, opened) {
             const s = this.state, turns = s.turn - 1;
             document.getElementById('milestone-title').textContent =
                 count === GameArtifacts.FIRST_MILESTONE ? 'IT DOES THE THING' : `${count} crates!`;
             document.getElementById('milestone-sub').textContent =
-                `${count} crates in ${turns} turns · next: ${nextMilestone(count)}` + (s.lost ? ` · ${s.lost} lost at sea` : '');
+                `${count} crates in ${turns} turns · next: ${nextMilestone(count)}` + (s.lost ? ` · ${s.lost} lost at sea` : '') +
+                opened.map(c => ` · ${c} crates now!`).join('');
             const el = document.getElementById('milestone');
             el.classList.remove('hidden');
             clearTimeout(this.bannerTimer);
@@ -464,8 +469,8 @@ const GameUI = (function () {
                 if (hex.terrain === TERRAIN.MOUNTAIN) this.drawPeak(x, y);
             }
 
-            this.drawPort(s.source, SOURCE_COLOR, 'IN');
-            this.drawPort(s.target, TARGET_COLOR, '★');
+            for (const src of s.sources) this.drawSource(src);
+            for (const t of s.targets) this.drawTarget(t);
 
             for (const t of s.things) {
                 const { x, y } = this.hexToScreen(t.q, t.r);
@@ -551,8 +556,33 @@ const GameUI = (function () {
         }
 
         // Source/target: a glowing ring with a label.
+        // A target: a ring in its color with a black line just inside it, so pale colors
+        // (green, yellow) still stand out on plains.
+        drawTarget(t) {
+            this.drawPort(t, CRATE_SHADES[t.color].left, '★');
+            const ctx = this.ctx;
+            const { x, y } = this.hexToScreen(t.q, t.r);
+            drawHexPath(ctx, x, y, HEX_SIZE - 5);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        // A source: the IN ring, with one pip per color it makes.
+        drawSource(src) {
+            this.drawPort(src, SOURCE_COLOR, 'IN');
+            const ctx = this.ctx;
+            const { x, y } = this.hexToScreen(src.q, src.r);
+            const gap = 9, y0 = y + HEX_SIZE * 0.62;
+            src.colors.forEach((color, i) => {
+                ctx.beginPath();
+                ctx.arc(x + (i - (src.colors.length - 1) / 2) * gap, y0, 3.5, 0, Math.PI * 2);
+                ctx.fillStyle = CRATE_SHADES[color].left;
+                ctx.fill();
+            });
+        }
+
         drawPort(at, color, label) {
-            if (!at) return;
             const ctx = this.ctx;
             const { x, y } = this.hexToScreen(at.q, at.r);
             ctx.save();
@@ -679,6 +709,9 @@ const GameUI = (function () {
             document.getElementById('progress-fill').style.width = s.delivered / next * 100 + '%';
             document.getElementById('progress-pct').textContent = `${s.delivered} / ${next}`;
             document.getElementById('lost-info').textContent = s.lost ? `${s.lost} crates lost` : '';
+            // Per-color counts, once a second color is open.
+            document.getElementById('color-info').innerHTML = s.targets.length < 2 ? '' : s.targets.map(t =>
+                `<span style="color:${CRATE_SHADES[t.color].top}">■ ${t.delivered}</span>`).join(' ');
             document.getElementById('ex-info').textContent = s.exGremlins;
             this.renderHand();
 
@@ -686,8 +719,10 @@ const GameUI = (function () {
             const h = this.hoveredHex && s.hexes.get(Hex.key(this.hoveredHex.q, this.hoveredHex.r));
             if (!h) { document.getElementById('hud-hover').classList.add('hidden'); return; }
             const parts = [TERRAIN_NAMES[h.terrain]];
-            if (Hex.same(h, s.source)) parts.push('Source — crates appear here');
-            if (Hex.same(h, s.target)) parts.push('Target — deliver crates here');
+            const src = s.sources.find(e => Hex.same(e, h));
+            const tgt = this.engine.targetAt(h.q, h.r);
+            if (src) parts.push(`Source — ${src.colors.join(', ')} crates appear here`);
+            if (tgt) parts.push(`Target — deliver ${tgt.color} crates here`);
             const t = this.engine.thingAt(h.q, h.r);
             if (t) parts.push(`${THING_LOOK[t.kind].name}: ${THING_LOOK[t.kind].does}` +
                 (aims(t.kind) && !this.picked ? ' (click to turn, D to remove)' : ' (D to remove)'));

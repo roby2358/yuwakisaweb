@@ -44,7 +44,7 @@ let lostTotal = 0;
 for (let i = 0; i < GAMES; i++) {
     const { g, state, engine } = newGame(5000 + i, SIZE);
     const goal = g.GameArtifacts.FIRST_MILESTONE;
-    const path = shortestPath(engine, g, state.source, state.target);
+    const path = shortestPath(engine, g, state.sources[0], state.targets[0]);
     let res = { ok: true };
     while (state.delivered < goal && state.turn < CAP) {
         // Next path hex (excluding the target) that has no mover facing the right way.

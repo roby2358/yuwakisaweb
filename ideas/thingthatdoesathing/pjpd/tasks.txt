@@ -1,0 +1,7 @@
+Priority:   40
+Status: ToDo
+ID: colorthings-3nq7
+Created: 2026-11-10T23:26:44Z
+Updated: 2026-11-10T23:26:44Z
+
+Thing Factory (ideas/thingthatdoesathing): add colored pullers and pushers. These are color-keyed variants of the Puller and the pushers (Belt, and maybe Spring/Rocket) that act only on crates of their own color (red, green, blue, yellow), so a player can sort a mixed line toward each color's destination. Open questions to settle with the user first: which movers get colored variants; whether a colored mover ignores gremlins or still moves them; whether colored cards replace plain ones or are added to the deck with their own weight; and how the card and glyph show the color. Depends on the multi-color sources and destinations feature (each color has its own source and destination). Reconcile ONTOLOGY/CRITERIA/RATIONALE/ARCHITECTURE_LOG and add test/R-n/ for the new rule.

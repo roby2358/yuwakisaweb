@@ -34,7 +34,7 @@ const { newGame, flatGame, DIR } = require('../helpers/load');
     const { events } = engine.wait();
     const c = state.pieces.find(p => p.kind === 'crate');
     check('spawn reports the new crate', JSON.stringify(events) ===
-        JSON.stringify([{ type: 'spawn', id: c.id, q: state.source.q, r: state.source.r }]));
+        JSON.stringify([{ type: 'spawn', id: c.id, q: state.sources[0].q, r: state.sources[0].r }]));
 }
 {
     const { engine, put, piece } = flatGame();

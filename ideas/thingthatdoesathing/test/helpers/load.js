@@ -43,7 +43,7 @@ function newGame(seed, size) {
 // The parts of GameState a command may change, as a comparable string.
 function snapshot(state) {
     return JSON.stringify({
-        source: state.source, target: state.target,
+        sources: state.sources, targets: state.targets,
         pieces: state.pieces.map(p => [p.id, p.kind, p.key(), p.color]),
         things: state.things, hand: state.hand,
         turn: state.turn, delivered: state.delivered, lost: state.lost,
@@ -52,8 +52,8 @@ function snapshot(state) {
 }
 
 // A controlled board for rule tests: every inner hex PLAINS, edges WATER, no pieces, no
-// Things, source and target parked far away in the bottom row so they stay out of the way,
-// and the spawn timer held back so no crate appears mid-test. Middle row r=4 runs
+// Things, one red source and red target parked far away in the bottom row so they stay out
+// of the way, and the spawn timer held back so no crate appears mid-test. Crates are red. Middle row r=4 runs
 // q = -2 … 13 (col 0 … 15); its inner hexes are q = -1 … 12.
 function flatGame(seed = 7) {
     const ctx = newGame(seed, 'small');
@@ -61,12 +61,12 @@ function flatGame(seed = 7) {
     for (const [, hex] of state.hexes) hex.terrain = hex.isEdge ? g.GameArtifacts.TERRAIN.WATER : g.GameArtifacts.TERRAIN.PLAINS;
     state.pieces = [];
     state.things = [];
-    state.source = { q: -3, r: 8 };   // col 1, row 8
-    state.target = { q: 10, r: 8 };   // col 14, row 8
+    state.sources = [{ q: -3, r: 8, colors: ['red'] }];      // col 1, row 8
+    state.targets = [{ q: 10, r: 8, color: 'red', delivered: 0 }];   // col 14, row 8
     state.spawnTimer = -1000;
     ctx.T = g.GameArtifacts.TERRAIN;
     ctx.put = (kind, q, r, facing = null) => { const t = { kind, q, r, facing }; state.things.push(t); return t; };
-    ctx.piece = (kind, q, r) => engine.addPiece(kind, q, r, kind === 'gremlin' ? '#888888' : null);
+    ctx.piece = (kind, q, r) => engine.addPiece(kind, q, r, kind === 'gremlin' ? '#888888' : 'red');
     ctx.terrain = (q, r, t) => { state.hexes.get(g.Hex.key(q, r)).terrain = t; };
     return ctx;
 }

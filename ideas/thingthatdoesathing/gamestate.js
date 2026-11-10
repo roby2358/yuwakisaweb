@@ -8,8 +8,8 @@ const GameState = (function () {
             this.seed = 0;            // reproducibility anchor
             this.size = null;         // key of GameArtifacts.MAP_SIZES
             this.hexes = null;        // Map<"q,r", hex>
-            this.source = null;       // {q, r} — crates appear here
-            this.target = null;       // {q, r} — crates are delivered here
+            this.sources = [];        // [{q, r, colors}] — crates of these colors appear here
+            this.targets = [];        // [{q, r, color, delivered}] — takes only `color` crates; one per open color
             this.pieces = [];         // [Piece] crates and gremlins, in creation order
             this.things = [];         // [{kind, q, r, facing}] in placement order (= action order)
             this.hand = [];           // [ThingKind], length HAND_SIZE
@@ -17,7 +17,7 @@ const GameState = (function () {
             this.delivered = 0;
             this.lost = 0;            // crates sunk
             this.exGremlins = 0;      // gremlins sunk or splatted
-            this.spawnTimer = 0;      // ticks since the source last spawned
+            this.spawnTimer = 0;      // ticks since a source last spawned
             this.nextId = 1;
             this.phase = 'player';    // 'player' | 'tick'
         }

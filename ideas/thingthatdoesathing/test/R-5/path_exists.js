@@ -8,7 +8,7 @@ for (const size of Object.keys(MAP_SIZES)) {
     let ok = 0;
     for (let seed = 1; seed <= RUNS[size]; seed++) {
         const { state, engine } = newGame(seed * 104729, size);
-        if (engine.board.hasPath(state.source, state.target)) ok++;
+        if (engine.board.hasPath(state.sources[0], state.targets[0])) ok++;
     }
     check(`${size}: ${RUNS[size]} seeds all have a source→target path (${ok})`, ok === RUNS[size]);
 }

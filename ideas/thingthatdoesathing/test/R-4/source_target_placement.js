@@ -10,7 +10,7 @@ for (const seed of SEEDS) {
     const passable = engine.board.passableHexes().sort((a, b) => a.col - b.col);
     const len = Math.max(A.PLACE_SLICE_MIN, Math.floor(passable.length * A.PLACE_SLICE_FRAC));
     const keys = arr => new Set(arr.map(h => g.Hex.key(h.q, h.r)));
-    check(`seed ${seed}: source in left slice`, keys(passable.slice(0, len)).has(g.Hex.key(state.source.q, state.source.r)));
-    check(`seed ${seed}: target in right slice`, keys(passable.slice(-len)).has(g.Hex.key(state.target.q, state.target.r)));
+    check(`seed ${seed}: source in left slice`, keys(passable.slice(0, len)).has(g.Hex.key(state.sources[0].q, state.sources[0].r)));
+    check(`seed ${seed}: target in right slice`, keys(passable.slice(-len)).has(g.Hex.key(state.targets[0].q, state.targets[0].r)));
 }
 done();

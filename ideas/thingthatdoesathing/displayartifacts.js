@@ -56,7 +56,6 @@ const GameDisplayArtifacts = (function () {
         },
         SPLAT_BLOTS: 8,              // drops in a splat burst
         SOURCE_COLOR: '#4ce08a',
-        TARGET_COLOR: '#ff6600',
         // Canvas chrome — mirror --bg and --font in index.css.
         BG_COLOR: '#0e1116',
         UI_FONT: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
