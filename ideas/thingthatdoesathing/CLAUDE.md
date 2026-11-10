@@ -9,7 +9,8 @@ small hex board, forked from the Hex & Counters base (`../hexandcounter`). Each 
 places a Thing from a random hand, turns a placed mover, or waits, and then the world ticks
 once: every Thing does its one thing (most act on the piece standing on them; the Puller
 reaches two hexes ahead). Crates come out of a source; deliver
-`DELIVER_GOAL` of them to the target. There's no time limit and no defeat; the score is turns.
+them to the target, through endless milestones (10, 20, 50, 100, 200, 500, 1000, …). There's
+no end, time limit or defeat; the score is the turn each milestone was reached.
 
 Design docs follow the ontology-spec format: **`ONTOLOGY.md`** is the implementation
 reference (purpose/goals `G-n`, entities, invariants, rules as pseudocode, numbers,
@@ -44,8 +45,8 @@ headless; `GameUI` is the only browser-coupled code.
 | `displayartifacts.js` | `GameDisplayArtifacts` | Client-only: `HEX_SIZE`, `COUNTER_SIZE`, `HOP_MS`, terrain colors/names, `THING_LOOK` (name, verb line, colors, inset), `PIECE_LOOK` (hover name, crate color), port colors. |
 | `piece.js` | `Piece` | A positioned token. Crates and gremlins are `Piece`s with engine-set `id` and `kind`. |
 | `board.js` | `Board` | Query layer over the hex `Map` (passable = land). |
-| `gamestate.js` | `GameState` | Serializable data: `source`, `target`, `pieces`, `things`, `hand`, `turn`, `delivered`, `lost`, `spawnTimer`, `nextId`, `gameWon`, `phase`. |
-| `gameengine.js` | `GameEngine` | Generation + rules. `newGame(seed)` takes the seed from the caller (the UI rolls it). Commands `place`/`rotate`/`wait` each run one `tick()` and return `{ ok, events, won? }`. One `step()` handles every movement (movers, springs, ice slides, gremlins). |
+| `gamestate.js` | `GameState` | Serializable data: `source`, `target`, `pieces`, `things`, `hand`, `turn`, `delivered`, `lost`, `spawnTimer`, `nextId`, `phase`. |
+| `gameengine.js` | `GameEngine` | Generation + rules. `newGame(seed)` takes the seed from the caller (the UI rolls it). Commands `place`/`rotate`/`remove`/`wait` each run one `tick()` and return `{ ok, events }`; a tick that reaches a milestone emits `milestone{count}`. One `step()` handles every movement (movers, springs, ice slides, gremlins). |
 | `gameui.js` | `GameUI` | Canvas, HUD, the hand, input, and the tick animation, which is driven only by the events the engine returns. |
 
 Libs: `hex.js` (axial math, `NEIGHBOR_DIRS` = facing order E, NE, NW, W, SW, SE;
@@ -61,9 +62,13 @@ tick animation) → `picked` card → bare map click.
 - **L1.2 pick-then-act:** picking a card (click or `1`–`3`) computes
   `engine.legalPlacements(kind)` once; clicking a hex is a lookup into that set. `R`/wheel
   turn the ghost's facing. With no card picked, clicking a Belt/Spring/Puller calls `rotate`.
+  `D` calls `remove` on the hovered Thing.
 - **L2.1 primary action:** Wait button / Space / Enter → `engine.wait()`.
 - **L2.2:** Esc and right-click put the card back.
-- **L5:** the intro and victory overlays consume the input that dismisses them.
+- **L5:** the intro overlay consumes the input that dismisses it. The milestone banner is not
+  an overlay; it never blocks input.
+- **Go/Pause** (`running`): after each animation, `wait()` again `RUN_GAP_MS` later; holds
+  while a card is picked (picking works mid-animation).
 - Every command goes through `commit()`, which snapshots piece positions, calls the engine,
   and animates from `res.events` (`move` paths, then `sink`/`deliver` fades; `spawn` appears
   at the end).
@@ -110,7 +115,7 @@ in `hexToScreen` / `screenToHex`.
   `CRITERIA.md` R-row owns `test/R-n/` (one rule per test); `flatGame()` in the helpers gives
   a controlled all-plains board for rule tests; `test/integration/smoke.js` plays random legal
   commands checking invariants; `test/integration/uiboot.js` boots the real UI on a stub DOM
-  and plays a game to the victory card by simulated clicks; `test/coverage.js` fails if CRITERIA and the `R-n` dirs disagree.
+  and plays to the first milestone by simulated clicks, then drives Go/Pause; `test/coverage.js` fails if CRITERIA and the `R-n` dirs disagree.
 - Every engine command returns `{ ok, ... }`; `ok:false` means illegal and nothing changed
   (`Rando` included). `ok:true` carries the tick's `events`.
 - Color values are 0–1 floats except when converting to `#rrggbb` strings for canvas.

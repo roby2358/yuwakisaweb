@@ -1,5 +1,5 @@
 /* Palette and type. The font stack is mirrored by GameDisplayArtifacts.UI_FONT for the
-   canvas-drawn text (the victory card), and --bg by the canvas clear color in GameUI. */
+   canvas-drawn text, and --bg by the canvas clear color in GameUI. */
 :root {
     --bg: #0e1116;
     --panel: rgba(16, 20, 26, 0.82);
@@ -114,6 +114,46 @@ html, body {
     font-weight: 600;
 }
 .btn.primary:hover { background: #ffe066; }
+
+/* Go/Pause: top centre, over the board. */
+#run {
+    position: fixed;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 6px;
+    z-index: 10;
+}
+.btn.go {
+    min-width: 84px;
+    background: #2fbf5b;
+    color: #08210f;
+    border-color: transparent;
+    font-weight: 700;
+}
+.btn.go:hover { background: #45d872; }
+.btn.go.running { background: #1d8a40; color: #e8ffe9; }
+.btn.go.running:hover { background: #24a04b; }
+/* Narrow screens: the HUD reaches the middle, so Go drops below its two rows. */
+@media (max-width: 1000px) {
+    #run { top: 96px; }
+    #milestone { top: 150px; }
+}
+
+/* Milestone banner: shows for a moment and doesn't stop play. */
+#milestone {
+    position: fixed;
+    top: 72px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 22px;
+    text-align: center;
+    border-color: #ff6600;   /* TARGET_COLOR */
+    z-index: 15;
+    pointer-events: none;
+}
+#milestone-title { font-size: 26px; font-weight: 700; color: #ff6600; letter-spacing: 0.02em; }
+#milestone-sub { color: var(--text-dim); font-size: 13px; margin-top: 2px; }
 
 /* Intro card. */
 #intro-panel {

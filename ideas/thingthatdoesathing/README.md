@@ -1,7 +1,8 @@
 # Thing Factory
 
 A thing that does a thing. Build a contraption on a small hex board, one Thing at a time,
-while it runs. Crates come out of the source; get `DELIVER_GOAL` of them to the target.
+while it runs. Crates come out of the source; get them to the target. Milestones at 10, 20, 50, 100, 200,
+500, 1000, and on; the factory never ends.
 Every Thing does exactly one thing, every tick.
 
 Forked from the Hex & Counters base (`../hexandcounter`). See [DYNAMICS.md](DYNAMICS.md)
@@ -26,5 +27,7 @@ ride your belts.
 - `R` / `Shift+R` / mouse wheel turn the Thing before placing
 - Click a yellow hex to place it; the world ticks once and animates
 - With no card picked, click a placed Belt/Spring/Puller to turn it clockwise (ticks)
+- `D` removes the Thing under the cursor; the card is gone and the world ticks once
 - Space / Enter / Wait: let it run one tick
+- Go (top centre): keep ticking until Pause; picking a card holds the run
 - Esc or right-click puts the card back; left-drag pans

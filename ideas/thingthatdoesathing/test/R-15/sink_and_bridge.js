@@ -13,9 +13,9 @@ const { flatGame, DIR } = require('../helpers/load');
 {
     const { state, engine, put, piece, terrain, T } = flatGame();
     put('BELT', 3, 4, DIR.E); terrain(4, 4, T.WATER);
-    piece('gremlin', 3, 4);
+    const gr = piece('gremlin', 3, 4);
     engine.wait();
-    check('gremlin sank: removed, lost unchanged', state.pieces.length === 0 && state.lost === 0);
+    check('gremlin sank: removed, lost unchanged', !state.pieces.includes(gr) && state.lost === 0);
 }
 {
     const { state, engine, put, piece, terrain, T } = flatGame();

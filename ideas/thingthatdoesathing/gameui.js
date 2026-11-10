@@ -6,19 +6,22 @@
 // GameEngine through its commands, animating each tick from the events it returns.
 //
 // Input dispatch mirrors UI_CONTROLS.md (layer citations kept): overlay → animation →
-// picked card → bare map click.
+// picked card → bare map click. Go/Pause keeps issuing Waits between animations.
 const GameUI = (function () {
     const {
-        HEX_SIZE, COUNTER_SIZE, HOP_MS, TERRAIN_COLORS, TERRAIN_NAMES, THING_LOOK,
-        PIECE_LOOK, SOURCE_COLOR, TARGET_COLOR, BG_COLOR, UI_FONT, REACH_COLOR
+        HEX_SIZE, COUNTER_SIZE, HOP_MS, RUN_GAP_MS, MILESTONE_MS, TERRAIN_COLORS, TERRAIN_NAMES, THING_LOOK,
+        PIECE_LOOK, CRATE_SHADES, SOURCE_COLOR, TARGET_COLOR, BG_COLOR, UI_FONT, REACH_COLOR
     } = GameDisplayArtifacts;
-    const { TERRAIN, DELIVER_GOAL, HAND_SIZE, aims } = GameArtifacts;
+    const { TERRAIN, HAND_SIZE, aims, nextMilestone } = GameArtifacts;
 
     const DRAG_THRESHOLD = 4;
 
-    // A piece's own color (gremlins), else its kind's display color (crates). Works on a
-    // live Piece or the animation's pre-tick snapshot of one.
-    const pieceColor = p => p.color || PIECE_LOOK[p.kind].color;
+    // How each kind of piece is drawn. `p` is a live Piece or the animation's pre-tick
+    // snapshot of one.
+    const PIECE_DRAW = {
+        crate:   (ui, x, y, p, alpha, scale) => ui.drawCrate(x, y, CRATE_SHADES[p.color], alpha, scale),
+        gremlin: (ui, x, y, p, alpha, scale) => ui.drawCounter(x, y, p.color, p.label, alpha, scale),
+    };
 
     // Screen angle of a facing (pointy-top axial direction → pixels).
     function facingAngle(facing) {
@@ -128,9 +131,12 @@ const GameUI = (function () {
 
             this.picked = null;      // L1.2 { slot, legal: Set<key> } — the card being placed
             this.facing = 0;         // ghost facing; remembered between placements
-            this.overlay = null;     // L5 'intro' | 'victory' | null
+            this.overlay = null;     // L5 'intro' | null
             this.hoveredHex = null;  // L1.3
-            this.anim = null;        // { t0, dur, tracks: Map<id, track>, hidden: Set<id>, won }
+            this.anim = null;        // { t0, dur, tracks: Map<id, track>, hidden: Set<id>, milestone }
+            this.running = false;    // Go/Pause: tick on its own after each animation
+            this.runTimer = null;    // the pending RUN_GAP_MS timeout, if any
+            this.bannerTimer = null; // hides the milestone banner
             this.handDrawn = null;   // what renderHand last drew, so it redraws only on change
         }
 
@@ -145,7 +151,8 @@ const GameUI = (function () {
             this.picked = null;
             this.anim = null;
             this.hoveredHex = null;
-            document.getElementById('intro-goal').textContent = DELIVER_GOAL;
+            this.setRunning(false);
+            document.getElementById('milestone').classList.add('hidden');
             this.showOverlay('intro');
             this.resize();
         }
@@ -179,8 +186,10 @@ const GameUI = (function () {
         }
 
         // ---- L1.2 Pick a card: the legal set is computed once; the click is a lookup ----
+        // Allowed mid-animation (the state is already post-tick), so a card can be picked
+        // while Go runs; the run holds while a card is picked.
         pick(slot) {
-            if (this.overlay || this.anim || this.state.gameWon) return;
+            if (this.overlay) return;
             if (slot < 0 || slot >= this.state.hand.length) return;
             if (this.picked && this.picked.slot === slot) { this.unpick(); return; }
             this.picked = { slot, legal: this.engine.legalPlacements(this.state.hand[slot]) };
@@ -217,10 +226,45 @@ const GameUI = (function () {
             this.commit(() => this.engine.rotate(q, r), () => this.sound.step());
         }
 
+        // Remove the Thing under the cursor (D).
+        removeHovered() {
+            if (this.overlay || this.anim || !this.hoveredHex) return;
+            const { q, r } = this.hoveredHex;
+            this.commit(() => this.engine.remove(q, r), () => this.sound.sink());
+        }
+
         // L2.1 the primary action (Wait button, Space, Enter).
         primaryAction() {
-            if (this.overlay || this.anim || this.state.gameWon) return;
+            if (this.overlay || this.anim) return;
             this.commit(() => this.engine.wait(), () => this.sound.endTurn());
+        }
+
+        // ---- Go/Pause: Wait after every animation, RUN_GAP_MS apart ----
+        toggleRun() {
+            if (this.overlay) return;
+            this.setRunning(!this.running);
+            if (this.running) this.runStep();
+        }
+
+        setRunning(on) {
+            this.running = on;
+            clearTimeout(this.runTimer);
+            this.runTimer = null;
+            const b = document.getElementById('go');
+            b.textContent = on ? 'Pause' : 'Go';
+            b.classList.toggle('running', on);
+        }
+
+        scheduleRun() {
+            if (!this.running || this.runTimer) return;
+            this.runTimer = setTimeout(() => { this.runTimer = null; this.runStep(); }, RUN_GAP_MS);
+        }
+
+        // A held card or an animation in flight waits for the next gap.
+        runStep() {
+            if (!this.running || this.overlay) return;
+            if (this.anim || this.picked) { this.scheduleRun(); return; }
+            this.commit(() => this.engine.wait(), () => {});
         }
 
         // ---- Tick animation ----
@@ -229,22 +273,27 @@ const GameUI = (function () {
         startAnim(before, res) {
             const tracks = new Map();
             const hidden = new Set();
-            let hops = 0, sank = false, delivered = false;
+            let hops = 0, sank = false, delivered = false, milestone = 0;
             for (const e of res.events) {
                 if (e.type === 'move') {
                     const b = before.get(e.id);
                     tracks.set(e.id, { ...b, pts: [{ q: b.q, r: b.r }, ...e.path], end: null });
                     hops = Math.max(hops, e.path.length);
                 } else if (e.type === 'sink' || e.type === 'deliver') {
-                    const t = tracks.get(e.id);
-                    if (t) t.end = e.type;
+                    // A piece that ends without moving (its Bridge removed) fades where it stood.
+                    const b = before.get(e.id);
+                    const t = tracks.get(e.id) || { ...b, pts: [{ q: b.q, r: b.r }], end: null };
+                    t.end = e.type;
+                    tracks.set(e.id, t);
                     if (e.type === 'sink') sank = true; else delivered = true;
                 } else if (e.type === 'spawn') {
                     hidden.add(e.id);
+                } else if (e.type === 'milestone') {
+                    milestone = e.count;
                 }
             }
             this.anim = { t0: performance.now(), dur: Math.max(1, hops + (sank || delivered ? 1 : 0)) * HOP_MS,
-                tracks, before, hidden, won: !!res.won, sank, delivered };
+                tracks, before, hidden, milestone, sank, delivered };
             const frame = now => {
                 if (!this.anim) return;
                 if (now - this.anim.t0 >= this.anim.dur) { this.finishAnim(); return; }
@@ -259,8 +308,9 @@ const GameUI = (function () {
             this.anim = null;
             if (a.delivered) this.sound.deliver();
             else if (a.sank) this.sound.sink();
-            if (a.won) { this.sound.fanfare(); this.showOverlay('victory'); }
+            if (a.milestone) { this.sound.fanfare(); this.showMilestone(a.milestone); }
             this.render();
+            this.scheduleRun();
         }
 
         // Where a tracked piece is drawn at time `now`, and how opaque.
@@ -276,6 +326,19 @@ const GameUI = (function () {
             const i = Math.floor(k), f = k - i;
             const a = this.hexToScreen(t.pts[i].q, t.pts[i].r), b = this.hexToScreen(t.pts[i + 1].q, t.pts[i + 1].r);
             return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, alpha: 1, scale: 1 };
+        }
+
+        // A banner that doesn't stop play: the milestone reached and the next one.
+        showMilestone(count) {
+            const s = this.state, turns = s.turn - 1;
+            document.getElementById('milestone-title').textContent =
+                count === GameArtifacts.FIRST_MILESTONE ? 'IT DOES THE THING' : `${count} crates!`;
+            document.getElementById('milestone-sub').textContent =
+                `${count} crates in ${turns} turns · next: ${nextMilestone(count)}` + (s.lost ? ` · ${s.lost} lost at sea` : '');
+            const el = document.getElementById('milestone');
+            el.classList.remove('hidden');
+            clearTimeout(this.bannerTimer);
+            this.bannerTimer = setTimeout(() => el.classList.add('hidden'), MILESTONE_MS);
         }
 
         // ---- L5 Overlays ----
@@ -334,7 +397,7 @@ const GameUI = (function () {
                     const { x, y } = this.hexToScreen(h.q, h.r);
                     drawThing(ctx, x, y, HEX_SIZE, s.hand[this.picked.slot], this.facing, 0.7);
                 }
-            } else if (this.hoveredHex && !this.anim && !s.gameWon) {
+            } else if (this.hoveredHex && !this.anim) {
                 // A bare hover over a mover: outline it — clicking turns it.
                 const t = this.engine.thingAt(this.hoveredHex.q, this.hoveredHex.r);
                 if (t && aims(t.kind)) {
@@ -347,7 +410,6 @@ const GameUI = (function () {
             }
 
             this.drawPieces(now);
-            if (this.overlay === 'victory') this.drawVictory();
             this.updateHUD();
         }
 
@@ -356,7 +418,7 @@ const GameUI = (function () {
             if (!a) {
                 for (const p of this.state.pieces) {
                     const { x, y } = this.hexToScreen(p.q, p.r);
-                    this.drawCounter(x, y, pieceColor(p), p.label, 1, 1);
+                    this.drawPiece(x, y, p, 1, 1);
                 }
                 return;
             }
@@ -364,12 +426,12 @@ const GameUI = (function () {
             // rest sit still; crates spawned this tick wait for the end.
             for (const [id, t] of a.tracks) {
                 const pose = this.trackPose(t, now);
-                this.drawCounter(pose.x, pose.y, pieceColor(t), t.label, pose.alpha, pose.scale);
+                this.drawPiece(pose.x, pose.y, t, pose.alpha, pose.scale);
             }
             for (const p of this.state.pieces) {
                 if (a.tracks.has(p.id) || a.hidden.has(p.id)) continue;
                 const { x, y } = this.hexToScreen(p.q, p.r);
-                this.drawCounter(x, y, pieceColor(p), p.label, 1, 1);
+                this.drawPiece(x, y, p, 1, 1);
             }
         }
 
@@ -418,38 +480,6 @@ const GameUI = (function () {
             ctx.fillText(label, x, y - HEX_SIZE * 0.62);
         }
 
-        drawVictory() {
-            const ctx = this.ctx;
-            const s = this.state;
-            const cx = this.canvas.width / 2, cy = this.canvas.height / 2;
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-            ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-            const w = 360, h = 180;
-            ctx.save();
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-            ctx.shadowBlur = 24;
-            this.roundRect(cx - w / 2, cy - h / 2, w, h, 10);
-            ctx.fillStyle = 'rgba(16, 20, 26, 0.94)';
-            ctx.fill();
-            ctx.restore();
-            ctx.strokeStyle = TARGET_COLOR;
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = TARGET_COLOR;
-            ctx.font = `bold 40px ${UI_FONT}`;
-            ctx.fillText('IT DOES THE THING', cx, cy - 36);
-            const turns = s.turn - 1;
-            ctx.fillStyle = '#e8e6e1';
-            ctx.font = `17px ${UI_FONT}`;
-            ctx.fillText(`${s.delivered} crates in ${turns} turn${turns === 1 ? '' : 's'}` +
-                (s.lost ? ` · ${s.lost} lost at sea` : ''), cx, cy + 12);
-            ctx.fillStyle = '#9aa0a8';
-            ctx.font = `13px ${UI_FONT}`;
-            ctx.fillText('Click or press Space to admire the contraption', cx, cy + 52);
-        }
-
         roundRect(x, y, w, h, r) {
             const ctx = this.ctx;
             ctx.beginPath();
@@ -470,6 +500,39 @@ const GameUI = (function () {
             const g = parseInt(hexColor.slice(3, 5), 16) / 255;
             const b = parseInt(hexColor.slice(5, 7), 16) / 255;
             return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.4 ? '#000' : '#fff';
+        }
+
+        drawPiece(x, y, p, alpha, scale) {
+            PIECE_DRAW[p.kind](this, x, y, p, alpha, scale);
+        }
+
+        // An isometric box centred on (cx, cy): a rhombus top and two side faces.
+        drawCrate(cx, cy, shades, alpha, scale) {
+            const ctx = this.ctx;
+            const w = COUNTER_SIZE * scale * 0.45;     // half-width
+            const h = w / 2;                           // half-height of the top rhombus
+            const d = w;                               // side-face depth
+            const top = cy - d / 2;                    // y of the top face's centre
+            const face = (pts, fill) => {
+                ctx.beginPath();
+                ctx.moveTo(pts[0][0], pts[0][1]);
+                for (const [px, py] of pts.slice(1)) ctx.lineTo(px, py);
+                ctx.closePath();
+                ctx.fillStyle = fill;
+                ctx.fill();
+                ctx.stroke();
+            };
+            const N = [cx, top - h], E = [cx + w, top], S = [cx, top + h], W = [cx - w, top];
+            const down = ([px, py]) => [px, py + d];
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 1;
+            ctx.lineJoin = 'round';
+            face([W, S, down(S), down(W)], shades.left);
+            face([S, E, down(E), down(S)], shades.right);
+            face([N, E, S, W], shades.top);
+            ctx.restore();
         }
 
         drawCounter(cx, cy, color, label, alpha, scale) {
@@ -506,8 +569,9 @@ const GameUI = (function () {
         updateHUD() {
             const s = this.state;
             document.getElementById('turn-info').textContent = 'Turn ' + s.turn;
-            document.getElementById('progress-fill').style.width = Math.min(1, s.delivered / DELIVER_GOAL) * 100 + '%';
-            document.getElementById('progress-pct').textContent = `${s.delivered} / ${DELIVER_GOAL}`;
+            const next = nextMilestone(s.delivered);
+            document.getElementById('progress-fill').style.width = s.delivered / next * 100 + '%';
+            document.getElementById('progress-pct').textContent = `${s.delivered} / ${next}`;
             document.getElementById('lost-info').textContent = s.lost ? `${s.lost} lost` : '';
             this.renderHand();
 
@@ -519,7 +583,7 @@ const GameUI = (function () {
             if (Hex.same(h, s.target)) parts.push('Target — deliver crates here');
             const t = this.engine.thingAt(h.q, h.r);
             if (t) parts.push(`${THING_LOOK[t.kind].name}: ${THING_LOOK[t.kind].does}` +
-                (aims(t.kind) && !this.picked ? ' (click to turn)' : ''));
+                (aims(t.kind) && !this.picked ? ' (click to turn, D to remove)' : ' (D to remove)'));
             const p = this.engine.pieceAt(h.q, h.r);
             if (p) parts.push(PIECE_LOOK[p.kind].name);
             hoverEl.textContent = parts.join(' · ');
@@ -531,7 +595,7 @@ const GameUI = (function () {
         renderHand() {
             const el = document.getElementById('hand');
             const s = this.state;
-            const shown = JSON.stringify([s.hand, this.picked && this.picked.slot, this.facing, s.gameWon]);
+            const shown = JSON.stringify([s.hand, this.picked && this.picked.slot, this.facing]);
             if (shown === this.handDrawn && el.children.length === HAND_SIZE) return;
             this.handDrawn = shown;
             if (el.children.length !== HAND_SIZE) {
@@ -550,7 +614,6 @@ const GameUI = (function () {
                 const look = THING_LOOK[kind];
                 const picked = this.picked && this.picked.slot === i;
                 b.classList.toggle('picked', !!picked);
-                b.disabled = s.gameWon;
                 b.querySelector('.name').textContent = look.name;
                 b.querySelector('.does').textContent = look.does;
                 const c = b.querySelector('canvas'), cx = c.getContext('2d');
@@ -574,6 +637,7 @@ const GameUI = (function () {
             window.addEventListener('resize', () => this.resize());
             window.addEventListener('keydown', e => this.onKeyDown(e));
             document.getElementById('end-turn').addEventListener('click', () => this.primaryAction());
+            document.getElementById('go').addEventListener('click', () => this.toggleRun());
             document.getElementById('new-game').addEventListener('click', () => this.newGame());
             document.getElementById('begin-btn').addEventListener('click', () => this.dismissOverlay());
         }
@@ -596,9 +660,8 @@ const GameUI = (function () {
         }
 
         handleClick(e) {
-            const s = this.state;
             if (this.overlay) { this.dismissOverlay(); return; }   // L5 captures & consumes
-            if (this.anim || s.gameWon) return;                     // L1.1 input waits for the tick
+            if (this.anim) return;                                  // L1.1 input waits for the tick
             const hex = this.screenToHex(e.clientX, e.clientY);
             const key = Hex.key(hex.q, hex.r);
             if (this.picked) {
@@ -646,7 +709,8 @@ const GameUI = (function () {
             if (e.key === 'Escape') { if (this.picked) this.unpick(); return; }   // L2.2
             if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); this.primaryAction(); return; }
             if (e.key >= '1' && e.key <= String(HAND_SIZE)) { this.pick(Number(e.key) - 1); return; }
-            if ((e.key === 'r' || e.key === 'R') && this.picked) this.turnGhost(e.shiftKey ? -1 : 1);
+            if ((e.key === 'r' || e.key === 'R') && this.picked) { this.turnGhost(e.shiftKey ? -1 : 1); return; }
+            if (e.key === 'd' || e.key === 'D') this.removeHovered();
         }
     }
 

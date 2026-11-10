@@ -8,7 +8,4 @@ const hand = JSON.stringify(state.hand), things = JSON.stringify(state.things), 
 const res = engine.wait();
 check('ticked once, hand and Things untouched',
     res.ok && state.turn === turn + 1 && JSON.stringify(state.hand) === hand && JSON.stringify(state.things) === things);
-state.gameWon = true;
-const before = snapshot(state);
-check('after a win: ok:false, unchanged', engine.wait().ok === false && snapshot(state) === before);
 done();

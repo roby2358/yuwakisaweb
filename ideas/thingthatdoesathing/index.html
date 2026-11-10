@@ -14,7 +14,7 @@
             <span id="progress">
                 <span class="progress-label">Delivered</span>
                 <span id="progress-bar"><span id="progress-fill"></span></span>
-                <span id="progress-pct">0 / 5</span>
+                <span id="progress-pct">0 / 10</span>
             </span>
             <span id="lost-info"></span>
             <span class="buttons">
@@ -24,18 +24,28 @@
         </div>
         <div id="hud-hover" class="panel hidden"><span id="hover-info"></span></div>
     </div>
+    <div id="run" class="panel">
+        <button id="go" class="btn go" title="Keep ticking on its own; picking a card holds it">Go</button>
+    </div>
+    <div id="milestone" class="panel hidden">
+        <div id="milestone-title"></div>
+        <div id="milestone-sub"></div>
+    </div>
     <div id="hand" class="panel"></div>
     <div id="intro-panel" class="panel">
         <h1>Thing Factory</h1>
         <p>Crates come out of the <strong class="src">source</strong>. Build a contraption that
-            gets <strong id="intro-goal">5</strong> of them to the <strong class="tgt">&#9733; target</strong>.
+            gets them to the <strong class="tgt">&#9733; target</strong>: 10, 20, 50, 100, and on
+            and on.
             Every Thing does one thing, every turn. Gremlins wander in and ride along.</p>
         <dl class="keys">
             <dt><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></dt><dd>pick a Thing from your hand</dd>
             <dt><kbd>R</kbd> / <kbd>Wheel</kbd></dt><dd>turn it before you place it</dd>
             <dt><kbd>Click</kbd></dt><dd>place it (yellow hexes); the world ticks</dd>
             <dt><kbd>Click</kbd> a mover</dt><dd>turn a placed one clockwise; ticks</dd>
+            <dt><kbd>D</kbd></dt><dd>remove the Thing under the cursor (ticks)</dd>
             <dt><kbd>Space</kbd></dt><dd>wait one tick</dd>
+            <dt><kbd>Go</kbd></dt><dd>keep ticking until Pause</dd>
             <dt><kbd>Esc</kbd></dt><dd>put the card back</dd>
         </dl>
         <button id="begin-btn" class="btn primary">Begin</button>

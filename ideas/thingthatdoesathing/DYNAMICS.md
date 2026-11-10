@@ -31,14 +31,21 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
 
 - **Random hand of `HAND_SIZE`** → feeds accumulation: you build with what you're dealt,
   and a Puller in hand asks where it can reach from.
-- **Gremlins** → feed comedy and keep routes from going stale. They ride movers and block
+- **Gremlins** → feed comedy and keep routes from going stale. A drowned one climbs back
+  out somewhere on the shore as a new gremlin. They ride movers and block
   without malice.
 - **Rotate** → makes a misplaced mover fixable without undo.
+- **Remove (`D`)** → makes any misplacement fixable at the price of the card and a turn,
+  so building stays an investment. Pulling a Bridge out from under a gremlin is a joke
+  you can set up on purpose.
 - **`SOURCE_INTERVAL`** → paces the factory; a jammed source just waits.
+- **Endless milestones** (10, 20, 50, 100, …) → feed accumulation: the machine keeps paying
+  off, and each milestone asks whether it still holds up with gremlins wandering through.
+- **Go/Pause** → lets the payoff run by itself; you watch, then pick a card to step in.
 
 ## Turn structure
 
-1. You **place** a card, **rotate** a mover, or **wait**.
+1. You **place** a card, **rotate** a mover, **remove** a Thing, or **wait**.
 2. **Tick:** Things act in placement order (pushers on the piece on them, Pullers on the
    piece two hexes ahead), each piece moving at most once.
    Unmoved gremlins wander. The source may spawn a crate.
@@ -49,7 +56,8 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
   you can't use somewhere harmless.
 - **Midgame:** patch around gremlins and jams. Fence the line with Walls where gremlins
   keep wandering on, and put Bridges where water forced a detour.
-- **Endgame:** Wait and watch. Once the line works, every tick is a crate closer.
+- **Long game:** press Go and watch. Once the line works, every tick is a crate closer to
+  the next milestone; step in when a gremlin or a jam starts leaking crates.
 - **Recurring tension:** use the odd card now (a Spring on a straight run, a Puller to
   catch crates at the end of an ice slide or to clear gremlins off the line) or dump it and
   wait for belts. A Puller can't sit in the line, so it always costs a side hex.
@@ -67,5 +75,5 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
 ### Strategy ↔ mechanic cross-check
 
 Every Thing kind is used by some strategy above (Belt: spine; Wall: fencing; Bridge:
-water detours; Spring: straight runs; Puller: side-feed, slide catcher, gremlin drowner). Rotate is used to
-fix misplacements. Gremlins create the midgame.
+water detours; Spring: straight runs; Puller: side-feed, slide catcher, gremlin drowner). Rotate and Remove
+are used to fix misplacements. Gremlins create the midgame.

@@ -1,6 +1,6 @@
 // test/integration/smoke.js — happy-path walkthrough of the DOM-free engine stack.
 //
-// Plays random legal commands (place / rotate / wait) for a while on several seeds and
+// Plays random legal commands (place / rotate / remove / wait) for a while on several seeds and
 // checks the ONTOLOGY invariants after every command. Touches many rules at once, so it
 // lives outside the test/R-n/ directories; each rule's own assertions are there.
 'use strict';
@@ -14,7 +14,7 @@ for (const seed of SEEDS.slice(0, 6)) {
     let pick = seed;
     const rnd = n => (pick = (pick * 1103515245 + 12345) % 2147483648) % n;
     let ok = true, why = '';
-    for (let i = 0; i < 300 && !state.gameWon; i++) {
+    for (let i = 0; i < 300; i++) {
         const turn = state.turn;
         const roll = rnd(10);
         let res;
@@ -26,6 +26,9 @@ for (const seed of SEEDS.slice(0, 6)) {
             const movers = state.things.filter(t => t.facing !== null);
             const t = movers[rnd(movers.length)];
             res = engine.rotate(t.q, t.r);
+        } else if (roll < 9 && state.things.length) {
+            const t = state.things[rnd(state.things.length)];
+            res = engine.remove(t.q, t.r);
         } else {
             res = engine.wait();
         }
@@ -45,7 +48,6 @@ for (const seed of SEEDS.slice(0, 6)) {
             if (!h || h.terrain === T.MOUNTAIN || (t && A.THINGS[t.kind].blocks) ||
                 (h.terrain === T.WATER && !t)) fail(`piece ${p.id} on an illegal hex`);
         }
-        if (state.gameWon !== (state.delivered >= A.DELIVER_GOAL)) fail('gameWon out of step with delivered');
     }
     check(`seed ${seed}: invariants hold through random play (turn ${state.turn}, delivered ${state.delivered}, lost ${state.lost}) ${why}`, ok);
 }

@@ -47,7 +47,7 @@ function snapshot(state) {
         pieces: state.pieces.map(p => [p.id, p.kind, p.key(), p.color]),
         things: state.things, hand: state.hand,
         turn: state.turn, delivered: state.delivered, lost: state.lost,
-        spawnTimer: state.spawnTimer, nextId: state.nextId, gameWon: state.gameWon, phase: state.phase
+        spawnTimer: state.spawnTimer, nextId: state.nextId, phase: state.phase
     });
 }
 

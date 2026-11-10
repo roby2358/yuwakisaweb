@@ -40,7 +40,7 @@ const { newGame, flatGame, DIR } = require('../helpers/load');
 for (const seed of [3, 4, 5]) {
     const { g, state, engine } = newGame(seed);
     let ok = true;
-    for (let i = 0; i < 80 && !state.gameWon; i++) {
+    for (let i = 0; i < 80; i++) {
         const pos = new Map(state.pieces.map(p => [p.id, p.key()]));
         const legal = [...engine.legalPlacements(state.hand[0])];
         const res = legal.length && i % 2 ? engine.place(0, ...legal[(i * 5) % legal.length].split(',').map(Number), i % 6) : engine.wait();

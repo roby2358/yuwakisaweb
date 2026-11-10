@@ -40,7 +40,8 @@ limit, small board]
 everything; G-2 beats G-1 (a funny interaction that can't be read is a bug, not comedy). [P]
 
 **Non-goals (for now)** [D]
-- A defeat condition or a time limit. The score is the turn count.
+- A defeat condition, a time limit, or an end. The factory runs forever; the score is the
+  turn each milestone was reached.
 - Combat, unit stats.
 - Levels or a campaign; every board is generated.
 - Undo, or picking a Thing back up.
@@ -67,7 +68,6 @@ everything; G-2 beats G-1 (a funny interaction that can't be read is a bug, not 
 | `lost` | int | Crates that sank. |
 | `spawnTimer` | int | Ticks since the source last spawned. |
 | `nextId` | int | Next piece id. |
-| `gameWon` | bool | `delivered ≥ DELIVER_GOAL`. |
 | `phase` | `'player' \| 'tick'` | `'tick'` only while a tick resolves inside a command. |
 
 ### Hex — one map cell (plain object)
@@ -88,16 +88,17 @@ everything; G-2 beats G-1 (a funny interaction that can't be read is a bug, not 
 | `q`, `r` | int | Position. |
 | `id` | int | Unique, from `nextId`; events refer to it. |
 | `kind` | `'crate' \| 'gremlin'` | Key into `PIECES`. |
-| `label` | string | `PIECES[kind].label`: `'C'` or `'G'`. |
-| `color` | `#rrggbb` \| null | Gremlins get a seeded palette color; crates null. |
+| `label` | string | `PIECES[kind].label`: `'📦'` or `'👹'`. |
+| `color` | `#rrggbb` \| `CRATE_COLORS` name | Gremlins get a seeded palette color; a crate gets `Rando.choice(CRATE_COLORS)` when it spawns. No rule reads a crate's color yet; the client draws it as a shaded isometric box. [P] |
 
 `PIECES[kind]` is the template:
 
 | Field | crate | gremlin | Meaning |
 |---|---|---|---|
-| `label` | `'C'` | `'G'` | The counter's glyph. |
+| `label` | `'📦'` | `'👹'` | The counter's glyph (the client draws crates as a box instead). |
 | `cargo` | yes | no | Delivered on entering the target; counted in `lost` when it sinks. |
 | `wanders` | no | yes | Takes a random step on a tick when no Thing moved it. |
+| `reemerges` | no | yes | When one sinks, a new one climbs out on a shore hex (Emerge rule). |
 
 ### Thing — a placed fixture (plain object)
 *Serves:* G-1, G-2. Templates over snowflakes: every kind is a row of `THINGS` (§6).
@@ -126,9 +127,10 @@ From the base: `get`, `has`, `moveCost`, `isPassable`, `passableHexes`, `neighbo
 | Field | Notes |
 |---|---|
 | `picked` | `{ slot, facing, legal: Set<key> }` \| null — the hand card being placed. |
-| `overlay` | `'intro' \| 'victory'` \| null. |
+| `overlay` | `'intro'` \| null. |
 | `hoveredHex`, `panX/Y`, drag fields | As in the base. |
-| `anim` | `{ t0, tracks, done }` \| null — tick animation; input waits while it runs. |
+| `anim` | `{ t0, tracks, milestone, … }` \| null — tick animation; input waits while it runs (picking a card doesn't). |
+| `running` | bool — Go/Pause. While true, the client calls `wait()` `RUN_GAP_MS` after each animation ends, and holds while a card is picked. [D] |
 | `sound` | `GameSound`, `Math.random` only. |
 
 ---
@@ -143,8 +145,7 @@ From the base: `get`, `has`, `moveCost`, `isPassable`, `passableHexes`, `neighbo
 - At most one piece per hex. No piece on a Wall, on mountain, or on unbridged water. [P]
 - `hand.length === HAND_SIZE` whenever a command returns. [P]
 - Every command that returns `ok:true` ran exactly one tick and raised `turn` by 1. [P]
-- `gameWon ⇔ delivered ≥ DELIVER_GOAL`. Once won, every command returns `{ ok:false }` and
-  changes nothing. [D]
+- There is no won state: every command stays legal however many crates are delivered. [D]
 - **Engine-side modules never read the DOM, canvas, or `GameDisplayArtifacts`.** [D]
 - **Determinism:** same seed + same commands ⇒ same state and same events. [D]
 
@@ -174,8 +175,9 @@ legal: seed is a non-negative integer
 state.seed = seed
 if not generateMap(seed, GEN_MAX_ATTEMPTS): seed = KNOWN_GOOD_SEED; generateMap(seed, 1)
     # generateMap: Rando.seed; build grid; assignTerrain; placeSourceAndTarget; hasPath?
-things = []; pieces = []; spawn crate on source; spawnGremlins()
-hand = HAND_SIZE draws; turn = 1; delivered = lost = spawnTimer = 0; gameWon = false
+things = []; pieces = []; spawnCrate(); spawnGremlins()
+    # spawnCrate: add a crate on source with color = Rando.choice(CRATE_COLORS)
+hand = HAND_SIZE draws; turn = 1; delivered = lost = spawnTimer = 0
 ```
 
 ### Assign terrain [P]
@@ -198,6 +200,18 @@ source = Rando.choice(first slice); target = Rando.choice(last slice)
 count = sum of GREMLIN_DICE_COUNT rolls of d GREMLIN_DICE_SIDES
 on shuffled passable hexes other than source, target, and the first crate
 ```
+
+### Emerge — `emerge(sunkKinds)` [D]
+*Serves:* comedy, routes going stale (the board never goes quiet).
+```
+shoreHexes = passable hexes with an edge-hex neighbor, canEnter, not source or target
+for each sunk kind with PIECES[kind].reemerges (in sink order):
+    if shoreHexes is empty: stop                 # a walled-off shore keeps it drowned
+    h = Rando.choice(shoreHexes); color = Rando.choice(a random palette)
+    add a new piece of that kind on h; emit spawn{id, q, r}
+```
+Runs at the end of every tick for that tick's sinks, and after `remove`'s tick for a piece
+left on a removed Bridge.
 
 ### Draw — `draw()` [P]
 *Serves:* scarcity of agency (you build with what you're dealt).
@@ -239,7 +253,7 @@ A slide always ends: a straight line reaches the water edge.
 ### Tick — `tick()` [P]
 *Serves:* G-1. Runs once per command.
 ```
-phase = 'tick'; moved = {}
+phase = 'tick'; moved = {}; deliveredBefore = delivered
 for thing in things (placement order):
     pusher: p = piece on thing's hex;  dir = facing;            n = push
     puller: p = piece on hex 2 ahead;  dir = opposite(facing);  n = pull
@@ -248,23 +262,37 @@ for piece with PIECES[kind].wanders, not in moved (creation order):
     dirs = directions whose neighbor is land or a bridge, empty, no blocking Thing
     if dirs: push(piece, Rando.choice(dirs), 1)
 spawnTimer += 1
-if spawnTimer >= SOURCE_INTERVAL and no piece on source: spawn crate; spawnTimer = 0
-turn += 1; gameWon = delivered >= DELIVER_GOAL; phase = 'player'
+if spawnTimer >= SOURCE_INTERVAL and no piece on source: spawnCrate(); spawnTimer = 0
+emerge(kinds of this tick's sunk pieces)
+for each milestone m with deliveredBefore < m <= delivered: emit milestone{count: m}
+turn += 1; phase = 'player'
 ```
 Each piece moves at most once per tick. Gremlins never step into water on purpose, but a
 gremlin that wanders onto ice, or is pulled into water, goes in. A Puller ignores pieces on
 its own hex and on the near hex; a pulled piece that lands on bare ice slides on toward the
 Puller and stops on it (a Thing covers its hex).
 
+### Milestones — `nextMilestone(delivered)` [D]
+*Serves:* accumulation (a factory that keeps paying off), G-1.
+```
+milestones = FIRST_MILESTONE × (1, 2, 5) × 10^k for k = 0, 1, 2, …   # 10, 20, 50, 100, 200, 500, 1000, …
+nextMilestone(n) = the smallest milestone > n                        # there is no last one
+```
+Reaching a milestone ends nothing; the client shows a banner and play goes on.
+
 ### Commands
 ```
 place(slot, q, r, facing):
-    legal: !gameWon, 0 <= slot < HAND_SIZE, canPlace(hand[slot], hex at (q,r)),
+    legal: 0 <= slot < HAND_SIZE, canPlace(hand[slot], hex at (q,r)),
            facing in 0..5 for Things with push or pull (ignored, stored null, for fixtures)
     things.push({kind, q, r, facing}); hand[slot] = draw(); tick()
-rotate(q, r):  legal: !gameWon and a Thing with a facing (push or pull) stands at (q,r)
+rotate(q, r):  legal: a Thing with a facing (push or pull) stands at (q,r)
     facing = (facing + 5) mod 6; tick()
-wait():        legal: !gameWon; tick()
+remove(q, r):  legal: a Thing stands at (q,r)
+    things.remove(that Thing)                  # the card is spent; the hand is untouched
+    if a piece stands there on open water: sink it (lost += 1 if cargo); emit sink first
+    tick(); emerge([that piece's kind]) if it sank
+wait():        always legal; tick()
 ```
 
 ---
@@ -274,7 +302,8 @@ wait():        legal: !gameWon; tick()
 *Serves:* comedy, routes going stale. Gremlins use the same `step` as everything else. They
 know only the board and occupancy. They pick a random free land or bridge neighbor, or
 stay. They never push crates; a gremlin in the way is a wall until it moves. A gremlin
-standing on a mover gets carried.
+standing on a mover gets carried. One that drowns is replaced by a new one on the shore.
+The count only drops when the whole shore is walled off or full.
 
 ---
 
@@ -285,9 +314,10 @@ The code constant in `GameArtifacts` is the single source.
 | Name | Value | Unit |
 |---|---|---|
 | `MAP_COLS` × `MAP_ROWS` | 16 × 10 | hexes |
-| `DELIVER_GOAL` | 5 | crates |
+| `FIRST_MILESTONE` | 10 | crates (then the 1-2-5 series, forever) |
 | `SOURCE_INTERVAL` | 3 | ticks |
 | `HAND_SIZE` | 3 | cards |
+| `CRATE_COLORS` | red, green, blue, yellow | crate colors |
 | `THINGS.SPRING.push` | 3 | hexes |
 | `THINGS.BELT.push` | 1 | hexes |
 | `THINGS.PULLER.pull` | 1 | hexes |
@@ -302,6 +332,8 @@ The code constant in `GameArtifacts` is the single source.
 | `ICE_FRAC` | 0.08 | of inner hexes |
 | `PLACE_SLICE_FRAC` / `PLACE_SLICE_MIN` | 0.05 / 3 | of passable hexes / hexes |
 | `HOP_MS` | 140 | ms per animated hop (client) |
+| `RUN_GAP_MS` | 250 | ms between ticks while Go runs (client) |
+| `MILESTONE_MS` | 3500 | ms the milestone banner shows (client) |
 | `DRAG_THRESHOLD` | 4 | px (client) |
 
 ---
@@ -313,9 +345,10 @@ The code constant in `GameArtifacts` is the single source.
 | Command | Legal when | Effect | Result |
 |---|---|---|---|
 | `newGame(seed)` | `seed` is a non-negative integer | regenerate | `{ok:true}` |
-| `place(slot, q, r, facing)` | see Commands rule | build, redraw slot, tick | `{ok, events, won?}` |
-| `rotate(q, r)` | a Belt, Spring, or Puller is there | turn clockwise, tick | `{ok, events, won?}` |
-| `wait()` | `!gameWon` | tick | `{ok, events, won?}` |
+| `place(slot, q, r, facing)` | see Commands rule | build, redraw slot, tick | `{ok, events}` |
+| `rotate(q, r)` | a Belt, Spring, or Puller is there | turn clockwise, tick | `{ok, events}` |
+| `remove(q, r)` | any Thing is there | take it off (a piece left on open water sinks), tick | `{ok, events}` |
+| `wait()` | always | tick | `{ok, events}` |
 
 Illegal → `{ ok:false }` and nothing changed (hand and `Rando` included).
 
@@ -330,9 +363,10 @@ Illegal → `{ ok:false }` and nothing changed (hand and `Rando` included).
 | Event | Fields |
 |---|---|
 | `move` | `id, path: [{q,r}…]` — every hex entered, in order, including slides |
-| `sink` | `id` (the piece is gone after its last `move`) |
+| `sink` | `id` (the piece is gone after its last `move`, or where it stood if its Bridge was removed) |
 | `deliver` | `id` |
-| `spawn` | `id, q, r` |
+| `spawn` | `id, q, r` — a new crate on the source, or a gremlin climbing out on the shore |
+| `milestone` | `count` — a milestone this tick's deliveries reached (after the tick's other events) |
 
 A piece pushed into water gets a `move` whose path ends on the water hex, then `sink`.
 

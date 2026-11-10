@@ -18,7 +18,4 @@ for (const [label, q, r] of [['a wall', 5, 4], ['an empty hex', 7, 4]]) {
     const before = snapshot(state);
     check(`${label}: ok:false, unchanged`, engine.rotate(q, r).ok === false && snapshot(state) === before);
 }
-state.gameWon = true;
-const before = snapshot(state);
-check('after a win: ok:false', engine.rotate(3, 4).ok === false && snapshot(state) === before);
 done();

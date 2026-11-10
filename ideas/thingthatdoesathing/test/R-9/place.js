@@ -1,6 +1,6 @@
 // R-9: a legal place() appends {kind, q, r, facing} (facing null for fixtures), refills that
 // hand slot so the hand stays HAND_SIZE, and ticks once. Illegal (bad slot, bad facing for a
-// mover, illegal hex, game won) → {ok:false} and nothing changes, Rando included.
+// mover, illegal hex) → {ok:false} and nothing changes, Rando included.
 'use strict';
 const { check, done } = require('../helpers/check');
 const { flatGame, snapshot } = require('../helpers/load');
@@ -35,7 +35,4 @@ for (const [label, card, args] of illegal) {
     check(`${label}: ok:false, unchanged, Rando untouched`,
         res2.ok === false && snapshot(state) === before && next === expect);
 }
-state.gameWon = true; state.hand[0] = 'BELT';
-const before = snapshot(state);
-check('after a win: ok:false, unchanged', engine.place(0, 7, 4, 0).ok === false && snapshot(state) === before);
 done();

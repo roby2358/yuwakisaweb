@@ -17,7 +17,6 @@ const GameState = (function () {
             this.lost = 0;            // crates sunk
             this.spawnTimer = 0;      // ticks since the source last spawned
             this.nextId = 1;
-            this.gameWon = false;
             this.phase = 'player';    // 'player' | 'tick'
         }
     }

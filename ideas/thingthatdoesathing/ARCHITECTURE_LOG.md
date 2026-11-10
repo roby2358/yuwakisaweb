@@ -2,6 +2,50 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-10 — Drowned gremlins re-emerge on the shore
+The designer asked that a gremlin falling into the ocean be replaced by a new one on an
+edge hex. This settles **Q-4** as **D-14**. `PIECES` gained `reemerges` (gremlin yes,
+crate no). The new `emerge(sunkKinds)` puts a fresh gremlin (new id, palette color) on a
+random shore hex, meaning land next to an edge hex that is free and isn't the source or
+target, and emits `spawn`. It runs at the end of each tick and after `remove` sinks a
+piece. Added **R-31**; R-15's gremlin case now checks that gremlin is gone rather than
+that the board is empty. The sim moved from 191/200, median 49, p90 60 to 187/200,
+median 50, p90 69, the only change being gremlins that no longer thin out.
+
+### 2026-11-10 — Endless milestones replace the win; Go/Pause button
+The designer asked for goals of 10, 20, 50, 100, "and keep going from there, 200, 500,
+1000". The win at `DELIVER_GOAL` (5) is gone, along with `gameWon`, the `won` result flag,
+the "after a win" refusals and the victory card. `FIRST_MILESTONE` (10) and
+`nextMilestone(n)` (the 1-2-5 series, no last one) replace them, and a tick that reaches a
+milestone emits `milestone{count}` (D-2 rewritten). The client shows a banner that hides on
+its own. **R-20 retired**, **R-30** added, R-9/R-10/R-11/R-29 lose their won cases, U-8/U-10/
+U-11 updated.
+The designer also asked for a green Go/Pause button in the top centre (D-13, U-13). It
+calls `wait()` `RUN_GAP_MS` after each animation and holds while a card is picked; picking
+now works mid-animation so you can step in. `uiboot.js` got a fake `setTimeout` and drives
+it. The sim now measures turns to the first milestone, which is twice the old goal, so its
+numbers aren't comparable to before: 191/200, median 49, p90 60.
+
+### 2026-11-10 — Colored isometric crates; gremlin counters show 👹
+At the designer's request, with colored crates in mind for later, each crate now gets a
+`color` from `CRATE_COLORS` (red, green, blue, yellow) when it spawns, through the new
+`spawnCrate()` (`Rando.choice`). No rule reads it yet. The client draws crates as a
+shaded isometric box from `CRATE_SHADES` and dispatches piece drawing via `PIECE_DRAW`;
+`PIECE_LOOK.crate.color` is gone. The gremlin label changed from `'G'` to `'👹'` (the
+crate's `'C'` became `'📦'`, which nothing draws now). R-19 now checks the crate color.
+The extra `Rando` draw shifts every later roll, so the sim's boards differ:
+`just cc-sim 200` gives 192/200, median 38 (was 189/200, median 36 on the old stream).
+This isn't a balance change.
+
+### 2026-11-10 — `D` removes a placed Thing
+The designer asked for a way to delete a placed item. That replaces the left-out rule that
+Things are permanent once placed. The new `remove(q, r)` command takes any Thing off the
+board and ticks once, and the card isn't refunded (D-12). A piece left on open water by a
+removed Bridge sinks before the tick, so its `sink` event has no `move` before it, and the
+client fades it where it stood. Added R-29 and U-12; R-25 now covers `remove`. The smoke
+walkthrough also plays random removes now. Q-3 (discarding hand cards) is still open,
+since removal spends a placed Thing, not a card in hand.
+
 ### 2026-11-10 — Coding-conventions pass: templates for pieces, no default parameters
 A review against the coding conventions found kind checks scattered through the code,
 default parameters, and duplicated helpers. This was a refactor with no rule changes:

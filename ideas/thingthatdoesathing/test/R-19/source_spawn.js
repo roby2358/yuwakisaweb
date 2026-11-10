@@ -1,6 +1,6 @@
 // R-19: each tick raises spawnTimer; once it reaches SOURCE_INTERVAL and the source is
 // empty, a crate appears there and the timer resets. While the source is occupied the
-// timer keeps counting and the spawn waits.
+// timer keeps counting and the spawn waits. Each spawned crate gets a CRATE_COLORS color.
 'use strict';
 const { check, done } = require('../helpers/check');
 const { flatGame } = require('../helpers/load');
@@ -20,4 +20,6 @@ check('while the source is occupied, no new crate; timer keeps counting',
 c.moveTo(0, 4);
 engine.wait();
 check('the moment it clears, the waiting crate spawns', crates().length === 2 && state.spawnTimer === 0);
+const { CRATE_COLORS } = g.GameArtifacts;
+check('every spawned crate has a CRATE_COLORS color', crates().every(p => CRATE_COLORS.includes(p.color)));
 done();

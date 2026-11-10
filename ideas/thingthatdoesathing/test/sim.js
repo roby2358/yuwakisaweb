@@ -3,8 +3,9 @@
 // A greedy builder bot: lay belts along the shortest land path from source to target,
 // facing each one at the next hex. A spring stands in for a belt on a straight run of 3.
 // Pullers, walls and bridges are discarded (the bot doesn't plan pulls).
-// Walls and bridges are dumped somewhere harmless (a discard). Reports turns to win.
-// Not a test (no pass/fail); it's the evidence behind DELIVER_GOAL and friends.
+// Walls and bridges are dumped somewhere harmless (a discard). Reports turns to the first
+// milestone (FIRST_MILESTONE crates). Not a test (no pass/fail); it's the evidence behind
+// FIRST_MILESTONE, SOURCE_INTERVAL and friends.
 'use strict';
 
 const { newGame } = require('./helpers/load');
@@ -40,9 +41,10 @@ const results = [];
 let lostTotal = 0;
 for (let i = 0; i < GAMES; i++) {
     const { g, state, engine } = newGame(5000 + i);
+    const goal = g.GameArtifacts.FIRST_MILESTONE;
     const path = shortestPath(engine, g, state.source, state.target);
     let res = { ok: true };
-    while (!state.gameWon && state.turn < CAP) {
+    while (state.delivered < goal && state.turn < CAP) {
         // Next path hex (excluding the target) that has no mover facing the right way.
         let todo = -1;
         for (let j = 0; j < path.length - 1; j++) {
@@ -90,12 +92,12 @@ for (let i = 0; i < GAMES; i++) {
         }
         if (!done) res = engine.wait();
     }
-    results.push(state.gameWon ? state.turn : CAP);
+    results.push(state.delivered >= goal ? state.turn : CAP);
     lostTotal += state.lost;
 }
 
 results.sort((a, b) => a - b);
 const q = p => results[Math.floor(p * (results.length - 1))];
 const wins = results.filter(t => t < CAP).length;
-console.log(`games ${GAMES}  won ${wins}  turns p10 ${q(0.1)}  median ${q(0.5)}  p90 ${q(0.9)}  ` +
+console.log(`games ${GAMES}  reached first milestone ${wins}  turns p10 ${q(0.1)}  median ${q(0.5)}  p90 ${q(0.9)}  ` +
     `crates lost/game ${(lostTotal / GAMES).toFixed(2)}`);

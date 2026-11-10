@@ -15,18 +15,39 @@ ARCHITECTURE_LOG.md.
   repair or an extension of a live machine. It also reuses the base's turn engine.
 - **Evidence:** R-9, R-10, R-11 (each command runs exactly one tick).
 
-### D-2 Win by delivering `DELIVER_GOAL` crates; no time limit; score is turns — *Decided*
-- **Alternatives:** deliver one crate; deliver N before turn T; drown every gremlin.
-- **Why:** N crates turns the puzzle into a factory: the first crate proves the line, the
-  rest test whether it keeps working with gremlins wandering through. Leaving out a time
-  limit keeps the mood tinkery, not panicky.
-- **Evidence:** R-16, R-20.
+### D-2 Endless milestones (10, 20, 50, 100, 200, 500, 1000, …); no end, no time limit — *Decided*
+- **Alternatives:** win at a fixed N crates; pick N at game start; deliver N before turn T;
+  drown every gremlin.
+- **Why:** the designer wanted the factory to keep going. The first milestone proves the
+  line, and the later ones test whether it keeps working with gremlins wandering through,
+  at scales where a small leak matters. The 1-2-5 series keeps milestones coming at a
+  steady feel as the numbers grow. Leaving out a time limit and an end keeps the mood
+  tinkery, not panicky; the score is the turn each milestone was reached.
+- **Evidence:** R-16, R-30.
+
+### D-13 Go/Pause runs the ticks for you — *Decided (Go), Proposed (gap, hold on pick)*
+- **Alternatives:** Wait only; a fast-forward that skips animations.
+- **Why:** with endless milestones, a working line needs hundreds of Waits. Go issues them,
+  one animation after another, `RUN_GAP_MS` apart. It is pure client: every tick is still
+  an ordinary `wait()`, so D-1 holds. Picking a card holds the run so you can aim and
+  place without racing the clock; the placement ticks and the run resumes.
+- **Evidence:** U-13 (manual); `uiboot.js` drives Go, the hold, and Pause.
 
 ### D-3 Small board, `MAP_COLS × MAP_ROWS`, fits one screen — *Decided*
 - **Alternatives:** the base's 60×40; a medium board with panning.
 - **Why:** G-2. The whole contraption is visible at once, so cause and effect are never
   off-screen.
 - **Evidence:** U-2 (manual).
+
+### D-12 `D` removes a placed Thing; it ticks, and the card is spent — *Decided (remove), Proposed (tick, no refund)*
+- **Alternatives:** no removal (permanence as the puzzle); undo of the last command;
+  removal that returns the card to the hand; removal as a free action that doesn't tick.
+- **Why:** the designer asked for it. A misplaced Wall or Bridge had no fix at all, and a
+  stray Belt could only be turned. Ticking keeps D-1 whole: every command runs the world
+  once, so a removal costs a turn like everything else. Spending the card keeps it from
+  becoming a free way to cycle the hand. Removing a Bridge from under a piece drops it in
+  the water. That's the step rule, and it's comedy.
+- **Evidence:** R-29.
 
 ---
 
@@ -70,8 +91,8 @@ ARCHITECTURE_LOG.md.
 - **Why:** scarcity of agency. You build with what you're dealt, so a Puller in hand
   invites a side-feed you wouldn't have planned. Belts are weighted heaviest so the plain
   solution is always reachable.
-- **Evidence:** `Measured by: node test/sim.js 200` → 189/200 won, median 36 turns, p90
-  52, 0.14 crates lost per game. The bot lays belts and Springs and discards Pullers facing
+- **Evidence:** `Measured by: node test/sim.js 200` → 187/200 reach the first milestone,
+  median 50 turns, p90 69, 0.20 crates lost per game. The bot lays belts and Springs and discards Pullers facing
   away from its path, so this measures boards and hand pacing, not Puller play. To be
   checked by playtest (X-2, X-4).
 
@@ -81,8 +102,20 @@ ARCHITECTURE_LOG.md.
   gremlin in the way is a wall until it moves on. They avoid open water on their own, but
   ice and your belts can still drown them.
 - **Evidence:** R-18; X-1 shows the bot still finishes most boards with gremlins around
-  (`node test/sim.js 200` → 189/200; the misses include the bot walling gremlins in on its
+  (`node test/sim.js 200` → 187/200 reach the first milestone; the misses include the bot walling gremlins in on its
   own path).
+
+---
+
+### D-14 A drowned gremlin is replaced by a new one on the shore — *Decided*
+- **Alternatives:** gremlins stay drowned; respawn on a timer; respawn where it sank.
+- **Why:** the designer asked for it. Without it gremlins drown over a long game and the
+  endless factory (D-2) goes quiet. Drowning one is still worth it: the newcomer turns
+  up somewhere else, a fresh color, often far from your line. The shore (land next to the
+  outer water) reads as "climbed out of the sea". A full or walled-off shore keeps it
+  drowned, so fencing the coast is a real, if expensive, answer.
+- **Evidence:** R-31. `node test/sim.js 200` → 187/200 reach the first milestone, median
+  50, p90 69 (with gremlins staying drowned it was 191/200, median 49, p90 60).
 
 ---
 
@@ -115,9 +148,7 @@ ARCHITECTURE_LOG.md.
   click costs a tick. *Recommendation:* keep it; a tick is cheap with no time limit.
 - **Q-3 Discarding.** An unwanted card can only be dumped by building it somewhere
   harmless. *Recommendation:* keep it until it feels bad; an explicit discard is easy to add.
-- **Q-4 Should gremlins respawn?** They drown over a game, so late game gets quiet.
-  *Recommendation:* playtest first.
 
 ## Deliberately left out
-- Undo and picking a Thing back up (non-goal; permanence is part of the puzzle).
-- A defeat condition and a time limit (D-2).
+- Undo, and getting a removed Thing's card back (D-12: removal costs the card and a turn).
+- A defeat condition, a time limit, and an end (D-2).

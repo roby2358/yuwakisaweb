@@ -1,6 +1,6 @@
 // R-25: every command returns an object with a boolean ok; newGame returns {ok:true} for a
 // seed and {ok:false} (state untouched) without one; every ok:true from place/rotate/wait
-// carries an events array.
+// carries an events array (remove included).
 'use strict';
 const { check, done } = require('../helpers/check');
 const { newGame, DIR, snapshot } = require('../helpers/load');
@@ -15,7 +15,9 @@ const [key] = engine.legalPlacements(state.hand[0]);
 const [q, r] = key.split(',').map(Number);
 shapes.push(engine.place(0, q, r, DIR.E));
 shapes.push(engine.rotate(q, r));
+shapes.push(engine.remove(q, r));
 shapes.push(engine.rotate(99, 99));
+shapes.push(engine.remove(99, 99));
 shapes.push(engine.place(9, 0, 0, 0));
 check('every result has a boolean ok', shapes.every(s => typeof s.ok === 'boolean'));
 check('every ok:true carries events[]', shapes.filter(s => s.ok).every(s => Array.isArray(s.events)));

@@ -10,6 +10,8 @@ const GameDisplayArtifacts = (function () {
         HEX_SIZE: 34,
         COUNTER_SIZE: 30,
         HOP_MS: 140,                 // ms per animated hop in a tick
+        RUN_GAP_MS: 250,             // Go: pause between ticks, so a card can still be picked
+        MILESTONE_MS: 3500,          // how long the milestone banner stays up
         TERRAIN_COLORS: {
             [T.WATER]: '#2a6faa',
             [T.PLAINS]: '#7db344',
@@ -31,11 +33,17 @@ const GameDisplayArtifacts = (function () {
             WALL:    { name: 'Wall',    does: 'nothing gets in',                          fill: '#8a5a3c', ink: '#5c3a24', inset: 1 },
             BRIDGE:  { name: 'Bridge',  does: 'water you can cross (build on water)',     fill: '#a07a4a', ink: '#6b4f2c', inset: 0.84 },
         },
-        // Per-piece look: hover name, and a display color for pieces with none of their own
-        // (gremlins carry a seeded color in state; crates don't).
+        // Per-piece hover name. Gremlins carry their own counter color in state.
         PIECE_LOOK: {
-            crate:   { name: 'Crate',             color: '#d8b07a' },
-            gremlin: { name: 'Gremlin — wanders', color: null },
+            crate:   { name: 'Crate' },
+            gremlin: { name: 'Gremlin — wanders' },
+        },
+        // Isometric crate faces per CRATE_COLORS name: lit top, mid left, dark right.
+        CRATE_SHADES: {
+            red:    { top: '#ff7a6b', left: '#d83a2e', right: '#8e1f18' },
+            green:  { top: '#8ff08a', left: '#3fbf45', right: '#22762a' },
+            blue:   { top: '#8ec4ff', left: '#3d7fe0', right: '#204a8e' },
+            yellow: { top: '#fff08a', left: '#e8c230', right: '#9a7a12' },
         },
         SOURCE_COLOR: '#4ce08a',
         TARGET_COLOR: '#ff6600',

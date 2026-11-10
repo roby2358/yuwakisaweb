@@ -28,12 +28,27 @@ const GameArtifacts = (function () {
     };
 
     // Piece templates, keyed by Piece.kind:
-    //   label   — the counter's glyph
+    //   label   — the counter's glyph (gremlins; crates draw as a box)
     //   cargo   — delivered on reaching the target; counted as lost when it sinks
-    //   wanders — takes a random step on a tick when no Thing moved it
+    //   wanders   — takes a random step on a tick when no Thing moved it
+    //   reemerges — when one sinks, a new one climbs out on a shore hex at the end of the tick
     const PIECES = {
-        crate:   { label: 'C', cargo: true,  wanders: false },
-        gremlin: { label: 'G', cargo: false, wanders: true },
+        crate:   { label: '📦', cargo: true,  wanders: false, reemerges: false },
+        gremlin: { label: '👹', cargo: false, wanders: true,  reemerges: true },
+    };
+
+    // A crate's color, rolled when it spawns. Only the display reads it today.
+    const CRATE_COLORS = ['red', 'green', 'blue', 'yellow'];
+
+    // The next milestone above `delivered`: 10, 20, 50, 100, 200, 500, 1000, … (the 1-2-5
+    // series from FIRST_MILESTONE). There's no last one; the factory runs forever.
+    const FIRST_MILESTONE = 10;   // crates
+    const MILESTONE_STEPS = [1, 2, 5];
+    const nextMilestone = delivered => {
+        for (let decade = FIRST_MILESTONE; ; decade *= 10) {
+            const m = MILESTONE_STEPS.map(k => k * decade).find(v => v > delivered);
+            if (m !== undefined) return m;
+        }
     };
 
     // Does this kind of Thing have a facing (it pushes or pulls)? Only those can be turned.
@@ -43,7 +58,9 @@ const GameArtifacts = (function () {
         TERRAIN,
         THINGS,
         PIECES,
+        CRATE_COLORS,
         aims,
+        nextMilestone,
         // Passability for Board: land is enterable, water and mountain are not. Water
         // still *accepts* a pushed piece (it sinks); that's the step rule, not this table.
         MOVEMENT_COST: {
@@ -55,7 +72,7 @@ const GameArtifacts = (function () {
         MAP_COLS: 16,
         MAP_ROWS: 10,
 
-        DELIVER_GOAL: 5,             // crates to win
+        FIRST_MILESTONE,
         SOURCE_INTERVAL: 3,          // ticks between crates (if the source is clear)
         HAND_SIZE: 3,
         GREMLIN_DICE_COUNT: 1,       // gremlins = count d sides

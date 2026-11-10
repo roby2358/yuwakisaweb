@@ -60,6 +60,16 @@ const seededMath = Object.create(Math, { random: { value: () => {   // mulberry3
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 } } });
+// setTimeout runs on the same fake clock: a timer fires once `clock` passes its due time.
+let timers = [];
+let timerId = 0;
+const fakeSetTimeout = (fn, ms) => { timers.push({ id: ++timerId, due: clock + ms, fn }); return timerId; };
+const fakeClearTimeout = id => { timers = timers.filter(t => t.id !== id); };
+const fireDueTimers = () => {
+    const due = timers.filter(t => t.due <= clock);
+    timers = timers.filter(t => t.due > clock);
+    due.forEach(t => t.fn());
+};
 const windowListeners = {};
 const ctx = vm.createContext({
     console, document, Math: seededMath, JSON, Number, String, Array, Map, Set, Object, Proxy, parseInt, Float64Array,
@@ -69,6 +79,7 @@ const ctx = vm.createContext({
     },
     performance: { now: () => clock },
     requestAnimationFrame: fn => rafQueue.push(fn),
+    setTimeout: fakeSetTimeout, clearTimeout: fakeClearTimeout,
     AudioContext: undefined,
 });
 // GameSound needs an AudioContext; give it a silent one.
@@ -108,6 +119,15 @@ const settle = () => {
         q.forEach(fn => fn(clock - 60));
     }
 };
+// Advance the clock `ms`, firing animation frames and timers as a browser would.
+const advance = ms => {
+    for (let t = 0; t < ms; t += 50) {
+        clock += 50;
+        const q = rafQueue; rafQueue = [];
+        q.forEach(fn => fn(clock - 60));
+        fireDueTimers();
+    }
+};
 
 const run = (label, fn) => {
     try { fn(); check(label, true); } catch (e) { check(label + ': ' + e.stack, false); }
@@ -134,6 +154,16 @@ run('placing a Thing ticks and animates to completion', () => {
     if (s.turn !== turn + 1) throw new Error('no tick');
     if (ui.anim) throw new Error('animation never finished');
 });
+run('D removes the hovered Thing and ticks', () => {
+    const s = ui.state, turn = s.turn;
+    const t = s.things[s.things.length - 1];
+    const { x, y } = ui.hexToScreen(t.q, t.r);
+    canvas.fire('mousemove', { clientX: x, clientY: y });
+    key('d');
+    settle();
+    if (ui.engine.thingAt(t.q, t.r)) throw new Error('Thing still there');
+    if (s.turn !== turn + 1) throw new Error('no tick');
+});
 run('a hand card button click picks it', () => {
     const btn = els.hand.children[1];
     btn.fire('click');
@@ -157,11 +187,12 @@ run('input is ignored mid-animation', () => {
 });
 
 // Play a full game through the UI: the sim bot's plan, executed with clicks.
-run('a whole game plays through the UI to the victory card', () => {
+run('a game plays through the UI to the first milestone banner', () => {
     // Fresh board: earlier steps dropped random Things that this bot can't plan around.
     els['new-game'].fire('click'); key(' ');
     const s = ui.state, e = ui.engine;
-    for (let i = 0; i < 2000 && !s.gameWon; i++) {
+    const goal = vm.runInContext('GameArtifacts.FIRST_MILESTONE', ctx);
+    for (let i = 0; i < 2000 && s.delivered < goal; i++) {
         // Lay belts toward the target along a BFS path, else wait.
         const prev = new Map([[s.source.q + ',' + s.source.r, null]]);
         const queue = [s.source];
@@ -201,11 +232,37 @@ run('a whole game plays through the UI to the victory card', () => {
         if (!acted) key(' ');
         settle();
     }
-    if (!s.gameWon) throw new Error('no win in 2000 commands: ' + JSON.stringify({ src: s.source, tgt: s.target, things: s.things, pieces: s.pieces.map(p => [p.kind, p.q, p.r]), d: s.delivered, turn: s.turn, hand: s.hand }));
-    if (ui.overlay !== 'victory') throw new Error('no victory card');
-    key(' ');
-    if (ui.overlay) throw new Error('victory card did not dismiss');
-    clickHex(s.source.q, s.source.r);   // view-only now: must not throw or tick
+    if (s.delivered < goal) throw new Error('no milestone in 2000 commands: ' + JSON.stringify({ src: s.source, tgt: s.target, things: s.things, pieces: s.pieces.map(p => [p.kind, p.q, p.r]), d: s.delivered, turn: s.turn, hand: s.hand }));
+    const banner = els.milestone.classList.set;
+    if (banner.has('hidden') || els['milestone-title'].textContent !== 'IT DOES THE THING') throw new Error('no milestone banner');
+    if (ui.overlay) throw new Error('a milestone must not stop play');
+    const turn = s.turn;
+    key(' '); settle();
+    if (s.turn !== turn + 1) throw new Error('play did not go on past the milestone');
+    advance(4000);
+    if (!banner.has('hidden')) throw new Error('banner never hid');
+});
+run('Go ticks on its own, holds while a card is picked, and Pause stops it', () => {
+    els['new-game'].fire('click'); key(' ');
+    const s = ui.state;
+    els.go.fire('click');
+    if (els.go.textContent !== 'Pause') throw new Error('button did not flip to Pause');
+    advance(3000);
+    const ran = s.turn;
+    if (ran < 4) throw new Error('only reached turn ' + ran);
+    key('1');
+    settle(); advance(1000);
+    const held = s.turn;
+    advance(1000);
+    if (s.turn !== held) throw new Error('ticked while a card was picked');
+    key('Escape');
+    advance(1000);
+    if (s.turn === held) throw new Error('did not resume after the card went back');
+    els.go.fire('click');
+    settle();
+    const paused = s.turn;
+    advance(2000);
+    if (s.turn !== paused || els.go.textContent !== 'Go') throw new Error('Pause did not stop it');
 });
 run('New Game resets', () => {
     els['new-game'].fire('click');

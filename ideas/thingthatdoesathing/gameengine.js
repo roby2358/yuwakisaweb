@@ -1,14 +1,14 @@
 // gameengine.js — GameEngine
 //
 // All game rules and world generation, operating on a GameState. DOM-free and render-free:
-// commands mutate state and *return outcomes* ({ ok, events, won? }); the client decides
+// commands mutate state and *return outcomes* ({ ok, events }); the client decides
 // what to animate. This is the half that would run server-side unchanged.
 //
 // Every command re-checks its own legality (never trust the client) and every legal
 // command runs exactly one tick. All randomness goes through the seeded Rando.
 const GameEngine = (function () {
     const {
-        TERRAIN, THINGS, PIECES, aims, MAP_COLS, MAP_ROWS, DELIVER_GOAL, SOURCE_INTERVAL, HAND_SIZE,
+        TERRAIN, THINGS, PIECES, CRATE_COLORS, aims, nextMilestone, MAP_COLS, MAP_ROWS, SOURCE_INTERVAL, HAND_SIZE,
         GREMLIN_DICE_COUNT, GREMLIN_DICE_SIDES,
         GEN_MAX_ATTEMPTS, KNOWN_GOOD_SEED, HEIGHTMAP_SIZE, HEIGHTMAP_ROUGHNESS,
         WATER_PCT, MOUNTAIN_PCT, ICE_FRAC, PLACE_SLICE_FRAC, PLACE_SLICE_MIN
@@ -65,14 +65,13 @@ const GameEngine = (function () {
             s.things = [];
             s.pieces = [];
             s.nextId = 1;
-            this.addPiece('crate', s.source.q, s.source.r, null);
+            this.spawnCrate();
             this.spawnGremlins();
             s.hand = Array.from({ length: HAND_SIZE }, () => this.draw());
             s.turn = 1;
             s.delivered = 0;
             s.lost = 0;
             s.spawnTimer = 0;
-            s.gameWon = false;
             s.phase = 'player';
             return { ok: true };
         }
@@ -189,6 +188,11 @@ const GameEngine = (function () {
             return p;
         }
 
+        spawnCrate() {
+            const s = this.state;
+            return this.addPiece('crate', s.source.q, s.source.r, Rando.choice(CRATE_COLORS));
+        }
+
         spawnGremlins() {
             const s = this.state;
             let count = 0;
@@ -200,6 +204,29 @@ const GameEngine = (function () {
                 const [r, g, b] = scheme[i % scheme.length];
                 this.addPiece('gremlin', candidates[i].q, candidates[i].r, ColorTheory.rgbToHex(r, g, b));
             }
+        }
+
+        // Land hexes next to the outer water (an edge hex) that a piece could stand on.
+        shoreHexes() {
+            const s = this.state;
+            return this.board.passableHexes().filter(h =>
+                this.canEnter(h) && !Hex.same(h, s.source) && !Hex.same(h, s.target) &&
+                this.board.neighbors(h.q, h.r).some(n => n.isEdge));
+        }
+
+        // For each sunk kind that reemerges, a new one (fresh color, new id) climbs out on a
+        // random shore hex. None if the shore is full. Returns the spawn events.
+        emerge(sunkKinds) {
+            const events = [];
+            for (const kind of sunkKinds.filter(k => PIECES[k].reemerges)) {
+                const shore = this.shoreHexes();
+                if (!shore.length) break;
+                const h = Rando.choice(shore);
+                const [r, g, b] = Rando.choice(ColorTheory.randomScheme(() => Rando.random()));
+                const p = this.addPiece(kind, h.q, h.r, ColorTheory.rgbToHex(r, g, b));
+                events.push({ type: 'spawn', id: p.id, q: p.q, r: p.r });
+            }
+            return events;
         }
 
         // A kind drawn with probability weight / total weight.
@@ -233,6 +260,12 @@ const GameEngine = (function () {
             s.pieces.splice(s.pieces.indexOf(piece), 1);
         }
 
+        // A piece goes into open water: gone, and counted as lost if it was cargo.
+        sink(piece) {
+            this.removePiece(piece);
+            if (PIECES[piece.kind].cargo) this.state.lost++;
+        }
+
         // The board hex one step from `at` in `dir` (undefined off the map).
         neighborHex(at, dir) {
             const d = NEIGHBOR_DIRS[dir];
@@ -252,8 +285,7 @@ const GameEngine = (function () {
                 return 'delivered';
             }
             if (this.isOpenWater(hex)) {
-                this.removePiece(piece);
-                if (cargo) s.lost++;
+                this.sink(piece);
                 return 'sank';
             }
             return 'moved';
@@ -306,6 +338,8 @@ const GameEngine = (function () {
         tick() {
             const s = this.state;
             s.phase = 'tick';
+            const deliveredBefore = s.delivered;
+            const kindOf = new Map(s.pieces.map(p => [p.id, p.kind]));
             const events = [];
             const moved = new Set();
 
@@ -325,22 +359,28 @@ const GameEngine = (function () {
 
             s.spawnTimer++;
             if (s.spawnTimer >= SOURCE_INTERVAL && !this.pieceAt(s.source.q, s.source.r)) {
-                const c = this.addPiece('crate', s.source.q, s.source.r, null);
+                const c = this.spawnCrate();
                 s.spawnTimer = 0;
                 events.push({ type: 'spawn', id: c.id, q: c.q, r: c.r });
             }
 
+            const drowned = events.filter(e => e.type === 'sink').map(e => kindOf.get(e.id));
+            events.push(...this.emerge(drowned));
+
+            // One milestone event per milestone this tick's deliveries reached.
+            for (let m = nextMilestone(deliveredBefore); m <= s.delivered; m = nextMilestone(m)) {
+                events.push({ type: 'milestone', count: m });
+            }
+
             s.turn++;
-            s.gameWon = s.delivered >= DELIVER_GOAL;
             s.phase = 'player';
-            return s.gameWon ? { ok: true, events, won: true } : { ok: true, events };
+            return { ok: true, events };
         }
 
         // ---- Commands (every one returns { ok, ... }; ok:false = illegal, unchanged) ----
 
         place(slot, q, r, facing) {
             const s = this.state;
-            if (s.gameWon) return { ok: false };
             if (!Number.isInteger(slot) || slot < 0 || slot >= s.hand.length) return { ok: false };
             const kind = s.hand[slot];
             const aimed = aims(kind);
@@ -352,15 +392,29 @@ const GameEngine = (function () {
         }
 
         rotate(q, r) {
-            if (this.state.gameWon) return { ok: false };
             const thing = this.thingAt(q, r);
             if (!thing || !aims(thing.kind)) return { ok: false };
             thing.facing = Hex.clockwise(thing.facing);
             return this.tick();
         }
 
+        // Take a placed Thing off the board. The card is spent: nothing returns to the hand.
+        remove(q, r) {
+            const s = this.state;
+            const thing = this.thingAt(q, r);
+            if (!thing) return { ok: false };
+            s.things.splice(s.things.indexOf(thing), 1);
+            // A piece left standing on open water (its Bridge is gone) sinks before the tick.
+            const piece = this.pieceAt(q, r);
+            const adrift = piece && this.isOpenWater(this.board.get(q, r));
+            if (adrift) this.sink(piece);
+            const res = this.tick();
+            if (adrift) res.events.unshift({ type: 'sink', id: piece.id });
+            if (adrift) res.events.push(...this.emerge([piece.kind]));
+            return res;
+        }
+
         wait() {
-            if (this.state.gameWon) return { ok: false };
             return this.tick();
         }
     }
