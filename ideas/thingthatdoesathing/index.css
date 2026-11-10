@@ -1,0 +1,205 @@
+/* Palette and type. The font stack is mirrored by GameDisplayArtifacts.UI_FONT for the
+   canvas-drawn text (the victory card), and --bg by the canvas clear color in GameUI. */
+:root {
+    --bg: #0e1116;
+    --panel: rgba(16, 20, 26, 0.82);
+    --panel-border: rgba(255, 255, 255, 0.09);
+    --text: #e8e6e1;
+    --text-dim: #9aa0a8;
+    --accent: #ffd633;          /* the reachable-hex yellow */
+    --accent-ink: #1a1a1a;
+    --btn: #2a313b;
+    --btn-hover: #36404c;
+    --radius: 8px;
+    --shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.4 var(--font);
+}
+#game { display: block; cursor: default; }
+.hidden { display: none !important; }
+
+/* Shared look for every floating panel: HUD bars and the intro card. */
+.panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(6px);
+}
+
+/* Two stacked bars: a static top line (turn / progress / buttons) and a second
+   line for the mouse-over readout, so hover text can never shift the buttons. */
+#hud-stack {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    z-index: 10;
+    user-select: none;
+}
+#hud {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 8px 10px 8px 14px;
+}
+#turn-info {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    min-width: 58px;
+}
+#hud-hover {
+    padding: 4px 12px;
+    font-size: 13px;
+    color: var(--text-dim);
+}
+#hover-info { font-variant-numeric: tabular-nums; }
+
+/* "Progress to end" meter — fills as P nears the target hex. */
+#progress { display: flex; align-items: center; gap: 8px; }
+.progress-label { color: var(--text-dim); font-size: 13px; }
+#progress-bar {
+    width: 120px;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    overflow: hidden;
+}
+#progress-fill {
+    display: block;
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    border-radius: inherit;
+    transition: width 0.25s ease;
+}
+#progress-pct {
+    color: var(--accent);
+    min-width: 36px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.buttons { display: flex; gap: 6px; }
+.btn {
+    font: inherit;
+    font-size: 13px;
+    color: var(--text);
+    background: var(--btn);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: background 0.12s ease, transform 0.06s ease;
+}
+.btn:hover { background: var(--btn-hover); }
+.btn:active { transform: translateY(1px); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn.primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: transparent;
+    font-weight: 600;
+}
+.btn.primary:hover { background: #ffe066; }
+
+/* Intro card. */
+#intro-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(360px, calc(100vw - 32px));
+    padding: 24px 28px;
+    text-align: center;
+    z-index: 20;
+}
+#intro-panel h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    margin-bottom: 10px;
+}
+#intro-panel p { color: var(--text-dim); margin-bottom: 14px; }
+#intro-panel p strong { color: var(--text); }
+.keys {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px 12px;
+    text-align: left;
+    font-size: 13px;
+    color: var(--text-dim);
+    margin: 0 auto 20px;
+    width: fit-content;
+}
+kbd {
+    font: 12px/1 var(--font);
+    color: var(--text);
+    background: var(--btn);
+    border: 1px solid var(--panel-border);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    padding: 2px 6px;
+}
+#intro-panel .btn { padding: 7px 28px; font-size: 14px; }
+
+#lost-info { color: #ff8a7a; font-size: 13px; font-variant-numeric: tabular-nums; }
+#intro-panel .src { color: #4ce08a; }      /* SOURCE_COLOR */
+#intro-panel .tgt { color: #ff6600; }      /* TARGET_COLOR */
+#intro-panel { width: min(420px, calc(100vw - 32px)); }
+
+/* The hand: three cards along the bottom. */
+#hand {
+    position: fixed;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    padding: 8px;
+    z-index: 10;
+    user-select: none;
+}
+.card {
+    position: relative;
+    display: grid;
+    grid-template-columns: 64px 140px;
+    grid-template-rows: auto 1fr;
+    column-gap: 8px;
+    align-items: center;
+    text-align: left;
+    font: inherit;
+    color: var(--text);
+    background: var(--btn);
+    border: 2px solid transparent;
+    border-radius: 8px;
+    padding: 6px 10px 6px 6px;
+    cursor: pointer;
+    transition: background 0.12s ease, transform 0.08s ease, border-color 0.12s ease;
+}
+.card canvas { grid-row: 1 / 3; width: 64px; height: 64px; }
+.card .name { font-weight: 600; font-size: 14px; align-self: end; }
+.card .does { font-size: 12px; color: var(--text-dim); align-self: start; line-height: 1.3; }
+.card kbd { position: absolute; top: 4px; right: 6px; font-size: 10px; padding: 1px 4px; }
+.card:hover { background: var(--btn-hover); }
+.card.picked { border-color: var(--accent); transform: translateY(-4px); background: var(--btn-hover); }
+.card:disabled { opacity: 0.5; cursor: default; }
+.card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@media (max-width: 760px) {
+    .card { grid-template-columns: 48px; grid-template-rows: auto; padding: 4px; }
+    .card canvas { width: 48px; height: 48px; grid-row: auto; }
+    .card .does { display: none; }
+}

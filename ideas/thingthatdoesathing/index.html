@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thing Factory</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <canvas id="game"></canvas>
+    <div id="hud-stack">
+        <div id="hud" class="panel">
+            <span id="turn-info">Turn 1</span>
+            <span id="progress">
+                <span class="progress-label">Delivered</span>
+                <span id="progress-bar"><span id="progress-fill"></span></span>
+                <span id="progress-pct">0 / 5</span>
+            </span>
+            <span id="lost-info"></span>
+            <span class="buttons">
+                <button id="end-turn" class="btn primary" title="Let it run one tick (Space)">Wait</button>
+                <button id="new-game" class="btn">New Game</button>
+            </span>
+        </div>
+        <div id="hud-hover" class="panel hidden"><span id="hover-info"></span></div>
+    </div>
+    <div id="hand" class="panel"></div>
+    <div id="intro-panel" class="panel">
+        <h1>Thing Factory</h1>
+        <p>Crates come out of the <strong class="src">source</strong>. Build a contraption that
+            gets <strong id="intro-goal">5</strong> of them to the <strong class="tgt">&#9733; target</strong>.
+            Every Thing does one thing, every turn. Gremlins wander in and ride along.</p>
+        <dl class="keys">
+            <dt><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></dt><dd>pick a Thing from your hand</dd>
+            <dt><kbd>R</kbd> / <kbd>Wheel</kbd></dt><dd>turn it before you place it</dd>
+            <dt><kbd>Click</kbd></dt><dd>place it (yellow hexes); the world ticks</dd>
+            <dt><kbd>Click</kbd> a mover</dt><dd>turn a placed one clockwise; ticks</dd>
+            <dt><kbd>Space</kbd></dt><dd>wait one tick</dd>
+            <dt><kbd>Esc</kbd></dt><dd>put the card back</dd>
+        </dl>
+        <button id="begin-btn" class="btn primary">Begin</button>
+    </div>
+    <!-- NOTE! We want to be able to double-click to run these games, so use plain
+    script includes (globals), not ES module imports. Order = dependency order:
+    artifacts → display artifacts → libs → piece/board → state → engine → ui → bootstrap. -->
+    <script src="artifacts.js"></script>
+    <script src="displayartifacts.js"></script>
+    <script src="rando.js"></script>
+    <script src="colortheory.js"></script>
+    <script src="hex.js"></script>
+    <script src="piece.js"></script>
+    <script src="board.js"></script>
+    <script src="sound.js"></script>
+    <script src="gamestate.js"></script>
+    <script src="gameengine.js"></script>
+    <script src="gameui.js"></script>
+    <script src="index.js"></script>
+</body>
+</html>
