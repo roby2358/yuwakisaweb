@@ -1,7 +1,7 @@
 // gamestate.js — GameState
 //
 // The authoritative, serializable game data — nothing else. No DOM, no rules behavior, no
-// view/interaction state. What a server would own and ship to clients.
+// view/interaction state.
 const GameState = (function () {
     class GameState {
         constructor() {

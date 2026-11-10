@@ -9,9 +9,9 @@ const NEIGHBOR_DIRS = [
     { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 }
 ];
 
-// A single axial hex coordinate. Pure value type: the coordinate math that used to be
-// free hex*(q, r) functions now lives here as methods, with factories for the inverse
-// directions (pixel → hex, key → hex). Methods return new Hex values rather than mutating.
+// A single axial hex coordinate. Pure value type: the coordinate math as methods, with
+// factories for the inverse directions (pixel → hex, key → hex). Methods return new Hex
+// values rather than mutating.
 class Hex {
     constructor(q, r) {
         this.q = q;

@@ -5,7 +5,7 @@
 // card, hover, pan, overlay, animation) — none of which is game state — and drives
 // GameEngine through its commands, animating each tick from the events it returns.
 //
-// Input dispatch mirrors UI_CONTROLS.md (layer citations kept): overlay → animation →
+// Input dispatch follows UI_CONTROLS.md (its layers cited as L1.2 etc.): overlay → animation →
 // picked card → bare map click. Go/Pause keeps issuing Waits between animations.
 const GameUI = (function () {
     const {
@@ -155,7 +155,7 @@ const GameUI = (function () {
             this.facing = 0;         // ghost facing; remembered between placements
             this.overlay = null;     // L5 'intro' | 'size' | null (both pick a board size)
             this.hoveredHex = null;  // L1.3
-            this.anim = null;        // { t0, dur, tracks: Map<id, track>, hidden: Set<id>, milestone }
+            this.anim = null;        // { t0, dur, tracks: Map<id, track>, before, hidden: Set<id>, milestone, ends: Set<type> }
             this.running = false;    // Go/Pause: tick on its own after each animation
             this.runTimer = null;    // the pending RUN_GAP_MS timeout, if any
             this.bannerTimer = null; // hides the milestone banner

@@ -1,12 +1,10 @@
 // sound.js — GameSound
 //
-// Client-only bleeps and boops, adapted from ../../warrior/sound.js: a 12.5% duty-cycle
-// pulse wave over a pentatonic scale. Every cue is a phrase — a list of pitches played
+// Client-only bleeps and boops: a 12.5% duty-cycle pulse wave over a pentatonic scale. Every cue is a phrase — a list of pitches played
 // as evenly spaced 100ms notes — so the cues differ only in which notes they pick.
 //
-// The AudioContext is created lazily on the first cue so it lands inside a user gesture
-// (click/keypress), which is what browsers require. Randomization uses Math.random, NOT
-// Rando: the seeded stream belongs to the engine and audio must not perturb it.
+// The AudioContext is created on the first cue, inside a user gesture (click/keypress).
+// Randomization uses Math.random, never Rando (D-9: the seeded stream is the engine's).
 const GameSound = (function () {
     const PENTATONIC = [0, 2, 4, 7, 9];
     const BASE_FREQ = 128;
@@ -37,8 +35,8 @@ const GameSound = (function () {
     }
 
     const SCALE = buildScale(BASE_FREQ, 8);
-    const STEP_NOTE = SCALE[2];        // fixed footstep pitch
-    const BLEEP = SCALE.slice(4, 8);   // high end of the scale — end-of-turn pair
+    const STEP_NOTE = SCALE[2];        // fixed turn/place pitch
+    const BLEEP = SCALE.slice(4, 8);   // high end of the scale — the Wait pair
     const FANFARE = SCALE.slice(2, 8); // wider range for the 5-beat flourish
 
     // Draw `count` pitches at random from a pool, repeats allowed.
@@ -85,9 +83,9 @@ const GameSound = (function () {
         }
 
         // ---- Cues ----
-        step() { this.phrase([STEP_NOTE]); }                    // one boop per move click
-        endTurn() { this.phrase(randomNotes(BLEEP, 2)); }        // bleep bloop
-        fanfare() { this.phrase(randomNotes(FANFARE, 5)); }      // game start and victory
+        step() { this.phrase([STEP_NOTE]); }                    // a mover turns
+        endTurn() { this.phrase(randomNotes(BLEEP, 2)); }        // Wait: bleep bloop
+        fanfare() { this.phrase(randomNotes(FANFARE, 5)); }      // game start and milestones
         place() { this.phrase([SCALE[1], STEP_NOTE]); }          // a Thing clunks down
         deliver() { this.phrase([SCALE[4], SCALE[6], SCALE[7]]); } // a crate arrives: rising
         sink() { this.phrase([SCALE[3], SCALE[0]]); }            // something goes in the drink

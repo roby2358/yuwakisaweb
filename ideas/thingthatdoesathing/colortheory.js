@@ -1,5 +1,4 @@
 // ColorTheory - Combined color utilities
-// Ported from Scala ColorWheel, Schemes, and Colors
 //
 // Scheme generation:
 //   const randomFn = () => Math.random();

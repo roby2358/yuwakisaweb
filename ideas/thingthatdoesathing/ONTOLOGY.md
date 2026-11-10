@@ -25,7 +25,7 @@ limit, board size picked at New Game]
 - **One verb per Thing** — you can predict any Thing by looking at it. [P]
 - **Comedy** — gremlins ride your belts into the sea, a Puller yanks a wandering gremlin
   into the drink, and a spring flings a crate onto ice so it skids home. Overlapping Things are allowed to do silly things. [P]
-- **Board-wargame feel** — flat hexes, chunky counters, inherited from the base. [D]
+- **Board-wargame feel** — flat hexes, chunky counters. [D]
 
 **Goals, in priority order**
 - **G-1 The contraption is the toy.** Placing a Thing should change what the machine does
@@ -82,7 +82,7 @@ everything; G-2 beats G-1 (a funny interaction that can't be read is a bug, not 
 
 ### Piece — a crate or gremlin
 *Serves:* G-1 (the things the machine moves), comedy (gremlins).
-`Piece` from the base, with two fields set by the engine. Each kind is a row of `PIECES`.
+A `Piece` (position, color, label) with two fields set by the engine. Each kind is a row of `PIECES`.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -125,16 +125,17 @@ everything; G-2 beats G-1 (a funny interaction that can't be read is a bug, not 
 | `weight` | Relative draw chance for the hand. |
 
 ### Board — query layer over `hexes`
-From the base: `get`, `has`, `moveCost`, `isPassable`, `passableHexes`, `neighbors`,
+`get`, `has`, `moveCost`, `isPassable`, `passableHexes` (non-edge only), `neighbors`,
 `hasPath`. Passable means land (plains or ice). Transient, rebuilt with the map.
 
 ### GameUI view state (client only)
 | Field | Notes |
 |---|---|
-| `picked` | `{ slot, facing, legal: Set<key> }` \| null — the hand card being placed. |
+| `picked` | `{ slot, legal: Set<key> }` \| null — the hand card being placed. |
+| `facing` | 0…5 — the ghost's facing, remembered between placements. |
 | `overlay` | `'intro'` \| `'size'` \| null. Both are size pickers; picking a size starts a game. `'size'` (New Game) also closes on Esc, back to the game. [D] |
-| `hoveredHex`, `panX/Y`, drag fields | As in the base. |
-| `anim` | `{ t0, tracks, milestone, … }` \| null — tick animation; input waits while it runs (picking a card doesn't). |
+| `hoveredHex`, `panX/Y`, drag fields | The hex under the cursor, the screen-space pan offset, and left-drag tracking (`DRAG_THRESHOLD`). |
+| `anim` | `{ t0, dur, tracks, before, hidden, milestone, ends }` \| null — tick animation; input waits while it runs (picking a card doesn't). |
 | `running` | bool — Go/Pause. While true, the client calls `wait()` `RUN_GAP_MS` after each animation ends, and holds while a card is picked. [D] |
 | `sound` | `GameSound`, `Math.random` only. |
 
@@ -160,7 +161,7 @@ From the base: `get`, `has`, `moveCost`, `isPassable`, `passableHexes`, `neighbo
 
 | Terrain | Pieces | Things | Placed by |
 |---|---|---|---|
-| `WATER` | sink on entry, unless bridged | Bridge only | lowest band; all edges |
+| `WATER` | sink on entry, unless bridged; a flying push crosses inland water and sinks only if it comes down on it | Bridge only | lowest band; all edges |
 | `PLAINS` | enter normally | any land Thing | middle band |
 | `ICE` | slide on through, unless a Thing covers it | any land Thing | scattered onto plains |
 | `MOUNTAIN` | can't enter | none | highest band |
@@ -217,8 +218,8 @@ for each sunk or splatted kind with PIECES[kind].reemerges (in event order):
     h = Rando.choice(shoreHexes); color = Rando.choice(a random palette)
     add a new piece of that kind on h; emit spawn{id, q, r}
 ```
-Runs at the end of every tick for that tick's sinks and splats, and after `remove`'s tick for a piece
-left on a removed Bridge.
+Runs once at the end of every tick, for that tick's sinks and splats and for a piece
+`remove` sank just before the tick (its kind comes first, as its `sink` does).
 
 ### Draw — `draw()` [P]
 *Serves:* scarcity of agency (you build with what you're dealt).
@@ -308,8 +309,8 @@ rotate(q, r):  legal: a Thing with a facing (push or pull) stands at (q,r)
     facing = (facing + 5) mod 6; tick()
 remove(q, r):  legal: a Thing stands at (q,r)
     things.remove(that Thing)                  # the card is spent; the hand is untouched
-    if a piece stands there on open water: sink it (lost += 1 if cargo); emit sink first
-    tick(); emerge([that piece's kind]) if it sank
+    if a piece stands there on open water: sink it (lost += 1 if cargo)
+    tick(), with that sink as its first event and that kind in its emerge
 discard(slot): legal: 0 <= slot < HAND_SIZE                       [D]
     hand[slot] = draw(); tick()                # Things and the other cards untouched
 wait():        always legal; tick()

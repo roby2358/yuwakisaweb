@@ -1,22 +1,20 @@
 // piece.js — Piece
 //
-// A counter on the board: a coordinate plus display identity. This is the base type for
-// every positioned token — the player, the target marker, and enemies today; the units,
-// objectives, and faction pieces of games built on this base tomorrow, which extend it
-// (hp, faction, movement) by subclassing.
+// A counter on the board: a coordinate plus display identity. In Thing Factory every piece is
+// a crate or a gremlin; the engine sets `id` and `kind` (a key of GameArtifacts.PIECES).
 //
 // Kept a light record — position + identity with pure convenience methods, no game rules —
 // so GameState stays a snapshot-able data bag. Depends only on Hex, so the engine can use
-// it server-side; no display artifacts here. A piece's *intrinsic* color (an enemy's seeded
-// hue) is state and lives here; pieces drawn with a fixed display color leave it null.
+// it server-side; no display artifacts here. A piece's color is state and lives here: a
+// gremlin's seeded hue, or a crate's CRATE_COLORS name.
 //
 // Plain-script global (no ES modules) so the page runs from file:// on a double-click.
 class Piece {
     constructor(q, r, color, label) {
         this.q = q;
         this.r = r;
-        this.color = color;   // intrinsic color (enemies); null when drawn with a display constant
-        this.label = label;   // single-glyph counter label ('P', 'E', '★')
+        this.color = color;   // gremlin '#rrggbb' or crate CRATE_COLORS name
+        this.label = label;   // PIECES[kind].label ('📦', '👹')
     }
 
     // Map/Set key for this piece's hex.

@@ -6,7 +6,7 @@
     --panel-border: rgba(255, 255, 255, 0.09);
     --text: #e8e6e1;
     --text-dim: #9aa0a8;
-    --accent: #ffd633;          /* the reachable-hex yellow */
+    --accent: #ffd633;          /* the legal-placement yellow */
     --accent-ink: #1a1a1a;
     --btn: #2a313b;
     --btn-hover: #36404c;
@@ -27,7 +27,7 @@ html, body {
 #game { display: block; cursor: default; }
 .hidden { display: none !important; }
 
-/* Shared look for every floating panel: HUD bars and the intro card. */
+/* Shared look for every floating panel: HUD bars, the hand, and the overlays. */
 .panel {
     background: var(--panel);
     border: 1px solid var(--panel-border);
@@ -37,7 +37,7 @@ html, body {
 }
 
 /* Two stacked bars: a static top line (turn / progress / buttons) and a second
-   line for the mouse-over readout, so hover text can never shift the buttons. */
+   line for the mouse-over readout, which never shifts the buttons. */
 #hud-stack {
     position: fixed;
     top: 12px;
@@ -67,7 +67,7 @@ html, body {
 }
 #hover-info { font-variant-numeric: tabular-nums; }
 
-/* "Progress to end" meter — fills as P nears the target hex. */
+/* Delivered meter — fills toward the next milestone. */
 #progress { display: flex; align-items: center; gap: 8px; }
 .progress-label { color: var(--text-dim); font-size: 13px; }
 #progress-bar {

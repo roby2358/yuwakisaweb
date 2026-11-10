@@ -3,8 +3,7 @@
 // The playing surface: a Map of axial hexes plus the spatial and terrain queries every
 // game asks of it — what's here, what's adjacent, what can be entered, and whether one hex
 // can be reached from another. A transient query layer wrapped around GameState.hexes, which
-// stays the plain, serializable source of truth; games built on this base extend Board with
-// their own terrain reasoning (zones of control, elevation effects, roads).
+// stays the plain, serializable source of truth.
 //
 // DOM-free: reads movement costs from GameArtifacts, never from display artifacts, so it runs
 // server-side alongside the engine. Plain-script global (no ES modules) for file:// launch.
@@ -24,8 +23,8 @@ const Board = (function () {
             return this.hexes.has(Hex.key(q, r));
         }
 
-        // Cost to enter a hex; Infinity for impassable terrain (water/mountain). Single
-        // source of truth for passability — reachability, spawning, and AI all route here.
+        // Cost to enter a hex; Infinity for impassable terrain (water/mountain). The one
+        // passability check: path checks, spawning, and the shore all use it.
         moveCost(hex) {
             return MOVEMENT_COST[hex.terrain] ?? Infinity;
         }

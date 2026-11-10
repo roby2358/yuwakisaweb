@@ -46,7 +46,7 @@ const GameArtifacts = (function () {
         gremlin: { label: '👹', cargo: false, wanders: true,  splats: true,  reemerges: true },
     };
 
-    // A crate's color, rolled when it spawns. Only the display reads it today.
+    // A crate's color, rolled when it spawns. No rule reads it; the display draws it.
     const CRATE_COLORS = ['red', 'green', 'blue', 'yellow'];
 
     // The next milestone above `delivered`: 10, 20, 50, 100, 200, 500, 1000, … (the 1-2-5

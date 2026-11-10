@@ -10,7 +10,7 @@ const GameDisplayArtifacts = (function () {
         HEX_SIZE: 34,
         COUNTER_SIZE: 30,
         HOP_MS: 140,                 // ms per animated hop in a tick
-        RUN_GAP_MS: 250,             // Go: pause between ticks, so a card can still be picked
+        RUN_GAP_MS: 250,             // Go: pause between ticks
         MILESTONE_MS: 3500,          // how long the milestone banner stays up
         // New Game menu note per GameArtifacts.MAP_SIZES key.
         MAP_SIZE_NOTES: {

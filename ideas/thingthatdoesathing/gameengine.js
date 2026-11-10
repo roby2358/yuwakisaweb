@@ -2,10 +2,9 @@
 //
 // All game rules and world generation, operating on a GameState. DOM-free and render-free:
 // commands mutate state and *return outcomes* ({ ok, events }); the client decides
-// what to animate. This is the half that would run server-side unchanged.
+// what to animate.
 //
-// Every command re-checks its own legality (never trust the client) and every legal
-// command runs exactly one tick. All randomness goes through the seeded Rando.
+// Every command re-checks its own legality and every legal command runs exactly one tick. All randomness goes through the seeded Rando.
 const GameEngine = (function () {
     const {
         TERRAIN, THINGS, PIECES, CRATE_COLORS, aims, nextMilestone, MAP_SIZES, SOURCE_INTERVAL, HAND_SIZE,
@@ -16,6 +15,9 @@ const GameEngine = (function () {
 
     const KINDS = Object.keys(THINGS);
     const WANDER = { n: 1, splat: false, flies: false, skids: false };   // a gremlin's own step, as a push
+    // What a command did before its tick: events to report first, and the kinds of pieces it
+    // sank (for emerge). Most commands do nothing first.
+    const NOTHING_FIRST = Object.freeze({ events: [], gone: [] });
     const isLand = t => t === TERRAIN.PLAINS || t === TERRAIN.ICE;
     // Where a Thing may be built, keyed by its template's `on`.
     const BUILDS_ON = {
@@ -38,7 +40,7 @@ const GameEngine = (function () {
         }
 
         // May `kind` be built on `hex`? The one placement rule: place() checks it, and
-        // legalPlacements() filters the board with it, so the UI's highlight is the rule.
+        // legalPlacements() filters the board with it.
         canPlace(kind, hex) {
             const tpl = THINGS[kind];
             if (!tpl || !hex) return false;
@@ -379,7 +381,9 @@ const GameEngine = (function () {
         }
 
         // ---- The tick: every Thing does its thing ----
-        tick() {
+        // `first` is what the command did before ticking (NOTHING_FIRST, or remove's sink):
+        // its events lead, and its sunk kinds emerge with the tick's own.
+        tick(first) {
             const s = this.state;
             s.phase = 'tick';
             const deliveredBefore = s.delivered;
@@ -409,7 +413,7 @@ const GameEngine = (function () {
             }
 
             const gone = events.filter(e => e.type === 'sink' || e.type === 'splat').map(e => kindOf.get(e.id));
-            events.push(...this.emerge(gone));
+            events.push(...this.emerge([...first.gone, ...gone]));
 
             // One milestone event per milestone this tick's deliveries reached.
             for (let m = nextMilestone(deliveredBefore); m <= s.delivered; m = nextMilestone(m)) {
@@ -418,7 +422,7 @@ const GameEngine = (function () {
 
             s.turn++;
             s.phase = 'player';
-            return { ok: true, events };
+            return { ok: true, events: [...first.events, ...events] };
         }
 
         // ---- Commands (every one returns { ok, ... }; ok:false = illegal, unchanged) ----
@@ -432,14 +436,14 @@ const GameEngine = (function () {
             if (!this.canPlace(kind, this.board.get(q, r))) return { ok: false };
             s.things.push({ kind, q, r, facing: aimed ? facing : null });
             s.hand[slot] = this.draw();
-            return this.tick();
+            return this.tick(NOTHING_FIRST);
         }
 
         rotate(q, r) {
             const thing = this.thingAt(q, r);
             if (!thing || !aims(thing.kind)) return { ok: false };
             thing.facing = Hex.clockwise(thing.facing);
-            return this.tick();
+            return this.tick(NOTHING_FIRST);
         }
 
         // Take a placed Thing off the board. The card is spent: nothing returns to the hand.
@@ -450,12 +454,9 @@ const GameEngine = (function () {
             s.things.splice(s.things.indexOf(thing), 1);
             // A piece left standing on open water (its Bridge is gone) sinks before the tick.
             const piece = this.pieceAt(q, r);
-            const adrift = piece && this.isOpenWater(this.board.get(q, r));
-            if (adrift) this.sink(piece);
-            const res = this.tick();
-            if (adrift) res.events.unshift({ type: 'sink', id: piece.id });
-            if (adrift) res.events.push(...this.emerge([piece.kind]));
-            return res;
+            if (!piece || !this.isOpenWater(this.board.get(q, r))) return this.tick(NOTHING_FIRST);
+            this.sink(piece);
+            return this.tick({ events: [{ type: 'sink', id: piece.id }], gone: [piece.kind] });
         }
 
         // Throw away a hand card: the slot gets a fresh draw, and the world ticks.
@@ -463,11 +464,11 @@ const GameEngine = (function () {
             const s = this.state;
             if (!Number.isInteger(slot) || slot < 0 || slot >= s.hand.length) return { ok: false };
             s.hand[slot] = this.draw();
-            return this.tick();
+            return this.tick(NOTHING_FIRST);
         }
 
         wait() {
-            return this.tick();
+            return this.tick(NOTHING_FIRST);
         }
     }
 

@@ -2,6 +2,33 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-10 — History and rationale swept out of code comments and ONTOLOGY
+Provenance and "why" notes moved here or to their decision. `sound.js` is adapted from
+`../../warrior/sound.js` (its 12.5% pulse wave and pentatonic cues). `Piece`, `Board`, the
+UI's hover/pan/drag fields, and the board-wargame look came with the Hex & Counters fork;
+ONTOLOGY now defines them directly instead of saying "from the base", and `board.js` no longer
+describes other games extending it. Module comments that argued for the server-portable split
+or the double-click rule (`index.js`, `gamestate.js`, `gameengine.js`, `index.html`) now cite
+D-9, and `RUN_GAP_MS` no longer explains itself (D-13 does). Stale base-game wording was
+fixed along the way: the CSS meter comment described the base's "progress to end" for the
+player counter, the accent was the base's reachable-hex yellow, and the sound cues named
+footsteps, end of turn, and victory (now: turning a mover, Wait, game start and milestones).
+The shared libraries carried history too: `colortheory.js` is ported from a Scala
+ColorWheel/Schemes/Colors library, and `hex.js`'s `Hex` class replaced the base's free
+`hex*(q, r)` functions; their comments now just describe them.
+
+### 2026-11-10 — Review against the ontology: remove's emerge moved into the tick
+A code-vs-ONTOLOGY review found one behavior mismatch. `remove` sank a piece left on a removed
+Bridge, ticked, then ran a second `emerge` for it, so its newcomer's `spawn` came after the
+tick's `milestone` (the events table says milestones come last) and after the tick's own
+emerges. Now `tick(first)` takes what the command did first (`NOTHING_FIRST`, or remove's
+sink and its kind): the sink leads the events and its kind joins the tick's one `emerge`,
+first. Added `test/R-31/remove_emerge_order.js` (fails on the old code); R-31 and the
+Emerge/Commands rules reworded. The sim is unchanged (the bot never removes). Also fixed
+stale comments (`piece.js` still described the base's player and enemies; `index.js` said four
+modules) and ONTOLOGY's view-state table (`picked` has no `facing`; the ghost's facing is its
+own field) and terrain table (flying over water).
+
 ### 2026-11-10 — Spring landings skid on ice again
 The designer wanted flying Springs to keep sliding on ice. `THINGS` gained `skids` (Spring
 yes, Rocket no): a flying push that runs its full range onto bare ice slides on, on the
