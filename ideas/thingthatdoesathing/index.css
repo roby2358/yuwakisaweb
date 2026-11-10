@@ -36,7 +36,7 @@ html, body {
     backdrop-filter: blur(6px);
 }
 
-/* Two stacked bars: a static top line (turn / progress / buttons) and a second
+/* Two stacked bars: a static top line (turn / buttons) and a second
    line for the mouse-over readout, which never shifts the buttons. */
 #hud-stack {
     position: fixed;
@@ -67,9 +67,24 @@ html, body {
 }
 #hover-info { font-variant-numeric: tabular-nums; }
 
-/* Delivered meter — fills toward the next milestone. */
-#progress { display: flex; align-items: center; gap: 8px; }
-.progress-label { color: var(--text-dim); font-size: 13px; }
+/* The tally, top right: the delivered meter (fills toward the next milestone), gremlins
+   done in, and crates lost. */
+#tally {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 14px;
+    z-index: 10;
+    user-select: none;
+}
+#progress, .tally-row { display: flex; align-items: center; gap: 8px; }
+.tally-row { justify-content: space-between; }
+.tally-label { color: var(--text-dim); font-size: 13px; }
+#ex-info { color: #c9a0ff; font-variant-numeric: tabular-nums; }
+#lost-info:empty { display: none; }
 #progress-bar {
     width: 120px;
     height: 8px;

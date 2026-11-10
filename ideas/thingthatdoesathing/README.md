@@ -18,20 +18,23 @@ for why it works and [ONTOLOGY.md](ONTOLOGY.md) for the rules.
 | Rocket | blasts what's on it up to 8 hexes, stopping early at something solid or the outer sea, and delivering if it crosses the target (it flies over lakes); splats any gremlin it hits, and any gremlin riding it |
 | Puller | reaches across the hex in front and pulls whatever's beyond it into that hex |
 | Wall | nothing gets in |
+| Trap | a gremlin that comes onto it dies (a new one climbs out on the shore); crates are safe |
 | Bridge | built on water; pieces cross instead of sinking |
 
 Terrain: water sinks pieces, ice makes them slide, mountains block. Gremlins wander and
-ride your belts.
+ride your belts, and a gremlin that steps onto a crate wrecks it (one pushed into a crate
+is just stopped).
 
 ## UI
 
 - `1` `2` `3` or click a card to pick it; legal hexes tint yellow
 - `R` / `Shift+R` / mouse wheel turn the Thing before placing
 - Click a yellow hex to place it; the world ticks once and animates
-- With no card picked, click a placed Belt/Spring/Puller to turn it clockwise (ticks)
+- With no card picked, click a placed Belt/Spring/Rocket/Puller to turn it clockwise (free: no tick)
 - `D` removes the Thing under the cursor; the card is gone and the world ticks once
 - Pick a card, then click Discard (right of the cards) or press `X` to throw it away; the world ticks once
 - Space / Enter / Wait: let it run one tick
 - Go (top centre): keep ticking until Pause; picking a card holds the run
 - Esc or right-click puts the card back; left-drag pans
+- Top right: crates delivered toward the next milestone, Ex-gremlins (gremlins done in), and crates lost
 - New Game: pick a board size (click or `1`–`4`); Esc keeps the current game

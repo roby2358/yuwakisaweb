@@ -19,9 +19,11 @@ const { flatGame, DIR } = require('../helpers/load');
     const { state, engine, put, piece } = flatGame();
     put('BELT', 9, 8, DIR.E); const c = piece('crate', 9, 8);
     const gr = piece('gremlin', 10, 8);
-    // Pin the gremlin in place by walling every other neighbor of the target.
+    // Pin the gremlin in place by walling every other neighbor of the target. (Its one way
+    // out is then the crate's hex, so it wanders back and wrecks the crate: R-37.)
     for (const [q, r] of [[11, 8], [11, 7], [10, 7], [9, 9], [10, 9]]) put('WALL', q, r);
-    engine.wait();
-    check('a gremlin on the target blocks the crate', c.isAt(9, 8) && gr.isAt(10, 8) && state.delivered === 0);
+    const res = engine.wait();
+    check('a gremlin on the target blocks the crate',
+        !res.events.some(e => e.id === c.id && (e.type === 'move' || e.type === 'deliver')) && state.delivered === 0);
 }
 done();

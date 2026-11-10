@@ -25,7 +25,7 @@ for (const seed of SEEDS.slice(0, 6)) {
         } else if (roll < 8 && state.things.some(t => t.facing !== null)) {
             const movers = state.things.filter(t => t.facing !== null);
             const t = movers[rnd(movers.length)];
-            res = engine.rotate(t.q, t.r);
+            res = { ...engine.rotate(t.q, t.r), rotated: true };
         } else if (roll < 9 && state.things.length) {
             const t = state.things[rnd(state.things.length)];
             res = engine.remove(t.q, t.r);
@@ -38,7 +38,7 @@ for (const seed of SEEDS.slice(0, 6)) {
         const thingKeys = state.things.map(t => t.q + ',' + t.r);
         const fail = msg => { if (ok) { ok = false; why = `cmd ${i}: ${msg}`; } };
         if (!res.ok) fail('a legal command was refused');
-        if (state.turn !== turn + 1) fail('turn did not advance by 1');
+        if (state.turn !== turn + (res.rotated ? 0 : 1)) fail('turn did not advance by 1 (0 for rotate)');
         if (new Set(keys).size !== keys.length) fail('two pieces share a hex');
         if (new Set(thingKeys).size !== thingKeys.length) fail('two Things share a hex');
         if (state.hand.length !== A.HAND_SIZE) fail('hand size changed');

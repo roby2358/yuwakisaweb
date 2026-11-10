@@ -4,7 +4,7 @@
 // commands mutate state and *return outcomes* ({ ok, events }); the client decides
 // what to animate.
 //
-// Every command re-checks its own legality and every legal command runs exactly one tick. All randomness goes through the seeded Rando.
+// Every command re-checks its own legality; every legal command but rotate runs exactly one tick. All randomness goes through the seeded Rando.
 const GameEngine = (function () {
     const {
         TERRAIN, THINGS, PIECES, CRATE_COLORS, aims, nextMilestone, MAP_SIZES, SOURCE_INTERVAL, HAND_SIZE,
@@ -14,7 +14,8 @@ const GameEngine = (function () {
     } = GameArtifacts;
 
     const KINDS = Object.keys(THINGS);
-    const WANDER = { n: 1, splat: false, flies: false, skids: false };   // a gremlin's own step, as a push
+    // A wanderer's own step, as a push; `wrecks` comes from its piece template.
+    const wanderOf = piece => ({ n: 1, splat: false, flies: false, skids: false, wrecks: PIECES[piece.kind].wrecks });
     // What a command did before its tick: events to report first, and the kinds of pieces it
     // sank (for emerge). Most commands do nothing first.
     const NOTHING_FIRST = Object.freeze({ events: [], gone: [] });
@@ -77,6 +78,7 @@ const GameEngine = (function () {
             s.turn = 1;
             s.delivered = 0;
             s.lost = 0;
+            s.exGremlins = 0;
             s.spawnTimer = 0;
             s.phase = 'player';
             return { ok: true };
@@ -262,6 +264,12 @@ const GameEngine = (function () {
             return hex.terrain === TERRAIN.ICE && !this.thingAt(hex.q, hex.r);
         }
 
+        // Does a Trap on this hex kill this piece when it comes onto it?
+        trapsPiece(piece, hex) {
+            const thing = this.thingAt(hex.q, hex.r);
+            return !!thing && THINGS[thing.kind].traps && PIECES[piece.kind].splats;
+        }
+
         // Is this hex wet — water with nothing built over it?
         isOpenWater(hex) {
             return hex.terrain === TERRAIN.WATER && !this.thingAt(hex.q, hex.r);
@@ -284,8 +292,9 @@ const GameEngine = (function () {
             return this.board.get(at.q + d.q, at.r + d.r);
         }
 
-        // One hex in `dir`. Returns 'moved' | 'blocked' | 'sank' | 'delivered'. A flying
-        // piece passes over inland open water (only the outer sea takes it).
+        // One hex in `dir`. Returns 'moved' | 'blocked' | 'sank' | 'delivered' | 'trapped'.
+        // A flying piece passes over inland open water (only the outer sea takes it) and over
+        // Traps.
         step(piece, dir, flies) {
             const s = this.state;
             const cargo = PIECES[piece.kind].cargo;
@@ -297,6 +306,10 @@ const GameEngine = (function () {
                 s.delivered++;
                 return 'delivered';
             }
+            if (!flies && this.trapsPiece(piece, hex)) {
+                this.removePiece(piece);
+                return 'trapped';
+            }
             if (this.isOpenWater(hex) && !(flies && !hex.isEdge)) {
                 this.sink(piece);
                 return 'sank';
@@ -305,22 +318,27 @@ const GameEngine = (function () {
         }
 
         // Shove `piece` up to n hexes in `dir`. Bare ice is free: the piece slides on.
-        // `how` is { n, splat, flies, skids } (from the Thing's template, or WANDER).
+        // `how` is { n, splat, flies, skids, wrecks } (from the Thing's template, or wanderOf).
+        // A wrecking step (a gremlin's own) that's stopped by cargo destroys it (lost) and
+        // takes its hex.
         // A splatting push (the Rocket) that's stopped by a piece that splats destroys it and
         // lands on its hex; then, if the launched piece itself splats, it does too.
         // A flying push counts every hex (ice is no shortcut mid-air), crosses inland water,
         // and sinks only if it comes down on water; if it skids, coming down on bare ice
-        // slides on as usual.
+        // slides on as usual. A piece that splats dies on a Trap it comes onto, or comes down on.
         // Returns this push's events: one move (if it moved), a splat for a piece it hit
-        // (`by` the mover), then a sink/deliver/splat if the mover ended so.
+        // (`by` the mover), then a sink/deliver/splat if the mover ended so (a Trap's kill is
+        // a splat, `by` null).
         push(piece, dir, how) {
-            const { n, splat, flies, skids } = how;
+            const { n, splat, flies, skids, wrecks } = how;
             const events = [];
             const path = [];
             let left = n, res = 'moved', hit = null;
             while (left > 0) {
                 res = this.step(piece, dir, flies);
-                if (res === 'blocked' && splat) hit = this.splatVictim(piece, dir);
+                if (res === 'blocked' && splat) hit = this.victim(piece, dir, v => PIECES[v.kind].splats);
+                if (res === 'blocked' && wrecks) hit = this.victim(piece, dir, v => PIECES[v.kind].cargo);
+                if (hit && PIECES[hit.kind].cargo) this.state.lost++;
                 if (hit) res = this.step(piece, dir, flies);
                 if (res === 'blocked') break;
                 path.push({ q: piece.q, r: piece.r });
@@ -334,25 +352,30 @@ const GameEngine = (function () {
                 if (res === 'blocked') break;
                 path.push({ q: piece.q, r: piece.r });
             }
-            if (flies && (res === 'moved' || res === 'blocked') && this.isOpenWater(this.board.get(piece.q, piece.r))) {
+            const landed = flies && (res === 'moved' || res === 'blocked');
+            const here = this.board.get(piece.q, piece.r);
+            if (landed && this.isOpenWater(here)) {
                 this.sink(piece);   // came down on inland water
                 res = 'sank';
+            } else if (landed && this.trapsPiece(piece, here)) {
+                this.removePiece(piece);   // came down on a Trap
+                res = 'trapped';
             }
-            const splatsToo = splat && res !== 'sank' && res !== 'delivered' && PIECES[piece.kind].splats;
+            const splatsToo = splat && (res === 'moved' || res === 'blocked') && PIECES[piece.kind].splats;
             if (splatsToo) this.removePiece(piece);
             if (path.length) events.push({ type: 'move', id: piece.id, path });
             if (hit) events.push({ type: 'splat', id: hit.id, by: piece.id });
             if (res === 'sank') events.push({ type: 'sink', id: piece.id });
             if (res === 'delivered') events.push({ type: 'deliver', id: piece.id });
-            if (splatsToo) events.push({ type: 'splat', id: piece.id, by: null });
+            if (splatsToo || res === 'trapped') events.push({ type: 'splat', id: piece.id, by: null });
             return events;
         }
 
-        // The piece in the way of `piece` going `dir`, if it splats; removed from the board.
-        splatVictim(piece, dir) {
+        // The piece in the way of `piece` going `dir`, if `isVictim(it)`; removed from the board.
+        victim(piece, dir, isVictim) {
             const hex = this.neighborHex(piece, dir);
             const victim = hex && this.pieceAt(hex.q, hex.r);
-            if (!victim || !PIECES[victim.kind].splats) return null;
+            if (!victim || !isVictim(victim)) return null;
             this.removePiece(victim);
             return victim;
         }
@@ -363,21 +386,28 @@ const GameEngine = (function () {
         actionOf(thing) {
             const tpl = THINGS[thing.kind];
             if (tpl.push) return { piece: this.pieceAt(thing.q, thing.r), dir: thing.facing,
-                how: { n: tpl.push, splat: tpl.splat, flies: tpl.flies, skids: tpl.skids } };
+                how: { n: tpl.push, splat: tpl.splat, flies: tpl.flies, skids: tpl.skids, wrecks: false } };
             if (tpl.pull) {
                 const d = NEIGHBOR_DIRS[thing.facing];
                 return { piece: this.pieceAt(thing.q + 2 * d.q, thing.r + 2 * d.r), dir: Hex.opposite(thing.facing),
-                    how: { n: tpl.pull, splat: tpl.splat, flies: tpl.flies, skids: tpl.skids } };
+                    how: { n: tpl.pull, splat: tpl.splat, flies: tpl.flies, skids: tpl.skids, wrecks: false } };
             }
             return null;
         }
 
-        // Directions a wandering piece may take: enterable, and not into open water.
+        // Directions a wandering piece may take: enterable (or holding cargo it wrecks), and
+        // not into open water.
         wanderDirs(piece) {
             return NEIGHBOR_DIRS.map((_, dir) => dir).filter(dir => {
                 const hex = this.neighborHex(piece, dir);
-                return this.canEnter(hex) && !this.isOpenWater(hex);
+                return (this.canEnter(hex) || this.wrecksInto(piece, hex)) && !this.isOpenWater(hex);
             });
+        }
+
+        // Would `piece`'s own step into `hex` wreck the cargo standing there?
+        wrecksInto(piece, hex) {
+            const there = hex && this.pieceAt(hex.q, hex.r);
+            return !!there && PIECES[piece.kind].wrecks && PIECES[there.kind].cargo;
         }
 
         // ---- The tick: every Thing does its thing ----
@@ -402,7 +432,7 @@ const GameEngine = (function () {
             // still on the board.
             for (const p of s.pieces.filter(p => PIECES[p.kind].wanders && !moved.has(p.id))) {
                 const dirs = this.wanderDirs(p);
-                if (dirs.length) events.push(...this.push(p, Rando.choice(dirs), WANDER));
+                if (dirs.length) events.push(...this.push(p, Rando.choice(dirs), wanderOf(p)));
             }
 
             s.spawnTimer++;
@@ -412,8 +442,9 @@ const GameEngine = (function () {
                 events.push({ type: 'spawn', id: c.id, q: c.q, r: c.r });
             }
 
-            const gone = events.filter(e => e.type === 'sink' || e.type === 'splat').map(e => kindOf.get(e.id));
-            events.push(...this.emerge([...first.gone, ...gone]));
+            const gone = [...first.gone, ...events.filter(e => e.type === 'sink' || e.type === 'splat').map(e => kindOf.get(e.id))];
+            s.exGremlins += gone.filter(kind => kind === 'gremlin').length;
+            events.push(...this.emerge(gone));
 
             // One milestone event per milestone this tick's deliveries reached.
             for (let m = nextMilestone(deliveredBefore); m <= s.delivered; m = nextMilestone(m)) {
@@ -439,11 +470,12 @@ const GameEngine = (function () {
             return this.tick(NOTHING_FIRST);
         }
 
+        // Turn a placed mover clockwise. Free: no tick, so nothing happens (D-19).
         rotate(q, r) {
             const thing = this.thingAt(q, r);
             if (!thing || !aims(thing.kind)) return { ok: false };
             thing.facing = Hex.clockwise(thing.facing);
-            return this.tick(NOTHING_FIRST);
+            return { ok: true, events: [] };
         }
 
         // Take a placed Thing off the board. The card is spent: nothing returns to the hand.

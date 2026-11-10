@@ -22,15 +22,18 @@ const GameArtifacts = (function () {
     //            it sinks only if it comes down on water
     //   skids  — a flying push that comes down on bare ice slides on, like any piece on ice
     //   blocks — pieces can't enter
+    //   traps  — a piece that splats dies when it comes onto it (walked, pushed, slid, or
+    //            landing from a flight; a flight passing over doesn't count)
     //   on     — 'land' (plains/ice) or 'water': where it may be built
     //   weight — relative draw chance for the hand
     const THINGS = {
-        BELT:    { push: 1, pull: 0, splat: false, flies: false, skids: false, blocks: false, on: 'land',  weight: 6 },
-        SPRING:  { push: 3, pull: 0, splat: false, flies: true,  skids: true,  blocks: false, on: 'land',  weight: 2 },
-        ROCKET:  { push: 8, pull: 0, splat: true,  flies: true,  skids: false, blocks: false, on: 'land',  weight: 1 },
-        PULLER:  { push: 0, pull: 1, splat: false, flies: false, skids: false, blocks: false, on: 'land',  weight: 2 },
-        WALL:    { push: 0, pull: 0, splat: false, flies: false, skids: false, blocks: true,  on: 'land',  weight: 2 },
-        BRIDGE:  { push: 0, pull: 0, splat: false, flies: false, skids: false, blocks: false, on: 'water', weight: 1 },
+        BELT:    { push: 1, pull: 0, splat: false, flies: false, skids: false, blocks: false, traps: false, on: 'land',  weight: 6 },
+        SPRING:  { push: 3, pull: 0, splat: false, flies: true,  skids: true,  blocks: false, traps: false, on: 'land',  weight: 2 },
+        ROCKET:  { push: 8, pull: 0, splat: true,  flies: true,  skids: false, blocks: false, traps: false, on: 'land',  weight: 1 },
+        PULLER:  { push: 0, pull: 1, splat: false, flies: false, skids: false, blocks: false, traps: false, on: 'land',  weight: 2 },
+        WALL:    { push: 0, pull: 0, splat: false, flies: false, skids: false, blocks: true,  traps: false, on: 'land',  weight: 2 },
+        TRAP:    { push: 0, pull: 0, splat: false, flies: false, skids: false, blocks: false, traps: true,  on: 'land',  weight: 1 },
+        BRIDGE:  { push: 0, pull: 0, splat: false, flies: false, skids: false, blocks: false, traps: false, on: 'water', weight: 1 },
     };
 
     // Piece templates, keyed by Piece.kind:
@@ -38,12 +41,14 @@ const GameArtifacts = (function () {
     //   cargo   — delivered on reaching the target; counted as lost when it sinks
     //   wanders   — takes a random step on a tick when no Thing moved it
     //   splats    — a splatting push (the Rocket) destroys it: the piece it lands on, and the
-    //               piece it launches once that one lands
-    //   reemerges — when one sinks or splats, a new one climbs out on a shore hex at the end
+    //               piece it launches once that one lands; so does coming onto a Trap
+    //   wrecks    — its own wandering step into a cargo piece's hex destroys that piece (lost)
+    //               and takes the hex; being pushed, pulled or flung into one doesn't
+    //   reemerges — when one sinks or splats (counted in exGremlins), a new one climbs out on a shore hex at the end
     //               of the tick
     const PIECES = {
-        crate:   { label: '📦', cargo: true,  wanders: false, splats: false, reemerges: false },
-        gremlin: { label: '👹', cargo: false, wanders: true,  splats: true,  reemerges: true },
+        crate:   { label: '📦', cargo: true,  wanders: false, splats: false, wrecks: false, reemerges: false },
+        gremlin: { label: '👹', cargo: false, wanders: true,  splats: true,  wrecks: true,  reemerges: true },
     };
 
     // A crate's color, rolled when it spawns. No rule reads it; the display draws it.

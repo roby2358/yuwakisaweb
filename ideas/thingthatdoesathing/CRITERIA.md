@@ -28,7 +28,7 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | R-7 | a step | blocked (piece stays) into off-map, mountain, Wall, or another piece; accepted onto plains, ice, a bridge, or a mover | automated |
 | R-8 | `legalPlacements(kind)` | exactly the Placement legality rule: no Thing, not the target, right ground, no piece under a blocking kind | automated |
 | R-9 | `place(slot, q, r, facing)` | legal: Thing appended (fixture facing null), slot redrawn, hand stays `HAND_SIZE`, one tick. Illegal (slot, facing, hex): `{ok:false}`, state and `Rando` unchanged | automated |
-| R-10 | `rotate(q, r)` | on a Belt, Spring, or Puller: facing turns clockwise, one tick. On a fixture or empty hex: `{ok:false}`, unchanged | automated |
+| R-10 | `rotate(q, r)` | on a Belt, Spring, Rocket, or Puller: facing turns clockwise and nothing else changes (no tick: `events` empty, turn, pieces, hand untouched). On a fixture or empty hex: `{ok:false}`, unchanged | automated |
 | R-11 | `wait()` | one tick, hand and Things untouched | automated |
 | R-12 | a piece on a mover during a tick | pushed `THINGS[kind].push` hexes in the facing, stopping before a blocked hex | automated |
 | R-13 | a tick | each piece moves at most once (a line of belts advances a crate one hex per tick; a carried gremlin doesn't also wander) | automated |
@@ -36,7 +36,7 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | R-15 | a piece entering water | removed if no Thing is there (crate: `lost` +1); a bridge carries it; a flying push (Spring, Rocket) passes over inland water and sinks only if it comes down on it, but the outer sea always takes it | automated |
 | R-16 | a piece entering the target | a crate is removed and `delivered` +1; a gremlin stays and blocks crates | automated |
 | R-17 | a spinner during a tick | the Spinner was replaced by the Puller (R-28) | retired |
-| R-18 | gremlins in a tick | each unmoved gremlin steps to a random enterable non-water neighbor or stays; boxed in → stays; never walks into open water; pieces never share a hex | automated |
+| R-18 | gremlins in a tick | each unmoved gremlin steps to a random enterable (or crate-holding) non-water neighbor or stays; boxed in → stays; never walks into open water; pieces never share a hex | automated |
 | R-19 | ticks | `spawnTimer` counts up; at `SOURCE_INTERVAL` with the source empty a crate with a `CRATE_COLORS` color spawns and the timer resets; while occupied it waits | automated |
 | R-20 | (a final win at `DELIVER_GOAL`) | — | retired |
 | R-21 | two games, same seed | identical terrain, source, target, pieces, hand; different seeds differ | automated |
@@ -53,6 +53,9 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | R-32 | a Rocket during a tick | the piece on it flies up to `THINGS.ROCKET.push` hexes in the facing, or until stopped: before a blocker, sunk in the outer sea (crate: `lost` +1), delivered crossing the target; it flies over inland open water, Bridges and ice (every hex counts, no slide), and sinks if it comes down on water; one `move` for the whole flight; Belts still sink in inland water | automated |
 | R-33 | a Rocket's flight and gremlins | a flier stopped by a gremlin splats it (`splat{id, by}`) and lands on its hex; a launched gremlin splats where it lands (`splat`, `by` null) unless it sank; splats aren't `lost`; other pushers never splat | automated |
 | R-34 | `discard(slot)` | the slot gets a fresh draw, one tick, Things and other cards untouched. Bad slot: `{ok:false}`, unchanged | automated |
+| R-35 | a gremlin comes onto a Trap | it dies (`splat`, `by` null, after its `move`) whether it wandered, was pushed, slid on ice, or came down from a flight (a Spring's skid included); a flight passing over a Trap doesn't trigger it; a Trap built under a gremlin doesn't kill it; crates cross Traps safely | automated |
+| R-36 | gremlins gone | `exGremlins` goes up by one for every gremlin sunk, splatted by a Rocket, killed by a Trap, or sunk by removing its Bridge; crates never count; a new game starts it at 0 | automated |
+| R-37 | a gremlin's own step into a crate | the crate is wrecked (`splat{id: crate, by: gremlin}` after the gremlin's `move`), `lost` +1, nothing re-emerges, and the gremlin takes the hex; a gremlin pushed, pulled or flung into a crate is only blocked | automated |
 
 ---
 
@@ -68,14 +71,16 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | U-6 | With no card picked, hovering a mover outlines it and the hover bar says "click to turn"; clicking turns it and ticks | manual — hover and click a placed Belt |
 | U-7 | Esc and right-click put the card back; a click on a non-yellow hex also does | manual — try all three with a card picked |
 | U-8 | Space, Enter, and Wait all tick; none of them, nor clicks, act during the animation or an overlay | manual — mash Space mid-animation |
-| U-9 | Each Thing is recognizable by look alone: belt chevrons, spring coil, rocket, puller magnet, wall bricks, bridge planks | manual — glance test |
-| U-10 | The HUD shows Turn, Delivered k / next milestone with a bar, crates lost, and the hover bar names terrain, Thing (with its verb), and piece | manual — hover a crate on a belt, then lose one at sea |
+| U-9 | Each Thing is recognizable by look alone: belt chevrons, spring coil, rocket, puller magnet, wall bricks, trap jaws, bridge planks | manual — glance test |
+| U-10 | The HUD (top left) shows Turn; the tally (top right) shows Delivered k / next milestone with a bar, Ex-gremlins, and crates lost (only once one is lost); the hover bar names terrain, Thing (with its verb), and piece | manual — hover a crate on a belt, then lose one at sea and trap a gremlin |
 | U-11 | Reaching a milestone shows a banner ("IT DOES THE THING" for the first, "N crates!" after) with crates, turns, the next milestone, and crates lost; it hides on its own and play never stops | manual — run a line past 10 and 20 |
 | U-12 | With no card picked or with one picked, `D` over a placed Thing removes it and ticks; the hover bar says "D to remove"; a crate on a removed Bridge fades where it stood | manual — remove a Belt, then a Bridge with a crate on it |
 | U-13 | A green Go button sits top centre; Go ticks on its own until Pause, picking a card holds it so you can place, and the button reads Pause while running | manual — press Go, pick and place a card mid-run, press Pause |
 | U-14 | The intro and New Game both show the four board sizes (click or `1`–`4`); nothing else closes the intro; Esc or Keep playing closes New Game and the game goes on | manual — open the page, press Space, then pick; press New Game, then Esc |
 | U-15 | A Discard spot sits right of the cards; it lights up while a card is picked, and clicking it (or `X`) throws that card away and ticks; with no card picked it does nothing | manual — pick a card, click Discard; click it with nothing picked |
 | U-16 | A Rocket's flight is one long hop-by-hop slide; a gremlin it hits bursts in its own color when the flier lands, with a splat sound; a launched gremlin bursts where it lands | manual — rocket a crate into a gremlin, then a gremlin into a Wall |
+| U-17 | A gremlin that walks or is pushed onto a Trap bursts there with a splat sound, Ex-gremlins goes up, and a new gremlin appears on the shore | manual — belt a gremlin onto a Trap |
+| U-18 | A gremlin that steps onto a crate: the crate bursts in its color as the gremlin arrives, and the lost count goes up | manual — watch a gremlin beside a stalled crate |
 
 ---
 
@@ -92,7 +97,7 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 
 ## Status (2026-11-10)
 
-- **Manual only:** U-1…U-16, X-1.
+- **Manual only:** U-1…U-18, X-1.
 - **Retired:** R-17 (Spinner), R-20 (final win).
 - **Not yet covered:** X-2, X-3, X-4 (need playtests).
 - **Partial coverage:** R-18 checks that wandering gremlins land on land and never step into

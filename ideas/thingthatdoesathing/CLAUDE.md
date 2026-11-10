@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Thing Factory** ("a thing that does a thing") is a place-then-tick contraption game on a
 small hex board, forked from the Hex & Counters base (`../hexandcounter`). Each command
-places a Thing from a random hand, turns a placed mover, or waits, and then the world ticks
-once: every Thing does its one thing (most act on the piece standing on them; the Puller
+places, removes or discards a Thing from a random hand, or waits, and then the world ticks
+once (turning a placed mover is free and doesn't tick): every Thing does its one thing (most act on the piece standing on them; the Puller
 reaches two hexes ahead). Crates come out of a source; deliver
 them to the target, through endless milestones (10, 20, 50, 100, 200, 500, 1000, …). There's
 no end, time limit or defeat; the score is the turn each milestone was reached.
@@ -41,13 +41,13 @@ headless; `GameUI` is the only browser-coupled code.
 
 | Module | Global | Role |
 |---|---|---|
-| `artifacts.js` | `GameArtifacts` | Rules data: `MAP_SIZES`, `TERRAIN`, `THINGS` (the Thing templates: `push`, `pull`, `splat`, `flies`, `skids`, `blocks`, `on`, `weight`), `PIECES` (the piece templates: `label`, `cargo`, `wanders`, `splats`, `reemerges`), `aims(kind)`, `MOVEMENT_COST`, and every tunable number. |
+| `artifacts.js` | `GameArtifacts` | Rules data: `MAP_SIZES`, `TERRAIN`, `THINGS` (the Thing templates: `push`, `pull`, `splat`, `flies`, `skids`, `blocks`, `traps`, `on`, `weight`), `PIECES` (the piece templates: `label`, `cargo`, `wanders`, `splats`, `reemerges`), `aims(kind)`, `MOVEMENT_COST`, and every tunable number. |
 | `displayartifacts.js` | `GameDisplayArtifacts` | Client-only: `HEX_SIZE`, `COUNTER_SIZE`, `HOP_MS`, terrain colors/names, `THING_LOOK` (name, verb line, colors, inset), `PIECE_LOOK` (hover name), `CRATE_SHADES`, `MAP_SIZE_NOTES` (size-picker notes), port colors. |
 | `piece.js` | `Piece` | A positioned token. Crates and gremlins are `Piece`s with engine-set `id` and `kind`. |
 | `board.js` | `Board` | Query layer over the hex `Map` (passable = land). |
-| `gamestate.js` | `GameState` | Serializable data: `source`, `target`, `pieces`, `things`, `hand`, `turn`, `delivered`, `lost`, `spawnTimer`, `nextId`, `phase`, `size`. |
-| `gameengine.js` | `GameEngine` | Generation + rules. `newGame(seed, size)` takes the seed from the caller (the UI rolls it) and a `MAP_SIZES` key (the player picks it). Commands `place`/`rotate`/`remove`/`discard`/`wait` each run one `tick()` and return `{ ok, events }`; a tick that reaches a milestone emits `milestone{count}`. One `step()` handles every movement (movers, springs, rockets, ice slides, gremlins); a Rocket's flight emits `splat` for gremlins it destroys. |
-| `gameui.js` | `GameUI` | Canvas, HUD, the hand, input, and the tick animation, which is driven only by the events the engine returns. |
+| `gamestate.js` | `GameState` | Serializable data: `source`, `target`, `pieces`, `things`, `hand`, `turn`, `delivered`, `lost`, `exGremlins`, `spawnTimer`, `nextId`, `phase`, `size`. |
+| `gameengine.js` | `GameEngine` | Generation + rules. `newGame(seed, size)` takes the seed from the caller (the UI rolls it) and a `MAP_SIZES` key (the player picks it). Commands `place`/`remove`/`discard`/`wait` each run one `tick()` and return `{ ok, events }`; `rotate` doesn't tick (`events: []`, D-19); a tick that reaches a milestone emits `milestone{count}`. One `step()` handles every movement (movers, springs, rockets, ice slides, gremlins); a Rocket's flight emits `splat` for gremlins it destroys. |
+| `gameui.js` | `GameUI` | Canvas, HUD (top left), tally (top right: delivered, ex-gremlins, lost), the hand, input, and the tick animation, which is driven only by the events the engine returns. |
 
 Libs: `hex.js` (axial math, `NEIGHBOR_DIRS` = facing order E, NE, NW, W, SW, SE;
 `Hex.clockwise` is `(f+5)%6`, plus `Hex.counterClockwise`, `Hex.opposite`, `Hex.same`), `rando.js` (seeded RNG), `colortheory.js` (gremlin colors), `sound.js`
@@ -61,7 +61,7 @@ tick animation) → `picked` card → bare map click.
 
 - **L1.2 pick-then-act:** picking a card (click or `1`–`3`) computes
   `engine.legalPlacements(kind)` once; clicking a hex is a lookup into that set. `R`/wheel
-  turn the ghost's facing. With no card picked, clicking a Belt/Spring/Puller calls `rotate`.
+  turn the ghost's facing. With no card picked, clicking a Belt/Spring/Rocket/Puller calls `rotate`, which doesn't tick, so the UI just re-renders.
   `D` calls `remove` on the hovered Thing. With a card picked, the Discard spot or `X` calls `discard`.
 - **L2.1 primary action:** Wait button / Space / Enter → `engine.wait()`.
 - **L2.2:** Esc and right-click put the card back.
@@ -94,12 +94,12 @@ in `hexToScreen` / `screenToHex`.
 - **Map:** 16×10, 20×20, 30×30 or 60×60 (`MAP_SIZES`, picked at New Game), edges water; terrain water / plains / mountain by elevation, ice carved
   from plains. Source on the left slice, target on the right, land path guaranteed
   (fallback: the size's `knownGoodSeed`).
-- **Things:** Belt pushes the piece on its own hex; the Spring and Rocket throw it 3 and 8 hexes (airborne: over inland water; a Spring skids on if it lands on ice), the Rocket splatting gremlins; the Puller pulls the piece
+- **Things:** Belt pushes the piece on its own hex; the Spring and Rocket throw it 3 and 8 hexes (airborne: over inland water; a Spring skids on if it lands on ice), the Rocket splatting gremlins; a Trap kills a gremlin that comes onto it; the Puller pulls the piece
   two hexes ahead back into the hex between; Wall blocks; Bridge makes water crossable. One Thing per hex, none on the target; movers may be built
   under a piece.
 - **Tick:** Things in placement order (each piece moves at most once), unmoved gremlins
   wander, the source spawns every `SOURCE_INTERVAL` if clear.
-- **Step:** blocked by off-map / mountain / Wall / piece; open water sinks; bare ice slides
+- **Step:** blocked by off-map / mountain / Wall / piece; a gremlin on a Trap dies; open water sinks; bare ice slides
   free; a crate on the target is delivered.
 - **Tuning harness:** `just cc-sim 200 small`, which runs `node test/sim.js 200 small` (greedy builder bot; lays belts and
   springs, throws every other card away with `discard`).

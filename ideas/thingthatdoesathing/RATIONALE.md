@@ -8,12 +8,13 @@ ARCHITECTURE_LOG.md.
 
 ## Shape of the game
 
-### D-1 Place-then-tick: every command ticks the world once — *Decided*
+### D-1 Place-then-tick: every command but turning a mover ticks the world once — *Decided*
 - **Alternatives:** build-then-run (Incredible Machine: freeze, build, press GO); a
   per-turn parts budget with several placements per tick.
 - **Why:** G-1. The contraption is running while you build it, so each placement is a
   repair or an extension of a live machine. It also reuses the base's turn engine.
-- **Evidence:** R-9, R-10, R-11 (each command runs exactly one tick).
+- **Evidence:** R-9, R-11, R-29, R-34 (each of those commands runs exactly one tick); R-10
+  (rotate runs none, D-19).
 
 ### D-2 Endless milestones (10, 20, 50, 100, 200, 500, 1000, …); no end, no time limit — *Decided*
 - **Alternatives:** win at a fixed N crates; pick N at game start; deliver N before turn T;
@@ -42,10 +43,23 @@ ARCHITECTURE_LOG.md.
   path. A board too big for the window opens centered on the source, where building starts,
   and left-drag pans as it always has.
 - **Evidence:** R-1, R-2, R-5, R-23 at every size; U-2, U-14 (manual).
-  `Measured by: just cc-sim 200 <size>` → small 187/200 reach the first milestone, median 51
-  turns; medium 196/200, median 57; large 198/200, median 76; huge (50 games) 50/50, median
-  132. Gremlins stay at `GREMLIN_DICE_COUNT`d`GREMLIN_DICE_SIDES` on every size, so the big
+  `Measured by: just cc-sim 200 <size>` → small 183/200 reach the first milestone, median 65
+  turns (11.5 crates lost per game); medium 195/200, median 65 (5.0 lost); large 196/200,
+  median 81 (2.4 lost); huge (50 games) 50/50, median 142 (1.6 lost). Gremlins stay at `GREMLIN_DICE_COUNT`d`GREMLIN_DICE_SIDES` on every size, so the big
   boards are much emptier of them (see Q-5).
+
+### D-19 Turning a placed mover is free: it doesn't tick — *Decided*
+- **Alternatives:** turning spends a turn like every other command (a stray click costs a
+  tick); a separate key to turn so a click can't misfire.
+- **Why:** the designer asked for it. Aiming a mover is fixing what you already built, not
+  a new action, so it shouldn't cost a turn on the turn score. Nothing in the world moves
+  while you turn, so you can try a facing, look, and turn again. Placing, removing and
+  discarding still tick, so building and hand cycling keep their cost. The exploit it opens
+  is narrow: you can re-aim freely between ticks, but each tick still runs the line as it
+  stands, so timing a turn to catch one crate means ticking between turns.
+- **Evidence:** R-10. `Measured by: just cc-sim 200 small` → identical to ticking turns
+  (183/200, median 65): the bot lays belts already aimed, so this is a feel change for
+  players, not a pacing change the bot can see.
 
 ### D-12 `D` removes a placed Thing; it ticks, and the card is spent — *Decided (remove), Proposed (tick, no refund)*
 - **Alternatives:** no removal (permanence as the puzzle); undo of the last command;
@@ -70,14 +84,14 @@ ARCHITECTURE_LOG.md.
   Its glyph faces the hex it reaches toward, so the exception stays readable.
 - **Evidence:** R-8 (movers may go under pieces), R-12, R-28.
 
-### D-5 Six kinds as rows of one template: Belt, Spring, Rocket, Puller, Wall, Bridge — *Decided (Puller, Rocket), Proposed (rest)*
+### D-5 Seven kinds as rows of one template: Belt, Spring, Rocket, Puller, Wall, Trap, Bridge — *Decided (Puller, Rocket, Trap), Proposed (rest)*
 - **Alternatives:** a bigger catalogue (splitters, grabbers); a single Belt; a Spinner
   (a belt that turns clockwise every tick).
 - **Why:** templates over snowflakes. Every kind is a row of `THINGS` (`push`, `pull`,
-  `splat`, `blocks`, `on`, `weight`), so a new kind is usually a new row, not new code. Each
+  `splat`, `flies`, `skids`, `blocks`, `traps`, `on`, `weight`), so a new kind is usually a new row, not new code. Each
   kind breaks one rule. A Spring hops three hexes over lakes and skids on ice, a Rocket flies eight,
   a Puller acts at a distance without needing a Thing under the piece, a Wall shuts a hex, a
-  Bridge opens water.
+  Trap kills gremlins that come onto it, a Bridge opens water.
 - **Why not the Spinner:** it pushed crates the opposite way on alternate arrivals. Crates
   arrive about every `SOURCE_INTERVAL` ticks, and with that at 3 the Spinner had turned
   halfway round each time. In the bot's lines it was mostly a hazard. The designer replaced
@@ -115,16 +129,26 @@ ARCHITECTURE_LOG.md.
   invites a side-feed you wouldn't have planned. Belts are weighted heaviest so the plain
   solution is always reachable. Bridges are drawn at half the other specials' rate (the
   designer's call): most boards need few, and a hand clogged with them stalls building.
-- **Evidence:** `Measured by: just cc-sim 200 small` → 187/200 reach the first milestone,
-  median 51 turns, p90 76, 0.17 crates lost per game. The bot lays belts and Springs on
+- **Evidence:** `Measured by: just cc-sim 200 small` → 183/200 reach the first milestone,
+  median 65 turns, p90 247, 11.5 crates lost per game (nearly all wrecked by gremlins, D-8). The bot lays belts and Springs on
   straight runs and throws every other card away with `discard`, so this measures boards
-  and hand pacing, not Puller or Rocket play. To be checked by playtest (X-2, X-4).
+  and hand pacing, not Puller, Rocket or Trap play. To be checked by playtest (X-2, X-4).
 
-### D-8 Gremlins wander and ride movers, but never push crates — *Proposed*
-- **Alternatives:** gremlins push crates; gremlins chase crates; no gremlins.
-- **Why:** comedy and stale routes, without the machine being sabotaged on purpose. A
-  gremlin in the way is a wall until it moves on. They avoid open water on their own, but
-  ice and your belts can still drown them, and a Rocket splats them (D-15).
+### D-8 Gremlins wander and ride movers, never push crates, and wreck a crate they step onto — *Proposed (wander, ride, no pushing), Decided (wrecking)*
+- **Alternatives:** gremlins push crates; gremlins chase crates; no gremlins; gremlins that
+  wreck crates however they arrive (pushed, pulled or flung too); wrecked crates not
+  counted as lost.
+- **Why:** comedy and stale routes. A gremlin in the way is a wall until it moves on. They
+  avoid open water on their own, but ice and your belts can still drown them, and a Rocket
+  splats them (D-15). The designer asked for them to be more pernicious: a gremlin's own
+  step onto a crate destroys it, while being carried into one by a Thing only blocks, so
+  the threat is the gremlin's choice, not your machine's. It's a piece template field
+  (`wrecks`) on the shared push, the mirror of the Rocket's splat with cargo as the victim,
+  so wanderers treat a crate's hex as open. A wrecked crate counts in `lost`: a crate the
+  line didn't deliver. It makes a stalled crate (a jam, the end of a slide, the source) a
+  target, which gives Walls, Traps and Rockets a job beside a line.
+- **Evidence:** R-18, R-37; U-18 (manual). Wrecking was added as one change: `just cc-sim
+  200 small` went from 187/200, median 53, p90 73, 0.15 lost per game to the figures in D-7.
 - **Evidence:** R-18; X-1 shows the bot still finishes most boards with gremlins around
   (`just cc-sim 200 small` → 187/200 reach the first milestone).
 
@@ -146,6 +170,25 @@ ARCHITECTURE_LOG.md.
   the other specials, because one Rocket changes a lot.
 - **Evidence:** R-32, R-33, R-31 (splats re-emerge), R-26 (splat events). Unmeasured in
   play: the bot discards Rockets.
+
+### D-18 The Trap: a gremlin that comes onto it dies, and a new one climbs out; Ex-gremlins counts them — *Decided (kills on arrival, re-emerge, weight as Rocket, the tally), Proposed (passing flights and building under a gremlin don't trigger; the count includes sinks and splats)*
+- **Alternatives:** a Trap that catches crates too; one that holds a gremlin in place
+  instead of killing it; one that's used up after a kill; gremlins that learn to wander
+  around Traps; counting only trap kills.
+- **Why:** the designer asked for a gremlin trap at the Rocket's frequency, killing on
+  arrival with a respawn. It's a fixture row (`traps`) on the shared step: one check where a
+  piece enters a hex, so every way of arriving (a wander, a belt, an ice slide, a Spring's
+  skid) triggers it. A flight is airborne over a Trap the way it is over a lake, so only its
+  landing hex counts; that keeps one rule for "what a flight ignores". Building one under a
+  gremlin does nothing, because nothing arrived. Wandering gremlins don't avoid Traps (they
+  only avoid water), so a Trap beside a line takes gremlins out over time without any
+  pushing. The kill reuses `splat` (by null), so the client animates and sounds it like a
+  Rocket's. Because gremlins re-emerge (D-14), a Trap thins traffic rather than clearing
+  the board. `exGremlins` counts every gremlin gone however it went, as "ex-" reads; it
+  sits in the top-right tally with deliveries, a score for comedy (G-1) beside the
+  turn score.
+- **Evidence:** R-35, R-36, R-31 (splats re-emerge); U-17 (manual). Unmeasured in play: the
+  bot discards Traps.
 
 ### D-16 Discard: pick a card, then the Discard spot (or `X`); it ticks — *Decided (discard, ticks), Proposed (key X)*
 - **Alternatives:** no discard (dump a card by building it somewhere harmless);
@@ -196,8 +239,6 @@ ARCHITECTURE_LOG.md.
 - **Q-1 Chain pushes?** A belt pushing a crate into another crate is blocked today.
   Sokoban-style chains would make jams clear themselves, and also make spectacular
   pile-ups. *Recommendation:* leave blocked until playtest shows jams are annoying.
-- **Q-2 Clicking a placed mover turns it and spends the turn.** That's fast, but a stray
-  click costs a tick. *Recommendation:* keep it; a tick is cheap with no time limit.
 - **Q-5 Gremlins on big boards.** The gremlin count doesn't scale with board size, so a
   60 × 60 board has the same one to four as the 16 × 10 one. Options: a gremlin count per
   `MAP_SIZES` row; a density (gremlins per land hex); leave it. *Recommendation:* a

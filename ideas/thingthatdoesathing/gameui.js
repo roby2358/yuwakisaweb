@@ -14,6 +14,11 @@ const GameUI = (function () {
     } = GameDisplayArtifacts;
     const { TERRAIN, HAND_SIZE, MAP_SIZES, aims, nextMilestone } = GameArtifacts;
     const SIZE_KEYS = Object.keys(MAP_SIZES);
+    // A splat burst's color, by piece kind: a gremlin's own color, a crate's side face.
+    const SPLAT_COLOR = {
+        crate: p => CRATE_SHADES[p.color].left,
+        gremlin: p => p.color,
+    };
     const END_CUES = ['deliver', 'splat', 'sink'];   // the one sound a tick's endings play, by priority
     const OVERLAY_PANELS = { intro: 'intro-panel', size: 'size-panel' };   // L5 overlay → its panel
 
@@ -92,6 +97,24 @@ const GameUI = (function () {
             for (const yy of [-0.08, 0.08]) {
                 ctx.beginPath(); ctx.moveTo(-s * 0.42, yy * s); ctx.lineTo(-s * 0.7, yy * s * 1.6); ctx.stroke();
             }
+        },
+        TRAP(ctx, s) {
+            // Open jaws: a ring with teeth pointing in, and the trigger plate in the middle.
+            const r = s * 0.5, n = 8;
+            ctx.beginPath();
+            ctx.arc(0, 0, r, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.beginPath();
+            for (let i = 0; i < n; i++) {
+                const a = (i + 0.5) / n * Math.PI * 2, a0 = i / n * Math.PI * 2, a1 = (i + 1) / n * Math.PI * 2;
+                ctx.moveTo(Math.cos(a0) * r, Math.sin(a0) * r);
+                ctx.lineTo(Math.cos(a) * r * 0.62, Math.sin(a) * r * 0.62);
+                ctx.lineTo(Math.cos(a1) * r, Math.sin(a1) * r);
+            }
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(0, 0, s * 0.1, 0, Math.PI * 2);
+            ctx.fill();
         },
         WALL(ctx, s) {
             ctx.lineWidth = Math.max(1, s * 0.05);
@@ -258,8 +281,11 @@ const GameUI = (function () {
             this.commit(() => this.engine.place(slot, q, r, this.facing), () => this.sound.place());
         }
 
+        // Turning a mover doesn't tick (D-19), so there's nothing to animate.
         rotate(q, r) {
-            this.commit(() => this.engine.rotate(q, r), () => this.sound.step());
+            if (!this.engine.rotate(q, r).ok) return;
+            this.sound.step();
+            this.render();
         }
 
         // Remove the Thing under the cursor (D).
@@ -489,7 +515,7 @@ const GameUI = (function () {
             // rest sit still; crates spawned this tick wait for the end.
             for (const [id, t] of a.tracks) {
                 const pose = this.trackPose(t, now);
-                if (t.end === 'splat' && pose.alpha < 1) this.drawSplat(pose.x, pose.y, t.color, 1 - pose.alpha);
+                if (t.end === 'splat' && pose.alpha < 1) this.drawSplat(pose.x, pose.y, SPLAT_COLOR[t.kind](t), 1 - pose.alpha);
                 this.drawPiece(pose.x, pose.y, t, pose.alpha, pose.scale);
             }
             for (const p of this.state.pieces) {
@@ -652,7 +678,8 @@ const GameUI = (function () {
             const next = nextMilestone(s.delivered);
             document.getElementById('progress-fill').style.width = s.delivered / next * 100 + '%';
             document.getElementById('progress-pct').textContent = `${s.delivered} / ${next}`;
-            document.getElementById('lost-info').textContent = s.lost ? `${s.lost} lost` : '';
+            document.getElementById('lost-info').textContent = s.lost ? `${s.lost} crates lost` : '';
+            document.getElementById('ex-info').textContent = s.exGremlins;
             this.renderHand();
 
             const hoverEl = document.getElementById('hover-info');

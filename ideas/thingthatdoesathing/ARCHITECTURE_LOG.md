@@ -2,6 +2,42 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-10 — Turning a mover no longer ticks (Q-2 settled by D-19)
+`rotate` used to turn the facing and then run a tick like every other command; now it
+returns `{ok: true, events: []}` and changes nothing else. Q-2 ("clicking a mover spends the
+turn") is settled by D-19, and D-1 now reads "every command but turning a mover". The UI's
+`rotate` no longer goes through `commit()` (no snapshot, no animation): it plays the cue
+and re-renders. R-10 rewritten (no tick, Rocket added), the smoke test expects no turn
+change for rotate, and the ONTOLOGY invariant, rotate rule and commands table, DYNAMICS
+turn structure, README, intro keys and CLAUDE.md updated. `just cc-sim 200 small` is
+identical (183/200, median 65).
+
+### 2026-11-10 — Gremlins wreck crates they step onto
+New piece template field `wrecks` (gremlin yes, crate no) and a `wrecks` field on the push's
+`how` (false for every Thing; the piece's own value for a wander, so the shared `WANDER`
+constant became `wanderOf(piece)`). A wandering step blocked by cargo removes it (`lost` +1)
+and takes the hex, emitting `splat{id: crate, by: gremlin}`; `splatVictim` became
+`victim(piece, dir, isVictim)` for both. `wanderDirs` treats a crate's hex as open. The
+client colors a splat by kind (`SPLAT_COLOR`), and the tally's lost line now reads "N crates
+lost" since not all of them sank. D-8 rewritten; R-37 and U-18 added; R-18 reworded;
+R-16's blocking test now checks events, since its pinned gremlin wanders back onto the crate.
+One change, measured alone: `just cc-sim 200 small` went from 187/200, median 53, p90 73,
+0.15 lost per game to 183/200, median 65, p90 247, 11.5 lost; medium 195/200, median 65
+(was 196, 57); large 196/200, median 81 (was 198, 76); huge 50/50, median 142 (was 132).
+
+### 2026-11-10 — The Trap, the ex-gremlin count, and a top-right tally
+New Thing `TRAP` (weight 1, as ROCKET) with a new template field `traps` on every row: a
+piece that splats dies when it comes onto the hex (`step` returns `'trapped'`; a flight
+checks only its landing hex) and the kill is a `splat` with `by` null, so it re-emerges
+through the existing Emerge rule. New state field `exGremlins`, counted in the tick from the
+same gone kinds that feed `emerge`. The Delivered meter and lost count moved out of the
+top-left HUD into a new `#tally` panel at the top right, with Ex-gremlins; the lost line now
+reads "N crates lost at sea" and hides at 0. D-5 grew to seven kinds; D-18, R-35, R-36,
+U-17 added; U-9 and U-10 reworded. Adding a kind changes the draw table, so a seed now
+deals different hands than before. `just cc-sim 200 small` went from 187/200, median 51, p90 76, 0.17
+lost to 187/200, median 53, p90 73, 0.15 lost: the bot throws Traps away, so a Belt is a
+slightly smaller share of each draw (D-7 evidence updated).
+
 ### 2026-11-10 — History and rationale swept out of code comments and ONTOLOGY
 Provenance and "why" notes moved here or to their decision. `sound.js` is adapted from
 `../../warrior/sound.js` (its 12.5% pulse wave and pentatonic cues). `Piece`, `Board`, the

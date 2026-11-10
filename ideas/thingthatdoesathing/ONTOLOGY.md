@@ -29,7 +29,7 @@ limit, board size picked at New Game]
 
 **Goals, in priority order**
 - **G-1 The contraption is the toy.** Placing a Thing should change what the machine does
-  on the very next tick, visibly. Concretely: every command ticks, and the tick is animated
+  on the very next tick, visibly. Concretely: every command but turning a mover ticks, and the tick is animated
   from engine events. [P]
 - **G-2 Readable.** Every Thing does one thing, shown by its glyph and facing arrow; the
   legal placement hexes highlight before you commit. [P]
@@ -66,7 +66,8 @@ everything; G-2 beats G-1 (a funny interaction that can't be read is a bug, not 
 | `hand` | `ThingKind[]` | Length `HAND_SIZE`. |
 | `turn` | int ≥ 1 | Goes up by 1 per tick. |
 | `delivered` | int | Crates that reached the target. |
-| `lost` | int | Crates that sank. |
+| `lost` | int | Crates that sank or were wrecked by a gremlin. |
+| `exGremlins` | int | Gremlins gone: sunk, splatted, or trapped (Tick rule). Shown in the tally. [D] |
 | `spawnTimer` | int | Ticks since the source last spawned. |
 | `nextId` | int | Next piece id. |
 | `phase` | `'player' \| 'tick'` | `'tick'` only while a tick resolves inside a command. |
@@ -99,7 +100,8 @@ A `Piece` (position, color, label) with two fields set by the engine. Each kind 
 | `label` | `'📦'` | `'👹'` | The counter's glyph (the client draws crates as a box instead). |
 | `cargo` | yes | no | Delivered on entering the target; counted in `lost` when it sinks. |
 | `wanders` | no | yes | Takes a random step on a tick when no Thing moved it. |
-| `splats` | no | yes | A Rocket's flight destroys it: the piece the flier lands on, and the launched piece once it lands (Push rule). [D] |
+| `splats` | no | yes | A Rocket's flight destroys it: the piece the flier lands on, and the launched piece once it lands; so does coming onto a Trap (Step and Push rules). [D] |
+| `wrecks` | no | yes | Its own wandering step into a cargo piece's hex destroys that piece (counted in `lost`) and takes the hex; pushed, pulled or flung into one, it's just blocked (Push rule). [D] |
 | `reemerges` | no | yes | When one sinks or splats, a new one climbs out on a shore hex (Emerge rule). |
 
 ### Thing — a placed fixture (plain object)
@@ -107,7 +109,7 @@ A `Piece` (position, color, label) with two fields set by the engine. Each kind 
 
 | Field | Type | Notes |
 |---|---|---|
-| `kind` | `ThingKind` | `BELT`, `SPRING`, `ROCKET`, `PULLER`, `WALL`, `BRIDGE`. |
+| `kind` | `ThingKind` | `BELT`, `SPRING`, `ROCKET`, `PULLER`, `WALL`, `TRAP`, `BRIDGE`. |
 | `q`, `r` | int | Position. One Thing per hex. |
 | `facing` | 0…5 \| null | Index into `Hex` neighbor directions; null for fixtures. Facing order E, NE, NW, W, SW, SE; clockwise is `(f+5) mod 6`. |
 
@@ -121,6 +123,7 @@ A `Piece` (position, color, label) with two fields set by the engine. Each kind 
 | `skids` | A flying push that runs its full range onto bare ice slides on, on the ground (Spring). [D] |
 | `pull` | Hexes it pulls the piece on the **far hex** (two ahead along `facing`) back toward itself, into the **near hex** (one ahead) (Puller). |
 | `blocks` | Pieces can't enter (Wall). |
+| `traps` | A piece that splats dies when it comes onto this hex: walked, pushed, slid, or coming down from a flight; a flight passing over doesn't count (Trap). [D] |
 | `on` | `'land'` (plains/ice) or `'water'` — where it may be built. |
 | `weight` | Relative draw chance for the hand. |
 
@@ -150,7 +153,7 @@ A `Piece` (position, color, label) with two fields set by the engine. Each kind 
   kind only on land. [P]
 - At most one piece per hex. No piece on a Wall, on mountain, or on unbridged water. [P]
 - `hand.length === HAND_SIZE` whenever a command returns. [P]
-- Every command that returns `ok:true` ran exactly one tick and raised `turn` by 1. [P]
+- Every command that returns `ok:true` ran exactly one tick and raised `turn` by 1, except `rotate`, which ran none and left everything but that facing alone. [P; rotate D]
 - There is no won state: every command stays legal however many crates are delivered. [D]
 - **Engine-side modules never read the DOM, canvas, or `GameDisplayArtifacts`.** [D]
 - **Determinism:** same seed + same commands ⇒ same state and same events. [D]
@@ -185,7 +188,7 @@ if not generateMap(seed, GEN_MAX_ATTEMPTS): seed = MAP_SIZES[size].knownGoodSeed
     #   diamond-square grid; assignTerrain; placeSourceAndTarget; hasPath?
 things = []; pieces = []; spawnCrate(); spawnGremlins()
     # spawnCrate: add a crate on source with color = Rando.choice(CRATE_COLORS)
-hand = HAND_SIZE draws; turn = 1; delivered = lost = spawnTimer = 0
+hand = HAND_SIZE draws; turn = 1; delivered = lost = exGremlins = spawnTimer = 0
 ```
 
 ### Assign terrain [P]
@@ -236,19 +239,20 @@ terrain fits THINGS[kind].on:  'land' → PLAINS or ICE;  'water' → WATER
 THINGS[kind].blocks ⇒ no piece on hex
 ```
 
-### Step — `step(piece, dir, flies)` → `'moved' | 'blocked' | 'sank' | 'delivered'` [P]
+### Step — `step(piece, dir, flies)` → `'moved' | 'blocked' | 'sank' | 'delivered' | 'trapped'` [P; trap D]
 *Serves:* one code path for every way a piece moves (movers, springs, ice, gremlins).
 ```
 next = piece + DIR[dir]
 if next off-map or MOUNTAIN or a blocking Thing or a piece there: return 'blocked'
 piece.moveTo(next)
 if PIECES[kind].cargo and next == target: remove; delivered += 1; return 'delivered'
+if not flies and a Thing with traps is there and PIECES[kind].splats: remove; return 'trapped'
 if next is WATER and no Thing there and not (flies and next is inland):
     remove; if cargo: lost += 1; return 'sank'
 return 'moved'
 ```
 
-### Push — `push(piece, dir, {n, splat, flies, skids})` [P; splat, flies, skids D]
+### Push — `push(piece, dir, {n, splat, flies, skids, wrecks})` [P; splat, flies, skids, wrecks D]
 *Serves:* G-1; ice as windfall; comedy (the Rocket).
 ```
 left = n
@@ -256,18 +260,24 @@ while left > 0:
     res = step(piece, dir, flies)
     if res == 'blocked' and splat and the blocker is a piece with PIECES.splats:
         remove it; emit splat{id: it, by: piece}; res = step(piece, dir); stop after it  # lands there
+    if res == 'blocked' and wrecks and the blocker is cargo:
+        remove it; lost += 1; emit splat{id: it, by: piece}; res = step(piece, dir); stop after it
     if res != 'moved': stop
     if not flies and piece's hex is ICE with no Thing: continue    # sliding is free
     left -= 1
 if skids and it ran its full range onto bare ice: slide on with step(piece, dir, false)
 if flies and piece is still on the board, on open water: sink it      # came down on inland water
+elif flies and it came down on a Trap and PIECES[piece.kind].splats: remove it; res = 'trapped'
+if res == 'trapped': emit splat{id, by: null}
 if splat and piece didn't sink or deliver and PIECES[piece.kind].splats: remove piece; emit splat{id, by: null}
 ```
 A slide or a flight always ends: a straight line reaches the water edge. A Rocket's flight
 (`flies`, range `THINGS.ROCKET.push`) crosses movers, Bridges, ice and inland water, delivers
 on the target, and sinks in the outer sea, or in inland water if it comes down there. A
 Spring's throw (`flies`, `skids`) does the same over its 3 hexes, then skids on if it lands
-on bare ice. Splatted pieces aren't `lost`.
+on bare ice. Splatted pieces aren't `lost`. A gremlin dies on a Trap however it comes onto it
+(a wander, a push, a slide, a landing), but not when a flight carries it over one, and not
+when a Trap is built under it.
 
 ### Tick — `tick()` [P]
 *Serves:* G-1. Runs once per command.
@@ -276,13 +286,15 @@ phase = 'tick'; moved = {}; deliveredBefore = delivered
 for thing in things (placement order):
     pusher: p = piece on thing's hex;  dir = facing;            n = push
     puller: p = piece on hex 2 ahead;  dir = opposite(facing);  n = pull
-    if p and p.id not in moved: moved += p; push(p, dir, {n, splat, flies, skids of THINGS[kind]})
+    if p and p.id not in moved: moved += p; push(p, dir, {n, splat, flies, skids of THINGS[kind], wrecks: false})
 for piece with PIECES[kind].wanders, not in moved (creation order):
-    dirs = directions whose neighbor is land or a bridge, empty, no blocking Thing
-    if dirs: push(piece, Rando.choice(dirs), {n: 1, splat: false, flies: false, skids: false})
+    dirs = directions whose neighbor is land or a bridge, no blocking Thing, and empty or holding cargo it wrecks
+    if dirs: push(piece, Rando.choice(dirs), {n: 1, splat: false, flies: false, skids: false, wrecks: PIECES[kind].wrecks})
 spawnTimer += 1
 if spawnTimer >= SOURCE_INTERVAL and no piece on source: spawnCrate(); spawnTimer = 0
-emerge(kinds of this tick's sunk and splatted pieces)
+gone = kinds of the command's own sink (remove) and this tick's sunk and splatted pieces
+exGremlins += count of 'gremlin' in gone
+emerge(gone)
 for each milestone m with deliveredBefore < m <= delivered: emit milestone{count: m}
 turn += 1; phase = 'player'
 ```
@@ -306,7 +318,7 @@ place(slot, q, r, facing):
            facing in 0..5 for Things with push or pull (ignored, stored null, for fixtures)
     things.push({kind, q, r, facing}); hand[slot] = draw(); tick()
 rotate(q, r):  legal: a Thing with a facing (push or pull) stands at (q,r)
-    facing = (facing + 5) mod 6; tick()
+    facing = (facing + 5) mod 6               # no tick: events = [], turn unchanged
 remove(q, r):  legal: a Thing stands at (q,r)
     things.remove(that Thing)                  # the card is spent; the hand is untouched
     if a piece stands there on open water: sink it (lost += 1 if cargo)
@@ -322,8 +334,10 @@ wait():        always legal; tick()
 
 *Serves:* comedy, routes going stale. Gremlins use the same `step` as everything else. They
 know only the board and occupancy. They pick a random free land or bridge neighbor, or
-stay. They never push crates; a gremlin in the way is a wall until it moves. A gremlin
-standing on a mover gets carried. One that drowns or splats is replaced by a new one on the shore.
+stay, and a crate on a neighbor counts as free: stepping there wrecks it. They never push
+crates; a gremlin in the way is a wall until it moves, unless it steps onto the crate.
+Pushed, pulled or flung into a crate, a gremlin is only blocked. A gremlin standing on a
+mover gets carried. One that drowns or splats is replaced by a new one on the shore.
 The count only drops when the whole shore is walled off or full.
 
 ---
@@ -345,7 +359,7 @@ The code constant in `GameArtifacts` is the single source.
 | `THINGS.BELT.push` | 1 | hexes |
 | `THINGS.ROCKET.push` | 8 | hexes (its range) [D] |
 | `THINGS.PULLER.pull` | 1 | hexes |
-| `THINGS.*.weight` BELT/SPRING/ROCKET/PULLER/WALL/BRIDGE | 6 / 2 / 1 / 2 / 2 / 1 | relative |
+| `THINGS.*.weight` BELT/SPRING/ROCKET/PULLER/WALL/TRAP/BRIDGE | 6 / 2 / 1 / 2 / 2 / 1 / 1 | relative (TRAP [D]: as ROCKET) |
 | `GREMLIN_DICE_COUNT` / `GREMLIN_DICE_SIDES` | 1 / 4 | gremlins = count d sides |
 | `GEN_MAX_ATTEMPTS` | 10 | tries per seed |
 | `HEIGHTMAP_ROUGHNESS` | 0.55 | — |
@@ -369,7 +383,7 @@ The code constant in `GameArtifacts` is the single source.
 |---|---|---|---|
 | `newGame(seed, size)` | `seed` is a non-negative integer and `size` a key of `MAP_SIZES` | regenerate at that size | `{ok:true}` |
 | `place(slot, q, r, facing)` | see Commands rule | build, redraw slot, tick | `{ok, events}` |
-| `rotate(q, r)` | a Belt, Spring, Rocket, or Puller is there | turn clockwise, tick | `{ok, events}` |
+| `rotate(q, r)` | a Belt, Spring, Rocket, or Puller is there | turn clockwise; no tick | `{ok, events: []}` |
 | `remove(q, r)` | any Thing is there | take it off (a piece left on open water sinks), tick | `{ok, events}` |
 | `discard(slot)` | `0 <= slot < HAND_SIZE` | redraw that slot, tick | `{ok, events}` |
 | `wait()` | always | tick | `{ok, events}` |
@@ -389,7 +403,7 @@ Illegal → `{ ok:false }` and nothing changed (hand and `Rando` included).
 | `move` | `id, path: [{q,r}…]` — every hex entered, in order, including slides |
 | `sink` | `id` (the piece is gone after its last `move`, or where it stood if its Bridge was removed) |
 | `deliver` | `id` |
-| `splat` | `id, by` — a piece destroyed by a Rocket's flight: `by` is the flier that landed on it, or null for the launched piece itself (after its `move`) |
+| `splat` | `id, by` — a piece destroyed by a Rocket's flight, a Trap, or a gremlin's step: `by` is the flier or gremlin that landed on it, or null for the launched piece itself or a trapped piece (after its `move`) |
 | `spawn` | `id, q, r` — a new crate on the source, or a gremlin climbing out on the shore |
 | `milestone` | `count` — a milestone this tick's deliveries reached (after the tick's other events) |
 

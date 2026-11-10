@@ -16,6 +16,7 @@ const GameState = (function () {
             this.turn = 1;
             this.delivered = 0;
             this.lost = 0;            // crates sunk
+            this.exGremlins = 0;      // gremlins sunk or splatted
             this.spawnTimer = 0;      // ticks since the source last spawned
             this.nextId = 1;
             this.phase = 'player';    // 'player' | 'tick'

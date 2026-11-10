@@ -249,6 +249,19 @@ run('a Rocket card draws, places, and its flight and splat animate', () => {
         settle();
     }
 });
+run('a Trap card places, and the tally shows ex-gremlins', () => {
+    const s = ui.state;
+    s.hand[0] = 'TRAP';
+    ui.render();
+    key('1');
+    const [k] = [...ui.picked.legal];
+    clickHex(...k.split(',').map(Number));
+    if (!s.things.some(t => t.kind === 'TRAP')) throw new Error('Trap not placed');
+    settle();
+    s.exGremlins = 7;
+    ui.updateHUD();
+    if (String(els['ex-info'].textContent) !== '7') throw new Error('Ex-gremlins not in the tally');
+});
 run('a game plays through the UI to the first milestone banner', () => {
     // Fresh board: earlier steps dropped random Things that this bot can't plan around.
     els['new-game'].fire('click'); key('1');

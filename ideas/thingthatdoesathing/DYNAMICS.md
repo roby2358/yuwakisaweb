@@ -34,14 +34,19 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
   and a Puller in hand asks where it can reach from.
 - **Gremlins** → feed comedy and keep routes from going stale. A drowned one climbs back
   out somewhere on the shore as a new gremlin. They ride movers and block
-  without malice.
+  without malice, until one steps onto a crate and wrecks it: a crate sitting still near a
+  gremlin is a crate at risk, which is what Walls and Traps beside a line are for.
 - **Rocket** → feeds windfall and comedy at once: eight hexes in one tick, over lakes, is a
   shortcut no belt paid for, but a crate that comes down in a lake or flies off the coast is
   gone. It splats gremlins it
   hits and gremlins that ride it, but they climb back out on the shore.
+- **Trap** → feeds comedy and gives gremlins a cost: a gremlin that wanders, rides or slides
+  onto it is done for, and the Ex-gremlins count climbs. A new one climbs out on the shore,
+  so a Trap thins traffic beside your line rather than clearing it.
 - **Discard (`X`)** → feeds scarcity of agency: a card you can't use costs a turn to throw
   away, so the choice between building the odd card and binning it stays real.
-- **Rotate** → makes a misplaced mover fixable without undo.
+- **Rotate** → makes a misplaced mover fixable without undo, and costs nothing: no tick,
+  so you can try a facing, look, and turn again.
 - **Remove (`D`)** → makes any misplacement fixable at the price of the card and a turn,
   so building stays an investment. Pulling a Bridge out from under a gremlin is a joke
   you can set up on purpose.
@@ -52,7 +57,8 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
 
 ## Turn structure
 
-1. You **place** a card, **discard** one, **rotate** a mover, **remove** a Thing, or **wait**.
+1. You **place** a card, **discard** one, **remove** a Thing, or **wait**. You may also
+   **rotate** movers first, as many as you like: turning doesn't tick.
 2. **Tick:** Things act in placement order (pushers on the piece on them, Pullers on the
    piece two hexes ahead), each piece moving at most once.
    A Rocket's piece flies up to its range, over lakes. Unmoved gremlins wander. The source may
