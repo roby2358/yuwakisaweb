@@ -79,12 +79,12 @@ const GameEngine = (function () {
         }
 
         // May `kind` be built on `hex`? The one placement rule: place() checks it, and
-        // legalPlacements() filters the board with it.
+        // legalPlacements() filters the board with it. A Thing already there doesn't count:
+        // placing replaces it, so the hex is judged as if it were gone (D-28).
         canPlace(kind, hex) {
             const tpl = THINGS[kind];
             if (!tpl || !hex) return false;
             if (this.targetAt(hex.q, hex.r)) return false;
-            if (this.thingAt(hex.q, hex.r)) return false;
             if (!BUILDS_ON[tpl.on](hex.terrain)) return false;
             return !(tpl.blocks && (this.pieceAt(hex.q, hex.r) || this.isSource(hex)));   // the crates must flow
         }
@@ -595,6 +595,8 @@ const GameEngine = (function () {
             const aimed = aims(kind);
             if (aimed && !(Number.isInteger(facing) && facing >= 0 && facing < 6)) return { ok: false };
             if (!this.canPlace(kind, this.board.get(q, r))) return { ok: false };
+            const old = this.thingAt(q, r);   // replaced: the new one goes last in placement order (D-28)
+            if (old) s.things.splice(s.things.indexOf(old), 1);
             s.things.push({ kind, color, q, r, facing: aimed ? facing : null });
             s.hand[slot] = this.draw();
             return this.tick(CARD_FIRST);
@@ -608,7 +610,6 @@ const GameEngine = (function () {
             return { ok: true, events: [] };
         }
 
-        // Take a placed Thing off the board. The card is spent: nothing returns to the hand.
         // Blow up the crate at (q, r): it's gone and counts as lost, then one tick. Only crates.
         blast(q, r) {
             const piece = this.pieceAt(q, r);
@@ -618,6 +619,8 @@ const GameEngine = (function () {
             return this.tick({ events: [{ type: 'splat', id: piece.id, by: null, trap: false }], gone: [piece.kind], usedCard: false });
         }
 
+        // Take a placed Thing off the board, leaving the hex bare. The Thing's card is
+        // spent: nothing returns to the hand. (Placing on it replaces it instead, D-28.)
         remove(q, r) {
             const s = this.state;
             const thing = this.thingAt(q, r);

@@ -575,12 +575,16 @@ const GameUI = (function () {
             for (const src of s.sources) this.drawSource(src);
             for (const t of s.targets) this.drawTarget(t);
 
+            // A Thing under the ghost is about to be replaced (D-28): the ghost stands in for it.
+            const doomed = this.replaceTarget(this.hoveredHex);
             for (const t of s.things) {
+                if (t === doomed) continue;
                 const { x, y } = this.hexToScreen(t.q, t.r);
                 drawThing(ctx, x, y, HEX_SIZE, t.kind, t.color, t.facing, 1);
             }
 
-            // L1.2 legal placements for the picked card, plus a ghost under the cursor.
+            // L1.2 legal placements for the picked card, plus a ghost under the cursor. A legal
+            // hex holding a Thing (placing replaces it) also gets a dashed yellow ring.
             if (this.picked) {
                 for (const key of this.picked.legal) {
                     const { q, r } = Hex.fromKey(key);
@@ -588,6 +592,14 @@ const GameUI = (function () {
                     drawHexPath(ctx, x, y, HEX_SIZE);
                     ctx.fillStyle = `rgba(${REACH_COLOR}, 0.28)`;
                     ctx.fill();
+                    if (!this.engine.thingAt(q, r)) continue;
+                    drawHexPath(ctx, x, y, HEX_SIZE - 2);
+                    ctx.save();
+                    ctx.setLineDash([4, 3]);
+                    ctx.strokeStyle = `rgba(${REACH_COLOR}, 0.9)`;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    ctx.restore();
                 }
                 const h = this.hoveredHex;
                 if (h && this.picked.legal.has(Hex.key(h.q, h.r))) {
@@ -609,6 +621,12 @@ const GameUI = (function () {
             this.drawPieces(now);
             if (this.selected) this.drawSelected(this.selected);
             this.updateHUD();
+        }
+
+        // The placed Thing that placing the picked card on `h` would replace, or null.
+        replaceTarget(h) {
+            if (!this.picked || !h || !this.picked.legal.has(Hex.key(h.q, h.r))) return null;
+            return this.engine.thingAt(h.q, h.r) || null;
         }
 
         // The selected hex: a bright outline, and over a mover a white arrow along its facing.
@@ -862,12 +880,18 @@ const GameUI = (function () {
             if (src) parts.push(`Source — ${src.colors.join(', ')} crates appear here`);
             if (tgt) parts.push(`Target — deliver ${tgt.color} crates here`);
             const t = this.engine.thingAt(h.q, h.r);
-            if (t) parts.push(`${thingName(t.kind, t.color)}: ${thingDoes(t.kind, t.color)}` +
-                (aims(t.kind) && !this.picked ? ' (click to select, again to turn, D to remove)' : ' (D to remove)'));
+            if (t) parts.push(`${thingName(t.kind, t.color)}: ${thingDoes(t.kind, t.color)}` + this.thingHint(h, t));
             const p = this.engine.pieceAt(h.q, h.r);
             if (p) parts.push(PIECE_LOOK[p.kind].name);
             hoverEl.textContent = parts.join(' · ');
             document.getElementById('hud-hover').classList.remove('hidden');
+        }
+
+        // What the mouse can do to the hovered Thing `t` on `h`, for the hover bar.
+        thingHint(h, t) {
+            if (this.replaceTarget(h)) return ' (click to replace, D to remove)';
+            if (aims(t.kind) && !this.picked) return ' (click to select, again to turn, D to remove)';
+            return ' (D to remove)';
         }
 
         // The hand: one card per slot, each with a little canvas of the Thing. Redrawn only

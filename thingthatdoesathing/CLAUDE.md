@@ -99,7 +99,7 @@ in `hexToScreen` / `screenToHex`.
   from plains. Sources on the left slice, targets on the right, land path guaranteed
   (fallback: the size's `knownGoodSeed`).
 - **Things:** Belt pushes the piece on its own hex; the Spring and Rocket throw it 3 and 8 hexes (airborne: over inland water; a Spring skids on if it lands on ice), the Rocket splatting gremlins; a Trap kills a gremlin that comes onto it; the Pusher pushes the piece on the hex in front on; the Puller pulls the piece
-  two hexes ahead back into the hex between (both always come in a crate color and move only that color's crates, and gremlins; they're rare draws); a gremlin coming onto a target dies; Wall blocks; Bridge is a Belt built on water (it carries the piece on it 1 hex). One Thing per hex, none on a target; movers may be built
+  two hexes ahead back into the hex between (both always come in a crate color and move only that color's crates, and gremlins; they're rare draws); a gremlin coming onto a target dies; Wall blocks; Bridge is a Belt built on water (it carries the piece on it 1 hex). One Thing per hex (placing on one replaces it), none on a target; movers may be built
   under a piece.
 - **Tick:** Pushers and Pullers first, then the other Things, each in placement order (each piece moves at most once), unmoved gremlins
   wander, every `SOURCE_INTERVAL` a random open color spawns at its source if clear; each milestone may open a color (`openColor`).

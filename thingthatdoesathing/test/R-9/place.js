@@ -19,7 +19,6 @@ check('fixture stores facing null', res.ok && state.things[1].kind === 'WALL' &&
 const illegal = [   // [label, hand[0], place args]
     ['slot out of range', 'BELT', [5, 6, 4, 0]],
     ['non-integer slot', 'BELT', ['0', 6, 4, 0]],
-    ['occupied by a Thing', 'BELT', [0, 3, 4, 0]],
     ['mover without a facing', 'BELT', [0, 6, 4]],
     ['mover with facing 6', 'BELT', [0, 6, 4, 6]],
     ['bridge on land', 'BRIDGE', [0, 6, 4, 0]],

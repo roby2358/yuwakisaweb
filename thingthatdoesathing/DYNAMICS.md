@@ -70,7 +70,7 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
 
 ## Turn structure
 
-1. You **place** a card, **discard** one, **remove** a Thing, or **wait**. You may also
+1. You **place** a card (on a bare hex or over a Thing, which it replaces), **discard** one, **remove** a Thing, or **wait**. You may also
    **rotate** movers first, as many as you like: turning doesn't tick.
 2. **Tick:** Pushers and Pullers act first, then the other Things, each in placement order (Belts, Springs and Rockets on the piece on them, Pushers on the piece in front, Pullers on the
    piece two hexes ahead), each piece moving at most once.

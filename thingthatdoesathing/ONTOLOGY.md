@@ -114,7 +114,7 @@ A `Piece` (position, color, label) with two fields set by the engine. Each kind 
 |---|---|---|
 | `kind` | `ThingKind` | `BELT`, `SPRING`, `ROCKET`, `PUSHER`, `PULLER`, `WALL`, `TRAP`, `BRIDGE`. |
 | `color` | `WHITE` \| `CRATE_COLORS` name | From its card. A colored one acts only on crates of its color and on every gremlin; white acts on every piece. Only `colored` kinds are ever anything but white. [D] |
-| `q`, `r` | int | Position. One Thing per hex. |
+| `q`, `r` | int | Position. One Thing per hex; placing on an occupied hex replaces it (D-28). |
 | `facing` | 0…5 \| null | Index into `Hex` neighbor directions; null for fixtures. Facing order E, NE, NW, W, SW, SE; clockwise is `(f+5) mod 6`. |
 
 `THINGS[kind]` is the template:
@@ -264,7 +264,7 @@ return {kind, color}
 *Serves:* G-2 (the highlight *is* the rule). `place` calls it; `legalPlacements(kind)` is
 the set of hexes where it holds.
 ```
-hex exists, no Thing there, not a target
+hex exists, not a target                      # a Thing already there doesn't count: place replaces it (D-28)
 terrain fits THINGS[kind].on:  'land' → PLAINS or ICE;  'water' → WATER
 THINGS[kind].blocks ⇒ no piece on hex, and not a source   # the crates must flow
 ```
@@ -357,7 +357,9 @@ a banner, and play goes on. An opened color also gets a panel that waits for a c
 place(slot, q, r, facing):
     legal: 0 <= slot < HAND_SIZE, canPlace(hand[slot], hex at (q,r)),
            facing in 0..5 for Things with push, pull or shove (ignored, stored null, for fixtures)
+    if a Thing stands at (q,r): things.remove(it)       # replaced; its card is spent (D-28)
     things.push({kind, color of the card, q, r, facing}); hand[slot] = draw(); tick()
+    # the new Thing is last in placement order and acts this tick on a piece standing there
 rotate(q, r):  legal: a Thing with a facing (push, pull or shove) stands at (q,r)
     facing = (facing + 5) mod 6               # no tick: events = [], turn unchanged
 remove(q, r):  legal: a Thing stands at (q,r)
@@ -432,7 +434,7 @@ The code constant in `GameArtifacts` is the single source.
 | Command | Legal when | Effect | Result |
 |---|---|---|---|
 | `newGame(seed, size)` | `seed` is a non-negative integer and `size` a key of `MAP_SIZES` | regenerate at that size | `{ok:true}` |
-| `place(slot, q, r, facing)` | see Commands rule | build, redraw slot, tick | `{ok, events}` |
+| `place(slot, q, r, facing)` | see Commands rule | build (replacing any Thing there), redraw slot, tick | `{ok, events}` |
 | `rotate(q, r)` | a Belt, Bridge, Spring, Rocket, Pusher, or Puller is there | turn clockwise; no tick | `{ok, events: []}` |
 | `remove(q, r)` | any Thing is there | take it off (a piece left on open water sinks), tick | `{ok, events}` |
 | `blast(q, r)` | a crate is there | blow it up (lost +1), tick | `{ok, events}` |

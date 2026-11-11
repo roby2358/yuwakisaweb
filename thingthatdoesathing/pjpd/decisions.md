@@ -13,3 +13,4 @@ decision, and where the full reasoning lives (a RATIONALE `D-n` tagged *unreview
 
 ## Made during the loop
 - bridge-belt-zguc (D-27): Bridge push is on the ground, so a Bridge aimed at open water sinks the crate (crossings need a line of Bridges); Bridges stay white and carry gremlins too; draw weight stays 1; glyph = faint planks under a belt chevron. [agent]
+- replace-es7n (D-28): D/remove stays; the new card must be legal on the bare terrain (only a Bridge replaces a water Bridge, so a replace never sinks anything); same-kind replace is legal (the way to recolor); new Thing goes last in placement order; a piece on the hex stays and the new Thing acts on it that tick; the old card is spent; a replace counts as card use for idle redraw; UI shows a dashed ring and hides the old Thing under the ghost. [agent]

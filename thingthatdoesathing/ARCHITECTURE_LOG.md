@@ -2,6 +2,16 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-11 — Placing on a Thing replaces it
+A hex holding a Thing used to be illegal for every card: rebuilding it took `D` (remove,
+one tick) and then a place (another tick). `canPlace` no longer checks for a Thing, so
+`legalPlacements` includes occupied hexes, and `place` takes the old Thing out before
+appending the new one, in one tick. The terrain, target, source and blocking checks still
+apply as if the hex were bare, so a Bridge on water can only be replaced by a Bridge.
+`remove` stays. The UI rings replaceable hexes with a dashed yellow line, hides the Thing
+under the ghost, and the hover bar says "click to replace". D-28 added; R-47 added, R-8,
+R-9 and U-3 updated.
+
 ### 2026-11-11 — The Bridge carries what's on it
 A Bridge used to be a facing-less fixture: water a piece could stand on, where a pushed crate
 stopped. It's now a mover with `push: 1`, a Belt built on water: it turns on click, places

@@ -328,6 +328,30 @@ ARCHITECTURE_LOG.md.
   `just cc-sim 50 medium`: unchanged, since the bot plans land paths and discards Bridges.
   Unmeasured in play.
 
+### D-28 Placing on a Thing replaces it — *Decided (replace in one command and one tick), Proposed (unreviewed: the rest)*
+- **Alternatives:** keep occupied hexes illegal (the old rule: `D`, then place, two ticks);
+  replace but refund the old Thing as a card; let the new Thing keep the old one's slot in
+  placement order.
+- **Why:** the designer asked for it. Rebuilding a hex cost a `remove` tick plus a `place`
+  tick, and a crate on the hex could wander off or sink in between. `canPlace` simply stops
+  looking for a Thing; `place` takes the old one out before it pushes the new one. No
+  engine code knows which kinds are involved.
+- **Unreviewed calls:** (1) `remove` stays its own command, for clearing a hex without
+  spending a card. (2) The hex is judged as if bare, against its own terrain: a land kind
+  can't replace a Bridge on water (a Bridge can, so a piece on a bridged hex never sinks
+  from a replace and `place` needs no sink case), a Wall still can't go where a piece
+  stands, and a Wall still can't go on a source. (3) The same kind over itself is legal; it
+  costs a card and a tick, and is how you'd recolor a Pusher or Puller. (4) The new Thing
+  goes last in placement order, like any new Thing, so within its group (D-24) it acts after
+  the others. (5) A piece standing there stays put and the new Thing acts on it that same
+  tick. (6) The old Thing's card is spent, as with `remove`; nothing returns to the hand.
+  (7) Replacing counts as using a card (D-26). (8) The UI rings replaceable hexes with a
+  dashed yellow line, hides the old Thing under the ghost, and the hover bar says "click
+  to replace".
+- **Evidence:** R-47, R-8, R-9; U-3 (manual). `Measured by: just cc-sim 200 small` and
+  `just cc-sim 50 medium`: unchanged, since the bot only rotates its own Things and never
+  places over one. Unmeasured in play.
+
 ### D-24 Pushers and Pullers act before the other Things in a tick — *Proposed*
 - **Alternatives:** pure placement order (the old rule); letting a Pusher or Puller move a
   piece that already moved this tick; acting after the Belts.

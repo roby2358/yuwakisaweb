@@ -39,9 +39,9 @@ that comes onto a target dies there, so they can't camp it.
 
 - `1` `2` `3` or click a card to pick it; legal hexes tint yellow
 - `R` / `Shift+R` / mouse wheel turn the Thing before placing
-- Click a yellow hex to place it; the world ticks once and animates
+- Click a yellow hex to place it; the world ticks once and animates. A yellow hex with a dashed ring holds a Thing: placing there replaces it (the old Thing's card is gone)
 - With no card picked, click a hex to select it: it lights up, a mover shows a white arrow, and Go holds. Click it again to turn a Belt/Spring/Rocket/Pusher/Puller clockwise (free: no tick); click anywhere else (or Esc) to let go
-- `D` removes the Thing under the cursor; the card is gone and the world ticks once
+- `D` removes the Thing under the cursor, leaving the hex bare; the card is gone and the world ticks once
 - Ten ticks in a row without placing or discarding a card redraws one card at random (it glows)
 - `B` blows up the crate under the cursor (a stuck line); it counts as lost and the world ticks once
 - Pick a card, then click Discard (right of the cards) or press `X` to throw it away; the world ticks once

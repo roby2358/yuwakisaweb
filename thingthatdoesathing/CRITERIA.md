@@ -26,7 +26,7 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | R-5 | many seeds at every size | a land path from the first source to its target | automated |
 | R-6 | `newGame(seed, size)` | one source and one target sharing a `CRATE_COLORS` color, and one crate of that color on the source; gremlin count in `gremlinDice(size)`d`GREMLIN_DICE_SIDES` (one die per `GREMLIN_HEXES_PER_DIE` hexes of area, rounded, at least 1) on distinct passable inner hexes off the source and target, each colored; no Things; `HAND_SIZE` cards; counters reset; unique ids | automated |
 | R-7 | a step | blocked (piece stays) into off-map, mountain, Wall, or another piece; accepted onto plains, ice, a bridge, or a mover | automated |
-| R-8 | `legalPlacements(kind)` | exactly the Placement legality rule: no Thing, not a target, right ground, no piece under a blocking kind, and no blocking kind on a source | automated |
+| R-8 | `legalPlacements(kind)` | exactly the Placement legality rule: not a target (a Thing there doesn't matter, R-47), right ground, no piece under a blocking kind, and no blocking kind on a source | automated |
 | R-9 | `place(slot, q, r, facing)` | legal: Thing appended (fixture facing null), slot redrawn, hand stays `HAND_SIZE`, one tick. Illegal (slot, facing, hex): `{ok:false}`, state and `Rando` unchanged | automated |
 | R-10 | `rotate(q, r)` | on a Belt, Bridge, Spring, Rocket, Pusher, or Puller: facing turns clockwise and nothing else changes (no tick: `events` empty, turn, pieces, hand untouched). On a fixture or empty hex: `{ok:false}`, unchanged | automated |
 | R-11 | `wait()` | one tick, hand and Things untouched | automated |
@@ -65,6 +65,7 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | R-44 | `blast(q, r)` | on a crate: the crate is gone, `lost` +1, its `splat` (`by` null) leads the events, Things untouched, one tick. On a gremlin or an empty hex: `{ok:false}`, state and `Rando` unchanged | automated |
 | R-45 | ticks with no card used | after `IDLE_REDRAW_TICKS` ticks in a row of `wait`, `remove` or `blast`, one random slot is redrawn (`redraw{slot}`) and the count starts over; `place` and `discard` reset it; `rotate` doesn't tick or count | automated |
 | R-46 | a Bridge during a tick | pushes the piece on it `THINGS.BRIDGE.push` hexes in its facing, on the ground, through the same `step` as a Belt: onto land or the next Bridge, blocked by a Wall or a piece, sunk in open water (crate: `lost` +1); a piece that came onto it this tick waits for the next (R-13); carries gremlins too | automated |
+| R-47 | `place` on a hex holding a Thing | the old Thing is gone and the new one stands there, last in placement order, as one command and one tick (Thing count unchanged); it acts this tick on a piece standing there; same kind over itself is legal; the hex is judged as if bare: a land kind can't replace a Bridge on water, a Wall can't go where a piece stands | automated |
 
 ---
 
@@ -74,7 +75,7 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 |---|---|---|
 | U-1 | Double-clicking `index.html` runs from `file://` with no console errors | manual — open from the file manager, check the console |
 | U-2 | The small board fits a desktop window without panning, centered; a board too big for the window opens centered on the source and left-drag pans it | manual — open small and huge at 1280×720 |
-| U-3 | Picking a card (click or `1`–`3`) lifts it and tints exactly `legalPlacements` yellow; a ghost with a facing arrow follows the cursor over legal hexes | manual — pick each kind |
+| U-3 | Picking a card (click or `1`–`3`) lifts it and tints exactly `legalPlacements` yellow, with a dashed ring on the ones holding a Thing; a ghost with a facing arrow follows the cursor over legal hexes, hiding the Thing it would replace, and the hover bar says "click to replace" | manual — pick each kind, hover a placed Belt |
 | U-4 | `R`, `Shift+R`, and the wheel turn the ghost; the card's picture turns with it | manual — pick a Belt, turn it all three ways |
 | U-5 | Clicking a yellow hex places the Thing and the tick plays: pieces hop along their paths, sinking/delivered pieces fade | manual — build a belt into water and one into the target |
 | U-6 | With no card picked, hovering a mover outlines it and the hover bar says "click to select, again to turn"; a click on any hex selects it (white outline, and a white arrow along a mover's facing) and holds Go; a second click turns the mover without a tick; a click anywhere else or Esc only deselects, and Go resumes | manual — press Go, click a placed Belt twice, then click elsewhere |

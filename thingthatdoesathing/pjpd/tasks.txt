@@ -1,11 +1,3 @@
-Priority:   60
-Status: ToDo
-ID: replace-es7n
-Created: 2026-11-11T15:54:12Z
-Updated: 2026-11-11T15:54:12Z
-
-Thing Factory: placing a card on a hex that already holds a Thing replaces that Thing, so the player no longer has to press D (remove) and then place. Update legalPlacements so occupied Thing hexes are legal (targets and other illegal hexes stay illegal). place() removes the old Thing and puts the new one down as one command and one tick. Decide whether D/remove stays as its own command (probably yes, for clearing a hex). Reconcile ONTOLOGY (place rule), CRITERIA row + test/R-n, RATIONALE, ARCHITECTURE_LOG, and the UI ghost and highlight on occupied hexes.
-----
 Priority:   55
 Status: ToDo
 ID: crate-cap-hybj

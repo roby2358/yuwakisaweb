@@ -6,6 +6,14 @@ Updated: 2026-11-11T20:39:28Z
 
 Thing Factory: give the Bridge a built-in belt so it pushes the piece on it in its facing direction, like a Belt over water. Right now a crate that reaches a bridge just stops there, which is annoying. That makes the Bridge a facing mover: it rotates on click, has a ghost facing, and is included in aims(kind). Check that the order of the tick and the "each piece moves at most once" rule still hold. Update THING_LOOK so the arrow shows on the bridge. Reconcile ONTOLOGY / CRITERIA (+ test/R-n for the bridge push) / RATIONALE / log, and the hover verb line.
 ----
+Priority:   60
+Status: Done
+ID: replace-es7n
+Created: 2026-11-11T15:54:12Z
+Updated: 2026-11-11T20:45:50Z
+
+Thing Factory: placing a card on a hex that already holds a Thing replaces that Thing, so the player no longer has to press D (remove) and then place. Update legalPlacements so occupied Thing hexes are legal (targets and other illegal hexes stay illegal). place() removes the old Thing and puts the new one down as one command and one tick. Decide whether D/remove stays as its own command (probably yes, for clearing a hex). Reconcile ONTOLOGY (place rule), CRITERIA row + test/R-n, RATIONALE, ARCHITECTURE_LOG, and the UI ghost and highlight on occupied hexes.
+----
 Priority:   40
 Status: Done
 ID: colorthings-3nq7
