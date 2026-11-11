@@ -2,6 +2,13 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-11 — Intro and keys legend are two panels; Help button
+The intro used to carry the story, the full key list and the size picker in one card. Now
+the intro is the story and the sizes; picking a size from it opens the keys legend (new
+`help` overlay, closes on a click or any key). A Help button in the HUD shows the same
+legend any time; like every overlay it holds Go, which picks up when it closes. The legend
+now lists select/turn, Space and Enter as they work today. U-24 added; uiboot covers both.
+
 ### 2026-11-11 — Space is "one tick, then stop"
 Space used to be the same Wait as Enter, which did nothing useful while Go ran. It is now
 `GameUI.oneTick()`: with Go off it's a Wait; with Go running it turns Go off and the tick

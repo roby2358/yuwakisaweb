@@ -20,13 +20,14 @@ const GameUI = (function () {
         gremlin: p => p.color,
     };
     const END_CUES = ['deliver', 'splat', 'sink'];   // the one sound a tick's endings play, by priority
-    const OVERLAY_PANELS = { intro: 'intro-panel', size: 'size-panel', color: 'color-panel' };   // L5 overlay → its panel
+    const OVERLAY_PANELS = { intro: 'intro-panel', size: 'size-panel', color: 'color-panel', help: 'help-panel' };   // L5 overlay → its panel
     // L5: what a key does on each overlay. The size pickers take their number keys (and Esc
-    // when a game is behind); the new-color panel closes on any key.
+    // when a game is behind); the new-color panel and the keys legend close on any key.
     const OVERLAY_KEYS = {
         intro: (ui, e) => ui.sizeKey(e),
         size: (ui, e) => ui.sizeKey(e),
         color: ui => ui.dismissOverlay(),
+        help: ui => ui.dismissOverlay(),
     };
 
     const DRAG_THRESHOLD = 4;
@@ -202,7 +203,7 @@ const GameUI = (function () {
 
             this.picked = null;      // L1.2 { slot, legal: Set<key> } — the card being placed
             this.facing = 0;         // ghost facing; remembered between placements
-            this.overlay = null;     // L5 'intro' | 'size' (board-size pickers) | 'color' (a color opened) | null
+            this.overlay = null;     // L5 'intro' | 'size' (board-size pickers) | 'color' (a color opened) | 'help' (the keys) | null
             this.hoveredHex = null;  // L1.3
             this.selected = null;    // {q, r} — a clicked hex: highlighted, holds Go; a second click turns its mover
             this.anim = null;        // { t0, dur, tracks: Map<id, track>, before, hidden: Set<id>, milestone, ends: Set<type> }
@@ -226,7 +227,9 @@ const GameUI = (function () {
             this.showOverlay('size');
         }
 
+        // The first game, picked from the intro, opens on the keys legend.
         startGame(size) {
+            const fromIntro = this.overlay === 'intro';
             this.engine.newGame(Math.floor(Math.random() * 0x100000000), size);
             this.picked = null;
             this.selected = null;
@@ -237,6 +240,14 @@ const GameUI = (function () {
             this.dismissOverlay();
             this.sound.fanfare();
             this.resize();
+            if (fromIntro) this.showOverlay('help');
+        }
+
+        // Help: the keys legend over the game. Like every overlay it holds Go; Go picks up
+        // again when it closes.
+        showHelp() {
+            if (this.overlay) return;
+            this.showOverlay('help');
         }
 
         resize() {
@@ -504,7 +515,7 @@ const GameUI = (function () {
         }
 
         // ---- L5 Overlays ----
-        // Both overlays are size pickers; only a size (or Esc on New Game) closes them.
+        // The size pickers close only on a size (or Esc on New Game); the others on any key or click.
         showOverlay(name) {
             this.overlay = name;
             for (const [n, id] of Object.entries(OVERLAY_PANELS))
@@ -903,6 +914,8 @@ const GameUI = (function () {
             document.getElementById('discard').addEventListener('click', () => this.discardPicked());
             document.getElementById('size-cancel').addEventListener('click', () => this.dismissOverlay());
             document.getElementById('color-panel').addEventListener('click', () => this.dismissOverlay());
+            document.getElementById('help').addEventListener('click', () => this.showHelp());
+            document.getElementById('help-panel').addEventListener('click', () => this.dismissOverlay());
             this.buildSizeButtons(document.getElementById('intro-sizes'));
             this.buildSizeButtons(document.getElementById('new-sizes'));
         }

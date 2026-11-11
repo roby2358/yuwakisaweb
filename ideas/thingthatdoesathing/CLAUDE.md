@@ -69,7 +69,9 @@ tick animation) → `picked` card → bare map click.
 - **L5:** the intro and New Game overlays are both board-size pickers (click or `1`–`4`); they
   consume all other input, and Esc closes New Game only. A milestone that opens a color shows
   the `color` overlay, which closes on a click or any key (`OVERLAY_KEYS` dispatches keys per
-  overlay). The milestone banner is not an overlay; it never blocks input.
+  overlay). The `help` overlay is the keys legend: shown once after the intro's size pick, and by
+  the Help button; it closes on a click or any key and holds Go while open. The milestone
+  banner is not an overlay; it never blocks input.
 - **Go/Pause** (`running`): after each animation, `wait()` again `RUN_GAP_MS` later; holds
   while a card is picked or a hex is selected (both work mid-animation).
 - Every command goes through `commit()`, which snapshots piece positions, calls the engine,

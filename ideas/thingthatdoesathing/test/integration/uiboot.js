@@ -140,6 +140,14 @@ run('the intro waits for a size: no board, and clicks and Space do nothing', () 
     key(' '); key('Escape');
     if (ui.overlay !== 'intro') throw new Error('the intro closed without a size');
 });
+run('a size from the intro opens the keys legend; any key closes it', () => {
+    key('1');
+    if (!ui.state.hexes || ui.overlay !== 'help' || els['help-panel'].classList.set.has('hidden'))
+        throw new Error('the first game must open on the keys legend');
+    key('2');
+    if (ui.overlay || ui.picked || !els['help-panel'].classList.set.has('hidden'))
+        throw new Error('a key must close the legend and do nothing else');
+});
 run('every size button builds its board; key 1 picks the first size', () => {
     const sizes = vm.runInContext('GameArtifacts.MAP_SIZES', ctx);
     const keys = Object.keys(sizes);
@@ -340,6 +348,23 @@ run('Go ticks on its own, holds while a card is picked, and Pause stops it', () 
     const paused = s.turn;
     advance(2000);
     if (s.turn !== paused || els.go.textContent !== 'Go') throw new Error('Pause did not stop it');
+});
+run('Help shows the keys and holds Go; closing it lets Go pick up again', () => {
+    els['new-game'].fire('click'); key('1');
+    const s = ui.state;
+    els.go.fire('click');
+    advance(1000);
+    els.help.fire('click');
+    if (ui.overlay !== 'help' || els['help-panel'].classList.set.has('hidden')) throw new Error('Help did not show the keys');
+    settle(); advance(500);
+    const held = s.turn;
+    advance(2000);
+    if (s.turn !== held) throw new Error('ticked while Help was open');
+    els['help-panel'].fire('click');
+    if (ui.overlay) throw new Error('a click must close Help');
+    advance(1000);
+    if (s.turn === held || !ui.running) throw new Error('Go did not pick up after Help closed');
+    els.go.fire('click'); settle();
 });
 run('Space while Go runs finishes the tick in flight, then stops', () => {
     els['new-game'].fire('click'); key('1');

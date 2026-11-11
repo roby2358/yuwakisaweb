@@ -50,4 +50,5 @@ that comes onto a target dies there, so they can't camp it.
 - Go (top centre): keep ticking until Pause; picking a card or selecting a hex holds the run
 - Esc or right-click puts the card back; left-drag pans
 - Top right: crates delivered toward the next milestone (and per color, once there are two), Ex-gremlins (gremlins done in), Trapped (gremlins a Trap caught), and crates lost
+- Help (top left): the keys legend, also shown once when the first game opens; ticks hold while it's open
 - New Game: pick a board size (click or `1`–`4`); Esc keeps the current game

@@ -94,6 +94,7 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | U-21 | `B` over a crate bursts it in its color and the lost count goes up; over a gremlin or empty hex nothing happens | manual — jam a line and press B on a crate |
 | U-22 | A card the idle rule redrew glows once in the hand | manual — press Go and watch the hand |
 | U-23 | When a milestone opens a color, a panel names it with a swatch and holds play (Go included) until a click anywhere or any key; that key does nothing else | manual — reach 10 on a medium board with Go running |
+| U-24 | The intro is the story and the board sizes; the first game then opens on the keys legend, which closes on a click or any key (that key does nothing else). The Help button shows the same legend any time and holds play (Go included) until it closes | manual — open the page, pick a size, read the keys; press Go, then Help |
 
 ---
 
@@ -110,7 +111,7 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 
 ## Status (2026-11-11)
 
-- **Manual only:** U-1…U-23, X-1.
+- **Manual only:** U-1…U-24, X-1.
 - **Retired:** R-17 (Spinner), R-20 (final win).
 - **Not yet covered:** X-2, X-3, X-4 (need playtests).
 - **Partial coverage:** R-18 checks that wandering gremlins land on land and never step into

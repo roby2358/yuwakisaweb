@@ -142,7 +142,7 @@ A `Piece` (position, color, label) with two fields set by the engine. Each kind 
 |---|---|
 | `picked` | `{ slot, legal: Set<key> }` \| null — the hand card being placed. |
 | `facing` | 0…5 — the ghost's facing, remembered between placements. |
-| `overlay` | `'intro'` \| `'size'` \| `'color'` \| null. `'intro'` and `'size'` are size pickers; picking a size starts a game, and `'size'` (New Game) also closes on Esc, back to the game. `'color'` shows the color an `open` event named and closes on a click or any key. [D] |
+| `overlay` | `'intro'` \| `'size'` \| `'color'` \| `'help'` \| null. `'intro'` and `'size'` are size pickers; picking a size starts a game, and `'size'` (New Game) also closes on Esc, back to the game. `'color'` shows the color an `open` event named and closes on a click or any key. `'help'` is the keys legend: it opens after the intro's size pick and from the Help button, and closes on a click or any key. [D] |
 | `hoveredHex`, `panX/Y`, drag fields | The hex under the cursor, the screen-space pan offset, and left-drag tracking (`DRAG_THRESHOLD`). |
 | `anim` | `{ t0, dur, tracks, before, hidden, milestone, opened, ends }` \| null — tick animation; input waits while it runs (picking a card doesn't). |
 | `running` | bool — Go/Pause. While true, the client calls `wait()` `RUN_GAP_MS` after each animation ends, and holds while a card is picked. [D] |
