@@ -2,6 +2,20 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-11 — Space is "one tick, then stop"
+Space used to be the same Wait as Enter, which did nothing useful while Go ran. It is now
+`GameUI.oneTick()`: with Go off it's a Wait; with Go running it turns Go off and the tick
+already animating finishes. Enter and the Wait button are unchanged. U-8 updated; uiboot
+covers it.
+
+### 2026-11-11 — Click selects a hex before it turns
+Clicking a moving board to turn a Belt was confusing, since the tick could shift things
+under the cursor. A bare click now selects a hex (`GameUI.selected`): a white outline, a
+white arrow along a mover's facing, and Go holds while it's selected. A second click on it
+turns the mover (`rotate`, still no tick, D-19); a click elsewhere or Esc deselects and Go
+resumes. Selecting and turning are allowed mid-animation. U-6, U-8, U-13 updated; uiboot
+covers it.
+
 ### 2026-11-11 — Pushers and Pullers only in crate colors, and rare (D-22)
 `cardColor()` no longer offers white: a colored kind takes one of the open colors (the only
 one on a single-color board). `PUSHER` and `PULLER` weights went from 2 to 0.5 each, since

@@ -2,7 +2,7 @@
 //
 // Loads every script index.html loads, in order, into a vm with a fake document, canvas,
 // and requestAnimationFrame, then drives the UI through clicks and keys: pick a board size
-// from the intro, pick each card, turn the ghost, place, rotate, wait, run tick animations to completion,
+// from the intro, pick each card, turn the ghost, place, select and rotate, wait, run tick animations to completion,
 // and play to the first milestone. Catches runtime errors in rendering and input wiring without a
 // browser. It can't judge how anything looks; that stays manual (U-rows).
 'use strict';
@@ -340,6 +340,51 @@ run('Go ticks on its own, holds while a card is picked, and Pause stops it', () 
     const paused = s.turn;
     advance(2000);
     if (s.turn !== paused || els.go.textContent !== 'Go') throw new Error('Pause did not stop it');
+});
+run('Space while Go runs finishes the tick in flight, then stops', () => {
+    els['new-game'].fire('click'); key('1');
+    const s = ui.state;
+    els.go.fire('click');
+    advance(1000);
+    for (let i = 0; i < 40 && !ui.anim; i++) advance(50);   // catch a tick mid-animation
+    const t = s.turn;
+    if (!ui.anim) throw new Error('expected a tick in flight');
+    key(' ');
+    if (els.go.textContent !== 'Go' || ui.running) throw new Error('Space did not turn Go off');
+    settle(); advance(2000);
+    if (s.turn !== t) throw new Error('ticked again after Space stopped Go');
+    key(' '); settle(); advance(2000);
+    if (s.turn !== t + 1) throw new Error('Space with Go off must do exactly one tick');
+});
+run('a click selects a hex and holds Go; a second click turns its mover; a click elsewhere lets go', () => {
+    els['new-game'].fire('click'); key('1');
+    const s = ui.state;
+    s.hand[0] = { kind: 'BELT', color: vm.runInContext('GameArtifacts.WHITE', ctx) };
+    key('1');
+    const [k] = ui.picked.legal;
+    const [q, r] = k.split(',').map(Number);
+    clickHex(q, r); settle();
+    const belt = ui.engine.thingAt(q, r);
+    if (!belt) throw new Error('belt not placed');
+    els.go.fire('click');
+    advance(1000);
+    clickHex(q, r);
+    if (!ui.selected || ui.selected.q !== q || ui.selected.r !== r) throw new Error('click did not select');
+    const facing = belt.facing;
+    if (ui.engine.thingAt(q, r).facing !== facing) throw new Error('the first click must not turn it');
+    settle(); advance(1000);
+    const held = s.turn;
+    advance(2000);
+    if (s.turn !== held) throw new Error('ticked while a hex was selected');
+    clickHex(q, r);
+    if (ui.engine.thingAt(q, r).facing === facing) throw new Error('the second click did not turn it');
+    if (s.turn !== held) throw new Error('turning must not tick');
+    const other = [...s.hexes.values()].find(h => h.q !== q || h.r !== r);
+    clickHex(other.q, other.r);
+    if (ui.selected) throw new Error('a click elsewhere did not deselect');
+    advance(1000);
+    if (s.turn === held) throw new Error('Go did not resume after deselecting');
+    els.go.fire('click'); settle();
 });
 run('a newly opened color shows a panel that holds Go until a click or any key', () => {
     const s = ui.state;

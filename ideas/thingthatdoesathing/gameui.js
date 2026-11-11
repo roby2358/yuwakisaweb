@@ -204,6 +204,7 @@ const GameUI = (function () {
             this.facing = 0;         // ghost facing; remembered between placements
             this.overlay = null;     // L5 'intro' | 'size' (board-size pickers) | 'color' (a color opened) | null
             this.hoveredHex = null;  // L1.3
+            this.selected = null;    // {q, r} — a clicked hex: highlighted, holds Go; a second click turns its mover
             this.anim = null;        // { t0, dur, tracks: Map<id, track>, before, hidden: Set<id>, milestone, ends: Set<type> }
             this.running = false;    // Go/Pause: tick on its own after each animation
             this.runTimer = null;    // the pending RUN_GAP_MS timeout, if any
@@ -228,6 +229,7 @@ const GameUI = (function () {
         startGame(size) {
             this.engine.newGame(Math.floor(Math.random() * 0x100000000), size);
             this.picked = null;
+            this.selected = null;
             this.anim = null;
             this.hoveredHex = null;
             this.setRunning(false);
@@ -277,6 +279,7 @@ const GameUI = (function () {
             if (this.overlay) return;
             if (slot < 0 || slot >= this.state.hand.length) return;
             if (this.picked && this.picked.slot === slot) { this.unpick(); return; }
+            this.selected = null;
             this.picked = { slot, legal: this.engine.legalPlacements(this.state.hand[slot].kind) };
             this.render();
         }
@@ -305,6 +308,18 @@ const GameUI = (function () {
         place(q, r) {
             const slot = this.picked.slot;
             this.commit(() => this.engine.place(slot, q, r, this.facing), () => this.sound.place());
+        }
+
+        // ---- Select a hex: it holds Go so you can look; clicking it again turns its mover ----
+        select(q, r) {
+            this.selected = { q, r };
+            this.render();
+        }
+
+        deselect() {
+            this.selected = null;
+            this.render();
+            this.scheduleRun();
         }
 
         // Turning a mover doesn't tick (D-19), so there's nothing to animate.
@@ -341,6 +356,14 @@ const GameUI = (function () {
             this.commit(() => this.engine.wait(), () => this.sound.endTurn());
         }
 
+        // Space: do one tick, or finish the one in flight, then stop. While Go runs it turns
+        // Go off (the animation playing finishes; no new tick starts); otherwise it's a Wait.
+        oneTick() {
+            if (this.overlay) return;
+            if (this.running) { this.setRunning(false); return; }
+            this.primaryAction();
+        }
+
         // ---- Go/Pause: Wait after every animation, RUN_GAP_MS apart ----
         toggleRun() {
             if (this.overlay) return;
@@ -362,10 +385,10 @@ const GameUI = (function () {
             this.runTimer = setTimeout(() => { this.runTimer = null; this.runStep(); }, RUN_GAP_MS);
         }
 
-        // A held card or an animation in flight waits for the next gap.
+        // A held card, a selected hex or an animation in flight waits for the next gap.
         runStep() {
             if (!this.running || this.overlay) return;
-            if (this.anim || this.picked) { this.scheduleRun(); return; }
+            if (this.anim || this.picked || this.selected) { this.scheduleRun(); return; }
             this.commit(() => this.engine.wait(), () => {});
         }
 
@@ -565,7 +588,41 @@ const GameUI = (function () {
             }
 
             this.drawPieces(now);
+            if (this.selected) this.drawSelected(this.selected);
             this.updateHUD();
+        }
+
+        // The selected hex: a bright outline, and over a mover a white arrow along its facing.
+        drawSelected({ q, r }) {
+            const ctx = this.ctx;
+            const { x, y } = this.hexToScreen(q, r);
+            drawHexPath(ctx, x, y, HEX_SIZE - 1.5);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            const t = this.engine.thingAt(q, r);
+            if (!t || !aims(t.kind)) return;
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(facingAngle(t.facing));
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            const s = HEX_SIZE;
+            const arrow = () => {
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.5, 0); ctx.lineTo(s * 0.62, 0);
+                ctx.moveTo(s * 0.34, -s * 0.26); ctx.lineTo(s * 0.62, 0); ctx.lineTo(s * 0.34, s * 0.26);
+                ctx.stroke();
+            };
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
+            ctx.lineWidth = Math.max(4, s * 0.2);
+            arrow();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = Math.max(2, s * 0.1);
+            arrow();
+            ctx.restore();
         }
 
         drawPieces(now) {
@@ -787,7 +844,7 @@ const GameUI = (function () {
             if (tgt) parts.push(`Target — deliver ${tgt.color} crates here`);
             const t = this.engine.thingAt(h.q, h.r);
             if (t) parts.push(`${thingName(t.kind, t.color)}: ${thingDoes(t.kind, t.color)}` +
-                (aims(t.kind) && !this.picked ? ' (click to turn, D to remove)' : ' (D to remove)'));
+                (aims(t.kind) && !this.picked ? ' (click to select, again to turn, D to remove)' : ' (D to remove)'));
             const p = this.engine.pieceAt(h.q, h.r);
             if (p) parts.push(PIECE_LOOK[p.kind].name);
             hoverEl.textContent = parts.join(' · ');
@@ -867,18 +924,25 @@ const GameUI = (function () {
             e.preventDefault();
         }
 
+        // With no card picked: a click on a hex selects it (and holds Go), a click on the
+        // selected hex turns its mover, and a click anywhere else only deselects. Selecting
+        // and turning work mid-animation, since neither ticks.
         handleClick(e) {
             if (this.overlay) return;                               // L5 captures & consumes
-            if (this.anim) return;                                  // L1.1 input waits for the tick
             const hex = this.screenToHex(e.clientX, e.clientY);
             const key = Hex.key(hex.q, hex.r);
             if (this.picked) {
+                if (this.anim) return;                              // L1.1 a place waits for the tick
                 if (this.picked.legal.has(key)) this.place(hex.q, hex.r);
                 else this.unpick();
                 return;
             }
-            const t = this.engine.thingAt(hex.q, hex.r);
-            if (t && aims(t.kind)) this.rotate(hex.q, hex.r);
+            if (this.selected) {
+                if (Hex.same(this.selected, hex)) this.rotate(hex.q, hex.r);
+                else this.deselect();
+                return;
+            }
+            if (this.state.hexes.has(key)) this.select(hex.q, hex.r);
         }
 
         onMouseMove(e) {
@@ -910,8 +974,9 @@ const GameUI = (function () {
 
         onKeyDown(e) {
             if (this.overlay) { this.onOverlayKey(e); return; }
-            if (e.key === 'Escape') { if (this.picked) this.unpick(); return; }   // L2.2
-            if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); this.primaryAction(); return; }
+            if (e.key === 'Escape') { if (this.picked) this.unpick(); else if (this.selected) this.deselect(); return; }   // L2.2
+            if (e.key === ' ') { e.preventDefault(); this.oneTick(); return; }
+            if (e.key === 'Enter') { e.preventDefault(); this.primaryAction(); return; }
             if (e.key >= '1' && e.key <= String(HAND_SIZE)) { this.pick(Number(e.key) - 1); return; }
             if ((e.key === 'r' || e.key === 'R') && this.picked) { this.turnGhost(e.shiftKey ? -1 : 1); return; }
             if (e.key === 'd' || e.key === 'D') { this.removeHovered(); return; }

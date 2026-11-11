@@ -40,13 +40,14 @@ that comes onto a target dies there, so they can't camp it.
 - `1` `2` `3` or click a card to pick it; legal hexes tint yellow
 - `R` / `Shift+R` / mouse wheel turn the Thing before placing
 - Click a yellow hex to place it; the world ticks once and animates
-- With no card picked, click a placed Belt/Spring/Rocket/Pusher/Puller to turn it clockwise (free: no tick)
+- With no card picked, click a hex to select it: it lights up, a mover shows a white arrow, and Go holds. Click it again to turn a Belt/Spring/Rocket/Pusher/Puller clockwise (free: no tick); click anywhere else (or Esc) to let go
 - `D` removes the Thing under the cursor; the card is gone and the world ticks once
 - Ten ticks in a row without placing or discarding a card redraws one card at random (it glows)
 - `B` blows up the crate under the cursor (a stuck line); it counts as lost and the world ticks once
 - Pick a card, then click Discard (right of the cards) or press `X` to throw it away; the world ticks once
-- Space / Enter / Wait: let it run one tick
-- Go (top centre): keep ticking until Pause; picking a card holds the run
+- Space: one tick, then stop. With Go running, Space finishes the tick in flight and turns Go off
+- Enter / Wait: let it run one tick
+- Go (top centre): keep ticking until Pause; picking a card or selecting a hex holds the run
 - Esc or right-click puts the card back; left-drag pans
 - Top right: crates delivered toward the next milestone (and per color, once there are two), Ex-gremlins (gremlins done in), Trapped (gremlins a Trap caught), and crates lost
 - New Game: pick a board size (click or `1`–`4`); Esc keeps the current game

@@ -62,16 +62,16 @@ tick animation) → `picked` card → bare map click.
 
 - **L1.2 pick-then-act:** picking a card (click or `1`–`3`) computes
   `engine.legalPlacements(kind)` once; clicking a hex is a lookup into that set. `R`/wheel
-  turn the ghost's facing. With no card picked, clicking a Belt/Spring/Rocket/Pusher/Puller calls `rotate`, which doesn't tick, so the UI just re-renders.
+  turn the ghost's facing. With no card picked, a click selects a hex (`selected`: outline, white facing arrow over a mover, holds Go); a click on the selected hex calls `rotate`, which doesn't tick, so the UI just re-renders; a click elsewhere or Esc deselects. Selecting and turning work mid-animation.
   `D` calls `remove` on the hovered Thing; `B` calls `blast` on the hovered crate. With a card picked, the Discard spot or `X` calls `discard`.
-- **L2.1 primary action:** Wait button / Space / Enter → `engine.wait()`.
+- **L2.1 primary action:** Wait button / Enter → `engine.wait()`. Space is `oneTick()`: a Wait when Go is off; when Go runs it turns Go off, and the tick in flight finishes.
 - **L2.2:** Esc and right-click put the card back.
 - **L5:** the intro and New Game overlays are both board-size pickers (click or `1`–`4`); they
   consume all other input, and Esc closes New Game only. A milestone that opens a color shows
   the `color` overlay, which closes on a click or any key (`OVERLAY_KEYS` dispatches keys per
   overlay). The milestone banner is not an overlay; it never blocks input.
 - **Go/Pause** (`running`): after each animation, `wait()` again `RUN_GAP_MS` later; holds
-  while a card is picked (picking works mid-animation).
+  while a card is picked or a hex is selected (both work mid-animation).
 - Every command goes through `commit()`, which snapshots piece positions, calls the engine,
   and animates from `res.events` (`move` paths, then `sink`/`deliver` fades; `spawn` appears
   at the end).
