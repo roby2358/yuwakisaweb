@@ -82,18 +82,20 @@ const GameUI = (function () {
             chevron(ctx, s * 0.55, s * 0.18);
         },
         PULLER(ctx, s) {
-            // A horseshoe magnet opening toward its facing, with a chevron pointing back
-            // at itself: it reaches out that way and pulls things in.
+            // A short horseshoe magnet opening toward its facing, with an arrow (stem and
+            // head) pointing back into it: it reaches out that way and pulls things in.
             ctx.beginPath();
-            ctx.arc(-s * 0.1, 0, s * 0.3, Math.PI * 0.5, Math.PI * 1.5);
-            ctx.lineTo(s * 0.35, -s * 0.3);
-            ctx.moveTo(-s * 0.1, s * 0.3);
-            ctx.lineTo(s * 0.35, s * 0.3);
+            ctx.arc(-s * 0.22, 0, s * 0.28, Math.PI * 0.5, Math.PI * 1.5);
+            ctx.lineTo(s * 0.05, -s * 0.28);
+            ctx.moveTo(-s * 0.22, s * 0.28);
+            ctx.lineTo(s * 0.05, s * 0.28);
+            ctx.moveTo(s * 0.62, 0);
+            ctx.lineTo(s * 0.14, 0);
             ctx.stroke();
             ctx.beginPath();
-            ctx.moveTo(s * 0.55, -s * 0.16);
-            ctx.lineTo(s * 0.4, 0);
-            ctx.lineTo(s * 0.55, s * 0.16);
+            ctx.moveTo(s * 0.3, -s * 0.16);
+            ctx.lineTo(s * 0.14, 0);
+            ctx.lineTo(s * 0.3, s * 0.16);
             ctx.stroke();
         },
         ROCKET(ctx, s) {
