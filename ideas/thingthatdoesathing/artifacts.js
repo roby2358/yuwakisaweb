@@ -25,7 +25,7 @@ const GameArtifacts = (function () {
     //   blocks — pieces can't enter
     //   traps  — a piece that splats dies when it comes onto it (walked, pushed, slid, or
     //            landing from a flight; a flight passing over doesn't count)
-    //   colored — its card comes in white (acts on every piece) or a crate color (acts only
+    //   colored — its card always comes in an open crate color, never white (it acts only
     //            on crates of that color, and on every gremlin)
     //   on     — 'land' (plains/ice) or 'water': where it may be built
     //   weight — relative draw chance for the hand
@@ -33,8 +33,8 @@ const GameArtifacts = (function () {
         BELT:    { push: 1, pull: 0, shove: 0, splat: false, flies: false, skids: false, blocks: false, traps: false, colored: false, on: 'land',  weight: 6 },
         SPRING:  { push: 3, pull: 0, shove: 0, splat: false, flies: true,  skids: true,  blocks: false, traps: false, colored: false, on: 'land',  weight: 2 },
         ROCKET:  { push: 8, pull: 0, shove: 0, splat: true,  flies: true,  skids: false, blocks: false, traps: false, colored: false, on: 'land',  weight: 1 },
-        PUSHER:  { push: 0, pull: 0, shove: 1, splat: false, flies: false, skids: false, blocks: false, traps: false, colored: true,  on: 'land',  weight: 2 },
-        PULLER:  { push: 0, pull: 1, shove: 0, splat: false, flies: false, skids: false, blocks: false, traps: false, colored: true,  on: 'land',  weight: 2 },
+        PUSHER:  { push: 0, pull: 0, shove: 1, splat: false, flies: false, skids: false, blocks: false, traps: false, colored: true,  on: 'land',  weight: 0.5 },
+        PULLER:  { push: 0, pull: 1, shove: 0, splat: false, flies: false, skids: false, blocks: false, traps: false, colored: true,  on: 'land',  weight: 0.5 },
         WALL:    { push: 0, pull: 0, shove: 0, splat: false, flies: false, skids: false, blocks: true,  traps: false, colored: false, on: 'land',  weight: 2 },
         TRAP:    { push: 0, pull: 0, shove: 0, splat: false, flies: false, skids: false, blocks: false, traps: true,  colored: false, on: 'land',  weight: 1 },
         BRIDGE:  { push: 0, pull: 0, shove: 0, splat: false, flies: false, skids: false, blocks: false, traps: false, colored: false, on: 'water', weight: 1 },

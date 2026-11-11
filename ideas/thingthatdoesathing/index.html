@@ -69,6 +69,14 @@
         <div class="sizes" id="new-sizes"></div>
         <button id="size-cancel" class="btn">Keep playing <kbd>Esc</kbd></button>
     </div>
+    <div id="color-panel" class="hidden">
+        <div class="panel color-card">
+            <div id="color-swatches"></div>
+            <h1 id="color-title"></h1>
+            <p id="color-sub"></p>
+            <p class="continue">Click or press any key to continue</p>
+        </div>
+    </div>
     <!-- Plain script includes (globals), not ES modules: the page runs on a double-click
     (D-9). Order = dependency order:
     artifacts → display artifacts → libs → piece/board → state → engine → ui → bootstrap. -->

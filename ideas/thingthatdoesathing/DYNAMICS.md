@@ -54,8 +54,8 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
   you can set up on purpose.
 - **`SOURCE_INTERVAL`** → paces the factory; a jammed source just waits, and while other
   colors are open, the crates go to them instead.
-- **Colored Pushers and Pullers** → feed readable consequences and accumulation: once a
-  second color is open, a red Pusher beside a white line knocks off only the red crates, and a
+- **Colored Pushers and Pullers** → feed readable consequences and accumulation: a red
+  Pusher beside a mixed line knocks off only the red crates, and a
   red Puller reaches in for them. Gremlins are moved by every color, so a sorter is never a
   gremlin-safe gap.
 - **Targets kill gremlins** → keep the payoff flowing: a gremlin that wanders or rides onto a

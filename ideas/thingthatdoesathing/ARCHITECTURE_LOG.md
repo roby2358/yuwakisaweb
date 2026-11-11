@@ -2,6 +2,18 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-11 — Pushers and Pullers only in crate colors, and rare (D-22)
+`cardColor()` no longer offers white: a colored kind takes one of the open colors (the only
+one on a single-color board). `PUSHER` and `PULLER` weights went from 2 to 0.5 each, since
+about one per color is enough. R-27, U-20, D-22, ONTOLOGY Draw rule and Numbers updated.
+`just cc-sim 200 small`: 200/200, median 58 → 51, 2.60 lost/game. The bot discards
+Pushers and Pullers, so this mostly measures more Belt draws (R-6 updated for colored cards).
+
+### 2026-11-11 — A new color opens a panel that waits for the player
+The milestone banner no longer lists opened colors; an `open` event now shows the `color`
+overlay (swatch, name, "click or press any key to continue"), which holds Go until dismissed.
+Overlay keys dispatch through `OVERLAY_KEYS`. U-19 trimmed, U-23 added; uiboot covers it.
+
 ### 2026-11-11 — Idle ticks redraw a card (D-26)
 New state field `idleTicks` and constant `IDLE_REDRAW_TICKS`. The tick's `first` input gained
 `usedCard` (`CARD_FIRST` for place and discard, `NOTHING_FIRST` and the remove/blast inputs

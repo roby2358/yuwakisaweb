@@ -183,17 +183,19 @@ ARCHITECTURE_LOG.md.
   200/200, median 57, p90 70, 3.2 lost per game with it. Medium with both: 200/200, median 73,
   p90 89, 5.2 lost per game. Camped targets were most of the bot's stalls.
 
-### D-22 The Pusher, and colored Pushers and Pullers — *Decided (Pusher shoves the piece in front 1 hex, white or a crate color, colored ones act on their color's crates and every gremlin, colored cards only once 2+ colors are open, 1 in open+1 white), Proposed (weight 2, the ram glyph)*
+### D-22 The Pusher, and colored Pushers and Pullers — *Decided (Pusher shoves the piece in front 1 hex, always a crate color, acting on its color's crates and every gremlin, each open color equally likely, rare: weight 0.5 each), Proposed (the ram glyph)*
 - **Alternatives:** colored Belts, Springs and Rockets; an off-color crate on a colored
   Belt carrying straight on (a switch, which needs a heading on every crate); colored
-  cards as their own deck rows with weights; colored cards from the start.
+  cards as their own deck rows with weights; white Pushers and Pullers alongside the
+  colored ones; the old weight 2 each.
 - **Why:** colors (D-21) need a way to split a mixed line. A Pusher acts from beside a
   line, on the hex it faces, so a colored one can knock just its color off a white Belt
   line, and a colored Puller can reach in and pull just its color out. Everything else is
   unchanged: only these two are selective. Gremlins are always affected, so a colored
   Thing is never a gremlin-safe gap. A card's color is rolled with its kind (a `colored`
-  template field), so the deck weights don't change, and with one color open there's
-  nothing to sort, so every card is white.
+  template field). With one color open, that color acts like white did, so white cards
+  would only be noise. The designer found about one per color is all a factory needs, so
+  they're rare: weight 0.5 each, about 1 card in 28 apiece.
 - **Evidence:** R-40, R-41, R-27, R-10; U-20 (manual). The bot discards Pushers, so
   adding the kind only thins its Belt draws: `just cc-sim 200 small` 185/200, median 65 →
   184/200, median 70 (the Pusher alone, before D-23).

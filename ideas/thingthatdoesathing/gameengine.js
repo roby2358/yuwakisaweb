@@ -318,12 +318,9 @@ const GameEngine = (function () {
             return KINDS[KINDS.length - 1];
         }
 
-        // A colored kind's card color: white while only one color is open; after that, white
-        // or one of the open colors, each equally likely.
+        // A colored kind's card color: one of the open colors, each equally likely (never white).
         cardColor() {
-            const open = this.openColors();
-            if (open.length < 2) return WHITE;
-            return Rando.choice([WHITE, ...open]);
+            return Rando.choice(this.openColors());
         }
 
         // Does this Thing act on this piece? White ones act on everything; a colored one only

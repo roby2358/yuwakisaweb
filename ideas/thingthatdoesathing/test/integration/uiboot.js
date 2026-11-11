@@ -341,6 +341,26 @@ run('Go ticks on its own, holds while a card is picked, and Pause stops it', () 
     advance(2000);
     if (s.turn !== paused || els.go.textContent !== 'Go') throw new Error('Pause did not stop it');
 });
+run('a newly opened color shows a panel that holds Go until a click or any key', () => {
+    const s = ui.state;
+    const opened = () => ui.startAnim(new Map(), { events: [{ type: 'open', color: 'red', source: s.sources[0], target: s.targets[0] }] });
+    els.go.fire('click');
+    settle();
+    opened(); settle();
+    if (ui.overlay !== 'color' || els['color-panel'].classList.set.has('hidden')) throw new Error('no new-color panel');
+    if (els['color-title'].textContent !== 'Red crates!') throw new Error('panel title: ' + els['color-title'].textContent);
+    const held = s.turn;
+    advance(2000);
+    if (s.turn !== held) throw new Error('Go ticked behind the panel');
+    key('1');
+    if (ui.overlay || ui.picked) throw new Error('a key must close the panel and do nothing else');
+    advance(1000);
+    if (s.turn === held) throw new Error('Go did not resume after the panel closed');
+    els.go.fire('click'); settle();
+    opened(); settle();
+    els['color-panel'].fire('click');
+    if (ui.overlay || !els['color-panel'].classList.set.has('hidden')) throw new Error('a click must close the panel');
+});
 run('New Game asks for a size, then resets', () => {
     key(' '); settle();
     els['new-game'].fire('click');

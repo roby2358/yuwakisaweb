@@ -20,7 +20,14 @@ const GameUI = (function () {
         gremlin: p => p.color,
     };
     const END_CUES = ['deliver', 'splat', 'sink'];   // the one sound a tick's endings play, by priority
-    const OVERLAY_PANELS = { intro: 'intro-panel', size: 'size-panel' };   // L5 overlay → its panel
+    const OVERLAY_PANELS = { intro: 'intro-panel', size: 'size-panel', color: 'color-panel' };   // L5 overlay → its panel
+    // L5: what a key does on each overlay. The size pickers take their number keys (and Esc
+    // when a game is behind); the new-color panel closes on any key.
+    const OVERLAY_KEYS = {
+        intro: (ui, e) => ui.sizeKey(e),
+        size: (ui, e) => ui.sizeKey(e),
+        color: ui => ui.dismissOverlay(),
+    };
 
     const DRAG_THRESHOLD = 4;
 
@@ -193,7 +200,7 @@ const GameUI = (function () {
 
             this.picked = null;      // L1.2 { slot, legal: Set<key> } — the card being placed
             this.facing = 0;         // ghost facing; remembered between placements
-            this.overlay = null;     // L5 'intro' | 'size' | null (both pick a board size)
+            this.overlay = null;     // L5 'intro' | 'size' (board-size pickers) | 'color' (a color opened) | null
             this.hoveredHex = null;  // L1.3
             this.anim = null;        // { t0, dur, tracks: Map<id, track>, before, hidden: Set<id>, milestone, ends: Set<type> }
             this.running = false;    // Go/Pause: tick on its own after each animation
@@ -419,7 +426,8 @@ const GameUI = (function () {
             this.anim = null;
             const cue = END_CUES.find(type => a.ends.has(type));
             if (cue) this.sound[cue]();
-            if (a.milestone) { this.sound.fanfare(); this.showMilestone(a.milestone, a.opened); }
+            if (a.milestone) { this.sound.fanfare(); this.showMilestone(a.milestone); }
+            if (a.opened.length) this.showOpened(a.opened);
             this.render();
             a.redrawn.forEach(slot => this.flashCard(slot));
             this.scheduleRun();
@@ -440,19 +448,34 @@ const GameUI = (function () {
             return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, alpha: 1, scale: 1 };
         }
 
-        // A banner that doesn't stop play: the milestone reached, the next one, and any
-        // color it opened.
-        showMilestone(count, opened) {
+        // A banner that doesn't stop play: the milestone reached and the next one.
+        showMilestone(count) {
             const s = this.state, turns = s.turn - 1;
             document.getElementById('milestone-title').textContent =
                 count === GameArtifacts.FIRST_MILESTONE ? 'IT DOES THE THING' : `${count} crates!`;
             document.getElementById('milestone-sub').textContent =
-                `${count} crates in ${turns} turns · next: ${nextMilestone(count)}` + (s.lost ? ` · ${s.lost} lost at sea` : '') +
-                opened.map(c => ` · ${c} crates now!`).join('');
+                `${count} crates in ${turns} turns · next: ${nextMilestone(count)}` + (s.lost ? ` · ${s.lost} lost at sea` : '');
             const el = document.getElementById('milestone');
             el.classList.remove('hidden');
             clearTimeout(this.bannerTimer);
             this.bannerTimer = setTimeout(() => el.classList.add('hidden'), MILESTONE_MS);
+        }
+
+        // A new crate color stops play until the player has seen it: click or any key goes on.
+        showOpened(colors) {
+            const swatches = document.getElementById('color-swatches');
+            swatches.innerHTML = '';
+            for (const c of colors) {
+                const sw = document.createElement('div');
+                sw.className = 'swatch';
+                sw.style.background = `linear-gradient(135deg, ${CRATE_SHADES[c].top}, ${CRATE_SHADES[c].left} 60%, ${CRATE_SHADES[c].right})`;
+                swatches.appendChild(sw);
+            }
+            const names = colors.map(c => c[0].toUpperCase() + c.slice(1)).join(' and ');
+            document.getElementById('color-title').textContent = `${names} crates!`;
+            document.getElementById('color-sub').textContent =
+                `A new source now sends ${colors.join(' and ')} crates. Each color goes to its own target.`;
+            this.showOverlay('color');
         }
 
         // ---- L5 Overlays ----
@@ -820,6 +843,7 @@ const GameUI = (function () {
             document.getElementById('new-game').addEventListener('click', () => this.newGame());
             document.getElementById('discard').addEventListener('click', () => this.discardPicked());
             document.getElementById('size-cancel').addEventListener('click', () => this.dismissOverlay());
+            document.getElementById('color-panel').addEventListener('click', () => this.dismissOverlay());
             this.buildSizeButtons(document.getElementById('intro-sizes'));
             this.buildSizeButtons(document.getElementById('new-sizes'));
         }
@@ -893,9 +917,13 @@ const GameUI = (function () {
             if (e.key === 'x' || e.key === 'X') this.discardPicked();
         }
 
-        // L5: a size picker takes only its number keys, and Esc when there's a game behind it.
         onOverlayKey(e) {
             e.preventDefault();
+            OVERLAY_KEYS[this.overlay](this, e);
+        }
+
+        // L5: a size picker takes only its number keys, and Esc when there's a game behind it.
+        sizeKey(e) {
             const i = Number(e.key) - 1;
             if (Number.isInteger(i) && i >= 0 && i < SIZE_KEYS.length) { this.startGame(SIZE_KEYS[i]); return; }
             if (e.key === 'Escape' && this.overlay === 'size') this.dismissOverlay();

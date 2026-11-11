@@ -1,0 +1,71 @@
+Priority:   60
+Status: ToDo
+ID: replace-es7n
+Created: 2026-11-11T15:54:12Z
+Updated: 2026-11-11T15:54:12Z
+
+Thing Factory: placing a card on a hex that already holds a Thing replaces that Thing, so the player no longer has to press D (remove) and then place. Update legalPlacements so occupied Thing hexes are legal (targets and other illegal hexes stay illegal). place() removes the old Thing and puts the new one down as one command and one tick. Decide whether D/remove stays as its own command (probably yes, for clearing a hex). Reconcile ONTOLOGY (place rule), CRITERIA row + test/R-n, RATIONALE, ARCHITECTURE_LOG, and the UI ghost and highlight on occupied hexes.
+----
+Priority:   60
+Status: ToDo
+ID: bridge-belt-zguc
+Created: 2026-11-11T15:58:58Z
+Updated: 2026-11-11T15:58:58Z
+
+Thing Factory: give the Bridge a built-in belt so it pushes the piece on it in its facing direction, like a Belt over water. Right now a crate that reaches a bridge just stops there, which is annoying. That makes the Bridge a facing mover: it rotates on click, has a ghost facing, and is included in aims(kind). Check that the order of the tick and the "each piece moves at most once" rule still hold. Update THING_LOOK so the arrow shows on the bridge. Reconcile ONTOLOGY / CRITERIA (+ test/R-n for the bridge push) / RATIONALE / log, and the hover verb line.
+----
+Priority:   55
+Status: ToDo
+ID: crate-cap-hybj
+Created: 2026-11-11T15:54:02Z
+Updated: 2026-11-11T15:54:02Z
+
+Thing Factory: switch crate spawning from a fixed SOURCE_INTERVAL timer to a population cap. There is a max number of crates on the board that scales with board area (like the gremlin count). Every third tick, if the crate count is below the max, spawn one at a random open color's source, as long as the source is clear. Each completion raises the max by one. "Completion" isn't settled yet: it means each milestone reached, or maybe each delivery, so ask the user before building. Add the max (or a bonus counter) to GameState and pick tunable base constants in artifacts.js. Retune with just cc-sim on every size, and reconcile ONTOLOGY / CRITERIA / RATIONALE / DYNAMICS / log plus the spawn tests.
+----
+Priority:   55
+Status: ToDo
+ID: card-unlock-aszw
+Created: 2026-11-11T15:58:55Z
+Updated: 2026-11-11T15:58:55Z
+
+Thing Factory: unlock cards gradually. A new game draws only Belt, Bridge and Wall. Each milestone unlocks the next card: first Pushers and Pullers, then Springs, and Rocket last. The user didn't place Trap (or the planned Slide card) in this order, so ask. Make the unlock order a data list in artifacts.js, and have the draw filter THINGS to what's unlocked before weighting. Add a field to GameState for unlocked kinds or the unlock index. The milestone should emit an event, and the UI should announce the new card, maybe on the same panel as a new color or one like it. Decide whether cards already in hand are kept as they are. Retune with cc-sim: the bot only uses Belts and Springs, so early games get Belts only. Reconcile ONTOLOGY / CRITERIA (R-27 draw weights, R-6 starting hand) / RATIONALE / DYNAMICS / log.
+----
+Priority:   50
+Status: ToDo
+ID: color-picker-8h4x
+Created: 2026-11-11T15:54:06Z
+Updated: 2026-11-11T15:54:06Z
+
+Thing Factory: Pusher and Puller cards are drawn white and get their color when placed. Placing one pops up a small square color picker near the Thing, one swatch per open crate color. The pick sets the Thing's color for good: no recoloring later, and it moves only crates of that color (plus gremlins). This reverses the current rule where cardColor() draws an open color at draw time. Open questions: does a white Pusher or Puller act before it's picked? Does the picker block the tick or Go (probably an overlay like the color panel)? Is the pick part of the place command (place(kind, q, r, facing, color)) or a separate free command like rotate? With one color open, skip the picker and use that color. Reconcile the engine, the UI overlay, ONTOLOGY / CRITERIA (R-27 draw colors) / RATIONALE D-22 / log, and uiboot.
+----
+Priority:   45
+Status: ToDo
+ID: big-crate-jat8
+Created: 2026-11-11T15:54:09Z
+Updated: 2026-11-11T15:54:09Z
+
+Thing Factory: add a large crate worth 10 deliveries. Each spawn has some chance of being a big crate instead of a normal one, and that chance grows with each milestone reached, approaching 1.0 without ever hitting it. Candidate formula: p = 1 - (1 - BIG_CRATE_BASE)^milestones, or p = m / (m + BIG_CRATE_HALF). Both are tunable constants in artifacts.js. Model it as a new PIECES template, or a value field on crate pieces, worth 10 toward delivered and the target's delivered count, and draw it bigger. Decide how it behaves under Spring, Rocket, wreck and sink (probably the same as a crate, so losing one costs 10 to the lost tally). Milestones can jump past several thresholds at once, so check that milestone and open events still fire for each threshold crossed. Reconcile the docs, add an R-n test, and run cc-sim.
+----
+Priority:   45
+Status: ToDo
+ID: slide-card-3um8
+Created: 2026-11-11T15:59:01Z
+Updated: 2026-11-11T15:59:19Z
+
+Thing Factory: add a Slide card, a placeable Thing that acts like ice. A piece that steps onto it keeps sliding in the same direction for free, the way it does on bare ice in step(). Ideally this is one THINGS flag (e.g. `slides: true`) that the ice check in step() also reads, so there's a single code path for terrain ice and Slide Things. A Slide can be placed on water, like a Bridge [D]: it makes the water hex crossable, and the piece slides over it. Use the Bridge's water-legal placement rule and its "not sunk" check, plus the slide behavior. Add a draw weight, a THING_LOOK, and a spot in the card-unlock order if that's built. Open question: does a Spring landing on a Slide skid on, the way it does on ice? Reconcile the docs, add an R-n test (including a slide across water), and run cc-sim.
+----
+Priority:   45
+Status: ToDo
+ID: bump-6nee
+Created: 2026-11-11T16:00:22Z
+Updated: 2026-11-11T16:00:22Z
+
+Thing Factory: bumping. Right now a piece that moves into a hex holding another piece is blocked. Change it so that when the blocking crate is standing on ice (terrain ice, and Slide Things if that card is built), the mover stops and passes its motion on: the bumped crate slides off in the same direction, like a billiard ball, using the normal ice slide in step(). The bumper stays where it was, or takes the freed hex; pick one and write it down. Decide: does a bumped crate that slides into another crate on ice set off a chain? Probably yes, but cap it at the board, because each piece moves at most once a tick, so a piece already moved can't be bumped again. Do gremlins bump, and can they be bumped? Do airborne Spring or Rocket landings bump? What about a piece bumped into water, a mountain or a Wall (sinks, blocked)? Emit move events for the bumped crate so the animation shows it. Reconcile ONTOLOGY (step rule) / CRITERIA + test/R-n / RATIONALE / DYNAMICS / log, and run cc-sim.
+----
+Priority:   40
+Status: ToDo
+ID: push-order-ptbd
+Created: 2026-11-11T15:59:05Z
+Updated: 2026-11-11T15:59:05Z
+
+Thing Factory: decide whether Pushers and Pullers act first in a tick (now) or last. Acting first means they take the crate before a Belt under it moves it, so a Pusher next to a belt line diverts crates. Acting last means they catch crates that belts just delivered in front of them, which may read more naturally ("the belt brings it, the pusher shoves it on"). Each piece still moves at most once a tick either way. Write a RATIONALE entry with both options and concrete examples, like a Pusher at a belt corner, a Puller reaching over a belt, and a Pusher feeding a Spring. Bring a recommendation to the user before changing anything. If it flips: change the order in tick(), update the R-n test for order, ONTOLOGY tick rule, D-entry, log, and run cc-sim.

@@ -45,7 +45,7 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | R-24 | the engine-side modules | load and play with no DOM, canvas, or `GameDisplayArtifacts`, and never reference them | automated |
 | R-25 | any command | a boolean `ok`; `newGame` without a non-negative integer seed or a `MAP_SIZES` key is `ok:false`; `ok:true` from place/rotate/remove/discard/wait carries `events[]`; `ok:false` carries nothing else | automated |
 | R-26 | a tick's events | `move` paths list every hex entered and end where the piece is or vanished; `sink`/`deliver`/`splat` follow their `move`; `spawn` reports the new crate; `open` follows its `milestone`; replaying events reproduces every position | automated |
-| R-27 | many draws | each card's kind comes from `THINGS` by weight (only known kinds, every kind, shares near weight / total); its color is `WHITE` unless the kind is `colored` and 2+ colors are open, then `WHITE` or an open color, equally likely | automated |
+| R-27 | many draws | each card's kind comes from `THINGS` by weight (only known kinds, every kind, shares near weight / total); its color is `WHITE` unless the kind is `colored`, then one of the open colors, equally likely (never `WHITE`) | automated |
 | R-28 | a Puller during a tick | the piece on the far hex (two ahead) is pulled one step back into the near hex by the ordinary step rule (blocked → stays, water → sinks, ice → slides onto the Puller); pieces on the Puller or the near hex are left alone; a piece already moved this tick isn't pulled | automated |
 | R-29 | `remove(q, r)` | the Thing at (q,r) is gone, one tick, hand unchanged; a piece left on open water by a removed Bridge sinks (lost if cargo) with its `sink` event first. Empty hex: `{ok:false}`, unchanged | automated |
 | R-30 | milestones | `nextMilestone` gives 10, 20, 50, 100, 200, 500, 1000, … with no last one; the tick whose deliveries reach one emits one `milestone{count}` (deliveries of every color count); other ticks emit none; commands keep working past any milestone | automated |
@@ -89,10 +89,11 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | U-16 | A Rocket's flight is one long hop-by-hop slide; a gremlin it hits bursts in its own color when the flier lands, with a splat sound; a launched gremlin bursts where it lands | manual — rocket a crate into a gremlin, then a gremlin into a Wall |
 | U-17 | A gremlin that walks or is pushed onto a Trap bursts there with a splat sound, Trapped goes up, and a new gremlin appears on the shore | manual — belt a gremlin onto a Trap |
 | U-18 | A gremlin that steps onto a crate: the crate bursts in its color as the gremlin arrives, and the lost count goes up | manual — watch a gremlin beside a stalled crate |
-| U-19 | Each target is ringed in its color, with a black line just inside, and a ★; a source shows one pip per color it makes; once a second color opens, the tally shows a count per color; the milestone banner names a color it opened; the hover bar names a source's colors and a target's color | manual — reach 10 on a medium board |
-| U-20 | A Pusher shows a ram with a chevron; Pushers and Pullers draw their glyph in white or their color, on the board, the ghost and the card; a colored card reads e.g. "Red Pusher" and says "only red crates, and gremlins" | manual — reach 10 on a medium board and draw a colored card |
+| U-19 | Each target is ringed in its color, with a black line just inside, and a ★; a source shows one pip per color it makes; once a second color opens, the tally shows a count per color; the hover bar names a source's colors and a target's color | manual — reach 10 on a medium board |
+| U-20 | A Pusher shows a ram with a chevron; Pushers and Pullers draw their glyph in their color, on the board, the ghost and the card; a colored card reads e.g. "Red Pusher" and says "only red crates, and gremlins" | manual — reach 10 on a medium board and draw a colored card |
 | U-21 | `B` over a crate bursts it in its color and the lost count goes up; over a gremlin or empty hex nothing happens | manual — jam a line and press B on a crate |
 | U-22 | A card the idle rule redrew glows once in the hand | manual — press Go and watch the hand |
+| U-23 | When a milestone opens a color, a panel names it with a swatch and holds play (Go included) until a click anywhere or any key; that key does nothing else | manual — reach 10 on a medium board with Go running |
 
 ---
 
@@ -107,9 +108,9 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 
 ---
 
-## Status (2026-11-10)
+## Status (2026-11-11)
 
-- **Manual only:** U-1…U-20, X-1.
+- **Manual only:** U-1…U-23, X-1.
 - **Retired:** R-17 (Spinner), R-20 (final win).
 - **Not yet covered:** X-2, X-3, X-4 (need playtests).
 - **Partial coverage:** R-18 checks that wandering gremlins land on land and never step into

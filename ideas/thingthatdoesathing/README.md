@@ -26,9 +26,9 @@ for why it works and [ONTOLOGY.md](ONTOLOGY.md) for the rules.
 | Trap | a gremlin that comes onto it dies (a new one climbs out on the shore); crates are safe |
 | Bridge | built on water; pieces cross instead of sinking |
 
-Pushers and Pullers come in white (they move anything) or, once a second color is open, in a
-crate color: a red one moves only red crates, and every gremlin. That's how you split a
-mixed line.
+Pushers and Pullers always come in a crate color: a red one moves only red crates, and every
+gremlin. That's how you split a mixed line. They're rare cards; about one per color is all a
+factory needs.
 
 Terrain: water sinks pieces, ice makes them slide, mountains block. Gremlins wander and
 ride your belts, and a gremlin that steps onto a crate wrecks it (one pushed into a crate

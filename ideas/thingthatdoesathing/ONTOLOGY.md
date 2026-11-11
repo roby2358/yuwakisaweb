@@ -129,7 +129,7 @@ A `Piece` (position, color, label) with two fields set by the engine. Each kind 
 | `pull` | Hexes it pulls the piece on the **far hex** (two ahead along `facing`) back toward itself, into the **near hex** (one ahead) (Puller). |
 | `blocks` | Pieces can't enter (Wall). |
 | `traps` | A piece that splats dies when it comes onto this hex: walked, pushed, slid, or coming down from a flight; a flight passing over doesn't count (Trap). Every target does the same, with no Thing (Step rule). [D] |
-| `colored` | Its cards come in white or a crate color (Pusher, Puller). [D] |
+| `colored` | Its cards always come in an open crate color, never white (Pusher, Puller). [D] |
 | `on` | `'land'` (plains/ice) or `'water'` — where it may be built. |
 | `weight` | Relative draw chance for the hand. |
 
@@ -142,7 +142,7 @@ A `Piece` (position, color, label) with two fields set by the engine. Each kind 
 |---|---|
 | `picked` | `{ slot, legal: Set<key> }` \| null — the hand card being placed. |
 | `facing` | 0…5 — the ghost's facing, remembered between placements. |
-| `overlay` | `'intro'` \| `'size'` \| null. Both are size pickers; picking a size starts a game. `'size'` (New Game) also closes on Esc, back to the game. [D] |
+| `overlay` | `'intro'` \| `'size'` \| `'color'` \| null. `'intro'` and `'size'` are size pickers; picking a size starts a game, and `'size'` (New Game) also closes on Esc, back to the game. `'color'` shows the color an `open` event named and closes on a click or any key. [D] |
 | `hoveredHex`, `panX/Y`, drag fields | The hex under the cursor, the screen-space pan offset, and left-drag tracking (`DRAG_THRESHOLD`). |
 | `anim` | `{ t0, dur, tracks, before, hidden, milestone, opened, ends }` \| null — tick animation; input waits while it runs (picking a card doesn't). |
 | `running` | bool — Go/Pause. While true, the client calls `wait()` `RUN_GAP_MS` after each animation ends, and holds while a card is picked. [D] |
@@ -255,8 +255,7 @@ Runs once at the end of every tick, for that tick's sinks and splats and for a p
 *Serves:* scarcity of agency (you build with what you're dealt).
 ```
 kind = chosen by Rando with probability THINGS[kind].weight / total weight
-color = WHITE unless THINGS[kind].colored and 2+ colors are open:
-        then Rando.choice([WHITE, ...open colors])
+color = THINGS[kind].colored ? Rando.choice(open colors) : WHITE
 return {kind, color}
 ```
 
@@ -350,7 +349,7 @@ milestones = FIRST_MILESTONE × (1, 2, 5) × 10^k for k = 0, 1, 2, …   # 10, 2
 nextMilestone(n) = the smallest milestone > n                        # there is no last one
 ```
 Reaching a milestone ends nothing: it may open a color (Open a color rule), the client shows
-a banner, and play goes on.
+a banner, and play goes on. An opened color also gets a panel that waits for a click or any key.
 
 ### Commands
 ```
@@ -408,7 +407,7 @@ The code constant in `GameArtifacts` is the single source.
 | `THINGS.ROCKET.push` | 8 | hexes (its range) [D] |
 | `THINGS.PULLER.pull` | 1 | hexes |
 | `THINGS.PUSHER.shove` | 1 | hexes [D] |
-| `THINGS.*.weight` BELT/SPRING/ROCKET/PUSHER/PULLER/WALL/TRAP/BRIDGE | 6 / 2 / 1 / 2 / 2 / 2 / 1 / 1 | relative (TRAP [D]: as ROCKET; PUSHER [P]: as PULLER) |
+| `THINGS.*.weight` BELT/SPRING/ROCKET/PUSHER/PULLER/WALL/TRAP/BRIDGE | 6 / 2 / 1 / 0.5 / 0.5 / 2 / 1 / 1 | relative (TRAP [D]: as ROCKET; PUSHER, PULLER [D]: rare, about one per color is plenty) |
 | `GREMLIN_HEXES_PER_DIE` / `GREMLIN_DICE_SIDES` | 160 / 4 | hexes of board area per die (the small board's area) [D] / sides; gremlins = `gremlinDice(size)` d sides |
 | `GEN_MAX_ATTEMPTS` | 10 | tries per seed |
 | `HEIGHTMAP_ROUGHNESS` | 0.55 | — |

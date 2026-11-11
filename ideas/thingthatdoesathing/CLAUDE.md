@@ -67,8 +67,9 @@ tick animation) → `picked` card → bare map click.
 - **L2.1 primary action:** Wait button / Space / Enter → `engine.wait()`.
 - **L2.2:** Esc and right-click put the card back.
 - **L5:** the intro and New Game overlays are both board-size pickers (click or `1`–`4`); they
-  consume all other input, and Esc closes New Game only. The milestone banner is not
-  an overlay; it never blocks input.
+  consume all other input, and Esc closes New Game only. A milestone that opens a color shows
+  the `color` overlay, which closes on a click or any key (`OVERLAY_KEYS` dispatches keys per
+  overlay). The milestone banner is not an overlay; it never blocks input.
 - **Go/Pause** (`running`): after each animation, `wait()` again `RUN_GAP_MS` later; holds
   while a card is picked (picking works mid-animation).
 - Every command goes through `commit()`, which snapshots piece positions, calls the engine,
@@ -96,7 +97,7 @@ in `hexToScreen` / `screenToHex`.
   from plains. Sources on the left slice, targets on the right, land path guaranteed
   (fallback: the size's `knownGoodSeed`).
 - **Things:** Belt pushes the piece on its own hex; the Spring and Rocket throw it 3 and 8 hexes (airborne: over inland water; a Spring skids on if it lands on ice), the Rocket splatting gremlins; a Trap kills a gremlin that comes onto it; the Pusher pushes the piece on the hex in front on; the Puller pulls the piece
-  two hexes ahead back into the hex between (both come in white or a crate color: a colored one moves only its color's crates, and gremlins); a gremlin coming onto a target dies; Wall blocks; Bridge makes water crossable. One Thing per hex, none on a target; movers may be built
+  two hexes ahead back into the hex between (both always come in a crate color and move only that color's crates, and gremlins; they're rare draws); a gremlin coming onto a target dies; Wall blocks; Bridge makes water crossable. One Thing per hex, none on a target; movers may be built
   under a piece.
 - **Tick:** Pushers and Pullers first, then the other Things, each in placement order (each piece moves at most once), unmoved gremlins
   wander, every `SOURCE_INTERVAL` a random open color spawns at its source if clear; each milestone may open a color (`openColor`).
