@@ -56,6 +56,14 @@ Thing Factory: Pusher and Puller cards are drawn white and get their color when 
 ----
 Priority:   40
 Status: Done
+ID: bump-6nee
+Created: 2026-11-11T16:00:22Z
+Updated: 2026-11-11T21:45:43Z
+
+Thing Factory: bumping. Right now a piece that moves into a hex holding another piece is blocked. Change it so that when the blocking crate is standing on ice (terrain ice, and Slide Things if that card is built), the mover stops and passes its motion on: the bumped crate slides off in the same direction, like a billiard ball, using the normal ice slide in step(). The bumper stays where it was, or takes the freed hex; pick one and write it down. Decide: does a bumped crate that slides into another crate on ice set off a chain? Probably yes, but cap it at the board, because each piece moves at most once a tick, so a piece already moved can't be bumped again. Do gremlins bump, and can they be bumped? Do airborne Spring or Rocket landings bump? What about a piece bumped into water, a mountain or a Wall (sinks, blocked)? Emit move events for the bumped crate so the animation shows it. Reconcile ONTOLOGY (step rule) / CRITERIA + test/R-n / RATIONALE / DYNAMICS / log, and run cc-sim.
+----
+Priority:   40
+Status: Done
 ID: colorthings-3nq7
 Created: 2026-11-10T23:26:44Z
 Updated: 2026-11-11T00:25:47Z

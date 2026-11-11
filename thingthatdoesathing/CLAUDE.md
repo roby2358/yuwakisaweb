@@ -104,7 +104,8 @@ in `hexToScreen` / `screenToHex`.
   under a piece.
 - **Tick:** Pushers and Pullers first, then the other Things, each in placement order (each piece moves at most once), unmoved gremlins
   wander, every `SPAWN_INTERVAL` ticks, while the board holds fewer crates than `crateCap(size)` plus one per milestone reached, a random open color spawns at its source if clear (D-31); each milestone may open a color (`openColor`) and unlocks the next card step (`unlock`).
-- **Step:** blocked by off-map / mountain / Wall / piece; a gremlin on a Trap dies; open water sinks; slick ground (bare ice or a Slide, `isSlick`) slides
+- **Step:** blocked by off-map / mountain / Wall / piece (a piece standing on slick ground is bumped instead: the
+  bumper stops, the bumped piece slides on, chains allowed, each piece once per tick, D-33); a gremlin on a Trap dies; open water sinks; slick ground (bare ice or a Slide, `isSlick`) slides
   free; a crate on its color's target is delivered (other colors' targets block it on the ground).
 - **Tuning harness:** `just cc-sim 200 small`, which runs `node test/sim.js 200 small` (greedy builder bot; lays belts and
   springs, throws every other card away with `discard`; before the first milestone only Belts,

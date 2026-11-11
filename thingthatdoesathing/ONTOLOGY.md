@@ -300,8 +300,8 @@ if next is WATER and no Thing there and not (flies and next is inland):
 return 'moved'
 ```
 
-### Push — `push(piece, dir, {n, splat, flies, skids, wrecks})` [P; splat, flies, skids, wrecks D]
-*Serves:* G-1; ice as windfall; comedy (the Rocket).
+### Push — `push(piece, dir, {n, splat, flies, skids, wrecks}, moved, by)` [P; splat, flies, skids, wrecks, bump D]
+*Serves:* G-1; ice as windfall; comedy (the Rocket, billiard bumps).
 ```
 left = n
 while left > 0:
@@ -310,16 +310,32 @@ while left > 0:
         remove it; emit splat{id: it, by: piece}; res = step(piece, dir); stop after it  # lands there
     if res == 'blocked' and wrecks and the blocker is cargo:
         remove it; lost += 1; emit splat{id: it, by: piece}; res = step(piece, dir); stop after it
+    if res == 'blocked' and nothing was hit and not flies: bump(piece, dir, moved)   # D-33
     if res != 'moved': stop
     if not flies and isSlick(piece's hex): continue    # sliding is free: a Thing with slides, or ICE with no Thing
     left -= 1
-if skids and it ran its full range onto slick ground: slide on with step(piece, dir, false)
+if skids and it ran its full range onto slick ground: slide on with step(piece, dir, false); blocked: bump(piece, dir, moved)
 if flies and it came down on a target of another color: back to the hex before (the start if none)
 if flies and piece is still on the board, on open water: sink it      # came down on inland water
 elif flies and it came down on a Trap and PIECES[piece.kind].splats: remove it; res = 'trapped'
 if res == 'trapped': emit splat{id, by: null, trap: a Trap is on the hex}   # else it died on a target
 if splat and piece didn't sink or deliver and PIECES[piece.kind].splats: remove piece; emit splat{id, by: null, trap: false}
+# events: move{id, path, by} (if it moved), then the splats/sink/deliver above, then the bumped piece's events
+
+bump(piece, dir, moved):                                  # D-33
+    other = the piece on the hex ahead of piece in dir
+    if no other, or other.id in moved, or not isSlick(other's hex): nothing (piece was just blocked)
+    moved += other; push(other, dir, {n: 1, splat: false, flies: false, skids: false, wrecks: false}, moved, by: piece)
 ```
+**Bump (D-33).** A piece stopped on the ground by a piece standing on slick ground (bare ice
+or a Slide) passes its motion on, like a billiard ball: the bumper stays where it stopped, and
+the bumped piece goes one hex the same way and slides on over slick ground, through the same
+`step` (it can sink, deliver, die on a Trap or be blocked). If it is stopped by another piece
+on slick ground it bumps that one too; the chain ends because a piece that already moved this
+tick (bumped ones included, even if they couldn't budge) can't be bumped. Every piece bumps
+and can be bumped, gremlins included; a gremlin's own step into cargo still wrecks it
+instead. A flight (Spring, Rocket in the air) doesn't bump; it comes down short as before, but
+a Spring's skid is on the ground and does.
 A slide or a flight always ends: a straight line reaches the water edge. A Rocket's flight
 (`flies`, range `THINGS.ROCKET.push`) crosses movers, Bridges, ice, inland water and other
 colors' targets, delivers on its color's target, and sinks in the outer sea, or in inland water if it comes down there. A
@@ -338,10 +354,11 @@ for thing in things with shove or pull, then the rest (each in placement order):
     Pusher: p = piece on hex 1 ahead;  dir = facing;            n = shove
     Puller: p = piece on hex 2 ahead;  dir = opposite(facing);  n = pull
     skip p if thing.color != WHITE and p is cargo of another color   # affects(thing, p)
-    if p and p.id not in moved: moved += p; push(p, dir, {n, splat, flies, skids of THINGS[kind], wrecks: false})
-for piece with PIECES[kind].wanders, not in moved (creation order):
+    if p and p.id not in moved: moved += p; push(p, dir, {n, splat, flies, skids of THINGS[kind], wrecks: false}, moved, null)
+for piece with PIECES[kind].wanders (creation order), skipping it if in moved by now:   # a bump may have moved it
+    moved += piece
     dirs = directions whose neighbor is land or covered water (Bridge, Slide), no blocking Thing, and empty or holding cargo it wrecks
-    if dirs: push(piece, Rando.choice(dirs), {n: 1, splat: false, flies: false, skids: false, wrecks: PIECES[kind].wrecks})
+    if dirs: push(piece, Rando.choice(dirs), {n: 1, splat: false, flies: false, skids: false, wrecks: PIECES[kind].wrecks}, moved, null)
 spawnTimer += 1
 if spawnTimer >= SPAWN_INTERVAL:                                    # a spawn chance (D-31)
     spawnTimer = 0
@@ -357,7 +374,7 @@ emerge(gone)
 for each milestone m with deliveredBefore < m <= delivered: emit milestone{count: m}; openColor(); unlock()   # reachMilestones
 turn += 1; phase = 'player'
 ```
-Each piece moves at most once per tick. Gremlins never step into water on purpose, but a
+Each piece moves at most once per tick, a bumped one included (D-33). Gremlins never step into water on purpose, but a
 gremlin that wanders onto ice, or is pulled into water, goes in. A Puller ignores pieces on
 its own hex and on the near hex; a pulled piece that lands on bare ice slides on toward the
 Puller and stops on it (a Thing covers its hex). A Pusher ignores a piece on its own hex. A
@@ -405,7 +422,8 @@ wait():        always legal; tick()
 know only the board and occupancy. They pick a random free land or covered-water (Bridge, Slide) neighbor, or
 stay, and a crate on a neighbor counts as free: stepping there wrecks it. They never push
 crates; a gremlin in the way is a wall until it moves, unless it steps onto the crate.
-Pushed, pulled or flung into a crate, a gremlin is only blocked. A gremlin standing on a
+Pushed or pulled into a crate, a gremlin is only blocked, unless the crate stands on slick
+ground: then it bumps it (D-33), and a gremlin on slick ground gets bumped like a crate. A gremlin standing on a
 mover (a Bridge too) gets carried. One that drowns or splats is replaced by a new one on the shore.
 The count only drops when the whole shore is walled off or full.
 
@@ -481,7 +499,7 @@ Illegal → `{ ok:false }` and nothing changed (hand and `Rando` included).
 
 | Event | Fields |
 |---|---|
-| `move` | `id, path: [{q,r}…]` — every hex entered, in order, including slides |
+| `move` | `id, path: [{q,r}…], by` — every hex entered, in order, including slides; `by` is the bumper's id for a bumped piece (D-33), else null. A bumped piece's `move` comes after its bumper's |
 | `sink` | `id` (the piece is gone after its last `move`, or where it stood if the Bridge or Slide under it was removed) |
 | `deliver` | `id` |
 | `splat` | `id, by, trap` — a piece destroyed by a Rocket's flight, a Trap, a target, a gremlin's step, or `blast`: `by` is the flier or gremlin that landed on it, or null for the launched piece itself, a trapped piece (after its `move`), or a blasted crate; `trap` is true only when a Trap killed it |

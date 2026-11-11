@@ -39,9 +39,11 @@ and you pick its color (click a swatch or press its number). The color is for go
 it, place another one over it.
 They're rare cards; about one per color is all a factory needs.
 
-Terrain: water sinks pieces, ice makes them slide, mountains block. Gremlins wander and
+Terrain: water sinks pieces, ice makes them slide, mountains block. A piece that runs into
+another standing on ice (or a Slide) stops, and knocks it sliding on like a billiard ball,
+which can knock the next one. Gremlins wander and
 ride your belts, and a gremlin that steps onto a crate wrecks it (one pushed into a crate
-is just stopped). A gremlin
+is just stopped, or bumps it on if the crate is on ice). A gremlin
 that comes onto a target dies there, so they can't camp it.
 
 ## UI

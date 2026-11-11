@@ -16,6 +16,8 @@ const GameEngine = (function () {
     const KINDS = Object.keys(THINGS);
     // A wanderer's own step, as a push; `wrecks` comes from its piece template.
     const wanderOf = piece => ({ n: 1, splat: false, flies: false, skids: false, wrecks: PIECES[piece.kind].wrecks });
+    // A bumped piece's motion, as a push: one hex on the ground, sliding on over slick ground (D-33).
+    const BUMP = Object.freeze({ n: 1, splat: false, flies: false, skids: false, wrecks: false });
     // What a command did before its tick: events to report first, and the kinds of pieces it
     // sank (for emerge). Most commands do nothing first.
     // What a command did before its tick: leading events, the kinds it removed (for emerge),
@@ -473,12 +475,18 @@ const GameEngine = (function () {
         // A flying push counts every hex (ice is no shortcut mid-air), crosses inland water,
         // and sinks only if it comes down on water; if it skids, coming down on slick ground
         // slides on as usual. A piece that splats dies on a Trap it comes onto, or comes down on.
+        // A piece stopped on the ground by a piece standing on slick ground bumps it (D-33):
+        // it stops where it is and the bumped piece is pushed on (bump), so chains run.
+        // `moved` is the tick's set of piece ids already moved; `by` is the bumper's id
+        // (null unless this push is a bump), carried on the move event so the client can
+        // start the bumped piece when its bumper arrives.
         // Returns this push's events: one move (if it moved), a splat for a piece it hit
         // (`by` the mover), then a sink/deliver/splat if the mover ended so (a Trap's kill is
-        // a splat, `by` null).
-        push(piece, dir, how) {
+        // a splat, `by` null), then the events of any piece it bumped.
+        push(piece, dir, how, moved, by) {
             const { n, splat, flies, skids, wrecks } = how;
             const events = [];
+            let bumped = [];
             const path = [];
             const start = { q: piece.q, r: piece.r };
             let left = n, res = 'moved', hit = null;
@@ -488,6 +496,7 @@ const GameEngine = (function () {
                 if (res === 'blocked' && wrecks) hit = this.victim(piece, dir, v => PIECES[v.kind].cargo);
                 if (hit && PIECES[hit.kind].cargo) this.state.lost++;
                 if (hit) res = this.step(piece, dir, flies);
+                if (res === 'blocked' && !hit && !flies) bumped = this.bump(piece, dir, moved);
                 if (res === 'blocked') break;
                 path.push({ q: piece.q, r: piece.r });
                 if (res !== 'moved' || hit) break;
@@ -497,6 +506,7 @@ const GameEngine = (function () {
             // A skidding throw that ran its full range onto slick ground slides on, on the ground.
             while (skids && res === 'moved' && !hit && this.isSlick(this.board.get(piece.q, piece.r))) {
                 res = this.step(piece, dir, false);
+                if (res === 'blocked') bumped = this.bump(piece, dir, moved);
                 if (res === 'blocked') break;
                 path.push({ q: piece.q, r: piece.r });
             }
@@ -517,13 +527,24 @@ const GameEngine = (function () {
             }
             const splatsToo = splat && (res === 'moved' || res === 'blocked') && PIECES[piece.kind].splats;
             if (splatsToo) this.removePiece(piece);
-            if (path.length) events.push({ type: 'move', id: piece.id, path });
+            if (path.length) events.push({ type: 'move', id: piece.id, path, by });
             if (hit) events.push({ type: 'splat', id: hit.id, by: piece.id, trap: false });
             if (res === 'sank') events.push({ type: 'sink', id: piece.id });
             if (res === 'delivered') events.push({ type: 'deliver', id: piece.id });
             // A trapped piece died on a Trap or on a target; `trap` says which.
             if (splatsToo || res === 'trapped') events.push({ type: 'splat', id: piece.id, by: null, trap: res === 'trapped' && this.isTrap(here) });
-            return events;
+            return [...events, ...bumped];
+        }
+
+        // `piece`, stopped going `dir`, bumps the piece in the way if that one stands on slick
+        // ground and hasn't moved this tick: it takes the motion and goes on (BUMP) in `dir`,
+        // and counts as moved. Returns its events (none if there's no bump).
+        bump(piece, dir, moved) {
+            const hex = this.neighborHex(piece, dir);
+            const other = hex && this.pieceAt(hex.q, hex.r);
+            if (!other || moved.has(other.id) || !this.isSlick(hex)) return [];
+            moved.add(other.id);
+            return this.push(other, dir, BUMP, moved, piece.id);
         }
 
         // The piece in the way of `piece` going `dir`, if `isVictim(it)`; removed from the board.
@@ -584,14 +605,16 @@ const GameEngine = (function () {
                 const act = this.actionOf(thing);
                 if (!act || !act.piece || !this.affects(thing, act.piece) || moved.has(act.piece.id)) continue;
                 moved.add(act.piece.id);
-                events.push(...this.push(act.piece, act.dir, act.how));
+                events.push(...this.push(act.piece, act.dir, act.how, moved, null));
             }
 
-            // Pieces a push removed are off s.pieces already, so every wanderer here is
-            // still on the board.
-            for (const p of s.pieces.filter(p => PIECES[p.kind].wanders && !moved.has(p.id))) {
+            // Pieces a push removed are off s.pieces already. A wanderer another one bumped
+            // (D-33) has moved, and may be gone, so `moved` is checked as each one goes.
+            for (const p of s.pieces.filter(p => PIECES[p.kind].wanders)) {
+                if (moved.has(p.id)) continue;
+                moved.add(p.id);
                 const dirs = this.wanderDirs(p);
-                if (dirs.length) events.push(...this.push(p, Rando.choice(dirs), wanderOf(p)));
+                if (dirs.length) events.push(...this.push(p, Rando.choice(dirs), wanderOf(p), moved, null));
             }
 
             // Every SPAWN_INTERVAL ticks, a spawn chance: under the crate cap, roll an open color;

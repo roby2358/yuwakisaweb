@@ -483,6 +483,41 @@ ARCHITECTURE_LOG.md.
   before the second color opens, so the dropped color roll never touches its `Rando` stream.
   Unmeasured in play.
 
+### D-33 A piece on ice is bumped, like a billiard ball — *Decided (a piece standing on slick ground passes the motion on, using the normal slide), Proposed (unreviewed: the rest)*
+- **Alternatives:** keep every piece a plain blocker (the old rule); the bumper takes the
+  freed hex; bump on any ground, not just slick; let a bumped piece be bumped again in the
+  same tick.
+- **Why:** the designer asked for it (pjpd bump-6nee). Ice should feel like ice: a crate
+  stalled at the end of a slide is a puck, and the next one knocks it on instead of piling up
+  behind it. It's one helper, `bump(piece, dir, moved)`, called where `push` already handles
+  a ground step that came back `'blocked'`; the bumped piece goes through the same `push` and
+  `step` with a fixed one-hex ground motion (`BUMP`), so the ice slide, water, targets, Traps
+  and Walls all work on it unchanged, and no kind is special-cased.
+- **Unreviewed calls:** (1) "On ice" means `isSlick` on the bumped piece's hex (bare ICE, or
+  a Slide, D-29); where the bumper stands doesn't matter. (2) The bumper stays where it
+  stopped (the cue ball stops dead). Taking the freed hex would move the bumper after the
+  bumped piece and need a second move for it in one push. (3) The bumped piece moves one hex
+  and slides on while the ground is slick, so it always leaves the ice patch it was on, or
+  stops against a blocker. (4) Chains: yes. A bumped piece stopped by another piece on slick
+  ground bumps it on. Every bumped piece joins the tick's `moved` set, even if it couldn't
+  budge, so a piece is bumped at most once per tick and a chain ends within the board (R-13
+  holds). A piece that already moved this tick (carried, or a wanderer that went) is just a
+  blocker. (5) Gremlins bump and are bumped: a carried gremlin knocks a crate on, a gremlin
+  standing on ice is knocked like a crate (onto a Trap, into the lake). A gremlin's own step
+  into a crate still wrecks it (wrecking is checked first). A bumped gremlin has moved, so it
+  doesn't wander that tick; the wander loop now checks `moved` as it goes and marks each
+  wanderer. (6) Flights don't bump: a Spring or Rocket stopped mid-air by a piece comes down
+  short as before (and a Rocket still splats a gremlin). A Spring's skid is on the ground,
+  so it does bump. (7) Into water a bumped crate sinks (`lost` +1); onto its color's target
+  it's delivered; another color's target, a Wall or a mountain stops it. (8) Events: the
+  bumped piece's `move` carries `by` (the bumper's id; null on every other move) and follows
+  the bumper's own events. The client holds a bumped piece's track at its start until the
+  bumper's track arrives, so a chain plays one after another.
+- **Evidence:** R-51, R-12, R-26. `Measured by: just cc-sim 200 small` → unchanged (200/200,
+  median 49, p90 58, 2.08 lost); `just cc-sim 50 medium` → 50/50, median 61 (was 61), p90 72
+  (was 70), 3.66 lost (was 3.52). The bot builds belts, so bumps only come up where a belt
+  runs into a crate stalled on ice. Unmeasured in play.
+
 ### D-24 Pushers and Pullers act before the other Things in a tick — *Proposed*
 - **Alternatives:** pure placement order (the old rule); letting a Pusher or Puller move a
   piece that already moved this tick; acting after the Belts.

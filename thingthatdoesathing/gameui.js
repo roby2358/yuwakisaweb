@@ -478,6 +478,8 @@ const GameUI = (function () {
         // ---- Tick animation ----
         // Each piece that moved gets a track: its pre-tick hex, then every hex it entered.
         // All tracks advance together one hop per HOP_MS; spawned crates appear at the end.
+        // A bumped piece (its move names the bumper `by`, D-33) holds still until the bumper
+        // arrives, so a chain of bumps runs one after another.
         startAnim(before, res) {
             const tracks = new Map();
             const hidden = new Set();
@@ -489,8 +491,11 @@ const GameUI = (function () {
             for (const e of res.events) {
                 if (e.type === 'move') {
                     const b = before.get(e.id);
-                    tracks.set(e.id, { ...b, pts: [{ q: b.q, r: b.r }, ...e.path], end: null });
-                    hops = Math.max(hops, e.path.length);
+                    const by = e.by && tracks.get(e.by);
+                    const hold = Array.from({ length: by ? by.pts.length : 1 }, () => ({ q: b.q, r: b.r }));
+                    const pts = [...hold, ...e.path];
+                    tracks.set(e.id, { ...b, pts, end: null });
+                    hops = Math.max(hops, pts.length - 1);
                 } else if (e.type === 'sink' || e.type === 'deliver' || e.type === 'splat') {
                     // A piece that ends without moving (its Bridge removed, or splatted where
                     // it stood) fades where it stood; one hit by a flier waits for it to land.

@@ -2,6 +2,16 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-11 — Pieces on ice get bumped
+A piece stopped by another piece used to be blocked, always. Now a ground step blocked by a
+piece standing on slick ground (`isSlick`: bare ice or a Slide) calls the new
+`bump(piece, dir, moved)`: the bumper stays, and the bumped piece goes through `push` with a
+fixed one-hex ground motion (`BUMP`), so chains run. `push` takes two more arguments, the
+tick's `moved` set and `by`; `move` events gained a `by` field (the bumper's id, else null).
+The wander loop now checks and marks `moved` as it goes. `gameui.js` holds a bumped piece's
+track until its bumper arrives. D-33 added; R-51 added, R-12 and R-26 touched (R-16 and R-26
+tests updated for the new `by` field on moves).
+
 ### 2026-11-11 — Pushers and Pullers get their color when placed
 A Pusher or Puller card used to come in a color rolled at draw time (`cardColor()`, one of the
 open colors, equally likely), and the placed Thing took the card's color. Cards are now just

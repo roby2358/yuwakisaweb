@@ -98,6 +98,10 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
 - **New color:** a milestone opens a second target. If it comes out of a new source, build a
   second line; if it shares your source, the crates of both colors ride the same belt, so
   you have to split them by color before the targets.
+- **Ice tricks:** a crate stalled on ice isn't a jam: the next one along knocks it on like a
+  billiard ball (D-33), and a line of crates on an ice patch can go off in a chain. Park a
+  Wall where the bumped crate should stop, or a Trap where a gremlin on the ice will be
+  knocked.
 - **Long game:** press Go and watch. Once the line works, every tick is a crate closer to
   the next milestone; step in when a gremlin or a jam starts leaking crates.
 - **Recurring tension:** use the odd card now (a Spring on a straight run, a Puller to
@@ -119,5 +123,5 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
 ### Strategy ↔ mechanic cross-check
 
 Every Thing kind is used by some strategy above (Belt: spine; Wall: fencing; Bridge:
-water detours; Slide: free fast runs and one-tick lake crossings; Spring: straight runs and lake hops; Rocket: long shots at the target, gremlin squashing; Pusher: side-feed and knocking a color off the line (colored); Puller: side-feed, slide catcher, gremlin drowner). Discard is the opening's way to skip cards. Rotate and Remove
+water detours; Slide: free fast runs, one-tick lake crossings, and bumping crates on; Spring: straight runs and lake hops; Rocket: long shots at the target, gremlin squashing; Pusher: side-feed and knocking a color off the line (colored); Puller: side-feed, slide catcher, gremlin drowner). Discard is the opening's way to skip cards. Rotate and Remove
 are used to fix misplacements. Gremlins create the midgame.

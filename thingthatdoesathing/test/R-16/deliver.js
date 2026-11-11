@@ -15,7 +15,7 @@ const { flatGame, DIR } = require('../helpers/load');
     const { state, engine, put, piece } = flatGame();
     put('BELT', 9, 8, DIR.E); const gr = piece('gremlin', 9, 8);
     const res = engine.wait();
-    const types = res.events.filter(e => e.id === gr.id).map(e => e.type + (e.by === null ? ':null' : ''));
+    const types = res.events.filter(e => e.id === gr.id).map(e => e.type + (e.type === 'splat' && e.by === null ? ':null' : ''));
     check('a gremlin pushed onto the target dies there (move, then splat by null)',
         !state.pieces.includes(gr) && types.join() === 'move,splat:null' && state.delivered === 0);
     check('it counts in exGremlins and a new one climbs out', state.exGremlins === 1 && res.events.some(e => e.type === 'spawn'));
