@@ -32,8 +32,8 @@ const GameDisplayArtifacts = (function () {
             [T.ICE]: 'Ice — pieces slide across',
         },
         // Per-Thing look: name, short verb line, base fill, accent, and how much of the hex
-        // its tile covers. A colored kind (THINGS.colored) draws its accent in its card color
-        // instead (COLOR_INK); white is the `ink` here.
+        // its tile covers. A colored kind (THINGS.colored) draws its accent in its Thing's color
+        // instead (COLOR_INK); its card, not yet colored, uses COLOR_INK.white.
         THING_LOOK: {
             BELT:    { name: 'Belt',    does: 'moves what is on it 1 hex',                fill: '#3a3f47', ink: '#ffd633', inset: 0.84 },
             SPRING:  { name: 'Spring',  does: 'flings what is on it 3 hexes, over lakes', fill: '#4a3a2a', ink: '#ff9a3c', inset: 0.84 },
@@ -45,7 +45,8 @@ const GameDisplayArtifacts = (function () {
             BRIDGE:  { name: 'Bridge',  does: 'carries what is on it 1 hex over water (build on water)', fill: '#a07a4a', ink: '#3d2812', inset: 0.84 },
             SLIDE:   { name: 'Slide',   does: 'what comes onto it slides on, like ice (build on land or water)', fill: '#9fd3e6', ink: '#ffffff', inset: 0.84 },
         },
-        // Accent per card color for colored kinds: white, or the crate color's lit face.
+        // Accent per color for colored kinds: white (a card), or the crate color's lit face.
+        COLOR_PICKER_PX: 84,   // the color picker's width and height (D-32), for placing it beside the hex
         COLOR_INK: { white: '#ffffff', red: '#ff7a6b', green: '#8ff08a', blue: '#8ec4ff', yellow: '#fff08a' },
         // Per-piece hover name. Gremlins carry their own counter color in state.
         PIECE_LOOK: {

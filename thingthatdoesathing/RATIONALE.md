@@ -185,7 +185,7 @@ ARCHITECTURE_LOG.md.
   200/200, median 57, p90 70, 3.2 lost per game with it. Medium with both: 200/200, median 73,
   p90 89, 5.2 lost per game. Camped targets were most of the bot's stalls.
 
-### D-22 The Pusher, and colored Pushers and Pullers — *Decided (Pusher shoves the piece in front 1 hex, always a crate color, acting on its color's crates and every gremlin, each open color equally likely, rare: weight 0.5 each, drawn only once two colors are open), Proposed (the ram glyph)*
+### D-22 The Pusher, and colored Pushers and Pullers — *Decided (Pusher shoves the piece in front 1 hex, always a crate color, acting on its color's crates and every gremlin, the color picked at placement (D-32), rare: weight 0.5 each, drawn only once two colors are open), Proposed (the ram glyph)*
 - **Alternatives:** colored Belts, Springs and Rockets; an off-color crate on a colored
   Belt carrying straight on (a switch, which needs a heading on every crate); colored
   cards as their own deck rows with weights; white Pushers and Pullers alongside the
@@ -194,13 +194,14 @@ ARCHITECTURE_LOG.md.
   line, on the hex it faces, so a colored one can knock just its color off a white Belt
   line, and a colored Puller can reach in and pull just its color out. Everything else is
   unchanged: only these two are selective. Gremlins are always affected, so a colored
-  Thing is never a gremlin-safe gap. A card's color is rolled with its kind (a `colored`
-  template field). With one color open, a colored card would just act like white, and the
+  Thing is never a gremlin-safe gap. Which kinds are selective is a `colored` template
+  field; the color itself is the player's pick when the Thing goes down (D-32), not rolled
+  with the card. With one color open, a colored Thing would just act like white, and the
   splitting it exists for has nothing to split, so the colored kinds stay out of the deck
   until a second color opens (on a board with one color, never), on top of the unlock order
   (D-30), which also needs them unlocked. The designer found about one per color is all a factory needs, so
   they're rare: weight 0.5 each, about 1 card in 28 apiece.
-- **Evidence:** R-40, R-41, R-27, R-10; U-20 (manual). The bot discards Pushers, so
+- **Evidence:** R-40, R-41, R-27, R-50, R-10; U-20 (manual). The bot discards Pushers, so
   adding the kind only thins its Belt draws: `just cc-sim 200 small` 185/200, median 65 →
   184/200, median 70 (the Pusher alone, before D-23).
 
@@ -344,7 +345,8 @@ ARCHITECTURE_LOG.md.
   can't replace a Bridge on water (a Bridge can, so a piece on a bridged hex never sinks
   from a replace and `place` needs no sink case), a Wall still can't go where a piece
   stands, and a Wall still can't go on a source. (3) The same kind over itself is legal; it
-  costs a card and a tick, and is how you'd recolor a Pusher or Puller. (4) The new Thing
+  costs a card and a tick, and is the only way to recolor a Pusher or Puller: a new card,
+  placed over it, with a new pick (D-32). (4) The new Thing
   goes last in placement order, like any new Thing, so within its group (D-24) it acts after
   the others. (5) A piece standing there stays put and the new Thing acts on it that same
   tick. (6) The old Thing's card is spent, as with `remove`; nothing returns to the hand.
@@ -445,6 +447,41 @@ ARCHITECTURE_LOG.md.
   2.08 lost/game both); medium 200 games median 60 → 61 (p90 71 → 70); large 100 games
   median 81 → 79 (p90 93 → 96); huge 50 games median 143 → 143 (p90 168 → 174). The bot
   stops at the first milestone, so the per-milestone growth is unmeasured; unmeasured in play.
+
+### D-32 The player picks a Pusher or Puller's color when placing it — *Decided (cards drawn plain, color picked at placement and kept for good, one color skips the picker), Proposed (unreviewed: the rest)*
+- **Alternatives:** the color rolled with the card at draw time (the old rule, D-22 before
+  this); a separate free command to color a placed white Thing, like `rotate`; recoloring a
+  placed Thing for free; a white Pusher or Puller that acts on everything until colored.
+- **Why:** the designer asked for it (pjpd color-picker-8h4x). A random color made the rare
+  sorter card a lottery: a red Pusher when the blue line is the one to split was as good as
+  a discard. Picking at placement keeps the card rare and the decision the player's.
+- **Unreviewed calls:** (1) The pick is part of the place command,
+  `place(slot, q, r, facing, color)`: the UI asks first and sends one command, so placement
+  stays one atomic command and one tick, the engine never holds a white Pusher or Puller, and
+  the question "does an unpicked one act?" never comes up. (2) `color` is a required argument
+  for every kind; the engine's one query `colorChoices(kind)` says what's legal (the open
+  colors for a `colored` kind, `[WHITE]` for every other), and anything else is `ok:false`
+  with nothing changed. The UI reads the same query, so it never branches on the kind: one
+  choice places at once, more open the picker. (3) With one color open the picker is skipped
+  and that color used. The draw gate (D-22) keeps colored cards out of a one-color deck, so
+  in play the picker always shows two or more swatches; the skip covers a forced hand.
+  (4) The picker is an L5 overlay (`color`): a small square of swatches beside the hex, one
+  per open color in opening order, with the white ghost left standing on the hex. It holds
+  Go like every overlay, and nothing ticks behind it because nothing has been sent. (5) A
+  swatch click or its number key (`1`–`4`; the overlay takes keys before the hand's `1`–`3`,
+  so there's no clash) places it. Esc, right-click or a click off the swatches closes the
+  picker and leaves the card picked (back one layer, as Esc does elsewhere); a second Esc puts
+  the card back. Other keys do nothing while it's open. (6) No recoloring: a placed Thing's
+  color is fixed (R-50); replacing it with a new card (D-28) is how you change it. (7) Cards
+  have no color field now (`{kind}`), and the hand draws Pushers and Pullers white, saying
+  "you pick its crate color when you place it".
+- **Evidence:** R-50, R-9, R-27; U-20, U-25 (manual); `test/integration/uiboot.js` drives the
+  picker (open on a two-color board, pick by key and swatch, cancel by Esc, right-click and a
+  click off, Go held). `Measured by: just cc-sim 200 small` and `just cc-sim 50 medium`:
+  unchanged (small 200/200, median 49, p90 58, 2.08 lost; medium 50/50, median 61, p90 70,
+  3.52 lost). Small never deals colored cards, and the bot stops at medium's first milestone,
+  before the second color opens, so the dropped color roll never touches its `Rando` stream.
+  Unmeasured in play.
 
 ### D-24 Pushers and Pullers act before the other Things in a tick — *Proposed*
 - **Alternatives:** pure placement order (the old rule); letting a Pusher or Puller move a

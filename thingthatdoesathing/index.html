@@ -61,7 +61,8 @@
                 <dt><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></dt><dd>pick a Thing from your hand</dd>
                 <dt><kbd>R</kbd> / <kbd>Wheel</kbd></dt><dd>turn it before you place it</dd>
                 <dt><kbd>Click</kbd></dt><dd>place it (yellow hexes); the world ticks</dd>
-                <dt><kbd>Esc</kbd> / right-click</dt><dd>put the card back</dd>
+                <dt><kbd>1</kbd>–<kbd>4</kbd> / click a swatch</dt><dd>a Pusher or Puller: pick the crate color it works on</dd>
+                <dt><kbd>Esc</kbd> / right-click</dt><dd>put the card back (or close the color swatches)</dd>
                 <dt><kbd>X</kbd> / Discard</dt><dd>throw away the picked card (ticks)</dd>
                 <dt><kbd>Click</kbd> a hex</dt><dd>select it; holds Go while selected</dd>
                 <dt><kbd>Click</kbd> it again</dt><dd>turn its mover clockwise (free, no tick)</dd>
@@ -89,6 +90,11 @@
             <p id="news-sub"></p>
             <p class="continue">Click or press any key to continue</p>
         </div>
+    </div>
+    <!-- The color picker (D-32): a clear backdrop (a click on it cancels) and a small box of
+    swatches beside the hex, one per open color. -->
+    <div id="color-panel" class="hidden">
+        <div id="color-picker" class="panel"></div>
     </div>
     <!-- Plain script includes (globals), not ES modules: the page runs on a double-click
     (D-9). Order = dependency order:

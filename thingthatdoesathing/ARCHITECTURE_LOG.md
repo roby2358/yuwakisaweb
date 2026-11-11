@@ -2,6 +2,17 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-11 — Pushers and Pullers get their color when placed
+A Pusher or Puller card used to come in a color rolled at draw time (`cardColor()`, one of the
+open colors, equally likely), and the placed Thing took the card's color. Cards are now just
+`{kind}`; `draw()` no longer rolls a color and `cardColor()` is gone. `place` takes a fifth
+argument, `color`, which must be one of the new query `colorChoices(kind)` (the open colors
+for a `colored` kind, `[WHITE]` otherwise). The UI asks for it with a new L5 overlay, `color`
+(`#color-panel` backdrop, `#color-picker` swatches, `GameUI.choosing`), opened by a click on a
+legal hex when there's more than one choice; `COLOR_PICKER_PX` added to display artifacts. The
+sim bot, smoke test and rule tests pass a color. D-32 added, D-22 and D-28 touched; R-50 and
+U-25 added, R-6, R-9, R-27 and U-20 updated; uiboot drives the picker.
+
 ### 2026-11-11 — Crate spawning caps by board area
 `SOURCE_INTERVAL` (a crate every 3 ticks whenever the rolled source was clear, retried each
 tick while jammed) became `SPAWN_INTERVAL` (a spawn chance every 3 ticks) plus a crate cap:

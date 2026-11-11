@@ -12,7 +12,7 @@ const GameState = (function () {
             this.targets = [];        // [{q, r, color, delivered}] — takes only `color` crates; one per open color
             this.pieces = [];         // [Piece] crates and gremlins, in creation order
             this.things = [];         // [{kind, color, q, r, facing}] in placement order (= action order)
-            this.hand = [];           // [{kind, color}] cards, length HAND_SIZE
+            this.hand = [];           // [{kind}] cards, length HAND_SIZE
             this.unlocks = 0;         // how many UNLOCKS steps are open (a new game opens 1)
             this.turn = 1;
             this.delivered = 0;

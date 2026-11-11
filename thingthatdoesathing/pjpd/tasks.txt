@@ -1,11 +1,3 @@
-Priority:   45
-Status: ToDo
-ID: color-picker-8h4x
-Created: 2026-11-11T15:54:06Z
-Updated: 2026-11-11T20:26:47Z
-
-Thing Factory: Pusher and Puller cards are drawn white and get their color when placed. Placing one pops up a small square color picker near the Thing, one swatch per open crate color. The pick sets the Thing's color for good: no recoloring later, and it moves only crates of that color (plus gremlins). This reverses the current rule where cardColor() draws an open color at draw time. Open questions: does a white Pusher or Puller act before it's picked? Does the picker block the tick or Go (probably an overlay like the color panel)? Is the pick part of the place command (place(kind, q, r, facing, color)) or a separate free command like rotate? With one color open, skip the picker and use that color. Reconcile the engine, the UI overlay, ONTOLOGY / CRITERIA (R-27 draw colors) / RATIONALE D-22 / log, and uiboot.
-----
 Priority:   40
 Status: ToDo
 ID: big-crate-jat8

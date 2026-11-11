@@ -46,6 +46,14 @@ Updated: 2026-11-11T20:54:22Z
 
 Thing Factory: add a Slide card, a placeable Thing that acts like ice. A piece that steps onto it keeps sliding in the same direction for free, the way it does on bare ice in step(). Ideally this is one THINGS flag (e.g. `slides: true`) that the ice check in step() also reads, so there's a single code path for terrain ice and Slide Things. A Slide can be placed on water, like a Bridge [D]: it makes the water hex crossable, and the piece slides over it. Use the Bridge's water-legal placement rule and its "not sunk" check, plus the slide behavior. Add a draw weight, a THING_LOOK, and a spot in the card-unlock order if that's built. Open question: does a Spring landing on a Slide skid on, the way it does on ice? Reconcile the docs, add an R-n test (including a slide across water), and run cc-sim.
 ----
+Priority:   45
+Status: Done
+ID: color-picker-8h4x
+Created: 2026-11-11T15:54:06Z
+Updated: 2026-11-11T21:37:06Z
+
+Thing Factory: Pusher and Puller cards are drawn white and get their color when placed. Placing one pops up a small square color picker near the Thing, one swatch per open crate color. The pick sets the Thing's color for good: no recoloring later, and it moves only crates of that color (plus gremlins). This reverses the current rule where cardColor() draws an open color at draw time. Open questions: does a white Pusher or Puller act before it's picked? Does the picker block the tick or Go (probably an overlay like the color panel)? Is the pick part of the place command (place(kind, q, r, facing, color)) or a separate free command like rotate? With one color open, skip the picker and use that color. Reconcile the engine, the UI overlay, ONTOLOGY / CRITERIA (R-27 draw colors) / RATIONALE D-22 / log, and uiboot.
+----
 Priority:   40
 Status: Done
 ID: colorthings-3nq7

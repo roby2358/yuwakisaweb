@@ -11,7 +11,7 @@ for (const seed of SEEDS.slice(0, 4)) {
         const legal = [...a.engine.legalPlacements(a.state.hand[i % 3].kind)];
         const run = e => {
             if (i % 4 === 3) return e.wait();
-            if (legal.length) { const { q, r } = a.g.Hex.fromKey(legal[(i * 7) % legal.length]); return e.place(i % 3, q, r, i % 6); }
+            if (legal.length) { const { q, r } = a.g.Hex.fromKey(legal[(i * 7) % legal.length]); return e.place(i % 3, q, r, i % 6, e.colorChoices(a.state.hand[i % 3].kind)[0]); }
             return e.wait();
         };
         const ra = run(a.engine), rb = run(b.engine);

@@ -4,7 +4,7 @@
 const { check, done } = require('../helpers/check');
 const { flatGame, snapshot } = require('../helpers/load');
 const { g, state, engine } = flatGame();
-state.hand = [{ kind: 'WALL', color: 'white' }, { kind: 'BELT', color: 'white' }, { kind: 'SPRING', color: 'white' }];
+state.hand = [{ kind: 'WALL' }, { kind: 'BELT' }, { kind: 'SPRING' }];
 const things = JSON.stringify(state.things), turn = state.turn;
 const res = engine.discard(0);
 check('ok, with events, and one tick', res.ok && Array.isArray(res.events) && state.turn === turn + 1);

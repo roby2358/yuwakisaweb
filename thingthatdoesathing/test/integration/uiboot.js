@@ -3,7 +3,7 @@
 // Loads every script index.html loads, in order, into a vm with a fake document, canvas,
 // and requestAnimationFrame, then drives the UI through clicks and keys: pick a board size
 // from the intro, pick each card, turn the ghost, place, select and rotate, wait, run tick animations to completion,
-// and play to the first milestone. Catches runtime errors in rendering and input wiring without a
+// play to the first milestone, and drive the color picker (D-32). Catches runtime errors in rendering and input wiring without a
 // browser. It can't judge how anything looks; that stays manual (U-rows).
 'use strict';
 
@@ -236,7 +236,7 @@ run('the Discard spot throws away the picked card and ticks; X does too', () => 
 });
 run('a Rocket card draws, places, and its flight and splat animate', () => {
     const s = ui.state;
-    s.hand[0] = { kind: 'ROCKET', color: 'white' };
+    s.hand[0] = { kind: 'ROCKET' };
     ui.render();
     key('1');
     const [k] = [...ui.picked.legal];
@@ -258,7 +258,7 @@ run('a Rocket card draws, places, and its flight and splat animate', () => {
 });
 run('a Trap card places, and the tally shows ex-gremlins and trapped', () => {
     const s = ui.state;
-    s.hand[0] = { kind: 'TRAP', color: 'white' };
+    s.hand[0] = { kind: 'TRAP' };
     ui.render();
     key('1');
     const [k] = [...ui.picked.legal];
@@ -399,7 +399,7 @@ run('Space while Go runs finishes the tick in flight, then stops', () => {
 run('a click selects a hex and holds Go; a second click turns its mover; a click elsewhere lets go', () => {
     els['new-game'].fire('click'); key('1');
     const s = ui.state;
-    s.hand[0] = { kind: 'BELT', color: vm.runInContext('GameArtifacts.WHITE', ctx) };
+    s.hand[0] = { kind: 'BELT' };
     key('1');
     const [k] = ui.picked.legal;
     const [q, r] = k.split(',').map(Number);
@@ -457,6 +457,70 @@ run('a newly opened color or unlocked card shows a panel that holds Go until a c
     if (ui.overlay !== 'news' || els['news-title'].textContent !== 'New card: Slide') throw new Error('card panel: ' + els['news-title'].textContent);
     els['news-panel'].fire('click');
     if (ui.overlay) throw new Error('a click must close the card panel');
+});
+run('a Pusher with one color open places at once in that color, no picker', () => {
+    els['new-game'].fire('click'); key('1');
+    const s = ui.state;
+    s.hand[0] = { kind: 'PUSHER' };
+    ui.render();
+    if (els.cards.children[0].querySelector('.name').textContent !== 'Pusher') throw new Error('the card must read plain "Pusher"');
+    key('1');
+    const turn = s.turn;
+    const [q, r] = [...ui.picked.legal][0].split(',').map(Number);
+    clickHex(q, r);
+    if (ui.overlay || s.turn !== turn + 1) throw new Error('expected a place and a tick, no picker');
+    if (ui.engine.thingAt(q, r).color !== s.targets[0].color) throw new Error('not placed in the one open color');
+    settle();
+});
+run('with two colors open, a Pusher asks for its color: pick, cancel three ways, keys and swatches', () => {
+    els['new-game'].fire('click'); key('2');
+    const s = ui.state, e = ui.engine;
+    const second = vm.runInContext('GameArtifacts.CRATE_COLORS', ctx).find(c => c !== s.targets[0].color);
+    const spot = [...s.hexes.values()].find(h => !h.isEdge && e.board.isPassable(h) && !e.isEndpoint(h) && !e.pieceAt(h.q, h.r));
+    s.targets.push({ q: spot.q, r: spot.r, color: second, delivered: 0 });
+    const colors = e.openColors();
+    const pickPusher = () => {
+        s.hand[0] = { kind: 'PUSHER' };
+        ui.render();
+        key('1');
+        return [...ui.picked.legal][0].split(',').map(Number);
+    };
+    const [q, r] = pickPusher();
+    const turn = s.turn;
+    const open = () => {
+        clickHex(q, r);
+        if (ui.overlay !== 'color' || els['color-panel'].classList.set.has('hidden')) throw new Error('no color picker');
+        if (s.turn !== turn || e.thingAt(q, r)) throw new Error('the picker must not place or tick');
+        if (els['color-picker'].children.length !== colors.length) throw new Error('one swatch per open color');
+    };
+    const closed = how => {
+        if (ui.overlay || ui.choosing || !els['color-panel'].classList.set.has('hidden')) throw new Error(how + ' did not close the picker');
+        if (!ui.picked || s.turn !== turn || e.thingAt(q, r)) throw new Error(how + ' must keep the card picked and place nothing');
+    };
+    open(); key('Escape'); closed('Esc');
+    open(); els['color-panel'].fire('contextmenu'); closed('right-click');
+    open(); els['color-panel'].fire('click'); closed('a click off the swatches');
+    open(); key('9'); key('r');
+    if (ui.overlay !== 'color' || s.turn !== turn) throw new Error('other keys must do nothing while the picker is open');
+    key('2');
+    if (ui.overlay || ui.picked || s.turn !== turn + 1) throw new Error('key 2 did not place and tick');
+    if (e.thingAt(q, r).kind !== 'PUSHER' || e.thingAt(q, r).color !== colors[1]) throw new Error('not placed in the second color');
+    settle();
+    // A swatch click places too; Go holds while the picker is open.
+    els.go.fire('click');
+    settle();   // Go's first tick finishes; a click waits for the animation
+    const [q2, r2] = pickPusher();
+    clickHex(q2, r2);
+    if (ui.overlay !== 'color') throw new Error('no picker for the second Pusher');
+    settle(); advance(500);
+    const held = s.turn;
+    advance(2000);
+    if (s.turn !== held) throw new Error('Go ticked while the picker was open');
+    els['color-picker'].children[0].fire('click', { stopPropagation() {} });
+    if (ui.overlay || e.thingAt(q2, r2).color !== colors[0] || s.turn !== held + 1) throw new Error('a swatch click did not place in its color');
+    advance(1000);
+    if (s.turn === held + 1) throw new Error('Go did not resume after the pick');
+    els.go.fire('click'); settle();
 });
 run('New Game asks for a size, then resets', () => {
     key(' '); settle();

@@ -64,13 +64,13 @@ for (let i = 0; i < GAMES; i++) {
             if (t) { res = engine.rotate(h.q, h.r); continue; }
             const slot = state.hand.findIndex(card => card.kind === 'BELT');
             const legal = slot >= 0 && engine.legalPlacements('BELT').has(g.Hex.key(h.q, h.r));
-            if (legal) { res = engine.place(slot, h.q, h.r, f); continue; }
+            if (legal) { res = engine.place(slot, h.q, h.r, f, g.GameArtifacts.WHITE); continue; }
             // A spring only on a straight run of 3 (it flings 3 hexes).
             const straight = todo + 3 < path.length &&
                 [1, 2].every(k => dirTo(g, path[todo + k], path[todo + k + 1]) === f);
             const any = state.hand.findIndex(card => card.kind === 'SPRING' && straight);
             if (any >= 0 && engine.legalPlacements(state.hand[any].kind).has(g.Hex.key(h.q, h.r))) {
-                res = engine.place(any, h.q, h.r, f); continue;
+                res = engine.place(any, h.q, h.r, f, g.GameArtifacts.WHITE); continue;
             }
         }
         // While building, discard a card the path can't use; otherwise wait.

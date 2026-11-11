@@ -65,7 +65,7 @@ everything; G-2 beats G-1 (a funny interaction that can't be read is a bug, not 
 | `targets` | `[{q, r, color, delivered}]` | One per open color, in the order they opened: it takes only `color` crates, and `delivered` counts them. Nothing may be built on one. [D] |
 | `pieces` | `Piece[]` | Every crate and gremlin, in creation order. |
 | `things` | `Thing[]` | Every placed Thing, in placement order (the order they act, Pushers and Pullers first: Tick rule). |
-| `hand` | `{kind, color}[]` | Cards, length `HAND_SIZE`; `color` is `WHITE` or a crate color (Draw rule). |
+| `hand` | `{kind}[]` | Cards, length `HAND_SIZE` (Draw rule). A card has no color; a `colored` kind gets its color when placed (D-32). |
 | `unlocks` | int ≥ 1 | How many `UNLOCKS` steps are open; their kinds are the deck (Unlock rule). A new game opens 1. [D: pjpd card-unlock] |
 | `turn` | int ≥ 1 | Goes up by 1 per tick. |
 | `delivered` | int | Crates delivered, all colors together (milestones count this). |
@@ -115,7 +115,7 @@ A `Piece` (position, color, label) with two fields set by the engine. Each kind 
 | Field | Type | Notes |
 |---|---|---|
 | `kind` | `ThingKind` | `BELT`, `SPRING`, `ROCKET`, `PUSHER`, `PULLER`, `WALL`, `TRAP`, `BRIDGE`, `SLIDE`. |
-| `color` | `WHITE` \| `CRATE_COLORS` name | From its card. A colored one acts only on crates of its color and on every gremlin; white acts on every piece. Only `colored` kinds are ever anything but white. [D] |
+| `color` | `WHITE` \| `CRATE_COLORS` name | Set by `place` and kept for good (D-32): a `colored` kind takes the open color the player picked, every other kind `WHITE`. A colored one acts only on crates of its color and on every gremlin; white acts on every piece. [D] |
 | `q`, `r` | int | Position. One Thing per hex; placing on an occupied hex replaces it (D-28). |
 | `facing` | 0…5 \| null | Index into `Hex` neighbor directions; null for fixtures. Facing order E, NE, NW, W, SW, SE; clockwise is `(f+5) mod 6`. |
 
@@ -131,7 +131,7 @@ A `Piece` (position, color, label) with two fields set by the engine. Each kind 
 | `pull` | Hexes it pulls the piece on the **far hex** (two ahead along `facing`) back toward itself, into the **near hex** (one ahead) (Puller). |
 | `blocks` | Pieces can't enter (Wall). |
 | `traps` | A piece that splats dies when it comes onto this hex: walked, pushed, slid, or coming down from a flight; a flight passing over doesn't count (Trap). Every target does the same, with no Thing (Step rule). [D] |
-| `colored` | Its cards always come in an open crate color, never white, and are drawn only once two or more colors are open (Pusher, Puller). [D] |
+| `colored` | Placed in an open crate color the player picks, never white (`colorChoices`, D-32); its card is drawn plain, and only once two or more colors are open (Pusher, Puller). [D] |
 | `slides` | Slick ground: a piece that comes onto it on the ground keeps going the same way, free, exactly like bare ice (Slide). The one slick test, `isSlick`, reads it: a Thing on a hex decides by `slides`; with no Thing, the hex is slick if it's ICE. [D-29] |
 | `on` | `'land'` (plains/ice), `'water'`, or `'both'` (land or water) — where it may be built. [both D-29] |
 | `weight` | Relative draw chance for the hand, among the kinds in the deck (Draw rule). |
@@ -145,7 +145,8 @@ A `Piece` (position, color, label) with two fields set by the engine. Each kind 
 |---|---|
 | `picked` | `{ slot, legal: Set<key> }` \| null — the hand card being placed. |
 | `facing` | 0…5 — the ghost's facing, remembered between placements. |
-| `overlay` | `'intro'` \| `'size'` \| `'news'` \| `'help'` \| null. `'intro'` and `'size'` are size pickers; picking a size starts a game, and `'size'` (New Game) also closes on Esc, back to the game. `'news'` shows the colors `open` events named and the cards `unlock` events named, on one panel, and closes on a click or any key (D-30). `'help'` is the keys legend: it opens after the intro's size pick and from the Help button, and closes on a click or any key. [D] |
+| `overlay` | `'intro'` \| `'size'` \| `'news'` \| `'help'` \| `'color'` \| null. `'intro'` and `'size'` are size pickers; picking a size starts a game, and `'size'` (New Game) also closes on Esc, back to the game. `'news'` shows the colors `open` events named and the cards `unlock` events named, on one panel, and closes on a click or any key (D-30). `'help'` is the keys legend: it opens after the intro's size pick and from the Help button, and closes on a click or any key. `'color'` is the color picker (D-32): a click on a legal hex with a card whose `colorChoices` has more than one color opens it beside that hex, one swatch per choice; a swatch click or its number key sends `place` in that color; Esc, right-click or a click off the swatches closes it with the card still picked. [D] |
+| `choosing` | `{ q, r, colors }` \| null — the hex and swatches of the open color picker; the ghost stands there while it's open. [D-32] |
 | `hoveredHex`, `panX/Y`, drag fields | The hex under the cursor, the screen-space pan offset, and left-drag tracking (`DRAG_THRESHOLD`). |
 | `anim` | `{ t0, dur, tracks, before, hidden, milestone, opened, unlocked, redrawn, ends }` \| null — tick animation; input waits while it runs (picking a card doesn't). |
 | `running` | bool — Go/Pause. While true, the client calls `wait()` `RUN_GAP_MS` after each animation ends, and holds while a card is picked. [D] |
@@ -260,8 +261,7 @@ Runs once at the end of every tick, for that tick's sinks and splats and for a p
 ```
 deck = the unlocked kinds (UNLOCKS[0 … unlocks-1]), minus the colored ones while fewer than 2 colors are open
 kind = chosen by Rando from deck with probability THINGS[kind].weight / deck's total weight
-color = THINGS[kind].colored ? Rando.choice(open colors) : WHITE
-return {kind, color}
+return {kind}                                # no color: a colored kind's is picked at place (D-32)
 ```
 
 ### Unlock — `unlock()` [D; skipping and kept hand D-30]
@@ -375,11 +375,13 @@ also gets the news panel, which waits for a click or any key.
 
 ### Commands
 ```
-place(slot, q, r, facing):
+place(slot, q, r, facing, color):
     legal: 0 <= slot < HAND_SIZE, canPlace(hand[slot], hex at (q,r)),
-           facing in 0..5 for Things with push, pull or shove (ignored, stored null, for fixtures)
+           facing in 0..5 for Things with push, pull or shove (ignored, stored null, for fixtures),
+           color in colorChoices(kind)                  # D-32
     if a Thing stands at (q,r): things.remove(it)       # replaced; its card is spent (D-28)
-    things.push({kind, color of the card, q, r, facing}); hand[slot] = draw(); tick()
+    things.push({kind, color, q, r, facing}); hand[slot] = draw(); tick()
+colorChoices(kind) = THINGS[kind].colored ? open colors, in opening order : [WHITE]
     # the new Thing is last in placement order and acts this tick on a piece standing there
 rotate(q, r):  legal: a Thing with a facing (push, pull or shove) stands at (q,r)
     facing = (facing + 5) mod 6               # no tick: events = [], turn unchanged
@@ -457,7 +459,7 @@ The code constant in `GameArtifacts` is the single source.
 | Command | Legal when | Effect | Result |
 |---|---|---|---|
 | `newGame(seed, size)` | `seed` is a non-negative integer and `size` a key of `MAP_SIZES` | regenerate at that size | `{ok:true}` |
-| `place(slot, q, r, facing)` | see Commands rule | build (replacing any Thing there), redraw slot, tick | `{ok, events}` |
+| `place(slot, q, r, facing, color)` | see Commands rule (`color` one of `colorChoices`) | build in `color` (replacing any Thing there), redraw slot, tick | `{ok, events}` |
 | `rotate(q, r)` | a Belt, Bridge, Spring, Rocket, Pusher, or Puller is there | turn clockwise; no tick | `{ok, events: []}` |
 | `remove(q, r)` | any Thing is there | take it off (a piece left on open water sinks), tick | `{ok, events}` |
 | `blast(q, r)` | a crate is there | blow it up (lost +1), tick | `{ok, events}` |
@@ -469,6 +471,7 @@ Illegal → `{ ok:false }` and nothing changed (hand and `Rando` included).
 ### Queries
 - `canPlace(kind, hex)` → bool — the check `place` enforces.
 - `legalPlacements(kind)` → `Set<key>` — every hex where `canPlace` holds.
+- `colorChoices(kind)` → color names — the colors `place` accepts for that kind: the open colors for a `colored` kind (the client asks the player when there's more than one), `[WHITE]` for any other (D-32).
 - `affects(thing, piece)` — whether a Thing's color lets it act on that piece.
 - `thingAt(q, r)`, `pieceAt(q, r)`, `targetAt(q, r)`, `sourceOf(color)`, `openColors()`, `isEndpoint(hex)`.
 - `unlockedKinds()`, `drawableKinds()` — the kinds open so far, and the deck the Draw rule uses.

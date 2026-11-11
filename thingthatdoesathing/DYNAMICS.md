@@ -66,7 +66,8 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
 - **Colored Pushers and Pullers** → feed readable consequences and accumulation: a red
   Pusher beside a mixed line knocks off only the red crates, and a
   red Puller reaches in for them. Gremlins are moved by every color, so a sorter is never a
-  gremlin-safe gap. They're dealt only once a second color opens, when there's a line to split.
+  gremlin-safe gap. They're dealt only once a second color opens, when there's a line to split,
+  and you pick the color as you place one, so the rare card always sorts the line you need.
 - **Targets kill gremlins** → keep the payoff flowing: a gremlin that wanders or rides onto a
   target dies there, so it can't camp the end of your line.
 - **Colors** (bigger boards) → feed escalating commitment and comedy: each milestone can open

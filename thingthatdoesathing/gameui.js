@@ -10,7 +10,8 @@
 const GameUI = (function () {
     const {
         HEX_SIZE, COUNTER_SIZE, HOP_MS, RUN_GAP_MS, MILESTONE_MS, TERRAIN_COLORS, TERRAIN_NAMES, THING_LOOK,
-        PIECE_LOOK, CRATE_SHADES, COLOR_INK, SPLAT_BLOTS, SOURCE_COLOR, BG_COLOR, UI_FONT, REACH_COLOR, MAP_SIZE_NOTES
+        PIECE_LOOK, CRATE_SHADES, COLOR_INK, SPLAT_BLOTS, SOURCE_COLOR, BG_COLOR, UI_FONT, REACH_COLOR, MAP_SIZE_NOTES,
+        COLOR_PICKER_PX
     } = GameDisplayArtifacts;
     const { TERRAIN, THINGS, WHITE, HAND_SIZE, MAP_SIZES, aims, nextMilestone } = GameArtifacts;
     const SIZE_KEYS = Object.keys(MAP_SIZES);
@@ -20,14 +21,16 @@ const GameUI = (function () {
         gremlin: p => p.color,
     };
     const END_CUES = ['deliver', 'splat', 'sink'];   // the one sound a tick's endings play, by priority
-    const OVERLAY_PANELS = { intro: 'intro-panel', size: 'size-panel', news: 'news-panel', help: 'help-panel' };   // L5 overlay → its panel
+    const OVERLAY_PANELS = { intro: 'intro-panel', size: 'size-panel', news: 'news-panel', help: 'help-panel', color: 'color-panel' };   // L5 overlay → its panel
     // L5: what a key does on each overlay. The size pickers take their number keys (and Esc
-    // when a game is behind); the news panel (new colors, new cards) and the keys legend close on any key.
+    // when a game is behind); the news panel (new colors, new cards) and the keys legend close
+    // on any key; the color picker takes its swatch numbers and Esc.
     const OVERLAY_KEYS = {
         intro: (ui, e) => ui.sizeKey(e),
         size: (ui, e) => ui.sizeKey(e),
         news: ui => ui.dismissOverlay(),
         help: ui => ui.dismissOverlay(),
+        color: (ui, e) => ui.colorKey(e),
     };
 
     const DRAG_THRESHOLD = 4;
@@ -198,8 +201,8 @@ const GameUI = (function () {
     // A Thing's name and verb line: a colored kind in a crate color says so.
     const capitalized = w => w[0].toUpperCase() + w.slice(1);
     const thingName = (kind, color) => (THINGS[kind].colored && color !== WHITE ? capitalized(color) + ' ' : '') + THING_LOOK[kind].name;
-    const thingDoes = (kind, color) => THING_LOOK[kind].does +
-        (THINGS[kind].colored && color !== WHITE ? ` (only ${color} crates, and gremlins)` : '');
+    const thingDoes = (kind, color) => THING_LOOK[kind].does + (!THINGS[kind].colored ? '' :
+        color === WHITE ? ' (you pick its crate color when you place it)' : ` (only ${color} crates, and gremlins)`);
 
     class GameUI {
         constructor(engine, canvas) {
@@ -219,8 +222,9 @@ const GameUI = (function () {
             this.panOrigY = 0;
 
             this.picked = null;      // L1.2 { slot, legal: Set<key> } — the card being placed
+            this.choosing = null;    // L5 { q, r, colors } — the color picker's hex and swatches, while it's open (D-32)
             this.facing = 0;         // ghost facing; remembered between placements
-            this.overlay = null;     // L5 'intro' | 'size' (board-size pickers) | 'news' (a color opened or cards unlocked) | 'help' (the keys) | null
+            this.overlay = null;     // L5 'intro' | 'size' (board-size pickers) | 'news' (a color opened or cards unlocked) | 'help' (the keys) | 'color' (the color picker, D-32) | null
             this.hoveredHex = null;  // L1.3
             this.selected = null;    // {q, r} — a clicked hex: highlighted, holds Go; a second click turns its mover
             this.anim = null;        // { t0, dur, tracks: Map<id, track>, before, hidden: Set<id>, milestone, ends: Set<type> }
@@ -249,6 +253,7 @@ const GameUI = (function () {
             const fromIntro = this.overlay === 'intro';
             this.engine.newGame(Math.floor(Math.random() * 0x100000000), size);
             this.picked = null;
+            this.choosing = null;
             this.selected = null;
             this.anim = null;
             this.hoveredHex = null;
@@ -314,6 +319,7 @@ const GameUI = (function () {
 
         unpick() {
             this.picked = null;
+            this.choosing = null;
             this.render();
         }
 
@@ -333,9 +339,57 @@ const GameUI = (function () {
             this.startAnim(before, res);
         }
 
-        place(q, r) {
+        place(q, r, color) {
             const slot = this.picked.slot;
-            this.commit(() => this.engine.place(slot, q, r, this.facing), () => this.sound.place());
+            this.commit(() => this.engine.place(slot, q, r, this.facing, color), () => this.sound.place());
+        }
+
+        // A click on a legal hex: with one color to choose from (every kind but Pushers and
+        // Pullers), place at once; otherwise ask for the color first (D-32).
+        placeOrAsk(q, r) {
+            const colors = this.engine.colorChoices(this.state.hand[this.picked.slot].kind);
+            if (colors.length === 1) { this.place(q, r, colors[0]); return; }
+            this.openColorPicker(q, r, colors);
+        }
+
+        // ---- L5 The color picker: one swatch per open color, beside the hex (D-32) ----
+        // The card stays picked behind it; nothing is sent until a swatch is chosen.
+        openColorPicker(q, r, colors) {
+            this.choosing = { q, r, colors };
+            const box = document.getElementById('color-picker');
+            box.innerHTML = '';
+            colors.forEach((color, i) => {
+                const b = document.createElement('button');
+                b.className = 'swatch';
+                b.title = capitalized(color);
+                b.style.background = CRATE_SHADES[color].top;
+                b.innerHTML = `<kbd>${i + 1}</kbd>`;
+                b.addEventListener('click', e => { e.stopPropagation(); this.chooseColor(i); });
+                box.appendChild(b);
+            });
+            const { x, y } = this.hexToScreen(q, r);
+            box.style.left = Math.min(x + HEX_SIZE, window.innerWidth - COLOR_PICKER_PX - 8) + 'px';
+            box.style.top = Math.max(8, y - HEX_SIZE - COLOR_PICKER_PX) + 'px';
+            this.showOverlay('color');
+            this.render();
+        }
+
+        chooseColor(i) {
+            const { q, r, colors } = this.choosing;
+            this.closeColorPicker();
+            this.place(q, r, colors[i]);
+        }
+
+        // Esc, right-click or a click off the swatches: back to the picked card, nothing placed.
+        closeColorPicker() {
+            this.choosing = null;
+            this.dismissOverlay();
+        }
+
+        colorKey(e) {
+            if (e.key === 'Escape') { this.closeColorPicker(); return; }
+            const i = Number(e.key) - 1;
+            if (Number.isInteger(i) && i >= 0 && i < this.choosing.colors.length) this.chooseColor(i);
         }
 
         // ---- Select a hex: it holds Go so you can look; clicking it again turns its mover ----
@@ -600,7 +654,7 @@ const GameUI = (function () {
             for (const t of s.targets) this.drawTarget(t);
 
             // A Thing under the ghost is about to be replaced (D-28): the ghost stands in for it.
-            const doomed = this.replaceTarget(this.hoveredHex);
+            const doomed = this.replaceTarget(this.ghostHex());
             for (const t of s.things) {
                 if (t === doomed) continue;
                 const { x, y } = this.hexToScreen(t.q, t.r);
@@ -625,10 +679,10 @@ const GameUI = (function () {
                     ctx.stroke();
                     ctx.restore();
                 }
-                const h = this.hoveredHex;
+                const h = this.ghostHex();
                 if (h && this.picked.legal.has(Hex.key(h.q, h.r))) {
                     const { x, y } = this.hexToScreen(h.q, h.r);
-                    drawThing(ctx, x, y, HEX_SIZE, s.hand[this.picked.slot].kind, s.hand[this.picked.slot].color, this.facing, 0.7);
+                    drawThing(ctx, x, y, HEX_SIZE, s.hand[this.picked.slot].kind, WHITE, this.facing, 0.7);
                 }
             } else if (this.hoveredHex && !this.anim) {
                 // A bare hover over a mover: outline it — clicking turns it.
@@ -645,6 +699,11 @@ const GameUI = (function () {
             this.drawPieces(now);
             if (this.selected) this.drawSelected(this.selected);
             this.updateHUD();
+        }
+
+        // Where the ghost stands: the hex the color picker is open on, else the hovered one.
+        ghostHex() {
+            return this.choosing || this.hoveredHex;
         }
 
         // The placed Thing that placing the picked card on `h` would replace, or null.
@@ -939,14 +998,14 @@ const GameUI = (function () {
                 }
             }
             [...el.children].forEach((b, i) => {
-                const { kind, color } = s.hand[i];
+                const { kind } = s.hand[i];   // cards have no color (D-32)
                 const picked = this.picked && this.picked.slot === i;
                 b.classList.toggle('picked', !!picked);
-                b.querySelector('.name').textContent = thingName(kind, color);
-                b.querySelector('.does').textContent = thingDoes(kind, color);
+                b.querySelector('.name').textContent = thingName(kind, WHITE);
+                b.querySelector('.does').textContent = thingDoes(kind, WHITE);
                 const c = b.querySelector('canvas'), cx = c.getContext('2d');
                 cx.clearRect(0, 0, c.width, c.height);
-                drawThing(cx, 32, 32, 26, kind, color, aims(kind) ? (picked ? this.facing : 0) : null, 1);
+                drawThing(cx, 32, 32, 26, kind, WHITE, aims(kind) ? (picked ? this.facing : 0) : null, 1);
             });
         }
 
@@ -972,6 +1031,9 @@ const GameUI = (function () {
             document.getElementById('news-panel').addEventListener('click', () => this.dismissOverlay());
             document.getElementById('help').addEventListener('click', () => this.showHelp());
             document.getElementById('help-panel').addEventListener('click', () => this.dismissOverlay());
+            const colorPanel = document.getElementById('color-panel');
+            colorPanel.addEventListener('click', () => this.closeColorPicker());
+            colorPanel.addEventListener('contextmenu', e => { e.preventDefault(); this.closeColorPicker(); });
             this.buildSizeButtons(document.getElementById('intro-sizes'));
             this.buildSizeButtons(document.getElementById('new-sizes'));
         }
@@ -1002,7 +1064,7 @@ const GameUI = (function () {
             const key = Hex.key(hex.q, hex.r);
             if (this.picked) {
                 if (this.anim) return;                              // L1.1 a place waits for the tick
-                if (this.picked.legal.has(key)) this.place(hex.q, hex.r);
+                if (this.picked.legal.has(key)) this.placeOrAsk(hex.q, hex.r);
                 else this.unpick();
                 return;
             }

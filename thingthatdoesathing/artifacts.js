@@ -25,9 +25,9 @@ const GameArtifacts = (function () {
     //   blocks — pieces can't enter
     //   traps  — a piece that splats dies when it comes onto it (walked, pushed, slid, or
     //            landing from a flight; a flight passing over doesn't count)
-    //   colored — its card always comes in an open crate color, never white (it acts only
-    //            on crates of that color, and on every gremlin); not drawn while only one
-    //            color is open
+    //   colored — placed in an open crate color the player picks, never white (it acts only
+    //            on crates of that color, and on every gremlin); its card is drawn plain, and
+    //            not while only one color is open (D-22, D-32)
     //   slides — a piece that comes onto it on the ground keeps going the same way, free,
     //            like bare ice (and a skidding throw that comes down on it skids on)
     //   on     — 'land' (plains/ice), 'water', or 'both' (land or water): where it may be built

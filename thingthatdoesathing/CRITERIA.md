@@ -9,7 +9,7 @@ test there asserts that one rule, with its cases commented in the test itself.
 
 **Test command:** `just cc-test`, which runs `node test/run.js` (add `-v` for every check). It runs each `test/R-n/`
 file, the integration tests (`smoke.js`: random legal play with invariant checks;
-`uiboot.js`: the real UI booted on a stub DOM, played to the first milestone by simulated clicks, plus Go/Pause), and
+`uiboot.js`: the real UI booted on a stub DOM, played to the first milestone by simulated clicks, plus Go/Pause and the color picker), and
 `test/coverage.js`. **Tuning harness:**
 `node test/sim.js <games> <size>` (a greedy builder bot; not pass/fail).
 
@@ -27,7 +27,7 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | R-6 | `newGame(seed, size)` | one source and one target sharing a `CRATE_COLORS` color, and one crate of that color on the source; gremlin count in `gremlinDice(size)`d`GREMLIN_DICE_SIDES` (one die per `GREMLIN_HEXES_PER_DIE` hexes of area, rounded, at least 1) on distinct passable inner hexes off the source and target, each colored; no Things; `HAND_SIZE` cards, all from the starting `UNLOCKS` step (`unlocks` 1, R-49); counters reset; unique ids | automated |
 | R-7 | a step | blocked (piece stays) into off-map, mountain, Wall, or another piece; accepted onto plains, ice, a bridge, a Slide, or a mover | automated |
 | R-8 | `legalPlacements(kind)` | exactly the Placement legality rule: not a target (a Thing there doesn't matter, R-47), right ground, no piece under a blocking kind, and no blocking kind on a source | automated |
-| R-9 | `place(slot, q, r, facing)` | legal: Thing appended (fixture facing null), slot redrawn, hand stays `HAND_SIZE`, one tick. Illegal (slot, facing, hex): `{ok:false}`, state and `Rando` unchanged | automated |
+| R-9 | `place(slot, q, r, facing, color)` | legal: Thing appended in `color` (fixture facing null), slot redrawn, hand stays `HAND_SIZE`, one tick. Illegal (slot, facing, hex, or a color not in `colorChoices`, R-50): `{ok:false}`, state and `Rando` unchanged | automated |
 | R-10 | `rotate(q, r)` | on a Belt, Bridge, Spring, Rocket, Pusher, or Puller: facing turns clockwise and nothing else changes (no tick: `events` empty, turn, pieces, hand untouched). On a fixture or empty hex: `{ok:false}`, unchanged | automated |
 | R-11 | `wait()` | one tick, hand and Things untouched | automated |
 | R-12 | a piece on a mover during a tick | pushed `THINGS[kind].push` hexes in the facing, stopping before a blocked hex | automated |
@@ -45,7 +45,7 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | R-24 | the engine-side modules | load and play with no DOM, canvas, or `GameDisplayArtifacts`, and never reference them | automated |
 | R-25 | any command | a boolean `ok`; `newGame` without a non-negative integer seed or a `MAP_SIZES` key is `ok:false`; `ok:true` from place/rotate/remove/discard/wait carries `events[]`; `ok:false` carries nothing else | automated |
 | R-26 | a tick's events | `move` paths list every hex entered and end where the piece is or vanished; `sink`/`deliver`/`splat` follow their `move`; `spawn` reports the new crate; `open` and then `unlock` follow their `milestone`; replaying events reproduces every position | automated |
-| R-27 | many draws | each card's kind comes from `THINGS` by weight (only known kinds, shares near weight / total over the kinds in the deck); the deck is the unlocked kinds (R-49), so a new game deals only `UNLOCKS[0]`; with one color open the `colored` kinds are out of the deck, with two or more every unlocked kind is in; its color is `WHITE` unless the kind is `colored`, then one of the open colors, equally likely (never `WHITE`) | automated |
+| R-27 | many draws | each card's kind comes from `THINGS` by weight (only known kinds, shares near weight / total over the kinds in the deck); the deck is the unlocked kinds (R-49), so a new game deals only `UNLOCKS[0]`; with one color open the `colored` kinds are out of the deck, with two or more every unlocked kind is in; a card is just its kind, with no color (a `colored` kind's color is picked at place, R-50) | automated |
 | R-28 | a Puller during a tick | the piece on the far hex (two ahead) is pulled one step back into the near hex by the ordinary step rule (blocked → stays, water → sinks, ice → slides onto the Puller); pieces on the Puller or the near hex are left alone; a piece already moved this tick isn't pulled | automated |
 | R-29 | `remove(q, r)` | the Thing at (q,r) is gone, one tick, hand unchanged; a piece left on open water by a removed Bridge sinks (lost if cargo) with its `sink` event first. Empty hex: `{ok:false}`, unchanged | automated |
 | R-30 | milestones | `nextMilestone` gives 10, 20, 50, 100, 200, 500, 1000, … with no last one; the tick whose deliveries reach one emits one `milestone{count}` (deliveries of every color count); other ticks emit none; commands keep working past any milestone | automated |
@@ -68,6 +68,7 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | R-47 | `place` on a hex holding a Thing | the old Thing is gone and the new one stands there, last in placement order, as one command and one tick (Thing count unchanged); it acts this tick on a piece standing there; same kind over itself is legal; the hex is judged as if bare: a land kind can't replace a Bridge on water, a Wall can't go where a piece stands | automated |
 | R-48 | a Slide (`THINGS.slides`) | a piece that comes onto it on the ground keeps going the same way, free, through the same slick test as bare ICE, until ground that isn't slick or a blocker; built on water (`on: 'both'`) the piece slides over it unsunk and sinks in open water beyond; a Slide on ice still slides; a Spring that comes down on one skids on, a Rocket doesn't, and Slides under a flight don't count; a piece standing on one stays put; no facing (`rotate` illegal); removing a water Slide sinks the piece on it | automated |
 | R-49 | milestones and the deck | a new game opens the first `UNLOCKS` step only; each milestone opens the next step (`unlock{kinds}` after that `milestone` and its `open`), and its kinds join the deck; on a one-color board a step of only `colored` kinds is passed over and the unlock names the next; crossing several milestones at once unlocks one step per milestone, in order; past the last step nothing unlocks; the cards in hand stay as they are | automated |
+| R-50 | a Thing's color at `place` | `colorChoices(kind)` is the open colors (in opening order) for a `colored` kind, `[WHITE]` for any other; `place` with one of them builds the Thing in that color, which it keeps for good (`rotate` doesn't change it) and acts by (R-40); any other color (`WHITE` or a closed color for a `colored` kind, a crate color or none for a plain kind) → `{ok:false}`, state and `Rando` unchanged | automated |
 
 ---
 
@@ -94,11 +95,12 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | U-17 | A gremlin that walks or is pushed onto a Trap bursts there with a splat sound, Trapped goes up, and a new gremlin appears on the shore | manual — belt a gremlin onto a Trap |
 | U-18 | A gremlin that steps onto a crate: the crate bursts in its color as the gremlin arrives, and the lost count goes up | manual — watch a gremlin beside a stalled crate |
 | U-19 | Each target is ringed in its color, with a black line just inside, and a ★; a source shows one pip per color it makes; once a second color opens, the tally shows a count per color; the hover bar names a source's colors and a target's color | manual — reach 10 on a medium board |
-| U-20 | A Pusher shows a ram with a chevron; Pushers and Pullers draw their glyph in their color, on the board, the ghost and the card; a colored card reads e.g. "Red Pusher" and says "only red crates, and gremlins" | manual — reach 10 on a medium board and draw a colored card |
+| U-20 | A Pusher shows a ram with a chevron; a placed Pusher or Puller draws its glyph in its color and its hover bar reads e.g. "Red Pusher" and says "only red crates, and gremlins"; its card and ghost are white, and the card says "you pick its crate color when you place it" | manual — reach 10 on a medium board and draw a Pusher |
 | U-21 | `B` over a crate bursts it in its color and the lost count goes up; over a gremlin or empty hex nothing happens | manual — jam a line and press B on a crate |
 | U-22 | A card the idle rule redrew glows once in the hand | manual — press Go and watch the hand |
 | U-23 | When a milestone opens a color or unlocks cards, one panel names them (a swatch per color, a picture and verb line per card) and holds play (Go included) until a click anywhere or any key; that key does nothing else | manual — reach 10 on a medium board with Go running |
 | U-24 | The intro is the story and the board sizes; the first game then opens on the keys legend, which closes on a click or any key (that key does nothing else). The Help button shows the same legend any time and holds play (Go included) until it closes | manual — open the page, pick a size, read the keys; press Go, then Help |
+| U-25 | Clicking a yellow hex with a Pusher or Puller picked (two or more colors open) places nothing yet: a small square of swatches, one per open color numbered `1`…, opens beside the hex with the white ghost on it; a swatch click or its number places it in that color and the tick plays; Esc, right-click or a click off the swatches closes it with the card still picked; Go holds while it's open | manual — reach 10 on a medium board, draw a Pusher, try a swatch, a number, and each cancel |
 
 ---
 
@@ -115,7 +117,7 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 
 ## Status (2026-11-11)
 
-- **Manual only:** U-1…U-24, X-1.
+- **Manual only:** U-1…U-25, X-1.
 - **Retired:** R-17 (Spinner), R-20 (final win).
 - **Not yet covered:** X-2, X-3, X-4 (need playtests).
 - **Partial coverage:** R-18 checks that wandering gremlins land on land and never step into

@@ -1,13 +1,13 @@
 // R-27: a card's kind comes from THINGS by weight: only known kinds, and each kind's share of
 // many draws is near weight / total over the kinds in the deck. The deck is the unlocked kinds
 // (R-49): a new game deals only UNLOCKS[0]. With one color open the `colored` kinds are out of
-// the deck; with two or more (and everything unlocked) every kind is in. A kind that isn't
-// `colored` is WHITE; a `colored` one is one of the open colors, each equally likely.
+// the deck; with two or more (and everything unlocked) every kind is in. A card is just its
+// kind: no color, `colored` kinds included (their color is picked at place, R-50, D-32).
 'use strict';
 const { check, done } = require('../helpers/check');
 const { newGame } = require('../helpers/load');
 const { g, state, engine } = newGame(21, 'small');
-const { THINGS, WHITE, UNLOCKS } = g.GameArtifacts;
+const { THINGS, UNLOCKS } = g.GameArtifacts;
 const N = 20000;
 const drawMany = () => {
     const count = {}, cards = [];
@@ -30,24 +30,11 @@ checkShares('new game', start.count, UNLOCKS[0]);
 state.unlocks = UNLOCKS.length;
 const { count, cards } = drawMany();
 checkShares('all unlocked, one color open', count, allKinds.filter(k => !THINGS[k].colored));
-check('one color open: no colored cards, every card white', cards.every(c => c.color === WHITE));
+check('one color open: no colored cards, and a card is just its kind', cards.every(c => Object.keys(c).join() === 'kind'));
 
 state.targets.push({ q: 0, r: 0, color: 'blue', delivered: 0 }, { q: 0, r: 1, color: 'green', delivered: 0 });
-const open = state.targets.map(t => t.color);
-const colors = {}, count3 = {};
-let plainWhite = true;
-for (let i = 0; i < N; i++) {
-    const c = engine.draw();
-    count3[c.kind] = (count3[c.kind] || 0) + 1;
-    if (!THINGS[c.kind].colored) { plainWhite = plainWhite && c.color === WHITE; continue; }
-    colors[c.color] = (colors[c.color] || 0) + 1;
-}
-checkShares('three colors open', count3, allKinds);
-check('kinds that aren\'t colored stay white', plainWhite);
-const coloredN = Object.values(colors).reduce((a, b) => a + b, 0);
-check('colored kinds: only an open color, never white', Object.keys(colors).every(c => open.includes(c)));
-for (const c of open) {
-    const share = (colors[c] || 0) / coloredN;
-    check(`colored kinds, ${c}: share ${share.toFixed(3)} ≈ ${(1 / open.length).toFixed(3)}`, Math.abs(share - 1 / open.length) < 0.03);
-}
+const three = drawMany();
+checkShares('three colors open', three.count, allKinds);
+check('three colors open: colored kinds come as cards with no color too',
+    three.cards.some(c => THINGS[c.kind].colored) && three.cards.every(c => Object.keys(c).join() === 'kind'));
 done();

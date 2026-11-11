@@ -5,7 +5,7 @@
 'use strict';
 const { check, done } = require('../helpers/check');
 const { flatGame, DIR } = require('../helpers/load');
-const card = kind => ({ kind, color: 'white' });
+const card = kind => ({ kind });
 {
     const { g, state, engine, put, piece } = flatGame();
     const other = put('BELT', 6, 6, DIR.E);
@@ -13,7 +13,7 @@ const card = kind => ({ kind, color: 'white' });
     const c = piece('crate', 3, 4);
     state.hand = [card('BELT'), card('WALL'), card('TRAP')];
     const turn = state.turn, count = state.things.length;
-    const res = engine.place(0, 3, 4, DIR.E);
+    const res = engine.place(0, 3, 4, DIR.E, 'white');
     const here = state.things.filter(t => t.q === 3 && t.r === 4);
     check('replace is legal and ticks once', res.ok && state.turn === turn + 1);
     check('one Thing on the hex, the new one', here.length === 1 && here[0].facing === DIR.E);
@@ -26,16 +26,16 @@ const card = kind => ({ kind, color: 'white' });
     const { state, engine, put } = flatGame();
     put('BELT', 3, 4, DIR.E);
     state.hand = [card('BELT'), card('WALL'), card('TRAP')];
-    check('a Belt over a Belt (same kind, new facing)', engine.place(0, 3, 4, DIR.SE).ok && engine.thingAt(3, 4).facing === DIR.SE);
+    check('a Belt over a Belt (same kind, new facing)', engine.place(0, 3, 4, DIR.SE, 'white').ok && engine.thingAt(3, 4).facing === DIR.SE);
     state.hand[1] = card('WALL');
-    check('a Wall replaces a Belt with nothing on it', engine.place(1, 3, 4).ok && engine.thingAt(3, 4).kind === 'WALL');
+    check('a Wall replaces a Belt with nothing on it', engine.place(1, 3, 4, null, 'white').ok && engine.thingAt(3, 4).kind === 'WALL');
 }
 {
     const { state, engine, put, piece } = flatGame();
     put('BELT', 3, 4, DIR.E);
     piece('crate', 3, 4);
     state.hand = [card('WALL'), card('WALL'), card('WALL')];
-    check('no Wall over a Belt carrying a crate', !engine.legalPlacements('WALL').has('3,4') && engine.place(0, 3, 4).ok === false);
+    check('no Wall over a Belt carrying a crate', !engine.legalPlacements('WALL').has('3,4') && engine.place(0, 3, 4, null, 'white').ok === false);
 }
 {
     const { state, engine, put, piece, terrain, T } = flatGame();
@@ -43,8 +43,8 @@ const card = kind => ({ kind, color: 'white' });
     put('BRIDGE', 4, 4, DIR.E);
     const c = piece('crate', 4, 4);
     state.hand = [card('BELT'), card('BRIDGE'), card('WALL')];
-    check('a land kind can\'t replace a Bridge on water', !engine.legalPlacements('BELT').has('4,4') && engine.place(0, 4, 4, DIR.E).ok === false);
-    check('a Bridge replaces a Bridge, turned back to shore', engine.place(1, 4, 4, DIR.W).ok && engine.thingAt(4, 4).kind === 'BRIDGE');
+    check('a land kind can\'t replace a Bridge on water', !engine.legalPlacements('BELT').has('4,4') && engine.place(0, 4, 4, DIR.E, 'white').ok === false);
+    check('a Bridge replaces a Bridge, turned back to shore', engine.place(1, 4, 4, DIR.W, 'white').ok && engine.thingAt(4, 4).kind === 'BRIDGE');
     check('the crate on it never sinks: carried onto land', state.pieces.includes(c) && c.isAt(3, 4) && state.lost === 0);
 }
 done();

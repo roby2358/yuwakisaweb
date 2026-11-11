@@ -27,6 +27,6 @@ check('a tick with no delivery: no milestone event', milestones(engine.wait()).l
 
 state.delivered = 99;
 check('99 → 100 emits {count: 100}', milestones(deliverOne()).map(e => e.count).join() === '100');
-state.hand[0] = { kind: 'BELT', color: 'white' };
-check('play goes on past a milestone', engine.wait().ok && engine.place(0, 3, 4, 0).ok);
+state.hand[0] = { kind: 'BELT' };
+check('play goes on past a milestone', engine.wait().ok && engine.place(0, 3, 4, 0, 'white').ok);
 done();

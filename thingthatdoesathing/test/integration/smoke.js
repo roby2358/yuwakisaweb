@@ -21,7 +21,8 @@ for (const seed of SEEDS.slice(0, 6)) {
         if (roll < 6) {
             const slot = rnd(A.HAND_SIZE);
             const legal = [...engine.legalPlacements(state.hand[slot].kind)];
-            res = legal.length ? engine.place(slot, ...legal[rnd(legal.length)].split(',').map(Number), rnd(6)) : engine.wait();
+            const colors = engine.colorChoices(state.hand[slot].kind);
+            res = legal.length ? engine.place(slot, ...legal[rnd(legal.length)].split(',').map(Number), rnd(6), colors[rnd(colors.length)]) : engine.wait();
         } else if (roll < 8 && state.things.some(t => t.facing !== null)) {
             const movers = state.things.filter(t => t.facing !== null);
             const t = movers[rnd(movers.length)];

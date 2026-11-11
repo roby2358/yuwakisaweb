@@ -128,7 +128,7 @@ const GameEngine = (function () {
             this.spawnCrate(color, s.sources[0]);
             this.spawnGremlins();
             s.unlocks = 1;   // the starting cards; before the hand, which draws from them
-            s.hand = Array.from({ length: HAND_SIZE }, () => this.draw());   // after targets: card colors read them
+            s.hand = Array.from({ length: HAND_SIZE }, () => this.draw());   // after targets: the deck reads them
             s.turn = 1;
             s.delivered = 0;
             s.lost = 0;
@@ -318,10 +318,10 @@ const GameEngine = (function () {
             return events;
         }
 
-        // A card: a kind drawn with probability weight / total weight, and its color.
+        // A card: a kind drawn with probability weight / total weight. Cards have no color;
+        // a colored kind's color is picked when it's placed (D-32).
         draw() {
-            const kind = this.drawKind(this.drawableKinds());
-            return { kind, color: THINGS[kind].colored ? this.cardColor() : WHITE };
+            return { kind: this.drawKind(this.drawableKinds()) };
         }
 
         // The deck: the unlocked kinds (R-49), less the colored ones while one color is open
@@ -373,9 +373,10 @@ const GameEngine = (function () {
             return kinds[kinds.length - 1];
         }
 
-        // A colored kind's card color: one of the open colors, each equally likely (never white).
-        cardColor() {
-            return Rando.choice(this.openColors());
+        // The colors `kind` may be placed in: any open color for a colored kind (the player
+        // picks, D-32), WHITE for every other kind.
+        colorChoices(kind) {
+            return THINGS[kind].colored ? this.openColors() : [WHITE];
         }
 
         // Does this Thing act on this piece? White ones act on everything; a colored one only
@@ -631,12 +632,14 @@ const GameEngine = (function () {
 
         // ---- Commands (every one returns { ok, ... }; ok:false = illegal, unchanged) ----
 
-        place(slot, q, r, facing) {
+        // `color` is the Thing's: one of colorChoices(kind) (D-32).
+        place(slot, q, r, facing, color) {
             const s = this.state;
             if (!Number.isInteger(slot) || slot < 0 || slot >= s.hand.length) return { ok: false };
-            const { kind, color } = s.hand[slot];
+            const { kind } = s.hand[slot];
             const aimed = aims(kind);
             if (aimed && !(Number.isInteger(facing) && facing >= 0 && facing < 6)) return { ok: false };
+            if (!this.colorChoices(kind).includes(color)) return { ok: false };
             if (!this.canPlace(kind, this.board.get(q, r))) return { ok: false };
             const old = this.thingAt(q, r);   // replaced: the new one goes last in placement order (D-28)
             if (old) s.things.splice(s.things.indexOf(old), 1);
