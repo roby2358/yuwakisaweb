@@ -20,13 +20,13 @@ const GameUI = (function () {
         gremlin: p => p.color,
     };
     const END_CUES = ['deliver', 'splat', 'sink'];   // the one sound a tick's endings play, by priority
-    const OVERLAY_PANELS = { intro: 'intro-panel', size: 'size-panel', color: 'color-panel', help: 'help-panel' };   // L5 overlay → its panel
+    const OVERLAY_PANELS = { intro: 'intro-panel', size: 'size-panel', news: 'news-panel', help: 'help-panel' };   // L5 overlay → its panel
     // L5: what a key does on each overlay. The size pickers take their number keys (and Esc
-    // when a game is behind); the new-color panel and the keys legend close on any key.
+    // when a game is behind); the news panel (new colors, new cards) and the keys legend close on any key.
     const OVERLAY_KEYS = {
         intro: (ui, e) => ui.sizeKey(e),
         size: (ui, e) => ui.sizeKey(e),
-        color: ui => ui.dismissOverlay(),
+        news: ui => ui.dismissOverlay(),
         help: ui => ui.dismissOverlay(),
     };
 
@@ -220,7 +220,7 @@ const GameUI = (function () {
 
             this.picked = null;      // L1.2 { slot, legal: Set<key> } — the card being placed
             this.facing = 0;         // ghost facing; remembered between placements
-            this.overlay = null;     // L5 'intro' | 'size' (board-size pickers) | 'color' (a color opened) | 'help' (the keys) | null
+            this.overlay = null;     // L5 'intro' | 'size' (board-size pickers) | 'news' (a color opened or cards unlocked) | 'help' (the keys) | null
             this.hoveredHex = null;  // L1.3
             this.selected = null;    // {q, r} — a clicked hex: highlighted, holds Go; a second click turns its mover
             this.anim = null;        // { t0, dur, tracks: Map<id, track>, before, hidden: Set<id>, milestone, ends: Set<type> }
@@ -429,6 +429,7 @@ const GameUI = (function () {
             const hidden = new Set();
             let hops = 0, milestone = 0;
             const opened = [];
+            const unlocked = [];
             const redrawn = [];
             const ends = new Set();
             for (const e of res.events) {
@@ -452,12 +453,14 @@ const GameUI = (function () {
                     milestone = e.count;
                 } else if (e.type === 'open') {
                     opened.push(e.color);
+                } else if (e.type === 'unlock') {
+                    unlocked.push(...e.kinds);
                 } else if (e.type === 'redraw') {
                     redrawn.push(e.slot);
                 }
             }
             this.anim = { t0: performance.now(), dur: Math.max(1, hops + (ends.size ? 1 : 0)) * HOP_MS,
-                tracks, before, hidden, milestone, opened, redrawn, ends };
+                tracks, before, hidden, milestone, opened, unlocked, redrawn, ends };
             const frame = now => {
                 if (!this.anim) return;
                 if (now - this.anim.t0 >= this.anim.dur) { this.finishAnim(); return; }
@@ -481,7 +484,7 @@ const GameUI = (function () {
             const cue = END_CUES.find(type => a.ends.has(type));
             if (cue) this.sound[cue]();
             if (a.milestone) { this.sound.fanfare(); this.showMilestone(a.milestone); }
-            if (a.opened.length) this.showOpened(a.opened);
+            if (a.opened.length || a.unlocked.length) this.showNews(a.opened, a.unlocked);
             this.render();
             a.redrawn.forEach(slot => this.flashCard(slot));
             this.scheduleRun();
@@ -515,21 +518,32 @@ const GameUI = (function () {
             this.bannerTimer = setTimeout(() => el.classList.add('hidden'), MILESTONE_MS);
         }
 
-        // A new crate color stops play until the player has seen it: click or any key goes on.
-        showOpened(colors) {
-            const swatches = document.getElementById('color-swatches');
-            swatches.innerHTML = '';
+        // New crate colors and newly unlocked cards stop play until the player has seen them:
+        // one panel for both, a swatch per color and a picture per card; click or any key goes on.
+        showNews(colors, kinds) {
+            const row = document.getElementById('news-swatches');
+            row.innerHTML = '';
             for (const c of colors) {
                 const sw = document.createElement('div');
                 sw.className = 'swatch';
                 sw.style.background = `linear-gradient(135deg, ${CRATE_SHADES[c].top}, ${CRATE_SHADES[c].left} 60%, ${CRATE_SHADES[c].right})`;
-                swatches.appendChild(sw);
+                row.appendChild(sw);
             }
-            const names = colors.map(c => c[0].toUpperCase() + c.slice(1)).join(' and ');
-            document.getElementById('color-title').textContent = `${names} crates!`;
-            document.getElementById('color-sub').textContent =
-                `A new source now sends ${colors.join(' and ')} crates. Each color goes to its own target.`;
-            this.showOverlay('color');
+            for (const kind of kinds) {
+                const c = document.createElement('canvas');
+                c.width = c.height = 48;
+                drawThing(c.getContext('2d'), 24, 24, 20, kind, WHITE, aims(kind) ? 0 : null, 1);
+                row.appendChild(c);
+            }
+            const and = names => names.join(' and ');
+            const colorNames = colors.map(capitalized), cardNames = kinds.map(k => THING_LOOK[k].name);
+            document.getElementById('news-title').textContent = colors.length
+                ? `${and(colorNames)} crates!` : `New card${kinds.length > 1 ? 's' : ''}: ${and(cardNames)}`;
+            const lines = [];
+            if (colors.length) lines.push(`A new source now sends ${and(colors)} crates. Each color goes to its own target.`);
+            if (kinds.length) lines.push(`Now in the deck: ${kinds.map(k => `${THING_LOOK[k].name} (${THING_LOOK[k].does})`).join('; ')}.`);
+            document.getElementById('news-sub').textContent = lines.join(' ');
+            this.showOverlay('news');
         }
 
         // ---- L5 Overlays ----
@@ -955,7 +969,7 @@ const GameUI = (function () {
             document.getElementById('new-game').addEventListener('click', () => this.newGame());
             document.getElementById('discard').addEventListener('click', () => this.discardPicked());
             document.getElementById('size-cancel').addEventListener('click', () => this.dismissOverlay());
-            document.getElementById('color-panel').addEventListener('click', () => this.dismissOverlay());
+            document.getElementById('news-panel').addEventListener('click', () => this.dismissOverlay());
             document.getElementById('help').addEventListener('click', () => this.showHelp());
             document.getElementById('help-panel').addEventListener('click', () => this.dismissOverlay());
             this.buildSizeButtons(document.getElementById('intro-sizes'));

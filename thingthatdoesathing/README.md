@@ -27,6 +27,10 @@ for why it works and [ONTOLOGY.md](ONTOLOGY.md) for the rules.
 | Bridge | built on water; carries what's on it 1 hex in its facing, like a Belt over water |
 | Slide | ice you can build, on land or water: what comes onto it keeps sliding the same way (a Spring that lands on it skids on) |
 
+A new game deals only Belts, Bridges, Walls and Traps. Each milestone unlocks the next card
+and a panel shows it: Pushers and Pullers (with the second color; a 16 × 10 board skips
+them), then the Slide, the Spring, and the Rocket last. Cards already in your hand stay.
+
 Pushers and Pullers always come in a crate color: a red one moves only red crates, and every
 gremlin. That's how you split a mixed line, so they're only dealt once a second color opens.
 They're rare cards; about one per color is all a factory needs.

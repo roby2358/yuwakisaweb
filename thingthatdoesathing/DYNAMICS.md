@@ -34,6 +34,11 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
   and a Puller in hand asks where it can reach from. Sit on a hand for
   `IDLE_REDRAW_TICKS` ticks without playing or discarding and one card turns over on its own,
   so waiting out a line still slowly refreshes your options.
+- **Cards unlock by milestone** (D-30) → feeds escalating commitment and readability: the
+  first board deals only Belt, Bridge, Wall and Trap, and each milestone adds the next card
+  (Pushers and Pullers with the second color, then the Slide, the Spring, and the Rocket
+  last), so there's one new toy to learn each time the factory pays off. The hand you hold
+  isn't touched; the new card turns up in later draws.
 - **Gremlins** → feed comedy and keep routes from going stale. A drowned one climbs back
   out somewhere on the shore as a new gremlin. They ride movers and block
   without malice, until one steps onto a crate and wrecks it: a crate sitting still near a
@@ -79,8 +84,9 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
 
 ## Strategies
 
-- **Opening:** build the spine. Lay belts from the source toward the target; discard cards
-  you can't use, or park them where they'll help later.
+- **Opening:** build the spine. Lay belts from the source toward the target (Bridges where a
+  lake is in the way); Walls and Traps keep gremlins off it. Discard cards you can't use, or
+  park them where they'll help later.
 - **Midgame:** patch around gremlins and jams. Fence the line with Walls where gremlins
   keep wandering on, and put a line of Bridges where water forced a detour, or a run of
   Slides that shoots a crate across the lake in one tick.

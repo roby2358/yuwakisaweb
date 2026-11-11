@@ -18,8 +18,9 @@ section numbers.
 Thing Factory is **a small hex board where you build a contraption one Thing at a time
 while it runs**. Each Thing does exactly one thing, every tick. Crates come
 out of a source; get enough of them to the target. Bigger boards open more colors as you
-pass milestones, each with its own target. [D: place-then-tick, deliver N, no time limit,
-board size picked at New Game, colors opened by milestones]
+pass milestones, each with its own target, and every milestone unlocks a new card. [D:
+place-then-tick, deliver N, no time limit, board size picked at New Game, colors opened by
+milestones, cards unlocked by milestones]
 
 **Qualities**
 - **Tinkerer's delight** — the fun is setting something up and watching it go. [P]
@@ -65,6 +66,7 @@ everything; G-2 beats G-1 (a funny interaction that can't be read is a bug, not 
 | `pieces` | `Piece[]` | Every crate and gremlin, in creation order. |
 | `things` | `Thing[]` | Every placed Thing, in placement order (the order they act, Pushers and Pullers first: Tick rule). |
 | `hand` | `{kind, color}[]` | Cards, length `HAND_SIZE`; `color` is `WHITE` or a crate color (Draw rule). |
+| `unlocks` | int ≥ 1 | How many `UNLOCKS` steps are open; their kinds are the deck (Unlock rule). A new game opens 1. [D: pjpd card-unlock] |
 | `turn` | int ≥ 1 | Goes up by 1 per tick. |
 | `delivered` | int | Crates delivered, all colors together (milestones count this). |
 | `lost` | int | Crates that sank or were wrecked by a gremlin. |
@@ -132,7 +134,7 @@ A `Piece` (position, color, label) with two fields set by the engine. Each kind 
 | `colored` | Its cards always come in an open crate color, never white, and are drawn only once two or more colors are open (Pusher, Puller). [D] |
 | `slides` | Slick ground: a piece that comes onto it on the ground keeps going the same way, free, exactly like bare ice (Slide). The one slick test, `isSlick`, reads it: a Thing on a hex decides by `slides`; with no Thing, the hex is slick if it's ICE. [D-29] |
 | `on` | `'land'` (plains/ice), `'water'`, or `'both'` (land or water) — where it may be built. [both D-29] |
-| `weight` | Relative draw chance for the hand. |
+| `weight` | Relative draw chance for the hand, among the kinds in the deck (Draw rule). |
 
 ### Board — query layer over `hexes`
 `get`, `has`, `moveCost`, `isPassable`, `passableHexes` (non-edge only), `neighbors`,
@@ -143,9 +145,9 @@ A `Piece` (position, color, label) with two fields set by the engine. Each kind 
 |---|---|
 | `picked` | `{ slot, legal: Set<key> }` \| null — the hand card being placed. |
 | `facing` | 0…5 — the ghost's facing, remembered between placements. |
-| `overlay` | `'intro'` \| `'size'` \| `'color'` \| `'help'` \| null. `'intro'` and `'size'` are size pickers; picking a size starts a game, and `'size'` (New Game) also closes on Esc, back to the game. `'color'` shows the color an `open` event named and closes on a click or any key. `'help'` is the keys legend: it opens after the intro's size pick and from the Help button, and closes on a click or any key. [D] |
+| `overlay` | `'intro'` \| `'size'` \| `'news'` \| `'help'` \| null. `'intro'` and `'size'` are size pickers; picking a size starts a game, and `'size'` (New Game) also closes on Esc, back to the game. `'news'` shows the colors `open` events named and the cards `unlock` events named, on one panel, and closes on a click or any key (D-30). `'help'` is the keys legend: it opens after the intro's size pick and from the Help button, and closes on a click or any key. [D] |
 | `hoveredHex`, `panX/Y`, drag fields | The hex under the cursor, the screen-space pan offset, and left-drag tracking (`DRAG_THRESHOLD`). |
-| `anim` | `{ t0, dur, tracks, before, hidden, milestone, opened, ends }` \| null — tick animation; input waits while it runs (picking a card doesn't). |
+| `anim` | `{ t0, dur, tracks, before, hidden, milestone, opened, unlocked, redrawn, ends }` \| null — tick animation; input waits while it runs (picking a card doesn't). |
 | `running` | bool — Go/Pause. While true, the client calls `wait()` `RUN_GAP_MS` after each animation ends, and holds while a card is picked. [D] |
 | `sound` | `GameSound`, `Math.random` only. |
 
@@ -163,6 +165,7 @@ A `Piece` (position, color, label) with two fields set by the engine. Each kind 
   water; every other kind only on land. [P; Slide D-29]
 - At most one piece per hex. No piece on a Wall, on mountain, or on open water (water with no Thing over it). [P]
 - `hand.length === HAND_SIZE` whenever a command returns. [P]
+- `1 <= unlocks <= UNLOCKS.length`, and every `THINGS` kind is in exactly one `UNLOCKS` step. [D]
 - Every command that returns `ok:true` ran exactly one tick and raised `turn` by 1, except `rotate`, which ran none and left everything but that facing alone. [P; rotate D]
 - There is no won state: every command stays legal however many crates are delivered. [D]
 - **Engine-side modules never read the DOM, canvas, or `GameDisplayArtifacts`.** [D]
@@ -199,7 +202,7 @@ ends = generateMap(seed, GEN_MAX_ATTEMPTS) or (seed = knownGoodSeed; generateMap
 color = Rando.choice(CRATE_COLORS)
 sources = [{ends.source, colors: [color]}]; targets = [{ends.target, color, delivered: 0}]
 things = []; pieces = []; a crate of color on the source; spawnGremlins()
-hand = HAND_SIZE draws; turn = 1; delivered = lost = exGremlins = trapped = spawnTimer = idleTicks = 0
+unlocks = 1; hand = HAND_SIZE draws (from UNLOCKS[0]); turn = 1; delivered = lost = exGremlins = trapped = spawnTimer = idleTicks = 0
 ```
 
 ### Assign terrain [P]
@@ -255,11 +258,24 @@ Runs once at the end of every tick, for that tick's sinks and splats and for a p
 ### Draw — `draw()` [P]
 *Serves:* scarcity of agency (you build with what you're dealt).
 ```
-deck = every kind, minus the colored ones while fewer than 2 colors are open
+deck = the unlocked kinds (UNLOCKS[0 … unlocks-1]), minus the colored ones while fewer than 2 colors are open
 kind = chosen by Rando from deck with probability THINGS[kind].weight / deck's total weight
 color = THINGS[kind].colored ? Rando.choice(open colors) : WHITE
 return {kind, color}
 ```
+
+### Unlock — `unlock()` [D; skipping and kept hand D-30]
+*Serves:* G-1 and escalating commitment: each milestone hands you one new toy to learn, so the
+first board is a short list (Belt, Bridge, Wall, Trap) and the deck grows as the factory does.
+Runs once per milestone reached, after Open a color, from the Tick rule.
+```
+everDealt(kind) = not THINGS[kind].colored or MAP_SIZES[size].colors > 1
+step = the first UNLOCKS step after the open ones with some kind everDealt   # an all-colored step is passed over on a one-color board
+if no such step: nothing                                                   # past the last step
+unlocks = that step's index + 1
+emit unlock{kinds: that step}
+```
+The cards already in hand stay as they are; new kinds arrive through later draws (D-30).
 
 ### Placement legality — `canPlace(kind, hex)` [P]
 *Serves:* G-2 (the highlight *is* the rule). `place` calls it; `legalPlacements(kind)` is
@@ -336,7 +352,7 @@ gone = kinds of the command's own sink (remove) and this tick's sunk and splatte
 trapped += count of gremlins whose splat has trap
 exGremlins += count of 'gremlin' in gone, less those trapped
 emerge(gone)
-for each milestone m with deliveredBefore < m <= delivered: emit milestone{count: m}; openColor()
+for each milestone m with deliveredBefore < m <= delivered: emit milestone{count: m}; openColor(); unlock()   # reachMilestones
 turn += 1; phase = 'player'
 ```
 Each piece moves at most once per tick. Gremlins never step into water on purpose, but a
@@ -351,8 +367,9 @@ gremlin that comes onto a target dies there, the same way as on a Trap.
 milestones = FIRST_MILESTONE × (1, 2, 5) × 10^k for k = 0, 1, 2, …   # 10, 20, 50, 100, 200, 500, 1000, …
 nextMilestone(n) = the smallest milestone > n                        # there is no last one
 ```
-Reaching a milestone ends nothing: it may open a color (Open a color rule), the client shows
-a banner, and play goes on. An opened color also gets a panel that waits for a click or any key.
+Reaching a milestone ends nothing: it may open a color (Open a color rule) and unlock cards
+(Unlock rule), the client shows a banner, and play goes on. An opened color or unlocked card
+also gets the news panel, which waits for a click or any key.
 
 ### Commands
 ```
@@ -413,6 +430,7 @@ The code constant in `GameArtifacts` is the single source.
 | `THINGS.ROCKET.push` | 8 | hexes (its range) [D] |
 | `THINGS.PULLER.pull` | 1 | hexes |
 | `THINGS.PUSHER.shove` | 1 | hexes [D] |
+| `UNLOCKS` | [BELT, BRIDGE, WALL, TRAP], [PUSHER, PULLER], [SLIDE], [SPRING], [ROCKET] | the order cards join the deck, one step per milestone [D] |
 | `THINGS.*.weight` BELT/SPRING/ROCKET/PUSHER/PULLER/WALL/TRAP/BRIDGE/SLIDE | 6 / 2 / 1 / 0.5 / 0.5 / 2 / 1 / 1 / 1 | relative (TRAP [D]: as ROCKET; PUSHER, PULLER [D]: rare, about one per color is plenty; SLIDE [D-29]: as BRIDGE) |
 | `GREMLIN_HEXES_PER_DIE` / `GREMLIN_DICE_SIDES` | 160 / 4 | hexes of board area per die (the small board's area) [D] / sides; gremlins = `gremlinDice(size)` d sides |
 | `GEN_MAX_ATTEMPTS` | 10 | tries per seed |
@@ -450,6 +468,7 @@ Illegal → `{ ok:false }` and nothing changed (hand and `Rando` included).
 - `legalPlacements(kind)` → `Set<key>` — every hex where `canPlace` holds.
 - `affects(thing, piece)` — whether a Thing's color lets it act on that piece.
 - `thingAt(q, r)`, `pieceAt(q, r)`, `targetAt(q, r)`, `sourceOf(color)`, `openColors()`, `isEndpoint(hex)`.
+- `unlockedKinds()`, `drawableKinds()` — the kinds open so far, and the deck the Draw rule uses.
 - `board.*`.
 
 ### Events (in the order they happened during the tick)
@@ -464,6 +483,7 @@ Illegal → `{ ok:false }` and nothing changed (hand and `Rando` included).
 | `redraw` | `slot` — the hand slot the idle rule redrew this tick |
 | `milestone` | `count` — a milestone this tick's deliveries reached (after the tick's other events) |
 | `open` | `color, source: {q,r}, target: {q,r}` — the color that milestone opened, right after its `milestone` |
+| `unlock` | `kinds` — the `UNLOCKS` step that milestone opened, after its `milestone` and `open` |
 
 A piece pushed into water gets a `move` whose path ends on the water hex, then `sink`.
 

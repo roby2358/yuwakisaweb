@@ -1,6 +1,7 @@
 // R-31: a gremlin left on open water by a removed Bridge sinks before the tick; its newcomer
 // climbs out in that same command's emerge, so the spawn comes after the sink and, like every
-// tick event, before the milestone the tick's deliveries reached.
+// tick event, before the milestone the tick's deliveries reached (only that milestone's own
+// open/unlock events follow it).
 'use strict';
 const { check, done } = require('../helpers/check');
 const { flatGame, DIR } = require('../helpers/load');
@@ -14,5 +15,5 @@ const types = res.events.map(e => e.type);
 const spawn = res.events.findIndex(e => e.type === 'spawn');
 check(`sink first, then the spawn, then the milestone: ${types.join(' ')}`,
     types[0] === 'sink' && res.events[0].id === gr.id && spawn > 0 && spawn < types.indexOf('milestone') &&
-    types.at(-1) === 'milestone');
+    types.slice(types.indexOf('milestone') + 1).every(t => t === 'open' || t === 'unlock'));
 done();

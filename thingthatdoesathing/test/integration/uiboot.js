@@ -319,7 +319,11 @@ run('a game plays through the UI to the first milestone banner', () => {
     if (s.delivered < goal) throw new Error('no milestone in 2000 commands: ' + JSON.stringify({ src: s.sources, tgt: s.targets, things: s.things, pieces: s.pieces.map(p => [p.kind, p.q, p.r]), d: s.delivered, turn: s.turn, hand: s.hand }));
     const banner = els.milestone.classList.set;
     if (banner.has('hidden') || els['milestone-title'].textContent !== 'IT DOES THE THING') throw new Error('no milestone banner');
-    if (ui.overlay) throw new Error('a milestone must not stop play');
+    // The small board's first milestone unlocks the Slide (R-49): the news panel names it.
+    if (ui.overlay !== 'news' || !els['news-title'].textContent.startsWith('New card'))
+        throw new Error('no new-card panel: ' + ui.overlay + ' ' + els['news-title'].textContent);
+    key('Escape');
+    if (ui.overlay) throw new Error('a key must close the new-card panel');
     const turn = s.turn;
     key(' '); settle();
     if (s.turn !== turn + 1) throw new Error('play did not go on past the milestone');
@@ -422,14 +426,14 @@ run('a click selects a hex and holds Go; a second click turns its mover; a click
     if (s.turn === held) throw new Error('Go did not resume after deselecting');
     els.go.fire('click'); settle();
 });
-run('a newly opened color shows a panel that holds Go until a click or any key', () => {
+run('a newly opened color or unlocked card shows a panel that holds Go until a click or any key', () => {
     const s = ui.state;
     const opened = () => ui.startAnim(new Map(), { events: [{ type: 'open', color: 'red', source: s.sources[0], target: s.targets[0] }] });
     els.go.fire('click');
     settle();
     opened(); settle();
-    if (ui.overlay !== 'color' || els['color-panel'].classList.set.has('hidden')) throw new Error('no new-color panel');
-    if (els['color-title'].textContent !== 'Red crates!') throw new Error('panel title: ' + els['color-title'].textContent);
+    if (ui.overlay !== 'news' || els['news-panel'].classList.set.has('hidden')) throw new Error('no new-color panel');
+    if (els['news-title'].textContent !== 'Red crates!') throw new Error('panel title: ' + els['news-title'].textContent);
     const held = s.turn;
     advance(2000);
     if (s.turn !== held) throw new Error('Go ticked behind the panel');
@@ -439,8 +443,20 @@ run('a newly opened color shows a panel that holds Go until a click or any key',
     if (s.turn === held) throw new Error('Go did not resume after the panel closed');
     els.go.fire('click'); settle();
     opened(); settle();
-    els['color-panel'].fire('click');
-    if (ui.overlay || !els['color-panel'].classList.set.has('hidden')) throw new Error('a click must close the panel');
+    els['news-panel'].fire('click');
+    if (ui.overlay || !els['news-panel'].classList.set.has('hidden')) throw new Error('a click must close the panel');
+    // A color and cards at once (a medium board's first milestone): one panel names both.
+    ui.startAnim(new Map(), { events: [{ type: 'open', color: 'red', source: s.sources[0], target: s.targets[0] },
+        { type: 'unlock', kinds: ['PUSHER', 'PULLER'] }] });
+    settle();
+    if (ui.overlay !== 'news' || els['news-title'].textContent !== 'Red crates!' || !/Pusher.*Puller/.test(els['news-sub'].textContent))
+        throw new Error('color + cards panel: ' + els['news-title'].textContent + ' / ' + els['news-sub'].textContent);
+    key('x');
+    ui.startAnim(new Map(), { events: [{ type: 'unlock', kinds: ['SLIDE'] }] });
+    settle();
+    if (ui.overlay !== 'news' || els['news-title'].textContent !== 'New card: Slide') throw new Error('card panel: ' + els['news-title'].textContent);
+    els['news-panel'].fire('click');
+    if (ui.overlay) throw new Error('a click must close the card panel');
 });
 run('New Game asks for a size, then resets', () => {
     key(' '); settle();

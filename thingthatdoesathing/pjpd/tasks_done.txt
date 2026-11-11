@@ -14,6 +14,14 @@ Updated: 2026-11-11T20:45:50Z
 
 Thing Factory: placing a card on a hex that already holds a Thing replaces that Thing, so the player no longer has to press D (remove) and then place. Update legalPlacements so occupied Thing hexes are legal (targets and other illegal hexes stay illegal). place() removes the old Thing and puts the new one down as one command and one tick. Decide whether D/remove stays as its own command (probably yes, for clearing a hex). Reconcile ONTOLOGY (place rule), CRITERIA row + test/R-n, RATIONALE, ARCHITECTURE_LOG, and the UI ghost and highlight on occupied hexes.
 ----
+Priority:   55
+Status: Done
+ID: card-unlock-aszw
+Created: 2026-11-11T15:58:55Z
+Updated: 2026-11-11T21:06:14Z
+
+Thing Factory: unlock cards gradually. A new game draws only Belt, Bridge and Wall. Each milestone unlocks the next card: first Pushers and Pullers, then Springs, and Rocket last. The user didn't place Trap (or the planned Slide card) in this order, so ask. Make the unlock order a data list in artifacts.js, and have the draw filter THINGS to what's unlocked before weighting. Add a field to GameState for unlocked kinds or the unlock index. The milestone should emit an event, and the UI should announce the new card, maybe on the same panel as a new color or one like it. Decide whether cards already in hand are kept as they are. Retune with cc-sim: the bot only uses Belts and Springs, so early games get Belts only. Reconcile ONTOLOGY / CRITERIA (R-27 draw weights, R-6 starting hand) / RATIONALE / DYNAMICS / log.
+----
 Priority:   50
 Status: Done
 ID: slide-card-3um8

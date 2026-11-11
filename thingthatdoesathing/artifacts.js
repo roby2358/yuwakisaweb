@@ -44,6 +44,18 @@ const GameArtifacts = (function () {
         SLIDE:   { push: 0, pull: 0, shove: 0, splat: false, flies: false, skids: false, blocks: false, traps: false, colored: false, slides: true,  on: 'both',  weight: 1 },
     };
 
+    // The order cards unlock in (R-49). A new game deals only from the first step; each
+    // milestone opens the next step the board can ever deal from (a step of only `colored`
+    // kinds is passed over on a board with one color, since those are never drawn there).
+    // Every THINGS kind is in exactly one step; past the last step nothing more unlocks.
+    const UNLOCKS = [
+        ['BELT', 'BRIDGE', 'WALL', 'TRAP'],
+        ['PUSHER', 'PULLER'],
+        ['SLIDE'],
+        ['SPRING'],
+        ['ROCKET'],
+    ];
+
     // Piece templates, keyed by Piece.kind:
     //   label   — the counter's glyph (gremlins; crates draw as a box)
     //   cargo   — delivered on reaching the target; counted as lost when it sinks
@@ -99,6 +111,7 @@ const GameArtifacts = (function () {
     return {
         TERRAIN,
         THINGS,
+        UNLOCKS,
         PIECES,
         CRATE_COLORS,
         WHITE,

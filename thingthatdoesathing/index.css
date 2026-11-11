@@ -171,8 +171,8 @@ html, body {
 #milestone-title { font-size: 26px; font-weight: 700; color: #ff6600; letter-spacing: 0.02em; }
 #milestone-sub { color: var(--text-dim); font-size: 13px; margin-top: 2px; }
 
-/* New-color panel and the keys legend: dim the board and wait for a click or any key. */
-#color-panel, #help-panel {
+/* News panel (new colors, new cards) and the keys legend: dim the board and wait for a click or any key. */
+#news-panel, #help-panel {
     position: fixed;
     inset: 0;
     display: flex;
@@ -182,15 +182,15 @@ html, body {
     z-index: 20;
     cursor: pointer;
 }
-.color-card {
+.news-card {
     width: min(360px, calc(100vw - 32px));
     padding: 24px 28px;
     text-align: center;
 }
-#color-swatches { display: flex; justify-content: center; gap: 10px; margin-bottom: 12px; }
-#color-swatches .swatch { width: 48px; height: 48px; border-radius: 8px; border: 2px solid rgba(255, 255, 255, 0.5); }
-#color-title { font-size: 24px; font-weight: 700; letter-spacing: 0.02em; margin-bottom: 8px; }
-#color-sub { color: var(--text-dim); margin-bottom: 14px; }
+#news-swatches { display: flex; justify-content: center; gap: 10px; margin-bottom: 12px; }
+#news-swatches .swatch { width: 48px; height: 48px; border-radius: 8px; border: 2px solid rgba(255, 255, 255, 0.5); }
+#news-title { font-size: 24px; font-weight: 700; letter-spacing: 0.02em; margin-bottom: 8px; }
+#news-sub { color: var(--text-dim); margin-bottom: 14px; }
 .help-card {
     width: min(460px, calc(100vw - 32px));
     max-height: calc(100vh - 32px);
@@ -200,7 +200,7 @@ html, body {
 }
 .help-card h1 { font-size: 22px; font-weight: 700; letter-spacing: 0.02em; margin-bottom: 12px; }
 .help-card .keys { margin-bottom: 14px; }
-#color-panel .continue, #help-panel .continue { color: var(--text); font-size: 13px; opacity: 0.8; }
+#news-panel .continue, #help-panel .continue { color: var(--text); font-size: 13px; opacity: 0.8; }
 
 /* Intro card and the New Game size picker. */
 #intro-panel, #size-panel {

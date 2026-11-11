@@ -7,7 +7,7 @@
 // Every command re-checks its own legality; every legal command but rotate runs exactly one tick. All randomness goes through the seeded Rando.
 const GameEngine = (function () {
     const {
-        TERRAIN, THINGS, PIECES, CRATE_COLORS, WHITE, aims, nextMilestone, MAP_SIZES, SOURCE_INTERVAL, ENHANCE_CHANCE, HAND_SIZE, IDLE_REDRAW_TICKS,
+        TERRAIN, THINGS, UNLOCKS, PIECES, CRATE_COLORS, WHITE, aims, nextMilestone, MAP_SIZES, SOURCE_INTERVAL, ENHANCE_CHANCE, HAND_SIZE, IDLE_REDRAW_TICKS,
         gremlinDice, GREMLIN_DICE_SIDES,
         GEN_MAX_ATTEMPTS, HEIGHTMAP_ROUGHNESS,
         WATER_PCT, MOUNTAIN_PCT, ICE_FRAC, PLACE_SLICE_FRAC, PLACE_SLICE_MIN
@@ -117,6 +117,7 @@ const GameEngine = (function () {
             s.nextId = 1;
             this.spawnCrate(color, s.sources[0]);
             this.spawnGremlins();
+            s.unlocks = 1;   // the starting cards; before the hand, which draws from them
             s.hand = Array.from({ length: HAND_SIZE }, () => this.draw());   // after targets: card colors read them
             s.turn = 1;
             s.delivered = 0;
@@ -313,9 +314,43 @@ const GameEngine = (function () {
             return { kind, color: THINGS[kind].colored ? this.cardColor() : WHITE };
         }
 
-        // Colored kinds only split colors, so they're in the deck only once two are open.
+        // The deck: the unlocked kinds (R-49), less the colored ones while one color is open
+        // (they only split colors, D-22).
         drawableKinds() {
-            return this.openColors().length > 1 ? KINDS : KINDS.filter(k => !THINGS[k].colored);
+            const unlocked = this.unlockedKinds();
+            const twoColors = this.openColors().length > 1;
+            return KINDS.filter(k => unlocked.includes(k) && (twoColors || !THINGS[k].colored));
+        }
+
+        unlockedKinds() {
+            return UNLOCKS.slice(0, this.state.unlocks).flat();
+        }
+
+        // Can this board ever deal `kind`? A colored kind needs a second color (D-22).
+        everDealt(kind) {
+            return !THINGS[kind].colored || MAP_SIZES[this.state.size].colors > 1;
+        }
+
+        // Open the next UNLOCKS step this board can ever deal from, passing over any it can't
+        // (D-30). Returns the unlock event, or null past the last step.
+        unlock() {
+            const s = this.state;
+            const skip = UNLOCKS.slice(s.unlocks).findIndex(step => step.some(k => this.everDealt(k)));
+            if (skip < 0) return null;
+            s.unlocks += skip + 1;
+            return { type: 'unlock', kinds: UNLOCKS[s.unlocks - 1] };
+        }
+
+        // One milestone event per milestone crossed going from `before` to `after` delivered,
+        // each followed by its open (if the board has room for a color) and its unlock (if a
+        // step is left). Crossing several at once does each in turn.
+        reachMilestones(before, after) {
+            const events = [];
+            for (let m = nextMilestone(before); m <= after; m = nextMilestone(m)) {
+                events.push({ type: 'milestone', count: m });
+                events.push(...[this.openColor(), this.unlock()].filter(e => e));
+            }
+            return events;
         }
 
         drawKind(kinds) {
@@ -576,13 +611,7 @@ const GameEngine = (function () {
             s.exGremlins += gone.filter(kind => kind === 'gremlin').length - trappedNow;
             events.push(...this.emerge(gone));
 
-            // One milestone event per milestone this tick's deliveries reached; each opens the
-            // next color, if the board has room.
-            for (let m = nextMilestone(deliveredBefore); m <= s.delivered; m = nextMilestone(m)) {
-                events.push({ type: 'milestone', count: m });
-                const open = this.openColor();
-                if (open) events.push(open);
-            }
+            events.push(...this.reachMilestones(deliveredBefore, s.delivered));
 
             s.turn++;
             s.phase = 'player';

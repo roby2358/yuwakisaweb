@@ -6,14 +6,6 @@ Updated: 2026-11-11T15:54:02Z
 
 Thing Factory: switch crate spawning from a fixed SOURCE_INTERVAL timer to a population cap. There is a max number of crates on the board that scales with board area (like the gremlin count). Every third tick, if the crate count is below the max, spawn one at a random open color's source, as long as the source is clear. Each completion raises the max by one. "Completion" isn't settled yet: it means each milestone reached, or maybe each delivery, so ask the user before building. Add the max (or a bonus counter) to GameState and pick tunable base constants in artifacts.js. Retune with just cc-sim on every size, and reconcile ONTOLOGY / CRITERIA / RATIONALE / DYNAMICS / log plus the spawn tests.
 ----
-Priority:   55
-Status: ToDo
-ID: card-unlock-aszw
-Created: 2026-11-11T15:58:55Z
-Updated: 2026-11-11T15:58:55Z
-
-Thing Factory: unlock cards gradually. A new game draws only Belt, Bridge and Wall. Each milestone unlocks the next card: first Pushers and Pullers, then Springs, and Rocket last. The user didn't place Trap (or the planned Slide card) in this order, so ask. Make the unlock order a data list in artifacts.js, and have the draw filter THINGS to what's unlocked before weighting. Add a field to GameState for unlocked kinds or the unlock index. The milestone should emit an event, and the UI should announce the new card, maybe on the same panel as a new color or one like it. Decide whether cards already in hand are kept as they are. Retune with cc-sim: the bot only uses Belts and Springs, so early games get Belts only. Reconcile ONTOLOGY / CRITERIA (R-27 draw weights, R-6 starting hand) / RATIONALE / DYNAMICS / log.
-----
 Priority:   50
 Status: ToDo
 ID: push-order-ptbd

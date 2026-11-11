@@ -1,15 +1,19 @@
 // R-27: a card's kind comes from THINGS by weight: only known kinds, and each kind's share of
-// many draws is near weight / total over the kinds in the deck. With one color open the
-// `colored` kinds are out of the deck; with two or more every kind is in. A kind that isn't
+// many draws is near weight / total over the kinds in the deck. The deck is the unlocked kinds
+// (R-49): a new game deals only UNLOCKS[0]. With one color open the `colored` kinds are out of
+// the deck; with two or more (and everything unlocked) every kind is in. A kind that isn't
 // `colored` is WHITE; a `colored` one is one of the open colors, each equally likely.
 'use strict';
 const { check, done } = require('../helpers/check');
 const { newGame } = require('../helpers/load');
 const { g, state, engine } = newGame(21, 'small');
-const { THINGS, WHITE } = g.GameArtifacts;
-const N = 20000, count = {};
-const cards = [];
-for (let i = 0; i < N; i++) { const c = engine.draw(); cards.push(c); count[c.kind] = (count[c.kind] || 0) + 1; }
+const { THINGS, WHITE, UNLOCKS } = g.GameArtifacts;
+const N = 20000;
+const drawMany = () => {
+    const count = {}, cards = [];
+    for (let i = 0; i < N; i++) { const c = engine.draw(); cards.push(c); count[c.kind] = (count[c.kind] || 0) + 1; }
+    return { count, cards };
+};
 // Each kind's share of `count` is near its weight over the total weight of `kinds`; the rest never appear.
 function checkShares(label, count, kinds) {
     const total = kinds.reduce((s, k) => s + THINGS[k].weight, 0);
@@ -20,7 +24,12 @@ function checkShares(label, count, kinds) {
     }
 }
 const allKinds = Object.keys(THINGS);
-checkShares('one color open', count, allKinds.filter(k => !THINGS[k].colored));
+const start = drawMany();
+checkShares('new game', start.count, UNLOCKS[0]);
+
+state.unlocks = UNLOCKS.length;
+const { count, cards } = drawMany();
+checkShares('all unlocked, one color open', count, allKinds.filter(k => !THINGS[k].colored));
 check('one color open: no colored cards, every card white', cards.every(c => c.color === WHITE));
 
 state.targets.push({ q: 0, r: 0, color: 'blue', delivered: 0 }, { q: 0, r: 1, color: 'green', delivered: 0 });

@@ -1,7 +1,7 @@
 // R-6: newGame starts with one source and one target sharing a CRATE_COLORS color, and one
 // crate of that color on the source; gremlinDice(size) d GREMLIN_DICE_SIDES
 // gremlins (one die per GREMLIN_HEXES_PER_DIE of board area) with #rrggbb colors on distinct passable non-edge hexes, none on source or target;
-// no Things; HAND_SIZE cards; turn 1; delivered, lost, spawnTimer 0; unique ids.
+// no Things; HAND_SIZE cards, all from the starting UNLOCKS step (unlocks 1); turn 1; delivered, lost, spawnTimer 0; unique ids.
 'use strict';
 const { check, done } = require('../helpers/check');
 const { newGame, SEEDS } = require('../helpers/load');
@@ -31,6 +31,8 @@ for (const seed of SEEDS) {
         state.things.length === 0 && state.hand.length === A.HAND_SIZE && state.hand.every(card => card.kind in A.THINGS && card.color === (A.THINGS[card.kind].colored ? state.targets[0].color : A.WHITE)) &&
         state.turn === 1 && state.delivered === 0 && state.lost === 0 && state.spawnTimer === 0 &&
         state.phase === 'player');
+    check(`seed ${seed}: only the starting cards unlocked, and the hand comes from them`,
+        state.unlocks === 1 && state.hand.every(card => A.UNLOCKS[0].includes(card.kind)));
 }
 // Bigger boards roll more dice: one per GREMLIN_HEXES_PER_DIE hexes of area, rounded.
 {

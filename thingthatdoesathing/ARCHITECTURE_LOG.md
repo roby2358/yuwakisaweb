@@ -2,6 +2,16 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-11 — Cards unlock one step per milestone
+Every kind used to be in the deck from turn 1. A new `UNLOCKS` list in artifacts.js orders the
+kinds in steps (Belt/Bridge/Wall/Trap, then Pusher+Puller, Slide, Spring, Rocket); a new game
+opens the first step (`GameState.unlocks = 1`) and each milestone opens the next with an
+`unlock{kinds}` event, passing over an all-colored step on a one-color board.
+`drawableKinds()` filters to the open steps before the D-22 color gate and the weights. The
+milestone loop moved into `reachMilestones(before, after)`. The UI's new-color panel became
+the news panel (overlay `news`, `#news-panel`), which also names unlocked cards. D-30 added,
+D-7, D-22 and D-29 touched; R-49 added, R-6, R-26, R-27 and U-23 updated.
+
 ### 2026-11-11 — The Slide card: ice you can build
 A new Thing, `SLIDE`, with a new `THINGS` flag `slides` and a new `on` value `'both'` (land
 or water). The engine's `isBareIce(hex)` became `isSlick(hex)`: a Thing on the hex decides by

@@ -10,7 +10,8 @@ places, removes or discards a Thing from a random hand, or waits, and then the w
 once (turning a placed mover is free and doesn't tick): every Thing does its one thing (most act on the piece standing on them; the Pusher
 shoves the hex in front, the Puller reaches two hexes ahead). Crates come out of a source; deliver
 them to the target, through endless milestones (10, 20, 50, 100, 200, 500, 1000, …). On
-bigger boards each milestone opens a new crate color with its own target (`MAP_SIZES.colors`). There's
+bigger boards each milestone opens a new crate color with its own target (`MAP_SIZES.colors`),
+and every milestone unlocks the next step of cards (`UNLOCKS`; a new game deals only the first). There's
 no end, time limit or defeat; the score is the turn each milestone was reached.
 
 Design docs follow the ontology-spec format: **`ONTOLOGY.md`** is the implementation
@@ -42,12 +43,12 @@ headless; `GameUI` is the only browser-coupled code.
 
 | Module | Global | Role |
 |---|---|---|
-| `artifacts.js` | `GameArtifacts` | Rules data: `MAP_SIZES`, `TERRAIN`, `THINGS` (the Thing templates: `push`, `pull`, `shove`, `splat`, `flies`, `skids`, `blocks`, `traps`, `colored`, `slides`, `on`, `weight`), `WHITE`, `PIECES` (the piece templates: `label`, `cargo`, `wanders`, `splats`, `reemerges`), `aims(kind)`, `MOVEMENT_COST`, and every tunable number. |
+| `artifacts.js` | `GameArtifacts` | Rules data: `MAP_SIZES`, `TERRAIN`, `THINGS` (the Thing templates: `push`, `pull`, `shove`, `splat`, `flies`, `skids`, `blocks`, `traps`, `colored`, `slides`, `on`, `weight`), `WHITE`, `UNLOCKS` (the card-unlock order, one step per milestone), `PIECES` (the piece templates: `label`, `cargo`, `wanders`, `splats`, `reemerges`), `aims(kind)`, `MOVEMENT_COST`, and every tunable number. |
 | `displayartifacts.js` | `GameDisplayArtifacts` | Client-only: `HEX_SIZE`, `COUNTER_SIZE`, `HOP_MS`, terrain colors/names, `THING_LOOK` (name, verb line, colors, inset), `PIECE_LOOK` (hover name), `CRATE_SHADES`, `MAP_SIZE_NOTES` (size-picker notes), port colors. |
 | `piece.js` | `Piece` | A positioned token. Crates and gremlins are `Piece`s with engine-set `id` and `kind`. |
 | `board.js` | `Board` | Query layer over the hex `Map` (passable = land). |
-| `gamestate.js` | `GameState` | Serializable data: `sources` (`{q, r, colors}`), `targets` (`{q, r, color, delivered}`), `pieces`, `things` (`{kind, color, q, r, facing}`), `hand` (`{kind, color}` cards), `turn`, `delivered`, `lost`, `exGremlins`, `trapped`, `idleTicks`, `spawnTimer`, `nextId`, `phase`, `size`. |
-| `gameengine.js` | `GameEngine` | Generation + rules. `newGame(seed, size)` takes the seed from the caller (the UI rolls it) and a `MAP_SIZES` key (the player picks it). Commands `place`/`remove`/`blast`/`discard`/`wait` each run one `tick()` and return `{ ok, events }`; `rotate` doesn't tick (`events: []`, D-19); a tick that reaches a milestone emits `milestone{count}`, then `open{color, source, target}` if it opened a color. One `step()` handles every movement (movers, springs, rockets, ice and Slide slides, gremlins); a Rocket's flight emits `splat` for gremlins it destroys. |
+| `gamestate.js` | `GameState` | Serializable data: `sources` (`{q, r, colors}`), `targets` (`{q, r, color, delivered}`), `pieces`, `things` (`{kind, color, q, r, facing}`), `hand` (`{kind, color}` cards), `unlocks` (how many `UNLOCKS` steps are open), `turn`, `delivered`, `lost`, `exGremlins`, `trapped`, `idleTicks`, `spawnTimer`, `nextId`, `phase`, `size`. |
+| `gameengine.js` | `GameEngine` | Generation + rules. `newGame(seed, size)` takes the seed from the caller (the UI rolls it) and a `MAP_SIZES` key (the player picks it). Commands `place`/`remove`/`blast`/`discard`/`wait` each run one `tick()` and return `{ ok, events }`; `rotate` doesn't tick (`events: []`, D-19); a tick that reaches a milestone emits `milestone{count}`, then `open{color, source, target}` if it opened a color, then `unlock{kinds}` if it unlocked cards (one each per milestone crossed, `reachMilestones`). One `step()` handles every movement (movers, springs, rockets, ice and Slide slides, gremlins); a Rocket's flight emits `splat` for gremlins it destroys. |
 | `gameui.js` | `GameUI` | Canvas, HUD (top left), tally (top right: delivered, ex-gremlins, trapped, lost), the hand, input, and the tick animation, which is driven only by the events the engine returns. |
 
 Libs: `hex.js` (axial math, `NEIGHBOR_DIRS` = facing order E, NE, NW, W, SW, SE;
@@ -67,8 +68,8 @@ tick animation) → `picked` card → bare map click.
 - **L2.1 primary action:** Wait button → `engine.wait()`. Enter toggles Go (`toggleRun()`), like the Go button. Space is `oneTick()`: a Wait when Go is off; when Go runs it turns Go off, and the tick in flight finishes.
 - **L2.2:** Esc and right-click put the card back.
 - **L5:** the intro and New Game overlays are both board-size pickers (click or `1`–`4`); they
-  consume all other input, and Esc closes New Game only. A milestone that opens a color shows
-  the `color` overlay, which closes on a click or any key (`OVERLAY_KEYS` dispatches keys per
+  consume all other input, and Esc closes New Game only. A milestone that opens a color or unlocks cards shows
+  the `news` overlay, which closes on a click or any key (`OVERLAY_KEYS` dispatches keys per
   overlay). The `help` overlay is the keys legend: shown once after the intro's size pick, and by
   the Help button; it closes on a click or any key and holds Go while open. The milestone
   banner is not an overlay; it never blocks input.
@@ -102,11 +103,12 @@ in `hexToScreen` / `screenToHex`.
   two hexes ahead back into the hex between (both always come in a crate color and move only that color's crates, and gremlins; they're rare draws); a gremlin coming onto a target dies; Wall blocks; Bridge is a Belt built on water (it carries the piece on it 1 hex); Slide is buildable ice, on land or water (`slides`). One Thing per hex (placing on one replaces it), none on a target; movers may be built
   under a piece.
 - **Tick:** Pushers and Pullers first, then the other Things, each in placement order (each piece moves at most once), unmoved gremlins
-  wander, every `SOURCE_INTERVAL` a random open color spawns at its source if clear; each milestone may open a color (`openColor`).
+  wander, every `SOURCE_INTERVAL` a random open color spawns at its source if clear; each milestone may open a color (`openColor`) and unlocks the next card step (`unlock`).
 - **Step:** blocked by off-map / mountain / Wall / piece; a gremlin on a Trap dies; open water sinks; slick ground (bare ice or a Slide, `isSlick`) slides
   free; a crate on its color's target is delivered (other colors' targets block it on the ground).
 - **Tuning harness:** `just cc-sim 200 small`, which runs `node test/sim.js 200 small` (greedy builder bot; lays belts and
-  springs, throws every other card away with `discard`).
+  springs, throws every other card away with `discard`; before the first milestone only Belts,
+  Bridges, Walls and Traps are dealt, D-30).
 
 ## Conventions
 

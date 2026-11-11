@@ -169,6 +169,8 @@ ARCHITECTURE_LOG.md.
   median 65 turns, p90 247, 11.5 crates lost per game (nearly all wrecked by gremlins, D-8). The bot lays belts and Springs on
   straight runs and throws every other card away with `discard`, so this measures boards
   and hand pacing, not Puller, Rocket or Trap play. To be checked by playtest (X-2, X-4).
+  Since D-30 the deck before the first milestone is only Belt, Bridge, Wall and Trap, so the
+  bot builds that milestone from Belts alone (numbers there).
 
 ### D-23 A gremlin that comes onto a target dies — *Decided (dies), Proposed (however it arrives but a flight passing over, like a Trap)*
 - **Alternatives:** gremlins stay on a target and block it (the old rule); gremlins can't
@@ -195,7 +197,8 @@ ARCHITECTURE_LOG.md.
   Thing is never a gremlin-safe gap. A card's color is rolled with its kind (a `colored`
   template field). With one color open, a colored card would just act like white, and the
   splitting it exists for has nothing to split, so the colored kinds stay out of the deck
-  until a second color opens (on a board with one color, never). The designer found about one per color is all a factory needs, so
+  until a second color opens (on a board with one color, never), on top of the unlock order
+  (D-30), which also needs them unlocked. The designer found about one per color is all a factory needs, so
   they're rare: weight 0.5 each, about 1 card in 28 apiece.
 - **Evidence:** R-40, R-41, R-27, R-10; U-20 (manual). The bot discards Pushers, so
   adding the kind only thins its Belt draws: `just cc-sim 200 small` 185/200, median 65 →
@@ -371,14 +374,48 @@ ARCHITECTURE_LOG.md.
   `skids` loop reads `isSlick` too); a Rocket doesn't; Slides under a flight don't count as a
   shortcut. (4) It's white and slides gremlins too; gremlins may wander onto a water Slide
   (it's covered water) and then slide on, possibly into the lake. (5) Weight 1, as a Bridge.
-  The card-unlock order isn't built yet; when it is, the Slide unlocks after Pushers and
-  Pullers. (6) A line of Slides across a lake carries a crate over in one tick, and a single
+  It unlocks after Pushers and Pullers (D-30). (6) A line of Slides across a lake carries a crate over in one tick, and a single
   water Slide whose far side is open water drops the crate in, like ice running into a lake.
   (7) Glyph: three white ice streaks on a pale-blue slab, no arrow.
 - **Evidence:** R-48, R-8, R-14. `Measured by: just cc-sim 200 small` → 200/200, median 51
   (was 50), p90 62 (was 60), 2.61 lost per game (was 2.60); `just cc-sim 50 medium` → 50/50,
   median 63 (was 60), p90 77 (was 70), 4.26 lost (was 3.58). The bot discards Slides, so the
   shift is belts drawn slightly less often. Unmeasured in play.
+
+### D-30 Cards unlock one step per milestone — *Decided (gradual unlock, order Belt/Bridge/Wall/Trap, then Pusher+Puller, Slide, Spring, Rocket last; hand kept), Proposed (unreviewed: the rest)*
+- **Alternatives:** every kind from turn 1 (the old rule); unlock by turn count rather than
+  milestones; a fixed per-board card list; redrawing the hand on an unlock so the new card
+  shows up at once.
+- **Why:** the designer asked for it (pjpd card-unlock-aszw). Nine kinds on the first board
+  is a lot to read before you've delivered a crate; four plain ones (a Belt line, a Bridge
+  over a lake, Walls and Traps against gremlins) are enough to build the first factory, and
+  each milestone then hands you one new toy to learn while the machine runs. The order is
+  data, `UNLOCKS` in artifacts.js: a list of steps, each a list of kinds. `drawableKinds()`
+  filters `THINGS` to the open steps before weighting, so the weights keep their meaning
+  among whatever is in the deck. The state keeps one integer, `unlocks` (how many steps are
+  open), and the milestone loop (`reachMilestones`) calls `unlock()` once per milestone
+  crossed, so a tick that crosses several unlocks several steps in order.
+- **Unreviewed calls:** (1) Cards already in hand stay as they are (the designer's default);
+  new kinds come through later draws, discards and idle redraws, so the first one can take a
+  few turns to appear. (2) On a board that can never open a second color (small), a step made
+  only of `colored` kinds is passed over: the milestone unlocks the next step instead, and
+  the passed-over kinds count as unlocked but the D-22 gate still keeps them out of the deck.
+  Announcing Pushers and Pullers there would promise cards that never come. The test is data
+  (`everDealt`: not `colored`, or `MAP_SIZES.colors > 1`), not a kind check. On a bigger board
+  the Pusher/Puller step lands on the same milestone that opens the second color, so they
+  arrive when they become useful; if that color can't open for want of a free hex, they're
+  announced but stay gated until it does. (3) The `unlock{kinds}` event follows its
+  milestone's `open`. (4) The UI shows one panel for both, the old new-color panel grown into a
+  news panel (overlay `news`): a swatch per color, a card picture per kind, and each kind's
+  verb line; it holds play until a click or any key, like the color panel did. A small
+  board's first milestone now opens it (for the Slide). (5) Past the last step (a small board
+  at 50, a bigger one at 100) milestones unlock nothing.
+- **Evidence:** R-49, R-27, R-6, R-26; U-23 (manual). `Measured by: just cc-sim 200 small` →
+  200/200, median 49 (was 51), p90 57 (was 62), 2.08 lost per game (was 2.61);
+  `just cc-sim 50 medium` → 50/50, median 61 (was 63), p90 69 (was 77), 3.42 lost (was 4.26).
+  The bot only measures the first milestone, where the deck is now Belt-heavy (6 of 10
+  weight, was 6 of 15): it never sees a Spring before then, but it gets more Belts, so it's a
+  little faster. No numbers retuned. Unmeasured in play.
 
 ### D-24 Pushers and Pullers act before the other Things in a tick — *Proposed*
 - **Alternatives:** pure placement order (the old rule); letting a Pusher or Puller move a

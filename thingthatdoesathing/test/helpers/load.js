@@ -45,7 +45,7 @@ function snapshot(state) {
     return JSON.stringify({
         sources: state.sources, targets: state.targets,
         pieces: state.pieces.map(p => [p.id, p.kind, p.key(), p.color]),
-        things: state.things, hand: state.hand,
+        things: state.things, hand: state.hand, unlocks: state.unlocks,
         turn: state.turn, delivered: state.delivered, lost: state.lost,
         spawnTimer: state.spawnTimer, nextId: state.nextId, phase: state.phase
     });
