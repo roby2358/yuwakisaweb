@@ -146,10 +146,17 @@ const GameUI = (function () {
             }
         },
         BRIDGE(ctx, s) {
-            ctx.lineWidth = Math.max(1, s * 0.06);
+            // Faint planks across the way it carries, and a belt's chevron over them: a deck
+            // that moves what's on it 1 hex.
+            const width = ctx.lineWidth;
+            ctx.lineWidth = Math.max(1, s * 0.05);
+            ctx.globalAlpha *= 0.45;
             for (let i = -3; i <= 3; i++) {
                 ctx.beginPath(); ctx.moveTo(i * s * 0.18, -s * 0.55); ctx.lineTo(i * s * 0.18, s * 0.55); ctx.stroke();
             }
+            ctx.globalAlpha /= 0.45;
+            ctx.lineWidth = width;
+            chevron(ctx, s * 0.2, s * 0.3);
         },
     };
 

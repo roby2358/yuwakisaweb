@@ -1,4 +1,4 @@
-// R-10: rotate(q,r) on a Thing with a facing (Belt, Spring, Rocket, Puller) turns its facing
+// R-10: rotate(q,r) on a Thing with a facing (Belt, Spring, Rocket, Pusher, Puller, Bridge) turns its facing
 // clockwise ((f+5) mod 6) and doesn't tick: events is empty, and turn, pieces (a free gremlin
 // would wander on a tick), hand and timers are untouched. On a fixture or an empty hex →
 // {ok:false}, unchanged.
@@ -7,7 +7,7 @@ const { check, done } = require('../helpers/check');
 const { flatGame, snapshot } = require('../helpers/load');
 const { state, engine, put, piece } = flatGame();
 piece('gremlin', 6, 6);
-for (const kind of ['BELT', 'SPRING', 'ROCKET', 'PUSHER', 'PULLER']) {
+for (const kind of ['BELT', 'SPRING', 'ROCKET', 'PUSHER', 'PULLER', 'BRIDGE']) {
     state.things = [];
     const t = put(kind, 3, 4, 0);
     const before = snapshot(state);

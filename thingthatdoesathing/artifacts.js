@@ -38,7 +38,7 @@ const GameArtifacts = (function () {
         PULLER:  { push: 0, pull: 1, shove: 0, splat: false, flies: false, skids: false, blocks: false, traps: false, colored: true,  on: 'land',  weight: 0.5 },
         WALL:    { push: 0, pull: 0, shove: 0, splat: false, flies: false, skids: false, blocks: true,  traps: false, colored: false, on: 'land',  weight: 2 },
         TRAP:    { push: 0, pull: 0, shove: 0, splat: false, flies: false, skids: false, blocks: false, traps: true,  colored: false, on: 'land',  weight: 1 },
-        BRIDGE:  { push: 0, pull: 0, shove: 0, splat: false, flies: false, skids: false, blocks: false, traps: false, colored: false, on: 'water', weight: 1 },
+        BRIDGE:  { push: 1, pull: 0, shove: 0, splat: false, flies: false, skids: false, blocks: false, traps: false, colored: false, on: 'water', weight: 1 },
     };
 
     // Piece templates, keyed by Piece.kind:

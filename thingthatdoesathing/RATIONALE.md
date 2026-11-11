@@ -127,7 +127,7 @@ ARCHITECTURE_LOG.md.
   `shove`, `splat`, `flies`, `skids`, `blocks`, `traps`, `colored`, `on`, `weight`), so a new kind is usually a new row, not new code. Each
   kind breaks one rule. A Spring hops three hexes over lakes and skids on ice, a Rocket flies eight,
   a Pusher shoves the piece in front of it, a Puller acts at a distance without needing a Thing under the piece, a Wall shuts a hex, a
-  Trap kills gremlins that come onto it, a Bridge opens water.
+  Trap kills gremlins that come onto it, a Bridge opens water and carries what's on it (D-27).
 - **Why not the Spinner:** it pushed crates the opposite way on alternate arrivals. Crates
   arrive about every `SOURCE_INTERVAL` ticks, and with that at 3 the Spinner had turned
   halfway round each time. In the bot's lines it was mostly a hazard. The designer replaced
@@ -306,6 +306,27 @@ ARCHITECTURE_LOG.md.
   and a crate, like `remove` costs a tick and a card, so it's a repair, not a free reset.
   The kill reuses `splat` (by null) so the client bursts it like any other.
 - **Evidence:** R-44; U-21 (manual). Unmeasured in play: the bot never blasts.
+
+### D-27 The Bridge is a Belt over water — *Decided (it pushes the piece on it along its facing), Proposed (unreviewed: the rest)*
+- **Alternatives:** a plain deck (the old rule: a piece pushed onto it just stopped there);
+  a Bridge that carries a piece onward in whatever direction it came on (no facing, but it
+  needs to remember each piece's last move); a separate Belt-on-water kind.
+- **Why:** the designer asked for it. A crate that reached a Bridge stopped dead, so every
+  crossing needed a Belt line that couldn't be built on water: in practice a Bridge was
+  only useful under a Spring's flight. Giving the row `push: 1` makes it a mover like any
+  other: `aims` turns it, the ghost and the selection arrow show its facing, and the tick
+  runs it through the same `push`/`step`. No engine code knows about Bridges.
+- **Unreviewed calls:** (1) It pushes on the ground (`flies: false`), so a Bridge aimed at
+  open water drops the crate in, like a Belt aimed there; a crossing is a line of Bridges.
+  (2) It's white and acts on every piece, gremlins included: a gremlin that wanders onto a
+  Bridge gets carried, and can be carried into the lake. (3) It stays in the second group of
+  the tick (D-24), in placement order, and a piece pushed onto it this tick waits for the
+  next (R-13), exactly as on a Belt. (4) Weight stays 1 (D-7). (5) The glyph keeps its
+  planks, drawn faint, under a belt chevron, and the ink is darkened so the chevron reads
+  on the wood; the hover line says it carries what's on it over water.
+- **Evidence:** R-46, R-10, R-15, R-13. `Measured by: just cc-sim 200 small` and
+  `just cc-sim 50 medium`: unchanged, since the bot plans land paths and discards Bridges.
+  Unmeasured in play.
 
 ### D-24 Pushers and Pullers act before the other Things in a tick — *Proposed*
 - **Alternatives:** pure placement order (the old rule); letting a Pusher or Puller move a

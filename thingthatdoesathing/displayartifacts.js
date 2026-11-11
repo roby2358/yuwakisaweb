@@ -42,7 +42,7 @@ const GameDisplayArtifacts = (function () {
             PULLER:  { name: 'Puller',  does: 'pulls what is 2 hexes ahead 1 hex closer', fill: '#1f4a4a', ink: '#ffffff', inset: 0.84 },
             WALL:    { name: 'Wall',    does: 'nothing gets in',                          fill: '#8a5a3c', ink: '#5c3a24', inset: 1 },
             TRAP:    { name: 'Trap',    does: 'a gremlin that comes onto it dies (crates are safe)', fill: '#3d3a33', ink: '#d9d4c7', inset: 0.84 },
-            BRIDGE:  { name: 'Bridge',  does: 'water you can cross (build on water)',     fill: '#a07a4a', ink: '#6b4f2c', inset: 0.84 },
+            BRIDGE:  { name: 'Bridge',  does: 'carries what is on it 1 hex over water (build on water)', fill: '#a07a4a', ink: '#3d2812', inset: 0.84 },
         },
         // Accent per card color for colored kinds: white, or the crate color's lit face.
         COLOR_INK: { white: '#ffffff', red: '#ff7a6b', green: '#8ff08a', blue: '#8ec4ff', yellow: '#fff08a' },

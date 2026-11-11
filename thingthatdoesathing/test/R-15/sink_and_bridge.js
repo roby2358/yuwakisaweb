@@ -19,7 +19,7 @@ const { flatGame, DIR } = require('../helpers/load');
 }
 {
     const { state, engine, put, piece, terrain, T } = flatGame();
-    put('BELT', 3, 4, DIR.E); terrain(4, 4, T.WATER); put('BRIDGE', 4, 4);
+    put('BELT', 3, 4, DIR.E); terrain(4, 4, T.WATER); put('BRIDGE', 4, 4, DIR.E);
     const c = piece('crate', 3, 4);
     engine.wait();
     check('a bridge carries the crate', state.pieces.includes(c) && c.isAt(4, 4) && state.lost === 0);

@@ -1,11 +1,3 @@
-Priority:   65
-Status: ToDo
-ID: bridge-belt-zguc
-Created: 2026-11-11T15:58:58Z
-Updated: 2026-11-11T20:26:46Z
-
-Thing Factory: give the Bridge a built-in belt so it pushes the piece on it in its facing direction, like a Belt over water. Right now a crate that reaches a bridge just stops there, which is annoying. That makes the Bridge a facing mover: it rotates on click, has a ghost facing, and is included in aims(kind). Check that the order of the tick and the "each piece moves at most once" rule still hold. Update THING_LOOK so the arrow shows on the bridge. Reconcile ONTOLOGY / CRITERIA (+ test/R-n for the bridge push) / RATIONALE / log, and the hover verb line.
-----
 Priority:   60
 Status: ToDo
 ID: replace-es7n

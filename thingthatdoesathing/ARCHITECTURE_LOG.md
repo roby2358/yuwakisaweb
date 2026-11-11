@@ -2,6 +2,14 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-11 — The Bridge carries what's on it
+A Bridge used to be a facing-less fixture: water a piece could stand on, where a pushed crate
+stopped. It's now a mover with `push: 1`, a Belt built on water: it turns on click, places
+with a facing, shows the selection arrow, and pushes the piece on it each tick through the
+usual `step` (so one aimed at open water sinks the crate). Only the `THINGS.BRIDGE` row
+changed in the engine; the glyph gained a chevron over faint planks, darker ink, and a new
+hover line. D-27 added, D-5 touched; R-46 added, R-10 and R-15 updated, U-9 updated.
+
 ### 2026-11-11 — Pushers and Pullers only once two colors are open
 Pushers and Pullers used to be drawn from the start, in the one open color, where they
 only acted like white Things. They now stay out of the deck until a second color opens,

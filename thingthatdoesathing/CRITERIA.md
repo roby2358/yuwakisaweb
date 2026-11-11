@@ -28,12 +28,12 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | R-7 | a step | blocked (piece stays) into off-map, mountain, Wall, or another piece; accepted onto plains, ice, a bridge, or a mover | automated |
 | R-8 | `legalPlacements(kind)` | exactly the Placement legality rule: no Thing, not a target, right ground, no piece under a blocking kind, and no blocking kind on a source | automated |
 | R-9 | `place(slot, q, r, facing)` | legal: Thing appended (fixture facing null), slot redrawn, hand stays `HAND_SIZE`, one tick. Illegal (slot, facing, hex): `{ok:false}`, state and `Rando` unchanged | automated |
-| R-10 | `rotate(q, r)` | on a Belt, Spring, Rocket, Pusher, or Puller: facing turns clockwise and nothing else changes (no tick: `events` empty, turn, pieces, hand untouched). On a fixture or empty hex: `{ok:false}`, unchanged | automated |
+| R-10 | `rotate(q, r)` | on a Belt, Bridge, Spring, Rocket, Pusher, or Puller: facing turns clockwise and nothing else changes (no tick: `events` empty, turn, pieces, hand untouched). On a fixture or empty hex: `{ok:false}`, unchanged | automated |
 | R-11 | `wait()` | one tick, hand and Things untouched | automated |
 | R-12 | a piece on a mover during a tick | pushed `THINGS[kind].push` hexes in the facing, stopping before a blocked hex | automated |
 | R-13 | a tick | each piece moves at most once (a line of belts advances a crate one hex per tick; a carried gremlin doesn't also wander) | automated |
 | R-14 | a piece entering bare ICE | keeps going the same way, free, until non-ice or blocked; ice under a Thing doesn't slide; a flying push (Spring, Rocket) counts ice under its flight; a Spring that lands on bare ice skids on (on the ground), a Rocket doesn't | automated |
-| R-15 | a piece entering water | removed if no Thing is there (crate: `lost` +1); a bridge carries it; a flying push (Spring, Rocket) passes over inland water and sinks only if it comes down on it, but the outer sea always takes it | automated |
+| R-15 | a piece entering water | removed if no Thing is there (crate: `lost` +1); a bridge takes it, and carries it on next tick (R-46); a flying push (Spring, Rocket) passes over inland water and sinks only if it comes down on it, but the outer sea always takes it | automated |
 | R-16 | a piece entering a target | a crate of its color is removed and `delivered` +1; a gremlin that comes onto any target dies (`splat`, `by` null, after its `move`; `exGremlins` +1, a new one climbs out), but not when a flight carries it over | automated |
 | R-17 | a spinner during a tick | the Spinner was replaced by the Puller (R-28) | retired |
 | R-18 | gremlins in a tick | each unmoved gremlin steps to a random enterable (or crate-holding) non-water neighbor or stays; boxed in → stays; never walks into open water; pieces never share a hex | automated |
@@ -64,6 +64,7 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | R-43 | the order Things act in a tick | Pushers and Pullers act before every other Thing, each group in placement order, so one built beside a running Belt line catches the crate in front of it whichever was placed first | automated |
 | R-44 | `blast(q, r)` | on a crate: the crate is gone, `lost` +1, its `splat` (`by` null) leads the events, Things untouched, one tick. On a gremlin or an empty hex: `{ok:false}`, state and `Rando` unchanged | automated |
 | R-45 | ticks with no card used | after `IDLE_REDRAW_TICKS` ticks in a row of `wait`, `remove` or `blast`, one random slot is redrawn (`redraw{slot}`) and the count starts over; `place` and `discard` reset it; `rotate` doesn't tick or count | automated |
+| R-46 | a Bridge during a tick | pushes the piece on it `THINGS.BRIDGE.push` hexes in its facing, on the ground, through the same `step` as a Belt: onto land or the next Bridge, blocked by a Wall or a piece, sunk in open water (crate: `lost` +1); a piece that came onto it this tick waits for the next (R-13); carries gremlins too | automated |
 
 ---
 
@@ -79,7 +80,7 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | U-6 | With no card picked, hovering a mover outlines it and the hover bar says "click to select, again to turn"; a click on any hex selects it (white outline, and a white arrow along a mover's facing) and holds Go; a second click turns the mover without a tick; a click anywhere else or Esc only deselects, and Go resumes | manual — press Go, click a placed Belt twice, then click elsewhere |
 | U-7 | Esc and right-click put the card back; a click on a non-yellow hex also does | manual — try all three with a card picked |
 | U-8 | Space and Wait tick (Space while Go runs instead turns Go off once the tick in flight finishes); none of them, nor placing clicks, act during the animation or an overlay (selecting and turning a hex work mid-animation, since they don't tick) | manual — mash Space mid-animation |
-| U-9 | Each Thing is recognizable by look alone: belt chevrons, spring coil, rocket, puller magnet, wall bricks, trap jaws, bridge planks | manual — glance test |
+| U-9 | Each Thing is recognizable by look alone: belt chevrons, spring coil, rocket, puller magnet, wall bricks, trap jaws, bridge planks under a chevron that points along its facing | manual — glance test |
 | U-10 | The HUD (top left) shows Turn; the tally (top right) shows Delivered k / next milestone with a bar, Ex-gremlins, Trapped, and crates lost (only once one is lost); the hover bar names terrain, Thing (with its verb), and piece | manual — hover a crate on a belt, then lose one at sea and trap a gremlin |
 | U-11 | Reaching a milestone shows a banner ("IT DOES THE THING" for the first, "N crates!" after) with crates, turns, the next milestone, and crates lost; it hides on its own and play never stops | manual — run a line past 10 and 20 |
 | U-12 | With no card picked or with one picked, `D` over a placed Thing removes it and ticks; the hover bar says "D to remove"; a crate on a removed Bridge fades where it stood | manual — remove a Belt, then a Bridge with a crate on it |

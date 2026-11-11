@@ -82,7 +82,7 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
 - **Opening:** build the spine. Lay belts from the source toward the target; discard cards
   you can't use, or park them where they'll help later.
 - **Midgame:** patch around gremlins and jams. Fence the line with Walls where gremlins
-  keep wandering on, and put Bridges where water forced a detour.
+  keep wandering on, and put a line of Bridges where water forced a detour.
 - **New color:** a milestone opens a second target. If it comes out of a new source, build a
   second line; if it shares your source, the crates of both colors ride the same belt, so
   you have to split them by color before the targets.

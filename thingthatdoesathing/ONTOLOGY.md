@@ -121,7 +121,7 @@ A `Piece` (position, color, label) with two fields set by the engine. Each kind 
 
 | Field | Meaning |
 |---|---|
-| `push` | Hexes it shoves (or flies) the piece standing on it, along `facing` (Belt, Spring, Rocket). |
+| `push` | Hexes it shoves (or flies) the piece standing on it, along `facing` (Belt, Bridge, Spring, Rocket). [Bridge D] |
 | `splat` | Its push splats pieces that splat: the one it lands on and the one it launches (Rocket). [D] |
 | `flies` | Its push is airborne: it passes over inland open water (only the outer sea, an edge hex, takes the piece mid-flight), every hex counts (ice is no shortcut mid-air), and it sinks if it comes down on water (Spring, Rocket). [D] |
 | `skids` | A flying push that runs its full range onto bare ice slides on, on the ground (Spring). [D] |
@@ -381,7 +381,7 @@ know only the board and occupancy. They pick a random free land or bridge neighb
 stay, and a crate on a neighbor counts as free: stepping there wrecks it. They never push
 crates; a gremlin in the way is a wall until it moves, unless it steps onto the crate.
 Pushed, pulled or flung into a crate, a gremlin is only blocked. A gremlin standing on a
-mover gets carried. One that drowns or splats is replaced by a new one on the shore.
+mover (a Bridge too) gets carried. One that drowns or splats is replaced by a new one on the shore.
 The count only drops when the whole shore is walled off or full.
 
 ---
@@ -405,6 +405,7 @@ The code constant in `GameArtifacts` is the single source.
 | `WHITE` | white | the color of a Thing that acts on every piece [D] |
 | `THINGS.SPRING.push` | 3 | hexes |
 | `THINGS.BELT.push` | 1 | hexes |
+| `THINGS.BRIDGE.push` | 1 | hexes, on the ground: a Belt over water (D-27) [D] |
 | `THINGS.ROCKET.push` | 8 | hexes (its range) [D] |
 | `THINGS.PULLER.pull` | 1 | hexes |
 | `THINGS.PUSHER.shove` | 1 | hexes [D] |
@@ -432,7 +433,7 @@ The code constant in `GameArtifacts` is the single source.
 |---|---|---|---|
 | `newGame(seed, size)` | `seed` is a non-negative integer and `size` a key of `MAP_SIZES` | regenerate at that size | `{ok:true}` |
 | `place(slot, q, r, facing)` | see Commands rule | build, redraw slot, tick | `{ok, events}` |
-| `rotate(q, r)` | a Belt, Spring, Rocket, Pusher, or Puller is there | turn clockwise; no tick | `{ok, events: []}` |
+| `rotate(q, r)` | a Belt, Bridge, Spring, Rocket, Pusher, or Puller is there | turn clockwise; no tick | `{ok, events: []}` |
 | `remove(q, r)` | any Thing is there | take it off (a piece left on open water sinks), tick | `{ok, events}` |
 | `blast(q, r)` | a crate is there | blow it up (lost +1), tick | `{ok, events}` |
 | `discard(slot)` | `0 <= slot < HAND_SIZE` | redraw that slot, tick | `{ok, events}` |
