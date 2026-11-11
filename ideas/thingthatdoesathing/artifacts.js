@@ -48,7 +48,7 @@ const GameArtifacts = (function () {
     //               piece it launches once that one lands; so does coming onto a Trap
     //   wrecks    — its own wandering step into a cargo piece's hex destroys that piece (lost)
     //               and takes the hex; being pushed, pulled or flung into one doesn't
-    //   reemerges — when one sinks or splats (counted in exGremlins), a new one climbs out on a shore hex at the end
+    //   reemerges — when one sinks or splats (counted in exGremlins or trapped), a new one climbs out on a shore hex at the end
     //               of the tick
     const PIECES = {
         crate:   { label: '📦', cargo: true,  wanders: false, splats: false, wrecks: false, reemerges: false },

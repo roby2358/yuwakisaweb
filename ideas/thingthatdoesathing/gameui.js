@@ -312,6 +312,13 @@ const GameUI = (function () {
             this.commit(() => this.engine.remove(q, r), () => this.sound.sink());
         }
 
+        // Blow up the crate under the cursor (B).
+        blastHovered() {
+            if (this.overlay || this.anim || !this.hoveredHex) return;
+            const { q, r } = this.hoveredHex;
+            this.commit(() => this.engine.blast(q, r), () => {});
+        }
+
         // Throw the picked card away (the Discard spot or X); it ticks like any command.
         discardPicked() {
             if (this.overlay || this.anim || !this.picked) return;
@@ -730,6 +737,7 @@ const GameUI = (function () {
             document.getElementById('color-info').innerHTML = s.targets.length < 2 ? '' : s.targets.map(t =>
                 `<span style="color:${CRATE_SHADES[t.color].top}">■ ${t.delivered}</span>`).join(' ');
             document.getElementById('ex-info').textContent = s.exGremlins;
+            document.getElementById('trap-info').textContent = s.trapped;
             this.renderHand();
 
             const hoverEl = document.getElementById('hover-info');
@@ -869,6 +877,7 @@ const GameUI = (function () {
             if (e.key >= '1' && e.key <= String(HAND_SIZE)) { this.pick(Number(e.key) - 1); return; }
             if ((e.key === 'r' || e.key === 'R') && this.picked) { this.turnGhost(e.shiftKey ? -1 : 1); return; }
             if (e.key === 'd' || e.key === 'D') { this.removeHovered(); return; }
+            if (e.key === 'b' || e.key === 'B') { this.blastHovered(); return; }
             if (e.key === 'x' || e.key === 'X') this.discardPicked();
         }
 

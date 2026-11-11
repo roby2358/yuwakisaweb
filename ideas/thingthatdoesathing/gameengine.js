@@ -114,6 +114,7 @@ const GameEngine = (function () {
             s.delivered = 0;
             s.lost = 0;
             s.exGremlins = 0;
+            s.trapped = 0;
             s.spawnTimer = 0;
             s.phase = 'player';
             return { ok: true };
@@ -345,9 +346,14 @@ const GameEngine = (function () {
         // Does this hex kill this piece when it comes onto it? A Trap does, and so does a
         // target, for a piece that splats (gremlins can't camp the targets).
         trapsPiece(piece, hex) {
-            const thing = this.thingAt(hex.q, hex.r);
-            const deadly = (!!thing && THINGS[thing.kind].traps) || !!this.targetAt(hex.q, hex.r);
+            const deadly = this.isTrap(hex) || !!this.targetAt(hex.q, hex.r);
             return deadly && PIECES[piece.kind].splats;
+        }
+
+        // Is there a Thing that traps on this hex?
+        isTrap(hex) {
+            const thing = this.thingAt(hex.q, hex.r);
+            return !!thing && THINGS[thing.kind].traps;
         }
 
         // Is this hex wet — water with nothing built over it?
@@ -453,10 +459,11 @@ const GameEngine = (function () {
             const splatsToo = splat && (res === 'moved' || res === 'blocked') && PIECES[piece.kind].splats;
             if (splatsToo) this.removePiece(piece);
             if (path.length) events.push({ type: 'move', id: piece.id, path });
-            if (hit) events.push({ type: 'splat', id: hit.id, by: piece.id });
+            if (hit) events.push({ type: 'splat', id: hit.id, by: piece.id, trap: false });
             if (res === 'sank') events.push({ type: 'sink', id: piece.id });
             if (res === 'delivered') events.push({ type: 'deliver', id: piece.id });
-            if (splatsToo || res === 'trapped') events.push({ type: 'splat', id: piece.id, by: null });
+            // A trapped piece died on a Trap or on a target; `trap` says which.
+            if (splatsToo || res === 'trapped') events.push({ type: 'splat', id: piece.id, by: null, trap: res === 'trapped' && this.isTrap(here) });
             return events;
         }
 
@@ -509,7 +516,12 @@ const GameEngine = (function () {
             const events = [];
             const moved = new Set();
 
-            for (const thing of s.things) {
+            // Things that reach ahead (Pusher, Puller) act first, so one beside a moving line
+            // catches the crate in front before a Belt carries it on; then the rest. Each
+            // group goes in placement order.
+            const reaches = t => THINGS[t.kind].shove > 0 || THINGS[t.kind].pull > 0;
+            const order = [...s.things.filter(reaches), ...s.things.filter(t => !reaches(t))];
+            for (const thing of order) {
                 const act = this.actionOf(thing);
                 if (!act || !act.piece || !this.affects(thing, act.piece) || moved.has(act.piece.id)) continue;
                 moved.add(act.piece.id);
@@ -534,8 +546,12 @@ const GameEngine = (function () {
                 events.push({ type: 'spawn', id: c.id, q: c.q, r: c.r });
             }
 
-            const gone = [...first.gone, ...events.filter(e => e.type === 'sink' || e.type === 'splat').map(e => kindOf.get(e.id))];
-            s.exGremlins += gone.filter(kind => kind === 'gremlin').length;
+            // Gremlins a Trap caught count in `trapped`; every other gremlin gone in `exGremlins`.
+            const ends = events.filter(e => e.type === 'sink' || e.type === 'splat');
+            const gone = [...first.gone, ...ends.map(e => kindOf.get(e.id))];
+            const trappedNow = ends.filter(e => e.trap && kindOf.get(e.id) === 'gremlin').length;
+            s.trapped += trappedNow;
+            s.exGremlins += gone.filter(kind => kind === 'gremlin').length - trappedNow;
             events.push(...this.emerge(gone));
 
             // One milestone event per milestone this tick's deliveries reached; each opens the
@@ -574,6 +590,15 @@ const GameEngine = (function () {
         }
 
         // Take a placed Thing off the board. The card is spent: nothing returns to the hand.
+        // Blow up the crate at (q, r): it's gone and counts as lost, then one tick. Only crates.
+        blast(q, r) {
+            const piece = this.pieceAt(q, r);
+            if (!piece || !PIECES[piece.kind].cargo) return { ok: false };
+            this.removePiece(piece);
+            this.state.lost++;
+            return this.tick({ events: [{ type: 'splat', id: piece.id, by: null, trap: false }], gone: [piece.kind] });
+        }
+
         remove(q, r) {
             const s = this.state;
             const thing = this.thingAt(q, r);

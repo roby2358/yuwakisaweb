@@ -63,12 +63,13 @@ everything; G-2 beats G-1 (a funny interaction that can't be read is a bug, not 
 | `sources` | `[{q, r, colors}]` | Where crates appear; each makes the crates of its `colors` (one or more). Things may sit on one. [D] |
 | `targets` | `[{q, r, color, delivered}]` | One per open color, in the order they opened: it takes only `color` crates, and `delivered` counts them. Nothing may be built on one. [D] |
 | `pieces` | `Piece[]` | Every crate and gremlin, in creation order. |
-| `things` | `Thing[]` | Every placed Thing, in placement order (the order they act). |
+| `things` | `Thing[]` | Every placed Thing, in placement order (the order they act, Pushers and Pullers first: Tick rule). |
 | `hand` | `{kind, color}[]` | Cards, length `HAND_SIZE`; `color` is `WHITE` or a crate color (Draw rule). |
 | `turn` | int ≥ 1 | Goes up by 1 per tick. |
 | `delivered` | int | Crates delivered, all colors together (milestones count this). |
 | `lost` | int | Crates that sank or were wrecked by a gremlin. |
-| `exGremlins` | int | Gremlins gone: sunk, splatted, or trapped (Tick rule). Shown in the tally. [D] |
+| `exGremlins` | int | Gremlins gone any way but a Trap: sunk, splatted, or killed on a target (Tick rule). Shown in the tally. [D] |
+| `trapped` | int | Gremlins a Trap caught (Tick rule). Shown in the tally. [D] |
 | `spawnTimer` | int | Ticks since a source last spawned (one timer for the board). |
 | `nextId` | int | Next piece id. |
 | `phase` | `'player' \| 'tick'` | `'tick'` only while a tick resolves inside a command. |
@@ -196,7 +197,7 @@ ends = generateMap(seed, GEN_MAX_ATTEMPTS) or (seed = knownGoodSeed; generateMap
 color = Rando.choice(CRATE_COLORS)
 sources = [{ends.source, colors: [color]}]; targets = [{ends.target, color, delivered: 0}]
 things = []; pieces = []; a crate of color on the source; spawnGremlins()
-hand = HAND_SIZE draws; turn = 1; delivered = lost = exGremlins = spawnTimer = 0
+hand = HAND_SIZE draws; turn = 1; delivered = lost = exGremlins = trapped = spawnTimer = 0
 ```
 
 ### Assign terrain [P]
@@ -298,8 +299,8 @@ if skids and it ran its full range onto bare ice: slide on with step(piece, dir,
 if flies and it came down on a target of another color: back to the hex before (the start if none)
 if flies and piece is still on the board, on open water: sink it      # came down on inland water
 elif flies and it came down on a Trap and PIECES[piece.kind].splats: remove it; res = 'trapped'
-if res == 'trapped': emit splat{id, by: null}
-if splat and piece didn't sink or deliver and PIECES[piece.kind].splats: remove piece; emit splat{id, by: null}
+if res == 'trapped': emit splat{id, by: null, trap: a Trap is on the hex}   # else it died on a target
+if splat and piece didn't sink or deliver and PIECES[piece.kind].splats: remove piece; emit splat{id, by: null, trap: false}
 ```
 A slide or a flight always ends: a straight line reaches the water edge. A Rocket's flight
 (`flies`, range `THINGS.ROCKET.push`) crosses movers, Bridges, ice, inland water and other
@@ -313,7 +314,7 @@ when a Trap is built under it.
 *Serves:* G-1. Runs once per command.
 ```
 phase = 'tick'; moved = {}; deliveredBefore = delivered
-for thing in things (placement order):
+for thing in things with shove or pull, then the rest (each in placement order):   # D-24
     mover:  p = piece on thing's hex;  dir = facing;            n = push
     Pusher: p = piece on hex 1 ahead;  dir = facing;            n = shove
     Puller: p = piece on hex 2 ahead;  dir = opposite(facing);  n = pull
@@ -327,7 +328,8 @@ if spawnTimer >= SOURCE_INTERVAL:
     color = Rando.choice(open colors); src = the source that makes color
     if no piece on src: a crate of color on src; spawnTimer = 0      # else the next tick rolls again
 gone = kinds of the command's own sink (remove) and this tick's sunk and splatted pieces
-exGremlins += count of 'gremlin' in gone
+trapped += count of gremlins whose splat has trap
+exGremlins += count of 'gremlin' in gone, less those trapped
 emerge(gone)
 for each milestone m with deliveredBefore < m <= delivered: emit milestone{count: m}; openColor()
 turn += 1; phase = 'player'
@@ -359,6 +361,9 @@ remove(q, r):  legal: a Thing stands at (q,r)
     things.remove(that Thing)                  # the card is spent; the hand is untouched
     if a piece stands there on open water: sink it (lost += 1 if cargo)
     tick(), with that sink as its first event and that kind in its emerge
+blast(q, r):   legal: a crate (PIECES cargo) stands at (q,r)        [D]
+    remove it; lost += 1                       # Things untouched; gremlins can't be blasted
+    tick(), with splat{id, by: null, trap: false} as its first event
 discard(slot): legal: 0 <= slot < HAND_SIZE                       [D]
     hand[slot] = draw(); tick()                # Things and the other cards untouched
 wait():        always legal; tick()
@@ -425,6 +430,7 @@ The code constant in `GameArtifacts` is the single source.
 | `place(slot, q, r, facing)` | see Commands rule | build, redraw slot, tick | `{ok, events}` |
 | `rotate(q, r)` | a Belt, Spring, Rocket, Pusher, or Puller is there | turn clockwise; no tick | `{ok, events: []}` |
 | `remove(q, r)` | any Thing is there | take it off (a piece left on open water sinks), tick | `{ok, events}` |
+| `blast(q, r)` | a crate is there | blow it up (lost +1), tick | `{ok, events}` |
 | `discard(slot)` | `0 <= slot < HAND_SIZE` | redraw that slot, tick | `{ok, events}` |
 | `wait()` | always | tick | `{ok, events}` |
 
@@ -444,7 +450,7 @@ Illegal → `{ ok:false }` and nothing changed (hand and `Rando` included).
 | `move` | `id, path: [{q,r}…]` — every hex entered, in order, including slides |
 | `sink` | `id` (the piece is gone after its last `move`, or where it stood if its Bridge was removed) |
 | `deliver` | `id` |
-| `splat` | `id, by` — a piece destroyed by a Rocket's flight, a Trap, or a gremlin's step: `by` is the flier or gremlin that landed on it, or null for the launched piece itself or a trapped piece (after its `move`) |
+| `splat` | `id, by, trap` — a piece destroyed by a Rocket's flight, a Trap, a target, a gremlin's step, or `blast`: `by` is the flier or gremlin that landed on it, or null for the launched piece itself, a trapped piece (after its `move`), or a blasted crate; `trap` is true only when a Trap killed it |
 | `spawn` | `id, q, r` — a new crate on a source, or a gremlin climbing out on the shore |
 | `milestone` | `count` — a milestone this tick's deliveries reached (after the tick's other events) |
 | `open` | `color, source: {q,r}, target: {q,r}` — the color that milestone opened, right after its `milestone` |

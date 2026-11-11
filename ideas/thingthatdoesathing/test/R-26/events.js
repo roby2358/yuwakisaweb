@@ -43,7 +43,7 @@ const { newGame, flatGame, DIR } = require('../helpers/load');
     const { events } = engine.wait();
     const mine = events.filter(e => e.id === gr.id);
     check('a launched gremlin: move, then splat', JSON.stringify(mine) ===
-        JSON.stringify([{ type: 'move', id: gr.id, path: [{ q: 1, r: 4 }, { q: 2, r: 4 }, { q: 3, r: 4 }] }, { type: 'splat', id: gr.id, by: null }]));
+        JSON.stringify([{ type: 'move', id: gr.id, path: [{ q: 1, r: 4 }, { q: 2, r: 4 }, { q: 3, r: 4 }] }, { type: 'splat', id: gr.id, by: null, trap: false }]));
 }
 // Replay check on real games (Rockets included, forced into the hand): applying events to the pre-tick positions reproduces the post-tick ones.
 for (const seed of [3, 4, 5]) {

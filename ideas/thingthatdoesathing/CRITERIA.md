@@ -54,12 +54,15 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | R-33 | a Rocket's flight and gremlins | a flier stopped by a gremlin splats it (`splat{id, by}`) and lands on its hex; a launched gremlin splats where it lands (`splat`, `by` null) unless it sank; splats aren't `lost`; other pushers never splat | automated |
 | R-34 | `discard(slot)` | the slot gets a fresh draw, one tick, Things and other cards untouched. Bad slot: `{ok:false}`, unchanged | automated |
 | R-35 | a gremlin comes onto a Trap | it dies (`splat`, `by` null, after its `move`) whether it wandered, was pushed, slid on ice, or came down from a flight (a Spring's skid included); a flight passing over a Trap doesn't trigger it; a Trap built under a gremlin doesn't kill it; crates cross Traps safely | automated |
-| R-36 | gremlins gone | `exGremlins` goes up by one for every gremlin sunk, splatted by a Rocket, killed by a Trap, or sunk by removing its Bridge; crates never count; a new game starts it at 0 | automated |
+| R-36 | gremlins gone | `exGremlins` goes up by one for every gremlin sunk, splatted by a Rocket, killed on a target, or sunk by removing its Bridge, but not one a Trap caught (R-42); crates never count; a new game starts it at 0 | automated |
 | R-37 | a gremlin's own step into a crate | the crate is wrecked (`splat{id: crate, by: gremlin}` after the gremlin's `move`), `lost` +1, nothing re-emerges, and the gremlin takes the hex; a gremlin pushed, pulled or flung into a crate is only blocked | automated |
 | R-38 | a milestone | opens the next color until `MAP_SIZES[size].colors`: a color not open yet, from an existing source (`ENHANCE_CHANCE`; both outcomes happen) or a new source in the left slice, with its target in the right slice on a free hex its source has a land path to; `open{color, source, target}` right after the `milestone`; nothing past the cap or with no free hex (the next milestone tries again); small never opens one | automated |
 | R-39 | a crate meets a target | its own color's target delivers it (walking, pushed, or crossing it in flight) and counts it in that target's `delivered` and the board's; another color's target is solid on the ground; a flight passes over it but drops one hex short rather than come down on it | automated |
 | R-40 | a colored Pusher or Puller | acts only on crates of its color and on every gremlin, leaving other crates where they are; a white one acts on every piece | automated |
 | R-41 | a Pusher during a tick | pushes the piece on the hex it faces `THINGS.PUSHER.shove` hexes on in its facing, through the same `step` (blocked, sinks, slides on ice); ignores a piece on its own hex; turns like any mover | automated |
+| R-42 | a gremlin caught by a Trap | `trapped` goes up by one (and `exGremlins` doesn't), whether it was pushed or came down from a flight; its `splat` carries `trap: true`, every other splat `trap: false`; a new game starts it at 0 | automated |
+| R-43 | the order Things act in a tick | Pushers and Pullers act before every other Thing, each group in placement order, so one built beside a running Belt line catches the crate in front of it whichever was placed first | automated |
+| R-44 | `blast(q, r)` | on a crate: the crate is gone, `lost` +1, its `splat` (`by` null) leads the events, Things untouched, one tick. On a gremlin or an empty hex: `{ok:false}`, state and `Rando` unchanged | automated |
 
 ---
 
@@ -76,17 +79,18 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | U-7 | Esc and right-click put the card back; a click on a non-yellow hex also does | manual — try all three with a card picked |
 | U-8 | Space, Enter, and Wait all tick; none of them, nor clicks, act during the animation or an overlay | manual — mash Space mid-animation |
 | U-9 | Each Thing is recognizable by look alone: belt chevrons, spring coil, rocket, puller magnet, wall bricks, trap jaws, bridge planks | manual — glance test |
-| U-10 | The HUD (top left) shows Turn; the tally (top right) shows Delivered k / next milestone with a bar, Ex-gremlins, and crates lost (only once one is lost); the hover bar names terrain, Thing (with its verb), and piece | manual — hover a crate on a belt, then lose one at sea and trap a gremlin |
+| U-10 | The HUD (top left) shows Turn; the tally (top right) shows Delivered k / next milestone with a bar, Ex-gremlins, Trapped, and crates lost (only once one is lost); the hover bar names terrain, Thing (with its verb), and piece | manual — hover a crate on a belt, then lose one at sea and trap a gremlin |
 | U-11 | Reaching a milestone shows a banner ("IT DOES THE THING" for the first, "N crates!" after) with crates, turns, the next milestone, and crates lost; it hides on its own and play never stops | manual — run a line past 10 and 20 |
 | U-12 | With no card picked or with one picked, `D` over a placed Thing removes it and ticks; the hover bar says "D to remove"; a crate on a removed Bridge fades where it stood | manual — remove a Belt, then a Bridge with a crate on it |
 | U-13 | A green Go button sits top centre; Go ticks on its own until Pause, picking a card holds it so you can place, and the button reads Pause while running | manual — press Go, pick and place a card mid-run, press Pause |
 | U-14 | The intro and New Game both show the four board sizes (click or `1`–`4`); nothing else closes the intro; Esc or Keep playing closes New Game and the game goes on | manual — open the page, press Space, then pick; press New Game, then Esc |
 | U-15 | A Discard spot sits right of the cards; it lights up while a card is picked, and clicking it (or `X`) throws that card away and ticks; with no card picked it does nothing | manual — pick a card, click Discard; click it with nothing picked |
 | U-16 | A Rocket's flight is one long hop-by-hop slide; a gremlin it hits bursts in its own color when the flier lands, with a splat sound; a launched gremlin bursts where it lands | manual — rocket a crate into a gremlin, then a gremlin into a Wall |
-| U-17 | A gremlin that walks or is pushed onto a Trap bursts there with a splat sound, Ex-gremlins goes up, and a new gremlin appears on the shore | manual — belt a gremlin onto a Trap |
+| U-17 | A gremlin that walks or is pushed onto a Trap bursts there with a splat sound, Trapped goes up, and a new gremlin appears on the shore | manual — belt a gremlin onto a Trap |
 | U-18 | A gremlin that steps onto a crate: the crate bursts in its color as the gremlin arrives, and the lost count goes up | manual — watch a gremlin beside a stalled crate |
 | U-19 | Each target is ringed in its color, with a black line just inside, and a ★; a source shows one pip per color it makes; once a second color opens, the tally shows a count per color; the milestone banner names a color it opened; the hover bar names a source's colors and a target's color | manual — reach 10 on a medium board |
 | U-20 | A Pusher shows a ram with a chevron; Pushers and Pullers draw their glyph in white or their color, on the board, the ghost and the card; a colored card reads e.g. "Red Pusher" and says "only red crates, and gremlins" | manual — reach 10 on a medium board and draw a colored card |
+| U-21 | `B` over a crate bursts it in its color and the lost count goes up; over a gremlin or empty hex nothing happens | manual — jam a line and press B on a crate |
 
 ---
 

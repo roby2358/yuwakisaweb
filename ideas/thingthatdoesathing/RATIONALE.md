@@ -235,7 +235,7 @@ ARCHITECTURE_LOG.md.
 - **Evidence:** R-32, R-33, R-31 (splats re-emerge), R-26 (splat events). Unmeasured in
   play: the bot discards Rockets.
 
-### D-18 The Trap: a gremlin that comes onto it dies, and a new one climbs out; Ex-gremlins counts them — *Decided (kills on arrival, re-emerge, weight as Rocket, the tally), Proposed (passing flights and building under a gremlin don't trigger; the count includes sinks and splats)*
+### D-18 The Trap: a gremlin that comes onto it dies, and a new one climbs out; Trapped counts them, Ex-gremlins counts the rest — *Decided (kills on arrival, re-emerge, weight as Rocket, the tally, Trapped apart from Ex-gremlins), Proposed (passing flights and building under a gremlin don't trigger; target kills count as Ex-gremlins)*
 - **Alternatives:** a Trap that catches crates too; one that holds a gremlin in place
   instead of killing it; one that's used up after a kill; gremlins that learn to wander
   around Traps; counting only trap kills.
@@ -248,10 +248,13 @@ ARCHITECTURE_LOG.md.
   only avoid water), so a Trap beside a line takes gremlins out over time without any
   pushing. The kill reuses `splat` (by null), so the client animates and sounds it like a
   Rocket's. Because gremlins re-emerge (D-14), a Trap thins traffic rather than clearing
-  the board. `exGremlins` counts every gremlin gone however it went, as "ex-" reads; it
-  sits in the top-right tally with deliveries, a score for comedy (G-1) beside the
-  turn score.
-- **Evidence:** R-35, R-36, R-31 (splats re-emerge); U-17 (manual). Unmeasured in play: the
+  the board. The designer asked for trap catches to be counted on their own: `trapped`
+  counts gremlins a Trap caught, and `exGremlins` every other gremlin gone (sunk,
+  splatted, killed on a target). Both sit in the top-right tally with deliveries, scores
+  for comedy (G-1) beside the turn score. The `splat` event carries `trap` so the tick
+  counts from events alone; a target kill isn't a catch the player built a Trap for, so it
+  stays in Ex-gremlins.
+- **Evidence:** R-35, R-36, R-42, R-31 (splats re-emerge); U-17 (manual). Unmeasured in play: the
   bot discards Traps.
 
 ### D-16 Discard: pick a card, then the Discard spot (or `X`); it ticks — *Decided (discard, ticks), Proposed (key X)*
@@ -279,6 +282,26 @@ ARCHITECTURE_LOG.md.
 ---
 
 ## Platform (inherited from the Hex & Counters base)
+
+### D-25 `blast` blows up a stuck crate: a free command, crates only, counts as lost — *Decided*
+- **Alternatives:** a Bomb card (scarce, from the hand); a Crusher fixture that crushes a
+  crate that sat still a tick; a bigger blast (neighbors, or the Thing too); blasting
+  gremlins as well; a separate "blown up" tally.
+- **Why:** the designer asked for a way to clear a crate jammed on the line, and picked a
+  free command with these answers: one hex, crates only, counted as lost. It costs a tick
+  and a crate, like `remove` costs a tick and a card, so it's a repair, not a free reset.
+  The kill reuses `splat` (by null) so the client bursts it like any other.
+- **Evidence:** R-44; U-21 (manual). Unmeasured in play: the bot never blasts.
+
+### D-24 Pushers and Pullers act before the other Things in a tick — *Proposed*
+- **Alternatives:** pure placement order (the old rule); letting a Pusher or Puller move a
+  piece that already moved this tick; acting after the Belts.
+- **Why:** in pure placement order a Pusher or Puller built after the Belt line beside it
+  never fired: the Belt had already moved the crate in front, and each piece moves at most
+  once (R-13). Players build the line first and the diverter second, so it read as broken.
+  Reaching first makes it a diverter wherever it was built, keeps one move per piece, and is
+  one partition of the loop, not a per-Thing priority.
+- **Evidence:** R-43. Unmeasured in play: the bot discards Pushers and Pullers.
 
 ### D-9 Five-module split, plain `<script>` globals, seeded `Rando` — *Decided*
 - **Alternatives:** single file; ES modules.

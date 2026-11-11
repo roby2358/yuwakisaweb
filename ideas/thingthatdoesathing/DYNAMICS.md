@@ -41,7 +41,7 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
   gone. It splats gremlins it
   hits and gremlins that ride it, but they climb back out on the shore.
 - **Trap** → feeds comedy and gives gremlins a cost: a gremlin that wanders, rides or slides
-  onto it is done for, and the Ex-gremlins count climbs. A new one climbs out on the shore,
+  onto it is done for, and the Trapped count climbs. A new one climbs out on the shore,
   so a Trap thins traffic beside your line rather than clearing it.
 - **Discard (`X`)** → feeds scarcity of agency: a card you can't use costs a turn to throw
   away, so the choice between building the odd card and binning it stays real.
@@ -70,7 +70,7 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
 
 1. You **place** a card, **discard** one, **remove** a Thing, or **wait**. You may also
    **rotate** movers first, as many as you like: turning doesn't tick.
-2. **Tick:** Things act in placement order (Belts, Springs and Rockets on the piece on them, Pushers on the piece in front, Pullers on the
+2. **Tick:** Pushers and Pullers act first, then the other Things, each in placement order (Belts, Springs and Rockets on the piece on them, Pushers on the piece in front, Pullers on the
    piece two hexes ahead), each piece moving at most once.
    A Rocket's piece flies up to its range, over lakes. Unmoved gremlins wander. The source may
    spawn a crate.

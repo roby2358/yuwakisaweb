@@ -46,9 +46,9 @@ headless; `GameUI` is the only browser-coupled code.
 | `displayartifacts.js` | `GameDisplayArtifacts` | Client-only: `HEX_SIZE`, `COUNTER_SIZE`, `HOP_MS`, terrain colors/names, `THING_LOOK` (name, verb line, colors, inset), `PIECE_LOOK` (hover name), `CRATE_SHADES`, `MAP_SIZE_NOTES` (size-picker notes), port colors. |
 | `piece.js` | `Piece` | A positioned token. Crates and gremlins are `Piece`s with engine-set `id` and `kind`. |
 | `board.js` | `Board` | Query layer over the hex `Map` (passable = land). |
-| `gamestate.js` | `GameState` | Serializable data: `sources` (`{q, r, colors}`), `targets` (`{q, r, color, delivered}`), `pieces`, `things` (`{kind, color, q, r, facing}`), `hand` (`{kind, color}` cards), `turn`, `delivered`, `lost`, `exGremlins`, `spawnTimer`, `nextId`, `phase`, `size`. |
-| `gameengine.js` | `GameEngine` | Generation + rules. `newGame(seed, size)` takes the seed from the caller (the UI rolls it) and a `MAP_SIZES` key (the player picks it). Commands `place`/`remove`/`discard`/`wait` each run one `tick()` and return `{ ok, events }`; `rotate` doesn't tick (`events: []`, D-19); a tick that reaches a milestone emits `milestone{count}`, then `open{color, source, target}` if it opened a color. One `step()` handles every movement (movers, springs, rockets, ice slides, gremlins); a Rocket's flight emits `splat` for gremlins it destroys. |
-| `gameui.js` | `GameUI` | Canvas, HUD (top left), tally (top right: delivered, ex-gremlins, lost), the hand, input, and the tick animation, which is driven only by the events the engine returns. |
+| `gamestate.js` | `GameState` | Serializable data: `sources` (`{q, r, colors}`), `targets` (`{q, r, color, delivered}`), `pieces`, `things` (`{kind, color, q, r, facing}`), `hand` (`{kind, color}` cards), `turn`, `delivered`, `lost`, `exGremlins`, `trapped`, `spawnTimer`, `nextId`, `phase`, `size`. |
+| `gameengine.js` | `GameEngine` | Generation + rules. `newGame(seed, size)` takes the seed from the caller (the UI rolls it) and a `MAP_SIZES` key (the player picks it). Commands `place`/`remove`/`blast`/`discard`/`wait` each run one `tick()` and return `{ ok, events }`; `rotate` doesn't tick (`events: []`, D-19); a tick that reaches a milestone emits `milestone{count}`, then `open{color, source, target}` if it opened a color. One `step()` handles every movement (movers, springs, rockets, ice slides, gremlins); a Rocket's flight emits `splat` for gremlins it destroys. |
+| `gameui.js` | `GameUI` | Canvas, HUD (top left), tally (top right: delivered, ex-gremlins, trapped, lost), the hand, input, and the tick animation, which is driven only by the events the engine returns. |
 
 Libs: `hex.js` (axial math, `NEIGHBOR_DIRS` = facing order E, NE, NW, W, SW, SE;
 `Hex.clockwise` is `(f+5)%6`, plus `Hex.counterClockwise`, `Hex.opposite`, `Hex.same`), `rando.js` (seeded RNG), `colortheory.js` (gremlin colors), `sound.js`
@@ -63,7 +63,7 @@ tick animation) → `picked` card → bare map click.
 - **L1.2 pick-then-act:** picking a card (click or `1`–`3`) computes
   `engine.legalPlacements(kind)` once; clicking a hex is a lookup into that set. `R`/wheel
   turn the ghost's facing. With no card picked, clicking a Belt/Spring/Rocket/Pusher/Puller calls `rotate`, which doesn't tick, so the UI just re-renders.
-  `D` calls `remove` on the hovered Thing. With a card picked, the Discard spot or `X` calls `discard`.
+  `D` calls `remove` on the hovered Thing; `B` calls `blast` on the hovered crate. With a card picked, the Discard spot or `X` calls `discard`.
 - **L2.1 primary action:** Wait button / Space / Enter → `engine.wait()`.
 - **L2.2:** Esc and right-click put the card back.
 - **L5:** the intro and New Game overlays are both board-size pickers (click or `1`–`4`); they
@@ -98,7 +98,7 @@ in `hexToScreen` / `screenToHex`.
 - **Things:** Belt pushes the piece on its own hex; the Spring and Rocket throw it 3 and 8 hexes (airborne: over inland water; a Spring skids on if it lands on ice), the Rocket splatting gremlins; a Trap kills a gremlin that comes onto it; the Pusher pushes the piece on the hex in front on; the Puller pulls the piece
   two hexes ahead back into the hex between (both come in white or a crate color: a colored one moves only its color's crates, and gremlins); a gremlin coming onto a target dies; Wall blocks; Bridge makes water crossable. One Thing per hex, none on a target; movers may be built
   under a piece.
-- **Tick:** Things in placement order (each piece moves at most once), unmoved gremlins
+- **Tick:** Pushers and Pullers first, then the other Things, each in placement order (each piece moves at most once), unmoved gremlins
   wander, every `SOURCE_INTERVAL` a random open color spawns at its source if clear; each milestone may open a color (`openColor`).
 - **Step:** blocked by off-map / mountain / Wall / piece; a gremlin on a Trap dies; open water sinks; bare ice slides
   free; a crate on its color's target is delivered (other colors' targets block it on the ground).

@@ -1,5 +1,6 @@
-// R-36: state.exGremlins counts every gremlin gone: sunk, splatted by a Rocket, killed by a
-// Trap, or sunk when its Bridge is removed. Crates never count; a new game starts it at 0.
+// R-36: state.exGremlins counts every gremlin gone except those a Trap caught (R-42): sunk,
+// splatted by a Rocket, killed on a target, or sunk when its Bridge is removed. Crates never
+// count; a new game starts it at 0.
 'use strict';
 const { check, done } = require('../helpers/check');
 const { newGame, flatGame, DIR } = require('../helpers/load');
@@ -13,7 +14,7 @@ const { newGame, flatGame, DIR } = require('../helpers/load');
     put('BELT', 3, 6, DIR.E); put('TRAP', 4, 6);
     piece('gremlin', 3, 4); piece('gremlin', 3, 6);
     engine.wait();
-    check('two trapped in one tick count 2', state.exGremlins === 2);
+    check('trapped gremlins do not count', state.exGremlins === 0);
 }
 {
     const { state, engine, put, piece, terrain, T } = flatGame();
@@ -28,6 +29,13 @@ const { newGame, flatGame, DIR } = require('../helpers/load');
     piece('gremlin', 0, 4);
     engine.wait();
     check('a splatted gremlin counts', state.exGremlins === 1);
+}
+{
+    const { state, engine, put, piece } = flatGame();
+    put('BELT', 9, 8, DIR.E);
+    piece('gremlin', 9, 8);   // pushed onto the red target at (10,8)
+    engine.wait();
+    check('a gremlin killed on a target counts', state.exGremlins === 1);
 }
 {
     const { state, engine, put, piece, terrain, T } = flatGame();

@@ -2,6 +2,21 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-11 — `blast` command blows up a crate (D-25)
+New engine command `blast(q, r)`: removes the crate there, `lost` +1, then ticks with its
+`splat` first. The UI binds `B` to the hovered hex, and the help lists it. R-44 and U-21 added.
+
+### 2026-11-11 — Pushers and Pullers act first in the tick (D-24)
+The tick loop used to run every Thing in placement order, so a Pusher or Puller placed after
+the Belt line beside it never acted (the Belt moved the crate first, R-13). Now Things with
+`shove` or `pull` run first, then the rest, each in placement order. R-43 added.
+
+### 2026-11-11 — Trapped gremlins counted apart from Ex-gremlins (D-18)
+New state field `trapped`; `exGremlins` no longer includes Trap kills (it still counts sinks,
+Rocket splats and target kills). Every `splat` event gained `trap` (true only for a Trap
+kill), and the tick counts both from events; new query `isTrap(hex)`, which `trapsPiece` now
+uses. The tally has a Trapped row. R-36 reworded, R-42 added; U-10 and U-17 name Trapped.
+
 ### 2026-11-11 — The Pusher, colored Pushers and Pullers, gremlins die on targets (D-22, D-23)
 New kind `PUSHER` and two new template fields on every `THINGS` row: `shove` (hexes it pushes
 the piece on the hex it faces, in its facing) and `colored` (Pusher, Puller). Things gained

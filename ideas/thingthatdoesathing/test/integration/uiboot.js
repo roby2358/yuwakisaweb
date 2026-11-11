@@ -243,13 +243,13 @@ run('a Rocket card draws, places, and its flight and splat animate', () => {
         const before = new Map([crate, gremlin].map(p => [p.id, { q: p.q, r: p.r, color: p.color, label: p.label, kind: p.kind }]));
         ui.startAnim(before, { events: [
             { type: 'move', id: crate.id, path: [{ q: crate.q + 1, r: crate.r }, { q: crate.q + 2, r: crate.r }] },
-            { type: 'splat', id: gremlin.id, by: crate.id },
+            { type: 'splat', id: gremlin.id, by: crate.id, trap: false },
         ] });
         if (ui.anim.tracks.get(gremlin.id).pts.length !== 3) throw new Error('the hit gremlin must wait for the flier');
         settle();
     }
 });
-run('a Trap card places, and the tally shows ex-gremlins', () => {
+run('a Trap card places, and the tally shows ex-gremlins and trapped', () => {
     const s = ui.state;
     s.hand[0] = { kind: 'TRAP', color: 'white' };
     ui.render();
@@ -259,8 +259,10 @@ run('a Trap card places, and the tally shows ex-gremlins', () => {
     if (!s.things.some(t => t.kind === 'TRAP')) throw new Error('Trap not placed');
     settle();
     s.exGremlins = 7;
+    s.trapped = 4;
     ui.updateHUD();
     if (String(els['ex-info'].textContent) !== '7') throw new Error('Ex-gremlins not in the tally');
+    if (String(els['trap-info'].textContent) !== '4') throw new Error('Trapped not in the tally');
 });
 run('a game plays through the UI to the first milestone banner', () => {
     // Fresh board: earlier steps dropped random Things that this bot can't plan around.
