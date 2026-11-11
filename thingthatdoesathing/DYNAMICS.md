@@ -57,8 +57,12 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
 - **Remove (`D`)** → makes any misplacement fixable at the price of the card and a turn,
   so building stays an investment. Pulling a Bridge out from under a gremlin is a joke
   you can set up on purpose.
-- **`SOURCE_INTERVAL`** → paces the factory; a jammed source just waits, and while other
-  colors are open, the crates go to them instead.
+- **`SPAWN_INTERVAL` and the crate cap** → pace the factory. Every third tick a source may
+  spawn, but only while the board holds fewer crates than its cap (bigger boards hold more,
+  and each milestone adds one). A jammed source just waits for the next chance, and while
+  other colors are open, the crates go to them instead. A line full of stuck crates throttles
+  itself, so a jam shows up as a quiet source rather than a flood; clearing it (or blasting
+  a crate) lets the stream start again.
 - **Colored Pushers and Pullers** → feed readable consequences and accumulation: a red
   Pusher beside a mixed line knocks off only the red crates, and a
   red Puller reaches in for them. Gremlins are moved by every color, so a sorter is never a
@@ -79,8 +83,8 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
    **rotate** movers first, as many as you like: turning doesn't tick.
 2. **Tick:** Pushers and Pullers act first, then the other Things, each in placement order (Belts, Springs and Rockets on the piece on them, Pushers on the piece in front, Pullers on the
    piece two hexes ahead), each piece moving at most once.
-   A Rocket's piece flies up to its range, over lakes. Unmoved gremlins wander. The source may
-   spawn a crate.
+   A Rocket's piece flies up to its range, over lakes. Unmoved gremlins wander. Every third
+   tick a source may spawn a crate, if the board is under its crate cap.
 
 ## Strategies
 

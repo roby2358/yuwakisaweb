@@ -73,7 +73,7 @@ everything; G-2 beats G-1 (a funny interaction that can't be read is a bug, not 
 | `exGremlins` | int | Gremlins gone any way but a Trap: sunk, splatted, or killed on a target (Tick rule). Shown in the tally. [D] |
 | `trapped` | int | Gremlins a Trap caught (Tick rule). Shown in the tally. [D] |
 | `idleTicks` | int | Ticks in a row with no card used (`place`, `discard`); at `IDLE_REDRAW_TICKS` one card is redrawn (Tick rule). [D] |
-| `spawnTimer` | int | Ticks since a source last spawned (one timer for the board). |
+| `spawnTimer` | int | Ticks since the last spawn chance (one timer for the board; a chance every `SPAWN_INTERVAL`). The crate cap isn't stored: it's `crateCap(size)` plus `milestonesReached(delivered)` (D-31). |
 | `nextId` | int | Next piece id. |
 | `phase` | `'player' \| 'tick'` | `'tick'` only while a tick resolves inside a command. |
 
@@ -343,9 +343,11 @@ for piece with PIECES[kind].wanders, not in moved (creation order):
     dirs = directions whose neighbor is land or covered water (Bridge, Slide), no blocking Thing, and empty or holding cargo it wrecks
     if dirs: push(piece, Rando.choice(dirs), {n: 1, splat: false, flies: false, skids: false, wrecks: PIECES[kind].wrecks})
 spawnTimer += 1
-if spawnTimer >= SOURCE_INTERVAL:
-    color = Rando.choice(open colors); src = the source that makes color
-    if no piece on src: a crate of color on src; spawnTimer = 0      # else the next tick rolls again
+if spawnTimer >= SPAWN_INTERVAL:                                    # a spawn chance (D-31)
+    spawnTimer = 0
+    if crates on the board < crateCap(size) + milestonesReached(delivered):
+        color = Rando.choice(open colors); src = the source that makes color
+        if no piece on src: a crate of color on src; emit spawn{id, q, r}   # else nothing until the next chance
 idleTicks = 0 if the command used a card (place, discard) else idleTicks + 1   # D-26
 if idleTicks >= IDLE_REDRAW_TICKS: slot = Rando.int(0, HAND_SIZE-1); hand[slot] = draw(); idleTicks = 0; emit redraw{slot}
 gone = kinds of the command's own sink (remove) and this tick's sunk and splatted pieces
@@ -419,7 +421,8 @@ The code constant in `GameArtifacts` is the single source.
 | `MAP_SIZES.*.colors` | 1 / 2 / 3 / 4 | most colors the board opens [D] |
 | `ENHANCE_CHANCE` | 0.5 | chance a new color comes out of an existing source [D] |
 | `FIRST_MILESTONE` | 10 | crates (then the 1-2-5 series, forever) |
-| `SOURCE_INTERVAL` | 3 | ticks between crates, board-wide, shared by every color [D] |
+| `SPAWN_INTERVAL` | 3 | ticks between spawn chances, board-wide, shared by every color [D] |
+| `CRATE_HEXES_PER_CAP` | 20 | hexes of board area per crate of the cap; `crateCap(size)` = max(1, round(cols × rows / this)): small 8, medium 20, large 45, huge 180; +1 per milestone reached (D-31) [T] |
 | `HAND_SIZE` | 3 | cards |
 | `IDLE_REDRAW_TICKS` | 10 | ticks in a row with no card used before one random card is redrawn (D-26) |
 | `CRATE_COLORS` | red, green, blue, yellow | the colors a game can open [D] |

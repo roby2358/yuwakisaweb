@@ -90,7 +90,7 @@ ARCHITECTURE_LOG.md.
   stream lumpy; one board clock means the crate rate doesn't grow with colors, so each line
   gets slower as colors open. A wrong target is solid on the ground so a mis-sorted crate
   jams where you can see it (G-2), but a Rocket flies over it, so long shots stay
-  possible. Rerolling the next tick means a jammed color mostly lets the others through.
+  possible. Rerolling at the next spawn chance means a jammed color mostly lets the others through (D-31).
   Small boards stay one color: the whole contraption still fits the screen.
 - **Evidence:** R-38, R-39, R-19, U-19 (manual). The bot measures only the first milestone,
   which comes before any color opens, so `just cc-sim` can't see this yet:
@@ -129,7 +129,7 @@ ARCHITECTURE_LOG.md.
   a Pusher shoves the piece in front of it, a Puller acts at a distance without needing a Thing under the piece, a Wall shuts a hex, a
   Trap kills gremlins that come onto it, a Bridge opens water and carries what's on it (D-27).
 - **Why not the Spinner:** it pushed crates the opposite way on alternate arrivals. Crates
-  arrive about every `SOURCE_INTERVAL` ticks, and with that at 3 the Spinner had turned
+  arrived about every 3 ticks (the spawn interval, now `SPAWN_INTERVAL`), and with that the Spinner had turned
   halfway round each time. In the bot's lines it was mostly a hazard. The designer replaced
   it with the Puller.
 - **What the Puller is for:** grabbing a piece off bare ground with no Thing under it, such
@@ -416,6 +416,35 @@ ARCHITECTURE_LOG.md.
   The bot only measures the first milestone, where the deck is now Belt-heavy (6 of 10
   weight, was 6 of 15): it never sees a Spring before then, but it gets more Belts, so it's a
   little faster. No numbers retuned. Unmeasured in play.
+
+### D-31 Crates spawn up to a cap that scales with board area and grows by one per milestone — *Decided (a cap scaled by area, a chance every third tick, +1 per milestone reached), Proposed (unreviewed: the rest)*
+- **Alternatives:** the fixed timer it replaced (`SOURCE_INTERVAL`: a crate every 3 ticks
+  whenever the rolled source was clear, retried every tick while jammed); a cap per color or
+  per source; a cap with a fixed base plus a per-area term; storing a bonus counter in state.
+- **Why:** the designer asked for it (pjpd crate-cap-hybj). Under the timer a stalled line kept
+  pouring crates onto the board until every source jammed; a cap makes a big factory's crate
+  population follow the board and the player's progress instead. The cap is
+  `crateCap(size)` = max(1, round(cols × rows / `CRATE_HEXES_PER_CAP`)), the same shape as
+  `gremlinDice`, plus `milestonesReached(delivered)`: one more per milestone (10, 20, 50, …),
+  so a tick that crosses several milestones (`reachMilestones`) raises it by each.
+- **Unreviewed calls:** (1) The bonus is derived from `delivered`, not stored: the 1-2-5
+  series already says how many milestones a count has reached, so state keeps only
+  `spawnTimer`. (2) `spawnTimer` now resets on every chance, spawn or not; a jammed source (or
+  a full board) waits for the next chance, three ticks on, rather than retrying the next tick
+  as the old timer did. It keeps "every third tick" literal and makes the rhythm steady.
+  (3) One cap for the whole board, counting every crate of every color, as one board clock
+  already did (D-21); a chance rolls one open color and spawns nothing if that source is
+  occupied (no reroll to another color). (4) Gremlins don't count toward the cap. (5)
+  `CRATE_HEXES_PER_CAP` = 20 gives small 8, medium 20, large 45, huge 180. Before the first
+  milestone the bot peaks at 8 / 14 / 21 / 45 crates on those boards, so only small's cap
+  binds then, and at 20 it doesn't slow the bot (30 gave small a cap of 5 and median 56).
+  The cap is meant to bite later, when several colors run and lines back up; huge's linear
+  scaling makes it nearly uncapped, which may want a sqrt-of-area shape after playtest.
+- **Evidence:** R-19. `Measured by: just cc-sim` (sim now also prints mean and peak crates on
+  the board), before → after: small 200 games median 49 → 49 (p10 43 → 43, p90 57 → 58,
+  2.08 lost/game both); medium 200 games median 60 → 61 (p90 71 → 70); large 100 games
+  median 81 → 79 (p90 93 → 96); huge 50 games median 143 → 143 (p90 168 → 174). The bot
+  stops at the first milestone, so the per-milestone growth is unmeasured; unmeasured in play.
 
 ### D-24 Pushers and Pullers act before the other Things in a tick — *Proposed*
 - **Alternatives:** pure placement order (the old rule); letting a Pusher or Puller move a

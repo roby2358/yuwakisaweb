@@ -7,8 +7,8 @@
 // Every command re-checks its own legality; every legal command but rotate runs exactly one tick. All randomness goes through the seeded Rando.
 const GameEngine = (function () {
     const {
-        TERRAIN, THINGS, UNLOCKS, PIECES, CRATE_COLORS, WHITE, aims, nextMilestone, MAP_SIZES, SOURCE_INTERVAL, ENHANCE_CHANCE, HAND_SIZE, IDLE_REDRAW_TICKS,
-        gremlinDice, GREMLIN_DICE_SIDES,
+        TERRAIN, THINGS, UNLOCKS, PIECES, CRATE_COLORS, WHITE, aims, nextMilestone, MAP_SIZES, SPAWN_INTERVAL, ENHANCE_CHANCE, HAND_SIZE, IDLE_REDRAW_TICKS,
+        gremlinDice, GREMLIN_DICE_SIDES, crateCap, milestonesReached,
         GEN_MAX_ATTEMPTS, HEIGHTMAP_ROUGHNESS,
         WATER_PCT, MOUNTAIN_PCT, ICE_FRAC, PLACE_SLICE_FRAC, PLACE_SLICE_MIN
     } = GameArtifacts;
@@ -66,6 +66,16 @@ const GameEngine = (function () {
         // The colors open so far, in the order they opened.
         openColors() {
             return this.state.targets.map(t => t.color);
+        }
+
+        // Crates on the board now, and how many it may hold: the size's cap plus one per
+        // milestone reached.
+        crateCount() {
+            return this.state.pieces.filter(p => PIECES[p.kind].cargo).length;
+        }
+
+        crateMax() {
+            return crateCap(this.state.size) + milestonesReached(this.state.delivered);
         }
 
         sourceOf(color) {
@@ -583,14 +593,15 @@ const GameEngine = (function () {
                 if (dirs.length) events.push(...this.push(p, Rando.choice(dirs), wanderOf(p)));
             }
 
-            // When the timer is ready, roll an open color; its source makes the crate if it's
-            // clear, else nothing this tick (the next tick rolls again).
+            // Every SPAWN_INTERVAL ticks, a spawn chance: under the crate cap, roll an open color;
+            // its source makes the crate if it's clear, else nothing until the next chance.
             s.spawnTimer++;
-            const color = s.spawnTimer >= SOURCE_INTERVAL ? Rando.choice(this.openColors()) : null;
+            const chance = s.spawnTimer >= SPAWN_INTERVAL;
+            if (chance) s.spawnTimer = 0;
+            const color = chance && this.crateCount() < this.crateMax() ? Rando.choice(this.openColors()) : null;
             const src = color && this.sourceOf(color);
             if (src && !this.pieceAt(src.q, src.r)) {
                 const c = this.spawnCrate(color, src);
-                s.spawnTimer = 0;
                 events.push({ type: 'spawn', id: c.id, q: c.q, r: c.r });
             }
 

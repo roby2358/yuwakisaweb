@@ -105,6 +105,20 @@ const GameArtifacts = (function () {
     // its area, rounded, at least one. Small 1, medium 3, large 6, huge 23.
     const gremlinDice = size => Math.max(1, Math.round(MAP_SIZES[size].cols * MAP_SIZES[size].rows / GREMLIN_HEXES_PER_DIE));
 
+    const CRATE_HEXES_PER_CAP = 20;   // one crate of the board's cap per this many board hexes
+
+    // How many crates a board size holds at once before any milestone: one per
+    // CRATE_HEXES_PER_CAP of its area, rounded, at least one: small 8, medium 20, large 45, huge 180.
+    // Each milestone reached adds one (D-31, R-19).
+    const crateCap = size => Math.max(1, Math.round(MAP_SIZES[size].cols * MAP_SIZES[size].rows / CRATE_HEXES_PER_CAP));
+
+    // How many milestones `delivered` crates have reached (0 below FIRST_MILESTONE).
+    const milestonesReached = delivered => {
+        let n = 0;
+        for (let m = nextMilestone(0); m <= delivered; m = nextMilestone(m)) n++;
+        return n;
+    };
+
     // Does this kind of Thing have a facing (it pushes, pulls or shoves)? Only those can be turned.
     const aims = kind => THINGS[kind].push > 0 || THINGS[kind].pull > 0 || THINGS[kind].shove > 0;
 
@@ -118,6 +132,8 @@ const GameArtifacts = (function () {
         aims,
         nextMilestone,
         gremlinDice,
+        crateCap,
+        milestonesReached,
         // Passability for Board: land is enterable, water and mountain are not. Water
         // still *accepts* a pushed piece (it sinks); that's the step rule, not this table.
         MOVEMENT_COST: {
@@ -129,7 +145,8 @@ const GameArtifacts = (function () {
         MAP_SIZES,
 
         FIRST_MILESTONE,
-        SOURCE_INTERVAL: 3,          // ticks between crates, board-wide (if the rolled color's source is clear)
+        SPAWN_INTERVAL: 3,           // ticks between spawn chances, board-wide (a crate comes if under the cap and the rolled color's source is clear)
+        CRATE_HEXES_PER_CAP,
         ENHANCE_CHANCE: 0.5,         // a newly opened color comes out of an existing source, else a new one
         HAND_SIZE: 3,
         IDLE_REDRAW_TICKS: 10,       // ticks in a row with no card used (place or discard) before one random card is redrawn

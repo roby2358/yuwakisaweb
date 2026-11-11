@@ -7,7 +7,8 @@ while it runs. Pick the board at New Game: 16 × 10 fits the screen; 20 × 20, 3
 crate color (up to 2 on 20 × 20, 3 on 30 × 30, 4 on 60 × 60), with its own target: half the
 time from a new source, half the time from one already running, so a line has to split. A
 target takes only its color; other colors can't get onto it, though a Rocket flies over.
-Crates keep coming at the same rate, a random open color each time.
+Crates keep coming every third tick, a random open color each time, until the board holds its
+cap (more on bigger boards, one more per milestone).
 Every Thing does exactly one thing, every tick.
 
 Forked from the Hex & Counters base (`../ideas/hexandcounter`). See [DYNAMICS.md](DYNAMICS.md)

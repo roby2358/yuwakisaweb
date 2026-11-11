@@ -2,6 +2,14 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-11 — Crate spawning caps by board area
+`SOURCE_INTERVAL` (a crate every 3 ticks whenever the rolled source was clear, retried each
+tick while jammed) became `SPAWN_INTERVAL` (a spawn chance every 3 ticks) plus a crate cap:
+`crateCap(size)` = max(1, round(area / `CRATE_HEXES_PER_CAP` = 20)) plus
+`milestonesReached(delivered)`, both new in artifacts.js. The engine gained `crateCount()` and
+`crateMax()`; `spawnTimer` now resets on every chance. No new state field. `test/sim.js`
+also prints mean and peak crates on the board. D-31 added, D-21 touched; R-19 updated.
+
 ### 2026-11-11 — Cards unlock one step per milestone
 Every kind used to be in the deck from turn 1. A new `UNLOCKS` list in artifacts.js orders the
 kinds in steps (Belt/Bridge/Wall/Trap, then Pusher+Puller, Slide, Spring, Rocket); a new game

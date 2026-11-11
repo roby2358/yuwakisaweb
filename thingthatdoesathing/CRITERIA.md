@@ -37,7 +37,7 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | R-16 | a piece entering a target | a crate of its color is removed and `delivered` +1; a gremlin that comes onto any target dies (`splat`, `by` null, after its `move`; `exGremlins` +1, a new one climbs out), but not when a flight carries it over | automated |
 | R-17 | a spinner during a tick | the Spinner was replaced by the Puller (R-28) | retired |
 | R-18 | gremlins in a tick | each unmoved gremlin steps to a random enterable (or crate-holding) non-water neighbor or stays; boxed in → stays; never walks into open water; pieces never share a hex | automated |
-| R-19 | ticks | `spawnTimer` counts up; at `SOURCE_INTERVAL` the tick rolls an open color, and if that color's source is empty a crate of that color spawns there and the timer resets; if it's occupied nothing spawns and the next tick rolls again | automated |
+| R-19 | ticks | `spawnTimer` counts up; at `SPAWN_INTERVAL` the tick is a spawn chance and the timer resets; on a chance, if the crates on the board number fewer than `crateCap(size)` (max(1, round(area / `CRATE_HEXES_PER_CAP`))) plus one per milestone reached, the tick rolls an open color, and if that color's source is empty a crate of that color spawns there; at the cap, or with that source occupied, nothing spawns until the next chance | automated |
 | R-20 | (a final win at `DELIVER_GOAL`) | — | retired |
 | R-21 | two games, same seed | identical terrain, source, target, pieces, hand; different seeds differ | automated |
 | R-22 | two engines, same seed and commands | identical state and events after every command; the engine never calls `Math.random` | automated |

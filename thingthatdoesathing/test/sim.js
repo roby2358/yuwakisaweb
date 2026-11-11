@@ -6,7 +6,7 @@
 // thrown away with discard() (the bot doesn't plan pulls or flights). Reports turns to the first
 // milestone (FIRST_MILESTONE crates). Before then only the first UNLOCKS step is dealt (Belt,
 // Bridge, Wall, Trap; D-30), so in practice the bot builds from Belts alone. Not a test (no pass/fail); it's the evidence behind
-// FIRST_MILESTONE, SOURCE_INTERVAL and friends.
+// FIRST_MILESTONE, SPAWN_INTERVAL, CRATE_HEXES_PER_CAP and friends. Also prints the mean and peak crates on the board.
 'use strict';
 
 const { newGame } = require('./helpers/load');
@@ -42,12 +42,16 @@ function dirTo(g, a, b) {
 
 const results = [];
 let lostTotal = 0;
+let crateTicks = 0, ticks = 0, peak = 0;
+const cratesOn = state => state.pieces.filter(p => p.kind === 'crate').length;
 for (let i = 0; i < GAMES; i++) {
     const { g, state, engine } = newGame(5000 + i, SIZE);
     const goal = g.GameArtifacts.FIRST_MILESTONE;
     const path = shortestPath(engine, g, state.sources[0], state.targets[0]);
     let res = { ok: true };
     while (state.delivered < goal && state.turn < CAP) {
+        const n = cratesOn(state);
+        crateTicks += n; ticks++; peak = Math.max(peak, n);
         // Next path hex (excluding the target) that has no mover facing the right way.
         let todo = -1;
         for (let j = 0; j < path.length - 1; j++) {
@@ -81,4 +85,4 @@ results.sort((a, b) => a - b);
 const q = p => results[Math.floor(p * (results.length - 1))];
 const wins = results.filter(t => t < CAP).length;
 console.log(`${SIZE}  games ${GAMES}  reached first milestone ${wins}  turns p10 ${q(0.1)}  median ${q(0.5)}  p90 ${q(0.9)}  ` +
-    `crates lost/game ${(lostTotal / GAMES).toFixed(2)}`);
+    `crates lost/game ${(lostTotal / GAMES).toFixed(2)}  crates on board mean ${(crateTicks / ticks).toFixed(1)} peak ${peak}`);

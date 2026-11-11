@@ -20,7 +20,7 @@ const GameState = (function () {
             this.exGremlins = 0;      // gremlins sunk, splatted, or killed on a target
             this.trapped = 0;         // gremlins a Trap caught
             this.idleTicks = 0;       // ticks in a row with no card used (place, discard)
-            this.spawnTimer = 0;      // ticks since a source last spawned
+            this.spawnTimer = 0;      // ticks since the last spawn chance (one every SPAWN_INTERVAL)
             this.nextId = 1;
             this.phase = 'player';    // 'player' | 'tick'
         }
