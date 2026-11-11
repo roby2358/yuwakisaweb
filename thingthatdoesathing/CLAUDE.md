@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 **Thing Factory** ("a thing that does a thing") is a place-then-tick contraption game on a
-small hex board, forked from the Hex & Counters base (`../hexandcounter`). Each command
+small hex board, forked from the Hex & Counters base (`../ideas/hexandcounter`). Each command
 places, removes or discards a Thing from a random hand, or waits, and then the world ticks
 once (turning a placed mover is free and doesn't tick): every Thing does its one thing (most act on the piece standing on them; the Pusher
 shoves the hex in front, the Puller reaches two hexes ahead). Crates come out of a source; deliver

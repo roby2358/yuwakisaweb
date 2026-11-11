@@ -1,11 +1,11 @@
 ---
 name: thingfactory-tools
-description: Project-local dev recipes for Thing Factory (ideas/thingthatdoesathing) - `just cc-test` runs the whole suite and `just cc-sim N SIZE` runs the builder-bot tuning harness on one board size. Use before and after changing gameengine.js, gameui.js, artifacts.js numbers, or the docs' CRITERIA rows, and when asked to verify the game still works. Extend these instead of writing throwaway scripts.
+description: Project-local dev recipes for Thing Factory (thingthatdoesathing) - `just cc-test` runs the whole suite and `just cc-sim N SIZE` runs the builder-bot tuning harness on one board size. Use before and after changing gameengine.js, gameui.js, artifacts.js numbers, or the docs' CRITERIA rows, and when asked to verify the game still works. Extend these instead of writing throwaway scripts.
 ---
 
 # Thing Factory dev recipes
 
-Run from `ideas/thingthatdoesathing/`. Invoke the recipes, not the raw script paths.
+Run from `thingthatdoesathing/`. Invoke the recipes, not the raw script paths.
 
 | Recipe | Runs | Use it |
 |---|---|---|

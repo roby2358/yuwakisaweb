@@ -10,7 +10,7 @@ target takes only its color; other colors can't get onto it, though a Rocket fli
 Crates keep coming at the same rate, a random open color each time.
 Every Thing does exactly one thing, every tick.
 
-Forked from the Hex & Counters base (`../hexandcounter`). See [DYNAMICS.md](DYNAMICS.md)
+Forked from the Hex & Counters base (`../ideas/hexandcounter`). See [DYNAMICS.md](DYNAMICS.md)
 for why it works and [ONTOLOGY.md](ONTOLOGY.md) for the rules.
 
 ## The Things
