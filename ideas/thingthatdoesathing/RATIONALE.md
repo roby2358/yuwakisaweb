@@ -43,9 +43,9 @@ ARCHITECTURE_LOG.md.
   path. A board too big for the window opens centered on the source, where building starts,
   and left-drag pans as it always has.
 - **Evidence:** R-1, R-2, R-5, R-23 at every size; U-2, U-14 (manual).
-  `Measured by: just cc-sim 200 <size>` (turn cap 400) → small 183/200 reach the first
-  milestone, median 65 turns (11.5 crates lost per game); medium 183/200, median 84 (13.2
-  lost); large 187/200, median 110 (14.4 lost); huge (50 games) 42/50, median 226 (30.6 lost).
+  `Measured by: just cc-sim 200 <size>` (turn cap 400) → small 200/200 reach the first
+  milestone, median 57 turns (3.2 crates lost per game); medium 200/200, median 73 (5.2
+  lost); before gremlins died on targets (D-23): large 187/200, median 110 (14.4 lost); huge (50 games) 42/50, median 226 (30.6 lost).
   Gremlin density is the same on every size (D-20), so big boards are as busy as small.
 
 ### D-19 Turning a placed mover is free: it doesn't tick — *Decided*
@@ -120,13 +120,13 @@ ARCHITECTURE_LOG.md.
   Its glyph faces the hex it reaches toward, so the exception stays readable.
 - **Evidence:** R-8 (movers may go under pieces), R-12, R-28.
 
-### D-5 Seven kinds as rows of one template: Belt, Spring, Rocket, Puller, Wall, Trap, Bridge — *Decided (Puller, Rocket, Trap), Proposed (rest)*
+### D-5 Eight kinds as rows of one template: Belt, Spring, Rocket, Pusher, Puller, Wall, Trap, Bridge — *Decided (Pusher, Puller, Rocket, Trap), Proposed (rest)*
 - **Alternatives:** a bigger catalogue (splitters, grabbers); a single Belt; a Spinner
   (a belt that turns clockwise every tick).
 - **Why:** templates over snowflakes. Every kind is a row of `THINGS` (`push`, `pull`,
-  `splat`, `flies`, `skids`, `blocks`, `traps`, `on`, `weight`), so a new kind is usually a new row, not new code. Each
+  `shove`, `splat`, `flies`, `skids`, `blocks`, `traps`, `colored`, `on`, `weight`), so a new kind is usually a new row, not new code. Each
   kind breaks one rule. A Spring hops three hexes over lakes and skids on ice, a Rocket flies eight,
-  a Puller acts at a distance without needing a Thing under the piece, a Wall shuts a hex, a
+  a Pusher shoves the piece in front of it, a Puller acts at a distance without needing a Thing under the piece, a Wall shuts a hex, a
   Trap kills gremlins that come onto it, a Bridge opens water.
 - **Why not the Spinner:** it pushed crates the opposite way on alternate arrivals. Crates
   arrive about every `SOURCE_INTERVAL` ticks, and with that at 3 the Spinner had turned
@@ -136,7 +136,7 @@ ARCHITECTURE_LOG.md.
   as the end of an ice slide, a Spring landing, the source, or a stranded crate. It can also
   yank a gremlin off the line, into water if the near hex is water. Its catch is that it
   can't sit inside a belt line: a crate pulled onto the Puller's own hex just stays there.
-- **Evidence:** R-12, R-17, R-7, R-15, R-32.
+- **Evidence:** R-12, R-17, R-7, R-15, R-32, R-41.
 
 ### D-17 Springs fly too: over lakes, and skid on landing on ice — *Decided*
 - **Alternatives:** Springs on the ground rules (sink in any water, free ice hexes); flying
@@ -169,6 +169,34 @@ ARCHITECTURE_LOG.md.
   median 65 turns, p90 247, 11.5 crates lost per game (nearly all wrecked by gremlins, D-8). The bot lays belts and Springs on
   straight runs and throws every other card away with `discard`, so this measures boards
   and hand pacing, not Puller, Rocket or Trap play. To be checked by playtest (X-2, X-4).
+
+### D-23 A gremlin that comes onto a target dies — *Decided (dies), Proposed (however it arrives but a flight passing over, like a Trap)*
+- **Alternatives:** gremlins stay on a target and block it (the old rule); gremlins can't
+  enter targets at all; a target pushes a gremlin off.
+- **Why:** the designer found gremlins too easy to camp on the target. A gremlin sitting
+  there jams the whole line until it wanders off, and with wrecking it also destroys the
+  crates queued up behind it. Treating every target as a Trap for gremlins (the same
+  `trapsPiece` check) adds no new code path: it splats, counts in Ex-gremlins, and a new one
+  climbs out on the shore.
+- **Evidence:** R-16. Measured as one change (the Pusher already in, kill toggled):
+  `just cc-sim 200 small` → 184/200, median 70, p90 259, 12.4 lost per game without it;
+  200/200, median 57, p90 70, 3.2 lost per game with it. Medium with both: 200/200, median 73,
+  p90 89, 5.2 lost per game. Camped targets were most of the bot's stalls.
+
+### D-22 The Pusher, and colored Pushers and Pullers — *Decided (Pusher shoves the piece in front 1 hex, white or a crate color, colored ones act on their color's crates and every gremlin, colored cards only once 2+ colors are open, 1 in open+1 white), Proposed (weight 2, the ram glyph)*
+- **Alternatives:** colored Belts, Springs and Rockets; an off-color crate on a colored
+  Belt carrying straight on (a switch, which needs a heading on every crate); colored
+  cards as their own deck rows with weights; colored cards from the start.
+- **Why:** colors (D-21) need a way to split a mixed line. A Pusher acts from beside a
+  line, on the hex it faces, so a colored one can knock just its color off a white Belt
+  line, and a colored Puller can reach in and pull just its color out. Everything else is
+  unchanged: only these two are selective. Gremlins are always affected, so a colored
+  Thing is never a gremlin-safe gap. A card's color is rolled with its kind (a `colored`
+  template field), so the deck weights don't change, and with one color open there's
+  nothing to sort, so every card is white.
+- **Evidence:** R-40, R-41, R-27, R-10; U-20 (manual). The bot discards Pushers, so
+  adding the kind only thins its Belt draws: `just cc-sim 200 small` 185/200, median 65 →
+  184/200, median 70 (the Pusher alone, before D-23).
 
 ### D-8 Gremlins wander and ride movers, never push crates, and wreck a crate they step onto — *Proposed (wander, ride, no pushing), Decided (wrecking)*
 - **Alternatives:** gremlins push crates; gremlins chase crates; no gremlins; gremlins that

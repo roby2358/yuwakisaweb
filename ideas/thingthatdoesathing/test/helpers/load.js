@@ -65,7 +65,8 @@ function flatGame(seed = 7) {
     state.targets = [{ q: 10, r: 8, color: 'red', delivered: 0 }];   // col 14, row 8
     state.spawnTimer = -1000;
     ctx.T = g.GameArtifacts.TERRAIN;
-    ctx.put = (kind, q, r, facing = null) => { const t = { kind, q, r, facing }; state.things.push(t); return t; };
+    ctx.putIn = (color, kind, q, r, facing) => { const t = { kind, color, q, r, facing }; state.things.push(t); return t; };
+    ctx.put = (kind, q, r, facing = null) => ctx.putIn(g.GameArtifacts.WHITE, kind, q, r, facing);
     ctx.piece = (kind, q, r) => engine.addPiece(kind, q, r, kind === 'gremlin' ? '#888888' : 'red');
     ctx.terrain = (q, r, t) => { state.hexes.get(g.Hex.key(q, r)).terrain = t; };
     return ctx;

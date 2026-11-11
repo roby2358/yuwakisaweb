@@ -16,6 +16,7 @@ const GameArtifacts = (function () {
     // Thing templates. Every kind is a parameter set, not a code path:
     //   push   — hexes it shoves the piece standing on it, in its facing
     //   pull   — hexes it pulls the piece on the far hex (two ahead) back into the near hex
+    //   shove  — hexes it pushes the piece on the near hex (the one it faces) on, in its facing
     //   splat  — its push splats what it lands on and what it launches, if that piece splats
     //   flies  — its push is airborne: it passes over inland open water (only the outer sea,
     //            an edge hex, takes it), every hex counts (ice is no shortcut mid-air), and
@@ -24,16 +25,19 @@ const GameArtifacts = (function () {
     //   blocks — pieces can't enter
     //   traps  — a piece that splats dies when it comes onto it (walked, pushed, slid, or
     //            landing from a flight; a flight passing over doesn't count)
+    //   colored — its card comes in white (acts on every piece) or a crate color (acts only
+    //            on crates of that color, and on every gremlin)
     //   on     — 'land' (plains/ice) or 'water': where it may be built
     //   weight — relative draw chance for the hand
     const THINGS = {
-        BELT:    { push: 1, pull: 0, splat: false, flies: false, skids: false, blocks: false, traps: false, on: 'land',  weight: 6 },
-        SPRING:  { push: 3, pull: 0, splat: false, flies: true,  skids: true,  blocks: false, traps: false, on: 'land',  weight: 2 },
-        ROCKET:  { push: 8, pull: 0, splat: true,  flies: true,  skids: false, blocks: false, traps: false, on: 'land',  weight: 1 },
-        PULLER:  { push: 0, pull: 1, splat: false, flies: false, skids: false, blocks: false, traps: false, on: 'land',  weight: 2 },
-        WALL:    { push: 0, pull: 0, splat: false, flies: false, skids: false, blocks: true,  traps: false, on: 'land',  weight: 2 },
-        TRAP:    { push: 0, pull: 0, splat: false, flies: false, skids: false, blocks: false, traps: true,  on: 'land',  weight: 1 },
-        BRIDGE:  { push: 0, pull: 0, splat: false, flies: false, skids: false, blocks: false, traps: false, on: 'water', weight: 1 },
+        BELT:    { push: 1, pull: 0, shove: 0, splat: false, flies: false, skids: false, blocks: false, traps: false, colored: false, on: 'land',  weight: 6 },
+        SPRING:  { push: 3, pull: 0, shove: 0, splat: false, flies: true,  skids: true,  blocks: false, traps: false, colored: false, on: 'land',  weight: 2 },
+        ROCKET:  { push: 8, pull: 0, shove: 0, splat: true,  flies: true,  skids: false, blocks: false, traps: false, colored: false, on: 'land',  weight: 1 },
+        PUSHER:  { push: 0, pull: 0, shove: 1, splat: false, flies: false, skids: false, blocks: false, traps: false, colored: true,  on: 'land',  weight: 2 },
+        PULLER:  { push: 0, pull: 1, shove: 0, splat: false, flies: false, skids: false, blocks: false, traps: false, colored: true,  on: 'land',  weight: 2 },
+        WALL:    { push: 0, pull: 0, shove: 0, splat: false, flies: false, skids: false, blocks: true,  traps: false, colored: false, on: 'land',  weight: 2 },
+        TRAP:    { push: 0, pull: 0, shove: 0, splat: false, flies: false, skids: false, blocks: false, traps: true,  colored: false, on: 'land',  weight: 1 },
+        BRIDGE:  { push: 0, pull: 0, shove: 0, splat: false, flies: false, skids: false, blocks: false, traps: false, colored: false, on: 'water', weight: 1 },
     };
 
     // Piece templates, keyed by Piece.kind:
@@ -54,6 +58,8 @@ const GameArtifacts = (function () {
     // The colors a game can open, one at a time. Each open color has one target, which
     // takes only its color's crates, and comes out of one source (a source may make several).
     const CRATE_COLORS = ['red', 'green', 'blue', 'yellow'];
+    // The color of every Thing that isn't keyed to one crate color: it acts on every piece.
+    const WHITE = 'white';
 
     // The next milestone above `delivered`: 10, 20, 50, 100, 200, 500, 1000, … (the 1-2-5
     // series from FIRST_MILESTONE). There's no last one; the factory runs forever.
@@ -83,14 +89,15 @@ const GameArtifacts = (function () {
     // its area, rounded, at least one. Small 1, medium 3, large 6, huge 23.
     const gremlinDice = size => Math.max(1, Math.round(MAP_SIZES[size].cols * MAP_SIZES[size].rows / GREMLIN_HEXES_PER_DIE));
 
-    // Does this kind of Thing have a facing (it pushes or pulls)? Only those can be turned.
-    const aims = kind => THINGS[kind].push > 0 || THINGS[kind].pull > 0;
+    // Does this kind of Thing have a facing (it pushes, pulls or shoves)? Only those can be turned.
+    const aims = kind => THINGS[kind].push > 0 || THINGS[kind].pull > 0 || THINGS[kind].shove > 0;
 
     return {
         TERRAIN,
         THINGS,
         PIECES,
         CRATE_COLORS,
+        WHITE,
         aims,
         nextMilestone,
         gremlinDice,

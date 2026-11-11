@@ -13,7 +13,7 @@ check('newGame with no or unknown size → {ok:false}, unchanged',
     [undefined, null, 'giant', 'toString'].every(size => engine.newGame(11, size).ok === false) && snapshot(state) === fresh);
 const shapes = [];
 shapes.push(engine.wait());
-const [key] = engine.legalPlacements(state.hand[0]);
+const [key] = engine.legalPlacements(state.hand[0].kind);
 const [q, r] = key.split(',').map(Number);
 shapes.push(engine.place(0, q, r, DIR.E));
 shapes.push(engine.rotate(q, r));

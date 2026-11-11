@@ -2,6 +2,21 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-11 — The Pusher, colored Pushers and Pullers, gremlins die on targets (D-22, D-23)
+New kind `PUSHER` and two new template fields on every `THINGS` row: `shove` (hexes it pushes
+the piece on the hex it faces, in its facing) and `colored` (Pusher, Puller). Things gained
+`color` (`WHITE` or a crate color, new constant `WHITE`), and the hand changed from kinds to
+`{kind, color}` cards: `draw()` now returns a card, `drawKind()` is the old weighted pick,
+and `cardColor()` rolls a colored kind's color once 2+ colors are open. The tick skips a
+Thing's piece when `affects(thing, piece)` is false. `actionOf` builds `how` once and has a
+shove branch. `trapsPiece` now also kills a splatting piece on any target, which replaces
+"a gremlin on the target stays and blocks crates". UI: Pusher glyph (a ram), colored kinds
+draw their accent from `COLOR_INK` (the Puller's teal became white), and card names read
+"Red Pusher". The pjpd task colorthings-3nq7 is done. Measured one change at a time: the
+Pusher alone took `just cc-sim 200 small` from 185/200, median 65 to 184/200, median 70; then
+the target kill took it to 200/200, median 57, 3.2 lost per game (medium 200/200, median 73).
+New R-40, R-41, U-20; R-10, R-16, R-27 reworded.
+
 ### 2026-11-10 — Colors: each milestone opens a new crate color with its own target (D-21)
 `GameState.source`/`target` became `sources` (`{q, r, colors}`) and `targets`
 (`{q, r, color, delivered}`). `MAP_SIZES` rows gained `colors` (1/2/3/4) and GameArtifacts

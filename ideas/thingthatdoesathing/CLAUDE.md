@@ -7,8 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Thing Factory** ("a thing that does a thing") is a place-then-tick contraption game on a
 small hex board, forked from the Hex & Counters base (`../hexandcounter`). Each command
 places, removes or discards a Thing from a random hand, or waits, and then the world ticks
-once (turning a placed mover is free and doesn't tick): every Thing does its one thing (most act on the piece standing on them; the Puller
-reaches two hexes ahead). Crates come out of a source; deliver
+once (turning a placed mover is free and doesn't tick): every Thing does its one thing (most act on the piece standing on them; the Pusher
+shoves the hex in front, the Puller reaches two hexes ahead). Crates come out of a source; deliver
 them to the target, through endless milestones (10, 20, 50, 100, 200, 500, 1000, …). On
 bigger boards each milestone opens a new crate color with its own target (`MAP_SIZES.colors`). There's
 no end, time limit or defeat; the score is the turn each milestone was reached.
@@ -42,11 +42,11 @@ headless; `GameUI` is the only browser-coupled code.
 
 | Module | Global | Role |
 |---|---|---|
-| `artifacts.js` | `GameArtifacts` | Rules data: `MAP_SIZES`, `TERRAIN`, `THINGS` (the Thing templates: `push`, `pull`, `splat`, `flies`, `skids`, `blocks`, `traps`, `on`, `weight`), `PIECES` (the piece templates: `label`, `cargo`, `wanders`, `splats`, `reemerges`), `aims(kind)`, `MOVEMENT_COST`, and every tunable number. |
+| `artifacts.js` | `GameArtifacts` | Rules data: `MAP_SIZES`, `TERRAIN`, `THINGS` (the Thing templates: `push`, `pull`, `shove`, `splat`, `flies`, `skids`, `blocks`, `traps`, `colored`, `on`, `weight`), `WHITE`, `PIECES` (the piece templates: `label`, `cargo`, `wanders`, `splats`, `reemerges`), `aims(kind)`, `MOVEMENT_COST`, and every tunable number. |
 | `displayartifacts.js` | `GameDisplayArtifacts` | Client-only: `HEX_SIZE`, `COUNTER_SIZE`, `HOP_MS`, terrain colors/names, `THING_LOOK` (name, verb line, colors, inset), `PIECE_LOOK` (hover name), `CRATE_SHADES`, `MAP_SIZE_NOTES` (size-picker notes), port colors. |
 | `piece.js` | `Piece` | A positioned token. Crates and gremlins are `Piece`s with engine-set `id` and `kind`. |
 | `board.js` | `Board` | Query layer over the hex `Map` (passable = land). |
-| `gamestate.js` | `GameState` | Serializable data: `sources` (`{q, r, colors}`), `targets` (`{q, r, color, delivered}`), `pieces`, `things`, `hand`, `turn`, `delivered`, `lost`, `exGremlins`, `spawnTimer`, `nextId`, `phase`, `size`. |
+| `gamestate.js` | `GameState` | Serializable data: `sources` (`{q, r, colors}`), `targets` (`{q, r, color, delivered}`), `pieces`, `things` (`{kind, color, q, r, facing}`), `hand` (`{kind, color}` cards), `turn`, `delivered`, `lost`, `exGremlins`, `spawnTimer`, `nextId`, `phase`, `size`. |
 | `gameengine.js` | `GameEngine` | Generation + rules. `newGame(seed, size)` takes the seed from the caller (the UI rolls it) and a `MAP_SIZES` key (the player picks it). Commands `place`/`remove`/`discard`/`wait` each run one `tick()` and return `{ ok, events }`; `rotate` doesn't tick (`events: []`, D-19); a tick that reaches a milestone emits `milestone{count}`, then `open{color, source, target}` if it opened a color. One `step()` handles every movement (movers, springs, rockets, ice slides, gremlins); a Rocket's flight emits `splat` for gremlins it destroys. |
 | `gameui.js` | `GameUI` | Canvas, HUD (top left), tally (top right: delivered, ex-gremlins, lost), the hand, input, and the tick animation, which is driven only by the events the engine returns. |
 
@@ -62,7 +62,7 @@ tick animation) → `picked` card → bare map click.
 
 - **L1.2 pick-then-act:** picking a card (click or `1`–`3`) computes
   `engine.legalPlacements(kind)` once; clicking a hex is a lookup into that set. `R`/wheel
-  turn the ghost's facing. With no card picked, clicking a Belt/Spring/Rocket/Puller calls `rotate`, which doesn't tick, so the UI just re-renders.
+  turn the ghost's facing. With no card picked, clicking a Belt/Spring/Rocket/Pusher/Puller calls `rotate`, which doesn't tick, so the UI just re-renders.
   `D` calls `remove` on the hovered Thing. With a card picked, the Discard spot or `X` calls `discard`.
 - **L2.1 primary action:** Wait button / Space / Enter → `engine.wait()`.
 - **L2.2:** Esc and right-click put the card back.
@@ -95,8 +95,8 @@ in `hexToScreen` / `screenToHex`.
 - **Map:** 16×10, 20×20, 30×30 or 60×60 (`MAP_SIZES`, picked at New Game), edges water; terrain water / plains / mountain by elevation, ice carved
   from plains. Sources on the left slice, targets on the right, land path guaranteed
   (fallback: the size's `knownGoodSeed`).
-- **Things:** Belt pushes the piece on its own hex; the Spring and Rocket throw it 3 and 8 hexes (airborne: over inland water; a Spring skids on if it lands on ice), the Rocket splatting gremlins; a Trap kills a gremlin that comes onto it; the Puller pulls the piece
-  two hexes ahead back into the hex between; Wall blocks; Bridge makes water crossable. One Thing per hex, none on a target; movers may be built
+- **Things:** Belt pushes the piece on its own hex; the Spring and Rocket throw it 3 and 8 hexes (airborne: over inland water; a Spring skids on if it lands on ice), the Rocket splatting gremlins; a Trap kills a gremlin that comes onto it; the Pusher pushes the piece on the hex in front on; the Puller pulls the piece
+  two hexes ahead back into the hex between (both come in white or a crate color: a colored one moves only its color's crates, and gremlins); a gremlin coming onto a target dies; Wall blocks; Bridge makes water crossable. One Thing per hex, none on a target; movers may be built
   under a piece.
 - **Tick:** Things in placement order (each piece moves at most once), unmoved gremlins
   wander, every `SOURCE_INTERVAL` a random open color spawns at its source if clear; each milestone may open a color (`openColor`).

@@ -4,12 +4,12 @@
 const { check, done } = require('../helpers/check');
 const { flatGame, snapshot } = require('../helpers/load');
 const { g, state, engine } = flatGame();
-state.hand = ['WALL', 'BELT', 'SPRING'];
+state.hand = [{ kind: 'WALL', color: 'white' }, { kind: 'BELT', color: 'white' }, { kind: 'SPRING', color: 'white' }];
 const things = JSON.stringify(state.things), turn = state.turn;
 const res = engine.discard(0);
 check('ok, with events, and one tick', res.ok && Array.isArray(res.events) && state.turn === turn + 1);
 check('the slot is redrawn from the known kinds; the others stay',
-    Object.keys(g.GameArtifacts.THINGS).includes(state.hand[0]) && state.hand[1] === 'BELT' && state.hand[2] === 'SPRING');
+    Object.keys(g.GameArtifacts.THINGS).includes(state.hand[0].kind) && state.hand[1].kind === 'BELT' && state.hand[2].kind === 'SPRING');
 check('the hand stays HAND_SIZE and no Thing is placed',
     state.hand.length === g.GameArtifacts.HAND_SIZE && JSON.stringify(state.things) === things);
 const before = snapshot(state);

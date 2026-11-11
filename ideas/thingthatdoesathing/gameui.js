@@ -10,9 +10,9 @@
 const GameUI = (function () {
     const {
         HEX_SIZE, COUNTER_SIZE, HOP_MS, RUN_GAP_MS, MILESTONE_MS, TERRAIN_COLORS, TERRAIN_NAMES, THING_LOOK,
-        PIECE_LOOK, CRATE_SHADES, SPLAT_BLOTS, SOURCE_COLOR, BG_COLOR, UI_FONT, REACH_COLOR, MAP_SIZE_NOTES
+        PIECE_LOOK, CRATE_SHADES, COLOR_INK, SPLAT_BLOTS, SOURCE_COLOR, BG_COLOR, UI_FONT, REACH_COLOR, MAP_SIZE_NOTES
     } = GameDisplayArtifacts;
-    const { TERRAIN, HAND_SIZE, MAP_SIZES, aims, nextMilestone } = GameArtifacts;
+    const { TERRAIN, THINGS, WHITE, HAND_SIZE, MAP_SIZES, aims, nextMilestone } = GameArtifacts;
     const SIZE_KEYS = Object.keys(MAP_SIZES);
     // A splat burst's color, by piece kind: a gremlin's own color, a crate's side face.
     const SPLAT_COLOR = {
@@ -63,6 +63,16 @@ const GameUI = (function () {
             ctx.lineTo(x1, 0);
             ctx.stroke();
             chevron(ctx, s * 0.5, s * 0.3);
+        },
+        PUSHER(ctx, s) {
+            // A ram: a back plate, a rod, a flat head at the hex edge, and a chevron beyond
+            // it: it shoves what's in front of it on.
+            ctx.beginPath();
+            ctx.moveTo(-s * 0.45, -s * 0.22); ctx.lineTo(-s * 0.45, s * 0.22);
+            ctx.moveTo(-s * 0.45, 0); ctx.lineTo(s * 0.25, 0);
+            ctx.moveTo(s * 0.25, -s * 0.3); ctx.lineTo(s * 0.25, s * 0.3);
+            ctx.stroke();
+            chevron(ctx, s * 0.55, s * 0.18);
         },
         PULLER(ctx, s) {
             // A horseshoe magnet opening toward its facing, with a chevron pointing back
@@ -134,9 +144,10 @@ const GameUI = (function () {
     };
 
     // Draw a Thing centered at (x, y) with hex radius s. Shared by the board and the hand.
-    // `facing` is null for kinds that don't aim.
-    function drawThing(ctx, x, y, s, kind, facing, alpha) {
+    // `facing` is null for kinds that don't aim; `color` is the Thing's (WHITE for most).
+    function drawThing(ctx, x, y, s, kind, color, facing, alpha) {
         const look = THING_LOOK[kind];
+        const ink = THINGS[kind].colored ? COLOR_INK[color] : look.ink;
         ctx.save();
         ctx.globalAlpha = alpha;
         drawHexPath(ctx, x, y, s * look.inset);
@@ -146,8 +157,8 @@ const GameUI = (function () {
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
-        ctx.strokeStyle = look.ink;
-        ctx.fillStyle = look.ink;
+        ctx.strokeStyle = ink;
+        ctx.fillStyle = ink;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.lineWidth = Math.max(2, s * 0.1);
@@ -156,6 +167,12 @@ const GameUI = (function () {
         GLYPHS[kind](ctx, s);
         ctx.restore();
     }
+
+    // A Thing's name and verb line: a colored kind in a crate color says so.
+    const capitalized = w => w[0].toUpperCase() + w.slice(1);
+    const thingName = (kind, color) => (THINGS[kind].colored && color !== WHITE ? capitalized(color) + ' ' : '') + THING_LOOK[kind].name;
+    const thingDoes = (kind, color) => THING_LOOK[kind].does +
+        (THINGS[kind].colored && color !== WHITE ? ` (only ${color} crates, and gremlins)` : '');
 
     class GameUI {
         constructor(engine, canvas) {
@@ -251,7 +268,7 @@ const GameUI = (function () {
             if (this.overlay) return;
             if (slot < 0 || slot >= this.state.hand.length) return;
             if (this.picked && this.picked.slot === slot) { this.unpick(); return; }
-            this.picked = { slot, legal: this.engine.legalPlacements(this.state.hand[slot]) };
+            this.picked = { slot, legal: this.engine.legalPlacements(this.state.hand[slot].kind) };
             this.render();
         }
 
@@ -474,7 +491,7 @@ const GameUI = (function () {
 
             for (const t of s.things) {
                 const { x, y } = this.hexToScreen(t.q, t.r);
-                drawThing(ctx, x, y, HEX_SIZE, t.kind, t.facing, 1);
+                drawThing(ctx, x, y, HEX_SIZE, t.kind, t.color, t.facing, 1);
             }
 
             // L1.2 legal placements for the picked card, plus a ghost under the cursor.
@@ -489,7 +506,7 @@ const GameUI = (function () {
                 const h = this.hoveredHex;
                 if (h && this.picked.legal.has(Hex.key(h.q, h.r))) {
                     const { x, y } = this.hexToScreen(h.q, h.r);
-                    drawThing(ctx, x, y, HEX_SIZE, s.hand[this.picked.slot], this.facing, 0.7);
+                    drawThing(ctx, x, y, HEX_SIZE, s.hand[this.picked.slot].kind, s.hand[this.picked.slot].color, this.facing, 0.7);
                 }
             } else if (this.hoveredHex && !this.anim) {
                 // A bare hover over a mover: outline it — clicking turns it.
@@ -724,7 +741,7 @@ const GameUI = (function () {
             if (src) parts.push(`Source — ${src.colors.join(', ')} crates appear here`);
             if (tgt) parts.push(`Target — deliver ${tgt.color} crates here`);
             const t = this.engine.thingAt(h.q, h.r);
-            if (t) parts.push(`${THING_LOOK[t.kind].name}: ${THING_LOOK[t.kind].does}` +
+            if (t) parts.push(`${thingName(t.kind, t.color)}: ${thingDoes(t.kind, t.color)}` +
                 (aims(t.kind) && !this.picked ? ' (click to turn, D to remove)' : ' (D to remove)'));
             const p = this.engine.pieceAt(h.q, h.r);
             if (p) parts.push(PIECE_LOOK[p.kind].name);
@@ -753,15 +770,14 @@ const GameUI = (function () {
                 }
             }
             [...el.children].forEach((b, i) => {
-                const kind = s.hand[i];
-                const look = THING_LOOK[kind];
+                const { kind, color } = s.hand[i];
                 const picked = this.picked && this.picked.slot === i;
                 b.classList.toggle('picked', !!picked);
-                b.querySelector('.name').textContent = look.name;
-                b.querySelector('.does').textContent = look.does;
+                b.querySelector('.name').textContent = thingName(kind, color);
+                b.querySelector('.does').textContent = thingDoes(kind, color);
                 const c = b.querySelector('canvas'), cx = c.getContext('2d');
                 cx.clearRect(0, 0, c.width, c.height);
-                drawThing(cx, 32, 32, 26, kind, aims(kind) ? (picked ? this.facing : 0) : null, 1);
+                drawThing(cx, 32, 32, 26, kind, color, aims(kind) ? (picked ? this.facing : 0) : null, 1);
             });
         }
 

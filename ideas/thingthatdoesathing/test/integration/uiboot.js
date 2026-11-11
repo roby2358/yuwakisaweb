@@ -229,7 +229,7 @@ run('the Discard spot throws away the picked card and ticks; X does too', () => 
 });
 run('a Rocket card draws, places, and its flight and splat animate', () => {
     const s = ui.state;
-    s.hand[0] = 'ROCKET';
+    s.hand[0] = { kind: 'ROCKET', color: 'white' };
     ui.render();
     key('1');
     const [k] = [...ui.picked.legal];
@@ -251,7 +251,7 @@ run('a Rocket card draws, places, and its flight and splat animate', () => {
 });
 run('a Trap card places, and the tally shows ex-gremlins', () => {
     const s = ui.state;
-    s.hand[0] = 'TRAP';
+    s.hand[0] = { kind: 'TRAP', color: 'white' };
     ui.render();
     key('1');
     const [k] = [...ui.picked.legal];
@@ -288,7 +288,7 @@ run('a game plays through the UI to the first milestone banner', () => {
             const t = e.thingAt(a.q, a.r);
             if (t && t.facing !== null && t.facing !== want && t.kind === 'BELT') { clickHex(a.q, a.r); acted = true; break; }
             if (t) continue;
-            const slot = s.hand.indexOf('BELT');
+            const slot = s.hand.findIndex(card => card.kind === 'BELT');
             if (slot < 0) {
                 // No belt: dump card 1 somewhere off the path (Wait never changes the hand).
                 const onPath = new Set(pathHexes.map(h => h.q + ',' + h.r));

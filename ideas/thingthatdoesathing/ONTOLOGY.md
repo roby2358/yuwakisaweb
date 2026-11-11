@@ -64,7 +64,7 @@ everything; G-2 beats G-1 (a funny interaction that can't be read is a bug, not 
 | `targets` | `[{q, r, color, delivered}]` | One per open color, in the order they opened: it takes only `color` crates, and `delivered` counts them. Nothing may be built on one. [D] |
 | `pieces` | `Piece[]` | Every crate and gremlin, in creation order. |
 | `things` | `Thing[]` | Every placed Thing, in placement order (the order they act). |
-| `hand` | `ThingKind[]` | Length `HAND_SIZE`. |
+| `hand` | `{kind, color}[]` | Cards, length `HAND_SIZE`; `color` is `WHITE` or a crate color (Draw rule). |
 | `turn` | int ≥ 1 | Goes up by 1 per tick. |
 | `delivered` | int | Crates delivered, all colors together (milestones count this). |
 | `lost` | int | Crates that sank or were wrecked by a gremlin. |
@@ -110,7 +110,8 @@ A `Piece` (position, color, label) with two fields set by the engine. Each kind 
 
 | Field | Type | Notes |
 |---|---|---|
-| `kind` | `ThingKind` | `BELT`, `SPRING`, `ROCKET`, `PULLER`, `WALL`, `TRAP`, `BRIDGE`. |
+| `kind` | `ThingKind` | `BELT`, `SPRING`, `ROCKET`, `PUSHER`, `PULLER`, `WALL`, `TRAP`, `BRIDGE`. |
+| `color` | `WHITE` \| `CRATE_COLORS` name | From its card. A colored one acts only on crates of its color and on every gremlin; white acts on every piece. Only `colored` kinds are ever anything but white. [D] |
 | `q`, `r` | int | Position. One Thing per hex. |
 | `facing` | 0…5 \| null | Index into `Hex` neighbor directions; null for fixtures. Facing order E, NE, NW, W, SW, SE; clockwise is `(f+5) mod 6`. |
 
@@ -122,9 +123,11 @@ A `Piece` (position, color, label) with two fields set by the engine. Each kind 
 | `splat` | Its push splats pieces that splat: the one it lands on and the one it launches (Rocket). [D] |
 | `flies` | Its push is airborne: it passes over inland open water (only the outer sea, an edge hex, takes the piece mid-flight), every hex counts (ice is no shortcut mid-air), and it sinks if it comes down on water (Spring, Rocket). [D] |
 | `skids` | A flying push that runs its full range onto bare ice slides on, on the ground (Spring). [D] |
+| `shove` | Hexes it pushes the piece on the **near hex** (the one it faces) on, along `facing` (Pusher). [D] |
 | `pull` | Hexes it pulls the piece on the **far hex** (two ahead along `facing`) back toward itself, into the **near hex** (one ahead) (Puller). |
 | `blocks` | Pieces can't enter (Wall). |
-| `traps` | A piece that splats dies when it comes onto this hex: walked, pushed, slid, or coming down from a flight; a flight passing over doesn't count (Trap). [D] |
+| `traps` | A piece that splats dies when it comes onto this hex: walked, pushed, slid, or coming down from a flight; a flight passing over doesn't count (Trap). Every target does the same, with no Thing (Step rule). [D] |
+| `colored` | Its cards come in white or a crate color (Pusher, Puller). [D] |
 | `on` | `'land'` (plains/ice) or `'water'` — where it may be built. |
 | `weight` | Relative draw chance for the hand. |
 
@@ -249,7 +252,10 @@ Runs once at the end of every tick, for that tick's sinks and splats and for a p
 ### Draw — `draw()` [P]
 *Serves:* scarcity of agency (you build with what you're dealt).
 ```
-return a kind chosen by Rando with probability THINGS[kind].weight / total weight
+kind = chosen by Rando with probability THINGS[kind].weight / total weight
+color = WHITE unless THINGS[kind].colored and 2+ colors are open:
+        then Rando.choice([WHITE, ...open colors])
+return {kind, color}
 ```
 
 ### Placement legality — `canPlace(kind, hex)` [P]
@@ -269,7 +275,7 @@ if next off-map or MOUNTAIN or a blocking Thing or a piece there: return 'blocke
 if not flies and next is a target of another color than this cargo: return 'blocked'
 piece.moveTo(next)
 if PIECES[kind].cargo and next is the target of its color: remove; that target's delivered += 1; delivered += 1; return 'delivered'
-if not flies and a Thing with traps is there and PIECES[kind].splats: remove; return 'trapped'
+if not flies and (a Thing with traps or a target is there) and PIECES[kind].splats: remove; return 'trapped'
 if next is WATER and no Thing there and not (flies and next is inland):
     remove; if cargo: lost += 1; return 'sank'
 return 'moved'
@@ -308,8 +314,10 @@ when a Trap is built under it.
 ```
 phase = 'tick'; moved = {}; deliveredBefore = delivered
 for thing in things (placement order):
-    pusher: p = piece on thing's hex;  dir = facing;            n = push
-    puller: p = piece on hex 2 ahead;  dir = opposite(facing);  n = pull
+    mover:  p = piece on thing's hex;  dir = facing;            n = push
+    Pusher: p = piece on hex 1 ahead;  dir = facing;            n = shove
+    Puller: p = piece on hex 2 ahead;  dir = opposite(facing);  n = pull
+    skip p if thing.color != WHITE and p is cargo of another color   # affects(thing, p)
     if p and p.id not in moved: moved += p; push(p, dir, {n, splat, flies, skids of THINGS[kind], wrecks: false})
 for piece with PIECES[kind].wanders, not in moved (creation order):
     dirs = directions whose neighbor is land or a bridge, no blocking Thing, and empty or holding cargo it wrecks
@@ -327,7 +335,8 @@ turn += 1; phase = 'player'
 Each piece moves at most once per tick. Gremlins never step into water on purpose, but a
 gremlin that wanders onto ice, or is pulled into water, goes in. A Puller ignores pieces on
 its own hex and on the near hex; a pulled piece that lands on bare ice slides on toward the
-Puller and stops on it (a Thing covers its hex).
+Puller and stops on it (a Thing covers its hex). A Pusher ignores a piece on its own hex. A
+gremlin that comes onto a target dies there, the same way as on a Trap.
 
 ### Milestones — `nextMilestone(delivered)` [D]
 *Serves:* accumulation (a factory that keeps paying off), G-1.
@@ -342,9 +351,9 @@ a banner, and play goes on.
 ```
 place(slot, q, r, facing):
     legal: 0 <= slot < HAND_SIZE, canPlace(hand[slot], hex at (q,r)),
-           facing in 0..5 for Things with push or pull (ignored, stored null, for fixtures)
-    things.push({kind, q, r, facing}); hand[slot] = draw(); tick()
-rotate(q, r):  legal: a Thing with a facing (push or pull) stands at (q,r)
+           facing in 0..5 for Things with push, pull or shove (ignored, stored null, for fixtures)
+    things.push({kind, color of the card, q, r, facing}); hand[slot] = draw(); tick()
+rotate(q, r):  legal: a Thing with a facing (push, pull or shove) stands at (q,r)
     facing = (facing + 5) mod 6               # no tick: events = [], turn unchanged
 remove(q, r):  legal: a Thing stands at (q,r)
     things.remove(that Thing)                  # the card is spent; the hand is untouched
@@ -384,11 +393,13 @@ The code constant in `GameArtifacts` is the single source.
 | `SOURCE_INTERVAL` | 3 | ticks between crates, board-wide, shared by every color [D] |
 | `HAND_SIZE` | 3 | cards |
 | `CRATE_COLORS` | red, green, blue, yellow | the colors a game can open [D] |
+| `WHITE` | white | the color of a Thing that acts on every piece [D] |
 | `THINGS.SPRING.push` | 3 | hexes |
 | `THINGS.BELT.push` | 1 | hexes |
 | `THINGS.ROCKET.push` | 8 | hexes (its range) [D] |
 | `THINGS.PULLER.pull` | 1 | hexes |
-| `THINGS.*.weight` BELT/SPRING/ROCKET/PULLER/WALL/TRAP/BRIDGE | 6 / 2 / 1 / 2 / 2 / 1 / 1 | relative (TRAP [D]: as ROCKET) |
+| `THINGS.PUSHER.shove` | 1 | hexes [D] |
+| `THINGS.*.weight` BELT/SPRING/ROCKET/PUSHER/PULLER/WALL/TRAP/BRIDGE | 6 / 2 / 1 / 2 / 2 / 2 / 1 / 1 | relative (TRAP [D]: as ROCKET; PUSHER [P]: as PULLER) |
 | `GREMLIN_HEXES_PER_DIE` / `GREMLIN_DICE_SIDES` | 160 / 4 | hexes of board area per die (the small board's area) [D] / sides; gremlins = `gremlinDice(size)` d sides |
 | `GEN_MAX_ATTEMPTS` | 10 | tries per seed |
 | `HEIGHTMAP_ROUGHNESS` | 0.55 | — |
@@ -412,7 +423,7 @@ The code constant in `GameArtifacts` is the single source.
 |---|---|---|---|
 | `newGame(seed, size)` | `seed` is a non-negative integer and `size` a key of `MAP_SIZES` | regenerate at that size | `{ok:true}` |
 | `place(slot, q, r, facing)` | see Commands rule | build, redraw slot, tick | `{ok, events}` |
-| `rotate(q, r)` | a Belt, Spring, Rocket, or Puller is there | turn clockwise; no tick | `{ok, events: []}` |
+| `rotate(q, r)` | a Belt, Spring, Rocket, Pusher, or Puller is there | turn clockwise; no tick | `{ok, events: []}` |
 | `remove(q, r)` | any Thing is there | take it off (a piece left on open water sinks), tick | `{ok, events}` |
 | `discard(slot)` | `0 <= slot < HAND_SIZE` | redraw that slot, tick | `{ok, events}` |
 | `wait()` | always | tick | `{ok, events}` |
@@ -422,6 +433,7 @@ Illegal → `{ ok:false }` and nothing changed (hand and `Rando` included).
 ### Queries
 - `canPlace(kind, hex)` → bool — the check `place` enforces.
 - `legalPlacements(kind)` → `Set<key>` — every hex where `canPlace` holds.
+- `affects(thing, piece)` — whether a Thing's color lets it act on that piece.
 - `thingAt(q, r)`, `pieceAt(q, r)`, `targetAt(q, r)`, `sourceOf(color)`, `openColors()`, `isEndpoint(hex)`.
 - `board.*`.
 

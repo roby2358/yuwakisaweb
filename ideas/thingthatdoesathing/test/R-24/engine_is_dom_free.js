@@ -7,7 +7,7 @@ const g = load();
 check('GameDisplayArtifacts absent from the engine context', g.GameDisplayArtifacts === undefined);
 const state = new g.GameState(), engine = new g.GameEngine(state);
 engine.newGame(5, 'small');
-const [key] = engine.legalPlacements(state.hand[0]);
+const [key] = engine.legalPlacements(state.hand[0].kind);
 const { q, r } = g.Hex.fromKey(key);
 check('a game generates, places, and waits headless', engine.place(0, q, r, 0).ok && engine.wait().ok);
 for (const f of ['artifacts.js', 'piece.js', 'board.js', 'gamestate.js', 'gameengine.js']) {

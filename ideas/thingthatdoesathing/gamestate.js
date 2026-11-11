@@ -11,8 +11,8 @@ const GameState = (function () {
             this.sources = [];        // [{q, r, colors}] — crates of these colors appear here
             this.targets = [];        // [{q, r, color, delivered}] — takes only `color` crates; one per open color
             this.pieces = [];         // [Piece] crates and gremlins, in creation order
-            this.things = [];         // [{kind, q, r, facing}] in placement order (= action order)
-            this.hand = [];           // [ThingKind], length HAND_SIZE
+            this.things = [];         // [{kind, color, q, r, facing}] in placement order (= action order)
+            this.hand = [];           // [{kind, color}] cards, length HAND_SIZE
             this.turn = 1;
             this.delivered = 0;
             this.lost = 0;            // crates sunk

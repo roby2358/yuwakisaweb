@@ -20,21 +20,27 @@ for why it works and [ONTOLOGY.md](ONTOLOGY.md) for the rules.
 | Belt | moves what's on it 1 hex in its facing |
 | Spring | flings what's on it 3 hexes, over lakes; it skids on if it lands on ice |
 | Rocket | blasts what's on it up to 8 hexes, stopping early at something solid or the outer sea, and delivering if it crosses its color's target (it flies over lakes); splats any gremlin it hits, and any gremlin riding it |
+| Pusher | pushes whatever is on the hex in front of it 1 hex on |
 | Puller | reaches across the hex in front and pulls whatever's beyond it into that hex |
 | Wall | nothing gets in |
 | Trap | a gremlin that comes onto it dies (a new one climbs out on the shore); crates are safe |
 | Bridge | built on water; pieces cross instead of sinking |
 
+Pushers and Pullers come in white (they move anything) or, once a second color is open, in a
+crate color: a red one moves only red crates, and every gremlin. That's how you split a
+mixed line.
+
 Terrain: water sinks pieces, ice makes them slide, mountains block. Gremlins wander and
 ride your belts, and a gremlin that steps onto a crate wrecks it (one pushed into a crate
-is just stopped).
+is just stopped). A gremlin
+that comes onto a target dies there, so they can't camp it.
 
 ## UI
 
 - `1` `2` `3` or click a card to pick it; legal hexes tint yellow
 - `R` / `Shift+R` / mouse wheel turn the Thing before placing
 - Click a yellow hex to place it; the world ticks once and animates
-- With no card picked, click a placed Belt/Spring/Rocket/Puller to turn it clockwise (free: no tick)
+- With no card picked, click a placed Belt/Spring/Rocket/Pusher/Puller to turn it clockwise (free: no tick)
 - `D` removes the Thing under the cursor; the card is gone and the world ticks once
 - Pick a card, then click Discard (right of the cards) or press `X` to throw it away; the world ticks once
 - Space / Enter / Wait: let it run one tick

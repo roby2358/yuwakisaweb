@@ -28,7 +28,7 @@ for (const seed of SEEDS) {
     check(`seed ${seed}: no two pieces share a hex; ids unique`,
         new Set(keys).size === keys.length && new Set(state.pieces.map(p => p.id)).size === keys.length);
     check(`seed ${seed}: empty board, full hand, counters reset`,
-        state.things.length === 0 && state.hand.length === A.HAND_SIZE && state.hand.every(k => k in A.THINGS) &&
+        state.things.length === 0 && state.hand.length === A.HAND_SIZE && state.hand.every(card => card.kind in A.THINGS && card.color === A.WHITE) &&
         state.turn === 1 && state.delivered === 0 && state.lost === 0 && state.spawnTimer === 0 &&
         state.phase === 'player');
 }

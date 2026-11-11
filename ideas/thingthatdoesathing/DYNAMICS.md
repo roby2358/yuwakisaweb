@@ -25,7 +25,7 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
 - **One shared `step` for every movement**, with ice and water (comedy). A gremlin, a crate,
   a Spring, and a slide all obey the same rule, so they collide in ways nobody scripted.
 - **Each Thing does one thing, drawn with a facing arrow** (readable). A Belt or Spring
-  moves what's on it; a Puller reaches two hexes ahead. You can always point at the Thing
+  moves what's on it; a Pusher shoves the hex in front; a Puller reaches two hexes ahead. You can always point at the Thing
   that moved a piece.
 
 ## Secondary mechanics, woven in
@@ -52,6 +52,12 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
   you can set up on purpose.
 - **`SOURCE_INTERVAL`** → paces the factory; a jammed source just waits, and while other
   colors are open, the crates go to them instead.
+- **Colored Pushers and Pullers** → feed readable consequences and accumulation: once a
+  second color is open, a red Pusher beside a white line knocks off only the red crates, and a
+  red Puller reaches in for them. Gremlins are moved by every color, so a sorter is never a
+  gremlin-safe gap.
+- **Targets kill gremlins** → keep the payoff flowing: a gremlin that wanders or rides onto a
+  target dies there, so it can't camp the end of your line.
 - **Colors** (bigger boards) → feed escalating commitment and comedy: each milestone can open
   a new color with its own target, sometimes out of the source your line already runs
   from. The working factory now has to share the board, and a shared source has to be
@@ -64,7 +70,7 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
 
 1. You **place** a card, **discard** one, **remove** a Thing, or **wait**. You may also
    **rotate** movers first, as many as you like: turning doesn't tick.
-2. **Tick:** Things act in placement order (pushers on the piece on them, Pullers on the
+2. **Tick:** Things act in placement order (Belts, Springs and Rockets on the piece on them, Pushers on the piece in front, Pullers on the
    piece two hexes ahead), each piece moving at most once.
    A Rocket's piece flies up to its range, over lakes. Unmoved gremlins wander. The source may
    spawn a crate.
@@ -99,5 +105,5 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
 ### Strategy ↔ mechanic cross-check
 
 Every Thing kind is used by some strategy above (Belt: spine; Wall: fencing; Bridge:
-water detours; Spring: straight runs and lake hops; Rocket: long shots at the target, gremlin squashing; Puller: side-feed, slide catcher, gremlin drowner). Discard is the opening's way to skip cards. Rotate and Remove
+water detours; Spring: straight runs and lake hops; Rocket: long shots at the target, gremlin squashing; Pusher: side-feed and knocking a color off the line (colored); Puller: side-feed, slide catcher, gremlin drowner). Discard is the opening's way to skip cards. Rotate and Remove
 are used to fix misplacements. Gremlins create the midgame.

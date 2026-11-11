@@ -7,7 +7,7 @@ const { check, done } = require('../helpers/check');
 const { flatGame, snapshot } = require('../helpers/load');
 const { state, engine, put, piece } = flatGame();
 piece('gremlin', 6, 6);
-for (const kind of ['BELT', 'SPRING', 'ROCKET', 'PULLER']) {
+for (const kind of ['BELT', 'SPRING', 'ROCKET', 'PUSHER', 'PULLER']) {
     state.things = [];
     const t = put(kind, 3, 4, 0);
     const before = snapshot(state);

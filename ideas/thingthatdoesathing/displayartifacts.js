@@ -32,16 +32,20 @@ const GameDisplayArtifacts = (function () {
             [T.ICE]: 'Ice — pieces slide across',
         },
         // Per-Thing look: name, short verb line, base fill, accent, and how much of the hex
-        // its tile covers.
+        // its tile covers. A colored kind (THINGS.colored) draws its accent in its card color
+        // instead (COLOR_INK); white is the `ink` here.
         THING_LOOK: {
             BELT:    { name: 'Belt',    does: 'moves what is on it 1 hex',                fill: '#3a3f47', ink: '#ffd633', inset: 0.84 },
             SPRING:  { name: 'Spring',  does: 'flings what is on it 3 hexes, over lakes', fill: '#4a3a2a', ink: '#ff9a3c', inset: 0.84 },
             ROCKET:  { name: 'Rocket',  does: 'blasts what is on it up to 8 hexes, over lakes; splats gremlins', fill: '#4a2234', ink: '#ff5c8a', inset: 0.84 },
-            PULLER:  { name: 'Puller',  does: 'pulls what is 2 hexes ahead 1 hex closer', fill: '#1f4a4a', ink: '#5ef0d8', inset: 0.84 },
+            PUSHER:  { name: 'Pusher',  does: 'pushes what is in front of it 1 hex on',   fill: '#2c2f4a', ink: '#ffffff', inset: 0.84 },
+            PULLER:  { name: 'Puller',  does: 'pulls what is 2 hexes ahead 1 hex closer', fill: '#1f4a4a', ink: '#ffffff', inset: 0.84 },
             WALL:    { name: 'Wall',    does: 'nothing gets in',                          fill: '#8a5a3c', ink: '#5c3a24', inset: 1 },
             TRAP:    { name: 'Trap',    does: 'a gremlin that comes onto it dies (crates are safe)', fill: '#3d3a33', ink: '#d9d4c7', inset: 0.84 },
             BRIDGE:  { name: 'Bridge',  does: 'water you can cross (build on water)',     fill: '#a07a4a', ink: '#6b4f2c', inset: 0.84 },
         },
+        // Accent per card color for colored kinds: white, or the crate color's lit face.
+        COLOR_INK: { white: '#ffffff', red: '#ff7a6b', green: '#8ff08a', blue: '#8ec4ff', yellow: '#fff08a' },
         // Per-piece hover name. Gremlins carry their own counter color in state.
         PIECE_LOOK: {
             crate:   { name: 'Crate' },

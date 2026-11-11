@@ -5,14 +5,14 @@
 const { check, done } = require('../helpers/check');
 const { flatGame, snapshot } = require('../helpers/load');
 const { g, state, engine } = flatGame();
-state.hand = ['BELT', 'WALL', 'BRIDGE'];
+state.hand = [{ kind: 'BELT', color: 'white' }, { kind: 'WALL', color: 'white' }, { kind: 'BRIDGE', color: 'white' }];
 const turn = state.turn;
 let res = engine.place(0, 3, 4, 2);
 const t = state.things[0];
 check('belt placed with its facing', res.ok && t.kind === 'BELT' && t.q === 3 && t.r === 4 && t.facing === 2);
-check('hand refilled to HAND_SIZE', state.hand.length === g.GameArtifacts.HAND_SIZE && state.hand.every(k => k in g.GameArtifacts.THINGS));
+check('hand refilled to HAND_SIZE', state.hand.length === g.GameArtifacts.HAND_SIZE && state.hand.every(card => card.kind in g.GameArtifacts.THINGS));
 check('ticked once', state.turn === turn + 1);
-state.hand[1] = 'WALL';
+state.hand[1] = { kind: 'WALL', color: 'white' };
 res = engine.place(1, 5, 4, 3);
 check('fixture stores facing null', res.ok && state.things[1].kind === 'WALL' && state.things[1].facing === null);
 
@@ -27,7 +27,7 @@ const illegal = [   // [label, hand[0], place args]
     ['off the map', 'BELT', [0, 40, 40, 0]],
 ];
 for (const [label, card, args] of illegal) {
-    state.hand[0] = card;
+    state.hand[0] = { kind: card, color: 'white' };
     const before = snapshot(state);
     // Rando untouched: the stream after the call equals a fresh stream from the same seed.
     g.Rando.seed(99); const res2 = engine.place(...args); const next = g.Rando.random();

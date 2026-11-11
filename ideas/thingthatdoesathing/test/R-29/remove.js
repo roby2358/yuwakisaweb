@@ -10,10 +10,10 @@ const { flatGame, snapshot, DIR } = require('../helpers/load');
     for (const [kind, facing] of [['BELT', DIR.E], ['SPRING', DIR.E], ['PULLER', DIR.E], ['WALL', null]]) {
         state.things = [];
         put(kind, 3, 4, facing);
-        const turn = state.turn, hand = state.hand.join();
+        const turn = state.turn, hand = JSON.stringify(state.hand);
         const res = engine.remove(3, 4);
         check(`${kind}: gone, ticked once, hand unchanged`,
-            res.ok && !engine.thingAt(3, 4) && state.turn === turn + 1 && state.hand.join() === hand);
+            res.ok && !engine.thingAt(3, 4) && state.turn === turn + 1 && JSON.stringify(state.hand) === hand);
     }
 }
 {

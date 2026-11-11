@@ -51,8 +51,8 @@ for (const seed of [3, 4, 5]) {
     let ok = true;
     for (let i = 0; i < 80; i++) {
         const pos = new Map(state.pieces.map(p => [p.id, p.key()]));
-        if (i % 8 === 1) state.hand[0] = 'ROCKET';
-        const legal = [...engine.legalPlacements(state.hand[0])];
+        if (i % 8 === 1) state.hand[0] = { kind: 'ROCKET', color: 'white' };
+        const legal = [...engine.legalPlacements(state.hand[0].kind)];
         const res = legal.length && i % 2 ? engine.place(0, ...legal[(i * 5) % legal.length].split(',').map(Number), i % 6) : engine.wait();
         for (const e of res.events) {
             if (e.type === 'move') pos.set(e.id, g.Hex.key(e.path.at(-1).q, e.path.at(-1).r));

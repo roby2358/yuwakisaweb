@@ -7,7 +7,7 @@
 // Every command re-checks its own legality; every legal command but rotate runs exactly one tick. All randomness goes through the seeded Rando.
 const GameEngine = (function () {
     const {
-        TERRAIN, THINGS, PIECES, CRATE_COLORS, aims, nextMilestone, MAP_SIZES, SOURCE_INTERVAL, ENHANCE_CHANCE, HAND_SIZE,
+        TERRAIN, THINGS, PIECES, CRATE_COLORS, WHITE, aims, nextMilestone, MAP_SIZES, SOURCE_INTERVAL, ENHANCE_CHANCE, HAND_SIZE,
         gremlinDice, GREMLIN_DICE_SIDES,
         GEN_MAX_ATTEMPTS, HEIGHTMAP_ROUGHNESS,
         WATER_PCT, MOUNTAIN_PCT, ICE_FRAC, PLACE_SLICE_FRAC, PLACE_SLICE_MIN
@@ -109,7 +109,7 @@ const GameEngine = (function () {
             s.nextId = 1;
             this.spawnCrate(color, s.sources[0]);
             this.spawnGremlins();
-            s.hand = Array.from({ length: HAND_SIZE }, () => this.draw());
+            s.hand = Array.from({ length: HAND_SIZE }, () => this.draw());   // after targets: card colors read them
             s.turn = 1;
             s.delivered = 0;
             s.lost = 0;
@@ -297,8 +297,13 @@ const GameEngine = (function () {
             return events;
         }
 
-        // A kind drawn with probability weight / total weight.
+        // A card: a kind drawn with probability weight / total weight, and its color.
         draw() {
+            const kind = this.drawKind();
+            return { kind, color: THINGS[kind].colored ? this.cardColor() : WHITE };
+        }
+
+        drawKind() {
             const total = KINDS.reduce((sum, k) => sum + THINGS[k].weight, 0);
             let roll = Rando.random() * total;
             for (const k of KINDS) {
@@ -306,6 +311,20 @@ const GameEngine = (function () {
                 if (roll < 0) return k;
             }
             return KINDS[KINDS.length - 1];
+        }
+
+        // A colored kind's card color: white while only one color is open; after that, white
+        // or one of the open colors, each equally likely.
+        cardColor() {
+            const open = this.openColors();
+            if (open.length < 2) return WHITE;
+            return Rando.choice([WHITE, ...open]);
+        }
+
+        // Does this Thing act on this piece? White ones act on everything; a colored one only
+        // on crates of its color, and on every gremlin.
+        affects(thing, piece) {
+            return thing.color === WHITE || !PIECES[piece.kind].cargo || piece.color === thing.color;
         }
 
         // ---- Movement: one code path for movers, springs, ice, and gremlins ----
@@ -323,10 +342,12 @@ const GameEngine = (function () {
             return hex.terrain === TERRAIN.ICE && !this.thingAt(hex.q, hex.r);
         }
 
-        // Does a Trap on this hex kill this piece when it comes onto it?
+        // Does this hex kill this piece when it comes onto it? A Trap does, and so does a
+        // target, for a piece that splats (gremlins can't camp the targets).
         trapsPiece(piece, hex) {
             const thing = this.thingAt(hex.q, hex.r);
-            return !!thing && THINGS[thing.kind].traps && PIECES[piece.kind].splats;
+            const deadly = (!!thing && THINGS[thing.kind].traps) || !!this.targetAt(hex.q, hex.r);
+            return deadly && PIECES[piece.kind].splats;
         }
 
         // Is this hex wet — water with nothing built over it?
@@ -449,17 +470,16 @@ const GameEngine = (function () {
         }
 
         // The piece a Thing acts on this tick, and which way and how far it goes.
-        // Pushers move the piece on their own hex along their facing; pullers reach across
-        // the near hex and pull the piece on the far hex back into the near one.
+        // Movers (push) move the piece on their own hex along their facing; Pushers (shove)
+        // move the piece on the hex they face on along their facing; Pullers (pull) reach
+        // across the near hex and pull the piece on the far hex back into the near one.
         actionOf(thing) {
             const tpl = THINGS[thing.kind];
-            if (tpl.push) return { piece: this.pieceAt(thing.q, thing.r), dir: thing.facing,
-                how: { n: tpl.push, splat: tpl.splat, flies: tpl.flies, skids: tpl.skids, wrecks: false } };
-            if (tpl.pull) {
-                const d = NEIGHBOR_DIRS[thing.facing];
-                return { piece: this.pieceAt(thing.q + 2 * d.q, thing.r + 2 * d.r), dir: Hex.opposite(thing.facing),
-                    how: { n: tpl.pull, splat: tpl.splat, flies: tpl.flies, skids: tpl.skids, wrecks: false } };
-            }
+            const how = n => ({ n, splat: tpl.splat, flies: tpl.flies, skids: tpl.skids, wrecks: false });
+            const d = aims(thing.kind) && NEIGHBOR_DIRS[thing.facing];
+            if (tpl.push) return { piece: this.pieceAt(thing.q, thing.r), dir: thing.facing, how: how(tpl.push) };
+            if (tpl.shove) return { piece: this.pieceAt(thing.q + d.q, thing.r + d.r), dir: thing.facing, how: how(tpl.shove) };
+            if (tpl.pull) return { piece: this.pieceAt(thing.q + 2 * d.q, thing.r + 2 * d.r), dir: Hex.opposite(thing.facing), how: how(tpl.pull) };
             return null;
         }
 
@@ -491,7 +511,7 @@ const GameEngine = (function () {
 
             for (const thing of s.things) {
                 const act = this.actionOf(thing);
-                if (!act || !act.piece || moved.has(act.piece.id)) continue;
+                if (!act || !act.piece || !this.affects(thing, act.piece) || moved.has(act.piece.id)) continue;
                 moved.add(act.piece.id);
                 events.push(...this.push(act.piece, act.dir, act.how));
             }
@@ -536,11 +556,11 @@ const GameEngine = (function () {
         place(slot, q, r, facing) {
             const s = this.state;
             if (!Number.isInteger(slot) || slot < 0 || slot >= s.hand.length) return { ok: false };
-            const kind = s.hand[slot];
+            const { kind, color } = s.hand[slot];
             const aimed = aims(kind);
             if (aimed && !(Number.isInteger(facing) && facing >= 0 && facing < 6)) return { ok: false };
             if (!this.canPlace(kind, this.board.get(q, r))) return { ok: false };
-            s.things.push({ kind, q, r, facing: aimed ? facing : null });
+            s.things.push({ kind, color, q, r, facing: aimed ? facing : null });
             s.hand[slot] = this.draw();
             return this.tick(NOTHING_FIRST);
         }

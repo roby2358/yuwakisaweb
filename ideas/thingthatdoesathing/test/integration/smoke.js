@@ -20,7 +20,7 @@ for (const seed of SEEDS.slice(0, 6)) {
         let res;
         if (roll < 6) {
             const slot = rnd(A.HAND_SIZE);
-            const legal = [...engine.legalPlacements(state.hand[slot])];
+            const legal = [...engine.legalPlacements(state.hand[slot].kind)];
             res = legal.length ? engine.place(slot, ...legal[rnd(legal.length)].split(',').map(Number), rnd(6)) : engine.wait();
         } else if (roll < 8 && state.things.some(t => t.facing !== null)) {
             const movers = state.things.filter(t => t.facing !== null);
