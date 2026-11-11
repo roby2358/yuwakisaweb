@@ -455,6 +455,52 @@ ARCHITECTURE_LOG.md.
   Reaching first makes it a diverter wherever it was built, keeps one move per piece, and is
   one partition of the loop, not a per-Thing priority.
 - **Evidence:** R-43. Unmeasured in play: the bot discards Pushers and Pullers.
+- **Open: first vs last (2026-11-11, pjpd push-order-ptbd)** *(unreviewed — recommendation
+  only, order unchanged)*. "Last" means Belts, Bridges, Springs and Rockets go first, then
+  Pushers and Pullers, each group still in placement order. R-13 holds either way: the
+  `moved` set is checked before every action, and a piece whose push was *blocked* still
+  counts as moved. That one fact decides most cases. The hope for "last" was "the belt
+  brings it, the Pusher shoves it on" in a single tick, but a crate a Belt just carried has
+  moved, so a last-acting Pusher skips it. Traced on `flatGame()` with the order line
+  swapped in a throwaway copy (crate positions after each tick, a Belt line E along r=4):
+  - *Pusher beside a running line* (Belts q=1…8, Pusher at (4,5) facing NE onto (5,4)).
+    First: the crate gets to (5,4) on tick 4 and is shoved to (6,3) on tick 5. Last: tick 5's
+    Belt carries it to (6,4) before the Pusher looks, and so on every tick: the Pusher never
+    fires, which is exactly the bug D-24 fixed. A *Puller* whose far hex is on the line
+    behaves the same way: first pulls the crate into its near hex, last never does. The same
+    holds for a *Bridge* line (D-27), with one hazard in first order: a Pusher beside a
+    Bridge line over water shoves the crate into the lake (sinks, `lost` +1) unless the
+    side hex is bridged or Slid. Last order never fires there at all.
+  - *Pusher at a belt corner.* Where the line just ends (Belts q=1…4, (5,4) bare, the Pusher
+    as above), both orders match: the crate arrives on tick 4 and is shoved NE on tick 5,
+    because a crate standing on bare ground has nothing else to move it. Where the corner is
+    a turning Belt ((5,4) Belt facing SE), first lets the Pusher override the turn (crate to
+    (6,3)) and last lets the Belt win (crate to (5,5), then (5,6)); the Pusher is dead weight.
+  - *Puller reaching over a Belt onto it* (Puller at (2,4) facing E, a Belt on the near hex
+    (3,4) facing W, a resting crate on the far hex (4,4)). Same in both orders: pulled onto
+    the Belt on tick 1, carried on tick 2. A piece that lands on a mover waits a tick
+    regardless.
+  - *Pusher feeding a Spring* (line ends at (5,4), Pusher shoves it NE to (6,3), a Spring
+    there facing E). Same in both: shoved on tick 5, thrown to (9,3) on tick 6. Aiming the
+    Pusher *at the Spring's own hex* differs: first steals the crate off the Spring before
+    the throw ((6,3)); last lets the Spring throw it ((8,4)) and the Pusher never acts.
+  - *Slide* (D-29) doesn't act in the tick, so order never matters for it: Belts q=1…3 into
+    Slides q=4…6 run the crate to (7,4) in one push, and a Pusher facing (7,4) shoves it on
+    the next tick in both orders.
+  - *Merging into a busy line* is the one place "last" does better. Belts q=1…8 with crates on
+    (5,4) and (6,4), and a Pusher at (4,6) shoving a side crate from (5,5) NE onto (6,4).
+    First: (6,4) is still occupied when the Pusher acts, so the shove is blocked and the side
+    crate burns its move; with the Belts placed downstream-first it waits two ticks. Last:
+    the Belts clear (6,4) first, and it merges on tick 1. The gain is a tick or two per
+    merge, and it depends on Belt placement order anyway.
+- **Recommendation:** keep *first*. With one move per piece, "last" doesn't buy "the belt
+  brings it, the Pusher shoves it on". It makes a Pusher or Puller beside any moving line
+  (Belt, Bridge, a turning corner, a Spring hex) never fire, and it changes nothing at line
+  ends, where the crate stops anyway. Its only win is faster merges into a dense line. In
+  "first", the Pusher overrides whatever the crate stands on, which is the whole point of a
+  diverter. The costs of first are a Pusher aimed at a Spring stealing its crate and a
+  Pusher beside a Bridge line drowning crates, and both are visible and fixable by aiming.
+  Revisit only if playtest shows merges stalling.
 
 ### D-9 Five-module split, plain `<script>` globals, seeded `Rando` — *Decided*
 - **Alternatives:** single file; ES modules.

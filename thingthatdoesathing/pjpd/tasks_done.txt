@@ -32,6 +32,14 @@ Thing Factory: unlock cards gradually. A new game draws only Belt, Bridge and Wa
 ----
 Priority:   50
 Status: Done
+ID: push-order-ptbd
+Created: 2026-11-11T15:59:05Z
+Updated: 2026-11-11T21:21:50Z
+
+Thing Factory: decide whether Pushers and Pullers act first in a tick (now) or last. Acting first means they take the crate before a Belt under it moves it, so a Pusher next to a belt line diverts crates. Acting last means they catch crates that belts just delivered in front of them, which may read more naturally ("the belt brings it, the pusher shoves it on"). Each piece still moves at most once a tick either way. Write a RATIONALE entry with both options and concrete examples, like a Pusher at a belt corner, a Puller reaching over a belt, and a Pusher feeding a Spring. Bring a recommendation to the user before changing anything. If it flips: change the order in tick(), update the R-n test for order, ONTOLOGY tick rule, D-entry, log, and run cc-sim.
+----
+Priority:   50
+Status: Done
 ID: slide-card-3um8
 Created: 2026-11-11T15:59:01Z
 Updated: 2026-11-11T20:54:22Z
