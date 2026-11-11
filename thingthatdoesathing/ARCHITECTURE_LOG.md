@@ -2,6 +2,17 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-11 — Big crates worth 10
+Every spawn used to be a `crate` worth one delivery. `PIECES` gained a `value` field (crate 1,
+gremlin 0) and a new row, `bigcrate` (value 10); `artifacts.js` gained `BIG_CRATE_HALF` and
+`bigCrateChance(m)`. The engine's new `spawnKind()` picks the spawn's kind (no `Rando` roll
+before the first milestone), `step` adds the value to `delivered` and the target's count, and
+the new `loseValue(piece)` replaces the `lost++` in sink, wreck and blast. `crateCount()`
+still counts pieces. Display: `BIG_CRATE_SCALE`, a `bigcrate` row in `PIECE_LOOK`, and
+`PIECE_DRAW`/`SPLAT_COLOR` entries in `gameui.js`. `test/sim.js` takes a third argument,
+milestones to play to (`just cc-sim` passes 1; new `just cc-sim-to`). D-34 added; R-52 and
+U-26 added, R-15, R-16, R-19, R-37, R-44 and U-10 touched (R-19's test counts cargo).
+
 ### 2026-11-11 — Pieces on ice get bumped
 A piece stopped by another piece used to be blocked, always. Now a ground step blocked by a
 piece standing on slick ground (`isSlick`: bare ice or a Slide) calls the new

@@ -51,6 +51,7 @@ const GameDisplayArtifacts = (function () {
         // Per-piece hover name. Gremlins carry their own counter color in state.
         PIECE_LOOK: {
             crate:   { name: 'Crate' },
+            bigcrate: { name: 'Big crate — worth 10' },
             gremlin: { name: 'Gremlin — wanders' },
         },
         // Isometric crate faces per CRATE_COLORS name: lit top, mid left, dark right.
@@ -60,6 +61,7 @@ const GameDisplayArtifacts = (function () {
             blue:   { top: '#8ec4ff', left: '#3d7fe0', right: '#204a8e' },
             yellow: { top: '#fff08a', left: '#e8c230', right: '#9a7a12' },
         },
+        BIG_CRATE_SCALE: 1.5,        // a big crate is drawn this much bigger than a crate (D-34)
         SPLAT_BLOTS: 8,              // drops in a splat burst
         SOURCE_COLOR: '#4ce08a',
         // Canvas chrome — mirror --bg and --font in index.css.

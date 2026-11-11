@@ -8,7 +8,9 @@ crate color (up to 2 on 20 × 20, 3 on 30 × 30, 4 on 60 × 60), with its own ta
 time from a new source, half the time from one already running, so a line has to split. A
 target takes only its color; other colors can't get onto it, though a Rocket flies over.
 Crates keep coming every third tick, a random open color each time, until the board holds its
-cap (more on bigger boards, one more per milestone).
+cap (more on bigger boards, one more per milestone). After the first milestone some come out
+as big crates, drawn bigger and worth 10 delivered (or 10 lost), and each milestone makes them
+commoner.
 Every Thing does exactly one thing, every tick.
 
 Forked from the Hex & Counters base (`../ideas/hexandcounter`). See [DYNAMICS.md](DYNAMICS.md)

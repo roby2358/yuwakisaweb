@@ -10,7 +10,7 @@
 const GameUI = (function () {
     const {
         HEX_SIZE, COUNTER_SIZE, HOP_MS, RUN_GAP_MS, MILESTONE_MS, TERRAIN_COLORS, TERRAIN_NAMES, THING_LOOK,
-        PIECE_LOOK, CRATE_SHADES, COLOR_INK, SPLAT_BLOTS, SOURCE_COLOR, BG_COLOR, UI_FONT, REACH_COLOR, MAP_SIZE_NOTES,
+        PIECE_LOOK, CRATE_SHADES, BIG_CRATE_SCALE, COLOR_INK, SPLAT_BLOTS, SOURCE_COLOR, BG_COLOR, UI_FONT, REACH_COLOR, MAP_SIZE_NOTES,
         COLOR_PICKER_PX
     } = GameDisplayArtifacts;
     const { TERRAIN, THINGS, WHITE, HAND_SIZE, MAP_SIZES, aims, nextMilestone } = GameArtifacts;
@@ -18,6 +18,7 @@ const GameUI = (function () {
     // A splat burst's color, by piece kind: a gremlin's own color, a crate's side face.
     const SPLAT_COLOR = {
         crate: p => CRATE_SHADES[p.color].left,
+        bigcrate: p => CRATE_SHADES[p.color].left,
         gremlin: p => p.color,
     };
     const END_CUES = ['deliver', 'splat', 'sink'];   // the one sound a tick's endings play, by priority
@@ -39,6 +40,7 @@ const GameUI = (function () {
     // snapshot of one.
     const PIECE_DRAW = {
         crate:   (ui, x, y, p, alpha, scale) => ui.drawCrate(x, y, CRATE_SHADES[p.color], alpha, scale),
+        bigcrate: (ui, x, y, p, alpha, scale) => ui.drawCrate(x, y, CRATE_SHADES[p.color], alpha, scale * BIG_CRATE_SCALE),
         gremlin: (ui, x, y, p, alpha, scale) => ui.drawCounter(x, y, p.color, p.label, alpha, scale),
     };
 

@@ -518,6 +518,46 @@ ARCHITECTURE_LOG.md.
   (was 70), 3.66 lost (was 3.52). The bot builds belts, so bumps only come up where a belt
   runs into a crate stalled on ice. Unmeasured in play.
 
+### D-34 Big crates, worth 10, grow more likely with each milestone — *Decided (a crate worth 10 deliveries whose share of spawns rises toward 1), Proposed (unreviewed: the rest)*
+- **Alternatives:** a `value` field on each crate piece instead of a kind; p = 1 − (1 −
+  base)^m; make later milestones closer together; spawn faster per milestone.
+- **Why:** the designer asked for it (pjpd big-crate-jat8). The milestones run on the 1-2-5
+  series, so the gap between them grows about tenfold per three milestones while a line
+  carries crates at a steady rate: without help, milestone 5 (100) takes the bot ~660 turns on
+  small, and each one roughly doubles the wait. Big crates raise what a crate is worth as the
+  factory matures, so the payoffs keep coming without changing the series. It's data, not a
+  code path: a new `PIECES` row `bigcrate` with `value: 10` (crate 1, gremlin 0), read by the
+  one place each count changes (`step`'s delivery, the new `loseValue(piece)` for sinks,
+  wrecks and blasts). Everything else keys on `cargo`, so a big crate is a crate.
+- **Unreviewed calls:** (1) A kind, not a per-piece field: templates already carry the
+  per-kind numbers, the client's draw and hover tables dispatch on `kind`, and saves need no
+  new field. (2) The formula is p = m / (m + `BIG_CRATE_HALF`) with `BIG_CRATE_HALF` = 4,
+  read as "half the spawns are big at the fourth milestone (100)": 0 before the first, 1 in 5
+  after it (10), 1 in 3 after 20, 3 in 7 after 50, and 9 in 13 by 5000. The exponential
+  candidate gets to 1 faster than this one, and this one's constant is easier to read. At
+  m = 1 big crates are uncommon (a few per milestone), and they're the norm past m = 4.
+  (3) No roll while p is 0: before the first milestone `spawnKind()` doesn't touch `Rando`,
+  so early games (and the first-milestone sim baselines in D-3, D-7) are unchanged. (4) A big
+  crate counts as one toward the cap (D-31): the cap meters congestion, and a big crate takes
+  one hex like any crate. (5) It behaves as a crate everywhere else: Belts, Springs (3) and
+  Rockets (8) move it as far, it isn't splatted, it slides and is bumped (D-29, D-33), only
+  its color's target takes it, and a gremlin's step wrecks it. Losing one costs its full value
+  (sunk, wrecked or blasted: `lost` += 10), so a big crate near a gremlin or a lake is worth
+  guarding, and blasting one to clear a jam is an expensive call. (6) `delivered` and each
+  target's count add the value, so the tally, progress bar and per-color counts read in crate
+  units with no UI change; `lost` too. (7) A delivery can cross several milestones (two big
+  crates from 9 crosses 10 and 20): `reachMilestones` already handles each in turn, and R-52
+  checks the order. (8) The client draws it as the same isometric box at `BIG_CRATE_SCALE`
+  (1.5) times the size, and names it "Big crate — worth 10" on hover.
+- **Evidence:** R-52, R-19, R-16. `Measured by: just cc-sim 200 small` → unchanged (200/200,
+  median 49, p90 58, 2.08 lost); `just cc-sim 50 medium` → unchanged (50/50, median 61, p90
+  72, 3.66 lost). On to the fifth milestone, `just cc-sim-to 100 small 5` → median turn per
+  milestone 49 / 76 / 104 / 139 / 199, ~20 big crates spawned per game (with big crates off:
+  49 / 82 / 180 / 342 / 662); `just cc-sim-to 30 medium 5` → 61 / 91 / 124 / 196 / 346 (off:
+  61 / 103 / 320 / 669 / 1332; the bot builds only the first color's line, so some medium
+  games stall). Gaps between milestones stay near 30 turns on small instead of doubling.
+  Unmeasured in play.
+
 ### D-24 Pushers and Pullers act before the other Things in a tick — *Proposed*
 - **Alternatives:** pure placement order (the old rule); letting a Pusher or Puller move a
   piece that already moved this tick; acting after the Belts.

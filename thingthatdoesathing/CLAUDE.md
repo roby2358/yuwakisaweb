@@ -43,8 +43,8 @@ headless; `GameUI` is the only browser-coupled code.
 
 | Module | Global | Role |
 |---|---|---|
-| `artifacts.js` | `GameArtifacts` | Rules data: `MAP_SIZES`, `TERRAIN`, `THINGS` (the Thing templates: `push`, `pull`, `shove`, `splat`, `flies`, `skids`, `blocks`, `traps`, `colored`, `slides`, `on`, `weight`), `WHITE`, `UNLOCKS` (the card-unlock order, one step per milestone), `PIECES` (the piece templates: `label`, `cargo`, `wanders`, `splats`, `reemerges`), `aims(kind)`, `MOVEMENT_COST`, and every tunable number. |
-| `displayartifacts.js` | `GameDisplayArtifacts` | Client-only: `HEX_SIZE`, `COUNTER_SIZE`, `HOP_MS`, terrain colors/names, `THING_LOOK` (name, verb line, colors, inset), `PIECE_LOOK` (hover name), `CRATE_SHADES`, `COLOR_PICKER_PX`, `MAP_SIZE_NOTES` (size-picker notes), port colors. |
+| `artifacts.js` | `GameArtifacts` | Rules data: `MAP_SIZES`, `TERRAIN`, `THINGS` (the Thing templates: `push`, `pull`, `shove`, `splat`, `flies`, `skids`, `blocks`, `traps`, `colored`, `slides`, `on`, `weight`), `WHITE`, `UNLOCKS` (the card-unlock order, one step per milestone), `PIECES` (the piece templates `crate`, `bigcrate`, `gremlin`: `label`, `cargo`, `value`, `wanders`, `splats`, `reemerges`), `aims(kind)`, `MOVEMENT_COST`, and every tunable number. |
+| `displayartifacts.js` | `GameDisplayArtifacts` | Client-only: `HEX_SIZE`, `COUNTER_SIZE`, `HOP_MS`, terrain colors/names, `THING_LOOK` (name, verb line, colors, inset), `PIECE_LOOK` (hover name), `BIG_CRATE_SCALE`, `CRATE_SHADES`, `COLOR_PICKER_PX`, `MAP_SIZE_NOTES` (size-picker notes), port colors. |
 | `piece.js` | `Piece` | A positioned token. Crates and gremlins are `Piece`s with engine-set `id` and `kind`. |
 | `board.js` | `Board` | Query layer over the hex `Map` (passable = land). |
 | `gamestate.js` | `GameState` | Serializable data: `sources` (`{q, r, colors}`), `targets` (`{q, r, color, delivered}`), `pieces`, `things` (`{kind, color, q, r, facing}`), `hand` (`{kind}` cards), `unlocks` (how many `UNLOCKS` steps are open), `turn`, `delivered`, `lost`, `exGremlins`, `trapped`, `idleTicks`, `spawnTimer`, `nextId`, `phase`, `size`. |
@@ -103,13 +103,14 @@ in `hexToScreen` / `screenToHex`.
   two hexes ahead back into the hex between (both are drawn plain and get a crate color the player picks at placement, `place(slot, q, r, facing, color)` checked against `colorChoices(kind)`; they move only that color's crates, and gremlins; they're rare draws, D-32); a gremlin coming onto a target dies; Wall blocks; Bridge is a Belt built on water (it carries the piece on it 1 hex); Slide is buildable ice, on land or water (`slides`). One Thing per hex (placing on one replaces it), none on a target; movers may be built
   under a piece.
 - **Tick:** Pushers and Pullers first, then the other Things, each in placement order (each piece moves at most once), unmoved gremlins
-  wander, every `SPAWN_INTERVAL` ticks, while the board holds fewer crates than `crateCap(size)` plus one per milestone reached, a random open color spawns at its source if clear (D-31); each milestone may open a color (`openColor`) and unlocks the next card step (`unlock`).
+  wander, every `SPAWN_INTERVAL` ticks, while the board holds fewer crates than `crateCap(size)` plus one per milestone reached, a random open color spawns at its source if clear (D-31), a big crate worth 10 with `bigCrateChance(milestones)` (D-34); each milestone may open a color (`openColor`) and unlocks the next card step (`unlock`).
 - **Step:** blocked by off-map / mountain / Wall / piece (a piece standing on slick ground is bumped instead: the
   bumper stops, the bumped piece slides on, chains allowed, each piece once per tick, D-33); a gremlin on a Trap dies; open water sinks; slick ground (bare ice or a Slide, `isSlick`) slides
   free; a crate on its color's target is delivered (other colors' targets block it on the ground).
 - **Tuning harness:** `just cc-sim 200 small`, which runs `node test/sim.js 200 small` (greedy builder bot; lays belts and
   springs, throws every other card away with `discard`; before the first milestone only Belts,
-  Bridges, Walls and Traps are dealt, D-30).
+  Bridges, Walls and Traps are dealt, D-30); `just cc-sim-to 100 small 5` plays on to the fifth
+  milestone and reports turns per milestone and big crates spawned (D-34).
 
 ## Conventions
 

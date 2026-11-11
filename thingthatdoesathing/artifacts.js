@@ -59,6 +59,8 @@ const GameArtifacts = (function () {
     // Piece templates, keyed by Piece.kind:
     //   label   — the counter's glyph (gremlins; crates draw as a box)
     //   cargo   — delivered on reaching the target; counted as lost when it sinks
+    //   value   — how many crates it's worth: what a delivery adds to `delivered` (and its
+    //             target's count), and what losing it (sunk, wrecked, blasted) adds to `lost` (D-34)
     //   wanders   — takes a random step on a tick when no Thing moved it
     //   splats    — a splatting push (the Rocket) destroys it: the piece it lands on, and the
     //               piece it launches once that one lands; so does coming onto a Trap
@@ -67,8 +69,9 @@ const GameArtifacts = (function () {
     //   reemerges — when one sinks or splats (counted in exGremlins or trapped), a new one climbs out on a shore hex at the end
     //               of the tick
     const PIECES = {
-        crate:   { label: '📦', cargo: true,  wanders: false, splats: false, wrecks: false, reemerges: false },
-        gremlin: { label: '👹', cargo: false, wanders: true,  splats: true,  wrecks: true,  reemerges: true },
+        crate:    { label: '📦', cargo: true,  value: 1,  wanders: false, splats: false, wrecks: false, reemerges: false },
+        bigcrate: { label: '📦', cargo: true,  value: 10, wanders: false, splats: false, wrecks: false, reemerges: false },
+        gremlin:  { label: '👹', cargo: false, value: 0,  wanders: true,  splats: true,  wrecks: true,  reemerges: true },
     };
 
     // The colors a game can open, one at a time. Each open color has one target, which
@@ -119,6 +122,13 @@ const GameArtifacts = (function () {
         return n;
     };
 
+    const BIG_CRATE_HALF = 4;   // milestones reached at which half the spawns are big crates
+
+    // The chance a spawned crate is a big crate (D-34, R-52), with `m` milestones reached:
+    // m / (m + BIG_CRATE_HALF). None before the first milestone, 1 in 5 after it, half at
+    // BIG_CRATE_HALF, and on toward 1 without reaching it.
+    const bigCrateChance = m => m / (m + BIG_CRATE_HALF);
+
     // Does this kind of Thing have a facing (it pushes, pulls or shoves)? Only those can be turned.
     const aims = kind => THINGS[kind].push > 0 || THINGS[kind].pull > 0 || THINGS[kind].shove > 0;
 
@@ -134,6 +144,7 @@ const GameArtifacts = (function () {
         gremlinDice,
         crateCap,
         milestonesReached,
+        bigCrateChance,
         // Passability for Board: land is enterable, water and mountain are not. Water
         // still *accepts* a pushed piece (it sinks); that's the step rule, not this table.
         MOVEMENT_COST: {
@@ -147,6 +158,7 @@ const GameArtifacts = (function () {
         FIRST_MILESTONE,
         SPAWN_INTERVAL: 3,           // ticks between spawn chances, board-wide (a crate comes if under the cap and the rolled color's source is clear)
         CRATE_HEXES_PER_CAP,
+        BIG_CRATE_HALF,
         ENHANCE_CHANCE: 0.5,         // a newly opened color comes out of an existing source, else a new one
         HAND_SIZE: 3,
         IDLE_REDRAW_TICKS: 10,       // ticks in a row with no card used (place or discard) before one random card is redrawn

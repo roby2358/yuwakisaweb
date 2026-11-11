@@ -10,7 +10,7 @@ const { g, state, engine, piece } = flatGame();
 const A = g.GameArtifacts;
 const N = A.SPAWN_INTERVAL;
 const cap = A.crateCap('small');
-const crates = () => state.pieces.filter(p => p.kind === 'crate');
+const crates = () => state.pieces.filter(p => A.PIECES[p.kind].cargo);   // a big crate counts as one (D-34)
 state.spawnTimer = 0;
 for (let t = 1; t < N; t++) engine.wait();
 check(`no crate before SPAWN_INTERVAL (${N}) ticks`, crates().length === 0 && state.spawnTimer === N - 1);
@@ -32,7 +32,7 @@ check('every spawned crate has the open color', crates().every(p => p.color === 
 {
     // The cap: crateCap(size) crates parked off the source hold the source back.
     const { state, engine, piece } = flatGame();
-    const crates = () => state.pieces.filter(p => p.kind === 'crate');
+    const crates = () => state.pieces.filter(p => A.PIECES[p.kind].cargo);   // a big crate counts as one (D-34)
     for (let i = 0; i < cap; i++) piece('crate', i - 1, 2);
     check(`crateCap('small') is ${cap} and the engine's max matches`, cap >= 1 && engine.crateMax() === cap);
     state.spawnTimer = N - 1;

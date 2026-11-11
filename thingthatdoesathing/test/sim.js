@@ -1,10 +1,12 @@
-// test/sim.js — tuning harness:  node test/sim.js <games> <size>   (size: a MAP_SIZES key)
+// test/sim.js — tuning harness:  node test/sim.js <games> <size> <milestones>   (size: a MAP_SIZES key)
 //
 // A greedy builder bot: lay belts along the shortest land path from source to target,
 // facing each one at the next hex. A spring stands in for a belt on a straight run of 3.
 // Every other card (Puller, Rocket, Wall, Bridge, Slide, and a Spring off a straight run) is
 // thrown away with discard() (the bot doesn't plan pulls or flights). Reports turns to the first
-// milestone (FIRST_MILESTONE crates). Before then only the first UNLOCKS step is dealt (Belt,
+// milestone (FIRST_MILESTONE crates), or with <milestones> above 1 plays on to that many
+// milestones (still building only the first color's path) and reports turns to each one and
+// the big crates spawned per game (D-34). Before then only the first UNLOCKS step is dealt (Belt,
 // Bridge, Wall, Trap; D-30), so in practice the bot builds from Belts alone. Not a test (no pass/fail); it's the evidence behind
 // FIRST_MILESTONE, SPAWN_INTERVAL, CRATE_HEXES_PER_CAP and friends. Also prints the mean and peak crates on the board.
 'use strict';
@@ -13,8 +15,9 @@ const { newGame } = require('./helpers/load');
 
 const GAMES = Number(process.argv[2]);
 const SIZE = process.argv[3];
-if (!(GAMES > 0) || !SIZE) { console.error('usage: node test/sim.js <games> <size>'); process.exit(2); }
-const CAP = 400;
+const MILESTONES = Number(process.argv[4]);
+if (!(GAMES > 0) || !SIZE || !(MILESTONES >= 1)) { console.error('usage: node test/sim.js <games> <size> <milestones>'); process.exit(2); }
+const CAP = 400 * MILESTONES;   // turns before a game is called off
 
 function shortestPath(engine, g, from, to) {
     const { state, board } = engine;
@@ -42,14 +45,21 @@ function dirTo(g, a, b) {
 
 const results = [];
 let lostTotal = 0;
-let crateTicks = 0, ticks = 0, peak = 0;
-const cratesOn = state => state.pieces.filter(p => p.kind === 'crate').length;
+let crateTicks = 0, ticks = 0, peak = 0, bigTotal = 0;
+const reachedAt = [...Array(MILESTONES)].map(() => []);   // per milestone: the turn each game reached it
 for (let i = 0; i < GAMES; i++) {
     const { g, state, engine } = newGame(5000 + i, SIZE);
-    const goal = g.GameArtifacts.FIRST_MILESTONE;
+    const { PIECES, nextMilestone, milestonesReached } = g.GameArtifacts;
+    const cratesOn = st => st.pieces.filter(p => PIECES[p.kind].cargo).length;
+    let goal = 0;
+    for (let k = 0; k < MILESTONES; k++) goal = nextMilestone(goal);
+    const seen = new Set();
+    let marked = 0;
     const path = shortestPath(engine, g, state.sources[0], state.targets[0]);
     let res = { ok: true };
     while (state.delivered < goal && state.turn < CAP) {
+        for (const p of state.pieces) if (p.kind === 'bigcrate' && !seen.has(p.id)) { seen.add(p.id); bigTotal++; }
+        for (; marked < Math.min(MILESTONES, milestonesReached(state.delivered)); marked++) reachedAt[marked].push(state.turn);
         const n = cratesOn(state);
         crateTicks += n; ticks++; peak = Math.max(peak, n);
         // Next path hex (excluding the target) that has no mover facing the right way.
@@ -77,6 +87,7 @@ for (let i = 0; i < GAMES; i++) {
         const slot = todo >= 0 ? state.hand.findIndex(card => card.kind !== 'BELT') : -1;
         res = slot >= 0 ? engine.discard(slot) : engine.wait();
     }
+    for (; marked < Math.min(MILESTONES, milestonesReached(state.delivered)); marked++) reachedAt[marked].push(state.turn);
     results.push(state.delivered >= goal ? state.turn : CAP);
     lostTotal += state.lost;
 }
@@ -84,5 +95,11 @@ for (let i = 0; i < GAMES; i++) {
 results.sort((a, b) => a - b);
 const q = p => results[Math.floor(p * (results.length - 1))];
 const wins = results.filter(t => t < CAP).length;
-console.log(`${SIZE}  games ${GAMES}  reached first milestone ${wins}  turns p10 ${q(0.1)}  median ${q(0.5)}  p90 ${q(0.9)}  ` +
+const label = MILESTONES === 1 ? 'first milestone' : `milestone ${MILESTONES}`;
+console.log(`${SIZE}  games ${GAMES}  reached ${label} ${wins}  turns p10 ${q(0.1)}  median ${q(0.5)}  p90 ${q(0.9)}  ` +
     `crates lost/game ${(lostTotal / GAMES).toFixed(2)}  crates on board mean ${(crateTicks / ticks).toFixed(1)} peak ${peak}`);
+if (MILESTONES > 1) {
+    const median = a => [...a].sort((x, y) => x - y)[Math.floor((a.length - 1) / 2)];
+    console.log('  median turn per milestone: ' + reachedAt.map((a, k) => `#${k + 1} ${a.length ? median(a) : '-'} (${a.length})`).join('  ') +
+        `  big crates spawned/game ${(bigTotal / GAMES).toFixed(1)}`);
+}

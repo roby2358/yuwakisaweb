@@ -62,14 +62,14 @@ everything; G-2 beats G-1 (a funny interaction that can't be read is a bug, not 
 | `size` | key of `MAP_SIZES` | The board size this game was generated at. |
 | `hexes` | `Map<"q,r", Hex>` | The map; `Board` wraps it. |
 | `sources` | `[{q, r, colors}]` | Where crates appear; each makes the crates of its `colors` (one or more). Things may sit on one, except a blocking one (Wall). [D] |
-| `targets` | `[{q, r, color, delivered}]` | One per open color, in the order they opened: it takes only `color` crates, and `delivered` counts them. Nothing may be built on one. [D] |
+| `targets` | `[{q, r, color, delivered}]` | One per open color, in the order they opened: it takes only `color` crates, and `delivered` sums their `value` (a big crate counts 10). Nothing may be built on one. [D] |
 | `pieces` | `Piece[]` | Every crate and gremlin, in creation order. |
 | `things` | `Thing[]` | Every placed Thing, in placement order (the order they act, Pushers and Pullers first: Tick rule). |
 | `hand` | `{kind}[]` | Cards, length `HAND_SIZE` (Draw rule). A card has no color; a `colored` kind gets its color when placed (D-32). |
 | `unlocks` | int ≥ 1 | How many `UNLOCKS` steps are open; their kinds are the deck (Unlock rule). A new game opens 1. [D: pjpd card-unlock] |
 | `turn` | int ≥ 1 | Goes up by 1 per tick. |
-| `delivered` | int | Crates delivered, all colors together (milestones count this). |
-| `lost` | int | Crates that sank or were wrecked by a gremlin. |
+| `delivered` | int | Crates delivered, all colors together, each counted at its `value` (a big crate is 10; milestones count this, D-34). |
+| `lost` | int | Crates that sank, were wrecked by a gremlin or were blasted, each counted at its `value` (D-34). |
 | `exGremlins` | int | Gremlins gone any way but a Trap: sunk, splatted, or killed on a target (Tick rule). Shown in the tally. [D] |
 | `trapped` | int | Gremlins a Trap caught (Tick rule). Shown in the tally. [D] |
 | `idleTicks` | int | Ticks in a row with no card used (`place`, `discard`); at `IDLE_REDRAW_TICKS` one card is redrawn (Tick rule). [D] |
@@ -94,20 +94,24 @@ A `Piece` (position, color, label) with two fields set by the engine. Each kind 
 |---|---|---|
 | `q`, `r` | int | Position. |
 | `id` | int | Unique, from `nextId`; events refer to it. |
-| `kind` | `'crate' \| 'gremlin'` | Key into `PIECES`. |
+| `kind` | `'crate' \| 'bigcrate' \| 'gremlin'` | Key into `PIECES`. |
 | `label` | string | `PIECES[kind].label`: `'📦'` or `'👹'`. |
 | `color` | `#rrggbb` \| `CRATE_COLORS` name | Gremlins get a seeded palette color; a crate gets the open color the spawn rolled. Only its color's target takes it (Step rule); the client draws it as a shaded isometric box. [D] |
 
 `PIECES[kind]` is the template:
 
-| Field | crate | gremlin | Meaning |
-|---|---|---|---|
-| `label` | `'📦'` | `'👹'` | The counter's glyph (the client draws crates as a box instead). |
-| `cargo` | yes | no | Delivered on entering its color's target, blocked by other colors' targets; counted in `lost` when it sinks. |
-| `wanders` | no | yes | Takes a random step on a tick when no Thing moved it. |
-| `splats` | no | yes | A Rocket's flight destroys it: the piece the flier lands on, and the launched piece once it lands; so does coming onto a Trap (Step and Push rules). [D] |
-| `wrecks` | no | yes | Its own wandering step into a cargo piece's hex destroys that piece (counted in `lost`) and takes the hex; pushed, pulled or flung into one, it's just blocked (Push rule). [D] |
-| `reemerges` | no | yes | When one sinks or splats, a new one climbs out on a shore hex (Emerge rule). |
+| Field | crate | bigcrate | gremlin | Meaning |
+|---|---|---|---|---|
+| `label` | `'📦'` | `'📦'` | `'👹'` | The counter's glyph (the client draws crates as a box instead; a big crate's box is `BIG_CRATE_SCALE` bigger). |
+| `cargo` | yes | yes | no | Delivered on entering its color's target, blocked by other colors' targets; counted in `lost` when it sinks. |
+| `value` | 1 | 10 | 0 | What a delivery adds to `delivered` and its target's count, and what losing it (sunk, wrecked, blasted) adds to `lost`. Toward the crate cap every cargo piece counts one (D-34). [D: pjpd big-crate] |
+| `wanders` | no | no | yes | Takes a random step on a tick when no Thing moved it. |
+| `splats` | no | no | yes | A Rocket's flight destroys it: the piece the flier lands on, and the launched piece once it lands; so does coming onto a Trap (Step and Push rules). [D] |
+| `wrecks` | no | no | yes | Its own wandering step into a cargo piece's hex destroys that piece (counted in `lost`) and takes the hex; pushed, pulled or flung into one, it's just blocked (Push rule). [D] |
+| `reemerges` | no | no | yes | When one sinks or splats, a new one climbs out on a shore hex (Emerge rule). |
+
+A big crate is a crate in every rule but `value`: Things, ice, bumps, Traps, targets and
+gremlins treat it the same (D-34).
 
 ### Thing — a placed fixture (plain object)
 *Serves:* G-1, G-2. Templates over snowflakes: every kind is a row of `THINGS` (§6).
@@ -293,10 +297,10 @@ next = piece + DIR[dir]
 if next off-map or MOUNTAIN or a blocking Thing or a piece there: return 'blocked'
 if not flies and next is a target of another color than this cargo: return 'blocked'
 piece.moveTo(next)
-if PIECES[kind].cargo and next is the target of its color: remove; that target's delivered += 1; delivered += 1; return 'delivered'
+if PIECES[kind].cargo and next is the target of its color: remove; that target's delivered += value; delivered += value; return 'delivered'
 if not flies and (a Thing with traps or a target is there) and PIECES[kind].splats: remove; return 'trapped'
 if next is WATER and no Thing there and not (flies and next is inland):
-    remove; if cargo: lost += 1; return 'sank'
+    remove; lost += PIECES[kind].value; return 'sank'   # 0 for a gremlin
 return 'moved'
 ```
 
@@ -309,7 +313,7 @@ while left > 0:
     if res == 'blocked' and splat and the blocker is a piece with PIECES.splats:
         remove it; emit splat{id: it, by: piece}; res = step(piece, dir); stop after it  # lands there
     if res == 'blocked' and wrecks and the blocker is cargo:
-        remove it; lost += 1; emit splat{id: it, by: piece}; res = step(piece, dir); stop after it
+        remove it; lost += its value; emit splat{id: it, by: piece}; res = step(piece, dir); stop after it
     if res == 'blocked' and nothing was hit and not flies: bump(piece, dir, moved)   # D-33
     if res != 'moved': stop
     if not flies and isSlick(piece's hex): continue    # sliding is free: a Thing with slides, or ICE with no Thing
@@ -364,7 +368,10 @@ if spawnTimer >= SPAWN_INTERVAL:                                    # a spawn ch
     spawnTimer = 0
     if crates on the board < crateCap(size) + milestonesReached(delivered):
         color = Rando.choice(open colors); src = the source that makes color
-        if no piece on src: a crate of color on src; emit spawn{id, q, r}   # else nothing until the next chance
+        if no piece on src:                                         # else nothing until the next chance
+            p = bigCrateChance(milestonesReached(delivered))          # D-34
+            kind = 'bigcrate' if p > 0 and Rando.random() < p else 'crate'   # no roll while p is 0
+            a kind of color on src; emit spawn{id, q, r}
 idleTicks = 0 if the command used a card (place, discard) else idleTicks + 1   # D-26
 if idleTicks >= IDLE_REDRAW_TICKS: slot = Rando.int(0, HAND_SIZE-1); hand[slot] = draw(); idleTicks = 0; emit redraw{slot}
 gone = kinds of the command's own sink (remove) and this tick's sunk and splatted pieces
@@ -404,10 +411,10 @@ rotate(q, r):  legal: a Thing with a facing (push, pull or shove) stands at (q,r
     facing = (facing + 5) mod 6               # no tick: events = [], turn unchanged
 remove(q, r):  legal: a Thing stands at (q,r)
     things.remove(that Thing)                  # the card is spent; the hand is untouched
-    if a piece stands there on open water: sink it (lost += 1 if cargo)
+    if a piece stands there on open water: sink it (lost += its value)
     tick(), with that sink as its first event and that kind in its emerge
 blast(q, r):   legal: a crate (PIECES cargo) stands at (q,r)        [D]
-    remove it; lost += 1                       # Things untouched; gremlins can't be blasted
+    remove it; lost += its value               # Things untouched; gremlins can't be blasted
     tick(), with splat{id, by: null, trap: false} as its first event
 discard(slot): legal: 0 <= slot < HAND_SIZE                       [D]
     hand[slot] = draw(); tick()                # Things and the other cards untouched
@@ -443,6 +450,8 @@ The code constant in `GameArtifacts` is the single source.
 | `FIRST_MILESTONE` | 10 | crates (then the 1-2-5 series, forever) |
 | `SPAWN_INTERVAL` | 3 | ticks between spawn chances, board-wide, shared by every color [D] |
 | `CRATE_HEXES_PER_CAP` | 20 | hexes of board area per crate of the cap; `crateCap(size)` = max(1, round(cols × rows / this)): small 8, medium 20, large 45, huge 180; +1 per milestone reached (D-31) [T] |
+| `BIG_CRATE_HALF` | 4 | milestones reached at which half the spawns are big crates; `bigCrateChance(m)` = m / (m + this): 0, 0.2, 0.33, 0.43, 0.5 at m = 0…4, toward 1 (D-34) [T] |
+| `PIECES.bigcrate.value` | 10 | crates a big crate is worth (D-34) [D] |
 | `HAND_SIZE` | 3 | cards |
 | `IDLE_REDRAW_TICKS` | 10 | ticks in a row with no card used before one random card is redrawn (D-26) |
 | `CRATE_COLORS` | red, green, blue, yellow | the colors a game can open [D] |
@@ -480,7 +489,7 @@ The code constant in `GameArtifacts` is the single source.
 | `place(slot, q, r, facing, color)` | see Commands rule (`color` one of `colorChoices`) | build in `color` (replacing any Thing there), redraw slot, tick | `{ok, events}` |
 | `rotate(q, r)` | a Belt, Bridge, Spring, Rocket, Pusher, or Puller is there | turn clockwise; no tick | `{ok, events: []}` |
 | `remove(q, r)` | any Thing is there | take it off (a piece left on open water sinks), tick | `{ok, events}` |
-| `blast(q, r)` | a crate is there | blow it up (lost +1), tick | `{ok, events}` |
+| `blast(q, r)` | a crate (or big crate) is there | blow it up (lost + its value), tick | `{ok, events}` |
 | `discard(slot)` | `0 <= slot < HAND_SIZE` | redraw that slot, tick | `{ok, events}` |
 | `wait()` | always | tick | `{ok, events}` |
 
@@ -493,6 +502,7 @@ Illegal → `{ ok:false }` and nothing changed (hand and `Rando` included).
 - `affects(thing, piece)` — whether a Thing's color lets it act on that piece.
 - `thingAt(q, r)`, `pieceAt(q, r)`, `targetAt(q, r)`, `sourceOf(color)`, `openColors()`, `isEndpoint(hex)`.
 - `unlockedKinds()`, `drawableKinds()` — the kinds open so far, and the deck the Draw rule uses.
+- `spawnKind()` — `'bigcrate'` or `'crate'` for the next spawn (Tick rule; rolls `Rando` only once a milestone is reached, D-34).
 - `board.*`.
 
 ### Events (in the order they happened during the tick)

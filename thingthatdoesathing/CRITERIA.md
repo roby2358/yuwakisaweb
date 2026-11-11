@@ -11,7 +11,7 @@ test there asserts that one rule, with its cases commented in the test itself.
 file, the integration tests (`smoke.js`: random legal play with invariant checks;
 `uiboot.js`: the real UI booted on a stub DOM, played to the first milestone by simulated clicks, plus Go/Pause and the color picker), and
 `test/coverage.js`. **Tuning harness:**
-`node test/sim.js <games> <size>` (a greedy builder bot; not pass/fail).
+`node test/sim.js <games> <size> <milestones>` (a greedy builder bot; not pass/fail): `just cc-sim N SIZE` plays to the first milestone, `just cc-sim-to N SIZE M` on to the Mth.
 
 ---
 
@@ -33,11 +33,11 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | R-12 | a piece on a mover during a tick | pushed `THINGS[kind].push` hexes in the facing, stopping before a blocked hex (a piece there on slick ground is bumped, R-51) | automated |
 | R-13 | a tick | each piece moves at most once (a line of belts advances a crate one hex per tick; a carried gremlin doesn't also wander) | automated |
 | R-14 | a piece entering bare ICE | keeps going the same way, free, until non-ice or blocked; ice under a Thing doesn't slide (unless that Thing slides, R-48); a flying push (Spring, Rocket) counts ice under its flight; a Spring that lands on bare ice skids on (on the ground), a Rocket doesn't | automated |
-| R-15 | a piece entering water | removed if no Thing is there (crate: `lost` +1); a bridge takes it, and carries it on next tick (R-46); a flying push (Spring, Rocket) passes over inland water and sinks only if it comes down on it, but the outer sea always takes it | automated |
-| R-16 | a piece entering a target | a crate of its color is removed and `delivered` +1; a gremlin that comes onto any target dies (`splat`, `by` null, after its `move`; `exGremlins` +1, a new one climbs out), but not when a flight carries it over | automated |
+| R-15 | a piece entering water | removed if no Thing is there (crate: `lost` + its `value`); a bridge takes it, and carries it on next tick (R-46); a flying push (Spring, Rocket) passes over inland water and sinks only if it comes down on it, but the outer sea always takes it | automated |
+| R-16 | a piece entering a target | a crate of its color is removed and `delivered` + its `value` (1; a big crate 10, R-52); a gremlin that comes onto any target dies (`splat`, `by` null, after its `move`; `exGremlins` +1, a new one climbs out), but not when a flight carries it over | automated |
 | R-17 | a spinner during a tick | the Spinner was replaced by the Puller (R-28) | retired |
 | R-18 | gremlins in a tick | each unmoved gremlin steps to a random enterable (or crate-holding) non-water neighbor or stays; boxed in → stays; never walks into open water; pieces never share a hex | automated |
-| R-19 | ticks | `spawnTimer` counts up; at `SPAWN_INTERVAL` the tick is a spawn chance and the timer resets; on a chance, if the crates on the board number fewer than `crateCap(size)` (max(1, round(area / `CRATE_HEXES_PER_CAP`))) plus one per milestone reached, the tick rolls an open color, and if that color's source is empty a crate of that color spawns there; at the cap, or with that source occupied, nothing spawns until the next chance | automated |
+| R-19 | ticks | `spawnTimer` counts up; at `SPAWN_INTERVAL` the tick is a spawn chance and the timer resets; on a chance, if the crates on the board (a big crate counts one) number fewer than `crateCap(size)` (max(1, round(area / `CRATE_HEXES_PER_CAP`))) plus one per milestone reached, the tick rolls an open color, and if that color's source is empty a crate (or big crate, R-52) of that color spawns there; at the cap, or with that source occupied, nothing spawns until the next chance | automated |
 | R-20 | (a final win at `DELIVER_GOAL`) | — | retired |
 | R-21 | two games, same seed | identical terrain, source, target, pieces, hand; different seeds differ | automated |
 | R-22 | two engines, same seed and commands | identical state and events after every command; the engine never calls `Math.random` | automated |
@@ -55,14 +55,14 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | R-34 | `discard(slot)` | the slot gets a fresh draw, one tick, Things and other cards untouched. Bad slot: `{ok:false}`, unchanged | automated |
 | R-35 | a gremlin comes onto a Trap | it dies (`splat`, `by` null, after its `move`) whether it wandered, was pushed, slid on ice, or came down from a flight (a Spring's skid included); a flight passing over a Trap doesn't trigger it; a Trap built under a gremlin doesn't kill it; crates cross Traps safely | automated |
 | R-36 | gremlins gone | `exGremlins` goes up by one for every gremlin sunk, splatted by a Rocket, killed on a target, or sunk by removing its Bridge, but not one a Trap caught (R-42); crates never count; a new game starts it at 0 | automated |
-| R-37 | a gremlin's own step into a crate | the crate is wrecked (`splat{id: crate, by: gremlin}` after the gremlin's `move`), `lost` +1, nothing re-emerges, and the gremlin takes the hex; a gremlin pushed, pulled or flung into a crate is only blocked | automated |
+| R-37 | a gremlin's own step into a crate | the crate is wrecked (`splat{id: crate, by: gremlin}` after the gremlin's `move`), `lost` + its `value`, nothing re-emerges, and the gremlin takes the hex; a gremlin pushed, pulled or flung into a crate is only blocked | automated |
 | R-38 | a milestone | opens the next color until `MAP_SIZES[size].colors`: a color not open yet, from an existing source (`ENHANCE_CHANCE`; both outcomes happen) or a new source in the left slice, with its target in the right slice on a free hex its source has a land path to; `open{color, source, target}` right after the `milestone`; nothing past the cap or with no free hex (the next milestone tries again); small never opens one | automated |
 | R-39 | a crate meets a target | its own color's target delivers it (walking, pushed, or crossing it in flight) and counts it in that target's `delivered` and the board's; another color's target is solid on the ground; a flight passes over it but drops one hex short rather than come down on it | automated |
 | R-40 | a colored Pusher or Puller | acts only on crates of its color and on every gremlin, leaving other crates where they are; a white one acts on every piece | automated |
 | R-41 | a Pusher during a tick | pushes the piece on the hex it faces `THINGS.PUSHER.shove` hexes on in its facing, through the same `step` (blocked, sinks, slides on ice); ignores a piece on its own hex; turns like any mover | automated |
 | R-42 | a gremlin caught by a Trap | `trapped` goes up by one (and `exGremlins` doesn't), whether it was pushed or came down from a flight; its `splat` carries `trap: true`, every other splat `trap: false`; a new game starts it at 0 | automated |
 | R-43 | the order Things act in a tick | Pushers and Pullers act before every other Thing, each group in placement order, so one built beside a running Belt line catches the crate in front of it whichever was placed first | automated |
-| R-44 | `blast(q, r)` | on a crate: the crate is gone, `lost` +1, its `splat` (`by` null) leads the events, Things untouched, one tick. On a gremlin or an empty hex: `{ok:false}`, state and `Rando` unchanged | automated |
+| R-44 | `blast(q, r)` | on a crate: the crate is gone, `lost` + its `value`, its `splat` (`by` null) leads the events, Things untouched, one tick. On a gremlin or an empty hex: `{ok:false}`, state and `Rando` unchanged | automated |
 | R-45 | ticks with no card used | after `IDLE_REDRAW_TICKS` ticks in a row of `wait`, `remove` or `blast`, one random slot is redrawn (`redraw{slot}`) and the count starts over; `place` and `discard` reset it; `rotate` doesn't tick or count | automated |
 | R-46 | a Bridge during a tick | pushes the piece on it `THINGS.BRIDGE.push` hexes in its facing, on the ground, through the same `step` as a Belt: onto land or the next Bridge, blocked by a Wall or a piece, sunk in open water (crate: `lost` +1); a piece that came onto it this tick waits for the next (R-13); carries gremlins too | automated |
 | R-47 | `place` on a hex holding a Thing | the old Thing is gone and the new one stands there, last in placement order, as one command and one tick (Thing count unchanged); it acts this tick on a piece standing there; same kind over itself is legal; the hex is judged as if bare: a land kind can't replace a Bridge on water, a Wall can't go where a piece stands | automated |
@@ -70,6 +70,7 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | R-49 | milestones and the deck | a new game opens the first `UNLOCKS` step only; each milestone opens the next step (`unlock{kinds}` after that `milestone` and its `open`), and its kinds join the deck; on a one-color board a step of only `colored` kinds is passed over and the unlock names the next; crossing several milestones at once unlocks one step per milestone, in order; past the last step nothing unlocks; the cards in hand stay as they are | automated |
 | R-50 | a Thing's color at `place` | `colorChoices(kind)` is the open colors (in opening order) for a `colored` kind, `[WHITE]` for any other; `place` with one of them builds the Thing in that color, which it keeps for good (`rotate` doesn't change it) and acts by (R-40); any other color (`WHITE` or a closed color for a `colored` kind, a crate color or none for a plain kind) → `{ok:false}`, state and `Rando` unchanged | automated |
 | R-51 | a piece stopped on the ground by a piece standing on slick ground (bare ICE, a Slide) | bump (D-33): the bumper stays where it stopped; the bumped piece goes one hex the same way and slides on through the same `step` (to the first plains; sinks in water, `lost` +1; delivered on its color's target; a gremlin dies on a Trap; a Wall or mountain stops it); its `move` has `by` = the bumper and comes after the bumper's events; a bumped piece stopped by another on slick ground bumps it on (a chain); a piece that already moved this tick isn't bumped; gremlins bump and are bumped; a piece on plains is only a blocker; a flight stopped by a piece doesn't bump (it comes down short), a Spring's skid does | automated |
+| R-52 | a spawn, a big crate's delivery or loss | a spawn is a `bigcrate` with `bigCrateChance(milestonesReached(delivered))` = m / (m + `BIG_CRATE_HALF`) (0 before the first milestone, with no `Rando` roll; rising toward 1, never 1), else a crate; it counts as one toward the crate cap; delivered, it adds `PIECES.bigcrate.value` to `delivered` and its target's count; sunk, wrecked or blasted, it adds that value to `lost`; Things move it like a crate (a Rocket doesn't splat it); a delivery that crosses several milestones at once emits each one's `milestone`, `open` and `unlock` in order | automated |
 
 ---
 
@@ -86,7 +87,7 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | U-7 | Esc and right-click put the card back; a click on a non-yellow hex also does | manual — try all three with a card picked |
 | U-8 | Space and Wait tick (Space while Go runs instead turns Go off once the tick in flight finishes); none of them, nor placing clicks, act during the animation or an overlay (selecting and turning a hex work mid-animation, since they don't tick) | manual — mash Space mid-animation |
 | U-9 | Each Thing is recognizable by look alone: belt chevrons, spring coil, rocket, puller magnet, wall bricks, trap jaws, bridge planks under a chevron that points along its facing | manual — glance test |
-| U-10 | The HUD (top left) shows Turn; the tally (top right) shows Delivered k / next milestone with a bar, Ex-gremlins, Trapped, and crates lost (only once one is lost); the hover bar names terrain, Thing (with its verb), and piece | manual — hover a crate on a belt, then lose one at sea and trap a gremlin |
+| U-10 | The HUD (top left) shows Turn; the tally (top right) shows Delivered k / next milestone with a bar, Ex-gremlins, Trapped, and crates lost (only once one is lost), both counting a big crate as 10; the hover bar names terrain, Thing (with its verb), and piece | manual — hover a crate on a belt, then lose one at sea and trap a gremlin |
 | U-11 | Reaching a milestone shows a banner ("IT DOES THE THING" for the first, "N crates!" after) with crates, turns, the next milestone, and crates lost; it hides on its own and play never stops | manual — run a line past 10 and 20 |
 | U-12 | With no card picked or with one picked, `D` over a placed Thing removes it and ticks; the hover bar says "D to remove"; a crate on a removed Bridge fades where it stood | manual — remove a Belt, then a Bridge with a crate on it |
 | U-13 | A green Go button sits top centre; Go (or Enter) ticks on its own until Pause (or Enter again, which lets the tick in flight finish), picking a card or selecting a hex holds it, and the button reads Pause while running | manual — press Go, pick and place a card mid-run, press Pause |
@@ -102,6 +103,7 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | U-23 | When a milestone opens a color or unlocks cards, one panel names them (a swatch per color, a picture and verb line per card) and holds play (Go included) until a click anywhere or any key; that key does nothing else | manual — reach 10 on a medium board with Go running |
 | U-24 | The intro is the story and the board sizes; the first game then opens on the keys legend, which closes on a click or any key (that key does nothing else). The Help button shows the same legend any time and holds play (Go included) until it closes | manual — open the page, pick a size, read the keys; press Go, then Help |
 | U-25 | Clicking a yellow hex with a Pusher or Puller picked (two or more colors open) places nothing yet: a small square of swatches, one per open color numbered `1`…, opens beside the hex with the white ghost on it; a swatch click or its number places it in that color and the tick plays; Esc, right-click or a click off the swatches closes it with the card still picked; Go holds while it's open | manual — reach 10 on a medium board, draw a Pusher, try a swatch, a number, and each cancel |
+| U-26 | A big crate is drawn as its color's isometric box, `BIG_CRATE_SCALE` times a crate's size; hovering it names it "Big crate — worth 10"; its delivery moves the progress bar by 10 | manual — play past the second milestone and watch a big crate in |
 
 ---
 
@@ -118,7 +120,7 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 
 ## Status (2026-11-11)
 
-- **Manual only:** U-1…U-25, X-1.
+- **Manual only:** U-1…U-26, X-1.
 - **Retired:** R-17 (Spinner), R-20 (final win).
 - **Not yet covered:** X-2, X-3, X-4 (need playtests).
 - **Partial coverage:** R-18 checks that wandering gremlins land on land and never step into

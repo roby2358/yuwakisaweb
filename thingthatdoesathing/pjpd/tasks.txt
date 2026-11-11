@@ -1,7 +1,0 @@
-Priority:   40
-Status: ToDo
-ID: big-crate-jat8
-Created: 2026-11-11T15:54:09Z
-Updated: 2026-11-11T20:26:47Z
-
-Thing Factory: add a large crate worth 10 deliveries. Each spawn has some chance of being a big crate instead of a normal one, and that chance grows with each milestone reached, approaching 1.0 without ever hitting it. Candidate formula: p = 1 - (1 - BIG_CRATE_BASE)^milestones, or p = m / (m + BIG_CRATE_HALF). Both are tunable constants in artifacts.js. Model it as a new PIECES template, or a value field on crate pieces, worth 10 toward delivered and the target's delivered count, and draw it bigger. Decide how it behaves under Spring, Rocket, wreck and sink (probably the same as a crate, so losing one costs 10 to the lost tally). Milestones can jump past several thresholds at once, so check that milestone and open events still fire for each threshold crossed. Reconcile the docs, add an R-n test, and run cc-sim.

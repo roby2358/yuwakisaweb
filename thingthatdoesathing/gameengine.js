@@ -8,7 +8,7 @@
 const GameEngine = (function () {
     const {
         TERRAIN, THINGS, UNLOCKS, PIECES, CRATE_COLORS, WHITE, aims, nextMilestone, MAP_SIZES, SPAWN_INTERVAL, ENHANCE_CHANCE, HAND_SIZE, IDLE_REDRAW_TICKS,
-        gremlinDice, GREMLIN_DICE_SIDES, crateCap, milestonesReached,
+        gremlinDice, GREMLIN_DICE_SIDES, crateCap, milestonesReached, bigCrateChance,
         GEN_MAX_ATTEMPTS, HEIGHTMAP_ROUGHNESS,
         WATER_PCT, MOUNTAIN_PCT, ICE_FRAC, PLACE_SLICE_FRAC, PLACE_SLICE_MIN
     } = GameArtifacts;
@@ -70,8 +70,8 @@ const GameEngine = (function () {
             return this.state.targets.map(t => t.color);
         }
 
-        // Crates on the board now, and how many it may hold: the size's cap plus one per
-        // milestone reached.
+        // Crates on the board now (a big crate counts as one, D-34), and how many it may hold:
+        // the size's cap plus one per milestone reached.
         crateCount() {
             return this.state.pieces.filter(p => PIECES[p.kind].cargo).length;
         }
@@ -282,7 +282,14 @@ const GameEngine = (function () {
         }
 
         spawnCrate(color, src) {
-            return this.addPiece('crate', src.q, src.r, color);
+            return this.addPiece(this.spawnKind(), src.q, src.r, color);
+        }
+
+        // A spawn is a big crate with bigCrateChance(milestones reached), else a crate. No
+        // roll while the chance is 0 (before the first milestone), so Rando is untouched (D-34).
+        spawnKind() {
+            const p = bigCrateChance(milestonesReached(this.state.delivered));
+            return p > 0 && Rando.random() < p ? 'bigcrate' : 'crate';
         }
 
         spawnGremlins() {
@@ -430,7 +437,13 @@ const GameEngine = (function () {
         // A piece goes into open water: gone, and counted as lost if it was cargo.
         sink(piece) {
             this.removePiece(piece);
-            if (PIECES[piece.kind].cargo) this.state.lost++;
+            this.loseValue(piece);
+        }
+
+        // A piece destroyed (sunk, wrecked, blasted) adds its value to `lost`: 0 for a
+        // gremlin, 1 for a crate, 10 for a big crate (D-34).
+        loseValue(piece) {
+            this.state.lost += PIECES[piece.kind].value;
         }
 
         // The board hex one step from `at` in `dir` (undefined off the map).
@@ -451,8 +464,8 @@ const GameEngine = (function () {
             const goal = PIECES[piece.kind].cargo && this.targetAt(hex.q, hex.r);
             if (goal && goal.color === piece.color) {
                 this.removePiece(piece);
-                goal.delivered++;
-                s.delivered++;
+                goal.delivered += PIECES[piece.kind].value;
+                s.delivered += PIECES[piece.kind].value;
                 return 'delivered';
             }
             if (!flies && this.trapsPiece(piece, hex)) {
@@ -494,7 +507,7 @@ const GameEngine = (function () {
                 res = this.step(piece, dir, flies);
                 if (res === 'blocked' && splat) hit = this.victim(piece, dir, v => PIECES[v.kind].splats);
                 if (res === 'blocked' && wrecks) hit = this.victim(piece, dir, v => PIECES[v.kind].cargo);
-                if (hit && PIECES[hit.kind].cargo) this.state.lost++;
+                if (hit) this.loseValue(hit);
                 if (hit) res = this.step(piece, dir, flies);
                 if (res === 'blocked' && !hit && !flies) bumped = this.bump(piece, dir, moved);
                 if (res === 'blocked') break;
@@ -684,7 +697,7 @@ const GameEngine = (function () {
             const piece = this.pieceAt(q, r);
             if (!piece || !PIECES[piece.kind].cargo) return { ok: false };
             this.removePiece(piece);
-            this.state.lost++;
+            this.loseValue(piece);
             return this.tick({ events: [{ type: 'splat', id: piece.id, by: null, trap: false }], gone: [piece.kind], usedCard: false });
         }
 
