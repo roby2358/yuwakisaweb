@@ -203,11 +203,10 @@ run('a hand card button click picks it', () => {
     canvas.fire('mousedown', { button: 2 });
     if (ui.picked) throw new Error('right-click did not unpick');
 });
-run('Wait button and Enter tick', () => {
+run('Wait button ticks', () => {
     const s = ui.state, turn = s.turn;
     els['end-turn'].fire('click'); settle();
-    key('Enter'); settle();
-    if (s.turn !== turn + 2) throw new Error('expected two ticks');
+    if (s.turn !== turn + 1) throw new Error('expected one tick');
 });
 run('input is ignored mid-animation', () => {
     const s = ui.state;
@@ -348,6 +347,18 @@ run('Go ticks on its own, holds while a card is picked, and Pause stops it', () 
     const paused = s.turn;
     advance(2000);
     if (s.turn !== paused || els.go.textContent !== 'Go') throw new Error('Pause did not stop it');
+});
+run('Enter toggles Go: on, then off once the tick in flight finishes', () => {
+    const s = ui.state;
+    key('Enter');
+    if (!ui.running || els.go.textContent !== 'Pause') throw new Error('Enter did not start Go');
+    advance(2000);
+    if (s.turn < 2) throw new Error('Go via Enter did not tick');
+    const t = s.turn;
+    key('Enter');
+    if (ui.running || els.go.textContent !== 'Go') throw new Error('Enter did not stop Go');
+    settle(); advance(2000);
+    if (s.turn !== t) throw new Error('ticked again after Enter stopped Go');
 });
 run('Help shows the keys and holds Go; closing it lets Go pick up again', () => {
     els['new-game'].fire('click'); key('1');

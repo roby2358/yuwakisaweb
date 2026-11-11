@@ -2,6 +2,12 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-11 — Enter toggles Go
+Enter used to be a Wait, the same as the Wait button. It now calls `toggleRun()`, like the
+Go button: it starts Go, and pressed again it turns Go off, letting the tick already
+animating finish. The Wait button still does one tick; Space is unchanged. U-8 and U-13
+updated; uiboot covers it.
+
 ### 2026-11-11 — Intro and keys legend are two panels; Help button
 The intro used to carry the story, the full key list and the size picker in one card. Now
 the intro is the story and the sizes; picking a size from it opens the keys legend (new

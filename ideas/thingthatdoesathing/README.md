@@ -46,8 +46,8 @@ that comes onto a target dies there, so they can't camp it.
 - `B` blows up the crate under the cursor (a stuck line); it counts as lost and the world ticks once
 - Pick a card, then click Discard (right of the cards) or press `X` to throw it away; the world ticks once
 - Space: one tick, then stop. With Go running, Space finishes the tick in flight and turns Go off
-- Enter / Wait: let it run one tick
-- Go (top centre): keep ticking until Pause; picking a card or selecting a hex holds the run
+- Wait: let it run one tick
+- Enter / Go (top centre): keep ticking until Pause (Enter again finishes the tick in flight and stops); picking a card or selecting a hex holds the run
 - Esc or right-click puts the card back; left-drag pans
 - Top right: crates delivered toward the next milestone (and per color, once there are two), Ex-gremlins (gremlins done in), Trapped (gremlins a Trap caught), and crates lost
 - Help (top left): the keys legend, also shown once when the first game opens; ticks hold while it's open

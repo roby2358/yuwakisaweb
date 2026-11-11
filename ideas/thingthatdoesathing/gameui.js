@@ -361,7 +361,7 @@ const GameUI = (function () {
             this.commit(() => this.engine.discard(slot), () => this.sound.discard());
         }
 
-        // L2.1 the primary action (Wait button, Space, Enter).
+        // L2.1 the primary action (Wait button, Space).
         primaryAction() {
             if (this.overlay || this.anim) return;
             this.commit(() => this.engine.wait(), () => this.sound.endTurn());
@@ -375,7 +375,8 @@ const GameUI = (function () {
             this.primaryAction();
         }
 
-        // ---- Go/Pause: Wait after every animation, RUN_GAP_MS apart ----
+        // ---- Go/Pause (Go button, Enter): Wait after every animation, RUN_GAP_MS apart.
+        // Turning it off lets the tick in flight finish; no new one starts. ----
         toggleRun() {
             if (this.overlay) return;
             this.setRunning(!this.running);
@@ -989,7 +990,7 @@ const GameUI = (function () {
             if (this.overlay) { this.onOverlayKey(e); return; }
             if (e.key === 'Escape') { if (this.picked) this.unpick(); else if (this.selected) this.deselect(); return; }   // L2.2
             if (e.key === ' ') { e.preventDefault(); this.oneTick(); return; }
-            if (e.key === 'Enter') { e.preventDefault(); this.primaryAction(); return; }
+            if (e.key === 'Enter') { e.preventDefault(); this.toggleRun(); return; }
             if (e.key >= '1' && e.key <= String(HAND_SIZE)) { this.pick(Number(e.key) - 1); return; }
             if ((e.key === 'r' || e.key === 'R') && this.picked) { this.turnGhost(e.shiftKey ? -1 : 1); return; }
             if (e.key === 'd' || e.key === 'D') { this.removeHovered(); return; }
