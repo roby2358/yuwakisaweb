@@ -42,6 +42,7 @@ that comes onto a target dies there, so they can't camp it.
 - Click a yellow hex to place it; the world ticks once and animates
 - With no card picked, click a placed Belt/Spring/Rocket/Pusher/Puller to turn it clockwise (free: no tick)
 - `D` removes the Thing under the cursor; the card is gone and the world ticks once
+- Ten ticks in a row without placing or discarding a card redraws one card at random (it glows)
 - `B` blows up the crate under the cursor (a stuck line); it counts as lost and the world ticks once
 - Pick a card, then click Discard (right of the cards) or press `X` to throw it away; the world ticks once
 - Space / Enter / Wait: let it run one tick

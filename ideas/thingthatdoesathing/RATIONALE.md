@@ -283,6 +283,17 @@ ARCHITECTURE_LOG.md.
 
 ## Platform (inherited from the Hex & Counters base)
 
+### D-26 Ten idle ticks redraw one random card — *Decided (10 ticks, one random card), Proposed (discard counts as using a card; remove and blast don't)*
+- **Alternatives:** redraw the whole hand; redraw the oldest card; a timer that runs
+  regardless of play; only `wait` counting as idle.
+- **Why:** the designer asked that every 10 ticks without using a card, one random card be
+  redrawn, so a hand you can't use doesn't freeze while Go runs the line. "Using a card" is
+  the two commands that spend one: `place` and `discard`. `remove` and `blast` spend no
+  card, so they count as idle. It's a `first.usedCard` flag on the tick input, not a check
+  per command.
+- **Evidence:** R-45; U-22 (manual). Unmeasured in play: the sim stops at the first
+  milestone, but the bot does play idle stretches.
+
 ### D-25 `blast` blows up a stuck crate: a free command, crates only, counts as lost — *Decided*
 - **Alternatives:** a Bomb card (scarce, from the hand); a Crusher fixture that crushes a
   crate that sat still a tick; a bigger blast (neighbors, or the Thing too); blasting

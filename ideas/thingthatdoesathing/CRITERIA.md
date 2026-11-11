@@ -63,6 +63,7 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | R-42 | a gremlin caught by a Trap | `trapped` goes up by one (and `exGremlins` doesn't), whether it was pushed or came down from a flight; its `splat` carries `trap: true`, every other splat `trap: false`; a new game starts it at 0 | automated |
 | R-43 | the order Things act in a tick | Pushers and Pullers act before every other Thing, each group in placement order, so one built beside a running Belt line catches the crate in front of it whichever was placed first | automated |
 | R-44 | `blast(q, r)` | on a crate: the crate is gone, `lost` +1, its `splat` (`by` null) leads the events, Things untouched, one tick. On a gremlin or an empty hex: `{ok:false}`, state and `Rando` unchanged | automated |
+| R-45 | ticks with no card used | after `IDLE_REDRAW_TICKS` ticks in a row of `wait`, `remove` or `blast`, one random slot is redrawn (`redraw{slot}`) and the count starts over; `place` and `discard` reset it; `rotate` doesn't tick or count | automated |
 
 ---
 
@@ -91,6 +92,7 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | U-19 | Each target is ringed in its color, with a black line just inside, and a ★; a source shows one pip per color it makes; once a second color opens, the tally shows a count per color; the milestone banner names a color it opened; the hover bar names a source's colors and a target's color | manual — reach 10 on a medium board |
 | U-20 | A Pusher shows a ram with a chevron; Pushers and Pullers draw their glyph in white or their color, on the board, the ghost and the card; a colored card reads e.g. "Red Pusher" and says "only red crates, and gremlins" | manual — reach 10 on a medium board and draw a colored card |
 | U-21 | `B` over a crate bursts it in its color and the lost count goes up; over a gremlin or empty hex nothing happens | manual — jam a line and press B on a crate |
+| U-22 | A card the idle rule redrew glows once in the hand | manual — press Go and watch the hand |
 
 ---
 

@@ -115,6 +115,7 @@ const GameArtifacts = (function () {
         SOURCE_INTERVAL: 3,          // ticks between crates, board-wide (if the rolled color's source is clear)
         ENHANCE_CHANCE: 0.5,         // a newly opened color comes out of an existing source, else a new one
         HAND_SIZE: 3,
+        IDLE_REDRAW_TICKS: 10,       // ticks in a row with no card used (place or discard) before one random card is redrawn
         GREMLIN_HEXES_PER_DIE,
         GREMLIN_DICE_SIDES: 4,
 

@@ -368,6 +368,7 @@ const GameUI = (function () {
             const hidden = new Set();
             let hops = 0, milestone = 0;
             const opened = [];
+            const redrawn = [];
             const ends = new Set();
             for (const e of res.events) {
                 if (e.type === 'move') {
@@ -390,10 +391,12 @@ const GameUI = (function () {
                     milestone = e.count;
                 } else if (e.type === 'open') {
                     opened.push(e.color);
+                } else if (e.type === 'redraw') {
+                    redrawn.push(e.slot);
                 }
             }
             this.anim = { t0: performance.now(), dur: Math.max(1, hops + (ends.size ? 1 : 0)) * HOP_MS,
-                tracks, before, hidden, milestone, opened, ends };
+                tracks, before, hidden, milestone, opened, redrawn, ends };
             const frame = now => {
                 if (!this.anim) return;
                 if (now - this.anim.t0 >= this.anim.dur) { this.finishAnim(); return; }
@@ -403,6 +406,14 @@ const GameUI = (function () {
             requestAnimationFrame(frame);
         }
 
+        // A card the idle rule redrew glows once (restarting the CSS animation).
+        flashCard(slot) {
+            const b = document.getElementById('cards').children[slot];
+            b.classList.remove('fresh');
+            void b.offsetWidth;
+            b.classList.add('fresh');
+        }
+
         finishAnim() {
             const a = this.anim;
             this.anim = null;
@@ -410,6 +421,7 @@ const GameUI = (function () {
             if (cue) this.sound[cue]();
             if (a.milestone) { this.sound.fanfare(); this.showMilestone(a.milestone, a.opened); }
             this.render();
+            a.redrawn.forEach(slot => this.flashCard(slot));
             this.scheduleRun();
         }
 

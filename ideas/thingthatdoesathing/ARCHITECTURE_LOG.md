@@ -2,6 +2,12 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-11 — Idle ticks redraw a card (D-26)
+New state field `idleTicks` and constant `IDLE_REDRAW_TICKS`. The tick's `first` input gained
+`usedCard` (`CARD_FIRST` for place and discard, `NOTHING_FIRST` and the remove/blast inputs
+false); at the threshold the tick redraws one random slot and emits `redraw{slot}`. The UI
+flashes that card. R-45 and U-22 added.
+
 ### 2026-11-11 — `blast` command blows up a crate (D-25)
 New engine command `blast(q, r)`: removes the crate there, `lost` +1, then ticks with its
 `splat` first. The UI binds `B` to the hovered hex, and the help lists it. R-44 and U-21 added.

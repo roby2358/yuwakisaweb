@@ -31,7 +31,9 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
 ## Secondary mechanics, woven in
 
 - **Random hand of `HAND_SIZE`** → feeds accumulation: you build with what you're dealt,
-  and a Puller in hand asks where it can reach from.
+  and a Puller in hand asks where it can reach from. Sit on a hand for
+  `IDLE_REDRAW_TICKS` ticks without playing or discarding and one card turns over on its own,
+  so waiting out a line still slowly refreshes your options.
 - **Gremlins** → feed comedy and keep routes from going stale. A drowned one climbs back
   out somewhere on the shore as a new gremlin. They ride movers and block
   without malice, until one steps onto a crate and wrecks it: a crate sitting still near a

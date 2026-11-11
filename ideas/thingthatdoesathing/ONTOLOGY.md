@@ -70,6 +70,7 @@ everything; G-2 beats G-1 (a funny interaction that can't be read is a bug, not 
 | `lost` | int | Crates that sank or were wrecked by a gremlin. |
 | `exGremlins` | int | Gremlins gone any way but a Trap: sunk, splatted, or killed on a target (Tick rule). Shown in the tally. [D] |
 | `trapped` | int | Gremlins a Trap caught (Tick rule). Shown in the tally. [D] |
+| `idleTicks` | int | Ticks in a row with no card used (`place`, `discard`); at `IDLE_REDRAW_TICKS` one card is redrawn (Tick rule). [D] |
 | `spawnTimer` | int | Ticks since a source last spawned (one timer for the board). |
 | `nextId` | int | Next piece id. |
 | `phase` | `'player' \| 'tick'` | `'tick'` only while a tick resolves inside a command. |
@@ -197,7 +198,7 @@ ends = generateMap(seed, GEN_MAX_ATTEMPTS) or (seed = knownGoodSeed; generateMap
 color = Rando.choice(CRATE_COLORS)
 sources = [{ends.source, colors: [color]}]; targets = [{ends.target, color, delivered: 0}]
 things = []; pieces = []; a crate of color on the source; spawnGremlins()
-hand = HAND_SIZE draws; turn = 1; delivered = lost = exGremlins = trapped = spawnTimer = 0
+hand = HAND_SIZE draws; turn = 1; delivered = lost = exGremlins = trapped = spawnTimer = idleTicks = 0
 ```
 
 ### Assign terrain [P]
@@ -327,6 +328,8 @@ spawnTimer += 1
 if spawnTimer >= SOURCE_INTERVAL:
     color = Rando.choice(open colors); src = the source that makes color
     if no piece on src: a crate of color on src; spawnTimer = 0      # else the next tick rolls again
+idleTicks = 0 if the command used a card (place, discard) else idleTicks + 1   # D-26
+if idleTicks >= IDLE_REDRAW_TICKS: slot = Rando.int(0, HAND_SIZE-1); hand[slot] = draw(); idleTicks = 0; emit redraw{slot}
 gone = kinds of the command's own sink (remove) and this tick's sunk and splatted pieces
 trapped += count of gremlins whose splat has trap
 exGremlins += count of 'gremlin' in gone, less those trapped
@@ -397,6 +400,7 @@ The code constant in `GameArtifacts` is the single source.
 | `FIRST_MILESTONE` | 10 | crates (then the 1-2-5 series, forever) |
 | `SOURCE_INTERVAL` | 3 | ticks between crates, board-wide, shared by every color [D] |
 | `HAND_SIZE` | 3 | cards |
+| `IDLE_REDRAW_TICKS` | 10 | ticks in a row with no card used before one random card is redrawn (D-26) |
 | `CRATE_COLORS` | red, green, blue, yellow | the colors a game can open [D] |
 | `WHITE` | white | the color of a Thing that acts on every piece [D] |
 | `THINGS.SPRING.push` | 3 | hexes |
@@ -452,6 +456,7 @@ Illegal → `{ ok:false }` and nothing changed (hand and `Rando` included).
 | `deliver` | `id` |
 | `splat` | `id, by, trap` — a piece destroyed by a Rocket's flight, a Trap, a target, a gremlin's step, or `blast`: `by` is the flier or gremlin that landed on it, or null for the launched piece itself, a trapped piece (after its `move`), or a blasted crate; `trap` is true only when a Trap killed it |
 | `spawn` | `id, q, r` — a new crate on a source, or a gremlin climbing out on the shore |
+| `redraw` | `slot` — the hand slot the idle rule redrew this tick |
 | `milestone` | `count` — a milestone this tick's deliveries reached (after the tick's other events) |
 | `open` | `color, source: {q,r}, target: {q,r}` — the color that milestone opened, right after its `milestone` |
 

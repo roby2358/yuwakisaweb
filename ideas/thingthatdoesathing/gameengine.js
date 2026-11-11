@@ -7,7 +7,7 @@
 // Every command re-checks its own legality; every legal command but rotate runs exactly one tick. All randomness goes through the seeded Rando.
 const GameEngine = (function () {
     const {
-        TERRAIN, THINGS, PIECES, CRATE_COLORS, WHITE, aims, nextMilestone, MAP_SIZES, SOURCE_INTERVAL, ENHANCE_CHANCE, HAND_SIZE,
+        TERRAIN, THINGS, PIECES, CRATE_COLORS, WHITE, aims, nextMilestone, MAP_SIZES, SOURCE_INTERVAL, ENHANCE_CHANCE, HAND_SIZE, IDLE_REDRAW_TICKS,
         gremlinDice, GREMLIN_DICE_SIDES,
         GEN_MAX_ATTEMPTS, HEIGHTMAP_ROUGHNESS,
         WATER_PCT, MOUNTAIN_PCT, ICE_FRAC, PLACE_SLICE_FRAC, PLACE_SLICE_MIN
@@ -18,7 +18,10 @@ const GameEngine = (function () {
     const wanderOf = piece => ({ n: 1, splat: false, flies: false, skids: false, wrecks: PIECES[piece.kind].wrecks });
     // What a command did before its tick: events to report first, and the kinds of pieces it
     // sank (for emerge). Most commands do nothing first.
-    const NOTHING_FIRST = Object.freeze({ events: [], gone: [] });
+    // What a command did before its tick: leading events, the kinds it removed (for emerge),
+    // and whether it used a card (place, discard), which resets the idle count.
+    const NOTHING_FIRST = Object.freeze({ events: [], gone: [], usedCard: false });
+    const CARD_FIRST = Object.freeze({ events: [], gone: [], usedCard: true });
     // An end slice of the col-sorted passable hexes.
     const SLICE_OF = {
         left: (sorted, len) => sorted.slice(0, len),
@@ -116,6 +119,7 @@ const GameEngine = (function () {
             s.exGremlins = 0;
             s.trapped = 0;
             s.spawnTimer = 0;
+            s.idleTicks = 0;
             s.phase = 'player';
             return { ok: true };
         }
@@ -546,6 +550,15 @@ const GameEngine = (function () {
                 events.push({ type: 'spawn', id: c.id, q: c.q, r: c.r });
             }
 
+            // IDLE_REDRAW_TICKS ticks in a row without a card used: one random card is redrawn.
+            s.idleTicks = first.usedCard ? 0 : s.idleTicks + 1;
+            if (s.idleTicks >= IDLE_REDRAW_TICKS) {
+                const slot = Rando.int(0, s.hand.length - 1);
+                s.hand[slot] = this.draw();
+                s.idleTicks = 0;
+                events.push({ type: 'redraw', slot });
+            }
+
             // Gremlins a Trap caught count in `trapped`; every other gremlin gone in `exGremlins`.
             const ends = events.filter(e => e.type === 'sink' || e.type === 'splat');
             const gone = [...first.gone, ...ends.map(e => kindOf.get(e.id))];
@@ -578,7 +591,7 @@ const GameEngine = (function () {
             if (!this.canPlace(kind, this.board.get(q, r))) return { ok: false };
             s.things.push({ kind, color, q, r, facing: aimed ? facing : null });
             s.hand[slot] = this.draw();
-            return this.tick(NOTHING_FIRST);
+            return this.tick(CARD_FIRST);
         }
 
         // Turn a placed mover clockwise. Free: no tick, so nothing happens (D-19).
@@ -596,7 +609,7 @@ const GameEngine = (function () {
             if (!piece || !PIECES[piece.kind].cargo) return { ok: false };
             this.removePiece(piece);
             this.state.lost++;
-            return this.tick({ events: [{ type: 'splat', id: piece.id, by: null, trap: false }], gone: [piece.kind] });
+            return this.tick({ events: [{ type: 'splat', id: piece.id, by: null, trap: false }], gone: [piece.kind], usedCard: false });
         }
 
         remove(q, r) {
@@ -608,7 +621,7 @@ const GameEngine = (function () {
             const piece = this.pieceAt(q, r);
             if (!piece || !this.isOpenWater(this.board.get(q, r))) return this.tick(NOTHING_FIRST);
             this.sink(piece);
-            return this.tick({ events: [{ type: 'sink', id: piece.id }], gone: [piece.kind] });
+            return this.tick({ events: [{ type: 'sink', id: piece.id }], gone: [piece.kind], usedCard: false });
         }
 
         // Throw away a hand card: the slot gets a fresh draw, and the world ticks.
@@ -616,7 +629,7 @@ const GameEngine = (function () {
             const s = this.state;
             if (!Number.isInteger(slot) || slot < 0 || slot >= s.hand.length) return { ok: false };
             s.hand[slot] = this.draw();
-            return this.tick(NOTHING_FIRST);
+            return this.tick(CARD_FIRST);
         }
 
         wait() {
