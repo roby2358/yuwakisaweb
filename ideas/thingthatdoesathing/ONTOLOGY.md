@@ -60,7 +60,7 @@ everything; G-2 beats G-1 (a funny interaction that can't be read is a bug, not 
 | `seed` | uint32 | Reproducibility anchor. |
 | `size` | key of `MAP_SIZES` | The board size this game was generated at. |
 | `hexes` | `Map<"q,r", Hex>` | The map; `Board` wraps it. |
-| `sources` | `[{q, r, colors}]` | Where crates appear; each makes the crates of its `colors` (one or more). Things may sit on one. [D] |
+| `sources` | `[{q, r, colors}]` | Where crates appear; each makes the crates of its `colors` (one or more). Things may sit on one, except a blocking one (Wall). [D] |
 | `targets` | `[{q, r, color, delivered}]` | One per open color, in the order they opened: it takes only `color` crates, and `delivered` counts them. Nothing may be built on one. [D] |
 | `pieces` | `Piece[]` | Every crate and gremlin, in creation order. |
 | `things` | `Thing[]` | Every placed Thing, in placement order (the order they act, Pushers and Pullers first: Tick rule). |
@@ -129,7 +129,7 @@ A `Piece` (position, color, label) with two fields set by the engine. Each kind 
 | `pull` | Hexes it pulls the piece on the **far hex** (two ahead along `facing`) back toward itself, into the **near hex** (one ahead) (Puller). |
 | `blocks` | Pieces can't enter (Wall). |
 | `traps` | A piece that splats dies when it comes onto this hex: walked, pushed, slid, or coming down from a flight; a flight passing over doesn't count (Trap). Every target does the same, with no Thing (Step rule). [D] |
-| `colored` | Its cards always come in an open crate color, never white (Pusher, Puller). [D] |
+| `colored` | Its cards always come in an open crate color, never white, and are drawn only once two or more colors are open (Pusher, Puller). [D] |
 | `on` | `'land'` (plains/ice) or `'water'` — where it may be built. |
 | `weight` | Relative draw chance for the hand. |
 
@@ -254,7 +254,8 @@ Runs once at the end of every tick, for that tick's sinks and splats and for a p
 ### Draw — `draw()` [P]
 *Serves:* scarcity of agency (you build with what you're dealt).
 ```
-kind = chosen by Rando with probability THINGS[kind].weight / total weight
+deck = every kind, minus the colored ones while fewer than 2 colors are open
+kind = chosen by Rando from deck with probability THINGS[kind].weight / deck's total weight
 color = THINGS[kind].colored ? Rando.choice(open colors) : WHITE
 return {kind, color}
 ```
@@ -265,7 +266,7 @@ the set of hexes where it holds.
 ```
 hex exists, no Thing there, not a target
 terrain fits THINGS[kind].on:  'land' → PLAINS or ICE;  'water' → WATER
-THINGS[kind].blocks ⇒ no piece on hex
+THINGS[kind].blocks ⇒ no piece on hex, and not a source   # the crates must flow
 ```
 
 ### Step — `step(piece, dir, flies)` → `'moved' | 'blocked' | 'sank' | 'delivered' | 'trapped'` [P; trap D]

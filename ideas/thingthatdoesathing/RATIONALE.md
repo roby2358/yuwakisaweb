@@ -183,7 +183,7 @@ ARCHITECTURE_LOG.md.
   200/200, median 57, p90 70, 3.2 lost per game with it. Medium with both: 200/200, median 73,
   p90 89, 5.2 lost per game. Camped targets were most of the bot's stalls.
 
-### D-22 The Pusher, and colored Pushers and Pullers — *Decided (Pusher shoves the piece in front 1 hex, always a crate color, acting on its color's crates and every gremlin, each open color equally likely, rare: weight 0.5 each), Proposed (the ram glyph)*
+### D-22 The Pusher, and colored Pushers and Pullers — *Decided (Pusher shoves the piece in front 1 hex, always a crate color, acting on its color's crates and every gremlin, each open color equally likely, rare: weight 0.5 each, drawn only once two colors are open), Proposed (the ram glyph)*
 - **Alternatives:** colored Belts, Springs and Rockets; an off-color crate on a colored
   Belt carrying straight on (a switch, which needs a heading on every crate); colored
   cards as their own deck rows with weights; white Pushers and Pullers alongside the
@@ -193,8 +193,9 @@ ARCHITECTURE_LOG.md.
   line, and a colored Puller can reach in and pull just its color out. Everything else is
   unchanged: only these two are selective. Gremlins are always affected, so a colored
   Thing is never a gremlin-safe gap. A card's color is rolled with its kind (a `colored`
-  template field). With one color open, that color acts like white did, so white cards
-  would only be noise. The designer found about one per color is all a factory needs, so
+  template field). With one color open, a colored card would just act like white, and the
+  splitting it exists for has nothing to split, so the colored kinds stay out of the deck
+  until a second color opens (on a board with one color, never). The designer found about one per color is all a factory needs, so
   they're rare: weight 0.5 each, about 1 card in 28 apiece.
 - **Evidence:** R-40, R-41, R-27, R-10; U-20 (manual). The bot discards Pushers, so
   adding the kind only thins its Belt draws: `just cc-sim 200 small` 185/200, median 65 →

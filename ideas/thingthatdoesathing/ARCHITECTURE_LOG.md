@@ -2,6 +2,17 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-11 — Pushers and Pullers only once two colors are open
+Pushers and Pullers used to be drawn from the start, in the one open color, where they
+only acted like white Things. They now stay out of the deck until a second color opens,
+so a board with one color (small) never deals them; the other kinds' shares grow to fill.
+`draw()` picks from `drawableKinds()`. D-22 and R-27 updated.
+
+The new draws sent the smoke test down a path that turned up an old bug: a Wall could be
+built on a source (Things may sit on one), and the source still spawned a crate inside it.
+Walls can no longer be built on a source (the crates must flow); other Things still can.
+`canPlace` checks it; R-8 updated and covers it.
+
 ### 2026-11-11 — Enter toggles Go
 Enter used to be a Wait, the same as the Wait button. It now calls `toggleRun()`, like the
 Go button: it starts Go, and pressed again it turns Go off, letting the tick already

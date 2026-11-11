@@ -22,13 +22,13 @@ for why it works and [ONTOLOGY.md](ONTOLOGY.md) for the rules.
 | Rocket | blasts what's on it up to 8 hexes, stopping early at something solid or the outer sea, and delivering if it crosses its color's target (it flies over lakes); splats any gremlin it hits, and any gremlin riding it |
 | Pusher | pushes whatever is on the hex in front of it 1 hex on |
 | Puller | reaches across the hex in front and pulls whatever's beyond it into that hex |
-| Wall | nothing gets in |
+| Wall | nothing gets in (never on a source: the crates must flow) |
 | Trap | a gremlin that comes onto it dies (a new one climbs out on the shore); crates are safe |
 | Bridge | built on water; pieces cross instead of sinking |
 
 Pushers and Pullers always come in a crate color: a red one moves only red crates, and every
-gremlin. That's how you split a mixed line. They're rare cards; about one per color is all a
-factory needs.
+gremlin. That's how you split a mixed line, so they're only dealt once a second color opens.
+They're rare cards; about one per color is all a factory needs.
 
 Terrain: water sinks pieces, ice makes them slide, mountains block. Gremlins wander and
 ride your belts, and a gremlin that steps onto a crate wrecks it (one pushed into a crate

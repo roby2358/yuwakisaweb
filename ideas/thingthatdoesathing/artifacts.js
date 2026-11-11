@@ -26,7 +26,8 @@ const GameArtifacts = (function () {
     //   traps  — a piece that splats dies when it comes onto it (walked, pushed, slid, or
     //            landing from a flight; a flight passing over doesn't count)
     //   colored — its card always comes in an open crate color, never white (it acts only
-    //            on crates of that color, and on every gremlin)
+    //            on crates of that color, and on every gremlin); not drawn while only one
+    //            color is open
     //   on     — 'land' (plains/ice) or 'water': where it may be built
     //   weight — relative draw chance for the hand
     const THINGS = {

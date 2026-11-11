@@ -53,6 +53,10 @@ const GameEngine = (function () {
         }
 
         // Is this hex a source or a target?
+        isSource(hex) {
+            return this.state.sources.some(src => Hex.same(src, hex));
+        }
+
         isEndpoint(hex) {
             const s = this.state;
             return [...s.sources, ...s.targets].some(e => Hex.same(e, hex));
@@ -82,7 +86,7 @@ const GameEngine = (function () {
             if (this.targetAt(hex.q, hex.r)) return false;
             if (this.thingAt(hex.q, hex.r)) return false;
             if (!BUILDS_ON[tpl.on](hex.terrain)) return false;
-            return !(tpl.blocks && this.pieceAt(hex.q, hex.r));
+            return !(tpl.blocks && (this.pieceAt(hex.q, hex.r) || this.isSource(hex)));   // the crates must flow
         }
 
         legalPlacements(kind) {
@@ -304,18 +308,23 @@ const GameEngine = (function () {
 
         // A card: a kind drawn with probability weight / total weight, and its color.
         draw() {
-            const kind = this.drawKind();
+            const kind = this.drawKind(this.drawableKinds());
             return { kind, color: THINGS[kind].colored ? this.cardColor() : WHITE };
         }
 
-        drawKind() {
-            const total = KINDS.reduce((sum, k) => sum + THINGS[k].weight, 0);
+        // Colored kinds only split colors, so they're in the deck only once two are open.
+        drawableKinds() {
+            return this.openColors().length > 1 ? KINDS : KINDS.filter(k => !THINGS[k].colored);
+        }
+
+        drawKind(kinds) {
+            const total = kinds.reduce((sum, k) => sum + THINGS[k].weight, 0);
             let roll = Rando.random() * total;
-            for (const k of KINDS) {
+            for (const k of kinds) {
                 roll -= THINGS[k].weight;
                 if (roll < 0) return k;
             }
-            return KINDS[KINDS.length - 1];
+            return kinds[kinds.length - 1];
         }
 
         // A colored kind's card color: one of the open colors, each equally likely (never white).
