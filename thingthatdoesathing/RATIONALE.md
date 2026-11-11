@@ -352,6 +352,34 @@ ARCHITECTURE_LOG.md.
   `just cc-sim 50 medium`: unchanged, since the bot only rotates its own Things and never
   places over one. Unmeasured in play.
 
+### D-29 The Slide is ice you can build — *Decided (a placeable Thing that slides like ice, buildable on water like a Bridge), Proposed (unreviewed: the rest)*
+- **Alternatives:** a Slide with a facing that redirects what comes onto it (a turning ice
+  hex); a land-only Slide plus a separate ice-bridge kind; a Slide that also pushes the piece
+  standing on it, like a Belt.
+- **Why:** the designer asked for it (pjpd slide-card-3um8). Ice was the one free-movement
+  windfall you couldn't build. One new `THINGS` flag, `slides`, feeds the single slick test
+  `isSlick(hex)` that `push` already ran for bare ice: a Thing on the hex decides by its
+  `slides`, and with no Thing the hex slides if it's ICE. So terrain ice and Slides share one
+  code path, and "ice under a Thing doesn't slide" (R-14) falls out of the same test. Over
+  water it needs no code of its own either: `isOpenWater` already means water with no Thing
+  over it, which is the Bridge's "not sunk" check.
+- **Unreviewed calls:** (1) `on: 'both'`, a new `BUILDS_ON` entry: a Slide builds on plains,
+  ice or water (never mountain), so it's the only kind that can replace a Bridge on water and
+  also go on land. (2) No facing: it keeps a piece going whichever way it came on, so it
+  doesn't `aim`, can't be turned, and moves nothing standing on it (a crate spawned or stopped
+  on one stays put). (3) A Spring that comes down on a Slide skids on, as on bare ice (the
+  `skids` loop reads `isSlick` too); a Rocket doesn't; Slides under a flight don't count as a
+  shortcut. (4) It's white and slides gremlins too; gremlins may wander onto a water Slide
+  (it's covered water) and then slide on, possibly into the lake. (5) Weight 1, as a Bridge.
+  The card-unlock order isn't built yet; when it is, the Slide unlocks after Pushers and
+  Pullers. (6) A line of Slides across a lake carries a crate over in one tick, and a single
+  water Slide whose far side is open water drops the crate in, like ice running into a lake.
+  (7) Glyph: three white ice streaks on a pale-blue slab, no arrow.
+- **Evidence:** R-48, R-8, R-14. `Measured by: just cc-sim 200 small` → 200/200, median 51
+  (was 50), p90 62 (was 60), 2.61 lost per game (was 2.60); `just cc-sim 50 medium` → 50/50,
+  median 63 (was 60), p90 77 (was 70), 4.26 lost (was 3.58). The bot discards Slides, so the
+  shift is belts drawn slightly less often. Unmeasured in play.
+
 ### D-24 Pushers and Pullers act before the other Things in a tick — *Proposed*
 - **Alternatives:** pure placement order (the old rule); letting a Pusher or Puller move a
   piece that already moved this tick; acting after the Belts.

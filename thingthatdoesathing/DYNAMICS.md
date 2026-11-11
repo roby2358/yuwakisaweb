@@ -82,7 +82,8 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
 - **Opening:** build the spine. Lay belts from the source toward the target; discard cards
   you can't use, or park them where they'll help later.
 - **Midgame:** patch around gremlins and jams. Fence the line with Walls where gremlins
-  keep wandering on, and put a line of Bridges where water forced a detour.
+  keep wandering on, and put a line of Bridges where water forced a detour, or a run of
+  Slides that shoots a crate across the lake in one tick.
 - **New color:** a milestone opens a second target. If it comes out of a new source, build a
   second line; if it shares your source, the crates of both colors ride the same belt, so
   you have to split them by color before the targets.
@@ -107,5 +108,5 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
 ### Strategy ↔ mechanic cross-check
 
 Every Thing kind is used by some strategy above (Belt: spine; Wall: fencing; Bridge:
-water detours; Spring: straight runs and lake hops; Rocket: long shots at the target, gremlin squashing; Pusher: side-feed and knocking a color off the line (colored); Puller: side-feed, slide catcher, gremlin drowner). Discard is the opening's way to skip cards. Rotate and Remove
+water detours; Slide: free fast runs and one-tick lake crossings; Spring: straight runs and lake hops; Rocket: long shots at the target, gremlin squashing; Pusher: side-feed and knocking a color off the line (colored); Puller: side-feed, slide catcher, gremlin drowner). Discard is the opening's way to skip cards. Rotate and Remove
 are used to fix misplacements. Gremlins create the midgame.

@@ -2,7 +2,7 @@
 //
 // A greedy builder bot: lay belts along the shortest land path from source to target,
 // facing each one at the next hex. A spring stands in for a belt on a straight run of 3.
-// Every other card (Puller, Rocket, Wall, Bridge, and a Spring off a straight run) is
+// Every other card (Puller, Rocket, Wall, Bridge, Slide, and a Spring off a straight run) is
 // thrown away with discard() (the bot doesn't plan pulls or flights). Reports turns to the first
 // milestone (FIRST_MILESTONE crates). Not a test (no pass/fail); it's the evidence behind
 // FIRST_MILESTONE, SOURCE_INTERVAL and friends.

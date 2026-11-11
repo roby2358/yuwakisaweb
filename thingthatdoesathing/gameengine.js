@@ -32,6 +32,7 @@ const GameEngine = (function () {
     const BUILDS_ON = {
         land: isLand,
         water: t => t === TERRAIN.WATER,
+        both: t => isLand(t) || t === TERRAIN.WATER,
     };
 
     class GameEngine {
@@ -338,7 +339,7 @@ const GameEngine = (function () {
             return thing.color === WHITE || !PIECES[piece.kind].cargo || piece.color === thing.color;
         }
 
-        // ---- Movement: one code path for movers, springs, ice, and gremlins ----
+        // ---- Movement: one code path for movers, springs, ice, Slides, and gremlins ----
 
         // Can a piece step into this hex at all? (Water accepts it — and sinks it.)
         canEnter(hex) {
@@ -348,9 +349,11 @@ const GameEngine = (function () {
             return !this.pieceAt(hex.q, hex.r);
         }
 
-        // Is this hex ice with nothing built on it (so a piece slides across it)?
-        isBareIce(hex) {
-            return hex.terrain === TERRAIN.ICE && !this.thingAt(hex.q, hex.r);
+        // Does a piece that comes onto this hex on the ground slide on? A Thing decides by its
+        // `slides` (a Slide does, any other Thing covers the ground); bare ground slides if it's ice.
+        isSlick(hex) {
+            const thing = this.thingAt(hex.q, hex.r);
+            return thing ? THINGS[thing.kind].slides : hex.terrain === TERRAIN.ICE;
         }
 
         // Does this hex kill this piece when it comes onto it? A Trap does, and so does a
@@ -415,14 +418,14 @@ const GameEngine = (function () {
             return 'moved';
         }
 
-        // Shove `piece` up to n hexes in `dir`. Bare ice is free: the piece slides on.
+        // Shove `piece` up to n hexes in `dir`. Slick ground (bare ice, a Slide) is free: the piece slides on.
         // `how` is { n, splat, flies, skids, wrecks } (from the Thing's template, or wanderOf).
         // A wrecking step (a gremlin's own) that's stopped by cargo destroys it (lost) and
         // takes its hex.
         // A splatting push (the Rocket) that's stopped by a piece that splats destroys it and
         // lands on its hex; then, if the launched piece itself splats, it does too.
         // A flying push counts every hex (ice is no shortcut mid-air), crosses inland water,
-        // and sinks only if it comes down on water; if it skids, coming down on bare ice
+        // and sinks only if it comes down on water; if it skids, coming down on slick ground
         // slides on as usual. A piece that splats dies on a Trap it comes onto, or comes down on.
         // Returns this push's events: one move (if it moved), a splat for a piece it hit
         // (`by` the mover), then a sink/deliver/splat if the mover ended so (a Trap's kill is
@@ -442,11 +445,11 @@ const GameEngine = (function () {
                 if (res === 'blocked') break;
                 path.push({ q: piece.q, r: piece.r });
                 if (res !== 'moved' || hit) break;
-                if (!flies && this.isBareIce(this.board.get(piece.q, piece.r))) continue;
+                if (!flies && this.isSlick(this.board.get(piece.q, piece.r))) continue;
                 left--;
             }
-            // A skidding throw that ran its full range onto bare ice slides on, on the ground.
-            while (skids && res === 'moved' && !hit && this.isBareIce(this.board.get(piece.q, piece.r))) {
+            // A skidding throw that ran its full range onto slick ground slides on, on the ground.
+            while (skids && res === 'moved' && !hit && this.isSlick(this.board.get(piece.q, piece.r))) {
                 res = this.step(piece, dir, false);
                 if (res === 'blocked') break;
                 path.push({ q: piece.q, r: piece.r });

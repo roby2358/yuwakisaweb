@@ -2,6 +2,15 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-11 — The Slide card: ice you can build
+A new Thing, `SLIDE`, with a new `THINGS` flag `slides` and a new `on` value `'both'` (land
+or water). The engine's `isBareIce(hex)` became `isSlick(hex)`: a Thing on the hex decides by
+its `slides` flag, otherwise the hex is slick if it's ICE, so terrain ice and Slides go
+through the one slide path in `push` (and the Spring's skid). Over water a Slide keeps the
+piece from sinking through the existing open-water check. Weight 1; no facing. Added a
+glyph and `THING_LOOK`; the sim bot discards Slides. D-29 added; R-48 added, R-7, R-8 and
+R-14 updated.
+
 ### 2026-11-11 — Placing on a Thing replaces it
 A hex holding a Thing used to be illegal for every card: rebuilding it took `D` (remove,
 one tick) and then a place (another tick). `canPlace` no longer checks for a Thing, so

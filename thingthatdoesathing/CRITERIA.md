@@ -25,14 +25,14 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | R-4 | any generated map | the first source in the leftmost placement slice, its target in the rightmost (Place source and target rule) | automated |
 | R-5 | many seeds at every size | a land path from the first source to its target | automated |
 | R-6 | `newGame(seed, size)` | one source and one target sharing a `CRATE_COLORS` color, and one crate of that color on the source; gremlin count in `gremlinDice(size)`d`GREMLIN_DICE_SIDES` (one die per `GREMLIN_HEXES_PER_DIE` hexes of area, rounded, at least 1) on distinct passable inner hexes off the source and target, each colored; no Things; `HAND_SIZE` cards; counters reset; unique ids | automated |
-| R-7 | a step | blocked (piece stays) into off-map, mountain, Wall, or another piece; accepted onto plains, ice, a bridge, or a mover | automated |
+| R-7 | a step | blocked (piece stays) into off-map, mountain, Wall, or another piece; accepted onto plains, ice, a bridge, a Slide, or a mover | automated |
 | R-8 | `legalPlacements(kind)` | exactly the Placement legality rule: not a target (a Thing there doesn't matter, R-47), right ground, no piece under a blocking kind, and no blocking kind on a source | automated |
 | R-9 | `place(slot, q, r, facing)` | legal: Thing appended (fixture facing null), slot redrawn, hand stays `HAND_SIZE`, one tick. Illegal (slot, facing, hex): `{ok:false}`, state and `Rando` unchanged | automated |
 | R-10 | `rotate(q, r)` | on a Belt, Bridge, Spring, Rocket, Pusher, or Puller: facing turns clockwise and nothing else changes (no tick: `events` empty, turn, pieces, hand untouched). On a fixture or empty hex: `{ok:false}`, unchanged | automated |
 | R-11 | `wait()` | one tick, hand and Things untouched | automated |
 | R-12 | a piece on a mover during a tick | pushed `THINGS[kind].push` hexes in the facing, stopping before a blocked hex | automated |
 | R-13 | a tick | each piece moves at most once (a line of belts advances a crate one hex per tick; a carried gremlin doesn't also wander) | automated |
-| R-14 | a piece entering bare ICE | keeps going the same way, free, until non-ice or blocked; ice under a Thing doesn't slide; a flying push (Spring, Rocket) counts ice under its flight; a Spring that lands on bare ice skids on (on the ground), a Rocket doesn't | automated |
+| R-14 | a piece entering bare ICE | keeps going the same way, free, until non-ice or blocked; ice under a Thing doesn't slide (unless that Thing slides, R-48); a flying push (Spring, Rocket) counts ice under its flight; a Spring that lands on bare ice skids on (on the ground), a Rocket doesn't | automated |
 | R-15 | a piece entering water | removed if no Thing is there (crate: `lost` +1); a bridge takes it, and carries it on next tick (R-46); a flying push (Spring, Rocket) passes over inland water and sinks only if it comes down on it, but the outer sea always takes it | automated |
 | R-16 | a piece entering a target | a crate of its color is removed and `delivered` +1; a gremlin that comes onto any target dies (`splat`, `by` null, after its `move`; `exGremlins` +1, a new one climbs out), but not when a flight carries it over | automated |
 | R-17 | a spinner during a tick | the Spinner was replaced by the Puller (R-28) | retired |
@@ -66,6 +66,7 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | R-45 | ticks with no card used | after `IDLE_REDRAW_TICKS` ticks in a row of `wait`, `remove` or `blast`, one random slot is redrawn (`redraw{slot}`) and the count starts over; `place` and `discard` reset it; `rotate` doesn't tick or count | automated |
 | R-46 | a Bridge during a tick | pushes the piece on it `THINGS.BRIDGE.push` hexes in its facing, on the ground, through the same `step` as a Belt: onto land or the next Bridge, blocked by a Wall or a piece, sunk in open water (crate: `lost` +1); a piece that came onto it this tick waits for the next (R-13); carries gremlins too | automated |
 | R-47 | `place` on a hex holding a Thing | the old Thing is gone and the new one stands there, last in placement order, as one command and one tick (Thing count unchanged); it acts this tick on a piece standing there; same kind over itself is legal; the hex is judged as if bare: a land kind can't replace a Bridge on water, a Wall can't go where a piece stands | automated |
+| R-48 | a Slide (`THINGS.slides`) | a piece that comes onto it on the ground keeps going the same way, free, through the same slick test as bare ICE, until ground that isn't slick or a blocker; built on water (`on: 'both'`) the piece slides over it unsunk and sinks in open water beyond; a Slide on ice still slides; a Spring that comes down on one skids on, a Rocket doesn't, and Slides under a flight don't count; a piece standing on one stays put; no facing (`rotate` illegal); removing a water Slide sinks the piece on it | automated |
 
 ---
 

@@ -21,24 +21,27 @@ const GameArtifacts = (function () {
     //   flies  — its push is airborne: it passes over inland open water (only the outer sea,
     //            an edge hex, takes it), every hex counts (ice is no shortcut mid-air), and
     //            it sinks only if it comes down on water
-    //   skids  — a flying push that comes down on bare ice slides on, like any piece on ice
+    //   skids  — a flying push that comes down on slick ground (bare ice or a Slide) slides on
     //   blocks — pieces can't enter
     //   traps  — a piece that splats dies when it comes onto it (walked, pushed, slid, or
     //            landing from a flight; a flight passing over doesn't count)
     //   colored — its card always comes in an open crate color, never white (it acts only
     //            on crates of that color, and on every gremlin); not drawn while only one
     //            color is open
-    //   on     — 'land' (plains/ice) or 'water': where it may be built
+    //   slides — a piece that comes onto it on the ground keeps going the same way, free,
+    //            like bare ice (and a skidding throw that comes down on it skids on)
+    //   on     — 'land' (plains/ice), 'water', or 'both' (land or water): where it may be built
     //   weight — relative draw chance for the hand
     const THINGS = {
-        BELT:    { push: 1, pull: 0, shove: 0, splat: false, flies: false, skids: false, blocks: false, traps: false, colored: false, on: 'land',  weight: 6 },
-        SPRING:  { push: 3, pull: 0, shove: 0, splat: false, flies: true,  skids: true,  blocks: false, traps: false, colored: false, on: 'land',  weight: 2 },
-        ROCKET:  { push: 8, pull: 0, shove: 0, splat: true,  flies: true,  skids: false, blocks: false, traps: false, colored: false, on: 'land',  weight: 1 },
-        PUSHER:  { push: 0, pull: 0, shove: 1, splat: false, flies: false, skids: false, blocks: false, traps: false, colored: true,  on: 'land',  weight: 0.5 },
-        PULLER:  { push: 0, pull: 1, shove: 0, splat: false, flies: false, skids: false, blocks: false, traps: false, colored: true,  on: 'land',  weight: 0.5 },
-        WALL:    { push: 0, pull: 0, shove: 0, splat: false, flies: false, skids: false, blocks: true,  traps: false, colored: false, on: 'land',  weight: 2 },
-        TRAP:    { push: 0, pull: 0, shove: 0, splat: false, flies: false, skids: false, blocks: false, traps: true,  colored: false, on: 'land',  weight: 1 },
-        BRIDGE:  { push: 1, pull: 0, shove: 0, splat: false, flies: false, skids: false, blocks: false, traps: false, colored: false, on: 'water', weight: 1 },
+        BELT:    { push: 1, pull: 0, shove: 0, splat: false, flies: false, skids: false, blocks: false, traps: false, colored: false, slides: false, on: 'land',  weight: 6 },
+        SPRING:  { push: 3, pull: 0, shove: 0, splat: false, flies: true,  skids: true,  blocks: false, traps: false, colored: false, slides: false, on: 'land',  weight: 2 },
+        ROCKET:  { push: 8, pull: 0, shove: 0, splat: true,  flies: true,  skids: false, blocks: false, traps: false, colored: false, slides: false, on: 'land',  weight: 1 },
+        PUSHER:  { push: 0, pull: 0, shove: 1, splat: false, flies: false, skids: false, blocks: false, traps: false, colored: true,  slides: false, on: 'land',  weight: 0.5 },
+        PULLER:  { push: 0, pull: 1, shove: 0, splat: false, flies: false, skids: false, blocks: false, traps: false, colored: true,  slides: false, on: 'land',  weight: 0.5 },
+        WALL:    { push: 0, pull: 0, shove: 0, splat: false, flies: false, skids: false, blocks: true,  traps: false, colored: false, slides: false, on: 'land',  weight: 2 },
+        TRAP:    { push: 0, pull: 0, shove: 0, splat: false, flies: false, skids: false, blocks: false, traps: true,  colored: false, slides: false, on: 'land',  weight: 1 },
+        BRIDGE:  { push: 1, pull: 0, shove: 0, splat: false, flies: false, skids: false, blocks: false, traps: false, colored: false, slides: false, on: 'water', weight: 1 },
+        SLIDE:   { push: 0, pull: 0, shove: 0, splat: false, flies: false, skids: false, blocks: false, traps: false, colored: false, slides: true,  on: 'both',  weight: 1 },
     };
 
     // Piece templates, keyed by Piece.kind:

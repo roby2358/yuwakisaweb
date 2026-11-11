@@ -25,6 +25,7 @@ for why it works and [ONTOLOGY.md](ONTOLOGY.md) for the rules.
 | Wall | nothing gets in (never on a source: the crates must flow) |
 | Trap | a gremlin that comes onto it dies (a new one climbs out on the shore); crates are safe |
 | Bridge | built on water; carries what's on it 1 hex in its facing, like a Belt over water |
+| Slide | ice you can build, on land or water: what comes onto it keeps sliding the same way (a Spring that lands on it skids on) |
 
 Pushers and Pullers always come in a crate color: a red one moves only red crates, and every
 gremlin. That's how you split a mixed line, so they're only dealt once a second color opens.

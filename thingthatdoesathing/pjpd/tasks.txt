@@ -22,14 +22,6 @@ Updated: 2026-11-11T20:26:47Z
 
 Thing Factory: decide whether Pushers and Pullers act first in a tick (now) or last. Acting first means they take the crate before a Belt under it moves it, so a Pusher next to a belt line diverts crates. Acting last means they catch crates that belts just delivered in front of them, which may read more naturally ("the belt brings it, the pusher shoves it on"). Each piece still moves at most once a tick either way. Write a RATIONALE entry with both options and concrete examples, like a Pusher at a belt corner, a Puller reaching over a belt, and a Pusher feeding a Spring. Bring a recommendation to the user before changing anything. If it flips: change the order in tick(), update the R-n test for order, ONTOLOGY tick rule, D-entry, log, and run cc-sim.
 ----
-Priority:   50
-Status: ToDo
-ID: slide-card-3um8
-Created: 2026-11-11T15:59:01Z
-Updated: 2026-11-11T20:26:47Z
-
-Thing Factory: add a Slide card, a placeable Thing that acts like ice. A piece that steps onto it keeps sliding in the same direction for free, the way it does on bare ice in step(). Ideally this is one THINGS flag (e.g. `slides: true`) that the ice check in step() also reads, so there's a single code path for terrain ice and Slide Things. A Slide can be placed on water, like a Bridge [D]: it makes the water hex crossable, and the piece slides over it. Use the Bridge's water-legal placement rule and its "not sunk" check, plus the slide behavior. Add a draw weight, a THING_LOOK, and a spot in the card-unlock order if that's built. Open question: does a Spring landing on a Slide skid on, the way it does on ice? Reconcile the docs, add an R-n test (including a slide across water), and run cc-sim.
-----
 Priority:   45
 Status: ToDo
 ID: color-picker-8h4x

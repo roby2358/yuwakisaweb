@@ -158,6 +158,16 @@ const GameUI = (function () {
             ctx.lineWidth = width;
             chevron(ctx, s * 0.2, s * 0.3);
         },
+        SLIDE(ctx, s) {
+            // Ice streaks on a slab: what comes onto it keeps going (it has no facing).
+            ctx.lineWidth = Math.max(1, s * 0.06);
+            for (const [dx, dy, len] of [[-0.42, -0.22, 0.42], [-0.1, 0.08, 0.5], [-0.3, 0.38, 0.3]]) {
+                ctx.beginPath();
+                ctx.moveTo(dx * s, dy * s);
+                ctx.lineTo((dx + len) * s, (dy - len * 0.4) * s);
+                ctx.stroke();
+            }
+        },
     };
 
     // Draw a Thing centered at (x, y) with hex radius s. Shared by the board and the hand.
