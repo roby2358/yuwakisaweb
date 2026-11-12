@@ -21,3 +21,10 @@ decision, and where the full reasoning lives (a RATIONALE `D-n` tagged *unreview
 - color-picker-8h4x (D-32, supersedes D-22): the pick happens in the UI before the command; `place(slot,q,r,facing,color)` carries it, so the engine never holds a white Pusher/Puller (one command, one tick); `color` required for every kind (plain kinds pass white); one open color skips the picker; picker is an overlay that holds Go; keys 1–4 pick; Esc/right-click/click-off cancel back to "card picked"; color is fixed, recolor = replace (D-28). Picker look/position is a manual check (U-25). [agent]
 - bump-6nee (D-33): "on ice" = bumped piece's hex is slick (ice or Slide); bumper stays put (cue ball); bumped piece moves 1 hex then slides on slick ground; chains allowed, each piece bumped at most once per tick; gremlins bump and get bumped (a gremlin stepping into a crate still wrecks it first); Spring/Rocket flights don't bump, Spring skids do; bumped crates sink in water, deliver on their target, stop at Wall/mountain/other target; UI plays a bumped piece after its bumper arrives. [agent]
 - big-crate-jat8 (D-34): new `bigcrate` piece template with `value` 10 (all pieces get `value`); chance m/(m+4) per spawn (0 before the first milestone, 50% at the 4th); counts 1 toward the crate cap; otherwise behaves exactly like a crate, so losing one costs 10; one tick crossing several milestones fires each in order. Bot to 5th milestone: small 49/76/104/139/199 turns with big crates vs 662 without — milestone gaps stay flat instead of doubling. New recipe `just cc-sim-to N SIZE M`. [agent]
+
+## Review round 2026-11-12
+- D-24 push order: keep first. [user]
+- crate cap: sqrt of area, plus 1 per milestone (replaces linear D-31). [user]
+- bumping: Springs and Rockets also bump; new bump rule: the line advances 2, the bumper ends 1 past the hit piece's old hex, for any mover. [user]
+- big crates: idea bigcrate-pac-e3h4 to reconsider how they drive advancement. [user]
+- milestone banner lists cards unlocked. [user]

@@ -558,7 +558,7 @@ ARCHITECTURE_LOG.md.
   games stall). Gaps between milestones stay near 30 turns on small instead of doubling.
   Unmeasured in play.
 
-### D-24 Pushers and Pullers act before the other Things in a tick — *Proposed*
+### D-24 Pushers and Pullers act before the other Things in a tick — *Decided*
 - **Alternatives:** pure placement order (the old rule); letting a Pusher or Puller move a
   piece that already moved this tick; acting after the Belts.
 - **Why:** in pure placement order a Pusher or Puller built after the Belt line beside it
@@ -567,8 +567,8 @@ ARCHITECTURE_LOG.md.
   Reaching first makes it a diverter wherever it was built, keeps one move per piece, and is
   one partition of the loop, not a per-Thing priority.
 - **Evidence:** R-43. Unmeasured in play: the bot discards Pushers and Pullers.
-- **Open: first vs last (2026-11-11, pjpd push-order-ptbd)** *(unreviewed — recommendation
-  only, order unchanged)*. "Last" means Belts, Bridges, Springs and Rockets go first, then
+- **First vs last (2026-11-11, pjpd push-order-ptbd; settled 2026-11-12: the designer agreed,
+  keep first).** "Last" means Belts, Bridges, Springs and Rockets go first, then
   Pushers and Pullers, each group still in placement order. R-13 holds either way: the
   `moved` set is checked before every action, and a piece whose push was *blocked* still
   counts as moved. That one fact decides most cases. The hope for "last" was "the belt
@@ -605,7 +605,7 @@ ARCHITECTURE_LOG.md.
     crate burns its move; with the Belts placed downstream-first it waits two ticks. Last:
     the Belts clear (6,4) first, and it merges on tick 1. The gain is a tick or two per
     merge, and it depends on Belt placement order anyway.
-- **Recommendation:** keep *first*. With one move per piece, "last" doesn't buy "the belt
+- **Decision:** keep *first*. With one move per piece, "last" doesn't buy "the belt
   brings it, the Pusher shoves it on". It makes a Pusher or Puller beside any moving line
   (Belt, Bridge, a turning corner, a Spring hex) never fire, and it changes nothing at line
   ends, where the crate stops anyway. Its only win is faster merges into a dense line. In

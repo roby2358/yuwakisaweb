@@ -2,6 +2,9 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-12 — D-24 settled: Pushers and Pullers stay first
+The designer agreed with the D-24 recommendation. D-24 is now *Decided*; no code change.
+
 ### 2026-11-11 — Big crates worth 10
 Every spawn used to be a `crate` worth one delivery. `PIECES` gained a `value` field (crate 1,
 gremlin 0) and a new row, `bigcrate` (value 10); `artifacts.js` gained `BIG_CRATE_HALF` and
