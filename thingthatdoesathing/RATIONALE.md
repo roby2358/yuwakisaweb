@@ -835,8 +835,8 @@ ARCHITECTURE_LOG.md.
   with flights); whether it fires is still judged at launch (off the map, or the 5th closed by
   terrain/Things/another color's target and the 4th unable to take it, pieces included, as the
   board stands); if the 5th is then blocked by a piece and the 4th holds a piece by the time it
-  comes down, the shot crashes (lost); on open water there it sinks. (5) *Mid-air crash scope:*
-  only `air` motions (Spring and Rocket flights) crash; two in one hex on one hop, or swapping
+  comes down, the shot crashes (lost); on open water there it sinks. (5) *Mid-air crash scope* (designer-confirmed 2026-11-12: on the ground they bump, in the
+  air they explode): only `air` motions (Spring and Rocket flights) crash; two in one hex on one hop, or swapping
   hexes, both go (splat, `by` the other, value lost). An air and a ground claimant on one hex
   tie by rank with no crash; a flight meeting a piece standing on a hex is stopped (it comes
   down; a Rocket still splats a gremlin; a still piece on slick ground is bumped). (6) *Ranks:*
