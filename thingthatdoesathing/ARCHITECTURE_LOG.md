@@ -2,6 +2,87 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-12 — Hover waits behind an overlay (no-board crash on the intro)
+The designer saw "Cannot read properties of null (reading 'has')" right after load, before a
+map (pjpd nullhas-7q2s). The intro and size cards are centered panels that don't cover the
+canvas, so moving the mouse over the bare canvas ran `onMouseMove`'s hover lookup
+`state.hexes.has(...)` while `hexes` was still null (no game until a size is picked). Before,
+only `handleClick` honored L5; now `onMouseMove` returns while any overlay is up, so hover and
+drag-pan wait like clicks. The other `.has(` sites were checked and can't see null before a
+game: `picked.legal` exists only with a pick, `handleClick` already returned on the overlay,
+`resize`/`render` test `hexes`, and the engine's `moved` sets are built per tick. uiboot gained
+an early-events check (hover, drag, right-click, wheel, leave, resize, keys, timers and frames
+on the intro); CRITERIA's test-command line and U-8 updated.
+
+### 2026-11-12 — Every landing skids; the `skids` flag is gone
+The designer settled the skid rule: "Basically anything that lands, slides, anywhere. The only
+exception is hitting a gremlin stops it in that hex", short Rocket landings included, and
+dropped the `skids` flag. Before, only a full-range landing skidded (a flight blocked mid-air,
+one backed up off a hex it couldn't land on, and the Cannon's 4th-hex fallback came down dead),
+and `skids` was a `THINGS` field (true on Spring, Rocket, Cannon). Now `push` runs `comeDown`,
+then the landing checks (new `landingResult`), then the new `skid(piece, dir, path, res, moved)`
+from the landing hex if it's slick, for every aloft piece except one that splatted a gremlin,
+one that bumped, and a gremlin riding a Rocket. `slidesOnLanding` is gone: `comeDown` running
+first is the `canLand` guard. `skids` left every `THINGS` row, `wanderOf`, `actionOf` and the
+`how` docs. Board outcomes are unchanged (the hex past a short landing is what shortened it).
+D-37 rewritten; D-17, D-15, D-29, D-35, D-36 touched; R-14, R-32, R-53, R-54 rows and tests
+updated (new checks: a Spring stepped back off a mountain onto ice, a Cannon's 4th-hex fallback
+on a Slide; flipped: a blocked Rocket onto ice); ONTOLOGY's `flies` field and Push rule,
+README, DYNAMICS and CLAUDE.md updated. Sims unchanged (small median 49, medium 61).
+
+### 2026-11-12 — Rockets and Cannons skid on landing
+The designer asked for pieces thrown by a Rocket or a Cannon to slide on when they land on
+ice, as a Spring's landing does (pjpd rocket-skid-v7ky). `THINGS.ROCKET.skids` and
+`THINGS.CANNON.skids` went from false to true; `push`'s skid loop needed no kind check. Its
+condition now reads the new `slidesOnLanding(piece, cleared)` (`canLand` and `isSlick`) instead
+of bare `isSlick`, so a flight that ends over another color's target on ice comes down short
+and stays instead of skidding on from the target hex (a latent Spring bug), and it skips a
+piece the push splats on landing (`doomed`: a gremlin on a Rocket). Before, a Rocket came down
+dead on ice and Slides (D-15, D-17, D-29 (3)). The Cannon's 5th-hex slide was already a ground
+slide in the main loop and still happens once. New D-37; D-15, D-17, D-29, D-36 updated;
+R-14, R-32, R-48, R-54 rows and tests updated, new `test/R-32/rocket_skid.js`; ONTOLOGY's
+`skids` field and Push rule, README, DYNAMICS, CLAUDE.md and the Rocket and Cannon verb lines
+updated. Sims unchanged (small median 49, medium 61).
+
+### 2026-11-12 — The Cannon
+The designer asked for a Cannon card (pjpd cannon-card-93j7): a facing mover that shoots the
+piece on it 5 hexes, passing over everything on the first 4 and moving into the 5th as a
+plain ground step. It's a `THINGS` row (`push` 5, `clears` 4, `flies` false, weight 1) and
+the last `UNLOCKS` step, after the Rocket. New template field `clears` (0 for every other
+kind), carried in the push's `how`: `push` sends the first `clears` hexes through the new
+`passOver(piece, dir)` (off the map is the only stop) and the rest through `step` as before.
+The D-35 back-up loop moved into `comeDown(piece, path, start, clears)`, shared by every
+flight and shot: a shot stopped right after its cleared stretch is still aloft, may come
+down only on the last cleared hex (`canLand` with `cleared` also wants no Wall, no other
+piece, no open water), and otherwise doesn't fire. Delivery came out of `step` into
+`goalFor`/`deliver`, so a shot that comes down on its color's target on the 4th hex is
+delivered. New D-36; new R-54 and `test/R-54/`; R-49's test now expects six steps (Rocket at
+50 on small, Cannon at 100); R-7's and R-10's rows and R-10's test name the Cannon;
+`uiboot.js` checks the banner and news panel name it. ONTOLOGY's `THINGS`, invariant, Push,
+Tick and Numbers, README, DYNAMICS and CLAUDE.md updated; new `THING_LOOK.CANNON` and glyph
+(a barrel on a wheel, a dotted arc from the muzzle). Sims unchanged (small median 49, medium
+61, milestone 5 at 208): the Cannon unlocks at the fifth milestone at the earliest.
+
+### 2026-11-12 — Slides are drawn twice as often
+The designer raised `THINGS.SLIDE.weight` from 1 (as a Bridge) to 2 (as a Wall or Spring):
+Slides felt rare, since they join the deck only after Pushers and Pullers. ONTOLOGY's weight
+row and D-29 (5) updated; R-27's test reads weights from `THINGS`, so it needed no change.
+Sims unchanged (small median 49, medium 61): the Slide unlocks after the first milestone.
+
+### 2026-11-12 — A Spring's throw clears mountains
+The designer asked that a Spring cross 2 mountain hexes, landing on the third. Before, a
+mountain stopped every flight (`canEnter`), so a Spring came down short of it. Now `THINGS`
+has an `overMountains` flag (true only for the Spring), carried in the push's `how`;
+`step(piece, dir, air)` takes `{flies, overMountains}` instead of a bare `flies` (ground
+callers pass a frozen `GROUND`) and lets an `overMountains` flight over a mountain. The
+"drop one hex short of another color's target" landing became a loop over the new
+`canLand(piece, hex)` (no mountain, no wrong target), so a throw that ends over a mountain
+comes down on the last hex short of it, or stays on the Spring. Walls, pieces and bumps
+are unchanged; the Rocket is still stopped by mountains. New D-35 (D-17 points to it);
+new R-53 and `test/R-53/`; R-7's row and test updated (`step` now takes `air`); ONTOLOGY's
+`THINGS`, terrain table, invariant, Step and Push updated; the Spring's verb line, README,
+DYNAMICS and CLAUDE.md one-liners touched. Sims unchanged (the bot never throws at a ridge).
+
 ### 2026-11-12 — The milestone banner names the cards it unlocked
 The designer asked for the milestone report to show unlocked cards. Before, the banner showed
 only the milestone (the last `milestone` event of the tick) and any `unlock` opened the news

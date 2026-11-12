@@ -21,18 +21,19 @@ for why it works and [ONTOLOGY.md](ONTOLOGY.md) for the rules.
 | Thing | Does |
 |---|---|
 | Belt | moves what's on it 1 hex in its facing |
-| Spring | flings what's on it 3 hexes, over lakes; it skids on if it lands on ice |
-| Rocket | blasts what's on it up to 8 hexes, stopping early at something solid or the outer sea, and delivering if it crosses its color's target (it flies over lakes); splats any gremlin it hits, and any gremlin riding it |
+| Spring | flings what's on it 3 hexes, over lakes and up to 2 mountains (it can't land on a mountain, so it comes down short of one); it skids on if it lands on ice |
+| Rocket | blasts what's on it up to 8 hexes, stopping early at something solid or the outer sea, and delivering if it crosses its color's target (it flies over lakes); a crate that lands on ice skids on (unless it splatted a gremlin, then it stops there); splats any gremlin it hits, and any gremlin riding it |
+| Cannon | lobs what's on it over the next 4 hexes, whatever is on them (water, mountains, Walls, crates, gremlins: it touches none of them), then moves it into the 5th like a Belt would (it can sink, deliver, slide on ice or bump a line there); if the 5th is blocked it comes down on the 4th, and if the 4th can't take it either the Cannon doesn't fire |
 | Pusher | pushes whatever is on the hex in front of it 1 hex on |
 | Puller | reaches across the hex in front and pulls whatever's beyond it into that hex |
 | Wall | nothing gets in (never on a source: the crates must flow) |
 | Trap | a gremlin that comes onto it dies (a new one climbs out on the shore); crates are safe |
 | Bridge | built on water; carries what's on it 1 hex in its facing, like a Belt over water |
-| Slide | ice you can build, on land or water: what comes onto it keeps sliding the same way (a Spring that lands on it skids on) |
+| Slide | ice you can build, on land or water: what comes onto it keeps sliding the same way (a Spring or Rocket that lands on it skids on) |
 
 A new game deals only Belts, Bridges, Walls and Traps. Each milestone unlocks the next card
 and the milestone banner shows it: Pushers and Pullers (with the second color; a 16 × 10 board skips
-them), then the Slide, the Spring, and the Rocket last. Cards already in your hand stay.
+them), then the Slide, the Spring, the Rocket, and the Cannon last. Cards already in your hand stay.
 
 Pushers and Pullers always work in one crate color: a red one moves only red crates, and every
 gremlin. That's how you split a mixed line, so they're only dealt once a second color opens.
@@ -54,7 +55,7 @@ that comes onto a target dies there, so they can't camp it.
 - `R` / `Shift+R` / mouse wheel turn the Thing before placing
 - A Pusher or Puller asks for its crate color after you click its hex: click a swatch or press `1`–`4`; Esc, right-click or a click elsewhere backs out with the card still picked
 - Click a yellow hex to place it; the world ticks once and animates. A yellow hex with a dashed ring holds a Thing: placing there replaces it (the old Thing's card is gone)
-- With no card picked, click a hex to select it: it lights up, a mover shows a white arrow, and Go holds. Click it again to turn a Belt/Spring/Rocket/Pusher/Puller clockwise (free: no tick); click anywhere else (or Esc) to let go
+- With no card picked, click a hex to select it: it lights up, a mover shows a white arrow, and Go holds. Click it again to turn a Belt/Spring/Rocket/Cannon/Pusher/Puller clockwise (free: no tick); click anywhere else (or Esc) to let go
 - `D` removes the Thing under the cursor, leaving the hex bare; the card is gone and the world ticks once
 - Ten ticks in a row without placing or discarding a card redraws one card at random (it glows)
 - `B` blows up the crate under the cursor (a stuck line); it counts as lost and the world ticks once

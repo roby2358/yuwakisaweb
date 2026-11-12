@@ -15,7 +15,9 @@ const GameEngine = (function () {
 
     const KINDS = Object.keys(THINGS);
     // A wanderer's own step, as a push; `wrecks` comes from its piece template.
-    const wanderOf = piece => ({ n: 1, splat: false, flies: false, skids: false, wrecks: PIECES[piece.kind].wrecks });
+    const wanderOf = piece => ({ n: 1, splat: false, flies: false, overMountains: false, clears: 0, wrecks: PIECES[piece.kind].wrecks });
+    // How a ground step travels (a skid, a bumped line, a bumper following): not airborne.
+    const GROUND = Object.freeze({ flies: false, overMountains: false });
     // What a command did before its tick: events to report first, and the kinds of pieces it
     // sank (for emerge). Most commands do nothing first.
     // What a command did before its tick: leading events, the kinds it removed (for emerge),
@@ -451,19 +453,20 @@ const GameEngine = (function () {
         }
 
         // One hex in `dir`. Returns 'moved' | 'blocked' | 'sank' | 'delivered' | 'trapped'.
+        // `air` is { flies, overMountains } (a push's `how`, or GROUND).
         // A flying piece passes over inland open water (only the outer sea takes it), over
         // Traps, and over targets of other colors; on the ground those targets are solid.
-        step(piece, dir, flies) {
-            const s = this.state;
+        // One that flies overMountains passes over mountains too (D-35; `push` sets it down).
+        step(piece, dir, air) {
+            const { flies } = air;
             const hex = this.neighborHex(piece, dir);
-            if (!this.canEnter(hex)) return 'blocked';
+            const overMountain = air.overMountains && !!hex && hex.terrain === TERRAIN.MOUNTAIN;
+            if (!overMountain && !this.canEnter(hex)) return 'blocked';
             if (!flies && this.wrongTarget(piece, hex)) return 'blocked';
             piece.moveTo(hex.q, hex.r);
-            const goal = PIECES[piece.kind].cargo && this.targetAt(hex.q, hex.r);
-            if (goal && goal.color === piece.color) {
-                this.removePiece(piece);
-                goal.delivered += PIECES[piece.kind].value;
-                s.delivered += PIECES[piece.kind].value;
+            const goal = this.goalFor(piece, hex);
+            if (goal) {
+                this.deliver(piece, goal);
                 return 'delivered';
             }
             if (!flies && this.trapsPiece(piece, hex)) {
@@ -477,15 +480,47 @@ const GameEngine = (function () {
             return 'moved';
         }
 
+        // The target that takes `piece` on `hex`: its color's, if it's cargo; else null.
+        goalFor(piece, hex) {
+            const goal = PIECES[piece.kind].cargo && this.targetAt(hex.q, hex.r);
+            return goal && goal.color === piece.color ? goal : null;
+        }
+
+        // `piece` is delivered to `goal`: gone, and its value counted there and in the tally.
+        deliver(piece, goal) {
+            this.removePiece(piece);
+            goal.delivered += PIECES[piece.kind].value;
+            this.state.delivered += PIECES[piece.kind].value;
+        }
+
+        // A shot passes over the hex in `dir` without touching it (D-36): water, mountains,
+        // Walls, pieces, targets and Traps don't count; only the map's edge stops it.
+        // Returns 'moved' | 'blocked'.
+        passOver(piece, dir) {
+            const hex = this.neighborHex(piece, dir);
+            if (!hex) return 'blocked';
+            piece.moveTo(hex.q, hex.r);
+            return 'moved';
+        }
+
         // Shove `piece` up to n hexes in `dir`. Slick ground (bare ice, a Slide) is free: the piece slides on.
-        // `how` is { n, splat, flies, skids, wrecks } (from the Thing's template, or wanderOf).
+        // `how` is { n, splat, flies, overMountains, clears, wrecks } (from the Thing's template, or wanderOf).
+        // The first `clears` hexes (a Cannon's shot) pass over everything (`passOver`); the rest
+        // go through `step` as `how` says (the Cannon's, on the ground) (D-36).
         // A wrecking step (a gremlin's own) that's stopped by cargo destroys it (lost) and
         // takes its hex.
         // A splatting push (the Rocket) that's stopped by a piece that splats destroys it and
         // lands on its hex; then, if the launched piece itself splats, it does too.
         // A flying push counts every hex (ice is no shortcut mid-air), crosses inland water,
-        // and sinks only if it comes down on water; if it skids, coming down on slick ground
-        // slides on as usual. A piece that splats dies on a Trap it comes onto, or comes down on.
+        // and sinks only if it comes down on water. A piece that splats dies on a Trap it comes
+        // onto, or comes down on. Every landing (a flight's or a shot's, full range or short)
+        // on slick ground skids on, on the ground (D-37, `skid`), except one that splatted a
+        // piece in its way (it stops on that hex), one that bumped (it ends behind the line),
+        // and a piece that splats itself on landing (a gremlin on a Rocket).
+        // A flight comes down only where it may land (`canLand`): one that ended over a mountain
+        // or another color's target drops back to the last hex short of it that it flew over,
+        // or stays put if there's none (D-35). A shot stopped right after its cleared stretch is
+        // still in the air: it comes down on the last cleared hex, or doesn't fire (`comeDown`).
         // A piece stopped (on the ground or mid-flight) by a piece standing on slick ground
         // bumps it (D-33, `bump`): the line ahead advances and this piece follows behind it,
         // and that ends its motion. `moved` is the tick's set of piece ids already moved.
@@ -493,55 +528,112 @@ const GameEngine = (function () {
         // (`by` the mover), then a sink/deliver/splat if the mover ended so (a Trap's kill is
         // a splat, `by` null), then the events of the line it bumped.
         push(piece, dir, how, moved) {
-            const { n, splat, flies, skids, wrecks } = how;
+            const { n, splat, flies, clears, wrecks } = how;
             const events = [];
             const path = [];
             const start = { q: piece.q, r: piece.r };
             let left = n, res = 'moved', hit = null, bumped = null;
             while (left > 0) {
-                res = this.step(piece, dir, flies);
+                const cleared = path.length < clears;
+                res = cleared ? this.passOver(piece, dir) : this.step(piece, dir, how);
                 if (res === 'blocked' && splat) hit = this.victim(piece, dir, v => PIECES[v.kind].splats);
                 if (res === 'blocked' && wrecks) hit = this.victim(piece, dir, v => PIECES[v.kind].cargo);
                 if (hit) this.loseValue(hit);
-                if (hit) res = this.step(piece, dir, flies);
+                if (hit) res = this.step(piece, dir, how);
                 if (res === 'blocked' && !hit) bumped = this.bump(piece, dir, moved, path.length);
                 if (bumped) { path.push(...bumped.path); res = bumped.res; break; }
                 if (res === 'blocked') break;
                 path.push({ q: piece.q, r: piece.r });
                 if (res !== 'moved' || hit) break;
-                if (!flies && this.isSlick(this.board.get(piece.q, piece.r))) continue;
+                if (!flies && !cleared && this.isSlick(this.board.get(piece.q, piece.r))) continue;
                 left--;
             }
-            // A skidding throw that ran its full range onto slick ground slides on, on the ground.
-            while (skids && !bumped && res === 'moved' && !hit && this.isSlick(this.board.get(piece.q, piece.r))) {
-                res = this.step(piece, dir, false);
-                if (res === 'blocked') bumped = this.bump(piece, dir, moved, path.length);
-                if (bumped) { path.push(...bumped.path); res = bumped.res; break; }
-                if (res === 'blocked') break;
-                path.push({ q: piece.q, r: piece.r });
-            }
-            const landed = flies && (res === 'moved' || res === 'blocked');
-            // A flight can't come down on another color's target: it drops one hex short.
-            if (landed && this.wrongTarget(piece, piece)) {
-                path.pop();
-                const back = path.length ? path[path.length - 1] : start;
-                piece.moveTo(back.q, back.r);
-            }
-            const here = this.board.get(piece.q, piece.r);
-            if (landed && this.isOpenWater(here)) {
-                this.sink(piece);   // came down on inland water
-                res = 'sank';
-            } else if (landed && this.trapsPiece(piece, here)) {
-                this.removePiece(piece);   // came down on a Trap
-                res = 'trapped';
-            }
-            const splatsToo = splat && (res === 'moved' || res === 'blocked') && PIECES[piece.kind].splats;
+            // A flight or a shot comes down where it may (`comeDown`), then the usual landing
+            // checks run on that hex, and if it's slick the piece skids on, on the ground (D-37).
+            const aloft = flies || (clears > 0 && path.length <= clears);
+            const landed = aloft && (res === 'moved' || res === 'blocked');
+            if (landed) this.comeDown(piece, path, start, clears);
+            if (landed) res = this.landingResult(piece, res);
+            const doomed = splat && PIECES[piece.kind].splats;
+            const skidsOn = landed && path.length > 0 && !doomed && !bumped && !hit;
+            if (skidsOn) ({ res, bumped } = this.skid(piece, dir, path, res, moved));
+            const splatsToo = doomed && (res === 'moved' || res === 'blocked');
             if (splatsToo) this.removePiece(piece);
             if (path.length) events.push({ type: 'move', id: piece.id, path, by: null, byAt: null });
             if (hit) events.push({ type: 'splat', id: hit.id, by: piece.id, trap: false });
             const end = splatsToo ? { type: 'splat', id: piece.id, by: null, trap: false } : this.endEvent(piece, res);
             if (end) events.push(end);
             return bumped ? [...events, ...bumped.events] : events;
+        }
+
+        // What landing on its hex does to a piece that came down there with `res`: delivered on
+        // its color's target, sunk in open water, killed on a Trap (a piece that splats);
+        // otherwise `res` is unchanged.
+        landingResult(piece, res) {
+            const here = this.board.get(piece.q, piece.r);
+            const goal = this.goalFor(piece, here);
+            if (goal) {
+                this.deliver(piece, goal);
+                return 'delivered';
+            }
+            if (this.isOpenWater(here)) {
+                this.sink(piece);
+                return 'sank';
+            }
+            if (this.trapsPiece(piece, here)) {
+                this.removePiece(piece);
+                return 'trapped';
+            }
+            return res;
+        }
+
+        // A piece that came down on slick ground slides on in `dir`, on the ground, until ground
+        // that isn't slick or something ends it (D-37): every hex through `step` (sinks,
+        // delivers, a Trap, blocked), and a piece on slick ground in the way is bumped (D-33).
+        // Appends to `path`. Returns { res, bumped } (`res` unchanged if it didn't slide).
+        skid(piece, dir, path, res, moved) {
+            let bumped = null;
+            const live = () => res === 'moved' || res === 'blocked';
+            while (live() && this.isSlick(this.board.get(piece.q, piece.r))) {
+                const r = this.step(piece, dir, GROUND);
+                if (r === 'blocked') bumped = this.bump(piece, dir, moved, path.length);
+                if (bumped) { path.push(...bumped.path); res = bumped.res; break; }
+                if (r === 'blocked') break;
+                res = r;
+                path.push({ q: piece.q, r: piece.r });
+            }
+            return { res, bumped };
+        }
+
+        // A flight comes down where it may (`canLand`), backing up along `path` (the hexes it
+        // entered) to the last hex it may land on, or to `start` if there's none (D-35). Of a
+        // shot's first `clears` hexes only the last is a landing spot: one that can't come down
+        // there, or whose path left the map before it, doesn't fire (D-36). Trims `path` to
+        // match and moves `piece` there.
+        comeDown(piece, path, start, clears) {
+            const floor = Math.max(clears - 1, 0);
+            const lastHex = () => this.board.get(path[path.length - 1].q, path[path.length - 1].r);
+            while (path.length > floor && !this.canLand(piece, lastHex(), path.length <= clears)) path.pop();
+            if (path.length < clears) path.length = 0;
+            const at = path.length ? path[path.length - 1] : start;
+            piece.moveTo(at.q, at.r);
+        }
+
+        // May a flight carrying `piece` come down on `hex`? Not on a mountain (only a flight
+        // overMountains is ever over one), nor on another color's target. A `cleared` hex (a
+        // shot passed over it unchecked) also needs ground that would take the piece: no Wall,
+        // no other piece, no open water (D-36).
+        canLand(piece, hex, cleared) {
+            if (hex.terrain === TERRAIN.MOUNTAIN || this.wrongTarget(piece, hex)) return false;
+            return !cleared || this.groundTakes(piece, hex);
+        }
+
+        // Could `piece` stand on `hex`: no Wall, no other piece, not open water?
+        groundTakes(piece, hex) {
+            const thing = this.thingAt(hex.q, hex.r);
+            if (thing && THINGS[thing.kind].blocks) return false;
+            if (this.state.pieces.some(p => p !== piece && p.isAt(hex.q, hex.r))) return false;
+            return !this.isOpenWater(hex);
         }
 
         // The event for a piece a step ended: sunk, delivered, or killed on a Trap or a target
@@ -595,7 +687,7 @@ const GameEngine = (function () {
             for (let k = 0; k < hexes; k++) {
                 for (const run of farFirst) {
                     if (run.res !== 'moved') continue;   // gone already
-                    const res = this.step(run.piece, dir, false);
+                    const res = this.step(run.piece, dir, GROUND);
                     if (res === 'blocked') continue;
                     run.res = res;
                     run.path.push({ q: run.piece.q, r: run.piece.r });
@@ -619,7 +711,7 @@ const GameEngine = (function () {
             const path = [];
             let res = 'blocked';
             for (let k = 0; k < hexes; k++) {
-                const r = this.step(piece, dir, false);
+                const r = this.step(piece, dir, GROUND);
                 if (r === 'blocked') break;
                 res = r;
                 path.push({ q: piece.q, r: piece.r });
@@ -643,7 +735,7 @@ const GameEngine = (function () {
         // across the near hex and pull the piece on the far hex back into the near one.
         actionOf(thing) {
             const tpl = THINGS[thing.kind];
-            const how = n => ({ n, splat: tpl.splat, flies: tpl.flies, skids: tpl.skids, wrecks: false });
+            const how = n => ({ n, splat: tpl.splat, flies: tpl.flies, overMountains: tpl.overMountains, clears: tpl.clears, wrecks: false });
             const d = aims(thing.kind) && NEIGHBOR_DIRS[thing.facing];
             if (tpl.push) return { piece: this.pieceAt(thing.q, thing.r), dir: thing.facing, how: how(tpl.push) };
             if (tpl.shove) return { piece: this.pieceAt(thing.q + d.q, thing.r + d.r), dir: thing.facing, how: how(tpl.shove) };

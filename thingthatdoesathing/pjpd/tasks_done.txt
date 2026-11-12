@@ -1,3 +1,11 @@
+Priority:   70
+Status: Done
+ID: nullhas-7q2s
+Created: 2026-11-12T03:28:16Z
+Updated: 2026-11-12T03:35:55Z
+
+Thing Factory: fix "Uncaught TypeError: Cannot read properties of null (reading 'has')" that the designer saw in the browser shortly after the page loads, before the map is displayed (reported 2026-11-12). Something calls .has() on a Set or Map that is still null at startup: likely candidates in gameui.js are the legal-placement set (from engine.legalPlacements), the selected/replace-target lookups, the moved set, or any render/hover/overlay path that runs before newGame() has built state (e.g. the intro size-picker overlay, a resize or mousemove event, or the first render). Find every `.has(` in gameui.js (and gameengine.js) and trace which can see null before the first game exists. It may also have been a mid-edit load while an agent was changing files, so first reproduce: extend test/integration/uiboot.js (stub DOM) to fire the startup sequence and early events (mousemove/hover, resize, keydown, wheel) before a size is picked, and confirm whether it throws. Fix the real cause (initialize to an empty Set, or don't run that path until a game exists) rather than adding scattered null guards; the project prefers fail-fast, so a guard only where "no game yet" is a legitimate state. Add the regression check to uiboot. Reconcile CRITERIA (a U-row or the uiboot row) and ARCHITECTURE_LOG. Run just cc-test.
+----
 Priority:   65
 Status: Done
 ID: bridge-belt-zguc
@@ -8,11 +16,27 @@ Thing Factory: give the Bridge a built-in belt so it pushes the piece on it in i
 ----
 Priority:   60
 Status: Done
+ID: slide-weight-6ibn
+Created: 2026-11-12T02:39:06Z
+Updated: 2026-11-12T02:45:13Z
+
+Thing Factory: raise the Slide card's draw weight from 1 to 2 (designer, 2026-11-12), matching Wall and Spring, so Slides show up more often. Change THINGS.SLIDE.weight in artifacts.js; update the weight in the ONTOLOGY numbers table, the draw-weight row/test (CRITERIA R-27 and test/R-27 if it pins weights), RATIONALE (the Slide entry, D-29: note the designer's change and why — Slides felt rare because they unlock after the first milestone and had weight 1), and a dated ARCHITECTURE_LOG line (newest first). Run just cc-test and just cc-sim 200 small and just cc-sim 50 medium; report the sim before/after (expect little change to the first milestone, since the Slide unlocks at or after it).
+----
+Priority:   60
+Status: Done
 ID: replace-es7n
 Created: 2026-11-11T15:54:12Z
 Updated: 2026-11-11T20:45:50Z
 
 Thing Factory: placing a card on a hex that already holds a Thing replaces that Thing, so the player no longer has to press D (remove) and then place. Update legalPlacements so occupied Thing hexes are legal (targets and other illegal hexes stay illegal). place() removes the old Thing and puts the new one down as one command and one tick. Decide whether D/remove stays as its own command (probably yes, for clearing a hex). Reconcile ONTOLOGY (place rule), CRITERIA row + test/R-n, RATIONALE, ARCHITECTURE_LOG, and the UI ghost and highlight on occupied hexes.
+----
+Priority:   55
+Status: Done
+ID: cannon-card-93j7
+Created: 2026-11-12T02:37:04Z
+Updated: 2026-11-12T03:01:20Z
+
+Thing Factory: add a Cannon Thing (card). It is a facing mover: like the Spring and Rocket, it launches the piece standing on it in its facing, here 5 hexes. Designer rule (2026-11-12): the shot ignores ALL terrain and items for the first 4 hexes (water, mountains, Walls, pieces, gremlins: it passes over them and does not splat gremlins the way a Rocket does), then moves into the 5th hex normally, as an ordinary ground step: it can be blocked, bump a line on ice or a Slide (D-33 rule: the line advances 2, the mover ends 1 past the hit hex), sink in open water, deliver on its own color's target, be stopped by another color's target, or trigger a Trap. Default when the 5th hex is blocked: the piece comes down on the 4th hex if that is a legal landing (not water without a Bridge/Slide, not a mountain, not a Wall, not holding a piece); otherwise it doesn't fire at all. Record that default in RATIONALE as unreviewed. Unlock: the Cannon is the last unlock step, after the Rocket (add it to UNLOCKS in artifacts.js). Draw weight: low like the Rocket's; pick it and note why. Make it data-driven: reuse the flight code with THINGS fields (e.g. a throw distance plus a "clears N hexes" value) rather than a kind check, so the Spring's mountain hop and the Cannon share one path. Add THING_LOOK (name, verb line, colors) and a glyph in gameui.js, and make sure the milestone banner and news panel show it when it unlocks. Reconcile ONTOLOGY / CRITERIA (new R-n row + test/R-n: clears water, mountains, a Wall and a piece over 4 hexes; 5th hex sinks, delivers, blocked → lands on 4th, blocked with an illegal 4th → no fire, bumps a line on ice; unlock order) / RATIONALE / ARCHITECTURE_LOG / DYNAMICS / README / CLAUDE.md. Run just cc-test and just cc-sim 200 small and just cc-sim 50 medium.
 ----
 Priority:   55
 Status: Done
@@ -29,6 +53,14 @@ Created: 2026-11-11T15:58:55Z
 Updated: 2026-11-11T21:06:14Z
 
 Thing Factory: unlock cards gradually. A new game draws only Belt, Bridge and Wall. Each milestone unlocks the next card: first Pushers and Pullers, then Springs, and Rocket last. The user didn't place Trap (or the planned Slide card) in this order, so ask. Make the unlock order a data list in artifacts.js, and have the draw filter THINGS to what's unlocked before weighting. Add a field to GameState for unlocked kinds or the unlock index. The milestone should emit an event, and the UI should announce the new card, maybe on the same panel as a new color or one like it. Decide whether cards already in hand are kept as they are. Retune with cc-sim: the bot only uses Belts and Springs, so early games get Belts only. Reconcile ONTOLOGY / CRITERIA (R-27 draw weights, R-6 starting hand) / RATIONALE / DYNAMICS / log.
+----
+Priority:   50
+Status: Done
+ID: rocket-skid-v7ky
+Created: 2026-11-12T02:51:08Z
+Updated: 2026-11-12T03:12:29Z
+
+Thing Factory: pieces thrown by a Rocket or a Cannon should slide on when they land on ice, the way a Spring's landing skids today (designer, 2026-11-12). Make it data-driven: set the `skids` flag in THINGS (artifacts.js) to true for ROCKET and CANNON and check that the engine's skid path (isSlick: bare ice or a Slide Thing) handles an 8-hex Rocket flight and the Cannon shot with no kind check. Cannon specifics: its 5th hex is already an ordinary ground step, so check whether a step onto ice there already slides (as a Belt push onto ice does) and make sure the slide happens exactly once, not twice; its fallback landing on the 4th hex (when the 5th is blocked) should skid on too if the designer's rule allows, decide and record. The skid is a ground move after landing, so it follows the normal rules: it sinks in open water, delivers on its own color's target, stops at a Wall, a mountain or another color's target, triggers a Trap, and bumps a line on ice or a Slide per D-33 (the line advances 2, the mover ends 1 past the hit hex). Decide and record as unreviewed in RATIONALE: whether a Rocket landing that comes down short (blocked mid-flight) skids (the Spring's short landing doesn't, per D-35), and whether gremlins splatted in flight change anything. Update the Rocket's and Cannon's THING_LOOK verb lines if it fits. Reconcile ONTOLOGY (Thing fields, flight/skid pseudocode), CRITERIA (Rocket and Cannon rows + test/R-n: landing on ice skids, on a Slide skids, skid into water sinks, skid bumps a line, short landing per the decision, Cannon 5th-hex slide happens once), RATIONALE (the Rocket and Cannon entries; D-29 currently says a Rocket doesn't skid on a Slide, so update it), ARCHITECTURE_LOG (dated, newest first), DYNAMICS/README/CLAUDE.md one-liners. Run just cc-test, just cc-sim 200 small and just cc-sim 50 medium.
 ----
 Priority:   50
 Status: Done

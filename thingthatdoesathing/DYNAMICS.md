@@ -11,7 +11,7 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
 
 1. **Accumulation and windfall.** Every Thing you place stays. The first crate takes a
    dozen turns of building; once the line works, crates arrive on Wait. An ice patch or a
-   Spring hopping a lake is a shortcut you didn't pay belts for.
+   Spring hopping a lake or a ridge is a shortcut you didn't pay belts for.
 2. **Comedy.** Overlapping Things do silly things. A Puller next to the sea yanks a passing
    gremlin into it, a gremlin stands on a belt and gets delivered to nowhere, a Spring
    flings a crate onto ice and it skids straight into the water, and a Rocket squashes the gremlin
@@ -36,17 +36,22 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
   so waiting out a line still slowly refreshes your options.
 - **Cards unlock by milestone** (D-30) → feeds escalating commitment and readability: the
   first board deals only Belt, Bridge, Wall and Trap, and each milestone adds the next card
-  (Pushers and Pullers with the second color, then the Slide, the Spring, and the Rocket
-  last), so there's one new toy to learn each time the factory pays off. The hand you hold
+  (Pushers and Pullers with the second color, then the Slide, the Spring, the Rocket, and
+  the Cannon last), so there's one new toy to learn each time the factory pays off. The hand you hold
   isn't touched; the new card turns up in later draws.
 - **Gremlins** → feed comedy and keep routes from going stale. A drowned one climbs back
   out somewhere on the shore as a new gremlin. They ride movers and block
   without malice, until one steps onto a crate and wrecks it: a crate sitting still near a
   gremlin is a crate at risk, which is what Walls and Traps beside a line are for.
 - **Rocket** → feeds windfall and comedy at once: eight hexes in one tick, over lakes, is a
-  shortcut no belt paid for, but a crate that comes down in a lake or flies off the coast is
-  gone. It splats gremlins it
+  shortcut no belt paid for, and one that comes down on ice skids on, wherever it lands (D-37), but a crate that
+  comes down in a lake or flies off the coast is gone. It splats gremlins it
   hits and gremlins that ride it, but they climb back out on the shore.
+- **Cannon** → feeds windfall and planning (D-36): it lobs a crate over the next four hexes
+  whatever is on them (a lake, a ridge, a Wall, a jam of crates, a gremlin) and drops it onto
+  the fifth like a Belt would, so it's the one card that jumps a crowd. Where the fifth hex is
+  blocked it falls back onto the fourth, and if that can't take it the Cannon just sits, so
+  aiming it means reading the hex it lands on and the one before.
 - **Trap** → feeds comedy and gives gremlins a cost: a gremlin that wanders, rides or slides
   onto it is done for, and the Trapped count climbs. A new one climbs out on the shore,
   so a Trap thins traffic beside your line rather than clearing it.
@@ -129,5 +134,5 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
 ### Strategy ↔ mechanic cross-check
 
 Every Thing kind is used by some strategy above (Belt: spine; Wall: fencing; Bridge:
-water detours; Slide: free fast runs, one-tick lake crossings, and bumping crates on; Spring: straight runs and lake hops; Rocket: long shots at the target, gremlin squashing; Pusher: side-feed and knocking a color off the line (colored); Puller: side-feed, slide catcher, gremlin drowner). Discard is the opening's way to skip cards. Rotate and Remove
+water detours; Slide: free fast runs, one-tick lake crossings, and bumping crates on; Spring: straight runs, lake hops and ridge hops (over up to two mountains, D-35); Rocket: long shots at the target, gremlin squashing; Cannon: jumping a jam, a Wall line or a ridge onto a known hex; Pusher: side-feed and knocking a color off the line (colored); Puller: side-feed, slide catcher, gremlin drowner). Discard is the opening's way to skip cards. Rotate and Remove
 are used to fix misplacements. Gremlins create the midgame.

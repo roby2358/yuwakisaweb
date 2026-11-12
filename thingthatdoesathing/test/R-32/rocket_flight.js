@@ -1,7 +1,7 @@
 // R-32: a Rocket flies the piece on it up to THINGS.ROCKET.push hexes in its facing: it
 // stops there, before a blocker, sinks in the outer sea (crate: lost +1), or is delivered
-// crossing the target. It flies over inland open water and ice (every hex counts, no slide),
-// and sinks if it comes down on water. The whole flight is one move event.
+// crossing the target. It flies over inland open water and ice (every hex counts, no slide
+// mid-air), sinks if it comes down on water, and skids on if it comes down on ice (D-37). The whole flight is one move event.
 'use strict';
 const { check, done } = require('../helpers/check');
 const { load, flatGame, DIR } = require('../helpers/load');
@@ -28,7 +28,7 @@ const RANGE = load().GameArtifacts.THINGS.ROCKET.push;
     for (let q = 0; q <= 11; q++) terrain(q, 4, T.ICE);
     const c = piece('crate', -1, 4);
     engine.wait();
-    check('ice neither stretches the flight nor slides it on landing', c.isAt(-1 + RANGE, 4));
+    check('ice doesn\'t stretch the flight; down on ice, it skids on to the first hex that isn\'t slick (D-37)', c.isAt(12, 4));
 }
 {
     const { state, engine, put, piece, terrain, T } = flatGame();

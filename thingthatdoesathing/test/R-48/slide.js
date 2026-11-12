@@ -2,7 +2,7 @@
 // that comes onto it on the ground keeps going the same way, free, until it reaches ground
 // that isn't slick or is blocked. Built on water it isn't open water: the piece slides over
 // it and isn't sunk, but slides into open water beyond and sinks. A Spring that comes down on
-// a Slide skids on (D-29); a Rocket doesn't. A piece standing on one isn't moved. No facing.
+// a Slide skids on (D-29), and so does a Rocket (D-37). A piece standing on one isn't moved. No facing.
 'use strict';
 const { check, done } = require('../helpers/check');
 const { flatGame, DIR } = require('../helpers/load');
@@ -65,7 +65,7 @@ const { flatGame, DIR } = require('../helpers/load');
     put('ROCKET', -1, 4, DIR.E); put('SLIDE', 7, 4);
     const c = piece('crate', -1, 4);
     engine.wait();
-    check('a Rocket that comes down on a Slide does not skid', c.isAt(7, 4));
+    check('a Rocket that comes down on a Slide skids on, too (D-37)', c.isAt(8, 4));
 }
 {
     const { engine, put, piece } = flatGame();

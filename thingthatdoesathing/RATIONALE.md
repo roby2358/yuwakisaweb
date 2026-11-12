@@ -124,7 +124,7 @@ ARCHITECTURE_LOG.md.
 - **Alternatives:** a bigger catalogue (splitters, grabbers); a single Belt; a Spinner
   (a belt that turns clockwise every tick).
 - **Why:** templates over snowflakes. Every kind is a row of `THINGS` (`push`, `pull`,
-  `shove`, `splat`, `flies`, `skids`, `blocks`, `traps`, `colored`, `on`, `weight`), so a new kind is usually a new row, not new code. Each
+  `shove`, `splat`, `flies`, `overMountains`, `clears`, `blocks`, `traps`, `colored`, `on`, `weight`), so a new kind is usually a new row, not new code. Each
   kind breaks one rule. A Spring hops three hexes over lakes and skids on ice, a Rocket flies eight,
   a Pusher shoves the piece in front of it, a Puller acts at a distance without needing a Thing under the piece, a Wall shuts a hex, a
   Trap kills gremlins that come onto it, a Bridge opens water and carries what's on it (D-27).
@@ -145,8 +145,10 @@ ARCHITECTURE_LOG.md.
   Springs to keep sliding on ice. A Spring is a throw: it clears a lake within its range and
   counts every hex in the air, then a crate that lands on ice skids on like any piece on ice.
   That keeps the ice windfall and the skid-into-the-sea joke for Springs, while a Rocket
-  (no `skids`) lands dead so its range stays exact. `flies` and `skids` are template fields,
-  so both throwers share one rule.
+  landed dead so its range stayed exact; since 2026-11-12 every landing skids, the Rocket's and
+  the Cannon's too, short ones included, and there's no `skids` flag (D-37). `flies` is a
+  template field, so both throwers share one rule. Since 2026-11-12 a Spring also clears mountains
+  (`overMountains`, D-35); a Rocket doesn't.
 - **Evidence:** R-14, R-15. `Measured by: just cc-sim 200 small` (Bridge weight 1): 187/200
   reach the first milestone, median 51, p90 76, 0.17 lost per game, against 187/200, median
   51, p90 75, 0.14 lost with Springs that land dead. The bot places Springs only on straight
@@ -225,7 +227,7 @@ ARCHITECTURE_LOG.md.
 
 ---
 
-### D-15 The Rocket: flies the piece on it up to 8 hexes, over inland water, and splats gremlins — *Decided (range 8, over inland water, splats both ways, splats re-emerge), Proposed (weight 1, lands on the splatted hex, sinks if it comes down on water, no ice slide)*
+### D-15 The Rocket: flies the piece on it up to 8 hexes, over inland water, and splats gremlins — *Decided (range 8, over inland water, splats both ways, splats re-emerge), Proposed (weight 1, lands on the splatted hex, sinks if it comes down on water); ice skid on landing Decided 2026-11-12 (D-37)*
 - **Alternatives:** unlimited range (until something stops it); a long Spring that sinks in
   any water; splat only the gremlin it hits; splat only a gremlin it launches; splatted
   gremlins gone for good.
@@ -235,7 +237,8 @@ ARCHITECTURE_LOG.md.
   `THINGS.ROCKET.push`. It's `push` with `flies` on the shared push, so a flight obeys the
   step rule apart from that: blocked stops it, the outer sea sinks it, the target delivers
   it, movers and Bridges are just ground. Airborne, it counts every hex and ice doesn't slide
-  it, so its range is exactly what the card says. A flight that ends over a lake comes down in
+  it, so its range is exactly what the card says. *(2026-11-12)* Once it comes down on ice or
+  a Slide it skids on, like a Spring's throw, even from a short landing, unless it splatted a gremlin (D-37); the 8 hexes in the air are still exact. A flight that ends over a lake comes down in
   it, since it has to land somewhere. A flier stopped by a gremlin lands on the gremlin's hex,
   since it squashed it; a gremlin riding a Rocket never survives the landing. Weight 1, half
   the other specials, because one Rocket changes a lot.
@@ -373,18 +376,22 @@ ARCHITECTURE_LOG.md.
   also go on land. (2) No facing: it keeps a piece going whichever way it came on, so it
   doesn't `aim`, can't be turned, and moves nothing standing on it (a crate spawned or stopped
   on one stays put). (3) A Spring that comes down on a Slide skids on, as on bare ice (the
-  `skids` loop reads `isSlick` too); a Rocket doesn't; Slides under a flight don't count as a
-  shortcut. (4) It's white and slides gremlins too; gremlins may wander onto a water Slide
-  (it's covered water) and then slide on, possibly into the lake. (5) Weight 1, as a Bridge.
-  It unlocks after Pushers and Pullers (D-30). (6) A line of Slides across a lake carries a crate over in one tick, and a single
+  landing skid reads `isSlick` too); since 2026-11-12 a Rocket does too (D-37); Slides under a
+  flight don't count as a shortcut. (4) It's white and slides gremlins too; gremlins may wander onto a water Slide
+  (it's covered water) and then slide on, possibly into the lake. (5) Weight 2, as a Wall or Spring
+  (decided: the designer raised it from 1, pjpd slide-weight-6ibn, 2026-11-12; at weight 1, as a
+  Bridge, Slides felt rare, since they only join the deck after Pushers and Pullers, D-30). (6) A line of Slides across a lake carries a crate over in one tick, and a single
   water Slide whose far side is open water drops the crate in, like ice running into a lake.
   (7) Glyph: three white ice streaks on a pale-blue slab, no arrow.
 - **Evidence:** R-48, R-8, R-14. `Measured by: just cc-sim 200 small` → 200/200, median 51
   (was 50), p90 62 (was 60), 2.61 lost per game (was 2.60); `just cc-sim 50 medium` → 50/50,
   median 63 (was 60), p90 77 (was 70), 4.26 lost (was 3.58). The bot discards Slides, so the
-  shift is belts drawn slightly less often. Unmeasured in play.
+  shift is belts drawn slightly less often. Weight 2 (2026-11-12): `just cc-sim 200 small` →
+  200/200, median 49, p90 58, 2.08 lost; `just cc-sim 50 medium` → 50/50, median 61, p90 70,
+  3.50 lost, both unchanged, since the Slide isn't in the deck before the first milestone.
+  Unmeasured in play.
 
-### D-30 Cards unlock one step per milestone — *Decided (gradual unlock, order Belt/Bridge/Wall/Trap, then Pusher+Puller, Slide, Spring, Rocket last; hand kept), Proposed (unreviewed: the rest)*
+### D-30 Cards unlock one step per milestone — *Decided (gradual unlock, order Belt/Bridge/Wall/Trap, then Pusher+Puller, Slide, Spring, Rocket, then the Cannon last (added 2026-11-12, D-36); hand kept), Proposed (unreviewed: the rest)*
 - **Alternatives:** every kind from turn 1 (the old rule); unlock by turn count rather than
   milestones; a fixed per-board card list; redrawing the hand on an unlock so the new card
   shows up at once.
@@ -411,7 +418,7 @@ ARCHITECTURE_LOG.md.
   news panel (overlay `news`): a swatch per color, a card picture per kind, and each kind's
   verb line; it holds play until a click or any key, like the color panel did. A small
   board's first milestone now opens it (for the Slide). (5) Past the last step (a small board
-  at 50, a bigger one at 100) milestones unlock nothing. (6) *(unreviewed, 2026-11-12)* The
+  at 100, a bigger one at 200, since the Cannon joined, D-36) milestones unlock nothing. (6) *(unreviewed, 2026-11-12)* The
   designer asked for the milestone report to show the cards it unlocked, so the milestone
   banner now carries a small picture and name per card, and a tick that crosses several
   milestones (big crates, D-34) shows one banner for the last one ("passed 50 and 100")
@@ -598,6 +605,143 @@ ARCHITECTURE_LOG.md.
   61 / 103 / 320 / 669 / 1332; the bot builds only the first color's line, so some medium
   games stall). Gaps between milestones stay near 30 turns on small instead of doubling.
   Unmeasured in play.
+
+### D-35 A Spring's throw clears mountains: over two, landing on the third — *Decided 2026-11-12 (a Spring can cross 2 mountain hexes, landing on the third), Proposed (unreviewed: the rest)*
+- **Alternatives:** a kind check on `SPRING` in `step`; a per-terrain "flight clears" set
+  on each template; mountains clearing every flight, the Rocket's too; a throw that ends over
+  a mountain bouncing back to the Spring (no throw) instead of landing short.
+- **Why:** the designer asked for it: "Make it so a Spring can cross 2 mountain hexes,
+  landing on the third." Before, a mountain stopped every flight like a Wall (`canEnter`), so
+  a Spring facing a ridge came down short of it. Its range is 3, so it can now fly over up to
+  two mountains and land on the third hex, which makes the Spring the one card that crosses a
+  ridge, as the Bridge is the one that crosses a lake.
+- **Unreviewed calls:** (1) Data, not a kind check: a new template flag `overMountains`
+  (true only for the Spring), carried in the push's `how` like `flies`. `step`
+  takes `air` = `{flies, overMountains}` (the `how`, or a frozen `GROUND` for skids, bumped
+  lines and followers) and lets a mountain through when `overMountains` is set. A per-terrain
+  set would be more general than the one terrain asked for. (2) The Rocket is unchanged
+  (still stopped by mountains): the designer named only the Spring, and an 8-hex flight that
+  clears ridges would make mountains meaningless to it. Flip its flag to try it. (3) Landing:
+  a flight can't come down on a mountain. One that ends over a mountain (full range, or
+  stopped there by a Wall or a piece) comes down on the last hex short of it that it flew
+  over, or doesn't leave the Spring if there's none (mountains on all three hexes: no throw,
+  no `move`). That generalizes the old "a flight can't come down on another color's target:
+  one hex short" rule into one loop over `canLand(piece, hex)` (not a mountain, not another
+  color's target), backing up along the path. That matches the short-landing the old code
+  did when a mountain stopped the throw: mountain on the 3rd hex, it lands on the 2nd, as
+  before. Then the usual landing checks run on the hex it came down on (sinks on inland
+  water, dies on a Trap); a short landing doesn't skid, like a blocked throw today (*superseded 2026-11-12, settled by the designer: every landing skids, short ones too, D-37*). *(2026-11-12)* The loop is now `comeDown`, shared with the Cannon's landing (D-36). (4) Walls
+  still stop a Spring's flight, mid-air or not, as before (a Wall is a built obstacle, a
+  mountain is terrain it's thrown over). (5) Pieces in the path are unchanged: a piece on
+  plains stops the flight, one on slick ground is bumped (D-33); a bumper stopped over a
+  mountain whose line can't move comes down short of the mountain. (6) The invariant "no
+  piece on a mountain" holds between commands; mid-push a flying piece's position may be a
+  mountain hex, and its `move` path never ends on one. (7) The bot (`test/sim.js`) is
+  unchanged: it lays Belts along a land-only shortest path and uses a Spring only as a
+  stand-in on a straight land run, and Springs aren't dealt until a few milestones in
+  (D-30), so planning mountain hops would need a new planner for little measured effect.
+- **Evidence:** R-53, R-7. `Measured by: just cc-sim 200 small` → unchanged (200/200, median
+  49, p90 58, 2.08 lost); `just cc-sim 50 medium` → unchanged (50/50, median 61, p90 70,
+  3.50 lost); `just cc-sim-to 30 small 5` → unchanged (51 / 75 / 105 / 147 / 208). The bot
+  never throws toward a mountain. Unmeasured in play.
+
+### D-36 The Cannon: over 4 hexes of anything, then a ground step into the 5th — *Decided 2026-11-12 (a facing mover, range 5; the first 4 hexes ignore all terrain and items: water, mountains, Walls, pieces, gremlins, no splat; the 5th an ordinary ground step that can be blocked, bump, sink, deliver, be stopped by another color's target or trigger a Trap; blocked there, down on the 4th if that's a legal landing, else no fire; the last unlock, after the Rocket; low weight like the Rocket's; data-driven, sharing the flight code), Proposed (unreviewed: the rest)*
+- **Alternatives:** a kind check on `CANNON` in `push`; extending `step`'s `air` with a
+  "clear everything" flag (every caller would carry it); a Cannon that `flies` for its whole
+  range (it would cross inland water on the 5th and never bump as a ground mover); a blocked
+  5th hex backing up to any earlier hex, as a Spring's throw does (D-35).
+- **Why:** the designer asked for it (pjpd cannon-card-93j7) and set the rule on 2026-11-12.
+  The Spring hops lakes and ridges and the Rocket shoots far, but nothing jumps the things a
+  player builds or the pieces jammed on a line. The Cannon jumps all of it for a fixed 4
+  hexes and then behaves like a Belt on the 5th, so it lands where you can read it.
+  Data, not a kind check: a template field `clears` (4 for the Cannon, 0 for every other
+  kind) says how many hexes at the start of the push go through `passOver` (only the map's
+  edge stops it; nothing on the hex is consulted or touched) before the rest goes through
+  `step` with the template's own `how` (`flies` false: the ground). The landing reuses the
+  Spring's D-35 path: `comeDown` backs a flight up to the last hex it may land on, and for a
+  shot only the last cleared hex counts. One loop sets down a Spring short of a ridge, a
+  Rocket short of a wrong target and a Cannon on its 4th hex.
+- **Unreviewed calls:** (1) *Off the map:* a shot whose 4 cleared hexes run off the board
+  doesn't fire (the step-back rule's "else no fire", applied to a path with no 4th hex). The
+  outer sea is on the map, so it's passed over like any water; a 5th hex in the sea sinks it,
+  a 5th hex off the map is a block (down on the 4th, which in the sea can't take it: no fire).
+  (2) *A target on the 4th hex:* coming down there on its color's target delivers it, as every
+  other arrival on its own target does (a flight crossing it mid-air, a ground step); another
+  color's target can't be landed on, as for every flight (D-21), so the Cannon doesn't fire.
+  Targets under hexes 1–3 are passed over unchecked, own color included: "ignores all terrain
+  and items". (3) *The legal 4th:* `canLand` on a cleared hex also wants no blocking Thing, no
+  other piece and no open water (a Bridge or a Slide covers it); bare ice or a Slide there
+  takes it, and skids on from there (*settled 2026-11-12: every landing skids, D-37*; the 5th hex that blocked it stops the skid at once); a Trap there catches a
+  gremlin, and a gremlin coming down on a target dies, like any landing (D-18, D-23). (4) *The
+  5th hex onto slick ground slides on:* "an ordinary ground step" is a Belt's, and a Belt's push
+  onto bare ice or a Slide keeps going. Since 2026-11-12 every landing skids (D-37); that
+  ground slide is its skid, and it happens once (past its cleared stretch the shot isn't aloft, so
+  no landing skid follows). (5) *A bump at the 5th:* contact is at `byAt` 4; the
+  shot follows its line on the ground (D-33). If the line can't move, the shot is stopped
+  after its cleared stretch and the 4th-hex rule applies. (6) *Pieces passed over* aren't
+  moved and aren't marked as moved, so a Belt under one still carries it that tick (R-13 holds:
+  only the shot piece moved). (7) *Weight 1*, the Rocket's: both are late, powerful,
+  situational cards, and at weight 1 of 17 in the full deck a Cannon is about one draw in 17,
+  often enough to plan around once it's unlocked, rare enough that a Belt line stays the
+  spine. (8) *Animation:* the `move` path lists all 5 hexes (and any slide or follow), so the
+  client hops it like a Spring's or Rocket's flight, one hex per `HOP_MS`; no new event.
+  (9) *Look:* a gunmetal tile with a pale barrel on a wheel and a dotted arc from the muzzle;
+  verb line "lobs what is on it over 4 hexes of anything, down on the 5th" ("(slides on ice)"
+  added 2026-11-12, D-37). (10) The bot
+  (`test/sim.js`) discards Cannons: it never sees one before the fifth milestone.
+- **Evidence:** R-54, R-49, R-7, R-10; `test/integration/uiboot.js` checks the banner and the
+  news panel name the Cannon. `Measured by: just cc-sim 200 small` → unchanged (200/200,
+  median 49, p90 58, 2.08 lost); `just cc-sim 50 medium` → unchanged (50/50, median 61, p90
+  70, 3.50 lost); `just cc-sim-to 30 small 5` → unchanged (51 / 75 / 105 / 147 / 208). The
+  Cannon unlocks at 100 on small (the fifth milestone) and later on bigger boards, past what
+  the sims measure. Unmeasured in play.
+
+### D-37 Anything that lands, slides: every flight and shot skids on landing — *Decided 2026-11-12 (Rockets and Cannons skid like Springs; settled 2026-11-12: "Basically anything that lands, slides, anywhere. The only exception is hitting a gremlin stops it in that hex", short Rocket landings included; drop the `skids` flag, every Thing that `flies` or `clears` skids), Proposed (unreviewed: the rest)*
+- **Alternatives:** keep the Rocket landing dead (D-15, D-17) so its range is exact; a kind
+  check on `ROCKET` in `push`; a Rocket that slides mid-flight on ice (its range would stop
+  meaning anything); skidding only from a full-range landing (the first version of this
+  decision, superseded); a per-Thing `skids` flag set on all three throwers (dropped: it would
+  always equal `flies || clears > 0`).
+- **Why:** the designer asked for it twice. First (pjpd rocket-skid-v7ky): "Pieces thrown by a
+  Rocket or a Cannon should slide on when they land on ice, the way a Spring's landing skids
+  today." Then, settling the exceptions on 2026-11-12: "Basically anything that lands, slides,
+  anywhere. The only exception is hitting a gremlin stops it in that hex", and short Rocket
+  landings keep pushing too. One rule, no list of exceptions to remember. The skid is a ground
+  move after landing (`skid`: `step` with `GROUND`), so it sinks in open water, delivers on its
+  color's target, stops at a Wall, a mountain or another color's target, kills a gremlin on a
+  Trap, and bumps a line on slick ground per D-33 (the line advances 2, the skidder ends 1 past
+  the hit hex). The designer also dropped the `skids` flag (settled 2026-11-12): every Thing
+  whose push `flies` or `clears` lands, so every one skids, and the data says so by not having
+  a field that could disagree.
+- **How:** `push` runs the flight, then `comeDown` (D-35) sets the piece on the hex it may land
+  on, then the landing checks (`landingResult`: delivered, sunk, trapped), then `skid` if the
+  hex it's on is slick. Because `comeDown` runs first, the piece only ever skids from a hex it
+  could legally come down on (the `canLand` guard of the first version is now just the order):
+  a flight ending over another color's target on ice comes down short of it, and its skid meets
+  that target and stops. The Cannon's slide still happens once: its 5th hex is a ground step
+  that slides on in the main loop, and a shot that went past its cleared stretch isn't aloft, so
+  `skid` never runs for it; only its 4th-hex fallback (still aloft) skids.
+- **Unreviewed calls:** (1) *Short landings change nothing on the board today.* The hex past a
+  short landing is what made it short: the Wall, mountain or piece that blocked the flight, the
+  mountain or other color's target it backed off, the Cannon's blocked 5th hex. So a short
+  landing's skid stops at once against it; the tests pin that the rule runs and the piece stays
+  on the landing hex with each hex once in its `move`. The rule is still worth having as one
+  line instead of a list of exceptions, and it will matter if a slide ever turns. (2) *A bumper
+  doesn't skid:* a flight stopped by a piece on slick ground bumps it, and the bump ends the
+  bumper's motion right behind the line (D-33); skidding on would only meet the line again.
+  (3) *A gremlin riding a Rocket* still splats where it comes down instead of skidding first
+  ("never survives the landing", D-15); so a Rocket's skid only ever carries a crate. (4) Verb
+  lines unchanged: the Rocket's reads "blasts what is on it up to 8 hexes, over lakes, skidding
+  on ice; splats gremlins", the Cannon's ends "(slides on ice)"; neither mentioned the old
+  exceptions.
+- **Evidence:** R-32 (`test/R-32/rocket_skid.js`: a blocked flight onto ice skids into the Wall
+  that stopped it; a flight that splats a gremlin stops on its hex), R-53 (a Spring stepped back
+  off a mountain onto ice skids into it), R-54 (the 4th-hex fallback onto bare ice or a Slide
+  skids into what blocked the 5th; the 5th-hex slide happens once), R-14, R-48. `Measured by:
+  just cc-sim 200 small` → unchanged (200/200, median 49, p90 58, 2.08 lost); `just cc-sim 50
+  medium` → unchanged (50/50, median 61, p90 70, 3.50 lost). The bot discards Rockets
+  and Cannons, neither is dealt before the first milestone, and short landings move nothing
+  further. Unmeasured in play.
 
 ### D-24 Pushers and Pullers act before the other Things in a tick — *Decided*
 - **Alternatives:** pure placement order (the old rule); letting a Pusher or Puller move a

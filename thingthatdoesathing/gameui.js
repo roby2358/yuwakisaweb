@@ -130,6 +130,25 @@ const GameUI = (function () {
                 ctx.beginPath(); ctx.moveTo(-s * 0.42, yy * s); ctx.lineTo(-s * 0.7, yy * s * 1.6); ctx.stroke();
             }
         },
+        CANNON(ctx, s) {
+            // A barrel on a round carriage wheel, a ball leaving the muzzle in a dotted arc:
+            // it lobs what's on it over 4 hexes and down on the 5th.
+            ctx.beginPath();
+            ctx.moveTo(-s * 0.45, -s * 0.14);
+            ctx.lineTo(s * 0.2, -s * 0.2);
+            ctx.lineTo(s * 0.2, s * 0.2);
+            ctx.lineTo(-s * 0.45, s * 0.14);
+            ctx.closePath();
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(-s * 0.2, s * 0.22, s * 0.16, 0, Math.PI * 2);
+            ctx.stroke();
+            for (const [xx, yy, rr] of [[0.36, -0.12, 0.05], [0.5, -0.2, 0.05], [0.64, -0.12, 0.09]]) {
+                ctx.beginPath();
+                ctx.arc(xx * s, yy * s, rr * s, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        },
         TRAP(ctx, s) {
             // Open jaws: a ring with teeth pointing in, and the trigger plate in the middle.
             const r = s * 0.5, n = 8;
@@ -1104,7 +1123,10 @@ const GameUI = (function () {
             if (this.state.hexes.has(key)) this.select(hex.q, hex.r);
         }
 
+        // The intro and size cards don't cover the canvas, so the mouse reaches it under
+        // them, before any board exists on the intro; L5 consumes it like a click.
         onMouseMove(e) {
+            if (this.overlay) return;                               // L5 captures & consumes
             if (this.dragCandidate && !this.panning) {
                 const dx = e.clientX - this.panStartX, dy = e.clientY - this.panStartY;
                 if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) this.panning = true;

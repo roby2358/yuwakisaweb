@@ -140,6 +140,22 @@ run('the intro waits for a size: no board, and clicks and Space do nothing', () 
     key(' '); key('Escape');
     if (ui.overlay !== 'intro') throw new Error('the intro closed without a size');
 });
+// nullhas-7q2s: the intro card doesn't cover the canvas, so the mouse reaches the bare canvas
+// before any board exists. Hover, drag, wheel, leave, resize, timers and frames must not throw.
+run('before a size is picked, early events on the bare canvas do nothing and throw nothing', () => {
+    for (const [x, y] of [[10, 10], [640, 360], [1200, 700]]) canvas.fire('mousemove', { clientX: x, clientY: y });
+    canvas.fire('mousedown', { button: 0, clientX: 10, clientY: 10 });
+    canvas.fire('mousemove', { clientX: 200, clientY: 200 });   // a drag
+    windowListeners.mouseup.forEach(fn => fn({ button: 0, clientX: 200, clientY: 200, preventDefault() {} }));
+    canvas.fire('mousedown', { button: 2, clientX: 10, clientY: 10 });
+    canvas.fire('wheel', { deltaY: 1 });
+    canvas.fire('mouseleave');
+    windowListeners.resize.forEach(fn => fn());
+    for (const k of ['r', 'd', 'b', 'x', 'Enter', '9']) key(k);
+    advance(500);
+    if (ui.overlay !== 'intro' || ui.state.hexes || ui.hoveredHex || ui.running)
+        throw new Error('early events must leave the intro up with no board, hover or Go');
+});
 run('a size from the intro opens the keys legend; any key closes it', () => {
     key('1');
     if (!ui.state.hexes || ui.overlay !== 'help' || els['help-panel'].classList.set.has('hidden'))
@@ -462,6 +478,18 @@ run('a newly opened color or unlocked card shows a panel that holds Go until a c
     if (els['milestone-title'].textContent !== '100 crates!' || !els['milestone-sub'].textContent.startsWith('passed 50 and 100')
         || named.join() !== 'Spring,Rocket')
         throw new Error('two-milestone banner: ' + els['milestone-title'].textContent + ' / ' + els['milestone-sub'].textContent + ' / ' + named.join());
+    // The last unlock step, the Cannon (R-49, D-36): named on the banner, and on the panel with its
+    // verb line when a color opens with it.
+    ui.startAnim(new Map(), { events: [{ type: 'milestone', count: 100 }, { type: 'unlock', kinds: ['CANNON'] }] });
+    settle();
+    const last = els['milestone-cards'].children.filter(c => c.className === 'mcard').map(c => c.children[1].textContent);
+    if (ui.overlay || last.join() !== 'Cannon') throw new Error('Cannon banner: ' + last.join());
+    ui.startAnim(new Map(), { events: [{ type: 'open', color: 'red', source: s.sources[0], target: s.targets[0] },
+        { type: 'unlock', kinds: ['CANNON'] }] });
+    settle();
+    if (ui.overlay !== 'news' || !/Cannon \(lobs/.test(els['news-sub'].textContent))
+        throw new Error('Cannon panel: ' + els['news-sub'].textContent);
+    key('x');
 });
 run('a Pusher with one color open places at once in that color, no picker', () => {
     els['new-game'].fire('click'); key('1');

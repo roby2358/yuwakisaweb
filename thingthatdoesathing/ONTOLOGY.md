@@ -118,7 +118,7 @@ gremlins treat it the same (D-34).
 
 | Field | Type | Notes |
 |---|---|---|
-| `kind` | `ThingKind` | `BELT`, `SPRING`, `ROCKET`, `PUSHER`, `PULLER`, `WALL`, `TRAP`, `BRIDGE`, `SLIDE`. |
+| `kind` | `ThingKind` | `BELT`, `SPRING`, `ROCKET`, `PUSHER`, `PULLER`, `WALL`, `TRAP`, `BRIDGE`, `SLIDE`, `CANNON`. |
 | `color` | `WHITE` \| `CRATE_COLORS` name | Set by `place` and kept for good (D-32): a `colored` kind takes the open color the player picked, every other kind `WHITE`. A colored one acts only on crates of its color and on every gremlin; white acts on every piece. [D] |
 | `q`, `r` | int | Position. One Thing per hex; placing on an occupied hex replaces it (D-28). |
 | `facing` | 0…5 \| null | Index into `Hex` neighbor directions; null for fixtures. Facing order E, NE, NW, W, SW, SE; clockwise is `(f+5) mod 6`. |
@@ -127,10 +127,11 @@ gremlins treat it the same (D-34).
 
 | Field | Meaning |
 |---|---|
-| `push` | Hexes it shoves (or flies) the piece standing on it, along `facing` (Belt, Bridge, Spring, Rocket). [Bridge D] |
+| `push` | Hexes it shoves (or flies) the piece standing on it, along `facing` (Belt, Bridge, Spring, Rocket, Cannon). [Bridge D] |
 | `splat` | Its push splats pieces that splat: the one it lands on and the one it launches (Rocket). [D] |
-| `flies` | Its push is airborne: it passes over inland open water (only the outer sea, an edge hex, takes the piece mid-flight), every hex counts (ice is no shortcut mid-air), and it sinks if it comes down on water (Spring, Rocket). [D] |
-| `skids` | A flying push that runs its full range onto slick ground (bare ice or a Slide) slides on, on the ground (Spring). [D; Slide D-29] |
+| `flies` | Its push is airborne: it passes over inland open water (only the outer sea, an edge hex, takes the piece mid-flight), every hex counts (ice is no shortcut mid-air), and it sinks if it comes down on water (Spring, Rocket). Every landing skids: a flight (or a `clears` shot) that comes down on slick ground (bare ice or a Slide), at full range or short, slides on, on the ground, by the Step rule; there is no per-Thing flag. The one exception is a flight that splatted a gremlin in its way (it stops on that hex); a gremlin riding a Rocket splats where it lands. [D; skid on landing D-17, D-29, D-37 (settled 2026-11-12)] |
+| `overMountains` | A flying push that passes over mountains too; it can't come down on one, so a flight that ends over a mountain lands on the last hex short of it that it flew over, or stays put if there's none (Spring: over two mountains, landing on the third). [D-35] |
+| `clears` | How many hexes at the start of its push pass over everything: water (the outer sea too), mountains, Walls, pieces (gremlins unsplatted), targets, Traps; the shot touches nothing on them, and the rest of the push goes through `step` from the last one, on the ground unless `flies` (Cannon: 4 of its 5). Stopped right after them, it comes down on the last cleared hex if the ground there would take it (no Wall, no other piece, not open water, not a mountain or another color's target; its color's target delivers it), else it doesn't fire; a path that leaves the map within them doesn't fire. 0 for every other kind. [D-36: the clearing and the 4th-hex landing D; off-map and the target cases P] |
 | `shove` | Hexes it pushes the piece on the **near hex** (the one it faces) on, along `facing` (Pusher). [D] |
 | `pull` | Hexes it pulls the piece on the **far hex** (two ahead along `facing`) back toward itself, into the **near hex** (one ahead) (Puller). |
 | `blocks` | Pieces can't enter (Wall). |
@@ -168,7 +169,7 @@ gremlins treat it the same (D-34).
   `targets.length <= MAP_SIZES[size].colors`, and the targets' colors are distinct `CRATE_COLORS`. [D]
 - At most one Thing per hex. No Thing on a target. Bridges only on water; Slides on land or
   water; every other kind only on land. [P; Slide D-29]
-- At most one piece per hex. No piece on a Wall, on mountain, or on open water (water with no Thing over it). [P]
+- At most one piece per hex. No piece on a Wall, on mountain, or on open water (water with no Thing over it), between commands (a Spring's flight passes over a mountain mid-push, D-35; a Cannon's shot over anything, D-36). [P]
 - `hand.length === HAND_SIZE` whenever a command returns. [P]
 - `1 <= unlocks <= UNLOCKS.length`, and every `THINGS` kind is in exactly one `UNLOCKS` step. [D]
 - Every command that returns `ok:true` ran exactly one tick and raised `turn` by 1, except `rotate`, which ran none and left everything but that facing alone. [P; rotate D]
@@ -185,7 +186,7 @@ gremlins treat it the same (D-34).
 | `WATER` | sink on entry, unless a Thing covers it (Bridge, Slide); a flying push crosses inland water and sinks only if it comes down on it | Bridge, Slide | lowest band; all edges |
 | `PLAINS` | enter normally | any land Thing | middle band |
 | `ICE` | slide on through, unless a Thing that doesn't slide covers it | any land Thing | scattered onto plains |
-| `MOUNTAIN` | can't enter | none | highest band |
+| `MOUNTAIN` | can't enter; a Spring's flight passes over it but can't come down on it (D-35) | none | highest band |
 
 *Serves:* terrain as language — water is the hazard, ice is the windfall, mountains are
 walls you didn't have to spend a card on. [P]
@@ -290,10 +291,11 @@ terrain fits THINGS[kind].on:  'land' → PLAINS or ICE;  'water' → WATER;  'b
 THINGS[kind].blocks ⇒ no piece on hex, and not a source   # the crates must flow
 ```
 
-### Step — `step(piece, dir, flies)` → `'moved' | 'blocked' | 'sank' | 'delivered' | 'trapped'` [P; trap D]
+### Step — `step(piece, dir, {flies, overMountains})` → `'moved' | 'blocked' | 'sank' | 'delivered' | 'trapped'` [P; trap D; overMountains D-35]
 *Serves:* one code path for every way a piece moves (movers, springs, ice, Slides, gremlins).
 ```
 next = piece + DIR[dir]
+if overMountains and next is MOUNTAIN: skip the next line          # a Spring's flight (D-35)
 if next off-map or MOUNTAIN or a blocking Thing or a piece there: return 'blocked'
 if not flies and next is a target of another color than this cargo: return 'blocked'
 piece.moveTo(next)
@@ -304,27 +306,39 @@ if next is WATER and no Thing there and not (flies and next is inland):
 return 'moved'
 ```
 
-### Push — `push(piece, dir, {n, splat, flies, skids, wrecks}, moved)` [P; splat, flies, skids, wrecks, bump D]
+### Push — `push(piece, dir, {n, splat, flies, overMountains, clears, wrecks}, moved)` [P; splat, flies, wrecks, bump D; overMountains D-35; clears D-36; every landing skids D-37]
 *Serves:* G-1; ice as windfall; comedy (the Rocket, bumps on the ice).
 ```
 left = n
 while left > 0:
-    res = step(piece, dir, flies)
+    cleared = fewer than `clears` hexes entered so far              # a Cannon's first 4 (D-36)
+    res = cleared ? passOver(piece, dir) : step(piece, dir, {flies, overMountains})
+                                                    # passOver: 'blocked' only off the map, else moves there touching nothing
     if res == 'blocked' and splat and the blocker is a piece with PIECES.splats:
         remove it; emit splat{id: it, by: piece}; res = step(piece, dir); stop after it  # lands there
     if res == 'blocked' and wrecks and the blocker is cargo:
         remove it; lost += its value; emit splat{id: it, by: piece}; res = step(piece, dir); stop after it
     if res == 'blocked' and nothing was hit and bump(piece, dir, moved): stop   # D-33, ground or air
     if res != 'moved': stop
-    if not flies and isSlick(piece's hex): continue    # sliding is free: a Thing with slides, or ICE with no Thing
+    if not flies and not cleared and isSlick(piece's hex): continue    # sliding is free: a Thing with slides, or ICE with no Thing
     left -= 1
-if skids and it ran its full range onto slick ground (and didn't bump): slide on with step(piece, dir, false);
-    blocked: bump(piece, dir, moved), and stop either way
-if flies and it came down on a target of another color: back to the hex before (the start if none)
-if flies and piece is still on the board, on open water: sink it      # came down on inland water
-elif flies and it came down on a Trap and PIECES[piece.kind].splats: remove it; res = 'trapped'
+aloft = flies, or (clears > 0 and it entered no more than `clears` hexes)   # a shot stopped right after its cleared stretch
+comeDown, if aloft and it's still on the board:                      # D-35, D-36
+    while it's on a hex past the first clears-1 of its path and not canLand(hex): back to the hex before
+    if it's back inside the first clears-1 hexes: back to the start (no fire, no move)
+    canLand(hex) = not MOUNTAIN, not a target of another color, and on a cleared hex also
+                   no blocking Thing, no other piece, not open water
+if aloft and it came down on its color's target: deliver it         # only a shot's 4th hex gets here
+elif aloft and piece is still on the board, on open water: sink it      # came down on inland water
+elif aloft and it came down on a Trap and PIECES[piece.kind].splats: remove it; res = 'trapped'
+doomed = splat and PIECES[piece.kind].splats                      # a gremlin on a Rocket splats where it lands
+if aloft and it came down (path not empty, still on the board) and not doomed and nothing hit and no bump:
+    while the hex it's on is slick:                                   # D-37: every landing, full range or short
+        step(piece, dir, GROUND)                                      # GROUND = {flies: false, overMountains: false}
+        blocked: bump(piece, dir, moved), and stop either way         # sinks, delivers, Traps as any step
+                                                    # comeDown ran first, so it only skids from a hex it may land on
 if res == 'trapped': emit splat{id, by: null, trap: a Trap is on the hex}   # else it died on a target
-if splat and piece didn't sink or deliver and PIECES[piece.kind].splats: remove piece; emit splat{id, by: null, trap: false}
+if doomed and piece didn't sink or deliver: remove piece; emit splat{id, by: null, trap: false}
 # events: move{id, path, by: null, byAt: null} (if it moved; the path includes any follow), then the
 # splats/sink/deliver above, then the bumped line's events
 
@@ -335,9 +349,9 @@ bump(piece, dir, moved) → bumped?:                        # D-33
     moved += line
     repeat BUMP_ADVANCE times:                            # 2: no slide afterward
         for each piece in line, far end first, still on the board:
-            step(it, dir, false)                          # blocked: it stays (compresses); may sink/deliver/trap
+            step(it, dir, GROUND)                         # blocked: it stays (compresses); may sink/deliver/trap
     for each piece in line: emit move{id, path, by: piece, byAt: hexes piece had entered at contact}, then its sink/deliver/splat
-    piece follows: step(piece, dir, false) as many times as A went (stopping if blocked or gone)
+    piece follows: step(piece, dir, GROUND) as many times as A went (stopping if blocked or gone)
     the bump ends piece's motion (a flight comes down where it followed to)
 ```
 **Bump (D-33).** A piece stopped by a piece standing on slick ground (bare ice or a Slide) —
@@ -355,8 +369,22 @@ gremlin in its path, before any bump.
 A slide or a flight always ends: a straight line reaches the water edge. A Rocket's flight
 (`flies`, range `THINGS.ROCKET.push`) crosses movers, Bridges, ice, inland water and other
 colors' targets, delivers on its color's target, and sinks in the outer sea, or in inland water if it comes down there. A
-Spring's throw (`flies`, `skids`) does the same over its 3 hexes, then skids on if it lands
-on bare ice or a Slide (D-29). A Slide moves nothing standing on it; it only keeps a piece
+Spring's throw (`flies`, `overMountains`) does the same over its 3 hexes, and passes
+over mountains too, so it can clear two and land on the third; a throw that ends over a
+mountain comes down on the last hex short of it that it flew over, or doesn't leave the
+Spring if all three are mountain (D-35). Walls and pieces still stop it. Then it skids on if it lands
+on bare ice or a Slide (D-29), and so does a Rocket's flight (D-37): the skid is a ground move, so it
+sinks in open water, delivers on its color's target, stops at a Wall, a mountain or another color's
+target, kills a gremlin on a Trap and bumps a line on slick ground. Every landing skids, short
+ones too (a flight blocked mid-air, one backed up off a hex it can't land on, a Cannon's 4th-hex
+fallback); the way on from a short landing is usually what shortened it, so that skid stops at
+once. The one exception: a flight that splatted a gremlin stops on that hex. A gremlin the Rocket
+carries splats where it lands, and a bumper ends behind its line (D-33). A Cannon's shot (`clears` 4, range 5) passes over anything for
+its first 4 hexes, touching nothing (it splats no gremlin, delivers on no target, springs no
+Trap), then moves into the 5th as an ordinary ground step: it can sink, deliver, be blocked,
+bump a line on slick ground, kill a gremlin on a Trap, and slide on over ice (once: the ground
+slide is the skid, D-37). Blocked there, it comes down on the 4th hex if the ground would take it
+(delivered if that's its color's target; on ice or a Slide it skids on, into what stopped it), or doesn't fire; a shot whose cleared hexes run off the map doesn't fire (D-36). A Slide moves nothing standing on it; it only keeps a piece
 that comes onto it going, and over water it keeps that piece from sinking. Splatted pieces aren't `lost`. A gremlin dies on a Trap however it comes onto it
 (a wander, a push, a slide, a landing), but not when a flight carries it over one, and not
 when a Trap is built under it.
@@ -370,11 +398,11 @@ for thing in things with shove or pull, then the rest (each in placement order):
     Pusher: p = piece on hex 1 ahead;  dir = facing;            n = shove
     Puller: p = piece on hex 2 ahead;  dir = opposite(facing);  n = pull
     skip p if thing.color != WHITE and p is cargo of another color   # affects(thing, p)
-    if p and p.id not in moved: moved += p; push(p, dir, {n, splat, flies, skids of THINGS[kind], wrecks: false}, moved)
+    if p and p.id not in moved: moved += p; push(p, dir, {n, splat, flies, overMountains, clears of THINGS[kind], wrecks: false}, moved)
 for piece with PIECES[kind].wanders (creation order), skipping it if in moved by now:   # a bumped line may have moved it
     moved += piece
     dirs = directions whose neighbor is land or covered water (Bridge, Slide), no blocking Thing, and empty or holding cargo it wrecks
-    if dirs: push(piece, Rando.choice(dirs), {n: 1, splat: false, flies: false, skids: false, wrecks: PIECES[kind].wrecks}, moved)
+    if dirs: push(piece, Rando.choice(dirs), {n: 1, splat: false, flies: false, overMountains: false, clears: 0, wrecks: PIECES[kind].wrecks}, moved)
 spawnTimer += 1
 if spawnTimer >= SPAWN_INTERVAL:                                    # a spawn chance (D-31)
     spawnTimer = 0
@@ -473,10 +501,11 @@ The code constant in `GameArtifacts` is the single source.
 | `THINGS.BELT.push` | 1 | hexes |
 | `THINGS.BRIDGE.push` | 1 | hexes, on the ground: a Belt over water (D-27) [D] |
 | `THINGS.ROCKET.push` | 8 | hexes (its range) [D] |
+| `THINGS.CANNON.push` / `.clears` | 5 / 4 | hexes: its range, and how many of them it passes over untouched (D-36) [D] |
 | `THINGS.PULLER.pull` | 1 | hexes |
 | `THINGS.PUSHER.shove` | 1 | hexes [D] |
-| `UNLOCKS` | [BELT, BRIDGE, WALL, TRAP], [PUSHER, PULLER], [SLIDE], [SPRING], [ROCKET] | the order cards join the deck, one step per milestone [D] |
-| `THINGS.*.weight` BELT/SPRING/ROCKET/PUSHER/PULLER/WALL/TRAP/BRIDGE/SLIDE | 6 / 2 / 1 / 0.5 / 0.5 / 2 / 1 / 1 / 1 | relative (TRAP [D]: as ROCKET; PUSHER, PULLER [D]: rare, about one per color is plenty; SLIDE [D-29]: as BRIDGE) |
+| `UNLOCKS` | [BELT, BRIDGE, WALL, TRAP], [PUSHER, PULLER], [SLIDE], [SPRING], [ROCKET], [CANNON] | the order cards join the deck, one step per milestone [D; CANNON last D-36] |
+| `THINGS.*.weight` BELT/SPRING/ROCKET/PUSHER/PULLER/WALL/TRAP/BRIDGE/SLIDE/CANNON | 6 / 2 / 1 / 0.5 / 0.5 / 2 / 1 / 1 / 2 / 1 | relative (TRAP [D]: as ROCKET; PUSHER, PULLER [D]: rare, about one per color is plenty; SLIDE [D-29]: as WALL and SPRING; CANNON [D-36: low D, 1 P]: as ROCKET) |
 | `GREMLIN_HEXES_PER_DIE` / `GREMLIN_DICE_SIDES` | 160 / 4 | hexes of board area per die (the small board's area) [D] / sides; gremlins = `gremlinDice(size)` d sides |
 | `GEN_MAX_ATTEMPTS` | 10 | tries per seed |
 | `HEIGHTMAP_ROUGHNESS` | 0.55 | — |
@@ -500,7 +529,7 @@ The code constant in `GameArtifacts` is the single source.
 |---|---|---|---|
 | `newGame(seed, size)` | `seed` is a non-negative integer and `size` a key of `MAP_SIZES` | regenerate at that size | `{ok:true}` |
 | `place(slot, q, r, facing, color)` | see Commands rule (`color` one of `colorChoices`) | build in `color` (replacing any Thing there), redraw slot, tick | `{ok, events}` |
-| `rotate(q, r)` | a Belt, Bridge, Spring, Rocket, Pusher, or Puller is there | turn clockwise; no tick | `{ok, events: []}` |
+| `rotate(q, r)` | a Belt, Bridge, Spring, Rocket, Cannon, Pusher, or Puller is there | turn clockwise; no tick | `{ok, events: []}` |
 | `remove(q, r)` | any Thing is there | take it off (a piece left on open water sinks), tick | `{ok, events}` |
 | `blast(q, r)` | a crate (or big crate) is there | blow it up (lost + its value), tick | `{ok, events}` |
 | `discard(slot)` | `0 <= slot < HAND_SIZE` | redraw that slot, tick | `{ok, events}` |

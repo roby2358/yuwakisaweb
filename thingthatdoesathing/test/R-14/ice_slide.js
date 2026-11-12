@@ -1,7 +1,7 @@
 // R-14: a piece that enters bare ICE keeps going in the same direction, free, until it
 // reaches a non-ice hex or is blocked; ice covered by a Thing does not slide. A flying push
 // (Spring, Rocket) is airborne: ice under the flight counts toward its range. A Spring that
-// comes down on bare ice slides on; a Rocket doesn't.
+// comes down on bare ice slides on, and so does a Rocket (D-37).
 'use strict';
 const { check, done } = require('../helpers/check');
 const { flatGame, DIR } = require('../helpers/load');
@@ -51,9 +51,9 @@ const { flatGame, DIR } = require('../helpers/load');
 }
 {
     const { engine, put, piece, terrain, T } = flatGame();
-    put('ROCKET', -1, 4, DIR.E); for (let q = 0; q <= 11; q++) terrain(q, 4, T.ICE);
+    put('ROCKET', -1, 4, DIR.E); terrain(7, 4, T.ICE); terrain(8, 4, T.ICE);
     const c = piece('crate', -1, 4);
     engine.wait();
-    check('a Rocket landing on ice does not skid', c.isAt(7, 4));
+    check('a Rocket that comes down on bare ice skids on, too (D-37)', c.isAt(9, 4));
 }
 done();
