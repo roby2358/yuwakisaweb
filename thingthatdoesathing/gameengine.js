@@ -63,7 +63,7 @@ const GameEngine = (function () {
     const BUILDS_ON = {
         land: isLand,
         water: t => t === TERRAIN.WATER,
-        both: t => isLand(t) || t === TERRAIN.WATER,
+        unslick: t => t === TERRAIN.PLAINS || t === TERRAIN.WATER,   // where slick ground would be new (D-29)
     };
 
     class GameEngine {

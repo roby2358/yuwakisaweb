@@ -121,6 +121,14 @@ Thing Factory: Pusher and Puller cards are drawn white and get their color when 
 ----
 Priority:   40
 Status: Done
+ID: slide-no-ice-nrq5
+Created: 2026-11-12T08:05:10Z
+Updated: 2026-11-12T08:41:02Z
+
+A Slide can't be placed on bare ice — it would do nothing (ice is already slick). Today the Slide builds on plains, ice and water (not mountain). Remove ice from its legal terrain: legalPlacements('SLIDE') must exclude ice hexes, and place() must reject a Slide on ice (ok:false, nothing changes). Replace-on-place: a Slide also can't replace another Thing standing on ice (the replacement must be legal on the bare terrain, D-28). Update ONTOLOGY (Slide's `on`/legal terrain), the Slide CRITERIA row and its test (add: Slide on ice is illegal, absent from legalPlacements), RATIONALE D-29 (note why: no point), ARCHITECTURE_LOG. `just cc-test` green.
+----
+Priority:   40
+Status: Done
 ID: big-crate-jat8
 Created: 2026-11-11T15:54:09Z
 Updated: 2026-11-11T21:56:47Z

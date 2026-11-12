@@ -392,9 +392,13 @@ ARCHITECTURE_LOG.md.
   code path, and "ice under a Thing doesn't slide" (R-14) falls out of the same test. Over
   water it needs no code of its own either: `isOpenWater` already means water with no Thing
   over it, which is the Bridge's "not sunk" check.
-- **Unreviewed calls:** (1) `on: 'both'`, a new `BUILDS_ON` entry: a Slide builds on plains,
-  ice or water (never mountain), so it's the only kind that can replace a Bridge on water and
-  also go on land. (2) No facing: it keeps a piece going whichever way it came on, so it
+- **Unreviewed calls:** (1) `on: 'unslick'`, its own `BUILDS_ON` entry: a Slide builds on
+  plains or water (never mountain), so it's the only kind that can replace a Bridge on water and
+  also go on land. Decided 2026-11-12 (pjpd slide-no-ice-nrq5): never on bare ice either. Ice
+  already slides, so a Slide there would do nothing, and a card spent on it is a wasted turn;
+  leaving ice out of the highlight tells the player that up front. It's the terrain rule, not a
+  kind check, so it also stops a Slide replacing a Thing standing on ice (the hex is judged as
+  bare, D-28). It was `on: 'both'` (plains, ice or water) before. (2) No facing: it keeps a piece going whichever way it came on, so it
   doesn't `aim`, can't be turned, and moves nothing standing on it (a crate spawned or stopped
   on one stays put). (3) A Spring that comes down on a Slide skids on, as on bare ice (the
   landing skid reads `isSlick` too); since 2026-11-12 a Rocket does too (D-37); Slides under a
@@ -410,7 +414,8 @@ ARCHITECTURE_LOG.md.
   shift is belts drawn slightly less often. Weight 2 (2026-11-12): `just cc-sim 200 small` →
   200/200, median 49, p90 58, 2.08 lost; `just cc-sim 50 medium` → 50/50, median 61, p90 70,
   3.50 lost, both unchanged, since the Slide isn't in the deck before the first milestone.
-  Unmeasured in play.
+  No Slide on ice (2026-11-12): `just cc-sim 200 small` → 200/200, median 45, p90 51, 0.61
+  lost, unchanged for the same reason. Unmeasured in play.
 
 ### D-30 Cards unlock one step per milestone — *Decided (gradual unlock, order Belt/Bridge/Wall/Trap, then Pusher+Puller, Slide, Spring, Rocket, then the Cannon last (added 2026-11-12, D-36); hand kept), Proposed (unreviewed: the rest)*
 - **Alternatives:** every kind from turn 1 (the old rule); unlock by turn count rather than

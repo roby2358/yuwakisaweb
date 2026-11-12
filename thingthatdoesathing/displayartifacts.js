@@ -43,7 +43,7 @@ const GameDisplayArtifacts = (function () {
             WALL:    { name: 'Wall',    does: 'nothing gets in',                          fill: '#8a5a3c', ink: '#5c3a24', inset: 1 },
             TRAP:    { name: 'Trap',    does: 'a gremlin that comes onto it dies (crates are safe)', fill: '#3d3a33', ink: '#d9d4c7', inset: 0.84 },
             BRIDGE:  { name: 'Bridge',  does: 'carries what is on it 1 hex over water (build on water)', fill: '#a07a4a', ink: '#3d2812', inset: 0.84 },
-            SLIDE:   { name: 'Slide',   does: 'what comes onto it slides on, like ice (build on land or water)', fill: '#9fd3e6', ink: '#ffffff', inset: 0.84 },
+            SLIDE:   { name: 'Slide',   does: 'what comes onto it slides on, like ice (build on plains or water)', fill: '#9fd3e6', ink: '#ffffff', inset: 0.84 },
             CANNON:  { name: 'Cannon',  does: 'lobs what is on it over 4 hexes of anything, down on the 5th (slides on ice)', fill: '#33383f', ink: '#c9d1d9', inset: 0.84 },
         },
         // Accent per color for colored kinds: white (a card), or the crate color's lit face.

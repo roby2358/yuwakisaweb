@@ -1,5 +1,5 @@
 // R-8: legalPlacements(kind) is exactly the hexes that aren't a target, of the right ground
-// (THINGS.on: 'water', 'land' = plains or ice, 'both' = either), and — for a blocking kind — no piece and not a
+// (THINGS.on: 'water', 'land' = plains or ice, 'unslick' = plains or water), and — for a blocking kind — no piece and not a
 // source. A Thing already on the hex doesn't matter: placing replaces it (R-47).
 'use strict';
 const { check, done } = require('../helpers/check');
@@ -8,7 +8,7 @@ for (const seed of SEEDS.slice(0, 5)) {
     const { g, state, engine } = newGame(seed, 'small');
     const A = g.GameArtifacts, T = A.TERRAIN;
     const land = t => t === T.PLAINS || t === T.ICE;
-    const ground = { land, water: t => t === T.WATER, both: t => land(t) || t === T.WATER };
+    const ground = { land, water: t => t === T.WATER, unslick: t => t === T.PLAINS || t === T.WATER };
     // Give the board some Things (still legal: replaced) and pieces.
     for (let i = 0; i < 6; i++) engine.wait();
     const belts = [...engine.legalPlacements('BELT')].slice(0, 3);
@@ -38,6 +38,8 @@ check('a hex holding a Thing is legal (placing replaces it)', (state.things.push
 terrain(7, 4, T.WATER);
 check('a Slide goes on land or water', engine.legalPlacements('SLIDE').has('3,4') && engine.legalPlacements('SLIDE').has('7,4'));
 check('but not on mountain', !engine.legalPlacements('SLIDE').has('5,4'));
+terrain(8, 4, T.ICE);
+check('nor on bare ice (already slick, D-29), where a Belt goes', !engine.legalPlacements('SLIDE').has('8,4') && engine.legalPlacements('BELT').has('8,4'));
 check('the target never does', !engine.legalPlacements('BELT').has('10,8'));
 state.targets.push({ q: 6, r: 4, color: 'blue', delivered: 0 });
 check('nor does a second color\'s target', !engine.legalPlacements('BELT').has('6,4'));

@@ -2,6 +2,14 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-12 — No Slide on bare ice (D-29)
+The Slide's `on` was `'both'` (plains, ice or water); ice already slides, so a Slide there did
+nothing. `BUILDS_ON.both` is renamed `unslick` (plains or water) and the Slide is its only user,
+so `legalPlacements('SLIDE')` leaves ice out, `place` rejects it (`ok:false`, nothing changed),
+and a Slide can't replace a Thing standing on ice (D-28). R-48's "a Slide on ice still slides"
+check, now unreachable, became the placement checks; R-8 spot-checks ice. The Slide's verb line
+and README say "plains or water" (pjpd slide-no-ice-nrq5).
+
 ### 2026-11-12 — `D` removes the selected hex's Thing (D-39)
 `D` used to call `remove` on the hovered hex (`removeHovered`), so a drifting mouse with Go
 running took out the wrong Thing. Now `removeSelected` acts on `GameUI.selected` only (the

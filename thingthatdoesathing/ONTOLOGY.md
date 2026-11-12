@@ -138,7 +138,7 @@ gremlins treat it the same (D-34).
 | `traps` | A piece that splats dies when it comes onto this hex: walked, pushed, slid, or coming down from a flight; a flight passing over doesn't count (Trap). Every target does the same, with no Thing (Motion rule). [D] |
 | `colored` | Placed in an open crate color the player picks, never white (`colorChoices`, D-32); its card is drawn plain, and only once two or more colors are open (Pusher, Puller). [D] |
 | `slides` | Slick ground: a piece that comes onto it on the ground keeps going the same way, free, exactly like bare ice (Slide). The one slick test, `isSlick`, reads it: a Thing on a hex decides by `slides`; with no Thing, the hex is slick if it's ICE. [D-29] |
-| `on` | `'land'` (plains/ice), `'water'`, or `'both'` (land or water) — where it may be built. [both D-29] |
+| `on` | `'land'` (plains/ice), `'water'`, or `'unslick'` (plains or water: not bare ice, which already slides) — where it may be built. [unslick D-29] |
 | `weight` | Relative draw chance for the hand, among the kinds in the deck (Draw rule). |
 
 ### Board — query layer over `hexes`
@@ -167,8 +167,8 @@ gremlins treat it the same (D-34).
   two share a hex. [P; colors D]
 - Each open color has exactly one target and comes out of exactly one source;
   `targets.length <= MAP_SIZES[size].colors`, and the targets' colors are distinct `CRATE_COLORS`. [D]
-- At most one Thing per hex. No Thing on a target. Bridges only on water; Slides on land or
-  water; every other kind only on land. [P; Slide D-29]
+- At most one Thing per hex. No Thing on a target. Bridges only on water; Slides on plains or
+  water (never bare ice); every other kind only on land. [P; Slide D-29]
 - At most one piece per hex, between commands and after every hop of a tick (a Cannon's shot passing over doesn't count, D-36, D-38). No piece on a Wall, on mountain, or on open water (water with no Thing over it), between commands (a Spring's flight passes over a mountain mid-tick, D-35; a Cannon's shot over anything, D-36). [P; every hop D-38]
 - `hand.length === HAND_SIZE` whenever a command returns. [P]
 - `1 <= unlocks <= UNLOCKS.length`, and every `THINGS` kind is in exactly one `UNLOCKS` step. [D]
@@ -287,7 +287,7 @@ The cards already in hand stay as they are; new kinds arrive through later draws
 the set of hexes where it holds.
 ```
 hex exists, not a target                      # a Thing already there doesn't count: place replaces it (D-28)
-terrain fits THINGS[kind].on:  'land' → PLAINS or ICE;  'water' → WATER;  'both' → either
+terrain fits THINGS[kind].on:  'land' → PLAINS or ICE;  'water' → WATER;  'unslick' → PLAINS or WATER
 THINGS[kind].blocks ⇒ no piece on hex, and not a source   # the crates must flow
 ```
 

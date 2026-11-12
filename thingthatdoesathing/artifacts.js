@@ -38,7 +38,8 @@ const GameArtifacts = (function () {
     //            not while only one color is open (D-22, D-32)
     //   slides — a piece that comes onto it on the ground keeps going the same way, free,
     //            like bare ice (and a flight or shot that comes down on it skids on)
-    //   on     — 'land' (plains/ice), 'water', or 'both' (land or water): where it may be built
+    //   on     — 'land' (plains/ice), 'water', or 'unslick' (plains or water: not bare ice,
+    //            which already slides, D-29): where it may be built
     //   weight — relative draw chance for the hand
     const THINGS = {
         BELT:    { push: 1, pull: 0, shove: 0, splat: false, flies: false, overMountains: false, clears: 0, blocks: false, traps: false, colored: false, slides: false, on: 'land',  weight: 6 },
@@ -49,7 +50,7 @@ const GameArtifacts = (function () {
         WALL:    { push: 0, pull: 0, shove: 0, splat: false, flies: false, overMountains: false, clears: 0, blocks: true,  traps: false, colored: false, slides: false, on: 'land',  weight: 2 },
         TRAP:    { push: 0, pull: 0, shove: 0, splat: false, flies: false, overMountains: false, clears: 0, blocks: false, traps: true,  colored: false, slides: false, on: 'land',  weight: 1 },
         BRIDGE:  { push: 1, pull: 0, shove: 0, splat: false, flies: false, overMountains: false, clears: 0, blocks: false, traps: false, colored: false, slides: false, on: 'water', weight: 1 },
-        SLIDE:   { push: 0, pull: 0, shove: 0, splat: false, flies: false, overMountains: false, clears: 0, blocks: false, traps: false, colored: false, slides: true,  on: 'both',  weight: 2 },
+        SLIDE:   { push: 0, pull: 0, shove: 0, splat: false, flies: false, overMountains: false, clears: 0, blocks: false, traps: false, colored: false, slides: true,  on: 'unslick', weight: 2 },
         CANNON:  { push: 5, pull: 0, shove: 0, splat: false, flies: false, overMountains: false, clears: 4, blocks: false, traps: false, colored: false, slides: false, on: 'land',  weight: 1 },
     };
 

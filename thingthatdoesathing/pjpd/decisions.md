@@ -33,3 +33,8 @@ decision, and where the full reasoning lives (a RATIONALE `D-n` tagged *unreview
 - [agent] delete-sel-rcax: no fallback to the hovered hex when nothing is selected (that would bring back the slip) (D-39).
 - [agent] delete-sel-rcax: hover-bar hint reworded: "click to select, then D to remove" over an unselected Thing, "D to remove" over the selected one, no D hint while a card is picked (picking clears the selection) (D-39 call 2).
 - [agent] delete-sel-rcax: U-12 (manual CRITERIA row) rewritten for select-then-D; `commit()` now returns true/false so the UI knows the remove succeeded.
+
+## slide-no-ice (2026-11-12)
+- [agent] Renamed `BUILDS_ON.both` to `unslick` (plains or water) instead of adding a fourth entry: the Slide was `both`'s only user, so no dead entry is left. Data-driven via `THINGS.SLIDE.on`, no kind check.
+- [agent] Dropped R-48's "a Slide on ice still slides" clause/check: a Slide can no longer stand on ice (no command changes terrain under a Thing), so it's unreachable; `isSlick` still lets the Thing decide. Replaced with the illegal-on-ice placement checks.
+- [agent] Updated the Slide's hover verb line (displayartifacts.js) and README from "land or water" to "plains or water" so the UI doesn't promise ice.

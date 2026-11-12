@@ -3,9 +3,10 @@
 // that isn't slick or is blocked. Built on water it isn't open water: the piece slides over
 // it and isn't sunk, but slides into open water beyond and sinks. A Spring that comes down on
 // a Slide skids on (D-29), and so does a Rocket (D-37). A piece standing on one isn't moved. No facing.
+// It can't be built on bare ice, which already slides (D-29).
 'use strict';
 const { check, done } = require('../helpers/check');
-const { flatGame, DIR } = require('../helpers/load');
+const { flatGame, snapshot, DIR } = require('../helpers/load');
 {
     const { engine, put, piece } = flatGame();
     put('BELT', 0, 4, DIR.E); put('SLIDE', 1, 4); put('SLIDE', 2, 4);
@@ -40,11 +41,19 @@ const { flatGame, DIR } = require('../helpers/load');
     check('… and stays there on later ticks (a Slide moves nothing standing on it)', c.isAt(3, 4) && state.lost === 0);
 }
 {
-    const { engine, put, piece, terrain, T } = flatGame();
-    terrain(1, 4, T.ICE); put('SLIDE', 1, 4); put('BELT', 0, 4, DIR.E);
-    const c = piece('crate', 0, 4);
-    engine.wait();
-    check('a Slide on ice still slides (it is the Thing that decides)', c.isAt(2, 4));
+    // Bare ice already slides, so a Slide there would do nothing: it can't be built on ice,
+    // not even over a Thing standing on ice (the hex is judged as if bare, D-28, D-29).
+    const { g, state, engine, put, terrain, T } = flatGame();
+    terrain(3, 4, T.ICE); terrain(5, 4, T.ICE); put('BELT', 5, 4, DIR.E);
+    state.hand[0] = { kind: 'SLIDE' };
+    check('a Slide is absent from legalPlacements on bare ice', !engine.legalPlacements('SLIDE').has('3,4'));
+    const before = snapshot(state);
+    g.Rando.seed(99); const res = engine.place(0, 3, 4, 0, 'white'); const next = g.Rando.random();
+    g.Rando.seed(99);
+    check('place() rejects a Slide on bare ice: ok:false, nothing changed, Rando untouched',
+        res.ok === false && snapshot(state) === before && next === g.Rando.random());
+    check('… and over a Belt standing on ice', !engine.legalPlacements('SLIDE').has('5,4') &&
+        engine.place(0, 5, 4, 0, 'white').ok === false && snapshot(state) === before && engine.thingAt(5, 4).kind === 'BELT');
 }
 {
     const { engine, put, piece } = flatGame();
