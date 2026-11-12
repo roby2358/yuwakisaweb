@@ -25,3 +25,11 @@ decision, and where the full reasoning lives (a RATIONALE `D-n` tagged *unreview
 - [agent] lockstep-ritf: a gremlin with no wander direction has no motion, so a bump can push it (before, every wanderer counted as moved). D-38 call 7.
 - [agent] lockstep-ritf: a hop a motion sits out (bumper on its contact hop, a flight about to drop back) repeats its hex in the move path, so paths are one entry per hop; moves carry `over` (a shot's cleared hexes) so overlap checks skip them. D-38 call 8.
 - [agent] lockstep-ritf: R-52's "two big crates in one tick" test now feeds them a hop apart (one over ice), since one hex takes one piece per hop; several R-33/R-51/R-32 tests box gremlins with a lake so they can't wander off on hop 1.
+
+## delete-sel (2026-11-12)
+
+- [agent] delete-sel-rcax: B (blast) stays on the hovered crate; crates move, so a selected hex would often be empty by the time you press B. Noted as a follow-up in D-39.
+- [agent] delete-sel-rcax: D on a selected bare hex does nothing and keeps the selection; only a successful remove clears it (D-39 call 1).
+- [agent] delete-sel-rcax: no fallback to the hovered hex when nothing is selected (that would bring back the slip) (D-39).
+- [agent] delete-sel-rcax: hover-bar hint reworded: "click to select, then D to remove" over an unselected Thing, "D to remove" over the selected one, no D hint while a card is picked (picking clears the selection) (D-39 call 2).
+- [agent] delete-sel-rcax: U-12 (manual CRITERIA row) rewritten for select-then-D; `commit()` now returns true/false so the UI knows the remove succeeded.

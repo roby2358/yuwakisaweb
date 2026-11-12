@@ -361,10 +361,11 @@ const GameUI = (function () {
             const before = new Map(this.state.pieces.map(p =>
                 [p.id, { q: p.q, r: p.r, color: p.color, label: p.label, kind: p.kind }]));
             const res = fn();
-            if (!res.ok) { this.render(); return; }
+            if (!res.ok) { this.render(); return false; }
             this.picked = null;
             cue();
             this.startAnim(before, res);
+            return true;
         }
 
         place(q, r, color) {
@@ -439,11 +440,12 @@ const GameUI = (function () {
             this.render();
         }
 
-        // Remove the Thing under the cursor (D).
-        removeHovered() {
-            if (this.overlay || this.anim || !this.hoveredHex) return;
-            const { q, r } = this.hoveredHex;
-            this.commit(() => this.engine.remove(q, r), () => this.sound.sink());
+        // Remove the Thing on the selected hex (D), never the hovered one (D-39); a bare hex
+        // or no selection does nothing. A remove lets go of the hex, so Go resumes.
+        removeSelected() {
+            if (this.overlay || this.anim || !this.selected) return;
+            const { q, r } = this.selected;
+            if (this.commit(() => this.engine.remove(q, r), () => this.sound.sink())) this.selected = null;
         }
 
         // Blow up the crate under the cursor (B).
@@ -1016,9 +1018,10 @@ const GameUI = (function () {
 
         // What the mouse can do to the hovered Thing `t` on `h`, for the hover bar.
         thingHint(h, t) {
-            if (this.replaceTarget(h)) return ' (click to replace, D to remove)';
-            if (aims(t.kind) && !this.picked) return ' (click to select, again to turn, D to remove)';
-            return ' (D to remove)';
+            if (this.replaceTarget(h)) return ' (click to replace)';
+            if (this.picked) return '';
+            if (this.selected && Hex.same(this.selected, h)) return aims(t.kind) ? ' (click to turn, D to remove)' : ' (D to remove)';
+            return aims(t.kind) ? ' (click to select, then click to turn or D to remove)' : ' (click to select, then D to remove)';
         }
 
         // The hand: one card per slot, each with a little canvas of the Thing. Redrawn only
@@ -1157,7 +1160,7 @@ const GameUI = (function () {
             if (e.key === 'Enter') { e.preventDefault(); this.toggleRun(); return; }
             if (e.key >= '1' && e.key <= String(HAND_SIZE)) { this.pick(Number(e.key) - 1); return; }
             if ((e.key === 'r' || e.key === 'R') && this.picked) { this.turnGhost(e.shiftKey ? -1 : 1); return; }
-            if (e.key === 'd' || e.key === 'D') { this.removeHovered(); return; }
+            if (e.key === 'd' || e.key === 'D') { this.removeSelected(); return; }
             if (e.key === 'b' || e.key === 'B') { this.blastHovered(); return; }
             if (e.key === 'x' || e.key === 'X') this.discardPicked();
         }

@@ -2,7 +2,7 @@
 //
 // Loads every script index.html loads, in order, into a vm with a fake document, canvas,
 // and requestAnimationFrame, then drives the UI through clicks and keys: pick a board size
-// from the intro, pick each card, turn the ghost, place, select and rotate, wait, run tick animations to completion,
+// from the intro, pick each card, turn the ghost, place, select and rotate, remove the selected Thing with D, wait, run tick animations to completion,
 // play to the first milestone (checking that no two pieces are ever drawn on one hex at a hop,
 // D-38), and drive the color picker (D-32). Catches runtime errors in rendering and input wiring without a
 // browser. It can't judge how anything looks; that stays manual (U-rows).
@@ -225,15 +225,36 @@ run('placing a Thing ticks and animates to completion', () => {
     if (s.turn !== turn + 1) throw new Error('no tick');
     if (ui.anim) throw new Error('animation never finished');
 });
-run('D removes the hovered Thing and ticks', () => {
-    const s = ui.state, turn = s.turn;
-    const t = s.things[s.things.length - 1];
-    const { x, y } = ui.hexToScreen(t.q, t.r);
-    canvas.fire('mousemove', { clientX: x, clientY: y });
-    key('d');
-    settle();
-    if (ui.engine.thingAt(t.q, t.r)) throw new Error('Thing still there');
+run('D removes the selected Thing, never the hovered one; with no selection it does nothing (D-39)', () => {
+    const s = ui.state, e = ui.engine;
+    const placeBelt = () => {
+        s.hand[0] = { kind: 'BELT' };
+        key('1');
+        const k = [...ui.picked.legal].find(k => !e.thingAt(...k.split(',').map(Number)));
+        const [q, r] = k.split(',').map(Number);
+        clickHex(q, r); settle();
+        if (!e.thingAt(q, r)) throw new Error('belt not placed');
+        return { q, r };
+    };
+    const a = placeBelt(), b = placeBelt();
+    const hover = h => { const { x, y } = ui.hexToScreen(h.q, h.r); canvas.fire('mousemove', { clientX: x, clientY: y }); };
+    // No selection: D over a Thing removes nothing and doesn't tick.
+    if (ui.selected) throw new Error('nothing should be selected yet');
+    let turn = s.turn;
+    hover(b); key('d'); settle();
+    if (!e.thingAt(b.q, b.r) || s.turn !== turn) throw new Error('D with no selection must do nothing');
+    // Select a, move the mouse onto b, press D: a goes, b stays, the selection clears.
+    clickHex(a.q, a.r);
+    if (!ui.selected || ui.selected.q !== a.q || ui.selected.r !== a.r) throw new Error('click did not select');
+    hover(b); key('d'); settle();
+    if (e.thingAt(a.q, a.r)) throw new Error('the selected Thing is still there');
+    if (!e.thingAt(b.q, b.r)) throw new Error('the hovered Thing was removed');
     if (s.turn !== turn + 1) throw new Error('no tick');
+    if (ui.selected) throw new Error('a remove must clear the selection');
+    // D again with nothing selected: still nothing.
+    turn = s.turn;
+    key('d'); settle();
+    if (!e.thingAt(b.q, b.r) || s.turn !== turn) throw new Error('D after the remove must do nothing');
 });
 run('a hand card button click picks it', () => {
     const btn = els.cards.children[1];

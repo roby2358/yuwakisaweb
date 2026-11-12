@@ -2,6 +2,14 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-12 — `D` removes the selected hex's Thing (D-39)
+`D` used to call `remove` on the hovered hex (`removeHovered`), so a drifting mouse with Go
+running took out the wrong Thing. Now `removeSelected` acts on `GameUI.selected` only (the
+bare-click selection); with none, or a bare hex, it does nothing, and a successful remove clears
+the selection (`commit` now returns whether the command was legal). The hover-bar hint, help
+legend, README, CLAUDE.md and U-12 say "select, then D". `B` still blasts the hovered crate
+(D-39 follow-up). `uiboot.js` covers it (pjpd delete-sel-rcax).
+
 ### 2026-11-12 — Lockstep movement: one hex per hop, all together (D-38)
 The tick's movement was rewritten as a lockstep, hop-by-hop simulation (pjpd lockstep-ritf).
 Before, each Thing acted in turn (Pushers/Pullers first, then placement order) and ran its

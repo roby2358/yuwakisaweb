@@ -64,7 +64,7 @@ tick animation) → `picked` card → bare map click.
 - **L1.2 pick-then-act:** picking a card (click or `1`–`3`) computes
   `engine.legalPlacements(kind)` once; clicking a hex is a lookup into that set. `R`/wheel
   turn the ghost's facing. With no card picked, a click selects a hex (`selected`: outline, white facing arrow over a mover, holds Go); a click on the selected hex calls `rotate`, which doesn't tick, so the UI just re-renders; a click elsewhere or Esc deselects. Selecting and turning work mid-animation.
-  `D` calls `remove` on the hovered Thing; `B` calls `blast` on the hovered crate. With a card picked, the Discard spot or `X` calls `discard`.
+  `D` calls `remove` on the selected hex's Thing (never the hovered one; no selection does nothing; a remove clears the selection, D-39); `B` calls `blast` on the hovered crate. With a card picked, the Discard spot or `X` calls `discard`.
 - **L2.1 primary action:** Wait button → `engine.wait()`. Enter toggles Go (`toggleRun()`), like the Go button. Space is `oneTick()`: a Wait when Go is off; when Go runs it turns Go off, and the tick in flight finishes.
 - **L2.2:** Esc and right-click put the card back.
 - **L5:** the intro and New Game overlays are both board-size pickers (click or `1`–`4`); they

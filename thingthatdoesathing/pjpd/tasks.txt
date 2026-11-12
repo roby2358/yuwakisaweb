@@ -1,11 +1,3 @@
-Priority:   45
-Status: ToDo
-ID: delete-sel-rcax
-Created: 2026-11-12T08:09:36Z
-Updated: 2026-11-12T08:09:36Z
-
-Pressing D removes the Thing on the selected (highlighted) hex only, never the hex under the mouse. Today D calls engine.remove on the hovered Thing (gameui.js key handling; UI_CONTROLS/CLAUDE.md input notes). Change: D acts on `selected` (the hex chosen by a bare map click, outlined); with no selected hex, or no Thing on it, D does nothing. After a successful remove, clear the selection. Decide and log whether B (blast the hovered crate) should follow the same rule — default: leave B as is and note it in RATIONALE as a possible follow-up. Update CLAUDE.md input section, UI_CONTROLS references if any, README controls/help overlay text (keys legend), RATIONALE (new D-n), ARCHITECTURE_LOG; extend test/integration/uiboot.js: select a hex with a Thing, move the hover elsewhere, press D → the selected Thing is removed and the hovered one isn't; D with no selection removes nothing. `just cc-test` green.
-----
 Priority:   40
 Status: ToDo
 ID: slide-no-ice-nrq5

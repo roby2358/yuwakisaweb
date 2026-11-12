@@ -107,6 +107,25 @@ ARCHITECTURE_LOG.md.
   the water. That's the step rule, and it's comedy.
 - **Evidence:** R-29.
 
+### D-39 `D` removes the Thing on the selected hex, never the hovered one — *Decided 2026-11-12 (pjpd delete-sel-rcax: D acts on the bare-click selection only; no selection or a bare hex does nothing; a remove clears the selection), Proposed (*unreviewed*: the rest)*
+- **Alternatives:** keep D on the hovered hex (the old rule); D on the selected hex, falling
+  back to the hovered one when nothing is selected; a confirm step.
+- **Why:** with Go running, the mouse drifts while you reach for the key, and D took out
+  whatever Thing happened to be under the cursor by then. Selecting first is a deliberate
+  two-step act: the outlined hex is exactly what goes, and selecting already holds Go, so the
+  board stands still while you decide. No fallback to the hover, since that would bring back
+  the slip the change is for. Clearing the selection after the remove lets Go resume and
+  leaves no outline over a bare hex.
+- **Unreviewed calls:** (1) A D on a selected bare hex (or one whose Thing is gone) keeps the
+  selection; only a successful remove clears it. (2) The hover bar now says how: "click to
+  select, then D to remove" over an unselected Thing, "D to remove" over the selected one, and
+  no D hint while a card is picked (picking clears the selection, so D can't act then).
+- **Possible follow-up:** `B` (blast) still hits the crate under the cursor. Crates move, so
+  selecting a hex to blast what stands on it would often miss by the time you press B; it
+  stays on the hover until playtest says the same slip happens there.
+- **Evidence:** `uiboot.js` (select a Thing, hover another, D removes only the selected one;
+  D with no selection removes nothing); U-12.
+
 ---
 
 ## Things

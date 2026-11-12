@@ -56,7 +56,7 @@ that comes onto a target dies there, so they can't camp it.
 - A Pusher or Puller asks for its crate color after you click its hex: click a swatch or press `1`–`4`; Esc, right-click or a click elsewhere backs out with the card still picked
 - Click a yellow hex to place it; the world ticks once and animates. A yellow hex with a dashed ring holds a Thing: placing there replaces it (the old Thing's card is gone)
 - With no card picked, click a hex to select it: it lights up, a mover shows a white arrow, and Go holds. Click it again to turn a Belt/Spring/Rocket/Cannon/Pusher/Puller clockwise (free: no tick); click anywhere else (or Esc) to let go
-- `D` removes the Thing under the cursor, leaving the hex bare; the card is gone and the world ticks once
+- `D` removes the Thing on the selected hex (click it first), leaving the hex bare and letting go of it; the card is gone and the world ticks once. With nothing selected, `D` does nothing
 - Ten ticks in a row without placing or discarding a card redraws one card at random (it glows)
 - `B` blows up the crate under the cursor (a stuck line); it counts as lost and the world ticks once
 - Pick a card, then click Discard (right of the cards) or press `X` to throw it away; the world ticks once
