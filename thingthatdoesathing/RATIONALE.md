@@ -126,6 +126,31 @@ ARCHITECTURE_LOG.md.
 - **Evidence:** `uiboot.js` (select a Thing, hover another, D removes only the selected one;
   D with no selection removes nothing); U-12.
 
+### D-40 Map scale: buttons 1, 2 and ∞ — *Decided 2026-11-12 (pjpd map-zoom-8cwk, then the designer after a look: three buttons, 1x / 1/2 / fit capped at 1x (1/4 dropped: it came out smaller than the fit); the fit uses the space from the window top to the top of the hand, or the canvas width, whichever is tighter; the hand sits flush on the bottom edge; fit computed once on the press; window resizes ignored for the scale; every new game at 1x; text below a readable size hidden, no other simplified art; zoom keeps the canvas center fixed; pan clamped so the board can't leave the screen; buttons only, no keys or wheel; active button lit), Proposed (*unreviewed*: the rest)*
+- **Alternatives:** wheel zoom (the wheel already turns the ghost); number-key zoom (`1`–`3`
+  pick cards); continuous zoom; level-of-detail art at small scales (a later idea, zoom-lod,
+  after playtest).
+- **Why:** the 30×30 and 60×60 boards took a lot of dragging to see where crates were going.
+  A few fixed steps are enough to get the whole factory in view and back, and buttons don't
+  fight the keys and wheel that placement already uses. The engine never sees the scale.
+- **Unreviewed calls:** (1) Drawing goes through one canvas transform (`scale` then pan), so
+  art, line widths and fonts all scale together; at small fits the hex borders and outlines come out
+  hairline-thin rather than being held at a minimum width. Text is the only thing gated
+  (`readable(px)`, `MIN_TEXT_PX` 8): at 1/2 the source's "IN" hides and the target's ★ stays;
+  at a small fit all on-map text hides. That gate is where a detail switch would hang later. (2) ∞
+  centers the board in the space above the hand (it doesn't keep the old center), ignores the
+  top-left HUD panels, and stays lit afterwards. (3) The clamp keeps the canvas center
+  inside the box of hex centers, during drags and after every zoom. (4) The buttons sit in a
+  third row under the HUD line ("Map 1 2 ∞"); on narrow screens Go and the banner drop a
+  little further to clear it. (5) A window resize still re-centers the board as before
+  (`centerMap`, now at the current scale) but never changes the scale. (6) `UI_CONTROLS.md`
+  is the shared family spec and already calls zoom optional, so it's unchanged.
+- **Evidence:** `uiboot.js` (each button sets its scale and lights; the center stays put;
+  `screenToHex(hexToScreen(h))` round-trips at every scale; at 1/2 a click selects and places
+  on the right hex and a tick animates; a drag can't push the board off; ∞ fits a 60×60 board
+  above the hand;
+  a new game resets to 1x); U-27.
+
 ---
 
 ## Things

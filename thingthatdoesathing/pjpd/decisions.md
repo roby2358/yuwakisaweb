@@ -38,3 +38,14 @@ decision, and where the full reasoning lives (a RATIONALE `D-n` tagged *unreview
 - [agent] Renamed `BUILDS_ON.both` to `unslick` (plains or water) instead of adding a fourth entry: the Slide was `both`'s only user, so no dead entry is left. Data-driven via `THINGS.SLIDE.on`, no kind check.
 - [agent] Dropped R-48's "a Slide on ice still slides" clause/check: a Slide can no longer stand on ice (no command changes terrain under a Thing), so it's unreachable; `isSlick` still lets the Thing decide. Replaced with the illegal-on-ice placement checks.
 - [agent] Updated the Slide's hover verb line (displayartifacts.js) and README from "land or water" to "plains or water" so the UI doesn't promise ice.
+
+## map-zoom (2026-11-12)
+- [agent] map-zoom-8cwk: one canvas transform (`setTransform(scale, 0, 0, scale, panX, panY)`) for all board drawing; draw helpers now take world px (`hexToWorld`). Line widths scale too (hairlines at 1/4), no minimum width held (D-40 call 1).
+- [agent] map-zoom-8cwk: `MIN_TEXT_PX` = 8: at 1/2 the source "IN" (11px) hides, the ★ (16px) and gremlin labels stay; at 1/4 all on-map text hides. `readable(px)` is the single gate a later detail switch can hang on (D-40 call 1).
+- [agent] map-zoom-8cwk: ∞ centers the board rather than keeping the old center, fits the whole canvas (not the area between HUD panels), and stays lit after (D-40 call 2).
+- [agent] map-zoom-8cwk: pan clamp = the canvas center stays inside the box of hex centers; applied during drags, after zooms and in centerMap (D-40 call 3).
+- [agent] map-zoom-8cwk: buttons are a third HUD-stack row "Map 1 2 4 ∞" under the Turn/Wait/New Game/Help line; narrow-screen (<1000px) Go moves 96→108px and the banner 150→162px to clear it. Not browser-measured (D-40 call 4).
+- [agent] map-zoom-8cwk: kept the existing window-resize handler (canvas size + re-center via centerMap, now at the current scale); "resizes ignored" read as "the scale never reacts to a resize" (D-40 call 5).
+- [agent] map-zoom-8cwk: UI_CONTROLS.md left unchanged (shared family spec, already says zoom is optional); gameui cites L1.3 at the view helpers (D-40 call 6).
+- [agent] map-zoom-8cwk: help legend gets a "Map 1 2 4 ∞ — buttons" line; README and CLAUDE.md input section updated; U-27 added.
+- [user] map-zoom after a look: buttons are 1, 2, ∞ (1/4 dropped, smaller than the fit); ∞ fits from the window top to the top of the hand, or across, whichever is tighter, centered in that space; the hand sits flush on the bottom edge.

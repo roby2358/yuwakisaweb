@@ -12,6 +12,10 @@ const GameDisplayArtifacts = (function () {
         HOP_MS: 140,                 // ms per animated hop in a tick
         RUN_GAP_MS: 250,             // Go: pause between ticks
         MILESTONE_MS: 3500,          // how long the milestone banner stays up
+        // Map-scale buttons (D-40): each divisor is a button showing the board at 1/d size;
+        // a last "∞" button fits the whole board to the canvas (never above 1x).
+        ZOOM_DIVISORS: [1, 2],
+        MIN_TEXT_PX: 8,              // on-map text that would draw smaller than this is skipped
         // New Game menu note per GameArtifacts.MAP_SIZES key.
         MAP_SIZE_NOTES: {
             small:  'fits the screen',

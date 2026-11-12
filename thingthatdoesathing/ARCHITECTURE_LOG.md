@@ -2,6 +2,23 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-12 — Map scale: 1, 2, ∞; fit above the hand (D-40)
+After a look in the browser: 1/4 came out smaller than the fit, so the `4` button is gone
+(`ZOOM_DIVISORS` [1, 2]). ∞ now fits the board between the window top and the top of the hand
+(`aboveHand()`, the hand's measured top), or across the canvas, whichever is tighter, and
+centers it in that space. The hand sits flush on the bottom edge (`bottom: 0`, was 14px).
+
+### 2026-11-12 — Map scale buttons (D-40)
+The board always drew at `HEX_SIZE` with a screen-space pan. Now a "Map 1 2 4 ∞" row under the
+HUD sets a view `scale` (1, 1/2, 1/4, or a fit computed once on the press, capped at 1x).
+`render()` draws in world px under one canvas transform, so the drawing helpers take world
+positions (`hexToWorld`) and only `hexToScreen`/`screenToHex` (and the color picker's offset)
+deal in screen px. On-map text under `MIN_TEXT_PX` is skipped. Zooming keeps the canvas center
+fixed (∞ centers the board); `clampPan()` keeps the canvas center on the board during drags
+and zooms. New games open at 1x; resizes don't touch the scale. `ZOOM_DIVISORS` and
+`MIN_TEXT_PX` are in `displayartifacts.js`. `uiboot.js` covers the buttons, round-trips,
+a 1/4 click, the 60×60 fit and the reset; U-27 is the look (pjpd map-zoom-8cwk).
+
 ### 2026-11-12 — Loop decisions reviewed and accepted (D-24, D-27 … D-37)
 The designer reviewed the loop decisions logged before the lockstep work and accepted them all:
 the D-24 first-vs-last addendum (keep Pushers/Pullers first; the "revisit if merges stall" line

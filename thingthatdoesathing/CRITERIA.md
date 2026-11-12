@@ -113,6 +113,7 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | U-24 | The intro is the story and the board sizes; the first game then opens on the keys legend, which closes on a click or any key (that key does nothing else). The Help button shows the same legend any time and holds play (Go included) until it closes | manual — open the page, pick a size, read the keys; press Go, then Help |
 | U-25 | Clicking a yellow hex with a Pusher or Puller picked (two or more colors open) places nothing yet: a small square of swatches, one per open color numbered `1`…, opens beside the hex with the white ghost on it; a swatch click or its number places it in that color and the tick plays; Esc, right-click or a click off the swatches closes it with the card still picked; Go holds while it's open | manual — reach 10 on a medium board, draw a Pusher, try a swatch, a number, and each cancel |
 | U-26 | A big crate is drawn as its color's isometric box, `BIG_CRATE_SCALE` times a crate's size; hovering it names it "Big crate — worth 10"; its delivery moves the progress bar by 10 | manual — play past the second milestone and watch a big crate in |
+| U-27 | The Map buttons `1` `2` `∞` (a row under the HUD, the active one lit) show the board at full and half size, or all of it above the hand (none of it hidden under the cards); at every scale the art is the same pictures scaled (text too small to read is gone), hovering, placing, selecting, the color picker, the tick animation and the milestone banner all still line up; zooming keeps the middle of the screen in place and dragging can't lose the board; a new game opens at `1`; the buttons don't overlap the hand, tally or Go/Wait in a small window | manual — open huge, try each button, place a Thing at 1/2 and at ∞, drag hard, shrink the window |
 
 ---
 
@@ -129,7 +130,7 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 
 ## Status (2026-11-12)
 
-- **Manual only:** U-1…U-26, X-1.
+- **Manual only:** U-1…U-27, X-1.
 - **Retired:** R-17 (Spinner), R-20 (final win).
 - **Not yet covered:** X-2, X-3, X-4 (need playtests).
 - **Partial coverage:** R-18 checks that wandering gremlins land on land and never step into

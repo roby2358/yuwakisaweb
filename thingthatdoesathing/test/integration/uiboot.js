@@ -4,7 +4,7 @@
 // and requestAnimationFrame, then drives the UI through clicks and keys: pick a board size
 // from the intro, pick each card, turn the ghost, place, select and rotate, remove the selected Thing with D, wait, run tick animations to completion,
 // play to the first milestone (checking that no two pieces are ever drawn on one hex at a hop,
-// D-38), and drive the color picker (D-32). Catches runtime errors in rendering and input wiring without a
+// D-38), drive the color picker (D-32), and the map-scale buttons (D-40). Catches runtime errors in rendering and input wiring without a
 // browser. It can't judge how anything looks; that stays manual (U-rows).
 'use strict';
 
@@ -27,7 +27,7 @@ function fakeCtx() {
 
 function fakeEl(tag) {
     const el = {
-        tagName: tag, children: [], style: {}, disabled: false, textContent: '', width: 0, height: 0,
+        tagName: tag, children: [], style: {}, dataset: {}, disabled: false, textContent: '', width: 0, height: 0,
         listeners: {},
         classList: { set: new Set(), toggle(c, on) { on ? this.set.add(c) : this.set.delete(c); }, add(c) { this.set.add(c); }, remove(c) { this.set.delete(c); } },
         addEventListener(type, fn) { (this.listeners[type] ||= []).push(fn); },
@@ -600,6 +600,78 @@ run('with two colors open, a Pusher asks for its color: pick, cancel three ways,
     advance(1000);
     if (s.turn === held + 1) throw new Error('Go did not resume after the pick');
     els.go.fire('click'); settle();
+});
+// Map scale (D-40): the 1 / 2 / 4 / ∞ buttons. One scale drives drawing and hit-testing, so
+// screenToHex(hexToScreen(h)) must round-trip and clicks must land on the hex under them.
+const zoomButton = label => els['zoom-buttons'].children.find(b => b.textContent === label);
+const litZoom = () => els['zoom-buttons'].children.filter(b => b.classList.set.has('active')).map(b => b.textContent).join();
+const roundTrips = () => [...ui.state.hexes.values()].every(h => {
+    const { x, y } = ui.hexToScreen(h.q, h.r);
+    const back = ui.screenToHex(x, y);
+    return back.q === h.q && back.r === h.r;
+});
+const centerOnBoard = () => {
+    const b = ui.boardBounds(), c = ui.centerWorld(ui.scale), eps = 1e-6;
+    return c.x >= b.minX - eps && c.x <= b.maxX + eps && c.y >= b.minY - eps && c.y <= b.maxY + eps;
+};
+run('the map-scale buttons set the scale, light up, keep the center, and round-trip hit-testing', () => {
+    els['new-game'].fire('click'); key('1');
+    if (els['zoom-buttons'].children.map(b => b.textContent).join() !== '1,2,∞') throw new Error('expected buttons 1, 2, ∞');
+    if (ui.scale !== 1 || litZoom() !== '1') throw new Error('a new game must open at 1x');
+    for (const [label, scale] of [['2', 0.5], ['1', 1]]) {
+        const before = ui.centerWorld(ui.scale);
+        zoomButton(label).fire('click');
+        if (ui.scale !== scale || litZoom() !== label) throw new Error(`button ${label}: scale ${ui.scale}, lit ${litZoom()}`);
+        const after = ui.centerWorld(ui.scale);
+        if (Math.abs(after.x - before.x) > 1e-6 || Math.abs(after.y - before.y) > 1e-6) throw new Error(`button ${label} moved the center`);
+        if (!roundTrips()) throw new Error('screenToHex(hexToScreen(h)) failed at ' + label);
+    }
+    zoomButton('∞').fire('click');
+    if (!(ui.scale > 0 && ui.scale <= 1) || litZoom() !== '∞' || !roundTrips()) throw new Error('∞ on the small board: ' + ui.scale);
+    if (!ui.readable(11) || !ui.readable(16)) throw new Error('at 1x the port labels must show');
+    zoomButton('2').fire('click');
+    if (ui.readable(11) || !ui.readable(16)) throw new Error('at 1/2 the IN label hides, the ★ stays');
+});
+run('at 1/2 a click selects and places on the right hex, a tick animates, and a drag cannot lose the board', () => {
+    const s = ui.state, e = ui.engine;
+    if (ui.scale !== 0.5) throw new Error('expected 1/2');
+    const bare = [...s.hexes.values()].find(h => !e.thingAt(h.q, h.r));
+    clickHex(bare.q, bare.r);
+    if (!ui.selected || ui.selected.q !== bare.q || ui.selected.r !== bare.r) throw new Error('the click did not select its hex');
+    key('Escape');
+    s.hand[0] = { kind: 'BELT' };
+    key('1');
+    const [q, r] = [...ui.picked.legal].find(k => !e.thingAt(...k.split(',').map(Number))).split(',').map(Number);
+    const turn = s.turn;
+    clickHex(q, r);
+    if (!e.thingAt(q, r) || e.thingAt(q, r).kind !== 'BELT' || s.turn !== turn + 1) throw new Error('the Belt did not land on the clicked hex');
+    settle();
+    if (ui.anim) throw new Error('the tick animation never finished at 1/2');
+    canvas.fire('mousedown', { button: 0, clientX: 640, clientY: 360 });
+    canvas.fire('mousemove', { clientX: 640 + 9000, clientY: 360 - 9000 });
+    windowListeners.mouseup.forEach(fn => fn({ button: 0, clientX: 640 + 9000, clientY: 360 - 9000, preventDefault() {} }));
+    if (!centerOnBoard()) throw new Error('a drag pushed the board off the screen');
+});
+run('∞ fits a 60×60 board above the hand; a new game opens at 1x', () => {
+    const sizes = vm.runInContext('GameArtifacts.MAP_SIZES', ctx);
+    const huge = Object.keys(sizes).find(k => sizes[k].cols === 60 && sizes[k].rows === 60);
+    els['new-game'].fire('click'); els['new-sizes'].children[Object.keys(sizes).indexOf(huge)].fire('click');
+    if (ui.state.size !== huge || ui.scale !== 1 || litZoom() !== '1') throw new Error('the huge board must open at 1x');
+    const handTop = canvas.height - 120;
+    els['hand'].getBoundingClientRect = () => ({ top: handTop });
+    zoomButton('∞').fire('click');
+    delete els['hand'].getBoundingClientRect;
+    const reach = vm.runInContext('GameDisplayArtifacts.HEX_SIZE', ctx) * ui.scale;
+    const off = [...ui.state.hexes.values()].find(h => {
+        const { x, y } = ui.hexToScreen(h.q, h.r);
+        return x - reach < -1e-6 || x + reach > canvas.width + 1e-6 || y - reach < -1e-6 || y + reach > handTop + 1e-6;
+    });
+    if (off || ui.scale >= 1 || litZoom() !== '∞') throw new Error('∞ left a hex off the canvas or under the hand: ' + JSON.stringify(off) + ' at ' + ui.scale);
+    if (!roundTrips()) throw new Error('round-trip failed at the fit scale');
+    key(' '); settle();
+    if (ui.anim) throw new Error('the tick animation never finished at the fit scale');
+    els['new-game'].fire('click'); key('1');
+    if (ui.scale !== 1 || litZoom() !== '1') throw new Error('a new game must reset to 1x');
 });
 run('New Game asks for a size, then resets', () => {
     key(' '); settle();

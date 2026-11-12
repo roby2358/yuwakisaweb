@@ -11,7 +11,7 @@ const GameUI = (function () {
     const {
         HEX_SIZE, COUNTER_SIZE, HOP_MS, RUN_GAP_MS, MILESTONE_MS, TERRAIN_COLORS, TERRAIN_NAMES, THING_LOOK,
         PIECE_LOOK, CRATE_SHADES, BIG_CRATE_SCALE, COLOR_INK, SPLAT_BLOTS, SOURCE_COLOR, BG_COLOR, UI_FONT, REACH_COLOR, MAP_SIZE_NOTES,
-        COLOR_PICKER_PX
+        COLOR_PICKER_PX, ZOOM_DIVISORS, MIN_TEXT_PX
     } = GameDisplayArtifacts;
     const { TERRAIN, THINGS, WHITE, HAND_SIZE, MAP_SIZES, aims, nextMilestone } = GameArtifacts;
     const SIZE_KEYS = Object.keys(MAP_SIZES);
@@ -42,6 +42,19 @@ const GameUI = (function () {
     };
 
     const DRAG_THRESHOLD = 4;
+
+    // The map-scale buttons (D-40), in order: one per ZOOM_DIVISORS entry (1/d size, keeping the
+    // point at the canvas center where it is), then ∞, which fits the whole board once, when
+    // pressed, and centers it. `scale` picks the view scale; `place` re-aims the pan for it.
+    const ZOOMS = [
+        ...ZOOM_DIVISORS.map(d => ({
+            label: String(d),
+            title: d === 1 ? 'The map at full size' : `The map at 1/${d} size`,
+            scale: () => 1 / d,
+            place: (ui, old) => ui.keepCenter(old),
+        })),
+        { label: '∞', title: 'The whole board on screen', scale: ui => ui.fitScale(), place: ui => ui.centerBoard() },
+    ];
 
     // How each kind of piece is drawn. `p` is a live Piece or the animation's pre-tick
     // snapshot of one.
@@ -242,6 +255,8 @@ const GameUI = (function () {
 
             this.panX = 0;
             this.panY = 0;
+            this.scale = 1;          // view scale (D-40): screen px per world px; the engine never sees it
+            this.zoom = ZOOMS[0].label;   // the map-scale button last pressed (lit)
             this.panning = false;
             this.dragCandidate = false;
             this.panStartX = 0;
@@ -286,6 +301,9 @@ const GameUI = (function () {
             this.anim = null;
             this.hoveredHex = null;
             this.setRunning(false);
+            this.scale = 1;          // every new game starts at full size (D-40)
+            this.zoom = ZOOMS[0].label;
+            this.markZoom();
             document.getElementById('milestone').classList.add('hidden');
             this.dismissOverlay();
             this.sound.fanfare();
@@ -307,30 +325,126 @@ const GameUI = (function () {
             this.render();
         }
 
-        // Center the whole map when it fits the window, nudged down a little to clear the
-        // HUD; a bigger map centers on the source instead, and you drag to pan.
+        // Center the whole map when it fits the window at the current scale, nudged down a
+        // little to clear the HUD; a bigger map centers on the source instead, and you drag to pan.
         centerMap() {
-            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-            for (const [, h] of this.state.hexes) {
-                const p = new Hex(h.q, h.r).toPixel();
-                minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
-                minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
-            }
-            const fits = maxX - minX + 2 * HEX_SIZE <= this.canvas.width && maxY - minY + 2 * HEX_SIZE <= this.canvas.height;
-            const src = new Hex(this.state.sources[0].q, this.state.sources[0].r).toPixel();
-            const cx = fits ? (minX + maxX) / 2 : src.x;
-            const cy = fits ? (minY + maxY) / 2 : src.y;
-            this.panX = this.canvas.width / 2 - cx;
-            this.panY = this.canvas.height / 2 - cy + 10;
+            const b = this.boardBounds();
+            const fits = b.width * this.scale <= this.canvas.width && b.height * this.scale <= this.canvas.height;
+            const src = this.hexToWorld(this.state.sources[0].q, this.state.sources[0].r);
+            this.aimAt(fits ? b.cx : src.x, fits ? b.cy : src.y);
+            this.panY += 10;
+            this.clampPan();
+        }
+
+        // ---- L1.3 View: world px (Hex.toPixel at HEX_SIZE) → screen px is `world * scale + pan` (D-40) ----
+        hexToWorld(q, r) {
+            return new Hex(q, r).toPixel();
         }
 
         hexToScreen(q, r) {
-            const p = new Hex(q, r).toPixel();
-            return { x: p.x + this.panX, y: p.y + this.panY };
+            const p = this.hexToWorld(q, r);
+            return { x: p.x * this.scale + this.panX, y: p.y * this.scale + this.panY };
         }
 
         screenToHex(sx, sy) {
-            return Hex.fromPixel(sx - this.panX, sy - this.panY);
+            return Hex.fromPixel((sx - this.panX) / this.scale, (sy - this.panY) / this.scale);
+        }
+
+        // The board in world px: its hex centers' box (min/max, center) and its full extent
+        // (a hex reaches at most HEX_SIZE past its center).
+        boardBounds() {
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            for (const [, h] of this.state.hexes) {
+                const p = this.hexToWorld(h.q, h.r);
+                minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+                minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+            }
+            return { minX, maxX, minY, maxY, cx: (minX + maxX) / 2, cy: (minY + maxY) / 2,
+                width: maxX - minX + 2 * HEX_SIZE, height: maxY - minY + 2 * HEX_SIZE };
+        }
+
+        // Pan so world point (wx, wy) sits at the canvas center.
+        aimAt(wx, wy) {
+            this.panX = this.canvas.width / 2 - wx * this.scale;
+            this.panY = this.canvas.height / 2 - wy * this.scale;
+        }
+
+        // The world point at the canvas center, at view scale `scale`.
+        centerWorld(scale) {
+            return { x: (this.canvas.width / 2 - this.panX) / scale, y: (this.canvas.height / 2 - this.panY) / scale };
+        }
+
+        // The board can't leave the screen: the canvas center stays inside its hex-center box.
+        clampPan() {
+            if (!this.state.hexes) return;
+            const b = this.boardBounds(), c = this.centerWorld(this.scale);
+            const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+            this.aimAt(clamp(c.x, b.minX, b.maxX), clamp(c.y, b.minY, b.maxY));
+        }
+
+        // ---- Map scale (D-40): buttons only; no keys (1–3 pick cards) and no wheel (it turns the ghost) ----
+        setZoom(label) {
+            if (!this.state.hexes) return;
+            const z = ZOOMS.find(z => z.label === label);
+            const old = this.scale;
+            this.scale = z.scale(this);
+            this.zoom = label;
+            z.place(this, old);
+            this.clampPan();
+            this.markZoom();
+            this.render();
+        }
+
+        // Re-aim after a scale change so the point at the canvas center stays put.
+        keepCenter(oldScale) {
+            const c = this.centerWorld(oldScale);
+            this.aimAt(c.x, c.y);
+        }
+
+        // ∞ centers the board in the space above the hand (D-40).
+        centerBoard() {
+            const b = this.boardBounds();
+            this.panX = this.canvas.width / 2 - b.cx * this.scale;
+            this.panY = this.aboveHand() / 2 - b.cy * this.scale;
+        }
+
+        // ∞: the largest scale, never above 1x, at which the whole board fits between the top
+        // of the window and the top of the hand, and across the canvas, whichever is tighter.
+        // Computed once, on the press; a later window resize doesn't redo it.
+        fitScale() {
+            const b = this.boardBounds();
+            return Math.min(1, this.canvas.width / b.width, this.aboveHand() / b.height);
+        }
+
+        // Screen px from the top of the canvas to the top of the hand panel (the whole canvas if
+        // the hand can't be measured).
+        aboveHand() {
+            const hand = document.getElementById('hand');
+            const top = hand && hand.getBoundingClientRect ? hand.getBoundingClientRect().top : NaN;
+            return top > 0 ? Math.min(top, this.canvas.height) : this.canvas.height;
+        }
+
+        markZoom() {
+            for (const b of document.getElementById('zoom-buttons').children)
+                b.classList.toggle('active', b.dataset.zoom === this.zoom);
+        }
+
+        buildZoomButtons(el) {
+            for (const z of ZOOMS) {
+                const b = document.createElement('button');
+                b.className = 'btn zoom';
+                b.textContent = z.label;
+                b.title = z.title;
+                b.dataset.zoom = z.label;
+                b.addEventListener('click', () => this.setZoom(z.label));
+                el.appendChild(b);
+            }
+            this.markZoom();
+        }
+
+        // On-map text is drawn only when it would be at least MIN_TEXT_PX on screen.
+        readable(px) {
+            return px * this.scale >= MIN_TEXT_PX;
         }
 
         // ---- L1.2 Pick a card: the legal set is computed once; the click is a lookup ----
@@ -397,8 +511,9 @@ const GameUI = (function () {
                 box.appendChild(b);
             });
             const { x, y } = this.hexToScreen(q, r);
-            box.style.left = Math.min(x + HEX_SIZE, window.innerWidth - COLOR_PICKER_PX - 8) + 'px';
-            box.style.top = Math.max(8, y - HEX_SIZE - COLOR_PICKER_PX) + 'px';
+            const reach = HEX_SIZE * this.scale;   // the hex's radius on screen
+            box.style.left = Math.min(x + reach, window.innerWidth - COLOR_PICKER_PX - 8) + 'px';
+            box.style.top = Math.max(8, y - reach - COLOR_PICKER_PX) + 'px';
             this.showOverlay('color');
             this.render();
         }
@@ -578,7 +693,7 @@ const GameUI = (function () {
             this.scheduleRun();
         }
 
-        // Where a tracked piece is drawn at time `now`, and how opaque.
+        // Where a tracked piece is drawn at time `now` (world px, D-40), and how opaque.
         trackPose(t, now) {
             // Never before hop 0, even if `now` came from a clock that precedes t0.
             const k = Math.max(0, (now - this.anim.t0) / HOP_MS);
@@ -586,10 +701,10 @@ const GameUI = (function () {
             if (k >= last) {
                 // Arrived; a sinking or delivered piece fades over one more hop.
                 const fade = t.end ? Math.max(0, 1 - (k - last)) : 1;
-                return { ...this.hexToScreen(t.pts[last].q, t.pts[last].r), alpha: fade, scale: t.end ? 0.6 + 0.4 * fade : 1 };
+                return { ...this.hexToWorld(t.pts[last].q, t.pts[last].r), alpha: fade, scale: t.end ? 0.6 + 0.4 * fade : 1 };
             }
             const i = Math.floor(k), f = k - i;
-            const a = this.hexToScreen(t.pts[i].q, t.pts[i].r), b = this.hexToScreen(t.pts[i + 1].q, t.pts[i + 1].r);
+            const a = this.hexToWorld(t.pts[i].q, t.pts[i].r), b = this.hexToWorld(t.pts[i + 1].q, t.pts[i + 1].r);
             return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, alpha: 1, scale: 1 };
         }
 
@@ -684,8 +799,13 @@ const GameUI = (function () {
             ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
             if (!s.hexes) return;
 
+            // Everything on the board draws in world px under one view transform (D-40), so the
+            // art, line widths and fonts all scale together; only text checks `readable`.
+            ctx.save();
+            ctx.setTransform(this.scale, 0, 0, this.scale, this.panX, this.panY);
+
             for (const [, hex] of s.hexes) {
-                const { x, y } = this.hexToScreen(hex.q, hex.r);
+                const { x, y } = this.hexToWorld(hex.q, hex.r);
                 drawHexPath(ctx, x, y, HEX_SIZE);
                 ctx.fillStyle = TERRAIN_COLORS[hex.terrain] || '#555';
                 ctx.fill();
@@ -703,7 +823,7 @@ const GameUI = (function () {
             const doomed = this.replaceTarget(this.ghostHex());
             for (const t of s.things) {
                 if (t === doomed) continue;
-                const { x, y } = this.hexToScreen(t.q, t.r);
+                const { x, y } = this.hexToWorld(t.q, t.r);
                 drawThing(ctx, x, y, HEX_SIZE, t.kind, t.color, t.facing, 1);
             }
 
@@ -712,7 +832,7 @@ const GameUI = (function () {
             if (this.picked) {
                 for (const key of this.picked.legal) {
                     const { q, r } = Hex.fromKey(key);
-                    const { x, y } = this.hexToScreen(q, r);
+                    const { x, y } = this.hexToWorld(q, r);
                     drawHexPath(ctx, x, y, HEX_SIZE);
                     ctx.fillStyle = `rgba(${REACH_COLOR}, 0.28)`;
                     ctx.fill();
@@ -727,14 +847,14 @@ const GameUI = (function () {
                 }
                 const h = this.ghostHex();
                 if (h && this.picked.legal.has(Hex.key(h.q, h.r))) {
-                    const { x, y } = this.hexToScreen(h.q, h.r);
+                    const { x, y } = this.hexToWorld(h.q, h.r);
                     drawThing(ctx, x, y, HEX_SIZE, s.hand[this.picked.slot].kind, WHITE, this.facing, 0.7);
                 }
             } else if (this.hoveredHex && !this.anim) {
                 // A bare hover over a mover: outline it — clicking turns it.
                 const t = this.engine.thingAt(this.hoveredHex.q, this.hoveredHex.r);
                 if (t && aims(t.kind)) {
-                    const { x, y } = this.hexToScreen(t.q, t.r);
+                    const { x, y } = this.hexToWorld(t.q, t.r);
                     drawHexPath(ctx, x, y, HEX_SIZE - 2);
                     ctx.strokeStyle = '#fff';
                     ctx.lineWidth = 2;
@@ -744,6 +864,7 @@ const GameUI = (function () {
 
             this.drawPieces(now);
             if (this.selected) this.drawSelected(this.selected);
+            ctx.restore();
             this.updateHUD();
         }
 
@@ -761,7 +882,7 @@ const GameUI = (function () {
         // The selected hex: a bright outline, and over a mover a white arrow along its facing.
         drawSelected({ q, r }) {
             const ctx = this.ctx;
-            const { x, y } = this.hexToScreen(q, r);
+            const { x, y } = this.hexToWorld(q, r);
             drawHexPath(ctx, x, y, HEX_SIZE - 1.5);
             ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
             ctx.fill();
@@ -795,7 +916,7 @@ const GameUI = (function () {
             const a = this.anim;
             if (!a) {
                 for (const p of this.state.pieces) {
-                    const { x, y } = this.hexToScreen(p.q, p.r);
+                    const { x, y } = this.hexToWorld(p.q, p.r);
                     this.drawPiece(x, y, p, 1, 1);
                 }
                 return;
@@ -809,7 +930,7 @@ const GameUI = (function () {
             }
             for (const p of this.state.pieces) {
                 if (a.tracks.has(p.id) || a.hidden.has(p.id)) continue;
-                const { x, y } = this.hexToScreen(p.q, p.r);
+                const { x, y } = this.hexToWorld(p.q, p.r);
                 this.drawPiece(x, y, p, 1, 1);
             }
         }
@@ -845,7 +966,7 @@ const GameUI = (function () {
         drawTarget(t) {
             this.drawPort(t, CRATE_SHADES[t.color].left, '★');
             const ctx = this.ctx;
-            const { x, y } = this.hexToScreen(t.q, t.r);
+            const { x, y } = this.hexToWorld(t.q, t.r);
             drawHexPath(ctx, x, y, HEX_SIZE - 5);
             ctx.strokeStyle = '#000';
             ctx.lineWidth = 2;
@@ -856,7 +977,7 @@ const GameUI = (function () {
         drawSource(src) {
             this.drawPort(src, SOURCE_COLOR, 'IN');
             const ctx = this.ctx;
-            const { x, y } = this.hexToScreen(src.q, src.r);
+            const { x, y } = this.hexToWorld(src.q, src.r);
             const gap = 9, y0 = y + HEX_SIZE * 0.62;
             src.colors.forEach((color, i) => {
                 ctx.beginPath();
@@ -868,7 +989,7 @@ const GameUI = (function () {
 
         drawPort(at, color, label) {
             const ctx = this.ctx;
-            const { x, y } = this.hexToScreen(at.q, at.r);
+            const { x, y } = this.hexToWorld(at.q, at.r);
             ctx.save();
             ctx.shadowColor = color;
             ctx.shadowBlur = 12;
@@ -877,8 +998,10 @@ const GameUI = (function () {
             ctx.lineWidth = 3;
             ctx.stroke();
             ctx.restore();
+            const px = label.length > 1 ? 11 : 16;
+            if (!this.readable(px)) return;
             ctx.fillStyle = color;
-            ctx.font = `bold ${label.length > 1 ? 11 : 16}px ${UI_FONT}`;
+            ctx.font = `bold ${px}px ${UI_FONT}`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(label, x, y - HEX_SIZE * 0.62);
@@ -977,11 +1100,14 @@ const GameUI = (function () {
             ctx.strokeStyle = '#000';
             ctx.lineWidth = 1;
             ctx.stroke();
-            ctx.fillStyle = this.contrastText(color);
-            ctx.font = `bold ${Math.floor(s * 0.55)}px ${UI_FONT}`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(label, cx, cy + 1);
+            const px = Math.floor(s * 0.55);
+            if (this.readable(px)) {
+                ctx.fillStyle = this.contrastText(color);
+                ctx.font = `bold ${px}px ${UI_FONT}`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(label, cx, cy + 1);
+            }
             ctx.restore();
         }
 
@@ -1083,6 +1209,7 @@ const GameUI = (function () {
             colorPanel.addEventListener('contextmenu', e => { e.preventDefault(); this.closeColorPicker(); });
             this.buildSizeButtons(document.getElementById('intro-sizes'));
             this.buildSizeButtons(document.getElementById('new-sizes'));
+            this.buildZoomButtons(document.getElementById('zoom-buttons'));
         }
 
         onMouseDown(e) {
@@ -1134,6 +1261,7 @@ const GameUI = (function () {
             if (this.panning) {
                 this.panX = this.panOrigX + (e.clientX - this.panStartX);
                 this.panY = this.panOrigY + (e.clientY - this.panStartY);
+                this.clampPan();
                 if (!this.anim) this.render();
                 return;
             }

@@ -1,23 +1,3 @@
-Priority:   50
-Status: ToDo
-ID: map-zoom-8cwk
-Created: 2026-11-12T08:49:28Z
-Updated: 2026-11-12T08:52:18Z
-
-Add four map-scale buttons labelled "1", "2", "4" and "∞" (infinity) that zoom the board view: 1 = full size (today's HEX_SIZE), 2 = half size, 4 = quarter size, ∞ = fit the whole board to the canvas (largest scale, capped at 1x, at which every hex is visible). Today there is no zoom at all — everything draws at the fixed HEX_SIZE (displayartifacts.js) with screen-space pan (panX/panY in hexToScreen/screenToHex); big boards (30x30, 60x60) need lots of panning.
-
-- UI only (gameui.js, index.html, index.css, displayartifacts.js for the scale list); the engine never sees the scale.
-- One view scale factor applied everywhere geometry is drawn or hit-tested: hex paths, Things, crates/big crates, gremlin counters, ghost, selection outline, facing arrows, reach overlays, splat blots, port/source/target marks, and screenToHex. Keep the color picker overlay positioning right (it uses HEX_SIZE offsets).
-- Tiny text is hidden (user's call): any on-map text/label that would draw below a readable size (pick a min px constant in displayartifacts.js) is skipped. No other simplified renderings in this task — just scale the existing art; simplified level-of-detail drawing is a separate idea for later, after playtest. Keep the draw code easy to give a detail switch later, but don't build one.
-- Zooming keeps the point at the canvas center fixed (re-center pan) and clamps pan so the board can't be dragged entirely off-screen.
-- Fit (∞) computes the scale ONCE, at the moment the button is pressed, from the current canvas size. Window resizes are ignored entirely — no resize handling for any mode (user's call). After a fit, the result is just a scale like any other.
-- Every new game starts at 1x (user's call). The active button is highlighted.
-- Buttons only, no number-key shortcuts: keys 1–3 already pick cards. Mouse wheel already turns the ghost, so don't bind wheel to zoom.
-- Place the buttons with the other HUD controls; they must not overlap the hand, tally or Go/Wait buttons at small window sizes.
-- Animations (hop tracks) and the milestone banner keep working at every scale.
-
-Docs: README (controls), CLAUDE.md input section, UI_CONTROLS references if relevant, RATIONALE new D-n, ARCHITECTURE_LOG, CRITERIA U-row (manual check of look at each scale). Tests: extend test/integration/uiboot.js — clicking each scale button changes the scale and screenToHex(hexToScreen(h)) round-trips at every scale; a click on a hex at 1/4 scale still places/selects the right hex; ∞ on a 60x60 board makes the whole board fit the canvas; a new game resets to 1x. `just cc-test` green.
-----
 Priority:   35
 Status: ToDo
 ID: pjpd-review-sgyf

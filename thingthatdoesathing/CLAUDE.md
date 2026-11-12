@@ -44,7 +44,7 @@ headless; `GameUI` is the only browser-coupled code.
 | Module | Global | Role |
 |---|---|---|
 | `artifacts.js` | `GameArtifacts` | Rules data: `MAP_SIZES`, `TERRAIN`, `THINGS` (the Thing templates: `push`, `pull`, `shove`, `splat`, `flies`, `overMountains`, `clears`, `blocks`, `traps`, `colored`, `slides`, `on`, `weight`), `WHITE`, `UNLOCKS` (the card-unlock order, one step per milestone), `PIECES` (the piece templates `crate`, `bigcrate`, `gremlin`: `label`, `cargo`, `value`, `wanders`, `splats`, `reemerges`), `aims(kind)`, `MOVEMENT_COST`, and every tunable number. |
-| `displayartifacts.js` | `GameDisplayArtifacts` | Client-only: `HEX_SIZE`, `COUNTER_SIZE`, `HOP_MS`, terrain colors/names, `THING_LOOK` (name, verb line, colors, inset), `PIECE_LOOK` (hover name), `BIG_CRATE_SCALE`, `CRATE_SHADES`, `COLOR_PICKER_PX`, `MAP_SIZE_NOTES` (size-picker notes), port colors. |
+| `displayartifacts.js` | `GameDisplayArtifacts` | Client-only: `HEX_SIZE`, `COUNTER_SIZE`, `HOP_MS`, `ZOOM_DIVISORS`, `MIN_TEXT_PX`, terrain colors/names, `THING_LOOK` (name, verb line, colors, inset), `PIECE_LOOK` (hover name), `BIG_CRATE_SCALE`, `CRATE_SHADES`, `COLOR_PICKER_PX`, `MAP_SIZE_NOTES` (size-picker notes), port colors. |
 | `piece.js` | `Piece` | A positioned token. Crates and gremlins are `Piece`s with engine-set `id` and `kind`. |
 | `board.js` | `Board` | Query layer over the hex `Map` (passable = land). |
 | `gamestate.js` | `GameState` | Serializable data: `sources` (`{q, r, colors}`), `targets` (`{q, r, color, delivered}`), `pieces`, `things` (`{kind, color, q, r, facing}`), `hand` (`{kind}` cards), `unlocks` (how many `UNLOCKS` steps are open), `turn`, `delivered`, `lost`, `exGremlins`, `trapped`, `idleTicks`, `spawnTimer`, `nextId`, `phase`, `size`. |
@@ -73,6 +73,7 @@ tick animation) → `picked` card → bare map click.
   overlay). The `color` overlay is the Pusher/Puller color picker (D-32): a click on a legal hex whose card has more than one `colorChoices` opens swatches beside it; a swatch or `1`–`4` places, Esc / right-click / a click off backs out with the card still picked. The `help` overlay is the keys legend: shown once after the intro's size pick, and by
   the Help button; it closes on a click or any key and holds Go while open. The milestone
   banner (which also names the cards that milestone unlocked) is not an overlay; it never blocks input.
+- **Map scale (D-40):** the `1` `2` `∞` buttons (`#zoom`, built from `ZOOM_DIVISORS`) set `scale`; `render()` draws in world px under one `setTransform(scale, …, panX, panY)`, `hexToScreen`/`screenToHex` apply the same scale, and on-map text below `MIN_TEXT_PX` is skipped (`readable`). `1`/`2` keep the canvas center fixed; `∞` fits the board once (capped at 1x) between the window top and the hand's top, or across, whichever is tighter, and centers it there; `clampPan()` keeps the canvas center on the board. No keys or wheel; resizes don't change the scale; `startGame` resets to 1x.
 - **Go/Pause** (`running`): after each animation, `wait()` again `RUN_GAP_MS` later; holds
   while a card is picked or a hex is selected (both work mid-animation).
 - Every command goes through `commit()`, which snapshots piece positions, calls the engine,

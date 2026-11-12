@@ -66,6 +66,16 @@ html, body {
     color: var(--text-dim);
 }
 #hover-info { font-variant-numeric: tabular-nums; }
+/* Map scale (D-40): a third row under the HUD, buttons 1 / 2 / 4 / ∞, the active one lit. */
+#zoom {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px 5px 12px;
+}
+.zoom-label { color: var(--text-dim); font-size: 13px; }
+.btn.zoom { min-width: 30px; padding: 3px 8px; font-variant-numeric: tabular-nums; }
+.btn.zoom.active { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 600; }
 
 /* The tally, top right: the delivered meter (fills toward the next milestone), per-color
    counts once a second color opens, gremlins done in, and crates lost. */
@@ -150,10 +160,11 @@ html, body {
 .btn.go:hover { background: #45d872; }
 .btn.go.running { background: #1d8a40; color: #e8ffe9; }
 .btn.go.running:hover { background: #24a04b; }
-/* Narrow screens: the HUD reaches the middle, so Go drops below its two rows. */
+/* Narrow screens: the HUD reaches the middle, so Go drops below its rows (the HUD line and
+   the map-scale row, D-40). */
 @media (max-width: 1000px) {
-    #run { top: 96px; }
-    #milestone { top: 150px; }
+    #run { top: 108px; }
+    #milestone { top: 162px; }
 }
 
 /* Milestone banner: shows for a moment and doesn't stop play. */
@@ -289,7 +300,7 @@ kbd {
 /* The hand: three cards along the bottom, then the Discard spot. */
 #hand {
     position: fixed;
-    bottom: 14px;
+    bottom: 0;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
