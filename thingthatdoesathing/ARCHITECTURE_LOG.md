@@ -2,6 +2,18 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-12 — The milestone banner names the cards it unlocked
+The designer asked for the milestone report to show unlocked cards. Before, the banner showed
+only the milestone (the last `milestone` event of the tick) and any `unlock` opened the news
+panel, which held play. Now `gameui.js` collects every `milestone` count of the tick:
+`showMilestone(counts, kinds)` titles the banner for the last one, adds "passed A and B" when
+several were crossed, and fills a new `#milestone-cards` row with a small picture and name per
+unlocked card. `showNews` runs only when a color opened (still listing that tick's cards), so
+a cards-only milestone no longer stops play. A shared `cardPicture(kind, px)` draws the card
+canvas for both. No engine change. D-30 gained an unreviewed addendum (6); U-11, U-23,
+ONTOLOGY's Milestones note and README updated; `uiboot.js` now checks the banner for the
+Slide at the first milestone and a two-milestone banner.
+
 ### 2026-11-12 — A bump advances the line 2, and the bumper follows; flights bump too
 The 2026-11-11 bump stopped the bumper dead and pushed the bumped piece one hex and on along
 the ice (a recursive `push` with `BUMP`, so bumps chained), and a flight stopped by a piece

@@ -68,11 +68,11 @@ tick animation) → `picked` card → bare map click.
 - **L2.1 primary action:** Wait button → `engine.wait()`. Enter toggles Go (`toggleRun()`), like the Go button. Space is `oneTick()`: a Wait when Go is off; when Go runs it turns Go off, and the tick in flight finishes.
 - **L2.2:** Esc and right-click put the card back.
 - **L5:** the intro and New Game overlays are both board-size pickers (click or `1`–`4`); they
-  consume all other input, and Esc closes New Game only. A milestone that opens a color or unlocks cards shows
+  consume all other input, and Esc closes New Game only. A milestone that opens a color shows
   the `news` overlay, which closes on a click or any key (`OVERLAY_KEYS` dispatches keys per
   overlay). The `color` overlay is the Pusher/Puller color picker (D-32): a click on a legal hex whose card has more than one `colorChoices` opens swatches beside it; a swatch or `1`–`4` places, Esc / right-click / a click off backs out with the card still picked. The `help` overlay is the keys legend: shown once after the intro's size pick, and by
   the Help button; it closes on a click or any key and holds Go while open. The milestone
-  banner is not an overlay; it never blocks input.
+  banner (which also names the cards that milestone unlocked) is not an overlay; it never blocks input.
 - **Go/Pause** (`running`): after each animation, `wait()` again `RUN_GAP_MS` later; holds
   while a card is picked or a hex is selected (both work mid-animation).
 - Every command goes through `commit()`, which snapshots piece positions, calls the engine,

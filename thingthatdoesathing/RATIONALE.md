@@ -411,8 +411,22 @@ ARCHITECTURE_LOG.md.
   news panel (overlay `news`): a swatch per color, a card picture per kind, and each kind's
   verb line; it holds play until a click or any key, like the color panel did. A small
   board's first milestone now opens it (for the Slide). (5) Past the last step (a small board
-  at 50, a bigger one at 100) milestones unlock nothing.
-- **Evidence:** R-49, R-27, R-6, R-26; U-23 (manual). `Measured by: just cc-sim 200 small` →
+  at 50, a bigger one at 100) milestones unlock nothing. (6) *(unreviewed, 2026-11-12)* The
+  designer asked for the milestone report to show the cards it unlocked, so the milestone
+  banner now carries a small picture and name per card, and a tick that crosses several
+  milestones (big crates, D-34) shows one banner for the last one ("passed 50 and 100")
+  naming every card unlocked. The news panel now opens only when a color opens; it still
+  lists that tick's cards with their verb lines, since play has stopped anyway and the verb
+  line teaches the card. A cards-only milestone (every small-board milestone, and the later
+  ones on bigger boards) no longer stops play: the banner already says it, and the card's
+  verb line is on its hover and in the hand. Alternatives: keep the panel for cards too
+  (two reports of one fact, and Go stops for news the banner already gave); drop cards from
+  the panel even with a color (the color panel would then hide the only place the verb
+  lines appear at unlock time). This partly reverses (4)'s "a small board's first milestone
+  now opens it".
+- **Evidence:** R-49, R-27, R-6, R-26; U-11, U-23 (manual); `test/integration/uiboot.js`
+  checks the first-milestone banner names the Slide with no panel, and a two-milestone tick
+  names both cards on one banner. `Measured by: just cc-sim 200 small` →
   200/200, median 49 (was 51), p90 57 (was 62), 2.08 lost per game (was 2.61);
   `just cc-sim 50 medium` → 50/50, median 61 (was 63), p90 69 (was 77), 3.42 lost (was 4.26).
   The bot only measures the first milestone, where the deck is now Belt-heavy (6 of 10

@@ -319,11 +319,12 @@ run('a game plays through the UI to the first milestone banner', () => {
     if (s.delivered < goal) throw new Error('no milestone in 2000 commands: ' + JSON.stringify({ src: s.sources, tgt: s.targets, things: s.things, pieces: s.pieces.map(p => [p.kind, p.q, p.r]), d: s.delivered, turn: s.turn, hand: s.hand }));
     const banner = els.milestone.classList.set;
     if (banner.has('hidden') || els['milestone-title'].textContent !== 'IT DOES THE THING') throw new Error('no milestone banner');
-    // The small board's first milestone unlocks the Slide (R-49): the news panel names it.
-    if (ui.overlay !== 'news' || !els['news-title'].textContent.startsWith('New card'))
-        throw new Error('no new-card panel: ' + ui.overlay + ' ' + els['news-title'].textContent);
-    key('Escape');
-    if (ui.overlay) throw new Error('a key must close the new-card panel');
+    // The small board's first milestone unlocks the Slide (R-49): the banner names it, and with
+    // no color opened nothing stops play (D-30).
+    const cardNames = els['milestone-cards'].children.filter(c => c.className === 'mcard').map(c => c.children[1].textContent);
+    if (els['milestone-cards'].classList.set.has('hidden') || cardNames.join() !== 'Slide')
+        throw new Error('banner cards: ' + cardNames.join());
+    if (ui.overlay) throw new Error('a cards-only milestone must not open a panel: ' + ui.overlay);
     const turn = s.turn;
     key(' '); settle();
     if (s.turn !== turn + 1) throw new Error('play did not go on past the milestone');
@@ -452,11 +453,15 @@ run('a newly opened color or unlocked card shows a panel that holds Go until a c
     if (ui.overlay !== 'news' || els['news-title'].textContent !== 'Red crates!' || !/Pusher.*Puller/.test(els['news-sub'].textContent))
         throw new Error('color + cards panel: ' + els['news-title'].textContent + ' / ' + els['news-sub'].textContent);
     key('x');
-    ui.startAnim(new Map(), { events: [{ type: 'unlock', kinds: ['SLIDE'] }] });
+    // Two milestones crossed at once, cards only: one banner covers both and names every card.
+    ui.startAnim(new Map(), { events: [{ type: 'milestone', count: 50 }, { type: 'unlock', kinds: ['SPRING'] },
+        { type: 'milestone', count: 100 }, { type: 'unlock', kinds: ['ROCKET'] }] });
     settle();
-    if (ui.overlay !== 'news' || els['news-title'].textContent !== 'New card: Slide') throw new Error('card panel: ' + els['news-title'].textContent);
-    els['news-panel'].fire('click');
-    if (ui.overlay) throw new Error('a click must close the card panel');
+    if (ui.overlay) throw new Error('cards alone must not open the panel');
+    const named = els['milestone-cards'].children.filter(c => c.className === 'mcard').map(c => c.children[1].textContent);
+    if (els['milestone-title'].textContent !== '100 crates!' || !els['milestone-sub'].textContent.startsWith('passed 50 and 100')
+        || named.join() !== 'Spring,Rocket')
+        throw new Error('two-milestone banner: ' + els['milestone-title'].textContent + ' / ' + els['milestone-sub'].textContent + ' / ' + named.join());
 });
 run('a Pusher with one color open places at once in that color, no picker', () => {
     els['new-game'].fire('click'); key('1');

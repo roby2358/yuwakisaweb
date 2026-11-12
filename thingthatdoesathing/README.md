@@ -31,7 +31,7 @@ for why it works and [ONTOLOGY.md](ONTOLOGY.md) for the rules.
 | Slide | ice you can build, on land or water: what comes onto it keeps sliding the same way (a Spring that lands on it skids on) |
 
 A new game deals only Belts, Bridges, Walls and Traps. Each milestone unlocks the next card
-and a panel shows it: Pushers and Pullers (with the second color; a 16 × 10 board skips
+and the milestone banner shows it: Pushers and Pullers (with the second color; a 16 × 10 board skips
 them), then the Slide, the Spring, and the Rocket last. Cards already in your hand stay.
 
 Pushers and Pullers always work in one crate color: a red one moves only red crates, and every

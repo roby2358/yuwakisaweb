@@ -406,8 +406,8 @@ milestones = FIRST_MILESTONE × (1, 2, 5) × 10^k for k = 0, 1, 2, …   # 10, 2
 nextMilestone(n) = the smallest milestone > n                        # there is no last one
 ```
 Reaching a milestone ends nothing: it may open a color (Open a color rule) and unlock cards
-(Unlock rule), the client shows a banner, and play goes on. An opened color or unlocked card
-also gets the news panel, which waits for a click or any key.
+(Unlock rule), the client shows a banner naming the cards it unlocked, and play goes on. An
+opened color also gets the news panel, which waits for a click or any key.
 
 ### Commands
 ```

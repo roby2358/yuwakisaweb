@@ -22,9 +22,16 @@ const GameUI = (function () {
         gremlin: p => p.color,
     };
     const END_CUES = ['deliver', 'splat', 'sink'];   // the one sound a tick's endings play, by priority
+    // A card's picture on a small canvas `px` square (the news panel and the milestone banner).
+    function cardPicture(kind, px) {
+        const c = document.createElement('canvas');
+        c.width = c.height = px;
+        drawThing(c.getContext('2d'), px / 2, px / 2, px * 5 / 12, kind, WHITE, aims(kind) ? 0 : null, 1);
+        return c;
+    }
     const OVERLAY_PANELS = { intro: 'intro-panel', size: 'size-panel', news: 'news-panel', help: 'help-panel', color: 'color-panel' };   // L5 overlay → its panel
     // L5: what a key does on each overlay. The size pickers take their number keys (and Esc
-    // when a game is behind); the news panel (new colors, new cards) and the keys legend close
+    // when a game is behind); the news panel (new colors) and the keys legend close
     // on any key; the color picker takes its swatch numbers and Esc.
     const OVERLAY_KEYS = {
         intro: (ui, e) => ui.sizeKey(e),
@@ -226,7 +233,7 @@ const GameUI = (function () {
             this.picked = null;      // L1.2 { slot, legal: Set<key> } — the card being placed
             this.choosing = null;    // L5 { q, r, colors } — the color picker's hex and swatches, while it's open (D-32)
             this.facing = 0;         // ghost facing; remembered between placements
-            this.overlay = null;     // L5 'intro' | 'size' (board-size pickers) | 'news' (a color opened or cards unlocked) | 'help' (the keys) | 'color' (the color picker, D-32) | null
+            this.overlay = null;     // L5 'intro' | 'size' (board-size pickers) | 'news' (a color opened) | 'help' (the keys) | 'color' (the color picker, D-32) | null
             this.hoveredHex = null;  // L1.3
             this.selected = null;    // {q, r} — a clicked hex: highlighted, holds Go; a second click turns its mover
             this.anim = null;        // { t0, dur, tracks: Map<id, track>, before, hidden: Set<id>, milestone, ends: Set<type> }
@@ -486,7 +493,8 @@ const GameUI = (function () {
         startAnim(before, res) {
             const tracks = new Map();
             const hidden = new Set();
-            let hops = 0, milestone = 0;
+            let hops = 0;
+            const milestones = [];
             const opened = [];
             const unlocked = [];
             const redrawn = [];
@@ -512,7 +520,7 @@ const GameUI = (function () {
                 } else if (e.type === 'spawn') {
                     hidden.add(e.id);
                 } else if (e.type === 'milestone') {
-                    milestone = e.count;
+                    milestones.push(e.count);
                 } else if (e.type === 'open') {
                     opened.push(e.color);
                 } else if (e.type === 'unlock') {
@@ -522,7 +530,7 @@ const GameUI = (function () {
                 }
             }
             this.anim = { t0: performance.now(), dur: Math.max(1, hops + (ends.size ? 1 : 0)) * HOP_MS,
-                tracks, before, hidden, milestone, opened, unlocked, redrawn, ends };
+                tracks, before, hidden, milestones, opened, unlocked, redrawn, ends };
             const frame = now => {
                 if (!this.anim) return;
                 if (now - this.anim.t0 >= this.anim.dur) { this.finishAnim(); return; }
@@ -545,8 +553,8 @@ const GameUI = (function () {
             this.anim = null;
             const cue = END_CUES.find(type => a.ends.has(type));
             if (cue) this.sound[cue]();
-            if (a.milestone) { this.sound.fanfare(); this.showMilestone(a.milestone); }
-            if (a.opened.length || a.unlocked.length) this.showNews(a.opened, a.unlocked);
+            if (a.milestones.length) { this.sound.fanfare(); this.showMilestone(a.milestones, a.unlocked); }
+            if (a.opened.length) this.showNews(a.opened, a.unlocked);
             this.render();
             a.redrawn.forEach(slot => this.flashCard(slot));
             this.scheduleRun();
@@ -567,21 +575,41 @@ const GameUI = (function () {
             return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, alpha: 1, scale: 1 };
         }
 
-        // A banner that doesn't stop play: the milestone reached and the next one.
-        showMilestone(count) {
-            const s = this.state, turns = s.turn - 1;
+        // A banner that doesn't stop play: the milestones this tick crossed (usually one; a big
+        // crate can cross several), the next one, and the cards they unlocked (D-30).
+        showMilestone(counts, kinds) {
+            const s = this.state, turns = s.turn - 1, count = counts[counts.length - 1];
             document.getElementById('milestone-title').textContent =
-                count === GameArtifacts.FIRST_MILESTONE ? 'IT DOES THE THING' : `${count} crates!`;
+                counts.includes(GameArtifacts.FIRST_MILESTONE) ? 'IT DOES THE THING' : `${count} crates!`;
+            const passed = counts.length > 1 ? `passed ${counts.join(' and ')} · ` : '';
             document.getElementById('milestone-sub').textContent =
-                `${count} crates in ${turns} turns · next: ${nextMilestone(count)}` + (s.lost ? ` · ${s.lost} lost at sea` : '');
+                `${passed}${count} crates in ${turns} turns · next: ${nextMilestone(count)}` + (s.lost ? ` · ${s.lost} lost at sea` : '');
+            const row = document.getElementById('milestone-cards');
+            row.innerHTML = '';
+            row.classList.toggle('hidden', !kinds.length);
+            if (kinds.length) {
+                const label = document.createElement('span');
+                label.textContent = kinds.length > 1 ? 'New cards:' : 'New card:';
+                row.appendChild(label);
+            }
+            for (const kind of kinds) {
+                const card = document.createElement('span');
+                card.className = 'mcard';
+                const name = document.createElement('span');
+                name.textContent = THING_LOOK[kind].name;
+                card.appendChild(cardPicture(kind, 28));
+                card.appendChild(name);
+                row.appendChild(card);
+            }
             const el = document.getElementById('milestone');
             el.classList.remove('hidden');
             clearTimeout(this.bannerTimer);
             this.bannerTimer = setTimeout(() => el.classList.add('hidden'), MILESTONE_MS);
         }
 
-        // New crate colors and newly unlocked cards stop play until the player has seen them:
-        // one panel for both, a swatch per color and a picture per card; click or any key goes on.
+        // A new crate color stops play until the player has seen it: a swatch per color, plus a
+        // picture and verb line per card the same milestone unlocked (cards alone only get the
+        // banner, D-30); click or any key goes on.
         showNews(colors, kinds) {
             const row = document.getElementById('news-swatches');
             row.innerHTML = '';
@@ -591,18 +619,10 @@ const GameUI = (function () {
                 sw.style.background = `linear-gradient(135deg, ${CRATE_SHADES[c].top}, ${CRATE_SHADES[c].left} 60%, ${CRATE_SHADES[c].right})`;
                 row.appendChild(sw);
             }
-            for (const kind of kinds) {
-                const c = document.createElement('canvas');
-                c.width = c.height = 48;
-                drawThing(c.getContext('2d'), 24, 24, 20, kind, WHITE, aims(kind) ? 0 : null, 1);
-                row.appendChild(c);
-            }
+            for (const kind of kinds) row.appendChild(cardPicture(kind, 48));
             const and = names => names.join(' and ');
-            const colorNames = colors.map(capitalized), cardNames = kinds.map(k => THING_LOOK[k].name);
-            document.getElementById('news-title').textContent = colors.length
-                ? `${and(colorNames)} crates!` : `New card${kinds.length > 1 ? 's' : ''}: ${and(cardNames)}`;
-            const lines = [];
-            if (colors.length) lines.push(`A new source now sends ${and(colors)} crates. Each color goes to its own target.`);
+            document.getElementById('news-title').textContent = `${and(colors.map(capitalized))} crates!`;
+            const lines = [`A new source now sends ${and(colors)} crates. Each color goes to its own target.`];
             if (kinds.length) lines.push(`Now in the deck: ${kinds.map(k => `${THING_LOOK[k].name} (${THING_LOOK[k].does})`).join('; ')}.`);
             document.getElementById('news-sub').textContent = lines.join(' ');
             this.showOverlay('news');

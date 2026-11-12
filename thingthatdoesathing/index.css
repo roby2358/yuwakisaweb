@@ -170,8 +170,10 @@ html, body {
 }
 #milestone-title { font-size: 26px; font-weight: 700; color: #ff6600; letter-spacing: 0.02em; }
 #milestone-sub { color: var(--text-dim); font-size: 13px; margin-top: 2px; }
+#milestone-cards { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; font-size: 14px; }
+#milestone-cards .mcard { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; }
 
-/* News panel (new colors, new cards) and the keys legend: dim the board and wait for a click or any key. */
+/* News panel (new colors, with any cards unlocked alongside) and the keys legend: dim the board and wait for a click or any key. */
 #news-panel, #help-panel {
     position: fixed;
     inset: 0;
