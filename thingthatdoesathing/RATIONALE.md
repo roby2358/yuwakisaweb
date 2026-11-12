@@ -419,16 +419,23 @@ ARCHITECTURE_LOG.md.
   weight, was 6 of 15): it never sees a Spring before then, but it gets more Belts, so it's a
   little faster. No numbers retuned. Unmeasured in play.
 
-### D-31 Crates spawn up to a cap that scales with board area and grows by one per milestone — *Decided (a cap scaled by area, a chance every third tick, +1 per milestone reached), Proposed (unreviewed: the rest)*
+### D-31 Crates spawn up to a cap that grows with the square root of board area and by one per milestone — *Decided (a cap growing with √area, settled 2026-11-12; a chance every third tick, +1 per milestone reached), Proposed (unreviewed: the rest)*
 - **Alternatives:** the fixed timer it replaced (`SOURCE_INTERVAL`: a crate every 3 ticks
   whenever the rolled source was clear, retried every tick while jammed); a cap per color or
-  per source; a cap with a fixed base plus a per-area term; storing a bonus counter in state.
+  per source; a cap with a fixed base plus a per-area term; storing a bonus counter in state;
+  a cap linear in area (the first version, below).
 - **Why:** the designer asked for it (pjpd crate-cap-hybj). Under the timer a stalled line kept
   pouring crates onto the board until every source jammed; a cap makes a big factory's crate
   population follow the board and the player's progress instead. The cap is
-  `crateCap(size)` = max(1, round(cols × rows / `CRATE_HEXES_PER_CAP`)), the same shape as
-  `gremlinDice`, plus `milestonesReached(delivered)`: one more per milestone (10, 20, 50, …),
-  so a tick that crosses several milestones (`reachMilestones`) raises it by each.
+  `crateCap(size)` = max(1, round(`CRATE_CAP_PER_ROOT` × √(cols × rows))), plus
+  `milestonesReached(delivered)`: one more per milestone (10, 20, 50, …), so a tick that
+  crosses several milestones (`reachMilestones`) raises it by each.
+- **Square root, not linear (designer, 2026-11-12):** the first version scaled linearly,
+  max(1, round(area / `CRATE_HEXES_PER_CAP` = 20)): small 8, medium 20, large 45, huge 180.
+  Before the first milestone the bot peaked at 8 / 14 / 20 / 42 crates on those boards, so
+  only small's cap ever bound and large and huge were effectively uncapped. A √area cap grows
+  with the board's width (roughly how long a line is) rather than its area, so a big board
+  holds more crates but still meters them.
 - **Unreviewed calls:** (1) The bonus is derived from `delivered`, not stored: the 1-2-5
   series already says how many milestones a count has reached, so state keeps only
   `spawnTimer`. (2) `spawnTimer` now resets on every chance, spawn or not; a jammed source (or
@@ -437,16 +444,20 @@ ARCHITECTURE_LOG.md.
   (3) One cap for the whole board, counting every crate of every color, as one board clock
   already did (D-21); a chance rolls one open color and spawns nothing if that source is
   occupied (no reroll to another color). (4) Gremlins don't count toward the cap. (5)
-  `CRATE_HEXES_PER_CAP` = 20 gives small 8, medium 20, large 45, huge 180. Before the first
-  milestone the bot peaks at 8 / 14 / 21 / 45 crates on those boards, so only small's cap
-  binds then, and at 20 it doesn't slow the bot (30 gave small a cap of 5 and median 56).
-  The cap is meant to bite later, when several colors run and lines back up; huge's linear
-  scaling makes it nearly uncapped, which may want a sqrt-of-area shape after playtest.
-- **Evidence:** R-19. `Measured by: just cc-sim` (sim now also prints mean and peak crates on
-  the board), before → after: small 200 games median 49 → 49 (p10 43 → 43, p90 57 → 58,
-  2.08 lost/game both); medium 200 games median 60 → 61 (p90 71 → 70); large 100 games
-  median 81 → 79 (p90 93 → 96); huge 50 games median 143 → 143 (p90 168 → 174). The bot
-  stops at the first milestone, so the per-milestone growth is unmeasured; unmeasured in play.
+  `CRATE_CAP_PER_ROOT` = 0.6 keeps small at 8 (0.6 × √160 = 7.6) and gives medium 12, large
+  18, huge 36. These now bind on every board (the bot's peaks before the first milestone
+  drop to the caps), yet the first milestone comes no slower on any size; the cap is still
+  meant to bite most later, when several colors run and lines back up.
+- **Evidence:** R-19. `Measured by: just cc-sim` (sim prints mean and peak crates on the
+  board). Linear cap (vs the old timer), before → after: small 200 games median 49 → 49
+  (p10 43 → 43, p90 57 → 58, 2.08 lost/game both); medium 200 games median 60 → 61 (p90 71 →
+  70); large 100 games median 81 → 79 (p90 93 → 96); huge 50 games median 143 → 143 (p90 168
+  → 174). Linear → √area (2026-11-12), first milestone: small 200 games median 49 → 49, peak
+  8 → 8; medium 200 median 61 → 61, peak 14 → 12; large 100 median 79 → 79 (p90 96 both),
+  peak 20 → 18; huge 30 median 143 → 143 (p90 163 → 166), peak 42 → 36. `just cc-sim-to 30
+  SIZE 5`: small unchanged (milestones at 51 / 75 / 107 / 147 / 209); medium 61 / 91 / 124 /
+  196 / 346 → 61 / 91 / 147 / 205 / 357, peak 20 → 14, with 18 → 19 of 30 games reaching the
+  fifth (the bot builds only the first color's line). Unmeasured in play.
 
 ### D-32 The player picks a Pusher or Puller's color when placing it — *Decided (cards drawn plain, color picked at placement and kept for good, one color skips the picker), Proposed (unreviewed: the rest)*
 - **Alternatives:** the color rolled with the card at draw time (the old rule, D-22 before

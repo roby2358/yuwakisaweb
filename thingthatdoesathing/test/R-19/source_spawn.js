@@ -57,10 +57,12 @@ check('every spawned crate has the open color', crates().every(p => p.color === 
         A.milestonesReached(99) === 3 && A.milestonesReached(100) === 4);
 }
 {
-    // crateCap scales with area: one per CRATE_HEXES_PER_CAP hexes, rounded, at least one.
+    // crateCap scales with the square root of area: CRATE_CAP_PER_ROOT per root hex, rounded, at least one.
     const ok = Object.entries(A.MAP_SIZES).every(([size, { cols, rows }]) =>
-        A.crateCap(size) === Math.max(1, Math.round(cols * rows / A.CRATE_HEXES_PER_CAP)));
-    check('crateCap(size) = max(1, round(area / CRATE_HEXES_PER_CAP)) on every size', ok);
+        A.crateCap(size) === Math.max(1, Math.round(A.CRATE_CAP_PER_ROOT * Math.sqrt(cols * rows))));
+    check('crateCap(size) = max(1, round(CRATE_CAP_PER_ROOT * sqrt(area))) on every size', ok);
+    const caps = ['small', 'medium', 'large', 'huge'].map(A.crateCap).join(' ');
+    check(`caps by size are 8 12 18 36 (got ${caps})`, caps === '8 12 18 36');
 }
 {
     // Two colors: red from the flatGame source, blue from a second source at (-1, 6), whose

@@ -366,7 +366,7 @@ for piece with PIECES[kind].wanders (creation order), skipping it if in moved by
 spawnTimer += 1
 if spawnTimer >= SPAWN_INTERVAL:                                    # a spawn chance (D-31)
     spawnTimer = 0
-    if crates on the board < crateCap(size) + milestonesReached(delivered):
+    if crates on the board < crateCap(size) + milestonesReached(delivered):   # crateCap ∝ √area
         color = Rando.choice(open colors); src = the source that makes color
         if no piece on src:                                         # else nothing until the next chance
             p = bigCrateChance(milestonesReached(delivered))          # D-34
@@ -449,7 +449,7 @@ The code constant in `GameArtifacts` is the single source.
 | `ENHANCE_CHANCE` | 0.5 | chance a new color comes out of an existing source [D] |
 | `FIRST_MILESTONE` | 10 | crates (then the 1-2-5 series, forever) |
 | `SPAWN_INTERVAL` | 3 | ticks between spawn chances, board-wide, shared by every color [D] |
-| `CRATE_HEXES_PER_CAP` | 20 | hexes of board area per crate of the cap; `crateCap(size)` = max(1, round(cols × rows / this)): small 8, medium 20, large 45, huge 180; +1 per milestone reached (D-31) [T] |
+| `CRATE_CAP_PER_ROOT` | 0.6 | crates of the cap per hex of √(board area); `crateCap(size)` = max(1, round(this × √(cols × rows))): small 8, medium 12, large 18, huge 36; +1 per milestone reached (D-31) [D: sqrt shape; T: the constant] |
 | `BIG_CRATE_HALF` | 4 | milestones reached at which half the spawns are big crates; `bigCrateChance(m)` = m / (m + this): 0, 0.2, 0.33, 0.43, 0.5 at m = 0…4, toward 1 (D-34) [T] |
 | `PIECES.bigcrate.value` | 10 | crates a big crate is worth (D-34) [D] |
 | `HAND_SIZE` | 3 | cards |

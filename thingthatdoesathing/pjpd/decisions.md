@@ -28,3 +28,4 @@ decision, and where the full reasoning lives (a RATIONALE `D-n` tagged *unreview
 - bumping: Springs and Rockets also bump; new bump rule: the line advances 2, the bumper ends 1 past the hit piece's old hex, for any mover. [user]
 - big crates: idea bigcrate-pac-e3h4 to reconsider how they drive advancement. [user]
 - milestone banner lists cards unlocked. [user]
+- crate cap sqrt (D-31 updated): cap = round(0.6 × √area) + 1 per milestone → small 8, medium 12, large 18, huge 36. First-milestone pacing unchanged on every size; medium's later milestones a bit slower (3rd at 147 vs 124). [agent constant]

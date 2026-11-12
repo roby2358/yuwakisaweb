@@ -2,6 +2,14 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-12 — Crate cap grows with the square root of board area
+`crateCap(size)` used to be max(1, round(area / `CRATE_HEXES_PER_CAP` = 20)): small 8, medium
+20, large 45, huge 180, which left large and huge effectively uncapped. The designer chose a
+square-root shape: `CRATE_CAP_PER_ROOT` = 0.6 replaces `CRATE_HEXES_PER_CAP`, and
+`crateCap(size)` = max(1, round(0.6 × √area)): small 8, medium 12, large 18, huge 36. The
++1 per milestone reached is unchanged. No engine or state change. D-31 updated; R-19 and its
+test updated (the test now also pins the four caps).
+
 ### 2026-11-12 — D-24 settled: Pushers and Pullers stay first
 The designer agreed with the D-24 recommendation. D-24 is now *Decided*; no code change.
 

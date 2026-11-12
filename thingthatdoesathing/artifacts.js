@@ -108,12 +108,12 @@ const GameArtifacts = (function () {
     // its area, rounded, at least one. Small 1, medium 3, large 6, huge 23.
     const gremlinDice = size => Math.max(1, Math.round(MAP_SIZES[size].cols * MAP_SIZES[size].rows / GREMLIN_HEXES_PER_DIE));
 
-    const CRATE_HEXES_PER_CAP = 20;   // one crate of the board's cap per this many board hexes
+    const CRATE_CAP_PER_ROOT = 0.6;   // crates of the board's cap per hex of sqrt(board area)
 
-    // How many crates a board size holds at once before any milestone: one per
-    // CRATE_HEXES_PER_CAP of its area, rounded, at least one: small 8, medium 20, large 45, huge 180.
+    // How many crates a board size holds at once before any milestone: CRATE_CAP_PER_ROOT times
+    // the square root of its area, rounded, at least one: small 8, medium 12, large 18, huge 36.
     // Each milestone reached adds one (D-31, R-19).
-    const crateCap = size => Math.max(1, Math.round(MAP_SIZES[size].cols * MAP_SIZES[size].rows / CRATE_HEXES_PER_CAP));
+    const crateCap = size => Math.max(1, Math.round(CRATE_CAP_PER_ROOT * Math.sqrt(MAP_SIZES[size].cols * MAP_SIZES[size].rows)));
 
     // How many milestones `delivered` crates have reached (0 below FIRST_MILESTONE).
     const milestonesReached = delivered => {
@@ -157,7 +157,7 @@ const GameArtifacts = (function () {
 
         FIRST_MILESTONE,
         SPAWN_INTERVAL: 3,           // ticks between spawn chances, board-wide (a crate comes if under the cap and the rolled color's source is clear)
-        CRATE_HEXES_PER_CAP,
+        CRATE_CAP_PER_ROOT,
         BIG_CRATE_HALF,
         ENHANCE_CHANCE: 0.5,         // a newly opened color comes out of an existing source, else a new one
         HAND_SIZE: 3,

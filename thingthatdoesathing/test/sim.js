@@ -8,7 +8,7 @@
 // milestones (still building only the first color's path) and reports turns to each one and
 // the big crates spawned per game (D-34). Before then only the first UNLOCKS step is dealt (Belt,
 // Bridge, Wall, Trap; D-30), so in practice the bot builds from Belts alone. Not a test (no pass/fail); it's the evidence behind
-// FIRST_MILESTONE, SPAWN_INTERVAL, CRATE_HEXES_PER_CAP and friends. Also prints the mean and peak crates on the board.
+// FIRST_MILESTONE, SPAWN_INTERVAL, CRATE_CAP_PER_ROOT and friends. Also prints the mean and peak crates on the board.
 'use strict';
 
 const { newGame } = require('./helpers/load');
