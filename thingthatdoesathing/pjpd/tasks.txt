@@ -17,3 +17,21 @@ Add four map-scale buttons labelled "1", "2", "4" and "∞" (infinity) that zoom
 - Animations (hop tracks) and the milestone banner keep working at every scale.
 
 Docs: README (controls), CLAUDE.md input section, UI_CONTROLS references if relevant, RATIONALE new D-n, ARCHITECTURE_LOG, CRITERIA U-row (manual check of look at each scale). Tests: extend test/integration/uiboot.js — clicking each scale button changes the scale and screenToHex(hexToScreen(h)) round-trips at every scale; a click on a hex at 1/4 scale still places/selects the right hex; ∞ on a 60x60 board makes the whole board fit the canvas; a new game resets to 1x. `just cc-test` green.
+----
+Priority:   35
+Status: ToDo
+ID: pjpd-review-sgyf
+Created: 2026-11-12T08:55:13Z
+Updated: 2026-11-12T09:03:18Z
+
+NOTE: this work belongs in the pjpd project itself (/work/pjpd, the pjpd MCP tool's own repo: SPEC.md, rust/, pjpd/tasks.txt), NOT in Thing Factory. It's parked here so it isn't forgotten — move it to /work/pjpd/pjpd/tasks.txt (or do it from a session in /work/pjpd) and mark this one done.
+
+Review pjpd and improve it. Principle: keep a paucity of commands — extend existing ones rather than adding new ones.
+1. Trim the tool responses. put_task/mark_task_done/etc. echo the whole task description back (often 2–3 KB per call), which costs tokens on every call. Return just id, status, priority and a short message by default; full text only on list/get or a verbose flag.
+2. Idea <-> task flow, with NO links between ideas and tasks (too much baggage):
+   - Idea → tasks: an idea goes through an interview process (the agent asks the user questions until the idea is concrete) that produces one or more fully fleshed-out tasks via the existing put_task; the idea is then closed with the existing mark-idea-done. No new command; the process lives in the SKILL.md (what a task needs before it's ready: goal, settled design calls, done-when).
+   - Task → idea: a task that isn't fleshed out enough moves, whole (full text), back to ideas — via the repurposed mark command below, not a new command.
+3. Repurpose and expand mark_task_done into one mark command: mark tasks (one or more ids) as `done`, `verified`, or `idea`. `done` = implemented by an agent; `verified` = the user has reviewed/played it (from done, or straight from todo); `idea` = demote: the task's full text becomes a new idea and the task is removed. All ids must exist or nothing changes (as today). Consider the rename (e.g. pjpd_mark_task) vs keeping the old name — decide, and keep the command count the same or lower.
+4. Split the done file (today tasks_done.txt) into done and verified files to match, and let list_tasks filter by status (todo/done/verified) via its existing show_done-style parameter (replace the boolean with a status filter rather than adding a command).
+5. Write a SKILL.md for pjpd: when to use tasks vs ideas vs epics, the interview process for turning ideas into tasks, when to mark a task back to `idea`, done vs verified, tag naming (describe the task, not the project; max 12 chars, alphanumerics and hyphens), priorities, the agent-loop workflow (one task per agent, decisions log, mark done after commit, the user marks verified).
+6. Keep the change in the pjpd repo's own docs (SPEC.md, README_API.md) and its own task list.
