@@ -22,8 +22,10 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
 ## Key mechanics (one per driver)
 
 - **Things are permanent, and every command ticks** (accumulation). Placing is investing.
-- **One shared `step` for every movement**, with ice and water (comedy). A gremlin, a crate,
-  a Spring, and a slide all obey the same rule, so they collide in ways nobody scripted.
+- **One shared movement rule, in lockstep**, with ice and water (comedy). A gremlin, a crate,
+  a Spring, and a slide all obey the same rule and all move one hex per hop together, so they
+  collide in ways nobody scripted (two Springs throwing into one hex blow both crates up), and
+  what you see animate is exactly what happened (D-38).
 - **Each Thing does one thing, drawn with a facing arrow** (readable). A Belt or Spring
   moves what's on it; a Pusher shoves the hex in front; a Puller reaches two hexes ahead. You can always point at the Thing
   that moved a piece.
@@ -91,9 +93,11 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
 
 1. You **place** a card (on a bare hex or over a Thing, which it replaces), **discard** one, **remove** a Thing, or **wait**. You may also
    **rotate** movers first, as many as you like: turning doesn't tick.
-2. **Tick:** Pushers and Pullers act first, then the other Things, each in placement order (Belts, Springs and Rockets on the piece on them, Pushers on the piece in front, Pullers on the
-   piece two hexes ahead), each piece moving at most once.
-   A Rocket's piece flies up to its range, over lakes. Unmoved gremlins wander. Every third
+2. **Tick:** Pushers and Pullers claim first, then the other Things, each in placement order (Belts, Springs and Rockets the piece on them, Pushers the piece in front, Pullers the
+   piece two hexes ahead), each piece getting one motion; unclaimed gremlins pick a way to
+   wander. Then everything moves together, one hex per hop: a packed train moves as one, and
+   when two pieces want one hex the earlier Thing wins (D-38).
+   A Rocket's piece flies up to its range, over lakes. Every third
    tick a source may spawn a crate, if the board is under its crate cap.
 
 ## Strategies

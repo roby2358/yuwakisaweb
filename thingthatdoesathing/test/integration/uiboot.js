@@ -3,7 +3,8 @@
 // Loads every script index.html loads, in order, into a vm with a fake document, canvas,
 // and requestAnimationFrame, then drives the UI through clicks and keys: pick a board size
 // from the intro, pick each card, turn the ghost, place, select and rotate, wait, run tick animations to completion,
-// play to the first milestone, and drive the color picker (D-32). Catches runtime errors in rendering and input wiring without a
+// play to the first milestone (checking that no two pieces are ever drawn on one hex at a hop,
+// D-38), and drive the color picker (D-32). Catches runtime errors in rendering and input wiring without a
 // browser. It can't judge how anything looks; that stays manual (U-rows).
 'use strict';
 
@@ -127,6 +128,28 @@ const advance = ms => {
         q.forEach(fn => fn(clock - 60));
         fireDueTimers();
     }
+};
+
+// The tick animation on screen, hop by hop: the first hop at which two pieces are drawn on one
+// hex (tracked pieces still on the board, plus every untracked piece sitting still), or null.
+// A tracked piece is gone from its last point once it ends; a shot passing over (its move's
+// first `over` hexes) doesn't count (D-38).
+const trackOverlap = () => {
+    const a = ui.anim;
+    if (!a) return null;
+    const still = ui.state.pieces.filter(p => !a.tracks.has(p.id) && !a.hidden.has(p.id));
+    const last = Math.max(0, ...[...a.tracks.values()].map(t => t.pts.length - 1));
+    for (let k = 0; k <= last; k++) {
+        const at = new Set(still.map(p => p.q + ',' + p.r));
+        for (const t of a.tracks.values()) {
+            const end = t.pts.length - 1;
+            if ((t.end && k >= end) || (k >= t.hop && k < t.hop + t.over)) continue;
+            const p = t.pts[Math.min(k, end)], key = p.q + ',' + p.r;
+            if (at.has(key)) return `hop ${k}, hex ${key}`;
+            at.add(key);
+        }
+    }
+    return null;
 };
 
 const run = (label, fn) => {
@@ -265,8 +288,8 @@ run('a Rocket card draws, places, and its flight and splat animate', () => {
     if (crate && gremlin) {
         const before = new Map([crate, gremlin].map(p => [p.id, { q: p.q, r: p.r, color: p.color, label: p.label, kind: p.kind }]));
         ui.startAnim(before, { events: [
-            { type: 'move', id: crate.id, path: [{ q: crate.q + 1, r: crate.r }, { q: crate.q + 2, r: crate.r }] },
-            { type: 'splat', id: gremlin.id, by: crate.id, trap: false },
+            { type: 'move', id: crate.id, path: [{ q: crate.q + 1, r: crate.r }, { q: crate.q + 2, r: crate.r }], hop: 1, over: 0 },
+            { type: 'splat', id: gremlin.id, by: crate.id, trap: false, hop: 2 },
         ] });
         if (ui.anim.tracks.get(gremlin.id).pts.length !== 3) throw new Error('the hit gremlin must wait for the flier');
         settle();
@@ -330,6 +353,8 @@ run('a game plays through the UI to the first milestone banner', () => {
             acted = true;
         }
         if (!acted) key(' ');
+        const overlap = trackOverlap();
+        if (overlap) throw new Error('two pieces drawn on one hex: ' + overlap);
         settle();
     }
     if (s.delivered < goal) throw new Error('no milestone in 2000 commands: ' + JSON.stringify({ src: s.sources, tgt: s.targets, things: s.things, pieces: s.pieces.map(p => [p.kind, p.q, p.r]), d: s.delivered, turn: s.turn, hand: s.hand }));

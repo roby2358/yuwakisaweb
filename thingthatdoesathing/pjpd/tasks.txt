@@ -1,0 +1,23 @@
+Priority:   45
+Status: ToDo
+ID: delete-sel-rcax
+Created: 2026-11-12T08:09:36Z
+Updated: 2026-11-12T08:09:36Z
+
+Pressing D removes the Thing on the selected (highlighted) hex only, never the hex under the mouse. Today D calls engine.remove on the hovered Thing (gameui.js key handling; UI_CONTROLS/CLAUDE.md input notes). Change: D acts on `selected` (the hex chosen by a bare map click, outlined); with no selected hex, or no Thing on it, D does nothing. After a successful remove, clear the selection. Decide and log whether B (blast the hovered crate) should follow the same rule — default: leave B as is and note it in RATIONALE as a possible follow-up. Update CLAUDE.md input section, UI_CONTROLS references if any, README controls/help overlay text (keys legend), RATIONALE (new D-n), ARCHITECTURE_LOG; extend test/integration/uiboot.js: select a hex with a Thing, move the hover elsewhere, press D → the selected Thing is removed and the hovered one isn't; D with no selection removes nothing. `just cc-test` green.
+----
+Priority:   40
+Status: ToDo
+ID: slide-no-ice-nrq5
+Created: 2026-11-12T08:05:10Z
+Updated: 2026-11-12T08:05:10Z
+
+A Slide can't be placed on bare ice — it would do nothing (ice is already slick). Today the Slide builds on plains, ice and water (not mountain). Remove ice from its legal terrain: legalPlacements('SLIDE') must exclude ice hexes, and place() must reject a Slide on ice (ok:false, nothing changes). Replace-on-place: a Slide also can't replace another Thing standing on ice (the replacement must be legal on the bare terrain, D-28). Update ONTOLOGY (Slide's `on`/legal terrain), the Slide CRITERIA row and its test (add: Slide on ice is illegal, absent from legalPlacements), RATIONALE D-29 (note why: no point), ARCHITECTURE_LOG. `just cc-test` green.
+----
+Priority:   30
+Status: ToDo
+ID: rationale-ok-cpnp
+Created: 2026-11-12T08:09:31Z
+Updated: 2026-11-12T08:09:31Z
+
+The user reviewed every loop decision (D-24 addendum and D-27 through D-37, plus the review-round updates to D-29/D-30/D-31/D-33) and accepted them all. In RATIONALE.md, remove the *unreviewed* tags from those entries (mark them accepted/reviewed 2026-11-12), and tidy any wording that still says "agent call, needs review" or offers an alternative the user has since settled (e.g. D-24 push order: keep Pushers/Pullers first — settled; D-31: sqrt cap is current, linear version is history). Don't touch entries added by the in-flight lockstep work (any new D-n for lockstep, and its edits to D-24/D-33/D-35/D-36/D-37) — do this task after that work lands, and leave those parts tagged *unreviewed*. Add an ARCHITECTURE_LOG line. Docs only, no code; `just cc-test` still green (coverage check).

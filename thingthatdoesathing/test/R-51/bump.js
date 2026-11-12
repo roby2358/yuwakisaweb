@@ -3,8 +3,9 @@
 // (it and the unmoved pieces right behind it) advances 2 hexes, each step through `step`
 // (water sinks, its color's target delivers, a Trap kills a gremlin, a Wall or the piece ahead
 // stops it, no slide afterward), and the bumper follows as far as the bumped piece went, so
-// the bumped hex is left empty. Line moves name the bumper (`by`) and the hexes it had entered
-// at contact (`byAt`). A flight that bumps ends there. Every piece involved moves once.
+// the bumped hex is left empty. In lockstep (D-38) the line starts moving on the contact hop
+// (its move's `hop`); the bumper waits that hop and follows from the next, one hex behind. A
+// flight that bumps ends there. Every piece involved moves once.
 'use strict';
 const { check, done } = require('../helpers/check');
 const { flatGame, DIR } = require('../helpers/load');
@@ -19,9 +20,9 @@ const pathIs = (mv, qs) => !!mv && JSON.stringify(mv.path) === JSON.stringify(qs
     check('a Belt bump: the bumped crate advances 2 (no slide on), the bumper ends right behind it',
         ok && a.isAt(3, 4) && b.isAt(2, 4) && !engine.pieceAt(1, 4));
     const mb = moveOf(events, b), ma = moveOf(events, a);
-    check('… the bumper\'s path runs through the bumped hex', pathIs(mb, [1, 2]) && mb.by === null);
-    check('… the bumped move names the bumper, at contact, and comes after it',
-        pathIs(ma, [2, 3]) && ma.by === b.id && ma.byAt === 0 && events.indexOf(mb) < events.indexOf(ma));
+    check('… the bumper\'s path runs through the bumped hex, from the hop after contact', pathIs(mb, [1, 2]) && mb.hop === 2);
+    check('… the bumped line moves from the contact hop, listed after the bumper',
+        pathIs(ma, [2, 3]) && ma.hop === 1 && events.indexOf(mb) < events.indexOf(ma));
 }
 {
     const { engine, put, piece, terrain, T } = flatGame();
@@ -30,7 +31,7 @@ const pathIs = (mv, qs) => !!mv && JSON.stringify(mv.path) === JSON.stringify(qs
     const { events } = engine.wait();
     check('a line of 3 advances 2 (only the bumped hex needs to be slick)',
         a.isAt(3, 4) && c.isAt(4, 4) && d.isAt(5, 4) && b.isAt(2, 4));
-    check('… every line move names the bumper', [a, c, d].every(p => moveOf(events, p).by === b.id));
+    check('… the whole line moves together from the contact hop', [a, c, d].every(p => moveOf(events, p).hop === 1));
 }
 {
     const { engine, put, piece, terrain, T } = flatGame();
@@ -99,8 +100,8 @@ const pathIs = (mv, qs) => !!mv && JSON.stringify(mv.path) === JSON.stringify(qs
     const b = piece('crate', 0, 4), a = piece('crate', 2, 4);
     const { events } = engine.wait();
     check('a Spring\'s flight bumps: the line advances 2, the flier comes down right behind it',
-        a.isAt(4, 4) && b.isAt(3, 4) && pathIs(moveOf(events, b), [1, 2, 3]));
-    check('… the bumped move starts where the flier made contact (byAt 1)', moveOf(events, a).byAt === 1);
+        a.isAt(4, 4) && b.isAt(3, 4) && pathIs(moveOf(events, b), [1, 1, 2, 3]));
+    check('… the bumped move starts on the contact hop (2), while the flier waits a hop over (1,4)', moveOf(events, a).hop === 2);
 }
 {
     const { engine, put, piece, terrain, T } = flatGame();
@@ -118,7 +119,9 @@ const pathIs = (mv, qs) => !!mv && JSON.stringify(mv.path) === JSON.stringify(qs
 }
 {
     const { state, engine, put, piece, terrain, T } = flatGame();
+    // Walled in but for (1,4), which the Rocket's crate wins on hop 1 (Things outrank wanderers).
     put('ROCKET', 0, 4, DIR.E); terrain(2, 4, T.ICE);
+    for (const [q, r] of [[3, 4], [3, 3], [2, 3], [1, 5], [2, 5]]) put('WALL', q, r);
     const b = piece('crate', 0, 4), g = piece('gremlin', 2, 4);
     engine.wait();
     check('a Rocket still splats a gremlin on ice rather than bumping it',
@@ -132,12 +135,15 @@ const pathIs = (mv, qs) => !!mv && JSON.stringify(mv.path) === JSON.stringify(qs
     check('a Spring\'s skid bumps like any mover', a.isAt(6, 4) && b.isAt(5, 4));
 }
 {
+    // A gremlin with nowhere to wander has no motion, so it can be bumped: walled in, a carried
+    // gremlin to its west, open water to its east (a wanderer never steps into water).
     const { state, engine, put, piece, terrain, T } = flatGame();
-    put('BELT', 0, 4, DIR.E); terrain(1, 4, T.ICE); put('TRAP', 4, 4);
-    const b = piece('crate', 0, 4), a = piece('crate', 1, 4), g = piece('gremlin', 2, 4);
+    put('BELT', 0, 4, DIR.E); terrain(1, 4, T.ICE); terrain(2, 4, T.WATER);
+    for (const [q, r] of [[2, 3], [1, 3], [0, 5], [1, 5]]) put('WALL', q, r);
+    const b = piece('gremlin', 0, 4), g = piece('gremlin', 1, 4);
     engine.wait();
-    check('a gremlin in a line is carried along, here onto a Trap: it dies (trapped +1)',
-        !state.pieces.includes(g) && state.trapped === 1 && a.isAt(3, 4) && b.isAt(2, 4));
+    check('a gremlin that can\'t wander is bumped like any piece, here into water: it sinks (ex-gremlins +1)',
+        !state.pieces.includes(g) && state.exGremlins === 1 && b.isAt(1, 4));
 }
 {
     const { engine, put, piece, terrain, T } = flatGame();

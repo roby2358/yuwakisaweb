@@ -62,11 +62,12 @@ const { flatGame, DIR } = require('../helpers/load');
 }
 {
     // Two big crates into the target in one tick from 9 delivered: 29, crossing 10 and 20.
-    const { g, state, engine, put, piece } = flatGame();
+    // (One hop apart: the second slides in over ice, since one hex takes one piece a hop.)
+    const { g, state, engine, put, piece, terrain, T } = flatGame();
     const { UNLOCKS } = g.GameArtifacts;
     state.size = 'medium';   // two colors: the first milestone opens one, the second has none left
-    put('BELT', 9, 8, DIR.E); put('BELT', 10, 7, DIR.SE);
-    piece('bigcrate', 9, 8); piece('bigcrate', 10, 7);
+    put('BELT', 9, 8, DIR.E); put('BELT', 10, 6, DIR.SE); terrain(10, 7, T.ICE);
+    piece('bigcrate', 9, 8); piece('bigcrate', 10, 6);
     state.delivered = 9;
     const res = engine.wait();
     const seq = res.events.filter(e => ['milestone', 'open', 'unlock'].includes(e.type))

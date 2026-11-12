@@ -1,3 +1,28 @@
+Priority:   80
+Status: Done
+ID: lockstep-ritf
+Created: 2026-11-12T07:59:56Z
+Updated: 2026-11-12T08:31:03Z
+
+Rewrite the tick's movement as a lockstep, hop-by-hop simulation so results don't depend on Thing placement order and the animation replays exactly what the engine did.
+
+WHY (bugs today): Things act one at a time in placement order, and a piece blocked by another piece just stops. (a) A Rocket crate lands on ice, skids, is blocked by a crate on a Belt that is carried away later in the same tick, and is left stuck on bare ice for good. (b) Two crates nose to tail on a Belt line built back-to-front (the natural build order): the back crate stalls a tick, so packed trains spread to every other hex. (c) A packed ring of Belts never moves. Also the UI can show two crates overlapping on one hex when a late-leaving bumped piece's hex is entered early by another mover.
+
+DESIGN (settled by the user):
+- Each tick, every piece that gets a motion (from its Thing, a wander, a bump) advances one hex per hop, all pieces together. Hop k in the engine = hop k in the animation.
+- Per hop: every moving piece proposes its next hex. A proposal succeeds if the hex is free, or its occupant succeeds in moving out this hop (resolve chains recursively). A chain whose front fails fails behind it. A cycle of proposals (3+ pieces, e.g. a packed ring) all succeed and rotate. A 2-piece head-on swap fails. Two pieces wanting the same hex: the piece moved by the earlier-placed Thing wins, the other is blocked.
+- A blocked piece STOPS for the rest of the tick (no stall/retry; may get fancier later).
+- Sinks, deliveries, Traps, splats happen at the hop they occur; the freed hex is open from the next hop.
+- Pushers/Pullers keep priority (D-24): when they and another Thing both claim a crate, they win; they act first and either succeed or fail.
+- Bumps (D-33) become motion that starts mid-tick: at the contact hop the line starts advancing BUMP_ADVANCE, the bumper follows from the next hop and ends right behind it. Each piece still gets at most one motion per tick (bumped pieces count).
+- Ice/Slide skids continue hop by hop. Every landing still slides (D-37) except after a gremlin splat.
+- Flights: a flight meets whatever is on a hex at that hop. A flight blocked by a stationary/ground piece behaves as today (Rocket splats gremlins; on slick ground it bumps; else it comes down). NEW: a mid-air collision blows up the item — two airborne pieces entering the same hex on the same hop (or swapping) are both destroyed (crates count as lost, value lost like today's losses; emit splat/explode events). Log the exact interpretation in decisions.md.
+- comeDown: mountains and targets don't move, so a flight's landing spot is trimmed at launch (D-35 back-up rule computed up front). The Cannon's cleared-hex landing check (groundTakes: Walls/pieces) needs a rule for lockstep — decide, log it.
+- Gremlins pick their wander direction at hop 1 from current occupancy.
+- Events: one move event per piece with its path plus a start hop (replacing by/byAt). The UI plays tracks by hop from the start hop; no track overlaps another at any hop.
+
+DONE WHEN: ONTOLOGY/CRITERIA/RATIONALE/ARCHITECTURE_LOG reconciled (new D-n for lockstep; D-24, D-33, D-35, D-36, D-37 updated); new CRITERIA rows + tests for: back-to-front Belt train moves together, Rocket skid past a crate carried off the same tick, packed ring rotates, swap fails, same-hex tie goes to placement order, mid-air collision destroys both, an invariant check that no two pieces share a hex at any hop (engine + uiboot); existing tests updated where seeded outcomes shift; `just cc-test` green; `just cc-sim 200 small` and `just cc-sim-to 100 small 5` run and compared to before in the log.
+----
 Priority:   70
 Status: Done
 ID: nullhas-7q2s

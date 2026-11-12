@@ -97,8 +97,8 @@ for (const [what, fourth] of Object.entries(illegal4th)) {
     const other = state.pieces.find(p => p !== c);
     check('a piece on ice on the 5th is bumped: the line advances 2 and the shot ends 1 past the hit hex',
         other.isAt(7, 4) && c.isAt(6, 4));
-    check('the bumped move names the shot, contact after its 4 cleared hexes',
-        res.events.some(e => e.type === 'move' && e.id === other.id && e.by === c.id && e.byAt === 4));
+    check('the bumped line moves from the contact hop, the one after its 4 cleared hexes',
+        res.events.some(e => e.type === 'move' && e.id === other.id && e.hop === 5));
 }
 {
     const { c, moves } = shoot(({ terrain, T }) => { terrain(5, 4, T.ICE); terrain(6, 4, T.ICE); });

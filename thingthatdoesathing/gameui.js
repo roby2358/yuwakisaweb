@@ -255,7 +255,7 @@ const GameUI = (function () {
             this.overlay = null;     // L5 'intro' | 'size' (board-size pickers) | 'news' (a color opened) | 'help' (the keys) | 'color' (the color picker, D-32) | null
             this.hoveredHex = null;  // L1.3
             this.selected = null;    // {q, r} — a clicked hex: highlighted, holds Go; a second click turns its mover
-            this.anim = null;        // { t0, dur, tracks: Map<id, track>, before, hidden: Set<id>, milestone, ends: Set<type> }
+            this.anim = null;        // { t0, dur, tracks: Map<id, track {pts, hop, over, end}>, before, hidden: Set<id>, milestone, ends: Set<type> }
             this.running = false;    // Go/Pause: tick on its own after each animation
             this.runTimer = null;    // the pending RUN_GAP_MS timeout, if any
             this.bannerTimer = null; // hides the milestone banner
@@ -504,35 +504,31 @@ const GameUI = (function () {
         }
 
         // ---- Tick animation ----
-        // Each piece that moved gets a track: its pre-tick hex, then every hex it entered.
-        // All tracks advance together one hop per HOP_MS; spawned crates appear at the end.
-        // A bumped piece (its move names the bumper `by`, D-33) holds still until the bumper
-        // reaches it (`byAt` hexes into the bumper's own path), then the line and the bumper
-        // go on together, the bumper one hex behind.
+        // The engine moves pieces in lockstep, one hex per hop (D-38), and the animation plays
+        // the same hops: each piece that moved or ended gets a track, `pts[k]` being where it
+        // stands after hop k (its pre-tick hex until its move's start `hop`, then its path).
+        // All tracks advance together one hop per HOP_MS; a piece that ends (sinks, is
+        // delivered, splats) fades over the hop after its end's `hop`; spawned crates appear
+        // at the end. Since the engine never puts two pieces on one hex at a hop, no two
+        // tracks overlap (a shot passing over, its move's first `over` hexes, aside).
         startAnim(before, res) {
             const tracks = new Map();
             const hidden = new Set();
-            let hops = 0;
             const milestones = [];
             const opened = [];
             const unlocked = [];
             const redrawn = [];
             const ends = new Set();
+            const still = id => ({ q: before.get(id).q, r: before.get(id).r });
+            const trackOf = id => tracks.get(id) || { ...before.get(id), pts: [still(id)], hop: 0, over: 0, end: null };
             for (const e of res.events) {
                 if (e.type === 'move') {
-                    const b = before.get(e.id);
-                    const by = e.by && tracks.get(e.by);
-                    const hold = Array.from({ length: by ? by.hold + e.byAt : 1 }, () => ({ q: b.q, r: b.r }));
-                    const pts = [...hold, ...e.path];
-                    tracks.set(e.id, { ...b, pts, hold: hold.length, end: null });
-                    hops = Math.max(hops, pts.length - 1);
+                    const pts = [...Array.from({ length: e.hop }, () => still(e.id)), ...e.path];
+                    tracks.set(e.id, { ...trackOf(e.id), pts, hop: e.hop, over: e.over });
                 } else if (e.type === 'sink' || e.type === 'deliver' || e.type === 'splat') {
-                    // A piece that ends without moving (its Bridge removed, or splatted where
-                    // it stood) fades where it stood; one hit by a flier waits for it to land.
-                    const b = before.get(e.id);
-                    const t = tracks.get(e.id) || { ...b, pts: [{ q: b.q, r: b.r }], hold: 1, end: null };
-                    const by = e.by && tracks.get(e.by);
-                    while (by && t.pts.length < by.pts.length) t.pts.push(t.pts[t.pts.length - 1]);
+                    // It stands where it ended until that hop, then fades.
+                    const t = trackOf(e.id);
+                    while (t.pts.length < e.hop + 1) t.pts.push(t.pts[t.pts.length - 1]);
                     t.end = e.type;
                     tracks.set(e.id, t);
                     ends.add(e.type);
@@ -548,7 +544,8 @@ const GameUI = (function () {
                     redrawn.push(e.slot);
                 }
             }
-            this.anim = { t0: performance.now(), dur: Math.max(1, hops + (ends.size ? 1 : 0)) * HOP_MS,
+            const hops = Math.max(1, ...[...tracks.values()].map(t => t.pts.length - 1 + (t.end ? 1 : 0)));
+            this.anim = { t0: performance.now(), dur: hops * HOP_MS,
                 tracks, before, hidden, milestones, opened, unlocked, redrawn, ends };
             const frame = now => {
                 if (!this.anim) return;

@@ -158,7 +158,9 @@ ARCHITECTURE_LOG.md.
 - **Alternatives:** separate handlers for springs, ice, and gremlins.
 - **Why:** one code path means gremlins, springs, and slides can never disagree. Ice is the
   windfall terrain: a crate that skids across three ice hexes covers ground no belt paid
-  for. Water is the cost of getting it wrong.
+  for. Water is the cost of getting it wrong. *(2026-11-12, D-38)* `step` is gone; the one
+  code path is now the lockstep hop loop, where each phase of a motion arrives and stops by one
+  dispatch table, so the rule holds in a new form.
 - **Evidence:** R-7, R-14, R-15.
 
 ### D-7 A random hand of `HAND_SIZE`, weighted toward belts — *Proposed, tuned by test/sim.js*
@@ -555,8 +557,9 @@ ARCHITECTURE_LOG.md.
   range is left is spent. The follow hexes are ones the bumped piece just crossed (or the
   bumped hex itself), so the landing rules have nothing left to catch; a flight whose line
   couldn't move comes down short, where it was stopped, as before. A Spring's skid bumps the
-  same way. (7) Events: line moves carry `by` (the bumper) and `byAt` (how many hexes of its
-  own path the bumper had entered at contact); both are null on every other move. The bumper's
+  same way. (7) Events: line moves carried `by` (the bumper) and `byAt` (how many hexes of its
+  own path the bumper had entered at contact); both were null on every other move
+  (*superseded 2026-11-12, D-38: moves carry a start `hop` instead*). The bumper's
   `move` comes first and includes its follow hexes. The client holds each line piece until the
   bumper reaches the contact hex, then the line and the bumper go on together, the bumper one
   hex behind, which reads as a shove.
@@ -565,6 +568,15 @@ ARCHITECTURE_LOG.md.
   (was 72), 3.50 lost (was 3.60); `just cc-sim-to 30 small 5` → milestone 5 at median 208
   (was 209), 24.83 lost per game (was 26.40). The bot builds belts and springs in a straight
   line, so bumps only come up where a crate stalls on ice in it. Unmeasured in play.
+- **In lockstep (2026-11-12, D-38; settled by the designer: bumps start mid-tick).** A bump is
+  motion that starts on the contact hop: the line (the bumped piece and the pieces right behind
+  it that have had no motion this tick) starts advancing `BUMP_ADVANCE` hexes that hop, all
+  together, and the bumper waits that hop and follows from the next, ending right behind it.
+  The line compresses against a blocker by the usual hop resolution (the far end is blocked,
+  the piece behind finds it staying). Only a piece with no motion this tick can be bumped: one
+  that moved, or was blocked, is just a blocker; a gremlin boxed in (no wander) can be bumped.
+  The client no longer needs `by`/`byAt` to hold the line: each move's `hop` says when it
+  starts. `bump`/`advance`/`follow` are gone; the line and follow are phases of the one motion.
 
 ### D-34 Big crates, worth 10, grow more likely with each milestone — *Decided (a crate worth 10 deliveries whose share of spawns rises toward 1), Proposed (unreviewed: the rest)*
 - **Alternatives:** a `value` field on each crate piece instead of a kind; p = 1 − (1 −
@@ -644,6 +656,13 @@ ARCHITECTURE_LOG.md.
   49, p90 58, 2.08 lost); `just cc-sim 50 medium` → unchanged (50/50, median 61, p90 70,
   3.50 lost); `just cc-sim-to 30 small 5` → unchanged (51 / 75 / 105 / 147 / 208). The bot
   never throws toward a mountain. Unmeasured in play.
+- **In lockstep (2026-11-12, D-38; settled by the designer: landing trimmed at launch).**
+  Mountains and targets don't move, so a flight's length is fixed at launch: up to its range,
+  stopping before the map's edge, a Wall or a mountain (unless `overMountains`), then trimmed
+  back off a trailing mountain or other color's target (`flightLength`). The flight then spends
+  one hop per hex. A flight stopped mid-air by a piece while over a mountain or another color's
+  target drops back on the next hop to the last hex it may land on (*unreviewed*: the old rule
+  did it instantly; D-38 call 3).
 
 ### D-36 The Cannon: over 4 hexes of anything, then a ground step into the 5th — *Decided 2026-11-12 (a facing mover, range 5; the first 4 hexes ignore all terrain and items: water, mountains, Walls, pieces, gremlins, no splat; the 5th an ordinary ground step that can be blocked, bump, sink, deliver, be stopped by another color's target or trigger a Trap; blocked there, down on the 4th if that's a legal landing, else no fire; the last unlock, after the Rocket; low weight like the Rocket's; data-driven, sharing the flight code), Proposed (unreviewed: the rest)*
 - **Alternatives:** a kind check on `CANNON` in `push`; extending `step`'s `air` with a
@@ -695,6 +714,12 @@ ARCHITECTURE_LOG.md.
   70, 3.50 lost); `just cc-sim-to 30 small 5` → unchanged (51 / 75 / 105 / 147 / 208). The
   Cannon unlocks at 100 on small (the fifth milestone) and later on bigger boards, past what
   the sims measure. Unmeasured in play.
+- **In lockstep (2026-11-12, D-38).** The shot spends hops 1–4 over its cleared hexes, unseen:
+  pieces move under it and it crashes into no flight. Its ground step into the 5th is hop 5;
+  a bump there starts the line on hop 5 (call 5's `byAt` 4 is now that hop). Whether it fires is
+  still judged at launch from the board as it stands (*unreviewed*: the 4th-hex `groundTakes`
+  check reads pieces as the tick starts). If the 5th is then blocked by a piece and the 4th
+  holds a piece by the time it comes down, it crashes (lost); open water there sinks it.
 
 ### D-37 Anything that lands, slides: every flight and shot skids on landing — *Decided 2026-11-12 (Rockets and Cannons skid like Springs; settled 2026-11-12: "Basically anything that lands, slides, anywhere. The only exception is hitting a gremlin stops it in that hex", short Rocket landings included; drop the `skids` flag, every Thing that `flies` or `clears` skids), Proposed (unreviewed: the rest)*
 - **Alternatives:** keep the Rocket landing dead (D-15, D-17) so its range is exact; a kind
@@ -742,6 +767,72 @@ ARCHITECTURE_LOG.md.
   medium` → unchanged (50/50, median 61, p90 70, 3.50 lost). The bot discards Rockets
   and Cannons, neither is dealt before the first milestone, and short landings move nothing
   further. Unmeasured in play.
+- **In lockstep (2026-11-12, D-38; settled by the designer: skids hop by hop, every landing still
+  slides except after a gremlin splat).** A landing becomes a `skid` phase that continues one hex
+  per hop from the hop after it lands. Call (1) no longer always holds: a flight stopped by a
+  *piece* comes down, and if that piece moves off on a later hop, the skid goes on through the
+  hex it left (R-56) instead of stopping at once.
+
+### D-38 Lockstep movement: every moving piece advances one hex per hop, together — *Decided 2026-11-12 (pjpd lockstep-ritf: hop-by-hop lockstep; chains resolve, 3+-cycles rotate, swaps fail, same-hex ties to the earlier Thing; a blocked piece stops for the tick; Pushers/Pullers first and win claims; bumps start mid-tick; skids and flights hop by hop; two airborne pieces meeting in one hex (or swapping) both crash, a flight meeting a ground piece is only stopped; flight landings trimmed at launch; gremlins pick at hop 1; moves carry a start hop and the UI plays by hop), Proposed (*unreviewed*: the rest)*
+- **Alternatives:** keep acting one Thing at a time in placement order (the old rule); resolve
+  in dependency order (front of each line first) without hops; let a blocked piece wait and
+  retry on a later hop; let a 2-swap succeed (pieces pass through each other); random tie
+  breaks; blow up a flight that meets anything, ground pieces included.
+- **Why:** with Things acting one at a time, results depended on placement order and the
+  animation couldn't replay them. (a) A Rocket crate landing on ice skidded into a crate a Belt
+  carried away later the same tick and was left on bare ice for good. (b) Two crates nose to
+  tail on a Belt line built back-to-front (the natural build order): the back crate stalled a
+  tick, so packed trains spread out to every other hex. (c) A packed ring of Belts never moved.
+  (d) The UI could draw two crates on one hex when a bumped piece left late and another mover
+  entered its hex early. In lockstep each hop resolves all proposals at once: a hex whose
+  occupant leaves this hop is open, so trains move as one and the Rocket's skid finds the hex
+  empty; a cycle of 3+ rotates; and the engine's hop k is the animation's hop k, so what you
+  see is what happened. The designer settled the rule (pjpd lockstep-ritf).
+- **How:** each claimed piece gets a *motion* in one phase (`over`, `air`, `ground`, `skid`,
+  `line`, `follow`, `drop`; the `PHASES` table and the `ARRIVED`/`STOPPED` dispatch in
+  `gameengine.js`). Each hop: proposals (terrain and Things checked per phase), same-hex ties,
+  then chains of occupants resolved front to back with cycle detection; a bump starts its line
+  this hop and the hop is resolved again; then victims go, movers move together, arrivals and
+  stops run by phase. A blocked piece stops for the tick. Events: one `move` per piece with
+  `path` (one hex per hop), `hop` (start) and `over` (a shot's cleared hexes), replacing
+  `by`/`byAt`; ends carry `hop`. `startAnim` builds each track as `pts[k]` = hex after hop k.
+- **Unreviewed calls:** (1) *Claims are made as the tick starts.* Each Thing acts on the piece
+  on its hex (or in front, or two ahead) when the tick begins; a piece carried onto a Belt
+  mid-tick waits for the next tick, as before (R-13, R-46, R-28). (2) *A splatter or wrecker
+  takes its victim's hex on the contact hop* (the victim fades that hop), rather than waiting a
+  hop for it to free up; every other freed hex (a sink, delivery, Trap) opens on the next hop.
+  (3) *A flight blocked by a piece while over a mountain or another color's target drops back
+  on the next hop* to the last hex it flew over that it may land on, or its start, as a landing
+  move; if that hex is taken by then, the piece crashes (lost). The old rule backed it up in the
+  same instant; lockstep can't undo hops already shown, so it hovers a hop and drops back. (4)
+  *The Cannon in lockstep:* its 4 cleared hexes are unseen (no claims, no occupancy, no crash
+  with flights); whether it fires is still judged at launch (off the map, or the 5th closed by
+  terrain/Things/another color's target and the 4th unable to take it, pieces included, as the
+  board stands); if the 5th is then blocked by a piece and the 4th holds a piece by the time it
+  comes down, the shot crashes (lost); on open water there it sinks. (5) *Mid-air crash scope:*
+  only `air` motions (Spring and Rocket flights) crash; two in one hex on one hop, or swapping
+  hexes, both go (splat, `by` the other, value lost). An air and a ground claimant on one hex
+  tie by rank with no crash; a flight meeting a piece standing on a hex is stopped (it comes
+  down; a Rocket still splats a gremlin; a still piece on slick ground is bumped). (6) *Ranks:*
+  a motion's rank is its Thing's place in the tick's order (Pushers/Pullers first, D-24, then
+  placement order); wanderers rank after every Thing, in creation order; a bumped line takes
+  its bumper's rank; ties within a rank go to the earlier motion. (7) *A gremlin with nowhere
+  to wander has no motion*, so it can be bumped into a line (before, every wanderer was marked
+  moved). A gremlin's direction is picked from the board as the tick starts, so it may step
+  into a hex a crate is leaving, or lose a tie for a hex a crate is entering. (8) *Waiting hops
+  repeat a hex in the path* (a bumper on its contact hop, a flight about to drop back), so
+  every path is one entry per hop from its start and the client needs no gaps. (9) A 2-cycle of
+  one flight and one ground piece is just blocked both ways (no crash). (10) `MAX_HOPS` (1000)
+  is a guard in the engine, not a tunable; every motion ends in a few dozen hops.
+- **Evidence:** R-55 (train), R-56 (Rocket skid past a crate carried off), R-57 (ring), R-58
+  (swap), R-59 (tie, Pusher priority, no retry), R-60 (mid-air crash), R-61 (no two pieces on
+  one hex at any hop; also `smoke.js` and `uiboot.js`); R-51, R-32, R-54, R-26 updated.
+  `Measured by:` before → after. `just cc-sim 200 small`: 200/200, median 49 → 45, p10 43 → 41,
+  p90 58 → 51, lost/game 2.08 → 0.61. `just cc-sim-to 100 small 5`: median turn per milestone
+  49 / 75 / 103 / 139 / 199 → 44 / 67 / 90 / 127 / 183, lost/game 20.13 → 3.14, big crates/game
+  19.9 → 18.8. Trains no longer stall (faster milestones), and far fewer crates are lost: a
+  crate jammed behind a stalled one used to sit where gremlins wreck it; now the line keeps
+  moving. Unmeasured in play.
 
 ### D-24 Pushers and Pullers act before the other Things in a tick — *Decided*
 - **Alternatives:** pure placement order (the old rule); letting a Pusher or Puller move a
@@ -798,6 +889,13 @@ ARCHITECTURE_LOG.md.
   diverter. The costs of first are a Pusher aimed at a Spring stealing its crate and a
   Pusher beside a Bridge line drowning crates, and both are visible and fixable by aiming.
   Revisit only if playtest shows merges stalling.
+- **In lockstep (2026-11-12, D-38; settled by the designer: Pushers and Pullers keep
+  priority).** "Act first" now means *claim first*: as the tick starts, Pushers and Pullers
+  claim their pieces before any other Thing, and their motions outrank every other Thing's
+  when two pieces want one hex on one hop (R-59). The traces above still hold, since claims
+  are made from the board as the tick starts. The merge case improves a little: a Pusher's
+  shove into a line hex whose crate a Belt moves out on the same hop now succeeds (the hex is
+  free that hop), so merging into a moving line no longer burns the side crate's move.
 
 ### D-9 Five-module split, plain `<script>` globals, seeded `Rando` — *Decided*
 - **Alternatives:** single file; ES modules.
@@ -822,7 +920,9 @@ ARCHITECTURE_LOG.md.
 - **Q-1 Chain pushes?** *Partly answered by D-33 (2026-11-12):* on slick ground a push now
   moves the whole line ahead two hexes. On plains a belt pushing a crate into another crate
   is still blocked. Open: whether that's annoying in playtest. *Recommendation:* leave plains
-  blocking; ice and Slides are now the place to build a line that clears itself.
+  blocking; ice and Slides are now the place to build a line that clears itself. *(2026-11-12, D-38)* In lockstep a packed train on plains moves as
+  one when its front is free (the hex ahead empties on the same hop), so only a train whose
+  front is truly stuck blocks.
 
 ## Deliberately left out
 - Undo, and getting a removed Thing's card back (D-12: removal costs the card and a turn).

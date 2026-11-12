@@ -1,12 +1,13 @@
 // test/integration/smoke.js — happy-path walkthrough of the DOM-free engine stack.
 //
 // Plays random legal commands (place / rotate / remove / discard / wait) for a while on several seeds and
-// checks the ONTOLOGY invariants after every command. Touches many rules at once, so it
+// checks the ONTOLOGY invariants after every command, including at every hop of each tick (D-38). Touches many rules at once, so it
 // lives outside the test/R-n/ directories; each rule's own assertions are there.
 'use strict';
 
 const { newGame, SEEDS } = require('../helpers/load');
 const { check, done } = require('../helpers/check');
+const { hopOverlap } = require('../helpers/hops');
 
 for (const seed of SEEDS.slice(0, 6)) {
     const { g, state, engine } = newGame(seed, 'small');
@@ -16,6 +17,7 @@ for (const seed of SEEDS.slice(0, 6)) {
     let ok = true, why = '';
     for (let i = 0; i < 300; i++) {
         const turn = state.turn;
+        const before = new Map(state.pieces.map(p => [p.id, { q: p.q, r: p.r }]));
         const roll = rnd(11);
         let res;
         if (roll < 6) {
@@ -41,6 +43,8 @@ for (const seed of SEEDS.slice(0, 6)) {
         if (!res.ok) fail('a legal command was refused');
         if (state.turn !== turn + (res.rotated ? 0 : 1)) fail('turn did not advance by 1 (0 for rotate)');
         if (new Set(keys).size !== keys.length) fail('two pieces share a hex');
+        const overlap = res.ok && hopOverlap(before, res.events);
+        if (overlap) fail(`two pieces share hex ${overlap.key} at hop ${overlap.hop}: ${overlap.ids}`);
         if (new Set(thingKeys).size !== thingKeys.length) fail('two Things share a hex');
         if (state.hand.length !== A.HAND_SIZE) fail('hand size changed');
         if (state.phase !== 'player') fail('phase left as tick');

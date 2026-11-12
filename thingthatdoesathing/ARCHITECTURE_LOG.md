@@ -2,6 +2,37 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-12 — Lockstep movement: one hex per hop, all together (D-38)
+The tick's movement was rewritten as a lockstep, hop-by-hop simulation (pjpd lockstep-ritf).
+Before, each Thing acted in turn (Pushers/Pullers first, then placement order) and ran its
+piece's whole `push` (`step` per hex, `passOver`, `comeDown`, `skid`, `bump` → `advance` +
+`follow`) before the next Thing looked; a piece blocked by another just stopped, a `moved` set
+kept one move per piece, and line moves carried `by`/`byAt` so the client could hold them. That
+made outcomes depend on placement order: a Rocket's skid stuck on ice behind a crate a later
+Belt carried off, back-to-front Belt trains stalled every other tick, packed rings never moved,
+and the UI could draw two crates on one hex. Now every Thing (and wanderer) claims its piece as
+the tick starts and gets a *motion* in a phase (`over`, `air`, `ground`, `skid`, `line`,
+`follow`, `drop`; `PHASES`, `OPEN_TO`, `ARRIVED`, `STOPPED` in `gameengine.js`); `runHops` runs
+hops until every motion stops, each hop proposing, settling same-hex ties (by rank, or a crash
+for two flights), resolving occupant chains (3+-cycles rotate, swaps fail), restarting the hop
+when a bump starts a line, then applying. Flight lengths are fixed at launch (`flightLength`);
+the Cannon's fire check moved to `aimShot`. Events: `move{id, path, hop, over}` (one hex per hop
+from `hop`), ends carry `hop` (`blast`/`remove` at hop 0); `by`/`byAt` are gone from moves.
+`gameui.js` `startAnim` builds each track as `pts[k]` = hex after hop k and fades an ended piece
+over the hop after its end. Decided by the designer (recorded in `pjpd/decisions.md`): blocked
+pieces stop for the tick, swaps fail, cycles rotate, ties to placement order, Pushers/Pullers
+first and win claims, only two airborne pieces meeting crash, landings trimmed at launch.
+New: D-38; D-24, D-33, D-35, D-36, D-37, D-6, Q-1 updated; R-55…R-61 with tests (train, Rocket
+skid past a crate carried off, ring, swap, tie, mid-air crash, no two pieces on one hex at any
+hop via the new `test/helpers/hops.js`, also checked in `smoke.js`, and on the UI's tracks in
+`uiboot.js`); R-7 now tests through a tick (`step` is gone); R-51, R-32, R-33, R-54, R-26, R-44,
+R-52 tests updated (path entries per hop, `hop` for `byAt`, gremlins boxed in now that they
+wander on hop 1, two big crates a hop apart). ONTOLOGY's Step/Push rules became the Motion rule.
+Sims, before → after: `just cc-sim 200 small` 200/200, p10/median/p90 43/49/58 → 41/45/51,
+lost/game 2.08 → 0.61, crates on board mean 4.5 → 4.5, peak 8 → 8; `just cc-sim-to 100 small 5`
+100/100, median turn per milestone 49/75/103/139/199 → 44/67/90/127/183 (p10 173 → 157, p90 239
+→ 210), lost/game 20.13 → 3.14, big crates/game 19.9 → 18.8.
+
 ### 2026-11-12 — Hover waits behind an overlay (no-board crash on the intro)
 The designer saw "Cannot read properties of null (reading 'has')" right after load, before a
 map (pjpd nullhas-7q2s). The intro and size cards are centered panels that don't cover the

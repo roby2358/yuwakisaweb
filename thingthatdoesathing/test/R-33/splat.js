@@ -5,8 +5,9 @@
 const { check, done } = require('../helpers/check');
 const { flatGame, DIR } = require('../helpers/load');
 {
-    const { state, engine, put, piece } = flatGame();
+    const { state, engine, put, piece, terrain, T } = flatGame();
     put('ROCKET', 0, 4, DIR.E); put('WALL', 6, 4); put('WALL', 6, 3); put('WALL', 5, 3); put('WALL', 5, 5); put('WALL', 4, 5);
+    terrain(4, 4, T.WATER);   // the flight crosses this lake; the gremlin won't wander into it
     const g = piece('gremlin', 5, 4);   // boxed in, so it can't wander out of the way
     const c = piece('crate', 0, 4);
     const res = engine.wait();

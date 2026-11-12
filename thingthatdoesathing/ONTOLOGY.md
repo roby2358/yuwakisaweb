@@ -96,7 +96,7 @@ A `Piece` (position, color, label) with two fields set by the engine. Each kind 
 | `id` | int | Unique, from `nextId`; events refer to it. |
 | `kind` | `'crate' \| 'bigcrate' \| 'gremlin'` | Key into `PIECES`. |
 | `label` | string | `PIECES[kind].label`: `'📦'` or `'👹'`. |
-| `color` | `#rrggbb` \| `CRATE_COLORS` name | Gremlins get a seeded palette color; a crate gets the open color the spawn rolled. Only its color's target takes it (Step rule); the client draws it as a shaded isometric box. [D] |
+| `color` | `#rrggbb` \| `CRATE_COLORS` name | Gremlins get a seeded palette color; a crate gets the open color the spawn rolled. Only its color's target takes it (Motion rule); the client draws it as a shaded isometric box. [D] |
 
 `PIECES[kind]` is the template:
 
@@ -105,9 +105,9 @@ A `Piece` (position, color, label) with two fields set by the engine. Each kind 
 | `label` | `'📦'` | `'📦'` | `'👹'` | The counter's glyph (the client draws crates as a box instead; a big crate's box is `BIG_CRATE_SCALE` bigger). |
 | `cargo` | yes | yes | no | Delivered on entering its color's target, blocked by other colors' targets; counted in `lost` when it sinks. |
 | `value` | 1 | 10 | 0 | What a delivery adds to `delivered` and its target's count, and what losing it (sunk, wrecked, blasted) adds to `lost`. Toward the crate cap every cargo piece counts one (D-34). [D: pjpd big-crate] |
-| `wanders` | no | no | yes | Takes a random step on a tick when no Thing moved it. |
-| `splats` | no | no | yes | A Rocket's flight destroys it: the piece the flier lands on, and the launched piece once it lands; so does coming onto a Trap (Step and Push rules). [D] |
-| `wrecks` | no | no | yes | Its own wandering step into a cargo piece's hex destroys that piece (counted in `lost`) and takes the hex; pushed, pulled or flung into one, it's just blocked (Push rule). [D] |
+| `wanders` | no | no | yes | Takes a random step on a tick when no Thing claimed it, its direction picked from the board as the tick starts (D-38). |
+| `splats` | no | no | yes | A Rocket's flight destroys it: the piece the flier lands on, and the launched piece once it lands; so does coming onto a Trap (Motion rule). [D] |
+| `wrecks` | no | no | yes | Its own wandering step into a cargo piece's hex destroys that piece (counted in `lost`) and takes the hex; pushed, pulled or flung into one, it's just blocked (Motion rule). [D] |
 | `reemerges` | no | no | yes | When one sinks or splats, a new one climbs out on a shore hex (Emerge rule). |
 
 A big crate is a crate in every rule but `value`: Things, ice, bumps, Traps, targets and
@@ -129,13 +129,13 @@ gremlins treat it the same (D-34).
 |---|---|
 | `push` | Hexes it shoves (or flies) the piece standing on it, along `facing` (Belt, Bridge, Spring, Rocket, Cannon). [Bridge D] |
 | `splat` | Its push splats pieces that splat: the one it lands on and the one it launches (Rocket). [D] |
-| `flies` | Its push is airborne: it passes over inland open water (only the outer sea, an edge hex, takes the piece mid-flight), every hex counts (ice is no shortcut mid-air), and it sinks if it comes down on water (Spring, Rocket). Every landing skids: a flight (or a `clears` shot) that comes down on slick ground (bare ice or a Slide), at full range or short, slides on, on the ground, by the Step rule; there is no per-Thing flag. The one exception is a flight that splatted a gremlin in its way (it stops on that hex); a gremlin riding a Rocket splats where it lands. [D; skid on landing D-17, D-29, D-37 (settled 2026-11-12)] |
+| `flies` | Its push is airborne: it passes over inland open water (only the outer sea, an edge hex, takes the piece mid-flight), every hex counts (ice is no shortcut mid-air), and it sinks if it comes down on water (Spring, Rocket). Every landing skids: a flight (or a `clears` shot) that comes down on slick ground (bare ice or a Slide), at full range or short, slides on, on the ground (a skid, Motion rule); there is no per-Thing flag. The one exception is a flight that splatted a gremlin in its way (it stops on that hex); a gremlin riding a Rocket splats where it lands. [D; skid on landing D-17, D-29, D-37 (settled 2026-11-12)] |
 | `overMountains` | A flying push that passes over mountains too; it can't come down on one, so a flight that ends over a mountain lands on the last hex short of it that it flew over, or stays put if there's none (Spring: over two mountains, landing on the third). [D-35] |
 | `clears` | How many hexes at the start of its push pass over everything: water (the outer sea too), mountains, Walls, pieces (gremlins unsplatted), targets, Traps; the shot touches nothing on them, and the rest of the push goes through `step` from the last one, on the ground unless `flies` (Cannon: 4 of its 5). Stopped right after them, it comes down on the last cleared hex if the ground there would take it (no Wall, no other piece, not open water, not a mountain or another color's target; its color's target delivers it), else it doesn't fire; a path that leaves the map within them doesn't fire. 0 for every other kind. [D-36: the clearing and the 4th-hex landing D; off-map and the target cases P] |
 | `shove` | Hexes it pushes the piece on the **near hex** (the one it faces) on, along `facing` (Pusher). [D] |
 | `pull` | Hexes it pulls the piece on the **far hex** (two ahead along `facing`) back toward itself, into the **near hex** (one ahead) (Puller). |
 | `blocks` | Pieces can't enter (Wall). |
-| `traps` | A piece that splats dies when it comes onto this hex: walked, pushed, slid, or coming down from a flight; a flight passing over doesn't count (Trap). Every target does the same, with no Thing (Step rule). [D] |
+| `traps` | A piece that splats dies when it comes onto this hex: walked, pushed, slid, or coming down from a flight; a flight passing over doesn't count (Trap). Every target does the same, with no Thing (Motion rule). [D] |
 | `colored` | Placed in an open crate color the player picks, never white (`colorChoices`, D-32); its card is drawn plain, and only once two or more colors are open (Pusher, Puller). [D] |
 | `slides` | Slick ground: a piece that comes onto it on the ground keeps going the same way, free, exactly like bare ice (Slide). The one slick test, `isSlick`, reads it: a Thing on a hex decides by `slides`; with no Thing, the hex is slick if it's ICE. [D-29] |
 | `on` | `'land'` (plains/ice), `'water'`, or `'both'` (land or water) — where it may be built. [both D-29] |
@@ -153,7 +153,7 @@ gremlins treat it the same (D-34).
 | `overlay` | `'intro'` \| `'size'` \| `'news'` \| `'help'` \| `'color'` \| null. `'intro'` and `'size'` are size pickers; picking a size starts a game, and `'size'` (New Game) also closes on Esc, back to the game. `'news'` shows the colors `open` events named and the cards `unlock` events named, on one panel, and closes on a click or any key (D-30). `'help'` is the keys legend: it opens after the intro's size pick and from the Help button, and closes on a click or any key. `'color'` is the color picker (D-32): a click on a legal hex with a card whose `colorChoices` has more than one color opens it beside that hex, one swatch per choice; a swatch click or its number key sends `place` in that color; Esc, right-click or a click off the swatches closes it with the card still picked. [D] |
 | `choosing` | `{ q, r, colors }` \| null — the hex and swatches of the open color picker; the ghost stands there while it's open. [D-32] |
 | `hoveredHex`, `panX/Y`, drag fields | The hex under the cursor, the screen-space pan offset, and left-drag tracking (`DRAG_THRESHOLD`). |
-| `anim` | `{ t0, dur, tracks, before, hidden, milestone, opened, unlocked, redrawn, ends }` \| null — tick animation; input waits while it runs (picking a card doesn't). |
+| `anim` | `{ t0, dur, tracks, before, hidden, milestone, opened, unlocked, redrawn, ends }` \| null — tick animation, played hop by hop as the engine ran it (each track `{pts, hop, over, end}`, `pts[k]` its hex after hop k, D-38); input waits while it runs (picking a card doesn't). |
 | `running` | bool — Go/Pause. While true, the client calls `wait()` `RUN_GAP_MS` after each animation ends, and holds while a card is picked. [D] |
 | `sound` | `GameSound`, `Math.random` only. |
 
@@ -169,7 +169,7 @@ gremlins treat it the same (D-34).
   `targets.length <= MAP_SIZES[size].colors`, and the targets' colors are distinct `CRATE_COLORS`. [D]
 - At most one Thing per hex. No Thing on a target. Bridges only on water; Slides on land or
   water; every other kind only on land. [P; Slide D-29]
-- At most one piece per hex. No piece on a Wall, on mountain, or on open water (water with no Thing over it), between commands (a Spring's flight passes over a mountain mid-push, D-35; a Cannon's shot over anything, D-36). [P]
+- At most one piece per hex, between commands and after every hop of a tick (a Cannon's shot passing over doesn't count, D-36, D-38). No piece on a Wall, on mountain, or on open water (water with no Thing over it), between commands (a Spring's flight passes over a mountain mid-tick, D-35; a Cannon's shot over anything, D-36). [P; every hop D-38]
 - `hand.length === HAND_SIZE` whenever a command returns. [P]
 - `1 <= unlocks <= UNLOCKS.length`, and every `THINGS` kind is in exactly one `UNLOCKS` step. [D]
 - Every command that returns `ok:true` ran exactly one tick and raised `turn` by 1, except `rotate`, which ran none and left everything but that facing alone. [P; rotate D]
@@ -291,118 +291,136 @@ terrain fits THINGS[kind].on:  'land' → PLAINS or ICE;  'water' → WATER;  'b
 THINGS[kind].blocks ⇒ no piece on hex, and not a source   # the crates must flow
 ```
 
-### Step — `step(piece, dir, {flies, overMountains})` → `'moved' | 'blocked' | 'sank' | 'delivered' | 'trapped'` [P; trap D; overMountains D-35]
-*Serves:* one code path for every way a piece moves (movers, springs, ice, Slides, gremlins).
+### Motion — the lockstep hop simulation [D-38; splat, flies, wrecks, bump D; overMountains D-35; clears D-36; every landing skids D-37]
+*Serves:* G-1; one code path for every way a piece moves (movers, springs, rockets, cannons,
+ice, Slides, bumps, gremlins); the animation replays exactly what happened.
+
+Every piece that gets a motion this tick (from its Thing, a wander, or a bump) advances one
+hex per **hop**, all together. Hop k in the engine is hop k in the animation. A motion is
+always in one **phase**, which says how it travels (`lift`) and what arriving and being
+stopped do:
+
+| Phase | Lift | Bumps | Arriving on a hex | Stopped |
+|---|---|---|---|---|
+| `over` | over | no | passes over, touching nothing; after `clears` hexes → `ground` (still aloft) | — |
+| `air` | air | yes | its color's target delivers, the outer sea sinks; at its planned length it **lands** | comes down where it is |
+| `ground` | ground | yes | ground arrival; non-slick ground uses up one of its `n` hexes (slick is free) | stops (aloft: comes down where it is) |
+| `skid` | ground | yes | ground arrival; non-slick ground stops it | stops |
+| `line` | ground | no | ground arrival; stops after `BUMP_ADVANCE` hexes | stops |
+| `follow` | ground | no | ground arrival; follows as far as its line's first piece went | stops (a flier that followed 0: comes down where it is) |
+| `drop` | ground | no | lands | crashes |
+
 ```
-next = piece + DIR[dir]
-if overMountains and next is MOUNTAIN: skip the next line          # a Spring's flight (D-35)
-if next off-map or MOUNTAIN or a blocking Thing or a piece there: return 'blocked'
-if not flies and next is a target of another color than this cargo: return 'blocked'
-piece.moveTo(next)
-if PIECES[kind].cargo and next is the target of its color: remove; that target's delivered += value; delivered += value; return 'delivered'
-if not flies and (a Thing with traps or a target is there) and PIECES[kind].splats: remove; return 'trapped'
-if next is WATER and no Thing there and not (flies and next is inland):
-    remove; lost += PIECES[kind].value; return 'sank'   # 0 for a gremlin
-return 'moved'
+ground arrival on hex: its color's target delivers; a Trap or a target kills a piece that splats
+                       (splat, trap says which); open water sinks (lost += value)
+groundOpen(hex) = on the map, not MOUNTAIN, no blocking Thing, not another color's target
+land:   the landing checks on its hex (its color's target delivers; open water sinks; a Trap kills
+        a piece that splats); then a gremlin on a Rocket (doomed) splats; else on slick ground it
+        skids (phase skid), unless it splatted a gremlin to land there; else it stops
+comeDownHere: a flight over a MOUNTAIN or another color's target drops back (phase drop, next hop)
+        to the last hex it flew over that it may land on, or its start (D-35); a shot over a hex
+        that's a MOUNTAIN, another color's target, a Wall or another piece crashes; else land
+crash:  remove it; lost += its value; emit splat{id, by: what it hit or null, trap: false}
+stop:   the motion is over; a doomed piece splats (splat{id, by: null})
 ```
 
-### Push — `push(piece, dir, {n, splat, flies, overMountains, clears, wrecks}, moved)` [P; splat, flies, wrecks, bump D; overMountains D-35; clears D-36; every landing skids D-37]
-*Serves:* G-1; ice as windfall; comedy (the Rocket, bumps on the ice).
+**Launch** (each claim as the tick starts):
 ```
-left = n
-while left > 0:
-    cleared = fewer than `clears` hexes entered so far              # a Cannon's first 4 (D-36)
-    res = cleared ? passOver(piece, dir) : step(piece, dir, {flies, overMountains})
-                                                    # passOver: 'blocked' only off the map, else moves there touching nothing
-    if res == 'blocked' and splat and the blocker is a piece with PIECES.splats:
-        remove it; emit splat{id: it, by: piece}; res = step(piece, dir); stop after it  # lands there
-    if res == 'blocked' and wrecks and the blocker is cargo:
-        remove it; lost += its value; emit splat{id: it, by: piece}; res = step(piece, dir); stop after it
-    if res == 'blocked' and nothing was hit and bump(piece, dir, moved): stop   # D-33, ground or air
-    if res != 'moved': stop
-    if not flies and not cleared and isSlick(piece's hex): continue    # sliding is free: a Thing with slides, or ICE with no Thing
-    left -= 1
-aloft = flies, or (clears > 0 and it entered no more than `clears` hexes)   # a shot stopped right after its cleared stretch
-comeDown, if aloft and it's still on the board:                      # D-35, D-36
-    while it's on a hex past the first clears-1 of its path and not canLand(hex): back to the hex before
-    if it's back inside the first clears-1 hexes: back to the start (no fire, no move)
-    canLand(hex) = not MOUNTAIN, not a target of another color, and on a cleared hex also
-                   no blocking Thing, no other piece, not open water
-if aloft and it came down on its color's target: deliver it         # only a shot's 4th hex gets here
-elif aloft and piece is still on the board, on open water: sink it      # came down on inland water
-elif aloft and it came down on a Trap and PIECES[piece.kind].splats: remove it; res = 'trapped'
-doomed = splat and PIECES[piece.kind].splats                      # a gremlin on a Rocket splats where it lands
-if aloft and it came down (path not empty, still on the board) and not doomed and nothing hit and no bump:
-    while the hex it's on is slick:                                   # D-37: every landing, full range or short
-        step(piece, dir, GROUND)                                      # GROUND = {flies: false, overMountains: false}
-        blocked: bump(piece, dir, moved), and stop either way         # sinks, delivers, Traps as any step
-                                                    # comeDown ran first, so it only skids from a hex it may land on
-if res == 'trapped': emit splat{id, by: null, trap: a Trap is on the hex}   # else it died on a target
-if doomed and piece didn't sink or deliver: remove piece; emit splat{id, by: null, trap: false}
-# events: move{id, path, by: null, byAt: null} (if it moved; the path includes any follow), then the
-# splats/sink/deliver above, then the bumped line's events
+shot (clears > 0):  hexes 1..clears must be on the map, and either hex clears+1 is groundOpen or
+                    hex clears could take it (not MOUNTAIN, not another color's target, no Wall, no
+                    piece, not open water), as the board stands now; else no fire (still claimed)
+                    → phase over for clears hexes, then ground for n - clears
+flight (flies):     its length is fixed now: up to n hexes, stopping before the map's edge, a Wall or a
+                    MOUNTAIN (unless overMountains), and on its color's target or the outer sea; then
+                    trimmed back off any MOUNTAIN or other color's target it would end over (D-35)
+                    → phase air for that many hops (0: it stays, and lands where it stands)
+otherwise:          phase ground for n hexes (a wander: n = 1, wrecks)
+```
 
-bump(piece, dir, moved) → bumped?:                        # D-33
-    H = the hex ahead of piece in dir; A = the piece on H
-    if no A, or A.id in moved, or not isSlick(H): no bump (piece was just blocked)
-    line = A, then each piece right behind the last one in dir, up to a gap or a piece in moved
-    moved += line
-    repeat BUMP_ADVANCE times:                            # 2: no slide afterward
-        for each piece in line, far end first, still on the board:
-            step(it, dir, GROUND)                         # blocked: it stays (compresses); may sink/deliver/trap
-    for each piece in line: emit move{id, path, by: piece, byAt: hexes piece had entered at contact}, then its sink/deliver/splat
-    piece follows: step(piece, dir, GROUND) as many times as A went (stopping if blocked or gone)
-    the bump ends piece's motion (a flight comes down where it followed to)
+**Each hop:**
 ```
-**Bump (D-33).** A piece stopped by a piece standing on slick ground (bare ice or a Slide) —
-on the ground or in the air, carried by any Thing, sliding, or a gremlin — bumps it: the line
-of pieces from the bumped one on (it and the unmoved pieces right behind it in the same
-direction; only the bumped hex needs to be slick) advances `BUMP_ADVANCE` (2) hexes, and the
-bumper follows as far as the bumped piece went, ending right behind it, so the bumped hex is
-left empty. Each step goes through `step`: a piece in the line can sink, deliver, die on a
-Trap or a target, or stop against a blocker or the piece ahead (the line compresses). There
-is no slide after the advance, and the bump ends the bumper's motion, a flight included. A
-bumper whose line can't move at all stays where it was stopped (a flight comes down short).
-Every piece in the line counts as moved, so the line pieces don't bump on and can't be moved
-again this tick. A gremlin's own step into cargo still wrecks it, and a Rocket still splats a
-gremlin in its path, before any bump.
-A slide or a flight always ends: a straight line reaches the water edge. A Rocket's flight
+every motion proposes its next hex (a drop: its drop hex; a follow: the next hex while it's behind
+    its leader, nothing on the hop it bumped); terrain and Things alone may block it: an over always
+    goes, an air motion while it has hexes left, a ground step if groundOpen
+claims on one hex (over aside, unseen): two or more air → each crashes (collide), the ground
+    claimants are blocked; else the lowest rank wins, the rest are blocked
+each claim resolves along its chain of occupants (pieces on the hexes as the hop starts, a shot
+    passing over not counted): free → go; occupant leaves this hop (go, collide, wreck, splat)
+    → go; a cycle of 3+ → all go (they rotate); a 2-cycle (swap) → both blocked, both crash if
+    both air; occupant stays → meet:
+        an air motion with splat (a Rocket) meeting a piece that splats → splat it, take its hex,
+            and land there (no skid)
+        a wander (wrecks) meeting cargo → wreck it (lost += value, splat{by: the gremlin}), take its hex
+        a phase that bumps meeting a piece that has had no motion this tick, on slick ground → bump
+        anything else → blocked
+a bump (lowest rank first) starts the line (that piece and the pieces right behind it in dir with no
+    motion this tick) as line motions of BUMP_ADVANCE hexes from this hop, ranked as the bumper;
+    the bumper becomes a follow that waits this hop; then the hop is resolved again
+apply: victims go; every mover moves (all at once); each arrives by its phase; each blocked one stops
+    by its phase. A hex freed by a sink, delivery, Trap or splat is open from the next hop (the
+    splatter or wrecker takes its victim's hex at once).
+```
+A **blocked piece stops for the rest of the tick**: no retry when the hex frees up later.
+**Rank** is the claiming Thing's place in the tick's order (Pushers and Pullers first, then
+placement order, D-24); wanderers rank after every Thing; a bumped line takes its bumper's rank.
+
+**Bump (D-33).** A piece stopped by a piece standing on slick ground (bare ice or a Slide)
+that has had no motion this tick — on the ground or in the air, carried by any Thing,
+sliding, or a gremlin — bumps it: from that hop the line of pieces from the bumped one on (it
+and the motionless pieces right behind it; only the bumped hex needs to be slick) advances
+`BUMP_ADVANCE` (2) hexes together, and from the next hop the bumper follows as far as the
+bumped piece went, ending right behind it, so the bumped hex is left empty. Each line step is a
+ground step: a piece in the line can sink, deliver, die on a Trap or a target, or stop against a
+blocker or the piece ahead (the line compresses). There is no slide after the advance, and the
+bump ends the bumper's motion, a flight included. A bumper whose line can't move at all stays
+where it was stopped (a flight comes down there). A gremlin's own step into cargo still
+wrecks it, and a Rocket still splats a gremlin in its path, before any bump.
+
+**Flights.** A flight meets whatever is on a hex at the hop it gets there. A Rocket's flight
 (`flies`, range `THINGS.ROCKET.push`) crosses movers, Bridges, ice, inland water and other
-colors' targets, delivers on its color's target, and sinks in the outer sea, or in inland water if it comes down there. A
-Spring's throw (`flies`, `overMountains`) does the same over its 3 hexes, and passes
-over mountains too, so it can clear two and land on the third; a throw that ends over a
-mountain comes down on the last hex short of it that it flew over, or doesn't leave the
-Spring if all three are mountain (D-35). Walls and pieces still stop it. Then it skids on if it lands
-on bare ice or a Slide (D-29), and so does a Rocket's flight (D-37): the skid is a ground move, so it
-sinks in open water, delivers on its color's target, stops at a Wall, a mountain or another color's
-target, kills a gremlin on a Trap and bumps a line on slick ground. Every landing skids, short
-ones too (a flight blocked mid-air, one backed up off a hex it can't land on, a Cannon's 4th-hex
-fallback); the way on from a short landing is usually what shortened it, so that skid stops at
-once. The one exception: a flight that splatted a gremlin stops on that hex. A gremlin the Rocket
-carries splats where it lands, and a bumper ends behind its line (D-33). A Cannon's shot (`clears` 4, range 5) passes over anything for
-its first 4 hexes, touching nothing (it splats no gremlin, delivers on no target, springs no
-Trap), then moves into the 5th as an ordinary ground step: it can sink, deliver, be blocked,
-bump a line on slick ground, kill a gremlin on a Trap, and slide on over ice (once: the ground
-slide is the skid, D-37). Blocked there, it comes down on the 4th hex if the ground would take it
-(delivered if that's its color's target; on ice or a Slide it skids on, into what stopped it), or doesn't fire; a shot whose cleared hexes run off the map doesn't fire (D-36). A Slide moves nothing standing on it; it only keeps a piece
-that comes onto it going, and over water it keeps that piece from sinking. Splatted pieces aren't `lost`. A gremlin dies on a Trap however it comes onto it
-(a wander, a push, a slide, a landing), but not when a flight carries it over one, and not
-when a Trap is built under it.
+colors' targets, delivers on its color's target, and sinks in the outer sea, or in inland
+water if it comes down there. A Spring's throw (`flies`, `overMountains`) does the same over
+its 3 hexes and passes over mountains too, so it can clear two and land on the third; a throw
+that would end over a mountain is trimmed at launch to the last hex short of it, or doesn't
+leave the Spring if all three are mountain (D-35). Walls stop a flight (planned at launch);
+a piece that stays in its way stops it mid-flight and it comes down where it is, dropping back
+the next hop if that's over a mountain. **Two airborne pieces entering one hex on the same
+hop, or swapping hexes, both crash** (D-38); a flight never blows up a piece on the ground. Every
+landing skids on bare ice or a Slide (D-29, D-37): the skid is a ground motion, so it sinks in
+open water, delivers on its color's target, stops at a Wall, a mountain or another color's
+target, kills a gremlin on a Trap and bumps a line on slick ground. The one exception: a flight
+that splatted a gremlin stops on that hex. A gremlin the Rocket carries splats where it lands.
+A Cannon's shot (`clears` 4, range 5) passes over anything for its first 4 hexes, unseen
+(it splats no gremlin, delivers on no target, springs no Trap, crashes into no flight, and
+pieces may move under it), then moves into the 5th as an ordinary ground step: it can sink,
+deliver, be blocked, bump a line on slick ground, kill a gremlin on a Trap, and slide on over
+ice (once: the ground slide is the skid, D-37). Blocked there, it comes down on the 4th hex (a
+Bridge, bare ice or a Slide takes it; its color's target delivers it; on ice or a Slide it
+skids on, into what stopped it); if what blocks the 5th is terrain or a Thing and the 4th
+couldn't take it as the tick starts, it doesn't fire, and if the 4th holds a piece by the time
+it comes down it crashes (D-38). A shot whose cleared hexes run off the map doesn't fire (D-36).
+A Slide moves nothing standing on it; it only keeps a piece that comes onto it going, and over
+water it keeps that piece from sinking. Splatted pieces aren't `lost`; crashed and wrecked ones
+are. A gremlin dies on a Trap however it comes onto it (a wander, a push, a slide, a landing),
+but not when a flight carries it over one, and not when a Trap is built under it. A slide or a
+flight always ends: a straight line reaches the water edge.
 
-### Tick — `tick()` [P]
+### Tick — `tick()` [P; lockstep D-38]
 *Serves:* G-1. Runs once per command.
 ```
-phase = 'tick'; moved = {}; deliveredBefore = delivered
-for thing in things with shove or pull, then the rest (each in placement order):   # D-24
+phase = 'tick'; deliveredBefore = delivered; claimed = {}
+for thing in things with shove or pull, then the rest (each in placement order), rank = its index:   # D-24
     mover:  p = piece on thing's hex;  dir = facing;            n = push
     Pusher: p = piece on hex 1 ahead;  dir = facing;            n = shove
     Puller: p = piece on hex 2 ahead;  dir = opposite(facing);  n = pull
     skip p if thing.color != WHITE and p is cargo of another color   # affects(thing, p)
-    if p and p.id not in moved: moved += p; push(p, dir, {n, splat, flies, overMountains, clears of THINGS[kind], wrecks: false}, moved)
-for piece with PIECES[kind].wanders (creation order), skipping it if in moved by now:   # a bumped line may have moved it
-    moved += piece
-    dirs = directions whose neighbor is land or covered water (Bridge, Slide), no blocking Thing, and empty or holding cargo it wrecks
-    if dirs: push(piece, Rando.choice(dirs), {n: 1, splat: false, flies: false, overMountains: false, clears: 0, wrecks: PIECES[kind].wrecks}, moved)
+    if p and p.id not in claimed: claimed += p; launch(p, dir, {n, splat, flies, overMountains, clears of THINGS[kind], wrecks: false}, rank)
+for piece with PIECES[kind].wanders (creation order), not claimed, ranked after every Thing:
+    dirs = directions whose neighbor is land or covered water (Bridge, Slide), no blocking Thing,
+           and empty or holding cargo it wrecks, as the tick starts
+    if dirs: claimed += piece; launch(piece, Rando.choice(dirs), {n: 1, splat: false, flies: false, overMountains: false, clears: 0, wrecks: PIECES[kind].wrecks}, rank)
+run hops 1, 2, … until every motion has stopped                     # Motion rule
+emit one move per piece that moved, then every end (sink/deliver/splat) in the order they happened
 spawnTimer += 1
 if spawnTimer >= SPAWN_INTERVAL:                                    # a spawn chance (D-31)
     spawnTimer = 0
@@ -414,18 +432,20 @@ if spawnTimer >= SPAWN_INTERVAL:                                    # a spawn ch
             a kind of color on src; emit spawn{id, q, r}
 idleTicks = 0 if the command used a card (place, discard) else idleTicks + 1   # D-26
 if idleTicks >= IDLE_REDRAW_TICKS: slot = Rando.int(0, HAND_SIZE-1); hand[slot] = draw(); idleTicks = 0; emit redraw{slot}
-gone = kinds of the command's own sink (remove) and this tick's sunk and splatted pieces
+gone = kinds of the command's own sink (remove) and this tick's sunk, splatted and crashed pieces
 trapped += count of gremlins whose splat has trap
 exGremlins += count of 'gremlin' in gone, less those trapped
 emerge(gone)
 for each milestone m with deliveredBefore < m <= delivered: emit milestone{count: m}; openColor(); unlock()   # reachMilestones
 turn += 1; phase = 'player'
 ```
-Each piece moves at most once per tick, a bumper and its bumped line included (D-33). Gremlins never step into water on purpose, but a
-gremlin that wanders onto ice, or is pulled into water, goes in. A Puller ignores pieces on
-its own hex and on the near hex; a pulled piece that lands on bare ice slides on toward the
-Puller and stops on it (a Thing covers its hex). A Pusher ignores a piece on its own hex. A
-gremlin that comes onto a target dies there, the same way as on a Trap.
+Each piece gets at most one motion per tick, a bumped line included (D-33); a piece a Thing
+claimed but couldn't move (a Cannon that didn't fire) has had its motion. A gremlin with
+nowhere to wander has none, so a bump can still move it. Gremlins never step into water on
+purpose, but a gremlin that wanders onto ice, or is pulled into water, goes in. A Puller
+ignores pieces on its own hex and on the near hex; a pulled piece that lands on bare ice slides
+on toward the Puller and stops on it (a Thing covers its hex). A Pusher ignores a piece on its
+own hex. A gremlin that comes onto a target dies there, the same way as on a Trap.
 
 ### Milestones — `nextMilestone(delivered)` [D]
 *Serves:* accumulation (a factory that keeps paying off), G-1.
@@ -547,14 +567,14 @@ Illegal → `{ ok:false }` and nothing changed (hand and `Rando` included).
 - `spawnKind()` — `'bigcrate'` or `'crate'` for the next spawn (Tick rule; rolls `Rando` only once a milestone is reached, D-34).
 - `board.*`.
 
-### Events (in the order they happened during the tick)
+### Events (each `move` with its start hop, each end with the hop it happened on)
 
 | Event | Fields |
 |---|---|
-| `move` | `id, path: [{q,r}…], by, byAt` — every hex entered, in order, including slides and a bumper's follow; for a piece in a bumped line (D-33) `by` is the bumper's id and `byAt` how many hexes of its own path the bumper had entered at contact, else both null. A bumped piece's `move` comes after its bumper's |
-| `sink` | `id` (the piece is gone after its last `move`, or where it stood if the Bridge or Slide under it was removed) |
-| `deliver` | `id` |
-| `splat` | `id, by, trap` — a piece destroyed by a Rocket's flight, a Trap, a target, a gremlin's step, or `blast`: `by` is the flier or gremlin that landed on it, or null for the launched piece itself, a trapped piece (after its `move`), or a blasted crate; `trap` is true only when a Trap killed it |
+| `move` | `id, path: [{q,r}…], hop, over` — one per piece that moved: one hex per hop from hop `hop` (the hop it entered `path[0]`), in order, including slides and a bumper's follow; a hop it sat out (a bumper waiting on its contact hop, a flight about to drop back) repeats its hex. `over` is how many of the first hexes it passed over (a Cannon's shot, unseen, D-36), else 0. Every `move` comes before every end, a bumped line's after its bumper's (D-38) |
+| `sink` | `id, hop` (the piece is gone from that hop on, after its last `move`, or where it stood, at hop 0, if the Bridge or Slide under it was removed) |
+| `deliver` | `id, hop` |
+| `splat` | `id, by, trap, hop` — a piece destroyed by a Rocket's flight, a Trap, a target, a gremlin's step, a mid-air crash, or `blast` (hop 0): `by` is the flier or gremlin that landed on it, or the other flight it crashed into (D-38), or null for the launched piece itself, a trapped piece (after its `move`), a shot or flight with nowhere to come down, or a blasted crate; `trap` is true only when a Trap killed it |
 | `spawn` | `id, q, r` — a new crate on a source, or a gremlin climbing out on the shore |
 | `redraw` | `slot` — the hand slot the idle rule redrew this tick |
 | `milestone` | `count` — a milestone this tick's deliveries reached (after the tick's other events) |

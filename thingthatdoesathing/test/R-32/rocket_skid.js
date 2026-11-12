@@ -55,8 +55,8 @@ function launch(setup, kind = 'crate') {
     });
     check('a skid that meets a piece on ice bumps it: the line advances 2, the skid ends 1 past the hit hex',
         other.isAt(10, 4) && c.isAt(9, 4));
-    check('… the bumped move names the Rocket\'s piece, contact after its 8-hex flight',
-        res.events.some(e => e.type === 'move' && e.id === other.id && e.by === c.id && e.byAt === 8));
+    check('… the bumped line moves from the contact hop, the one after its 8-hex flight',
+        res.events.some(e => e.type === 'move' && e.id === other.id && e.hop === 9));
 }
 {
     const { c, moves } = launch(({ terrain, put, T }) => { terrain(5, 4, T.ICE); put('WALL', 6, 4); });
@@ -72,8 +72,11 @@ function launch(setup, kind = 'crate') {
 }
 {
     let g;
-    const { c, state } = launch(({ terrain, piece, T }) => {
+    const { c, state } = launch(({ terrain, piece, put, T }) => {
         for (let q = 3; q <= 6; q++) terrain(q, 4, T.ICE);
+        // Walled in, with a lake to its west, so it has nowhere to wander (the flight crosses the lake).
+        for (const [q, r] of [[4, 4], [4, 3], [3, 3], [2, 5], [3, 5]]) put('WALL', q, r);
+        terrain(2, 4, T.WATER);
         g = piece('gremlin', 3, 4);
     });
     check('a flight that splats a gremlin on ice stops on that hex: no skid (the one exception)',

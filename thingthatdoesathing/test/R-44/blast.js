@@ -11,7 +11,7 @@ const { flatGame, snapshot, DIR } = require('../helpers/load');
     const turn = state.turn;
     const res = engine.blast(3, 4);
     check('the crate is gone and counts lost', res.ok && !state.pieces.includes(c) && state.lost === 1);
-    check('its splat leads the events', JSON.stringify(res.events[0]) === JSON.stringify({ type: 'splat', id: c.id, by: null, trap: false }));
+    check('its splat leads the events', JSON.stringify(res.events[0]) === JSON.stringify({ type: 'splat', id: c.id, by: null, trap: false, hop: 0 }));
     check('the Belt under it stays, and one tick ran', state.things.length === 1 && state.turn === turn + 1);
 }
 {
