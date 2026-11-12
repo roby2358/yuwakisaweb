@@ -29,3 +29,4 @@ decision, and where the full reasoning lives (a RATIONALE `D-n` tagged *unreview
 - big crates: idea bigcrate-pac-e3h4 to reconsider how they drive advancement. [user]
 - milestone banner lists cards unlocked. [user]
 - crate cap sqrt (D-31 updated): cap = round(0.6 × √area) + 1 per milestone → small 8, medium 12, large 18, huge 36. First-milestone pacing unchanged on every size; medium's later milestones a bit slower (3rd at 147 vs 124). [agent constant]
+- bump rework (D-33 rewritten): fixed 2-hex advance, no extra ice slide; a blocked line compresses and the bumper follows only as far as the hit piece went (stops short if it sank/delivered); only the hit hex must be slick; the line ends at a gap or an already-moved piece; line pieces don't bump further; a bumping flight ends there (remaining range spent); Q-1 still open for plains. [agent]

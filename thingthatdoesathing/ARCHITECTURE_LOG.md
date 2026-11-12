@@ -2,6 +2,20 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-12 — A bump advances the line 2, and the bumper follows; flights bump too
+The 2026-11-11 bump stopped the bumper dead and pushed the bumped piece one hex and on along
+the ice (a recursive `push` with `BUMP`, so bumps chained), and a flight stopped by a piece
+never bumped. Now `bump(piece, dir, moved, byAt)` takes the line from the bumped piece on
+(`lineFrom`), steps it `BUMP_ADVANCE` (2, new in `artifacts.js`) hexes far end first
+(`advance`, plain `step`s, no slide after), then steps the bumper after it as far as the
+bumped piece went (`follow`); the bump ends the bumper's push. `push` calls it from flights
+too and lost its `by` argument; `BUMP` is gone; a shared `endEvent(piece, res)` builds the
+sink/deliver/trap splat for both. `move` events gained `byAt` (hexes the bumper had entered at
+contact; null with `by` on every other move). `gameui.js` holds a line piece until its bumper
+reaches the contact hex (`track.hold + byAt`), so line and bumper move together. D-33
+rewritten, Q-1 updated (partly answered); R-51 and its test rewritten, R-12, R-26 and R-32 touched (R-26's test
+updated for `byAt`).
+
 ### 2026-11-12 — Crate cap grows with the square root of board area
 `crateCap(size)` used to be max(1, round(area / `CRATE_HEXES_PER_CAP` = 20)): small 8, medium
 20, large 45, huge 180, which left large and huge effectively uncapped. The designer chose a

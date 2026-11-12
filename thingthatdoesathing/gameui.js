@@ -481,7 +481,8 @@ const GameUI = (function () {
         // Each piece that moved gets a track: its pre-tick hex, then every hex it entered.
         // All tracks advance together one hop per HOP_MS; spawned crates appear at the end.
         // A bumped piece (its move names the bumper `by`, D-33) holds still until the bumper
-        // arrives, so a chain of bumps runs one after another.
+        // reaches it (`byAt` hexes into the bumper's own path), then the line and the bumper
+        // go on together, the bumper one hex behind.
         startAnim(before, res) {
             const tracks = new Map();
             const hidden = new Set();
@@ -494,15 +495,15 @@ const GameUI = (function () {
                 if (e.type === 'move') {
                     const b = before.get(e.id);
                     const by = e.by && tracks.get(e.by);
-                    const hold = Array.from({ length: by ? by.pts.length : 1 }, () => ({ q: b.q, r: b.r }));
+                    const hold = Array.from({ length: by ? by.hold + e.byAt : 1 }, () => ({ q: b.q, r: b.r }));
                     const pts = [...hold, ...e.path];
-                    tracks.set(e.id, { ...b, pts, end: null });
+                    tracks.set(e.id, { ...b, pts, hold: hold.length, end: null });
                     hops = Math.max(hops, pts.length - 1);
                 } else if (e.type === 'sink' || e.type === 'deliver' || e.type === 'splat') {
                     // A piece that ends without moving (its Bridge removed, or splatted where
                     // it stood) fades where it stood; one hit by a flier waits for it to land.
                     const b = before.get(e.id);
-                    const t = tracks.get(e.id) || { ...b, pts: [{ q: b.q, r: b.r }], end: null };
+                    const t = tracks.get(e.id) || { ...b, pts: [{ q: b.q, r: b.r }], hold: 1, end: null };
                     const by = e.by && tracks.get(e.by);
                     while (by && t.pts.length < by.pts.length) t.pts.push(t.pts[t.pts.length - 1]);
                     t.end = e.type;

@@ -161,6 +161,7 @@ const GameArtifacts = (function () {
         BIG_CRATE_HALF,
         ENHANCE_CHANCE: 0.5,         // a newly opened color comes out of an existing source, else a new one
         HAND_SIZE: 3,
+        BUMP_ADVANCE: 2,             // hexes a bumped line advances; its bumper follows to one behind it (D-33)
         IDLE_REDRAW_TICKS: 10,       // ticks in a row with no card used (place or discard) before one random card is redrawn
         GREMLIN_HEXES_PER_DIE,
         GREMLIN_DICE_SIDES: 4,

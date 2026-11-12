@@ -7,7 +7,7 @@
 // Every command re-checks its own legality; every legal command but rotate runs exactly one tick. All randomness goes through the seeded Rando.
 const GameEngine = (function () {
     const {
-        TERRAIN, THINGS, UNLOCKS, PIECES, CRATE_COLORS, WHITE, aims, nextMilestone, MAP_SIZES, SPAWN_INTERVAL, ENHANCE_CHANCE, HAND_SIZE, IDLE_REDRAW_TICKS,
+        TERRAIN, THINGS, UNLOCKS, PIECES, CRATE_COLORS, WHITE, aims, nextMilestone, MAP_SIZES, SPAWN_INTERVAL, ENHANCE_CHANCE, HAND_SIZE, IDLE_REDRAW_TICKS, BUMP_ADVANCE,
         gremlinDice, GREMLIN_DICE_SIDES, crateCap, milestonesReached, bigCrateChance,
         GEN_MAX_ATTEMPTS, HEIGHTMAP_ROUGHNESS,
         WATER_PCT, MOUNTAIN_PCT, ICE_FRAC, PLACE_SLICE_FRAC, PLACE_SLICE_MIN
@@ -16,8 +16,6 @@ const GameEngine = (function () {
     const KINDS = Object.keys(THINGS);
     // A wanderer's own step, as a push; `wrecks` comes from its piece template.
     const wanderOf = piece => ({ n: 1, splat: false, flies: false, skids: false, wrecks: PIECES[piece.kind].wrecks });
-    // A bumped piece's motion, as a push: one hex on the ground, sliding on over slick ground (D-33).
-    const BUMP = Object.freeze({ n: 1, splat: false, flies: false, skids: false, wrecks: false });
     // What a command did before its tick: events to report first, and the kinds of pieces it
     // sank (for emerge). Most commands do nothing first.
     // What a command did before its tick: leading events, the kinds it removed (for emerge),
@@ -488,28 +486,26 @@ const GameEngine = (function () {
         // A flying push counts every hex (ice is no shortcut mid-air), crosses inland water,
         // and sinks only if it comes down on water; if it skids, coming down on slick ground
         // slides on as usual. A piece that splats dies on a Trap it comes onto, or comes down on.
-        // A piece stopped on the ground by a piece standing on slick ground bumps it (D-33):
-        // it stops where it is and the bumped piece is pushed on (bump), so chains run.
-        // `moved` is the tick's set of piece ids already moved; `by` is the bumper's id
-        // (null unless this push is a bump), carried on the move event so the client can
-        // start the bumped piece when its bumper arrives.
+        // A piece stopped (on the ground or mid-flight) by a piece standing on slick ground
+        // bumps it (D-33, `bump`): the line ahead advances and this piece follows behind it,
+        // and that ends its motion. `moved` is the tick's set of piece ids already moved.
         // Returns this push's events: one move (if it moved), a splat for a piece it hit
         // (`by` the mover), then a sink/deliver/splat if the mover ended so (a Trap's kill is
-        // a splat, `by` null), then the events of any piece it bumped.
-        push(piece, dir, how, moved, by) {
+        // a splat, `by` null), then the events of the line it bumped.
+        push(piece, dir, how, moved) {
             const { n, splat, flies, skids, wrecks } = how;
             const events = [];
-            let bumped = [];
             const path = [];
             const start = { q: piece.q, r: piece.r };
-            let left = n, res = 'moved', hit = null;
+            let left = n, res = 'moved', hit = null, bumped = null;
             while (left > 0) {
                 res = this.step(piece, dir, flies);
                 if (res === 'blocked' && splat) hit = this.victim(piece, dir, v => PIECES[v.kind].splats);
                 if (res === 'blocked' && wrecks) hit = this.victim(piece, dir, v => PIECES[v.kind].cargo);
                 if (hit) this.loseValue(hit);
                 if (hit) res = this.step(piece, dir, flies);
-                if (res === 'blocked' && !hit && !flies) bumped = this.bump(piece, dir, moved);
+                if (res === 'blocked' && !hit) bumped = this.bump(piece, dir, moved, path.length);
+                if (bumped) { path.push(...bumped.path); res = bumped.res; break; }
                 if (res === 'blocked') break;
                 path.push({ q: piece.q, r: piece.r });
                 if (res !== 'moved' || hit) break;
@@ -517,9 +513,10 @@ const GameEngine = (function () {
                 left--;
             }
             // A skidding throw that ran its full range onto slick ground slides on, on the ground.
-            while (skids && res === 'moved' && !hit && this.isSlick(this.board.get(piece.q, piece.r))) {
+            while (skids && !bumped && res === 'moved' && !hit && this.isSlick(this.board.get(piece.q, piece.r))) {
                 res = this.step(piece, dir, false);
-                if (res === 'blocked') bumped = this.bump(piece, dir, moved);
+                if (res === 'blocked') bumped = this.bump(piece, dir, moved, path.length);
+                if (bumped) { path.push(...bumped.path); res = bumped.res; break; }
                 if (res === 'blocked') break;
                 path.push({ q: piece.q, r: piece.r });
             }
@@ -540,24 +537,95 @@ const GameEngine = (function () {
             }
             const splatsToo = splat && (res === 'moved' || res === 'blocked') && PIECES[piece.kind].splats;
             if (splatsToo) this.removePiece(piece);
-            if (path.length) events.push({ type: 'move', id: piece.id, path, by });
+            if (path.length) events.push({ type: 'move', id: piece.id, path, by: null, byAt: null });
             if (hit) events.push({ type: 'splat', id: hit.id, by: piece.id, trap: false });
-            if (res === 'sank') events.push({ type: 'sink', id: piece.id });
-            if (res === 'delivered') events.push({ type: 'deliver', id: piece.id });
-            // A trapped piece died on a Trap or on a target; `trap` says which.
-            if (splatsToo || res === 'trapped') events.push({ type: 'splat', id: piece.id, by: null, trap: res === 'trapped' && this.isTrap(here) });
-            return [...events, ...bumped];
+            const end = splatsToo ? { type: 'splat', id: piece.id, by: null, trap: false } : this.endEvent(piece, res);
+            if (end) events.push(end);
+            return bumped ? [...events, ...bumped.events] : events;
         }
 
-        // `piece`, stopped going `dir`, bumps the piece in the way if that one stands on slick
-        // ground and hasn't moved this tick: it takes the motion and goes on (BUMP) in `dir`,
-        // and counts as moved. Returns its events (none if there's no bump).
-        bump(piece, dir, moved) {
+        // The event for a piece a step ended: sunk, delivered, or killed on a Trap or a target
+        // (a splat, `by` null, `trap` says which). Null if it's still on the board.
+        endEvent(piece, res) {
+            if (res === 'sank') return { type: 'sink', id: piece.id };
+            if (res === 'delivered') return { type: 'deliver', id: piece.id };
+            if (res === 'trapped') return { type: 'splat', id: piece.id, by: null, trap: this.isTrap(this.board.get(piece.q, piece.r)) };
+            return null;
+        }
+
+        // `piece`, stopped going `dir` (on the ground or mid-flight), bumps the piece in the way
+        // if that one stands on slick ground and hasn't moved this tick (D-33). The line from it
+        // on (it and the unmoved pieces right behind it in `dir`) advances BUMP_ADVANCE hexes,
+        // and then `piece` follows as far as the bumped piece went, ending right behind it, so
+        // the bumped hex is left empty. Every piece in the line counts as moved, even one that
+        // couldn't budge. `byAt` is how many hexes `piece` had entered before the contact.
+        // Returns null if there's no bump, else { path, res, events }: the hexes `piece`
+        // entered following, its last step's result ('blocked' if it couldn't follow at all),
+        // and the line's events.
+        bump(piece, dir, moved, byAt) {
             const hex = this.neighborHex(piece, dir);
-            const other = hex && this.pieceAt(hex.q, hex.r);
-            if (!other || moved.has(other.id) || !this.isSlick(hex)) return [];
-            moved.add(other.id);
-            return this.push(other, dir, BUMP, moved, piece.id);
+            const first = hex && this.pieceAt(hex.q, hex.r);
+            if (!first || moved.has(first.id) || !this.isSlick(hex)) return null;
+            const line = this.lineFrom(first, dir, moved);
+            line.forEach(p => moved.add(p.id));
+            const runs = this.advance(line, dir, BUMP_ADVANCE);
+            const events = runs.flatMap(run => this.runEvents(run, piece.id, byAt));
+            return { ...this.follow(piece, dir, runs[0].path.length), events };
+        }
+
+        // `first` and the pieces right behind it going `dir`, up to a gap or a piece that already
+        // moved this tick (that one is just a blocker).
+        lineFrom(first, dir, moved) {
+            const line = [first];
+            for (;;) {
+                const hex = this.neighborHex(line[line.length - 1], dir);
+                const next = hex && this.pieceAt(hex.q, hex.r);
+                if (!next || moved.has(next.id)) return line;
+                line.push(next);
+            }
+        }
+
+        // Each piece of `line` goes up to `hexes` hexes in `dir` on the ground, the far end first
+        // each hex, every step through `step`: it can sink, deliver, die on a Trap or a target,
+        // or stop against a blocker or the piece ahead. No slide afterward. Returns one run
+        // { piece, path, res } per piece, in line order.
+        advance(line, dir, hexes) {
+            const runs = line.map(piece => ({ piece, path: [], res: 'moved' }));
+            const farFirst = [...runs].reverse();
+            for (let k = 0; k < hexes; k++) {
+                for (const run of farFirst) {
+                    if (run.res !== 'moved') continue;   // gone already
+                    const res = this.step(run.piece, dir, false);
+                    if (res === 'blocked') continue;
+                    run.res = res;
+                    run.path.push({ q: run.piece.q, r: run.piece.r });
+                }
+            }
+            return runs;
+        }
+
+        // A bumped piece's events: its move (naming the bumper `by`, and `byAt`), then its end.
+        runEvents(run, by, byAt) {
+            const events = [];
+            if (run.path.length) events.push({ type: 'move', id: run.piece.id, path: run.path, by, byAt });
+            const end = this.endEvent(run.piece, run.res);
+            if (end) events.push(end);
+            return events;
+        }
+
+        // The bumper follows its line up to `hexes` hexes in `dir` on the ground.
+        // Returns { path, res } as in `bump`.
+        follow(piece, dir, hexes) {
+            const path = [];
+            let res = 'blocked';
+            for (let k = 0; k < hexes; k++) {
+                const r = this.step(piece, dir, false);
+                if (r === 'blocked') break;
+                res = r;
+                path.push({ q: piece.q, r: piece.r });
+                if (r !== 'moved') break;
+            }
+            return { path, res };
         }
 
         // The piece in the way of `piece` going `dir`, if `isVictim(it)`; removed from the board.
@@ -618,16 +686,16 @@ const GameEngine = (function () {
                 const act = this.actionOf(thing);
                 if (!act || !act.piece || !this.affects(thing, act.piece) || moved.has(act.piece.id)) continue;
                 moved.add(act.piece.id);
-                events.push(...this.push(act.piece, act.dir, act.how, moved, null));
+                events.push(...this.push(act.piece, act.dir, act.how, moved));
             }
 
-            // Pieces a push removed are off s.pieces already. A wanderer another one bumped
+            // Pieces a push removed are off s.pieces already. A wanderer in a bumped line
             // (D-33) has moved, and may be gone, so `moved` is checked as each one goes.
             for (const p of s.pieces.filter(p => PIECES[p.kind].wanders)) {
                 if (moved.has(p.id)) continue;
                 moved.add(p.id);
                 const dirs = this.wanderDirs(p);
-                if (dirs.length) events.push(...this.push(p, Rando.choice(dirs), wanderOf(p), moved, null));
+                if (dirs.length) events.push(...this.push(p, Rando.choice(dirs), wanderOf(p), moved));
             }
 
             // Every SPAWN_INTERVAL ticks, a spawn chance: under the crate cap, roll an open color;

@@ -494,40 +494,56 @@ ARCHITECTURE_LOG.md.
   before the second color opens, so the dropped color roll never touches its `Rando` stream.
   Unmeasured in play.
 
-### D-33 A piece on ice is bumped, like a billiard ball — *Decided (a piece standing on slick ground passes the motion on, using the normal slide), Proposed (unreviewed: the rest)*
-- **Alternatives:** keep every piece a plain blocker (the old rule); the bumper takes the
-  freed hex; bump on any ground, not just slick; let a bumped piece be bumped again in the
-  same tick.
-- **Why:** the designer asked for it (pjpd bump-6nee). Ice should feel like ice: a crate
-  stalled at the end of a slide is a puck, and the next one knocks it on instead of piling up
-  behind it. It's one helper, `bump(piece, dir, moved)`, called where `push` already handles
-  a ground step that came back `'blocked'`; the bumped piece goes through the same `push` and
-  `step` with a fixed one-hex ground motion (`BUMP`), so the ice slide, water, targets, Traps
-  and Walls all work on it unchanged, and no kind is special-cased.
-- **Unreviewed calls:** (1) "On ice" means `isSlick` on the bumped piece's hex (bare ICE, or
-  a Slide, D-29); where the bumper stands doesn't matter. (2) The bumper stays where it
-  stopped (the cue ball stops dead). Taking the freed hex would move the bumper after the
-  bumped piece and need a second move for it in one push. (3) The bumped piece moves one hex
-  and slides on while the ground is slick, so it always leaves the ice patch it was on, or
-  stops against a blocker. (4) Chains: yes. A bumped piece stopped by another piece on slick
-  ground bumps it on. Every bumped piece joins the tick's `moved` set, even if it couldn't
-  budge, so a piece is bumped at most once per tick and a chain ends within the board (R-13
-  holds). A piece that already moved this tick (carried, or a wanderer that went) is just a
-  blocker. (5) Gremlins bump and are bumped: a carried gremlin knocks a crate on, a gremlin
-  standing on ice is knocked like a crate (onto a Trap, into the lake). A gremlin's own step
-  into a crate still wrecks it (wrecking is checked first). A bumped gremlin has moved, so it
-  doesn't wander that tick; the wander loop now checks `moved` as it goes and marks each
-  wanderer. (6) Flights don't bump: a Spring or Rocket stopped mid-air by a piece comes down
-  short as before (and a Rocket still splats a gremlin). A Spring's skid is on the ground,
-  so it does bump. (7) Into water a bumped crate sinks (`lost` +1); onto its color's target
-  it's delivered; another color's target, a Wall or a mountain stops it. (8) Events: the
-  bumped piece's `move` carries `by` (the bumper's id; null on every other move) and follows
-  the bumper's own events. The client holds a bumped piece's track at its start until the
-  bumper's track arrives, so a chain plays one after another.
-- **Evidence:** R-51, R-12, R-26. `Measured by: just cc-sim 200 small` → unchanged (200/200,
-  median 49, p90 58, 2.08 lost); `just cc-sim 50 medium` → 50/50, median 61 (was 61), p90 72
-  (was 70), 3.66 lost (was 3.52). The bot builds belts, so bumps only come up where a belt
-  runs into a crate stalled on ice. Unmeasured in play.
+### D-33 A bump on ice advances the line two and the bumper follows — *Decided 2026-11-11 (a piece standing on slick ground passes the motion on); Decided 2026-11-12 (flights bump too; the line advances 2 and the bumper ends one past the bumped hex, for every mover); Proposed (unreviewed: the rest)*
+- **Alternatives:** keep every piece a plain blocker (the original rule); the 2026-11-11 rule
+  (the bumper stops dead, the bumped piece goes one hex and slides on, chains allowed); the
+  bumper stops in place while the line advances; the bumper takes the bumped hex (the line
+  advances 1); bump on any ground, not just slick; flights come down short instead of bumping.
+- **Why:** the designer asked for the bump (pjpd bump-6nee) so ice feels like ice, and on
+  2026-11-12 settled its outcome, for every mover (Belt, Bridge, Pusher, Puller, Spring,
+  Rocket, ice slides, gremlins): the line starting at the bumped piece advances 2 hexes, and
+  the bumper ends 1 hex past the bumped hex, right behind it, so the bumped hex is left empty.
+  In the designer's words: "if the crate stopped in place the line would slowly back up. If it
+  replaced the item it hit, it would form a lasting barrier. Having the line advance 2 and the
+  item move 1 past the bump slowly moves things along." Springs and Rockets bump too (designer,
+  2026-11-12): a flight that runs into a piece on slick ground bumps it like any other mover.
+  It's one helper, `bump(piece, dir, moved, byAt)`, called wherever `push` gets a `'blocked'`
+  that didn't hit anything, in the air or on the ground; the line and the bumper move with the
+  same `step` as everything else, so water, targets, Traps and Walls work on them unchanged,
+  and no kind is special-cased. The advance is `BUMP_ADVANCE` in `artifacts.js`.
+- **Unreviewed calls:** (1) The advance is a fixed 2 hexes with no ice slide afterward ("advances
+  2"). Each step still resolves terrain: open water sinks (`lost` += value), its color's target
+  delivers, a gremlin dies on a Trap or a target, and a Wall, mountain, other color's target or
+  the map edge stops it. (2) A line blocked part way moves as far as it can: the far end steps
+  first each hex, so the pieces compress behind the blocker, each stopping behind the one
+  ahead. The bumper follows as far as the bumped piece went (0, 1 or 2 hexes), through `step`,
+  so it ends right behind it, never moves backward, and stays put if the line couldn't move.
+  If the bumped piece sank or was delivered, the bumper still stops where it would have stood
+  behind it, short of the water. (3) Only the bumped hex needs to be slick: the trigger is "a
+  puck on the ice", and the queue behind it moves whatever its ground, so a backed-up line
+  that spills off the ice still creeps along. Requiring every hex to be slick would let one
+  plains hex anywhere in the queue turn the bump back into a dead stop. (4) The line runs from
+  the bumped piece through each piece right behind it in the bump's direction, and ends at a
+  gap or at a piece that already moved this tick (that one is just a blocker, so nothing moves
+  twice). Every piece in the line counts as moved, even one that couldn't budge, and the
+  bumper already has (R-13). Line pieces step plainly and don't bump on, so the old chain
+  reaction is gone; a line replaces it. (5) Precedence is unchanged: a gremlin's own step into
+  cargo wrecks it, and a Rocket splats a gremlin in its path, before any bump. A carried
+  gremlin bumps; a gremlin in a line is pushed along like a crate (onto a Trap, into a lake).
+  (6) A flight that bumps follows the same way, on the ground, and the bump ends it: whatever
+  range is left is spent. The follow hexes are ones the bumped piece just crossed (or the
+  bumped hex itself), so the landing rules have nothing left to catch; a flight whose line
+  couldn't move comes down short, where it was stopped, as before. A Spring's skid bumps the
+  same way. (7) Events: line moves carry `by` (the bumper) and `byAt` (how many hexes of its
+  own path the bumper had entered at contact); both are null on every other move. The bumper's
+  `move` comes first and includes its follow hexes. The client holds each line piece until the
+  bumper reaches the contact hex, then the line and the bumper go on together, the bumper one
+  hex behind, which reads as a shove.
+- **Evidence:** R-51, R-12, R-26, R-32. 2026-11-12 rule: `just cc-sim 200 small` → unchanged
+  (200/200, median 49, p90 58, 2.08 lost); `just cc-sim 50 medium` → 50/50, median 61, p90 70
+  (was 72), 3.50 lost (was 3.60); `just cc-sim-to 30 small 5` → milestone 5 at median 208
+  (was 209), 24.83 lost per game (was 26.40). The bot builds belts and springs in a straight
+  line, so bumps only come up where a crate stalls on ice in it. Unmeasured in play.
 
 ### D-34 Big crates, worth 10, grow more likely with each milestone — *Decided (a crate worth 10 deliveries whose share of spawns rises toward 1), Proposed (unreviewed: the rest)*
 - **Alternatives:** a `value` field on each crate piece instead of a kind; p = 1 − (1 −
@@ -645,9 +661,10 @@ ARCHITECTURE_LOG.md.
 
 ## Open questions
 
-- **Q-1 Chain pushes?** A belt pushing a crate into another crate is blocked today.
-  Sokoban-style chains would make jams clear themselves, and also make spectacular
-  pile-ups. *Recommendation:* leave blocked until playtest shows jams are annoying.
+- **Q-1 Chain pushes?** *Partly answered by D-33 (2026-11-12):* on slick ground a push now
+  moves the whole line ahead two hexes. On plains a belt pushing a crate into another crate
+  is still blocked. Open: whether that's annoying in playtest. *Recommendation:* leave plains
+  blocking; ice and Slides are now the place to build a line that clears itself.
 
 ## Deliberately left out
 - Undo, and getting a removed Thing's card back (D-12: removal costs the card and a turn).

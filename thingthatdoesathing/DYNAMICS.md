@@ -102,10 +102,12 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
 - **New color:** a milestone opens a second target. If it comes out of a new source, build a
   second line; if it shares your source, the crates of both colors ride the same belt, so
   you have to split them by color before the targets.
-- **Ice tricks:** a crate stalled on ice isn't a jam: the next one along knocks it on like a
-  billiard ball (D-33), and a line of crates on an ice patch can go off in a chain. Park a
-  Wall where the bumped crate should stop, or a Trap where a gremlin on the ice will be
-  knocked.
+- **Ice tricks:** a crate stalled on ice isn't a jam: the next one along shoves it, and every
+  crate queued behind it, two hexes on, and takes the spot right behind them (D-33). Each bump
+  moves the queue a little, so a backed-up line on an ice patch creeps forward instead of
+  setting hard. A Spring or Rocket that hits a crate on ice does the same and stops there, so
+  a throw aimed into a stalled queue becomes a short, sure shove. Park a Wall where the line
+  should stop, or a Trap where a gremlin in the line will be pushed.
 - **Long game:** press Go and watch. Once the line works, every tick is a crate closer to
   the next milestone; step in when a gremlin or a jam starts leaking crates.
 - **Recurring tension:** use the odd card now (a Spring on a straight run, a Puller to
