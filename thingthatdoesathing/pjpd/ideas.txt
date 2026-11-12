@@ -5,6 +5,20 @@ Updated: 2026-11-12T00:51:43Z
 
 Thing Factory: reconsider how big crates (D-34) drive advancement. Right now the big-crate chance is m/(m+4) per spawn and a big crate is worth 10, so milestone gaps stay roughly flat (bot, small board, to the 5th milestone: turns 49/76/104/139/199 with big crates vs 49/82/180/342/662 without). That may flatten the endless milestone ladder (10, 20, 50, 100, 200, 500, 1000) too much, or turn late play into "wait for big crates". Options to weigh: a gentler curve or cap on the chance; scaling the value with the milestone instead of a fixed 10; making big crates heavier (e.g. Springs can't throw them, Belts move them every other tick) so they're worth more but cost more to route; tying them to the crate cap (count as more than 1). Playtest first, then pick with cc-sim-to numbers.
 ----
+Score:   50
+ID: goal-gen-tz9e
+Created: 2026-11-12T16:39:23Z
+Updated: 2026-11-12T16:39:23Z
+
+A goal generator: alongside the endless delivery milestones, the game hands the player side goals to chase, drawn from a pool of goal kinds and scaled to how far along they are. Candidate goal kinds:
+- Milestones: deliver N crates (today's ladder 10, 20, 50, …), or N of one color, or N big crates.
+- Construction: build something specific — e.g. a line of 5 Belts, a water crossing of Bridges, a Spring hop over mountains, a Cannon shot that lands, a ring of Belts, N Things on the board at once.
+- Gremlin trapping: trap N gremlins (tally "trapped"), or N in one tick, or with a specific Thing.
+- Gremlin expiration: N ex-gremlins by any means (Rocket splats, targets, Traps — the tally's "ex-gremlins"), or by a particular one (splat N with Rockets, lure N onto targets).
+- Possibly: deliveries without losing a crate for K turns, deliver within T turns of the goal appearing, keep the board clear of gremlins for K turns.
+
+Open questions: what a goal pays out (a card unlock, a card draw/choice, score, cosmetic badge, or nothing but the banner); how many goals are live at once (one? three?); whether goals are seeded by the game's Rando (reproducible) and how they scale with milestones/board size; whether goals replace or sit beside the milestone ladder; how the HUD shows them without crowding (the tally top right?); goals as data (a GOALS table in artifacts.js: kind, params, check, reward) so new kinds are rows, not code. Needs an interview before it becomes tasks.
+----
 Score:   40
 ID: zoom-lod-t65a
 Created: 2026-11-12T08:52:10Z
