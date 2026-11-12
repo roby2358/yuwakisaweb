@@ -2,6 +2,16 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-12 — Loop decisions reviewed and accepted (D-24, D-27 … D-37)
+The designer reviewed the loop decisions logged before the lockstep work and accepted them all:
+the D-24 first-vs-last addendum (keep Pushers/Pullers first; the "revisit if merges stall" line
+dropped) and D-27 through D-37 as they stood before D-38, with the review-round updates to D-29,
+D-30 (the banner call, (6)), D-31 (√area cap current; the linear cap is history) and D-33. Their
+*unreviewed* tags became "reviewed and accepted 2026-11-12" and their "Unreviewed calls" became
+"Calls (reviewed 2026-11-12)". Still *unreviewed*: D-38, every D-38 lockstep note (D-6, D-24,
+D-33, D-35, D-36, D-37, Q-1), D-39, and the slide-no-ice addition to D-29's call (1)
+(pjpd rationale-ok-cpnp). Docs only.
+
 ### 2026-11-12 — No Slide on bare ice (D-29)
 The Slide's `on` was `'both'` (plains, ice or water); ice already slides, so a Slide there did
 nothing. `BUILDS_ON.both` is renamed `unslick` (plains or water) and the Slide is its only user,

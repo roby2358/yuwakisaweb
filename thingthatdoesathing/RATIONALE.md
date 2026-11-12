@@ -177,7 +177,7 @@ ARCHITECTURE_LOG.md.
 - **Alternatives:** separate handlers for springs, ice, and gremlins.
 - **Why:** one code path means gremlins, springs, and slides can never disagree. Ice is the
   windfall terrain: a crate that skids across three ice hexes covers ground no belt paid
-  for. Water is the cost of getting it wrong. *(2026-11-12, D-38)* `step` is gone; the one
+  for. Water is the cost of getting it wrong. *(2026-11-12, D-38, *unreviewed*)* `step` is gone; the one
   code path is now the lockstep hop loop, where each phase of a motion arrives and stops by one
   dispatch table, so the rule holds in a new form.
 - **Evidence:** R-7, R-14, R-15.
@@ -335,7 +335,7 @@ ARCHITECTURE_LOG.md.
   The kill reuses `splat` (by null) so the client bursts it like any other.
 - **Evidence:** R-44; U-21 (manual). Unmeasured in play: the bot never blasts.
 
-### D-27 The Bridge is a Belt over water — *Decided (it pushes the piece on it along its facing), Proposed (unreviewed: the rest)*
+### D-27 The Bridge is a Belt over water — *Decided (it pushes the piece on it along its facing), Proposed (the rest; reviewed and accepted 2026-11-12)*
 - **Alternatives:** a plain deck (the old rule: a piece pushed onto it just stopped there);
   a Bridge that carries a piece onward in whatever direction it came on (no facing, but it
   needs to remember each piece's last move); a separate Belt-on-water kind.
@@ -344,7 +344,7 @@ ARCHITECTURE_LOG.md.
   only useful under a Spring's flight. Giving the row `push: 1` makes it a mover like any
   other: `aims` turns it, the ghost and the selection arrow show its facing, and the tick
   runs it through the same `push`/`step`. No engine code knows about Bridges.
-- **Unreviewed calls:** (1) It pushes on the ground (`flies: false`), so a Bridge aimed at
+- **Calls (reviewed 2026-11-12):** (1) It pushes on the ground (`flies: false`), so a Bridge aimed at
   open water drops the crate in, like a Belt aimed there; a crossing is a line of Bridges.
   (2) It's white and acts on every piece, gremlins included: a gremlin that wanders onto a
   Bridge gets carried, and can be carried into the lake. (3) It stays in the second group of
@@ -356,7 +356,7 @@ ARCHITECTURE_LOG.md.
   `just cc-sim 50 medium`: unchanged, since the bot plans land paths and discards Bridges.
   Unmeasured in play.
 
-### D-28 Placing on a Thing replaces it — *Decided (replace in one command and one tick), Proposed (unreviewed: the rest)*
+### D-28 Placing on a Thing replaces it — *Decided (replace in one command and one tick), Proposed (the rest; reviewed and accepted 2026-11-12)*
 - **Alternatives:** keep occupied hexes illegal (the old rule: `D`, then place, two ticks);
   replace but refund the old Thing as a card; let the new Thing keep the old one's slot in
   placement order.
@@ -364,7 +364,7 @@ ARCHITECTURE_LOG.md.
   tick, and a crate on the hex could wander off or sink in between. `canPlace` simply stops
   looking for a Thing; `place` takes the old one out before it pushes the new one. No
   engine code knows which kinds are involved.
-- **Unreviewed calls:** (1) `remove` stays its own command, for clearing a hex without
+- **Calls (reviewed 2026-11-12):** (1) `remove` stays its own command, for clearing a hex without
   spending a card. (2) The hex is judged as if bare, against its own terrain: a land kind
   can't replace a Bridge on water (a Bridge can, so a piece on a bridged hex never sinks
   from a replace and `place` needs no sink case), a Wall still can't go where a piece
@@ -381,7 +381,7 @@ ARCHITECTURE_LOG.md.
   `just cc-sim 50 medium`: unchanged, since the bot only rotates its own Things and never
   places over one. Unmeasured in play.
 
-### D-29 The Slide is ice you can build — *Decided (a placeable Thing that slides like ice, buildable on water like a Bridge), Proposed (unreviewed: the rest)*
+### D-29 The Slide is ice you can build — *Decided (a placeable Thing that slides like ice, buildable on water like a Bridge), Proposed (the rest; reviewed and accepted 2026-11-12)*
 - **Alternatives:** a Slide with a facing that redirects what comes onto it (a turning ice
   hex); a land-only Slide plus a separate ice-bridge kind; a Slide that also pushes the piece
   standing on it, like a Belt.
@@ -392,9 +392,10 @@ ARCHITECTURE_LOG.md.
   code path, and "ice under a Thing doesn't slide" (R-14) falls out of the same test. Over
   water it needs no code of its own either: `isOpenWater` already means water with no Thing
   over it, which is the Bridge's "not sunk" check.
-- **Unreviewed calls:** (1) `on: 'unslick'`, its own `BUILDS_ON` entry: a Slide builds on
-  plains or water (never mountain), so it's the only kind that can replace a Bridge on water and
-  also go on land. Decided 2026-11-12 (pjpd slide-no-ice-nrq5): never on bare ice either. Ice
+- **Calls (reviewed 2026-11-12):** (1) A Slide builds on land or water (never mountain), so it's the only
+  kind that can replace a Bridge on water and also go on land. *(Added later 2026-11-12,
+  pjpd slide-no-ice-nrq5; decided: never on bare ice; the rest of this addition is *unreviewed*.)*
+  Its `BUILDS_ON` entry is now `on: 'unslick'` (plains or water). Ice
   already slides, so a Slide there would do nothing, and a card spent on it is a wasted turn;
   leaving ice out of the highlight tells the player that up front. It's the terrain rule, not a
   kind check, so it also stops a Slide replacing a Thing standing on ice (the hex is judged as
@@ -417,7 +418,7 @@ ARCHITECTURE_LOG.md.
   No Slide on ice (2026-11-12): `just cc-sim 200 small` → 200/200, median 45, p90 51, 0.61
   lost, unchanged for the same reason. Unmeasured in play.
 
-### D-30 Cards unlock one step per milestone — *Decided (gradual unlock, order Belt/Bridge/Wall/Trap, then Pusher+Puller, Slide, Spring, Rocket, then the Cannon last (added 2026-11-12, D-36); hand kept), Proposed (unreviewed: the rest)*
+### D-30 Cards unlock one step per milestone — *Decided (gradual unlock, order Belt/Bridge/Wall/Trap, then Pusher+Puller, Slide, Spring, Rocket, then the Cannon last (added 2026-11-12, D-36); hand kept), Proposed (the rest; reviewed and accepted 2026-11-12)*
 - **Alternatives:** every kind from turn 1 (the old rule); unlock by turn count rather than
   milestones; a fixed per-board card list; redrawing the hand on an unlock so the new card
   shows up at once.
@@ -430,7 +431,7 @@ ARCHITECTURE_LOG.md.
   among whatever is in the deck. The state keeps one integer, `unlocks` (how many steps are
   open), and the milestone loop (`reachMilestones`) calls `unlock()` once per milestone
   crossed, so a tick that crosses several unlocks several steps in order.
-- **Unreviewed calls:** (1) Cards already in hand stay as they are (the designer's default);
+- **Calls (reviewed 2026-11-12):** (1) Cards already in hand stay as they are (the designer's default);
   new kinds come through later draws, discards and idle redraws, so the first one can take a
   few turns to appear. (2) On a board that can never open a second color (small), a step made
   only of `colored` kinds is passed over: the milestone unlocks the next step instead, and
@@ -444,7 +445,7 @@ ARCHITECTURE_LOG.md.
   news panel (overlay `news`): a swatch per color, a card picture per kind, and each kind's
   verb line; it holds play until a click or any key, like the color panel did. A small
   board's first milestone now opens it (for the Slide). (5) Past the last step (a small board
-  at 100, a bigger one at 200, since the Cannon joined, D-36) milestones unlock nothing. (6) *(unreviewed, 2026-11-12)* The
+  at 100, a bigger one at 200, since the Cannon joined, D-36) milestones unlock nothing. (6) *(2026-11-12, reviewed 2026-11-12)* The
   designer asked for the milestone report to show the cards it unlocked, so the milestone
   banner now carries a small picture and name per card, and a tick that crosses several
   milestones (big crates, D-34) shows one banner for the last one ("passed 50 and 100")
@@ -466,24 +467,24 @@ ARCHITECTURE_LOG.md.
   weight, was 6 of 15): it never sees a Spring before then, but it gets more Belts, so it's a
   little faster. No numbers retuned. Unmeasured in play.
 
-### D-31 Crates spawn up to a cap that grows with the square root of board area and by one per milestone — *Decided (a cap growing with √area, settled 2026-11-12; a chance every third tick, +1 per milestone reached), Proposed (unreviewed: the rest)*
+### D-31 Crates spawn up to a cap that grows with the square root of board area and by one per milestone — *Decided (a cap growing with √area, settled 2026-11-12; a chance every third tick, +1 per milestone reached), Proposed (the rest; reviewed and accepted 2026-11-12)*
 - **Alternatives:** the fixed timer it replaced (`SOURCE_INTERVAL`: a crate every 3 ticks
   whenever the rolled source was clear, retried every tick while jammed); a cap per color or
   per source; a cap with a fixed base plus a per-area term; storing a bonus counter in state;
-  a cap linear in area (the first version, below).
+  a cap linear in area (the first version, now history; see ARCHITECTURE_LOG.md).
 - **Why:** the designer asked for it (pjpd crate-cap-hybj). Under the timer a stalled line kept
   pouring crates onto the board until every source jammed; a cap makes a big factory's crate
   population follow the board and the player's progress instead. The cap is
   `crateCap(size)` = max(1, round(`CRATE_CAP_PER_ROOT` × √(cols × rows))), plus
   `milestonesReached(delivered)`: one more per milestone (10, 20, 50, …), so a tick that
   crosses several milestones (`reachMilestones`) raises it by each.
-- **Square root, not linear (designer, 2026-11-12):** the first version scaled linearly,
+- **Why square root (settled by the designer 2026-11-12):** a linear cap was tried first,
   max(1, round(area / `CRATE_HEXES_PER_CAP` = 20)): small 8, medium 20, large 45, huge 180.
   Before the first milestone the bot peaked at 8 / 14 / 20 / 42 crates on those boards, so
   only small's cap ever bound and large and huge were effectively uncapped. A √area cap grows
   with the board's width (roughly how long a line is) rather than its area, so a big board
   holds more crates but still meters them.
-- **Unreviewed calls:** (1) The bonus is derived from `delivered`, not stored: the 1-2-5
+- **Calls (reviewed 2026-11-12):** (1) The bonus is derived from `delivered`, not stored: the 1-2-5
   series already says how many milestones a count has reached, so state keeps only
   `spawnTimer`. (2) `spawnTimer` now resets on every chance, spawn or not; a jammed source (or
   a full board) waits for the next chance, three ticks on, rather than retrying the next tick
@@ -506,14 +507,14 @@ ARCHITECTURE_LOG.md.
   196 / 346 → 61 / 91 / 147 / 205 / 357, peak 20 → 14, with 18 → 19 of 30 games reaching the
   fifth (the bot builds only the first color's line). Unmeasured in play.
 
-### D-32 The player picks a Pusher or Puller's color when placing it — *Decided (cards drawn plain, color picked at placement and kept for good, one color skips the picker), Proposed (unreviewed: the rest)*
+### D-32 The player picks a Pusher or Puller's color when placing it — *Decided (cards drawn plain, color picked at placement and kept for good, one color skips the picker), Proposed (the rest; reviewed and accepted 2026-11-12)*
 - **Alternatives:** the color rolled with the card at draw time (the old rule, D-22 before
   this); a separate free command to color a placed white Thing, like `rotate`; recoloring a
   placed Thing for free; a white Pusher or Puller that acts on everything until colored.
 - **Why:** the designer asked for it (pjpd color-picker-8h4x). A random color made the rare
   sorter card a lottery: a red Pusher when the blue line is the one to split was as good as
   a discard. Picking at placement keeps the card rare and the decision the player's.
-- **Unreviewed calls:** (1) The pick is part of the place command,
+- **Calls (reviewed 2026-11-12):** (1) The pick is part of the place command,
   `place(slot, q, r, facing, color)`: the UI asks first and sends one command, so placement
   stays one atomic command and one tick, the engine never holds a white Pusher or Puller, and
   the question "does an unpicked one act?" never comes up. (2) `color` is a required argument
@@ -541,7 +542,7 @@ ARCHITECTURE_LOG.md.
   before the second color opens, so the dropped color roll never touches its `Rando` stream.
   Unmeasured in play.
 
-### D-33 A bump on ice advances the line two and the bumper follows — *Decided 2026-11-11 (a piece standing on slick ground passes the motion on); Decided 2026-11-12 (flights bump too; the line advances 2 and the bumper ends one past the bumped hex, for every mover); Proposed (unreviewed: the rest)*
+### D-33 A bump on ice advances the line two and the bumper follows — *Decided 2026-11-11 (a piece standing on slick ground passes the motion on); Decided 2026-11-12 (flights bump too; the line advances 2 and the bumper ends one past the bumped hex, for every mover); Proposed (the rest; reviewed and accepted 2026-11-12)*
 - **Alternatives:** keep every piece a plain blocker (the original rule); the 2026-11-11 rule
   (the bumper stops dead, the bumped piece goes one hex and slides on, chains allowed); the
   bumper stops in place while the line advances; the bumper takes the bumped hex (the line
@@ -558,7 +559,7 @@ ARCHITECTURE_LOG.md.
   that didn't hit anything, in the air or on the ground; the line and the bumper move with the
   same `step` as everything else, so water, targets, Traps and Walls work on them unchanged,
   and no kind is special-cased. The advance is `BUMP_ADVANCE` in `artifacts.js`.
-- **Unreviewed calls:** (1) The advance is a fixed 2 hexes with no ice slide afterward ("advances
+- **Calls (reviewed 2026-11-12):** (1) The advance is a fixed 2 hexes with no ice slide afterward ("advances
   2"). Each step still resolves terrain: open water sinks (`lost` += value), its color's target
   delivers, a gremlin dies on a Trap or a target, and a Wall, mountain, other color's target or
   the map edge stops it. (2) A line blocked part way moves as far as it can: the far end steps
@@ -583,7 +584,7 @@ ARCHITECTURE_LOG.md.
   couldn't move comes down short, where it was stopped, as before. A Spring's skid bumps the
   same way. (7) Events: line moves carried `by` (the bumper) and `byAt` (how many hexes of its
   own path the bumper had entered at contact); both were null on every other move
-  (*superseded 2026-11-12, D-38: moves carry a start `hop` instead*). The bumper's
+  (*superseded 2026-11-12, D-38, *unreviewed*: moves carry a start `hop` instead*). The bumper's
   `move` comes first and includes its follow hexes. The client holds each line piece until the
   bumper reaches the contact hex, then the line and the bumper go on together, the bumper one
   hex behind, which reads as a shove.
@@ -592,7 +593,7 @@ ARCHITECTURE_LOG.md.
   (was 72), 3.50 lost (was 3.60); `just cc-sim-to 30 small 5` → milestone 5 at median 208
   (was 209), 24.83 lost per game (was 26.40). The bot builds belts and springs in a straight
   line, so bumps only come up where a crate stalls on ice in it. Unmeasured in play.
-- **In lockstep (2026-11-12, D-38; settled by the designer: bumps start mid-tick).** A bump is
+- **In lockstep (2026-11-12, D-38; settled by the designer: bumps start mid-tick; the rest *unreviewed*).** A bump is
   motion that starts on the contact hop: the line (the bumped piece and the pieces right behind
   it that have had no motion this tick) starts advancing `BUMP_ADVANCE` hexes that hop, all
   together, and the bumper waits that hop and follows from the next, ending right behind it.
@@ -602,7 +603,7 @@ ARCHITECTURE_LOG.md.
   The client no longer needs `by`/`byAt` to hold the line: each move's `hop` says when it
   starts. `bump`/`advance`/`follow` are gone; the line and follow are phases of the one motion.
 
-### D-34 Big crates, worth 10, grow more likely with each milestone — *Decided (a crate worth 10 deliveries whose share of spawns rises toward 1), Proposed (unreviewed: the rest)*
+### D-34 Big crates, worth 10, grow more likely with each milestone — *Decided (a crate worth 10 deliveries whose share of spawns rises toward 1), Proposed (the rest; reviewed and accepted 2026-11-12)*
 - **Alternatives:** a `value` field on each crate piece instead of a kind; p = 1 − (1 −
   base)^m; make later milestones closer together; spawn faster per milestone.
 - **Why:** the designer asked for it (pjpd big-crate-jat8). The milestones run on the 1-2-5
@@ -613,7 +614,7 @@ ARCHITECTURE_LOG.md.
   code path: a new `PIECES` row `bigcrate` with `value: 10` (crate 1, gremlin 0), read by the
   one place each count changes (`step`'s delivery, the new `loseValue(piece)` for sinks,
   wrecks and blasts). Everything else keys on `cargo`, so a big crate is a crate.
-- **Unreviewed calls:** (1) A kind, not a per-piece field: templates already carry the
+- **Calls (reviewed 2026-11-12):** (1) A kind, not a per-piece field: templates already carry the
   per-kind numbers, the client's draw and hover tables dispatch on `kind`, and saves need no
   new field. (2) The formula is p = m / (m + `BIG_CRATE_HALF`) with `BIG_CRATE_HALF` = 4,
   read as "half the spawns are big at the fourth milestone (100)": 0 before the first, 1 in 5
@@ -642,7 +643,7 @@ ARCHITECTURE_LOG.md.
   games stall). Gaps between milestones stay near 30 turns on small instead of doubling.
   Unmeasured in play.
 
-### D-35 A Spring's throw clears mountains: over two, landing on the third — *Decided 2026-11-12 (a Spring can cross 2 mountain hexes, landing on the third), Proposed (unreviewed: the rest)*
+### D-35 A Spring's throw clears mountains: over two, landing on the third — *Decided 2026-11-12 (a Spring can cross 2 mountain hexes, landing on the third), Proposed (the rest; reviewed and accepted 2026-11-12)*
 - **Alternatives:** a kind check on `SPRING` in `step`; a per-terrain "flight clears" set
   on each template; mountains clearing every flight, the Rocket's too; a throw that ends over
   a mountain bouncing back to the Spring (no throw) instead of landing short.
@@ -651,7 +652,7 @@ ARCHITECTURE_LOG.md.
   a Spring facing a ridge came down short of it. Its range is 3, so it can now fly over up to
   two mountains and land on the third hex, which makes the Spring the one card that crosses a
   ridge, as the Bridge is the one that crosses a lake.
-- **Unreviewed calls:** (1) Data, not a kind check: a new template flag `overMountains`
+- **Calls (reviewed 2026-11-12):** (1) Data, not a kind check: a new template flag `overMountains`
   (true only for the Spring), carried in the push's `how` like `flies`. `step`
   takes `air` = `{flies, overMountains}` (the `how`, or a frozen `GROUND` for skids, bumped
   lines and followers) and lets a mountain through when `overMountains` is set. A per-terrain
@@ -680,7 +681,8 @@ ARCHITECTURE_LOG.md.
   49, p90 58, 2.08 lost); `just cc-sim 50 medium` → unchanged (50/50, median 61, p90 70,
   3.50 lost); `just cc-sim-to 30 small 5` → unchanged (51 / 75 / 105 / 147 / 208). The bot
   never throws toward a mountain. Unmeasured in play.
-- **In lockstep (2026-11-12, D-38; settled by the designer: landing trimmed at launch).**
+- **In lockstep (2026-11-12, D-38; settled by the designer: landing trimmed at launch; the rest
+  *unreviewed*).**
   Mountains and targets don't move, so a flight's length is fixed at launch: up to its range,
   stopping before the map's edge, a Wall or a mountain (unless `overMountains`), then trimmed
   back off a trailing mountain or other color's target (`flightLength`). The flight then spends
@@ -688,7 +690,7 @@ ARCHITECTURE_LOG.md.
   target drops back on the next hop to the last hex it may land on (*unreviewed*: the old rule
   did it instantly; D-38 call 3).
 
-### D-36 The Cannon: over 4 hexes of anything, then a ground step into the 5th — *Decided 2026-11-12 (a facing mover, range 5; the first 4 hexes ignore all terrain and items: water, mountains, Walls, pieces, gremlins, no splat; the 5th an ordinary ground step that can be blocked, bump, sink, deliver, be stopped by another color's target or trigger a Trap; blocked there, down on the 4th if that's a legal landing, else no fire; the last unlock, after the Rocket; low weight like the Rocket's; data-driven, sharing the flight code), Proposed (unreviewed: the rest)*
+### D-36 The Cannon: over 4 hexes of anything, then a ground step into the 5th — *Decided 2026-11-12 (a facing mover, range 5; the first 4 hexes ignore all terrain and items: water, mountains, Walls, pieces, gremlins, no splat; the 5th an ordinary ground step that can be blocked, bump, sink, deliver, be stopped by another color's target or trigger a Trap; blocked there, down on the 4th if that's a legal landing, else no fire; the last unlock, after the Rocket; low weight like the Rocket's; data-driven, sharing the flight code), Proposed (the rest; reviewed and accepted 2026-11-12)*
 - **Alternatives:** a kind check on `CANNON` in `push`; extending `step`'s `air` with a
   "clear everything" flag (every caller would carry it); a Cannon that `flies` for its whole
   range (it would cross inland water on the 5th and never bump as a ground mover); a blocked
@@ -704,7 +706,7 @@ ARCHITECTURE_LOG.md.
   Spring's D-35 path: `comeDown` backs a flight up to the last hex it may land on, and for a
   shot only the last cleared hex counts. One loop sets down a Spring short of a ridge, a
   Rocket short of a wrong target and a Cannon on its 4th hex.
-- **Unreviewed calls:** (1) *Off the map:* a shot whose 4 cleared hexes run off the board
+- **Calls (reviewed 2026-11-12):** (1) *Off the map:* a shot whose 4 cleared hexes run off the board
   doesn't fire (the step-back rule's "else no fire", applied to a path with no 4th hex). The
   outer sea is on the map, so it's passed over like any water; a 5th hex in the sea sinks it,
   a 5th hex off the map is a block (down on the 4th, which in the sea can't take it: no fire).
@@ -738,14 +740,14 @@ ARCHITECTURE_LOG.md.
   70, 3.50 lost); `just cc-sim-to 30 small 5` → unchanged (51 / 75 / 105 / 147 / 208). The
   Cannon unlocks at 100 on small (the fifth milestone) and later on bigger boards, past what
   the sims measure. Unmeasured in play.
-- **In lockstep (2026-11-12, D-38).** The shot spends hops 1–4 over its cleared hexes, unseen:
+- **In lockstep (2026-11-12, D-38; *unreviewed*).** The shot spends hops 1–4 over its cleared hexes, unseen:
   pieces move under it and it crashes into no flight. Its ground step into the 5th is hop 5;
   a bump there starts the line on hop 5 (call 5's `byAt` 4 is now that hop). Whether it fires is
   still judged at launch from the board as it stands (*unreviewed*: the 4th-hex `groundTakes`
   check reads pieces as the tick starts). If the 5th is then blocked by a piece and the 4th
   holds a piece by the time it comes down, it crashes (lost); open water there sinks it.
 
-### D-37 Anything that lands, slides: every flight and shot skids on landing — *Decided 2026-11-12 (Rockets and Cannons skid like Springs; settled 2026-11-12: "Basically anything that lands, slides, anywhere. The only exception is hitting a gremlin stops it in that hex", short Rocket landings included; drop the `skids` flag, every Thing that `flies` or `clears` skids), Proposed (unreviewed: the rest)*
+### D-37 Anything that lands, slides: every flight and shot skids on landing — *Decided 2026-11-12 (Rockets and Cannons skid like Springs; settled 2026-11-12: "Basically anything that lands, slides, anywhere. The only exception is hitting a gremlin stops it in that hex", short Rocket landings included; drop the `skids` flag, every Thing that `flies` or `clears` skids), Proposed (the rest; reviewed and accepted 2026-11-12)*
 - **Alternatives:** keep the Rocket landing dead (D-15, D-17) so its range is exact; a kind
   check on `ROCKET` in `push`; a Rocket that slides mid-flight on ice (its range would stop
   meaning anything); skidding only from a full-range landing (the first version of this
@@ -770,7 +772,7 @@ ARCHITECTURE_LOG.md.
   that target and stops. The Cannon's slide still happens once: its 5th hex is a ground step
   that slides on in the main loop, and a shot that went past its cleared stretch isn't aloft, so
   `skid` never runs for it; only its 4th-hex fallback (still aloft) skids.
-- **Unreviewed calls:** (1) *Short landings change nothing on the board today.* The hex past a
+- **Calls (reviewed 2026-11-12):** (1) *Short landings change nothing on the board today.* The hex past a
   short landing is what made it short: the Wall, mountain or piece that blocked the flight, the
   mountain or other color's target it backed off, the Cannon's blocked 5th hex. So a short
   landing's skid stops at once against it; the tests pin that the rule runs and the piece stays
@@ -792,7 +794,7 @@ ARCHITECTURE_LOG.md.
   and Cannons, neither is dealt before the first milestone, and short landings move nothing
   further. Unmeasured in play.
 - **In lockstep (2026-11-12, D-38; settled by the designer: skids hop by hop, every landing still
-  slides except after a gremlin splat).** A landing becomes a `skid` phase that continues one hex
+  slides except after a gremlin splat; the rest *unreviewed*).** A landing becomes a `skid` phase that continues one hex
   per hop from the hop after it lands. Call (1) no longer always holds: a flight stopped by a
   *piece* comes down, and if that piece moves off on a later hop, the skid goes on through the
   hex it left (R-56) instead of stopping at once.
@@ -868,7 +870,7 @@ ARCHITECTURE_LOG.md.
   one partition of the loop, not a per-Thing priority.
 - **Evidence:** R-43. Unmeasured in play: the bot discards Pushers and Pullers.
 - **First vs last (2026-11-11, pjpd push-order-ptbd; settled 2026-11-12: the designer agreed,
-  keep first).** "Last" means Belts, Bridges, Springs and Rockets go first, then
+  keep first; reviewed and accepted 2026-11-12).** The traces below are why. "Last" means Belts, Bridges, Springs and Rockets go first, then
   Pushers and Pullers, each group still in placement order. R-13 holds either way: the
   `moved` set is checked before every action, and a piece whose push was *blocked* still
   counts as moved. That one fact decides most cases. The hope for "last" was "the belt
@@ -905,16 +907,15 @@ ARCHITECTURE_LOG.md.
     crate burns its move; with the Belts placed downstream-first it waits two ticks. Last:
     the Belts clear (6,4) first, and it merges on tick 1. The gain is a tick or two per
     merge, and it depends on Belt placement order anyway.
-- **Decision:** keep *first*. With one move per piece, "last" doesn't buy "the belt
+- **Decision (settled 2026-11-12):** keep *first*. With one move per piece, "last" doesn't buy "the belt
   brings it, the Pusher shoves it on". It makes a Pusher or Puller beside any moving line
   (Belt, Bridge, a turning corner, a Spring hex) never fire, and it changes nothing at line
   ends, where the crate stops anyway. Its only win is faster merges into a dense line. In
   "first", the Pusher overrides whatever the crate stands on, which is the whole point of a
   diverter. The costs of first are a Pusher aimed at a Spring stealing its crate and a
   Pusher beside a Bridge line drowning crates, and both are visible and fixable by aiming.
-  Revisit only if playtest shows merges stalling.
 - **In lockstep (2026-11-12, D-38; settled by the designer: Pushers and Pullers keep
-  priority).** "Act first" now means *claim first*: as the tick starts, Pushers and Pullers
+  priority; the rest *unreviewed*).** "Act first" now means *claim first*: as the tick starts, Pushers and Pullers
   claim their pieces before any other Thing, and their motions outrank every other Thing's
   when two pieces want one hex on one hop (R-59). The traces above still hold, since claims
   are made from the board as the tick starts. The merge case improves a little: a Pusher's
@@ -944,7 +945,7 @@ ARCHITECTURE_LOG.md.
 - **Q-1 Chain pushes?** *Partly answered by D-33 (2026-11-12):* on slick ground a push now
   moves the whole line ahead two hexes. On plains a belt pushing a crate into another crate
   is still blocked. Open: whether that's annoying in playtest. *Recommendation:* leave plains
-  blocking; ice and Slides are now the place to build a line that clears itself. *(2026-11-12, D-38)* In lockstep a packed train on plains moves as
+  blocking; ice and Slides are now the place to build a line that clears itself. *(2026-11-12, D-38, *unreviewed*)* In lockstep a packed train on plains moves as
   one when its front is free (the hex ahead empties on the same hop), so only a train whose
   front is truly stuck blocks.
 
