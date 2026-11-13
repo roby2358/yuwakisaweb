@@ -167,7 +167,6 @@ const GameArtifacts = (function () {
         MAP_SIZES,
 
         FIRST_MILESTONE,
-        SPAWN_INTERVAL: 3,           // ticks between spawn chances, board-wide (a crate comes if under the cap and the rolled color's source is clear)
         CRATE_CAP_PER_ROOT,
         BIG_CRATE_HALF,
         ENHANCE_CHANCE: 0.5,         // a newly opened color comes out of an existing source, else a new one

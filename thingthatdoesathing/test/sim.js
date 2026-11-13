@@ -8,7 +8,8 @@
 // milestones (still building only the first color's path) and reports turns to each one and
 // the big crates spawned per game (D-34). Before then only the first UNLOCKS step is dealt (Belt,
 // Bridge, Wall, Trap; D-30), so in practice the bot builds from Belts alone. Not a test (no pass/fail); it's the evidence behind
-// FIRST_MILESTONE, SPAWN_INTERVAL, CRATE_CAP_PER_ROOT and friends. Also prints the mean and peak crates on the board.
+// FIRST_MILESTONE, the spawn cycle (D-43), CRATE_CAP_PER_ROOT and friends. Also prints the mean and peak crates on the
+// board, and the share of ticks the board sat at the crate cap (crateMax).
 'use strict';
 
 const { newGame } = require('./helpers/load');
@@ -45,7 +46,7 @@ function dirTo(g, a, b) {
 
 const results = [];
 let lostTotal = 0;
-let crateTicks = 0, ticks = 0, peak = 0, bigTotal = 0;
+let crateTicks = 0, ticks = 0, peak = 0, bigTotal = 0, capTicks = 0;
 const reachedAt = [...Array(MILESTONES)].map(() => []);   // per milestone: the turn each game reached it
 for (let i = 0; i < GAMES; i++) {
     const { g, state, engine } = newGame(5000 + i, SIZE);
@@ -62,6 +63,7 @@ for (let i = 0; i < GAMES; i++) {
         for (; marked < Math.min(MILESTONES, milestonesReached(state.delivered)); marked++) reachedAt[marked].push(state.turn);
         const n = cratesOn(state);
         crateTicks += n; ticks++; peak = Math.max(peak, n);
+        if (n >= engine.crateMax()) capTicks++;
         // Next path hex (excluding the target) that has no mover facing the right way.
         let todo = -1;
         for (let j = 0; j < path.length - 1; j++) {
@@ -97,7 +99,7 @@ const q = p => results[Math.floor(p * (results.length - 1))];
 const wins = results.filter(t => t < CAP).length;
 const label = MILESTONES === 1 ? 'first milestone' : `milestone ${MILESTONES}`;
 console.log(`${SIZE}  games ${GAMES}  reached ${label} ${wins}  turns p10 ${q(0.1)}  median ${q(0.5)}  p90 ${q(0.9)}  ` +
-    `crates lost/game ${(lostTotal / GAMES).toFixed(2)}  crates on board mean ${(crateTicks / ticks).toFixed(1)} peak ${peak}`);
+    `crates lost/game ${(lostTotal / GAMES).toFixed(2)}  crates on board mean ${(crateTicks / ticks).toFixed(1)} peak ${peak}  at cap ${(100 * capTicks / ticks).toFixed(0)}%`);
 if (MILESTONES > 1) {
     const median = a => [...a].sort((x, y) => x - y)[Math.floor((a.length - 1) / 2)];
     console.log('  median turn per milestone: ' + reachedAt.map((a, k) => `#${k + 1} ${a.length ? median(a) : '-'} (${a.length})`).join('  ') +

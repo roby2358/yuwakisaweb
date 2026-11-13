@@ -10,7 +10,7 @@ Run from `thingthatdoesathing/`. Invoke the recipes, not the raw script paths.
 | Recipe | Runs | Use it |
 |---|---|---|
 | `just cc-test` | `node test/run.js` | After any code or CRITERIA change. Must end `ALL PASS`. `just cc-test -v` prints every check. |
-| `just cc-sim 200 small` | `node test/sim.js 200 small` | After touching rules or numbers in `artifacts.js`. Sizes: small, medium, large, huge (huge is slow; 50 games is plenty). Compare against RATIONALE D-7 (small) and D-3 (every size). A pure refactor must reproduce them exactly. |
+| `just cc-sim 200 small` | `node test/sim.js 200 small` | After touching rules or numbers in `artifacts.js`. Sizes: small, medium, large, huge (huge is slow; 50 games is plenty). Prints turns, crates lost, mean/peak crates on the board and `at cap` (share of ticks at the crate cap). Compare against the latest numbers in RATIONALE (D-43 for the current spawn rule; D-7 small and D-3 every size are older). A pure refactor must reproduce them exactly. |
 | `just cc-sim-to 100 small 5` | `node test/sim.js 100 small 5` | Same bot, played on to the Nth milestone: median turn per milestone and big crates spawned per game. Use when tuning anything past the first milestone (big crates, D-34). |
 
 ## What the suite holds

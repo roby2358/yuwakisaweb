@@ -73,7 +73,8 @@ everything; G-2 beats G-1 (a funny interaction that can't be read is a bug, not 
 | `exGremlins` | int | Gremlins gone any way but a Trap: sunk, splatted, or killed on a target (Tick rule). Shown in the tally. [D] |
 | `trapped` | int | Gremlins a Trap caught (Tick rule). Shown in the tally. [D] |
 | `idleTicks` | int | Ticks in a row with no card used (`place`, `discard`); at `IDLE_REDRAW_TICKS` one card is redrawn (Tick rule). [D] |
-| `spawnTimer` | int | Ticks since the last spawn chance (one timer for the board; a chance every `SPAWN_INTERVAL`). The crate cap isn't stored: it's `crateCap(size)` plus `milestonesReached(delivered)` (D-31). |
+| `spawnCycle` | [`CRATE_COLORS` name] | Every `CRATE_COLORS` color once, shuffled with `Rando` at `newGame`; fixed for the whole game, never reshuffled (D-43). [D] |
+| `spawnSlot` | int, 0 ≤ n < `spawnCycle.length` | The slot of `spawnCycle` the next tick takes; advances one per tick, wrapping. The crate cap isn't stored: it's `crateCap(size)` plus `milestonesReached(delivered)` (D-31). [D] |
 | `nextId` | int | Next piece id. |
 | `phase` | `'player' \| 'tick'` | `'tick'` only while a tick resolves inside a command. |
 
@@ -96,7 +97,7 @@ A `Piece` (position, color, label) with two fields set by the engine. Each kind 
 | `id` | int | Unique, from `nextId`; events refer to it. |
 | `kind` | `'crate' \| 'bigcrate' \| 'gremlin'` | Key into `PIECES`. |
 | `label` | string | `PIECES[kind].label`: `'📦'` or `'👹'`. |
-| `color` | `#rrggbb` \| `CRATE_COLORS` name | Gremlins get a seeded palette color; a crate gets the open color the spawn rolled. Only its color's target takes it (Motion rule); the client draws it as a shaded isometric box. [D] |
+| `color` | `#rrggbb` \| `CRATE_COLORS` name | Gremlins get a seeded palette color; a crate gets the color of the spawn slot that made it. Only its color's target takes it (Motion rule); the client draws it as a shaded isometric box. [D] |
 
 `PIECES[kind]` is the template:
 
@@ -206,9 +207,10 @@ ends = generateMap(seed, GEN_MAX_ATTEMPTS) or (seed = knownGoodSeed; generateMap
     # generateMap: Rando.seed; build cols×rows grid sampling a heightmap-side
     #   diamond-square grid; assignTerrain; placeSourceAndTarget; hasPath? → {source, target}
 color = Rando.choice(CRATE_COLORS)
+spawnCycle = Rando.shuffle(copy of CRATE_COLORS); spawnSlot = 0     # D-43
 sources = [{ends.source, colors: [color]}]; targets = [{ends.target, color, delivered: 0}]
 things = []; pieces = []; a crate of color on the source; spawnGremlins()
-unlocks = 1; hand = HAND_SIZE draws (from UNLOCKS[0]); turn = 1; delivered = lost = exGremlins = trapped = spawnTimer = idleTicks = 0
+unlocks = 1; hand = HAND_SIZE draws (from UNLOCKS[0]); turn = 1; delivered = lost = exGremlins = trapped = idleTicks = 0
 ```
 
 ### Assign terrain [P]
@@ -421,15 +423,13 @@ for piece with PIECES[kind].wanders (creation order), not claimed, ranked after 
     if dirs: claimed += piece; launch(piece, Rando.choice(dirs), {n: 1, splat: false, flies: false, overMountains: false, clears: 0, wrecks: PIECES[kind].wrecks}, rank)
 run hops 1, 2, … until every motion has stopped                     # Motion rule
 emit one move per piece that moved, then every end (sink/deliver/splat) in the order they happened
-spawnTimer += 1
-if spawnTimer >= SPAWN_INTERVAL:                                    # a spawn chance (D-31)
-    spawnTimer = 0
-    if crates on the board < crateCap(size) + milestonesReached(delivered):   # crateCap ∝ √area
-        color = Rando.choice(open colors); src = the source that makes color
-        if no piece on src:                                         # else nothing until the next chance
-            p = bigCrateChance(milestonesReached(delivered))          # D-34
-            kind = 'bigcrate' if p > 0 and Rando.random() < p else 'crate'   # no roll while p is 0
-            a kind of color on src; emit spawn{id, q, r}
+color = spawnCycle[spawnSlot]; spawnSlot = (spawnSlot + 1) % length(spawnCycle)   # one slot a tick (D-43)
+if color is open and crates on the board < crateCap(size) + milestonesReached(delivered):   # crateCap ∝ √area (D-31)
+    src = the source that makes color
+    if no piece on src:                                             # else the slot is skipped, not retried
+        p = bigCrateChance(milestonesReached(delivered))              # D-34
+        kind = 'bigcrate' if p > 0 and Rando.random() < p else 'crate'   # no roll while p is 0
+        a kind of color on src; emit spawn{id, q, r}
 idleTicks = 0 if the command used a card (place, discard) else idleTicks + 1   # D-26
 if idleTicks >= IDLE_REDRAW_TICKS: slot = Rando.int(0, HAND_SIZE-1); hand[slot] = draw(); idleTicks = 0; emit redraw{slot}
 gone = kinds of the command's own sink (remove) and this tick's sunk, splatted and crashed pieces
@@ -508,14 +508,13 @@ The code constant in `GameArtifacts` is the single source.
 | `MAP_SIZES.*.colors` | 1 / 2 / 3 / 4 | most colors the board opens [D] |
 | `ENHANCE_CHANCE` | 0.5 | chance a new color comes out of an existing source [D] |
 | `FIRST_MILESTONE` | 10 | crates (then the 1-2-5 series, forever) |
-| `SPAWN_INTERVAL` | 3 | ticks between spawn chances, board-wide, shared by every color [D] |
 | `CRATE_CAP_PER_ROOT` | 0.6 | crates of the cap per hex of √(board area); `crateCap(size)` = max(1, round(this × √(cols × rows))): small 8, medium 12, large 18, huge 36; +1 per milestone reached (D-31) [D: sqrt shape; T: the constant] |
 | `BIG_CRATE_HALF` | 4 | milestones reached at which half the spawns are big crates; `bigCrateChance(m)` = m / (m + this): 0, 0.2, 0.33, 0.43, 0.5 at m = 0…4, toward 1 (D-34) [T] |
 | `PIECES.bigcrate.value` | 10 | crates a big crate is worth (D-34) [D] |
 | `HAND_SIZE` | 3 | cards |
 | `BUMP_ADVANCE` | 2 | hexes a bumped line advances; its bumper follows to one hex behind it (D-33) [D] |
 | `IDLE_REDRAW_TICKS` | 10 | ticks in a row with no card used before one random card is redrawn (D-26) |
-| `CRATE_COLORS` | red, green, blue, yellow | the colors a game can open [D] |
+| `CRATE_COLORS` | red, green, blue, yellow | the colors a game can open; their count is the spawn cycle's length (one crate chance per color per round, D-43) [D] |
 | `WHITE` | white | the color of a Thing that acts on every piece [D] |
 | `THINGS.SPRING.push` | 3 | hexes |
 | `THINGS.BELT.push` | 1 | hexes |

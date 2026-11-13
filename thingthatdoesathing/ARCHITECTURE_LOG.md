@@ -2,6 +2,19 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-13 — Crates come from a fixed color cycle, one slot a tick (D-43)
+Spawning used to be a board clock: `spawnTimer` counted to `SPAWN_INTERVAL` (3), and each
+such chance rolled one open color with `Rando.choice` and spawned at its source if it was
+clear and the board under the cap. Now `newGame` shuffles all of `CRATE_COLORS` once into
+`spawnCycle` (right after the starting color is picked, so every seed's game after the map
+plays differently), and every tick takes slot `spawnSlot` and advances it: an open color
+spawns if under the cap with its source clear, anything else skips the slot. `spawnTimer` and
+`SPAWN_INTERVAL` are gone; D-31's cap is unchanged. R-19 was rewritten (shuffle, one slot a
+tick, closed slot, skip on cap or blocked source, every color open = a crate a tick); R-6,
+R-26 and R-52 set the cycle instead of the timer; `flatGame()` holds spawns off with a
+`[null]` cycle; `test/sim.js` prints the share of ticks at the cap. Small's first milestone
+moved from a median of 45 to 53 turns (pjpd spawn-cycle-jisb).
+
 ### 2026-11-13 — Sources and targets fill their hex (D-42)
 A source or target used to be a glowing ring over its terrain with an "IN" or ★ label; a
 target also had a black line inside the ring and a source a row of color pips. Now each

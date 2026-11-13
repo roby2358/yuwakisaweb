@@ -31,7 +31,7 @@ const { newGame, flatGame, DIR } = require('../helpers/load');
 }
 {
     const { state, engine } = flatGame();
-    state.spawnTimer = 99;
+    state.spawnCycle = ['red'];
     const { events } = engine.wait();
     const c = state.pieces.find(p => p.kind === 'crate');
     check('spawn reports the new crate', JSON.stringify(events) ===

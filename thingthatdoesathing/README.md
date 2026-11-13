@@ -7,7 +7,9 @@ while it runs. Pick the board at New Game: 16 × 10 fits the screen; 20 × 20, 3
 crate color (up to 2 on 20 × 20, 3 on 30 × 30, 4 on 60 × 60), with its own target: half the
 time from a new source, half the time from one already running, so a line has to split. A
 target takes only its color; other colors can't get onto it, though a Rocket flies over.
-Crates keep coming every third tick, a random open color each time, until the board holds its
+Crates keep coming from a fixed cycle of the four colors, one slot a tick: an open color's slot
+makes a crate at its source and a closed color's slot makes nothing, so one color gets a crate
+every 4 ticks and four colors one every tick. That goes on until the board holds its
 cap (more on bigger boards, one more per milestone). After the first milestone some come out
 as big crates, drawn bigger and worth 10 delivered (or 10 lost), and each milestone makes them
 commoner.

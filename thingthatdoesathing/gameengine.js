@@ -7,7 +7,7 @@
 // Every command re-checks its own legality; every legal command but rotate runs exactly one tick. All randomness goes through the seeded Rando.
 const GameEngine = (function () {
     const {
-        TERRAIN, THINGS, UNLOCKS, PIECES, CRATE_COLORS, WHITE, aims, nextMilestone, MAP_SIZES, SPAWN_INTERVAL, ENHANCE_CHANCE, HAND_SIZE, IDLE_REDRAW_TICKS, BUMP_ADVANCE,
+        TERRAIN, THINGS, UNLOCKS, PIECES, CRATE_COLORS, WHITE, aims, nextMilestone, MAP_SIZES, ENHANCE_CHANCE, HAND_SIZE, IDLE_REDRAW_TICKS, BUMP_ADVANCE,
         gremlinDice, GREMLIN_DICE_SIDES, crateCap, milestonesReached, bigCrateChance,
         GEN_MAX_ATTEMPTS, HEIGHTMAP_ROUGHNESS,
         WATER_PCT, MOUNTAIN_PCT, ICE_FRAC, PLACE_SLICE_FRAC, PLACE_SLICE_MIN
@@ -151,6 +151,8 @@ const GameEngine = (function () {
                 ends = this.generateMap(s.seed, 1);
             }
             const color = Rando.choice(CRATE_COLORS);
+            s.spawnCycle = Rando.shuffle([...CRATE_COLORS]);   // fixed for the game (D-43)
+            s.spawnSlot = 0;
             s.sources = [{ q: ends.source.q, r: ends.source.r, colors: [color] }];
             s.targets = [{ q: ends.target.q, r: ends.target.r, color, delivered: 0 }];
             s.things = [];
@@ -165,7 +167,6 @@ const GameEngine = (function () {
             s.lost = 0;
             s.exGremlins = 0;
             s.trapped = 0;
-            s.spawnTimer = 0;
             s.idleTicks = 0;
             s.phase = 'player';
             return { ok: true };
@@ -1001,13 +1002,12 @@ const GameEngine = (function () {
             });
             events.push(...this.runHops(run));
 
-            // Every SPAWN_INTERVAL ticks, a spawn chance: under the crate cap, roll an open color;
-            // its source makes the crate if it's clear, else nothing until the next chance.
-            s.spawnTimer++;
-            const chance = s.spawnTimer >= SPAWN_INTERVAL;
-            if (chance) s.spawnTimer = 0;
-            const color = chance && this.crateCount() < this.crateMax() ? Rando.choice(this.openColors()) : null;
-            const src = color && this.sourceOf(color);
+            // Every tick takes the next slot of the spawn cycle (D-43): an open color's source
+            // makes its crate if the board is under the cap and the source is clear; a closed
+            // color, a full board or a blocked source skips the slot, no retry.
+            const color = s.spawnCycle[s.spawnSlot];
+            s.spawnSlot = (s.spawnSlot + 1) % s.spawnCycle.length;
+            const src = this.openColors().includes(color) && this.crateCount() < this.crateMax() && this.sourceOf(color);
             if (src && !this.pieceAt(src.q, src.r)) {
                 const c = this.spawnCrate(color, src);
                 events.push({ type: 'spawn', id: c.id, q: c.q, r: c.r });

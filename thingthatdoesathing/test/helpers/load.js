@@ -47,13 +47,13 @@ function snapshot(state) {
         pieces: state.pieces.map(p => [p.id, p.kind, p.key(), p.color]),
         things: state.things, hand: state.hand, unlocks: state.unlocks,
         turn: state.turn, delivered: state.delivered, lost: state.lost,
-        spawnTimer: state.spawnTimer, nextId: state.nextId, phase: state.phase
+        spawnCycle: state.spawnCycle, spawnSlot: state.spawnSlot, nextId: state.nextId, phase: state.phase
     });
 }
 
 // A controlled board for rule tests: every inner hex PLAINS, edges WATER, no pieces, no
 // Things, one red source and red target parked far away in the bottom row so they stay out
-// of the way, and the spawn timer held back so no crate appears mid-test. Crates are red. Middle row r=4 runs
+// of the way, and a spawn cycle with no color in it so no crate appears mid-test. Crates are red. Middle row r=4 runs
 // q = -2 … 13 (col 0 … 15); its inner hexes are q = -1 … 12.
 function flatGame(seed = 7) {
     const ctx = newGame(seed, 'small');
@@ -63,7 +63,8 @@ function flatGame(seed = 7) {
     state.things = [];
     state.sources = [{ q: -3, r: 8, colors: ['red'] }];      // col 1, row 8
     state.targets = [{ q: 10, r: 8, color: 'red', delivered: 0 }];   // col 14, row 8
-    state.spawnTimer = -1000;
+    state.spawnCycle = [null];   // one slot, never an open color: no spawns (tests set their own cycle)
+    state.spawnSlot = 0;
     ctx.T = g.GameArtifacts.TERRAIN;
     ctx.putIn = (color, kind, q, r, facing) => { const t = { kind, color, q, r, facing }; state.things.push(t); return t; };
     ctx.put = (kind, q, r, facing = null) => ctx.putIn(g.GameArtifacts.WHITE, kind, q, r, facing);

@@ -65,3 +65,12 @@ decision, and where the full reasoning lives (a RATIONALE `D-n` tagged *unreview
 - [agent] port-look-jtj4: plus = vertex to vertex vertically, edge to edge across, arms at 86% to the rim; rings at 68% and 34% of the inner radius; marks 4.5 world px (D-42 call 3).
 - [agent] port-look-jtj4: wedges start at the top and go clockwise; neutral plus #f2f2f2 (`PORT_NEUTRAL_MARK`); a source with no colors falls back to `SOURCE_COLOR` with the neutral plus (D-42 call 4).
 - [agent] port-look-jtj4: dropped the ★ from the intro's "★ target"; U-19 trimmed to the tally/hover parts and points at the new U-29; D-40 call 1's IN/★ example annotated as removed (D-42 call 5).
+
+## spawn-cycle (2026-11-13)
+- [agent] spawn-cycle-jisb: the starting color stays `Rando.choice(CRATE_COLORS)`, independent of the cycle; the shuffle draws right after it, so every seed's game past map generation differs from before (D-43 call 1).
+- [agent] spawn-cycle-jisb: `spawnSlot` is the slot the next tick takes, so the first tick takes slot 0 (D-43 call 2).
+- [agent] spawn-cycle-jisb: skip, not retry; a retry variant tied on small (fifth milestone 238 vs 236) and lost on medium (14 vs 17 of 50 reached the third, 18.5 vs 7.6 crates lost) since one jammed color stalls the rest (D-43 call 3).
+- [agent] spawn-cycle-jisb: checks run open color, cap, clear source; the big-crate roll only on an actual spawn, so a skipped slot doesn't touch `Rando` (D-43 call 4).
+- [agent] spawn-cycle-jisb: `flatGame()` holds spawns off with a one-slot `[null]` cycle instead of the old negative timer; spawn tests set their own cycle (D-43 call 5).
+- [agent] spawn-cycle-jisb: `test/sim.js` prints `at cap` (share of ticks at `crateMax()`) to answer whether the cap binds; the cap binds 54-63% of ticks on medium/large/huge past the first milestone (44-69% before), 0% before it, not retuned (D-43 call 6).
+- [agent] spawn-cycle-jisb: no number retuned; small's first milestone slows from median 45 to 53, left for the designer (D-43 call 7).

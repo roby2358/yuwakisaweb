@@ -91,6 +91,8 @@ ARCHITECTURE_LOG.md.
   gets slower as colors open. A wrong target is solid on the ground so a mis-sorted crate
   jams where you can see it (G-2), but a Rocket flies over it, so long shots stay
   possible. Rerolling at the next spawn chance means a jammed color mostly lets the others through (D-31).
+  *(2026-11-13: the random color per spawn is superseded by D-43's fixed color cycle; a jammed
+  color's slot is skipped, so the others still come through.)*
   Small boards stay one color: the whole contraption still fits the screen.
 - **Evidence:** R-38, R-39, R-19, U-19 (manual). The bot measures only the first milestone,
   which comes before any color opens, so `just cc-sim` can't see this yet:
@@ -200,6 +202,62 @@ ARCHITECTURE_LOG.md.
   falls back to `SOURCE_COLOR` with the neutral plus. (5) The intro's "★ target" lost its ★.
 - **Evidence:** `uiboot.js` (every crate color has a `light` shade lighter than its fill; a
   source of none, one and every color renders); U-29.
+
+### D-43 Crates come from a fixed, seeded cycle of the four colors, one slot a tick — *Decided 2026-11-13 (pjpd spawn-cycle-jisb: all of `CRATE_COLORS` shuffled once with `Rando` at `newGame` into `spawnCycle`, never reshuffled; every tick takes the next slot; an open color's slot makes its crate if the board is under the cap and the source is clear, a closed color's slot is a tick with no crate; a blocked or capped slot is skipped, not retried; `SPAWN_INTERVAL` removed; the cycle's length is `CRATE_COLORS.length`, no per-size cases; the big-crate roll stays per spawn), Proposed (*unreviewed*: the rest)*
+- **Supersedes** D-31's spawn timing (a chance every `SPAWN_INTERVAL` = 3 ticks, rolling one
+  open color) and D-21's random color per spawn. D-31's cap (`crateCap(size)` plus one per
+  milestone) stays as it was.
+- **Alternatives:** the shared board clock it replaces (D-31); a cycle of only the open colors
+  (a 1-color board would spawn every tick); reshuffling at each milestone or each round;
+  holding a blocked slot until it can spawn (retry).
+- **Why:** the designer asked for it. The rate now follows the colors that are open: one color
+  gets a crate every 4 ticks, four colors a crate every tick, one of each per round, so a new
+  color adds work instead of splitting the old line's crates. The order is fixed for the game,
+  so the stream has a rhythm a player can learn and plan around, and it's seeded, so a game
+  still reproduces (R-21, R-22).
+- **Unreviewed calls:** (1) The starting color is still `Rando.choice(CRATE_COLORS)`,
+  independent of the cycle; the shuffle draws from `Rando` right after it, so every seed's
+  game after map generation differs from before (maps and `knownGoodSeed` don't change). The
+  starting color's next crate comes when its slot comes round, 1 to 4 ticks in. (2)
+  `spawnSlot` is the slot the *next* tick takes, so the first tick takes slot 0. (3) Skip, not
+  retry, as the task suggested: a retry variant (hold the slot while its open color is capped
+  or blocked) measured the same on small (first milestone median 52, fifth 238) and worse on
+  medium (`cc-sim-to 50 medium 3`: 14 of 50 reached the third against 17, 18.5 crates lost
+  against 7.6), because one jammed color stalls every other color behind it. (4) The checks
+  run open color, then the cap, then a clear source; the big-crate roll happens only when a
+  crate spawns, so `Rando` isn't touched on a skipped slot. (5) Test fixture: `flatGame()`
+  holds spawns off with a one-slot cycle `[null]` (never an open color) in place of the old
+  far-negative timer; spawn tests set their own cycle. (6) `test/sim.js` now prints `at cap`,
+  the share of ticks the board sat at `crateMax()`. (7) No number retuned: the first
+  milestone on small comes later (median 45 → 53), and `FIRST_MILESTONE`, the cap and the
+  deck are left for the designer.
+- **Is the cap binding constantly on big boards?** Not constantly, but most of the time once a
+  second color opens: 54-63% of ticks on medium, large and huge past the first milestone
+  (44-69% before), 0% before the first milestone on every size (one color now spawns less
+  often than the old clock). The bot routes only the first color, so on bigger boards the
+  unrouted colors' crates fill the board up to the cap whatever the spawn rule; it says more
+  about the bot than about play. Not retuned here.
+- **Evidence:** R-19 (shuffle, one slot a tick, closed slot, skip on cap or blocked source,
+  every color open = a crate a tick), R-6, R-26, R-52. `Measured by: just cc-sim` and
+  `just cc-sim-to`, before → after (seeds 5000+):
+  - `cc-sim 200 small`: median 45 → 53 (p10 41 → 48, p90 51 → 58), lost/game 0.61 → 0.63,
+    crates on board mean 4.5 → 3.6, peak 8 both.
+  - `cc-sim-to 100 small 5`: all 100 reach the fifth both ways; median 183 → 236 (p10 157 →
+    207, p90 210 → 262); milestones 44 / 67 / 90 / 127 / 183 → 53 / 79 / 112 / 159 / 236;
+    big crates/game 18.8 → 18.4; lost 3.14 → 3.84; at cap 1% → 0%.
+  - `cc-sim 100 medium`: median 51 → 60 (p10 46 → 53, p90 57 → 69), lost 0.93 → 0.95, mean
+    6.0 → 4.9 crates.
+  - `cc-sim-to 50 medium 3`: reached the third 25 → 17 of 50; milestones 50 / 87 / 137 (50 /
+    36 / 25 games) → 60 / 88 / 126 (50 / 23 / 17); lost 8.28 → 7.56; mean 11.4 → 11.9, peak
+    14 both; at cap 44% → 62%.
+  - `cc-sim-to 30 large 3`: reached the third 11 → 9 of 30; milestones 66 / 98 / 160 (30 / 27
+    / 11) → 75 / 115 / 148 (30 / 15 / 9); lost 19.6 → 14.4; mean 17.7 → 17.2, peak 20 both;
+    at cap 69% → 63%.
+  - `cc-sim-to 20 huge 3`: reached the third 11 → 9 of 20; milestones 118 / 132 / 206 → 124
+    / 153 / 213; lost 40.2 → 46.1; mean 31.3 → 31.8, peak 38 both; at cap 54% both.
+  Past the first milestone the bot ignores new colors, and they now flood faster (a second
+  color gets a crate every 4 ticks, against every 6), so fewer bot games reach the later
+  milestones on medium and up. Unmeasured in play.
 
 ---
 
@@ -542,7 +600,7 @@ ARCHITECTURE_LOG.md.
   weight, was 6 of 15): it never sees a Spring before then, but it gets more Belts, so it's a
   little faster. No numbers retuned. Unmeasured in play.
 
-### D-31 Crates spawn up to a cap that grows with the square root of board area and by one per milestone — *Decided (a cap growing with √area, settled 2026-11-12; a chance every third tick, +1 per milestone reached), Proposed (the rest; reviewed and accepted 2026-11-12)*
+### D-31 Crates spawn up to a cap that grows with the square root of board area and by one per milestone — *Spawn timing superseded 2026-11-13 by D-43 (a fixed color cycle, one slot a tick; the cap stands); Decided (a cap growing with √area, settled 2026-11-12; a chance every third tick, +1 per milestone reached), Proposed (the rest; reviewed and accepted 2026-11-12)*
 - **Alternatives:** the fixed timer it replaced (`SOURCE_INTERVAL`: a crate every 3 ticks
   whenever the rolled source was clear, retried every tick while jammed); a cap per color or
   per source; a cap with a fixed base plus a per-area term; storing a bonus counter in state;

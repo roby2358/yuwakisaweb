@@ -64,10 +64,11 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
 - **Remove (`D`)** → makes any misplacement fixable at the price of the card and a turn,
   so building stays an investment. Pulling a Bridge out from under a gremlin is a joke
   you can set up on purpose.
-- **`SPAWN_INTERVAL` and the crate cap** → pace the factory. Every third tick a source may
-  spawn, but only while the board holds fewer crates than its cap (bigger boards hold more,
-  and each milestone adds one). A jammed source just waits for the next chance, and while
-  other colors are open, the crates go to them instead. A line full of stuck crates throttles
+- **The spawn cycle and the crate cap** → pace the factory. The four colors come round in a
+  fixed, seeded order, one slot a tick; an open color's slot spawns, a closed one's waits, so
+  each color that opens adds its own stream (D-43). That runs only while the board holds fewer
+  crates than its cap (bigger boards hold more, and each milestone adds one). A jammed source
+  just misses its slot, and the other colors keep coming in theirs. A line full of stuck crates throttles
   itself, so a jam shows up as a quiet source rather than a flood; clearing it (or blasting
   a crate) lets the stream start again.
 - **Colored Pushers and Pullers** → feed readable consequences and accumulation: a red
@@ -97,8 +98,9 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
    piece two hexes ahead), each piece getting one motion; unclaimed gremlins pick a way to
    wander. Then everything moves together, one hex per hop: a packed train moves as one, and
    when two pieces want one hex the earlier Thing wins (D-38).
-   A Rocket's piece flies up to its range, over lakes. Every third
-   tick a source may spawn a crate, if the board is under its crate cap.
+   A Rocket's piece flies up to its range, over lakes. The tick takes
+   the next slot of the color cycle; if that color is open, its source may spawn a crate, if
+   the board is under its crate cap.
 
 ## Strategies
 
@@ -131,7 +133,7 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
 | Stack two pieces on one hex to "store" crates | One piece per hex (R-7) |
 | Ride a crate down a belt line twice in one tick | Each piece moves once per tick (R-13) |
 | Build on the target to block gremlins | Nothing may be built on a target (R-8) |
-| Ignore new colors and keep feeding one line | The rate is shared: each open color takes its share of spawns, and an unrouted color's crates jam its source or wander into the sea (R-19) |
+| Ignore new colors and keep feeding one line | Each open color has its own slot in the cycle, so an unrouted color's crates keep coming, jam its source, fill the board to the cap or wander into the sea (R-19) |
 | Spam Wait forever for a perfect hand | Waiting also counts on the turn score; the hand never changes on Wait |
 | Discard until the hand is all Belts | Each discard is a tick (D-16), so cycling the hand costs turns |
 

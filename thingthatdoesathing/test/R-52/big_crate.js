@@ -36,13 +36,13 @@ const { flatGame, DIR } = require('../helpers/load');
         Math.abs(big - p) < 0.1 && big < 1);
 }
 {
-    // A spawn chance past the milestones puts a big crate on the source sometimes; it counts once toward the cap.
+    // A spawn past the milestones puts a big crate on the source sometimes; it counts once toward the cap.
     const { g, state, engine } = flatGame();
     state.delivered = 5000;
     let spawned = null;
     for (let i = 0; i < 40 && !spawned; i++) {
         state.pieces = [];
-        state.spawnTimer = g.GameArtifacts.SPAWN_INTERVAL - 1;
+        state.spawnCycle = ['red'];
         engine.wait();
         spawned = state.pieces.find(p => p.kind === 'bigcrate');
     }

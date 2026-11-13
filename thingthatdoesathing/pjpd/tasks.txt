@@ -1,23 +1,3 @@
-Priority:   85
-Status: ToDo
-ID: spawn-cycle-jisb
-Created: 2026-11-13T17:44:19Z
-Updated: 2026-11-13T17:44:19Z
-
-Crate production cycles through the colors instead of rolling one random open color every SPAWN_INTERVAL (3) ticks.
-
-Designer's rule:
-- At the start of the game, shuffle CRATE_COLORS (all 4: red, green, blue, yellow) into a spawn sequence using the game's Rando, so the order is seeded and reproducible. Store it in GameState (e.g. `spawnCycle` plus a `spawnSlot` index replacing `spawnTimer`) so it survives toJSON/fromJSON.
-- Every tick, advance one slot. If that slot's color is open on this board, its source makes a crate of that color, as long as the board is under the crate cap (crateMax) and the source hex is clear; otherwise nothing comes that tick. If that color isn't open (yet), the tick is a wait.
-- So on a 1-color board (small) you get a crate, then 3 waits, then a crate, and so on (one every 4 ticks, against one every 3 today). On a 4-color board (huge) with all colors open, a crate comes every tick, one of each color per round. A color opened at a milestone (openColor) starts producing when its slot comes round. The shuffle is fixed for the whole game; it is not reshuffled at milestones.
-- The big-crate roll (bigCrateChance, D-34) stays per spawn as today.
-- A blocked source or a full board skips that slot's crate; it doesn't hold the cycle or retry. Decide and log if retrying looks better in the sim.
-- SPAWN_INTERVAL goes away (or becomes unused: remove it, no dead constant). The cycle length is CRATE_COLORS.length. Data-driven, no per-size special cases.
-
-Note: this changes pacing: slower on small boards, and much faster on big boards once several colors are open. Run `just cc-sim 200 small` and `just cc-sim-to 100 small 5` (plus a medium run) before and after, and record the numbers in RATIONALE. Flag it if the crate cap (crateCap) now binds constantly on big boards; don't retune the cap in this task, just report.
-
-Update: ONTOLOGY (the spawn rule and the new state fields), CRITERIA (rewrite the spawn rows: seeded shuffle, one slot per tick, closed slot = no crate, blocked/capped = skipped; tests in their test/R-n dirs), RATIONALE new D-n superseding the D-31 spawn timing (keep the cap), ARCHITECTURE_LOG, README and CLAUDE.md where they say "every SPAWN_INTERVAL ticks"/"a random open color", the thingfactory-tools skill if it mentions it, and test/sim.js if it reads spawnTimer. Agent calls go in pjpd/decisions.md. `just cc-test` green.
-----
 Priority:   80
 Status: ToDo
 ID: port-clears-kh58
