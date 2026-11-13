@@ -19,9 +19,48 @@ A goal generator: alongside the endless delivery milestones, the game hands the 
 
 Open questions: what a goal pays out (a card unlock, a card draw/choice, score, cosmetic badge, or nothing but the banner); how many goals are live at once (one? three?); whether goals are seeded by the game's Rando (reproducible) and how they scale with milestones/board size; whether goals replace or sit beside the milestone ladder; how the HUD shows them without crowding (the tally top right?); goals as data (a GOALS table in artifacts.js: kind, params, check, reward) so new kinds are rows, not code. Needs an interview before it becomes tasks.
 ----
+Score:   50
+ID: level-goals-6xmd
+Created: 2026-11-13T17:33:14Z
+Updated: 2026-11-13T17:33:14Z
+
+Levels built from goals: the game keeps ladders of rising goals along several scales, each level deals 3 of them, and once all 3 are met the player chooses to end the level or keep going. This pairs with goal-gen-tz9e, which is the pool of goal kinds; this idea is the structure that hands those goals out.
+
+1. Goal ladders: one list of rising targets per scale, kept like today's milestone ladder (10, 20, 50, 100, …). Candidate scales: crates delivered, one color delivered, big crates delivered, gremlins trapped, ex-gremlins, Things built or standing, construction feats (Belt run length, Bridge crossings, Spring/Cannon hops), turns without a lost crate. The player's place on each ladder carries from level to level, so every level asks for the next rung up.
+2. Level start: the level opens with 3 goals drawn from different scales, each at the player's next rung on that scale, shown somewhere persistent (the tally? a goals panel?).
+3. Completion: when all 3 are met, ask "End the level or continue?" Ending banks the result and starts a new level (new board? same board?). Continuing keeps the board running, maybe with fresh goals or a bonus ladder.
+
+Open questions:
+- Does this replace the endless milestone run or sit beside it as a mode?
+- What does ending a level bank: a score, the turn count, unlocks that carry over (cards, board sizes), a star rating?
+- Does continuing pay anything, and is there a reason to stop (risk, diminishing returns), or is it just more play?
+- Is the draw seeded by Rando so it's reproducible? Can a player reroll or swap a goal?
+- How do the card UNLOCKS map onto levels: per level, or by ladder rung?
+- Where does progress across levels live (localStorage; per-viewer only)?
+- Board size per level: does it grow or does the player pick it?
+
+Needs an interview before it becomes tasks. Probably settle it together with goal-gen-tz9e.
+----
 Score:   40
 ID: zoom-lod-t65a
 Created: 2026-11-12T08:52:10Z
 Updated: 2026-11-12T08:52:10Z
 
 Simplified renderings at small map scales (after the 1/2/4/∞ zoom buttons land; play it by ear once the user has seen 1/4 and fit on big boards). Candidates: crates as plain filled squares in their crate color (big crates bigger squares), gremlins as plain dots, terrain as flat fills with no texture/detail, Things as simple glyphs (a line/arrow for movers, a block for Walls, a ring for Traps) instead of the full art, sources/targets as bold outlines. Switch by a level-of-detail threshold on the on-screen hex size, not by zoom button, so ∞ on a medium board can still draw full detail. Only build what playtest shows is unreadable or slow.
+----
+Score:   40
+ID: bomb-card-7z4j
+Created: 2026-11-13T17:34:37Z
+Updated: 2026-11-13T17:34:42Z
+
+A Bomb card: a one-shot card that clears the Things from several hexes at once, rather than removing them one by one with D (one command, so one tick, per Thing). Useful for tearing out a failed contraption or clearing room for a rebuild.
+
+Design calls to settle:
+- Area: the target hex plus its 6 neighbors (radius 1)? A line of hexes along the ghost's facing (R turns it, like the movers)? A radius that grows with milestones?
+- What it clears: Things only, or pieces too? Crates (lost? counted in the tally?), gremlins (killed, counting as ex-gremlins?). Terrain stays; sources and targets are never touched.
+- Placement: any hex, or only hexes holding a Thing? Is the card used up after one shot (yes, it's a card)? It costs one tick like any command.
+- Rarity and unlock: where it sits in UNLOCKS and how often it's dealt (rare like the Pusher/Puller, D-32?). How it relates to B (blast on the hovered crate) and D (remove the selected Thing, D-39). Does Bomb make D less needed, or do they live side by side?
+- Engine: a new `bomb` command, or `place` with a card whose kind is an effect rather than a Thing (data-driven, e.g. a `blastRadius` field; not `clears`, which the Cannon already uses; and not a kind check). Events: one remove/fade per cleared hex, so the animation can play it as a burst.
+- UI: the ghost previews the blast area (outline every hex it will clear), so you can't misfire.
+
+Docs when built: ONTOLOGY (command and rule), CRITERIA row, RATIONALE D-n, README card list, help legend.
