@@ -2,6 +2,13 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-13 — A crate on its own color's new target is delivered (D-46)
+`clearHex` used to destroy any piece on a newly revealed source or target, a crate on its own
+color's new target included (D-44 call 6). Now that crate is delivered (`deliver` event at the
+tick's last hop). `reachMilestones(before, after, hop)` became `reachMilestones(before, hop)`,
+reading `state.delivered` live so a reveal's delivery can cross the next milestone that tick.
+R-62 row and test extended.
+
 ### 2026-11-13 — Big crates: 1% at the start, 5% by the fifth milestone (D-45)
 `bigCrateChance(m)` used to be m / (m + `BIG_CRATE_HALF`) with `BIG_CRATE_HALF` = 4: 0 before
 the first milestone (with no `Rando` roll), 20% after it, 56% by the fifth. Now it's a

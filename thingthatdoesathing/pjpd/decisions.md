@@ -81,7 +81,7 @@ decision, and where the full reasoning lives (a RATIONALE `D-n` tagged *unreview
 - [agent] port-clears-kh58: the clear's splat `hop` is the tick's last hop, so a piece that moved onto the hex this tick arrives, then fades (D-44 call 3).
 - [agent] port-clears-kh58: a cleared gremlin re-emerges like any splatted gremlin; the tick now runs milestones before its tally/emerge but still emits their events last (after the spawns), keeping R-31's order; an emerged gremlin can never be the one cleared (D-44 call 4).
 - [agent] port-clears-kh58: emerge's Rando draws now follow openColor's, so a game that opens a color diverges from that tick (D-44 call 5).
-- [agent] port-clears-kh58: a crate on its own color's new target is destroyed and lost, not delivered ("whatever its color") (D-44 call 6).
+- [user, changed 2026-11-13] port-clears-kh58: a crate on its own color's new target is delivered, not destroyed (D-46, superseding D-44 call 6).
 - [agent] port-clears-kh58: `freeEndHexes` → `openEndHexes`; `openColor(hop)` returns a list; `reachMilestones(before, after, hop)`; R-62 is a new row for the clears, R-38 keeps placement (D-44 call 7).
 - [agent] port-clears-kh58: `test/sim.js` with a milestone count prints colors opened and endpoint clears per game; medium to 5: colors opened 1.00/game, 0.19 clears/game, fewer games reach #2 (50 → 45), likely the bot's belts under a new wrong-color target (D-44 call 8).
 

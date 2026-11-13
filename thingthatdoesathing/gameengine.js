@@ -308,7 +308,8 @@ const GameEngine = (function () {
 
         // A newly opened endpoint takes its hex (D-44): its Thing is removed (no card back),
         // its piece destroyed (a crate's value counts as lost; the tick's tally counts a
-        // gremlin's splat as an ex-gremlin and lets it re-emerge). Returns the events.
+        // gremlin's splat as an ex-gremlin and lets it re-emerge), except a crate on its own
+        // color's new target, which is delivered (D-46). Returns the events.
         clearHex(h, hop) {
             const s = this.state;
             const events = [];
@@ -318,7 +319,11 @@ const GameEngine = (function () {
                 events.push({ type: 'clear', kind: thing.kind, q: h.q, r: h.r });
             }
             const piece = this.pieceAt(h.q, h.r);
-            if (piece) {
+            const goal = piece && this.goalFor(piece, h);
+            if (goal) {
+                this.deliver(piece, goal);
+                events.push({ type: 'deliver', id: piece.id, hop });
+            } else if (piece) {
                 this.removePiece(piece);
                 this.loseValue(piece);
                 events.push({ type: 'splat', id: piece.id, by: null, trap: false, hop });
@@ -413,13 +418,14 @@ const GameEngine = (function () {
             return { type: 'unlock', kinds: UNLOCKS[s.unlocks - 1] };
         }
 
-        // One milestone event per milestone crossed going from `before` to `after` delivered,
-        // each followed by its open and clears (if the board has room for a color) and its
-        // unlock (if a step is left). Crossing several at once does each in turn. `hop` is
-        // when the clears' splats fade.
-        reachMilestones(before, after, hop) {
+        // One milestone event per milestone crossed going from `before` to the board's
+        // delivered count, each followed by its open and clears (if the board has room for a
+        // color) and its unlock (if a step is left). Crossing several at once does each in
+        // turn. The count is read live, so a crate a reveal delivers (D-46) can cross the next
+        // milestone in the same tick. `hop` is when the clears' fades play.
+        reachMilestones(before, hop) {
             const events = [];
-            for (let m = nextMilestone(before); m <= after; m = nextMilestone(m)) {
+            for (let m = nextMilestone(before); m <= this.state.delivered; m = nextMilestone(m)) {
                 events.push({ type: 'milestone', count: m });
                 events.push(...this.openColor(hop));
                 const unlocked = this.unlock();
@@ -1050,7 +1056,7 @@ const GameEngine = (function () {
 
             // Milestones run before the tally, so a gremlin a newly opened endpoint cleared
             // counts and re-emerges like any splat (D-44); their events still go last.
-            const reached = this.reachMilestones(deliveredBefore, s.delivered, run.hop);
+            const reached = this.reachMilestones(deliveredBefore, run.hop);
 
             // Gremlins a Trap caught count in `trapped`; every other gremlin gone in `exGremlins`.
             const ends = [...events, ...reached].filter(e => e.type === 'sink' || e.type === 'splat');

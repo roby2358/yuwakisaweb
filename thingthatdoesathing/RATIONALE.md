@@ -286,8 +286,8 @@ ARCHITECTURE_LOG.md.
   tick can never be the one a new endpoint clears (it isn't in the client's pre-tick snapshot),
   and the shore it climbs out on already excludes the new endpoints. (5) The emerge's `Rando`
   draws now come after openColor's, so a game that opens a color plays differently from that
-  tick on. (6) A crate on its own color's new target is destroyed and lost, not delivered, as
-  the spec says ("whatever its color"). (7) `freeEndHexes` renamed `openEndHexes`; `openColor`
+  tick on. (6) ~~A crate on its own color's new target is destroyed and lost, not delivered, as
+  the spec says ("whatever its color").~~ Superseded by D-46: it's delivered. (7) `freeEndHexes` renamed `openEndHexes`; `openColor`
   and `reachMilestones` take the splat `hop`; `openColor` returns a list (`[]` when nothing
   opens). (8) `test/sim.js` with a milestone count prints colors opened and endpoint clears per
   game.
@@ -346,6 +346,22 @@ ARCHITECTURE_LOG.md.
   Unmeasured in play.
 
 ---
+
+### D-46 A crate on its own color's new target is delivered — *Decided 2026-11-13 (designer, after reviewing D-44 call 6)*
+- **Supersedes** D-44 call (6), which destroyed a crate on a newly revealed target whatever its
+  color. Now a crate (or big crate) standing on a new target of its own color is delivered
+  there: `deliver{id, hop}` at the tick's last hop, its value counted in that target's
+  `delivered` and the board's, exactly as if it had walked on. Any other piece on a new
+  endpoint is still cleared as D-44 says (a crate of another color, or any crate on a new
+  source, is lost; a gremlin counts as an ex-gremlin).
+- **Why:** the reveal put the right target under the right crate; destroying it was a literal
+  reading of "whatever its color" that felt like a punishment for luck.
+- **Follow-on:** `reachMilestones(before, hop)` now reads the board's delivered count live, so a
+  delivery made by a reveal can cross the next milestone in the same tick (before, the loop's
+  upper bound was fixed when it started, and the next tick would have started from the new
+  count and missed that milestone).
+- **Evidence:** R-62's test seeds crates of every unopened color across the right slice; over
+  30 seeds the one on the new target is delivered when it matches (7) and lost otherwise (18).
 
 ## Things
 

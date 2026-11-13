@@ -1,8 +1,9 @@
 // R-62: a newly opened source or target takes its hex whatever stands there (D-44): a Thing
 // is removed (`clear{kind, q, r}`, no card back), a gremlin is destroyed (`splat`, +1
 // exGremlins, and it re-emerges like any splat), a crate is destroyed (`splat`, `lost` + its
-// value), any color, source or target. The splats come at the tick's last hop, after the
-// `open`. An enhanced source clears nothing on its own hex.
+// value), source or target, except a crate on its own color's new target, which is
+// delivered (`deliver`, D-46). The splats come at the tick's last hop, after the `open`. An
+// enhanced source clears nothing on its own hex.
 'use strict';
 const { check, done } = require('../helpers/check');
 const { flatGame, DIR } = require('../helpers/load');
@@ -101,7 +102,8 @@ check(`a gremlin cleared (${gremlins}), a Thing cleared (${things}), a big crate
 check(`enhanced sources (${enhanced}) and new sources (${fresh}) both seen`, enhanced > 0 && fresh > 0);
 
 {
-    // A crate on the new target is destroyed and lost, whatever its color.
+    // A crate of another color on a new endpoint is destroyed and lost (the helper's crates
+    // are red, and red is the color already open, so the new target is never theirs).
     let seen = 0, right = 0;
     for (let seed = 1; seed <= 10; seed++) {
         const ctx = board(seed, crate, crate);
@@ -113,5 +115,36 @@ check(`enhanced sources (${enhanced}) and new sources (${fresh}) both seen`, enh
             fresh.every(h => bare(ctx, h)) && ctx.state.exGremlins === was.ex) right++;
     }
     check(`crates on the new endpoints: destroyed, +1 lost each, no ex-gremlin (${right}/${seen})`, seen > 0 && right === seen);
+}
+{
+    // Crates of every unopened color on the right slice: the one on the new target is
+    // delivered if it matches the target's color (D-46), else destroyed and lost.
+    const colors = ['green', 'blue', 'yellow'];
+    let matched = 0, other = 0, right = 0;
+    for (let seed = 1; seed <= 30; seed++) {
+        let i = 0;
+        const ctx = board(seed, crate, (c, h) => { c.piece('crate', h.q, h.r).color = colors[i++ % colors.length]; });
+        const { state } = ctx;
+        const goalBefore = () => state.targets.find(t => t.q === open.target.q && t.r === open.target.r);
+        const deliveredBefore = state.delivered;
+        const { res, open, pieceOn, was } = play(ctx);
+        const p = open && pieceOn.get(key(open.target));
+        if (!p) continue;
+        const tgt = goalBefore();
+        // The tick's own delivery (the Belt crate) brings the count from 9 to 10.
+        const tick = 1;
+        if (p.color === open.color) {
+            matched++;
+            if (res.events.some(e => e.type === 'deliver' && e.id === p.id) && tgt.delivered === 1 &&
+                state.delivered === deliveredBefore + tick + 1 && !res.events.some(e => e.type === 'splat' && e.id === p.id) &&
+                state.lost === was.lost + (state.sources.length > 1 && pieceOn.get(key(open.source)) ? 1 : 0)) right++;
+        } else {
+            other++;
+            if (res.events.some(e => e.type === 'splat' && e.id === p.id) && tgt.delivered === 0 &&
+                state.delivered === deliveredBefore + tick) right++;
+        }
+    }
+    check(`a crate on the new target: delivered when it's the target's color (${matched}), lost otherwise (${other}); ${right}/${matched + other} right`,
+        matched > 0 && other > 0 && right === matched + other);
 }
 done();

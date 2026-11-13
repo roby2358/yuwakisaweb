@@ -241,13 +241,14 @@ add color to src (or add {src, colors: [color]}); add {tgt, color, delivered: 0}
 emit open{color, source, target}
 for h in the newly placed hexes (tgt, and src unless it was enhanced):  # clearHex (D-44)
     if a Thing on h: remove it (no card back); emit clear{kind, q, r}
-    if a piece on h: remove it; lost += its value; emit splat{id, by: null, trap: false, hop: the tick's last hop}
+    if a crate on h is h's target color: deliver it; emit deliver{id, hop: the tick's last hop}  # D-46
+    elif a piece on h: remove it; lost += its value; emit splat{id, by: null, trap: false, hop: the tick's last hop}
 ```
 An open hex is any slice hex that isn't already a source or target: a Thing or a piece on it
 doesn't rule it out, and the pick is uniform (D-44). The slices are the Place source and
 target rule's. A cleared gremlin counts in `exGremlins` and re-emerges like any splat (the
 Tick rule runs milestones before its tally); a cleared crate or big crate counts as lost,
-whatever its color. An enhanced source's hex is left as it is.
+unless it stands on its own color's new target, where it's delivered (D-46). An enhanced source's hex is left as it is.
 
 ### Spawn gremlins [P; scales with area D]
 *Serves:* comedy; moving obstacles.
@@ -439,7 +440,7 @@ if color is open and crates on the board < crateCap(size) + milestonesReached(de
         a kind of color on src; emit spawn{id, q, r}
 idleTicks = 0 if the command used a card (place, discard) else idleTicks + 1   # D-26
 if idleTicks >= IDLE_REDRAW_TICKS: slot = Rando.int(0, HAND_SIZE-1); hand[slot] = draw(); idleTicks = 0; emit redraw{slot}
-for each milestone m with deliveredBefore < m <= delivered: milestone{count: m}; openColor(); unlock()   # reachMilestones; events held back
+for each milestone m with deliveredBefore < m <= delivered (read live: a reveal's delivery counts, D-46): milestone{count: m}; openColor(); unlock()   # reachMilestones; events held back
 gone = kinds of the command's own sink (remove) and this tick's sunk, splatted (cleared included) and crashed pieces
 trapped += count of gremlins whose splat has trap
 exGremlins += count of 'gremlin' in gone, less those trapped
