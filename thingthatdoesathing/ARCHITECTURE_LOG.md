@@ -2,6 +2,18 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-13 — A new source or target clears its hex (D-44)
+`openColor` used to pick new sources and targets only from free end-slice hexes
+(`freeEndHexes`: no Thing, no piece, no endpoint), so a built-up or crowded slice could
+leave no spot and the color waited for the next milestone. Now `openEndHexes` drops only
+existing endpoints, and `clearHex` empties each newly placed hex: a Thing goes (`clear`
+event, no card back), a piece is destroyed (`splat` at the tick's last hop; a crate's value
+to `lost`, a gremlin to `exGremlins` and the shore). `openColor` returns a list and takes
+the hop, as does `reachMilestones`; the tick runs milestones before its tally and emerge,
+emitting their events last as before. R-38 rewritten, R-62 added (test/R-62/), R-36 and R-31
+mention cleared gremlins; `test/sim.js` prints colors opened and clears per game (pjpd
+port-clears-kh58).
+
 ### 2026-11-13 — Crates come from a fixed color cycle, one slot a tick (D-43)
 Spawning used to be a board clock: `spawnTimer` counted to `SPAWN_INTERVAL` (3), and each
 such chance rolled one open color with `Rando.choice` and spawned at its source if it was

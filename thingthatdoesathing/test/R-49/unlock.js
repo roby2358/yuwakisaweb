@@ -68,7 +68,7 @@ const unlocks = events => events.filter(e => e.type === 'unlock').map(e => e.kin
     // Several milestones crossed at once (9 → 50: 10, 20 and 50): one unlock per milestone.
     const { g, state, engine } = lineGame('huge');
     const { UNLOCKS } = g.GameArtifacts;
-    const events = engine.reachMilestones(9, 50);
+    const events = engine.reachMilestones(9, 50, 0);
     const t = events.filter(e => e.type === 'milestone' || e.type === 'unlock').map(e => e.type).join(' ');
     check(`9 → 50: each milestone followed by its unlock (${t})`,
         t === 'milestone unlock milestone unlock milestone unlock');

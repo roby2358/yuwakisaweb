@@ -278,28 +278,52 @@ const GameEngine = (function () {
             return { source: Rando.choice(this.endSlice('left')), target: Rando.choice(this.endSlice('right')) };
         }
 
-        // Hexes in an end slice where a new source or target may open: no Thing, no piece,
-        // not already a source or target.
-        freeEndHexes(end) {
-            return this.endSlice(end).filter(h => !this.thingAt(h.q, h.r) && !this.pieceAt(h.q, h.r) && !this.isEndpoint(h));
+        // Hexes in an end slice where a new source or target may open: any not already a
+        // source or target. Whatever stands on the one picked is cleared (D-44).
+        openEndHexes(end) {
+            return this.endSlice(end).filter(h => !this.isEndpoint(h));
         }
 
         // Open the next color, if the board has room for one (R-38): ENHANCE_CHANCE that it
         // comes out of an existing source, else a new source on the left; its target goes on
-        // the right, with a land path from its source. Returns the open event, or null.
-        openColor() {
+        // the right, with a land path from its source. Each newly placed hex is cleared
+        // (D-44); its splats fade at `hop`, the tick's last. Returns the open event then the
+        // clears, or [] when nothing opens.
+        openColor(hop) {
             const s = this.state;
-            if (s.targets.length >= MAP_SIZES[s.size].colors) return null;
+            if (s.targets.length >= MAP_SIZES[s.size].colors) return [];
             const color = Rando.choice(CRATE_COLORS.filter(c => !this.openColors().includes(c)));
             const enhance = Rando.random() < ENHANCE_CHANCE;
-            const src = enhance ? Rando.choice(s.sources) : Rando.choice(this.freeEndHexes('left'));
-            const reachable = src ? this.freeEndHexes('right').filter(h => this.board.hasPath(src, h)) : [];
+            const src = enhance ? Rando.choice(s.sources) : Rando.choice(this.openEndHexes('left'));
+            const reachable = src ? this.openEndHexes('right').filter(h => this.board.hasPath(src, h)) : [];
             const tgt = Rando.choice(reachable);
-            if (!tgt) return null;
+            if (!tgt) return [];
             if (enhance) src.colors.push(color);
             else s.sources.push({ q: src.q, r: src.r, colors: [color] });
             s.targets.push({ q: tgt.q, r: tgt.r, color, delivered: 0 });
-            return { type: 'open', color, source: { q: src.q, r: src.r }, target: { q: tgt.q, r: tgt.r } };
+            const cleared = enhance ? [tgt] : [src, tgt];
+            return [{ type: 'open', color, source: { q: src.q, r: src.r }, target: { q: tgt.q, r: tgt.r } },
+                ...cleared.flatMap(h => this.clearHex(h, hop))];
+        }
+
+        // A newly opened endpoint takes its hex (D-44): its Thing is removed (no card back),
+        // its piece destroyed (a crate's value counts as lost; the tick's tally counts a
+        // gremlin's splat as an ex-gremlin and lets it re-emerge). Returns the events.
+        clearHex(h, hop) {
+            const s = this.state;
+            const events = [];
+            const thing = this.thingAt(h.q, h.r);
+            if (thing) {
+                s.things.splice(s.things.indexOf(thing), 1);
+                events.push({ type: 'clear', kind: thing.kind, q: h.q, r: h.r });
+            }
+            const piece = this.pieceAt(h.q, h.r);
+            if (piece) {
+                this.removePiece(piece);
+                this.loseValue(piece);
+                events.push({ type: 'splat', id: piece.id, by: null, trap: false, hop });
+            }
+            return events;
         }
 
         addPiece(kind, q, r, color) {
@@ -391,13 +415,16 @@ const GameEngine = (function () {
         }
 
         // One milestone event per milestone crossed going from `before` to `after` delivered,
-        // each followed by its open (if the board has room for a color) and its unlock (if a
-        // step is left). Crossing several at once does each in turn.
-        reachMilestones(before, after) {
+        // each followed by its open and clears (if the board has room for a color) and its
+        // unlock (if a step is left). Crossing several at once does each in turn. `hop` is
+        // when the clears' splats fade.
+        reachMilestones(before, after, hop) {
             const events = [];
             for (let m = nextMilestone(before); m <= after; m = nextMilestone(m)) {
                 events.push({ type: 'milestone', count: m });
-                events.push(...[this.openColor(), this.unlock()].filter(e => e));
+                events.push(...this.openColor(hop));
+                const unlocked = this.unlock();
+                if (unlocked) events.push(unlocked);
             }
             return events;
         }
@@ -1022,15 +1049,17 @@ const GameEngine = (function () {
                 events.push({ type: 'redraw', slot });
             }
 
+            // Milestones run before the tally, so a gremlin a newly opened endpoint cleared
+            // counts and re-emerges like any splat (D-44); their events still go last.
+            const reached = this.reachMilestones(deliveredBefore, s.delivered, run.hop);
+
             // Gremlins a Trap caught count in `trapped`; every other gremlin gone in `exGremlins`.
-            const ends = events.filter(e => e.type === 'sink' || e.type === 'splat');
+            const ends = [...events, ...reached].filter(e => e.type === 'sink' || e.type === 'splat');
             const gone = [...first.gone, ...ends.map(e => kindOf.get(e.id))];
             const trappedNow = ends.filter(e => e.trap && kindOf.get(e.id) === 'gremlin').length;
             s.trapped += trappedNow;
             s.exGremlins += gone.filter(kind => kind === 'gremlin').length - trappedNow;
-            events.push(...this.emerge(gone));
-
-            events.push(...this.reachMilestones(deliveredBefore, s.delivered));
+            events.push(...this.emerge(gone), ...reached);
 
             s.turn++;
             s.phase = 'player';

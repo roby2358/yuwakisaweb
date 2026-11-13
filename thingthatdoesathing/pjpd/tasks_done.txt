@@ -53,6 +53,26 @@ Update: ONTOLOGY (the spawn rule and the new state fields), CRITERIA (rewrite th
 ----
 Priority:   80
 Status: Done
+ID: port-clears-kh58
+Created: 2026-11-13T17:45:48Z
+Updated: 2026-11-13T18:40:50Z
+
+When a milestone opens a color and reveals a new source or target (openColor), the new endpoint takes its hex whatever is on it: Things, gremlins and crates are all cleared. Today, freeEndHexes skips any hex holding a Thing or a piece, so a built-up or gremlin-filled end slice can leave fewer spots, or none, and openColor returns null.
+
+Designer's rule (settled):
+- Candidate hexes for a new source (left slice) or target (right slice) no longer exclude hexes with a Thing or a piece. They still exclude existing sources and targets, still need terrain where an endpoint can stand, and the target still needs a land path from its source (board.hasPath, which already runs on terrain only). No preference for empty hexes: pick uniformly over every candidate.
+- On reveal, everything on that hex goes:
+  - A Thing is removed (no card back to the hand).
+  - A gremlin is destroyed and counts as an ex-gremlin (exGremlins, not trapped).
+  - A crate is destroyed and counts as lost, whatever its color and whether the hex becomes a source or a target. C'est la vie.
+- An enhanced source (a color added to an existing source) changes nothing on the board; only newly placed hexes clear.
+
+Events: emit what the animation needs, e.g. the existing splat/fade for the gremlin or crate plus a remove for the Thing, at the end of the tick next to the `open` event. The tally updates from state. Keep `open{color, source, target}` as is; no new overlay.
+
+Docs: ONTOLOGY (the openColor rule), CRITERIA (rewrite the R-38 placement row(s): reveal clears a Thing, kills a gremlin (+1 ex-gremlin), destroys a crate (+1 lost), and opens even when every end hex is occupied; tests in the test/R-n dirs), RATIONALE new D-n (designer-settled), ARCHITECTURE_LOG, README if it describes where colors open. Agent calls go in pjpd/decisions.md. `just cc-test` green; run `just cc-sim-to 100 medium 5` to confirm colors still open.
+----
+Priority:   80
+Status: Done
 ID: lockstep-ritf
 Created: 2026-11-12T07:59:56Z
 Updated: 2026-11-12T08:31:03Z

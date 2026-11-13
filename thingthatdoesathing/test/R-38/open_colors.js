@@ -1,9 +1,9 @@
 // R-38: each milestone opens the next color until the board's MAP_SIZES `colors` cap: a
 // color not open yet, coming out of an existing source (ENHANCE_CHANCE) or a new source in
 // the left slice, with a new target of that color in the right slice that its source has a
-// land path to, on a hex with no Thing, piece, source or target. The tick emits
-// open{color, source, target} right after its milestone. With no free hex, nothing opens
-// and the next milestone tries again.
+// land path to, on any hex that isn't already a source or target (what stands there is
+// cleared, R-62). The tick emits open{color, source, target} right after its milestone.
+// With no hex its source can reach, nothing opens and the next milestone tries again.
 'use strict';
 const { check, done } = require('../helpers/check');
 const { flatGame, DIR } = require('../helpers/load');
@@ -74,9 +74,23 @@ const inSlice = (engine, end, h) => engine.endSlice(end).some(x => x.q === h.q &
     const ctx = lineGame('medium');
     const { state, engine } = ctx;
     for (const h of engine.endSlice('right')) if (!engine.targetAt(h.q, h.r) && !engine.thingAt(h.q, h.r)) ctx.put('WALL', h.q, h.r);
-    check('no free hex for a target: nothing opens',
-        !reach(ctx, 10).events.some(e => e.type === 'open') && state.targets.length === 1);
-    state.things = state.things.filter(t => t.kind !== 'WALL');
-    check('the next milestone tries again', reach(ctx, 20).events.some(e => e.type === 'open') && state.targets.length === 2);
+    check('every right-slice hex built on: the color still opens (D-44)',
+        reach(ctx, 10).events.some(e => e.type === 'open') && state.targets.length === 2);
+}
+{
+    // The target moved inland, and the right slice walled off by mountains from the rest.
+    const ctx = flatGame();
+    const { state, engine, T } = ctx;
+    state.size = 'medium';
+    state.targets = [{ q: 5, r: 4, color: 'red', delivered: 0 }];
+    ctx.put('BELT', 4, 4, DIR.E);
+    const slice = engine.endSlice('right');
+    for (const h of slice) for (const n of engine.board.neighbors(h.q, h.r)) if (!n.isEdge && !slice.includes(n)) ctx.terrain(n.q, n.r, T.MOUNTAIN);
+    const sameSlice = engine.endSlice('right').every(h => slice.includes(h));
+    const reachIn = at => { state.delivered = at - 1; ctx.piece('crate', 4, 4); return engine.wait(); };
+    check('no right-slice hex its source can reach: nothing opens',
+        sameSlice && !reachIn(10).events.some(e => e.type === 'open') && state.targets.length === 1);
+    for (const [, h] of state.hexes) if (h.terrain === T.MOUNTAIN) h.terrain = T.PLAINS;
+    check('the next milestone tries again', reachIn(20).events.some(e => e.type === 'open') && state.targets.length === 2);
 }
 done();

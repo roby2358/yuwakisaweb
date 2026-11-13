@@ -78,7 +78,7 @@ ARCHITECTURE_LOG.md.
   line (it discards Walls, Traps and Rockets), and a huge board's line is long, so these
   are a floor on how a player fares, not a forecast.
 
-### D-21 Milestones open more colors on bigger boards, each with its own target — *Decided (one color per milestone up to 1/2/3/4 by size, 50% from an existing source, own target per color, random color per spawn, wrong-color targets solid on the ground but flown over), Proposed (placement in the end slices on free hexes, a flight drops short of a wrong target, nothing opens when there's no free hex)*
+### D-21 Milestones open more colors on bigger boards, each with its own target — *Decided (one color per milestone up to 1/2/3/4 by size, 50% from an existing source, own target per color, random color per spawn, wrong-color targets solid on the ground but flown over), Proposed (placement in the end slices on free hexes, a flight drops short of a wrong target, nothing opens when there's no free hex; free-hex placement superseded 2026-11-13 by D-44)*
 - **Alternatives:** a second color on a timer instead of at milestones; every color with its
   own source (no shared source); a round-robin spawn order instead of a random color; a
   per-color spawn clock instead of one for the board; a wrong-color crate passing over a
@@ -258,6 +258,51 @@ ARCHITECTURE_LOG.md.
   Past the first milestone the bot ignores new colors, and they now flood faster (a second
   color gets a crate every 4 ticks, against every 6), so fewer bot games reach the later
   milestones on medium and up. Unmeasured in play.
+
+### D-44 A new source or target takes its hex, clearing whatever stands there — *Decided 2026-11-13 (pjpd port-clears-kh58: candidates for a new source (left slice) or target (right slice) no longer exclude hexes with a Thing or a piece, only existing sources and targets; the target still needs a land path from its source; the pick is uniform, no preference for empty hexes; on reveal a Thing is removed with no card back, a gremlin is destroyed and counts as an ex-gremlin (not trapped), a crate of any color is destroyed and counts as lost, on a source or a target; an enhanced source changes nothing on the board; `open{color, source, target}` unchanged, no new overlay), Proposed (*unreviewed*: the rest)*
+- **Supersedes** D-21's Proposed placement on free hexes and "nothing opens when there's no
+  free hex": a color now fails to open only past the cap or when no right-slice hex is
+  reachable by land from its source.
+- **Alternatives:** the free-hex rule it replaces (a built-up or crowded end slice could leave
+  no spot, and the color, with its unlock-gated cards, waited for the next milestone);
+  preferring empty hexes and clearing only when none is left; pushing what's there aside.
+- **Why:** the designer asked for it. A color always opens when the milestone says it does,
+  however much the player has built in the end slices, and the new endpoint is a small
+  disaster where it lands, which suits the game's comedy (G-2): a belt line or a crate in
+  transit can be wiped by the factory's own growth.
+- **Unreviewed calls:** (1) Events: a Thing's removal is a new `clear{kind, q, r}` event (not
+  `remove`, which is a command's name); a destroyed piece reuses `splat{id, by: null, trap:
+  false, hop}`, so the UI's existing fade and splat sound play it with no client change (Things
+  are drawn from state, so the cleared Thing and the new endpoint simply appear at the start of
+  the animation). (2) Order: the clears follow their `open`, the new source's hex first, then
+  the target's, each hex's Thing before its piece.
+  (3) The splat's `hop` is the tick's last hop, so a piece that moved onto the hex this tick
+  arrives first, then fades. (4) A cleared gremlin re-emerges on the shore like every other
+  gremlin that splats (D-14's steady population). To make that and the tally work, the tick
+  now runs milestones before its tally and emerge (state order), while their events still come
+  last, after the emerge's spawns, so R-31's "spawn before the milestone" holds; a cleared
+  gremlin's own `spawn` therefore comes before the `splat` that caused it, which the client
+  doesn't care about. Running emerge after openColor also means a gremlin that climbs out this
+  tick can never be the one a new endpoint clears (it isn't in the client's pre-tick snapshot),
+  and the shore it climbs out on already excludes the new endpoints. (5) The emerge's `Rando`
+  draws now come after openColor's, so a game that opens a color plays differently from that
+  tick on. (6) A crate on its own color's new target is destroyed and lost, not delivered, as
+  the spec says ("whatever its color"). (7) `freeEndHexes` renamed `openEndHexes`; `openColor`
+  and `reachMilestones` take the splat `hop`; `openColor` returns a list (`[]` when nothing
+  opens). (8) `test/sim.js` with a milestone count prints colors opened and endpoint clears per
+  game.
+- **Evidence:** R-38 (opens with every right-slice hex built on; nothing opens only with no
+  reachable hex), R-62 (Thing removed with no card back, gremlin +1 ex-gremlin and re-emerges,
+  crate and big crate lost, enhanced source untouched), R-36, R-31. `Measured by:
+  just cc-sim-to 100 medium 5`, before → after (seeds 5000+): milestones 60 / 90 / 122 / 172 /
+  254 (100 / 50 / 38 / 38 / 38 games) → 60 / 91 / 123 / 172 / 249 (100 / 45 / 34 / 34 / 34);
+  lost/game 12.54 → 15.19; mean 11.8 crates both, peak 14, at cap 57% → 56%; big crates
+  9.8 → 9.4; colors opened 1.00 per game (every game opens medium's second color);
+  0.19 clears per game. `just cc-sim 200 small` is unchanged (median 53; small never opens a
+  color). The bot builds only the first color's line, and a new target can now land on one of
+  its belts, where it stands as a wrong-color target the bot never routes around; that, and
+  the shifted random stream, likely account for fewer games reaching the second milestone.
+  Unmeasured in play.
 
 ---
 
@@ -572,7 +617,7 @@ ARCHITECTURE_LOG.md.
   Announcing Pushers and Pullers there would promise cards that never come. The test is data
   (`everDealt`: not `colored`, or `MAP_SIZES.colors > 1`), not a kind check. On a bigger board
   the Pusher/Puller step lands on the same milestone that opens the second color, so they
-  arrive when they become useful; if that color can't open for want of a free hex, they're
+  arrive when they become useful; if that color can't open (for want of a free hex, since D-44 only of a reachable one), they're
   announced but stay gated until it does. (3) The `unlock{kinds}` event follows its
   milestone's `open`. (4) The UI shows one panel for both, the old new-color panel grown into a
   news panel (overlay `news`): a swatch per color, a card picture per kind, and each kind's

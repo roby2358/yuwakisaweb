@@ -165,7 +165,7 @@ gremlins treat it the same (D-34).
 - `hexes.size === cols × rows` of `MAP_SIZES[size]`; every edge hex is `WATER`. [D]
 - Sources and targets are on passable non-edge hexes, sources in the leftmost placement
   slice, targets in the rightmost, each target with a land path from its color's source. No
-  two share a hex. [P; colors D]
+  two share a hex. A newly opened one holds no Thing and no piece (D-44). [P; colors D]
 - Each open color has exactly one target and comes out of exactly one source;
   `targets.length <= MAP_SIZES[size].colors`, and the targets' colors are distinct `CRATE_COLORS`. [D]
 - At most one Thing per hex. No Thing on a target. Bridges only on water; Slides on plains or
@@ -234,14 +234,20 @@ lines of different colors). Runs once per milestone reached, from the Tick rule.
 if targets.length >= MAP_SIZES[size].colors: nothing
 color = Rando.choice(CRATE_COLORS not yet open)
 if Rando.random() < ENHANCE_CHANCE: src = Rando.choice(sources)        # it adds this color
-else: src = Rando.choice(free hexes in the left slice)                  # a new source
-tgt = Rando.choice(free hexes in the right slice with a land path from src)
+else: src = Rando.choice(open hexes in the left slice)                  # a new source
+tgt = Rando.choice(open hexes in the right slice with a land path from src)
 if no src or no tgt: nothing                                            # the next milestone tries again
 add color to src (or add {src, colors: [color]}); add {tgt, color, delivered: 0}
 emit open{color, source, target}
+for h in the newly placed hexes (tgt, and src unless it was enhanced):  # clearHex (D-44)
+    if a Thing on h: remove it (no card back); emit clear{kind, q, r}
+    if a piece on h: remove it; lost += its value; emit splat{id, by: null, trap: false, hop: the tick's last hop}
 ```
-A free hex has no Thing, no piece, and no source or target. The slices are the Place source
-and target rule's.
+An open hex is any slice hex that isn't already a source or target: a Thing or a piece on it
+doesn't rule it out, and the pick is uniform (D-44). The slices are the Place source and
+target rule's. A cleared gremlin counts in `exGremlins` and re-emerges like any splat (the
+Tick rule runs milestones before its tally); a cleared crate or big crate counts as lost,
+whatever its color. An enhanced source's hex is left as it is.
 
 ### Spawn gremlins [P; scales with area D]
 *Serves:* comedy; moving obstacles.
@@ -260,8 +266,9 @@ for each sunk or splatted kind with PIECES[kind].reemerges (in event order):
     h = Rando.choice(shoreHexes); color = Rando.choice(a random palette)
     add a new piece of that kind on h; emit spawn{id, q, r}
 ```
-Runs once at the end of every tick, for that tick's sinks and splats and for a piece
-`remove` sank just before the tick (its kind comes first, as its `sink` does).
+Runs once at the end of every tick, for that tick's sinks and splats (a piece a newly opened
+source or target cleared included, D-44) and for a piece `remove` sank just before the tick
+(its kind comes first, as its `sink` does).
 
 ### Draw — `draw()` [P]
 *Serves:* scarcity of agency (you build with what you're dealt).
@@ -432,11 +439,12 @@ if color is open and crates on the board < crateCap(size) + milestonesReached(de
         a kind of color on src; emit spawn{id, q, r}
 idleTicks = 0 if the command used a card (place, discard) else idleTicks + 1   # D-26
 if idleTicks >= IDLE_REDRAW_TICKS: slot = Rando.int(0, HAND_SIZE-1); hand[slot] = draw(); idleTicks = 0; emit redraw{slot}
-gone = kinds of the command's own sink (remove) and this tick's sunk, splatted and crashed pieces
+for each milestone m with deliveredBefore < m <= delivered: milestone{count: m}; openColor(); unlock()   # reachMilestones; events held back
+gone = kinds of the command's own sink (remove) and this tick's sunk, splatted (cleared included) and crashed pieces
 trapped += count of gremlins whose splat has trap
 exGremlins += count of 'gremlin' in gone, less those trapped
 emerge(gone)
-for each milestone m with deliveredBefore < m <= delivered: emit milestone{count: m}; openColor(); unlock()   # reachMilestones
+emit the held-back milestone, open, clear, splat and unlock events            # last, after the spawns
 turn += 1; phase = 'player'
 ```
 Each piece gets at most one motion per tick, a bumped line included (D-33); a piece a Thing
@@ -573,12 +581,13 @@ Illegal → `{ ok:false }` and nothing changed (hand and `Rando` included).
 | `move` | `id, path: [{q,r}…], hop, over` — one per piece that moved: one hex per hop from hop `hop` (the hop it entered `path[0]`), in order, including slides and a bumper's follow; a hop it sat out (a bumper waiting on its contact hop, a flight about to drop back) repeats its hex. `over` is how many of the first hexes it passed over (a Cannon's shot, unseen, D-36), else 0. Every `move` comes before every end, a bumped line's after its bumper's (D-38) |
 | `sink` | `id, hop` (the piece is gone from that hop on, after its last `move`, or where it stood, at hop 0, if the Bridge or Slide under it was removed) |
 | `deliver` | `id, hop` |
-| `splat` | `id, by, trap, hop` — a piece destroyed by a Rocket's flight, a Trap, a target, a gremlin's step, a mid-air crash, or `blast` (hop 0): `by` is the flier or gremlin that landed on it, or the other flight it crashed into (D-38), or null for the launched piece itself, a trapped piece (after its `move`), a shot or flight with nowhere to come down, or a blasted crate; `trap` is true only when a Trap killed it |
+| `splat` | `id, by, trap, hop` — a piece destroyed by a Rocket's flight, a Trap, a target, a gremlin's step, a mid-air crash, or `blast` (hop 0), or a newly opened source or target (the tick's last hop, D-44): `by` is the flier or gremlin that landed on it, or the other flight it crashed into (D-38), or null for the launched piece itself, a trapped piece (after its `move`), a shot or flight with nowhere to come down, a blasted crate, or a cleared piece; `trap` is true only when a Trap killed it |
 | `spawn` | `id, q, r` — a new crate on a source, or a gremlin climbing out on the shore |
 | `redraw` | `slot` — the hand slot the idle rule redrew this tick |
 | `milestone` | `count` — a milestone this tick's deliveries reached (after the tick's other events) |
 | `open` | `color, source: {q,r}, target: {q,r}` — the color that milestone opened, right after its `milestone` |
-| `unlock` | `kinds` — the `UNLOCKS` step that milestone opened, after its `milestone` and `open` |
+| `clear` | `kind, q, r` — a Thing a newly opened source or target removed, right after its `open` (with a `splat` for a piece it destroyed, at the tick's last hop, D-44) |
+| `unlock` | `kinds` — the `UNLOCKS` step that milestone opened, after its `milestone`, `open` and clears |
 
 A piece pushed into water gets a `move` whose path ends on the water hex, then `sink`.
 

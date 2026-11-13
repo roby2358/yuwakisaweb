@@ -9,7 +9,8 @@
 // the big crates spawned per game (D-34). Before then only the first UNLOCKS step is dealt (Belt,
 // Bridge, Wall, Trap; D-30), so in practice the bot builds from Belts alone. Not a test (no pass/fail); it's the evidence behind
 // FIRST_MILESTONE, the spawn cycle (D-43), CRATE_CAP_PER_ROOT and friends. Also prints the mean and peak crates on the
-// board, and the share of ticks the board sat at the crate cap (crateMax).
+// board, and the share of ticks the board sat at the crate cap (crateMax); to a later milestone,
+// also the colors opened per game and what new endpoints cleared (D-44).
 'use strict';
 
 const { newGame } = require('./helpers/load');
@@ -39,6 +40,17 @@ function shortestPath(engine, g, from, to) {
     return path;
 }
 
+// What newly opened endpoints cleared in one command's events (D-44): every `clear` and
+// `splat` after an `open`, up to the next `milestone`.
+function countClears(events) {
+    let n = 0, after = false;
+    for (const e of events) {
+        if (e.type === 'open' || e.type === 'milestone') after = e.type === 'open';
+        else if (after && (e.type === 'clear' || e.type === 'splat')) n++;
+    }
+    return n;
+}
+
 function dirTo(g, a, b) {
     return g.Hex ? [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]]
         .findIndex(([dq, dr]) => a.q + dq === b.q && a.r + dr === b.r) : -1;
@@ -46,7 +58,7 @@ function dirTo(g, a, b) {
 
 const results = [];
 let lostTotal = 0;
-let crateTicks = 0, ticks = 0, peak = 0, bigTotal = 0, capTicks = 0;
+let crateTicks = 0, ticks = 0, peak = 0, bigTotal = 0, capTicks = 0, opened = 0, clears = 0;
 const reachedAt = [...Array(MILESTONES)].map(() => []);   // per milestone: the turn each game reached it
 for (let i = 0; i < GAMES; i++) {
     const { g, state, engine } = newGame(5000 + i, SIZE);
@@ -59,6 +71,7 @@ for (let i = 0; i < GAMES; i++) {
     const path = shortestPath(engine, g, state.sources[0], state.targets[0]);
     let res = { ok: true };
     while (state.delivered < goal && state.turn < CAP) {
+        clears += countClears(res.events || []);
         for (const p of state.pieces) if (p.kind === 'bigcrate' && !seen.has(p.id)) { seen.add(p.id); bigTotal++; }
         for (; marked < Math.min(MILESTONES, milestonesReached(state.delivered)); marked++) reachedAt[marked].push(state.turn);
         const n = cratesOn(state);
@@ -90,6 +103,8 @@ for (let i = 0; i < GAMES; i++) {
         res = slot >= 0 ? engine.discard(slot) : engine.wait();
     }
     for (; marked < Math.min(MILESTONES, milestonesReached(state.delivered)); marked++) reachedAt[marked].push(state.turn);
+    clears += countClears(res.events || []);
+    opened += state.targets.length - 1;
     results.push(state.delivered >= goal ? state.turn : CAP);
     lostTotal += state.lost;
 }
@@ -103,5 +118,6 @@ console.log(`${SIZE}  games ${GAMES}  reached ${label} ${wins}  turns p10 ${q(0.
 if (MILESTONES > 1) {
     const median = a => [...a].sort((x, y) => x - y)[Math.floor((a.length - 1) / 2)];
     console.log('  median turn per milestone: ' + reachedAt.map((a, k) => `#${k + 1} ${a.length ? median(a) : '-'} (${a.length})`).join('  ') +
-        `  big crates spawned/game ${(bigTotal / GAMES).toFixed(1)}`);
+        `  big crates spawned/game ${(bigTotal / GAMES).toFixed(1)}  colors opened/game ${(opened / GAMES).toFixed(2)}` +
+        `  cleared by new endpoints/game ${(clears / GAMES).toFixed(2)}`);
 }

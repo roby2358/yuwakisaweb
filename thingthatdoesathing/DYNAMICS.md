@@ -112,7 +112,9 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
   Slides that shoots a crate across the lake in one tick.
 - **New color:** a milestone opens a second target. If it comes out of a new source, build a
   second line; if it shares your source, the crates of both colors ride the same belt, so
-  you have to split them by color before the targets.
+  you have to split them by color before the targets. A new endpoint lands where it lands:
+  on your belts, a gremlin, or a crate in transit, wiping what was there (D-44), so the end
+  slices are never quite safe to build in.
 - **Ice tricks:** a crate stalled on ice isn't a jam: the next one along shoves it, and every
   crate queued behind it, two hexes on, and takes the spot right behind them (D-33). Each bump
   moves the queue a little, so a backed-up line on an ice patch creeps forward instead of
