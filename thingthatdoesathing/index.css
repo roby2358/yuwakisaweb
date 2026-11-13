@@ -297,6 +297,28 @@ kbd {
 #intro-panel .tgt { color: #ff6600; }      /* TARGET_COLOR */
 #intro-panel { width: min(420px, calc(100vw - 32px)); }
 
+/* The sorry page for phones and tablets (D-41): the only thing on the page, a centered card
+   that scrolls if a landscape phone is too short for it. */
+body.touch-only > :not(#sorry-panel) { display: none !important; }
+#sorry-panel {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    padding: 16px;
+    overflow-y: auto;
+}
+.sorry-card {
+    margin: auto;
+    width: min(420px, 100%);
+    padding: 24px 22px;
+    text-align: center;
+}
+.sorry-card h1 { font-size: 22px; font-weight: 700; letter-spacing: 0.02em; margin-bottom: 12px; }
+#sorry-picture { margin-bottom: 12px; }
+#sorry-picture canvas { display: block; margin: 0 auto; }
+.sorry-card p { color: var(--text-dim); margin-bottom: 12px; }
+.sorry-card .sorry-note { color: var(--text); margin-bottom: 0; }
+
 /* The hand: three cards along the bottom, then the Discard spot. */
 #hand {
     position: fixed;

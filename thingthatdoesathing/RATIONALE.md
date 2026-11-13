@@ -151,6 +151,32 @@ ARCHITECTURE_LOG.md.
   above the hand;
   a new game resets to 1x); U-27.
 
+### D-41 Phones and tablets get a sorry page instead of the game — *Decided 2026-11-13 (pjpd mobile-lock-twxz: detect at boot with `matchMedia('(pointer: coarse) and (hover: none)')`, not the user agent, so a touchscreen laptop with a mouse still plays; the sorry page replaces the intro, with no board, engine or input; the game's name, what it is, and a kind "needs a mouse and keyboard, try it on a computer"; no bypass by default), Proposed (*unreviewed*: the rest)*
+- **Alternatives:** user-agent sniffing (misreads iPads that report as desktop Safari, and
+  touchscreen laptops); `'ontouchstart' in window` (true on touchscreen laptops, which have a
+  mouse); a touch control scheme (a real project of its own: hover, right-click, the wheel and
+  R/D/B/X all need stand-ins); letting a phone load the game and fail quietly.
+- **Why:** the game leans on hover (the hover bar, the ghost), right-click, the wheel and
+  four letter keys. On a phone none of that exists, so the intro would offer a game that
+  can't be played. A gentle page that says so, and where it does work, is kinder than a
+  board that ignores taps.
+- **Unreviewed calls:** (1) No user-agent fallback: every current mobile browser answers the
+  pointer/hover media query, and a browser without `matchMedia` at all is treated as a
+  desktop (the tests' stub DOM relies on that). (2) No "play anyway" link: with no touch
+  controls behind it, it would only lead to a board that doesn't answer taps; easy to add if
+  a stylus-and-keyboard tablet player asks. (3) The check runs once in `index.js`, before
+  `GameState`/`GameEngine`/`GameUI` are built, and the page stays as it booted (no live
+  re-check if a mouse is plugged in; reload to play). (4) The page is a hidden
+  `#sorry-panel` in `index.html`; `GameUI.showSorry()` (a static, so no `GameUI` is
+  constructed) shows it and adds `touch-only` to the body, which hides every other panel and
+  the canvas. (5) Its picture is a Belt drawn by the card art (`cardPicture`), the first
+  Thing a player meets. (6) The card scrolls inside a 16px gutter if a landscape phone is
+  too short for it; the existing viewport meta (`width=device-width, initial-scale=1.0`)
+  already lays it out at phone width.
+- **Evidence:** `uiboot.js` (a coarse/no-hover `matchMedia` shows the sorry page, hides the
+  rest, builds no game and wires no input; a fine pointer and a missing `matchMedia` both boot
+  to the intro); U-28.
+
 ---
 
 ## Things

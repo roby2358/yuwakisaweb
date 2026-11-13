@@ -99,6 +99,19 @@
     <div id="color-panel" class="hidden">
         <div id="color-picker" class="panel"></div>
     </div>
+    <!-- Phones and tablets (D-41): shown instead of the intro when the pointer is coarse and
+    can't hover; index.js decides at boot. -->
+    <div id="sorry-panel" class="hidden">
+        <div class="panel sorry-card">
+            <h1>Thing Factory</h1>
+            <div id="sorry-picture"></div>
+            <p>A little contraption game: lay Belts, Springs and Rockets on a hex board and
+                get the crates from the source to the target.</p>
+            <p class="sorry-note">This one needs a mouse and a keyboard (hovering, right-click,
+                a few keys), so it doesn't play on a touchscreen yet. Try it on a computer.
+                It'll be here.</p>
+        </div>
+    </div>
     <!-- Plain script includes (globals), not ES modules: the page runs on a double-click
     (D-9). Order = dependency order:
     artifacts → display artifacts → libs → piece/board → state → engine → ui → bootstrap. -->

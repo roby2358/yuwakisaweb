@@ -16,6 +16,10 @@ const GameDisplayArtifacts = (function () {
         // a last "∞" button fits the whole board to the canvas (never above 1x).
         ZOOM_DIVISORS: [1, 2],
         MIN_TEXT_PX: 8,              // on-map text that would draw smaller than this is skipped
+        // A phone or tablet: the primary pointer is coarse and can't hover (D-41). The game
+        // needs a mouse and keyboard, so it shows the sorry page instead of the intro.
+        TOUCH_ONLY_QUERY: '(pointer: coarse) and (hover: none)',
+        SORRY_PICTURE_PX: 64,        // the Belt drawn on the sorry page
         // New Game menu note per GameArtifacts.MAP_SIZES key.
         MAP_SIZE_NOTES: {
             small:  'fits the screen',

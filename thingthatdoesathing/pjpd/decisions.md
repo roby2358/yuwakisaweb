@@ -49,3 +49,12 @@ decision, and where the full reasoning lives (a RATIONALE `D-n` tagged *unreview
 - [agent] map-zoom-8cwk: UI_CONTROLS.md left unchanged (shared family spec, already says zoom is optional); gameui cites L1.3 at the view helpers (D-40 call 6).
 - [agent] map-zoom-8cwk: help legend gets a "Map 1 2 4 ∞ — buttons" line; README and CLAUDE.md input section updated; U-27 added.
 - [user] map-zoom after a look: buttons are 1, 2, ∞ (1/4 dropped, smaller than the fit); ∞ fits from the window top to the top of the hand, or across, whichever is tighter, centered in that space; the hand sits flush on the bottom edge.
+
+## mobile-lock (2026-11-13)
+- [agent] mobile-lock-twxz: no user-agent fallback; the pointer/hover media query alone decides, and a missing `matchMedia` counts as a desktop (D-41 call 1).
+- [agent] mobile-lock-twxz: no "play anyway" link; without touch controls it would only open a board that ignores taps (D-41 call 2).
+- [agent] mobile-lock-twxz: checked once at boot in `index.js` before state/engine/UI are built; no live re-check if a mouse is plugged in later (D-41 call 3).
+- [agent] mobile-lock-twxz: the page is a hidden `#sorry-panel` in index.html shown by a static `GameUI.showSorry()`; body class `touch-only` hides every other panel and the canvas (D-41 call 4).
+- [agent] mobile-lock-twxz: the picture is one Belt from the card art (`cardPicture`, `SORRY_PICTURE_PX` 64) (D-41 call 5).
+- [agent] mobile-lock-twxz: viewport meta was already `width=device-width, initial-scale=1.0`, left as is; the card scrolls inside a 16px gutter on a short landscape phone (D-41 call 6).
+- [agent] mobile-lock-twxz: `TOUCH_ONLY_QUERY` lives in displayartifacts.js (client-only); README says who can play, CLAUDE.md gets a Boot bullet, ONTOLOGY's overlay row a one-line note; U-28 added.

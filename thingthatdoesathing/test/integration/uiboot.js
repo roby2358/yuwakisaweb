@@ -4,7 +4,7 @@
 // and requestAnimationFrame, then drives the UI through clicks and keys: pick a board size
 // from the intro, pick each card, turn the ghost, place, select and rotate, remove the selected Thing with D, wait, run tick animations to completion,
 // play to the first milestone (checking that no two pieces are ever drawn on one hex at a hop,
-// D-38), drive the color picker (D-32), and the map-scale buttons (D-40). Catches runtime errors in rendering and input wiring without a
+// D-38), drive the color picker (D-32), the map-scale buttons (D-40), and the sorry page a phone gets (D-41). Catches runtime errors in rendering and input wiring without a
 // browser. It can't judge how anything looks; that stays manual (U-rows).
 'use strict';
 
@@ -84,18 +84,19 @@ const ctx = vm.createContext({
     AudioContext: undefined,
 });
 // GameSound needs an AudioContext; give it a silent one.
-ctx.window.AudioContext = ctx.AudioContext = class {
+const SilentAudio = class {
     constructor() { this.currentTime = 0; this.state = 'running'; this.destination = {}; }
     createPeriodicWave() { return {}; }
     createOscillator() { return { setPeriodicWave() {}, frequency: { setValueAtTime() {} }, connect() {}, start() {}, stop() {} }; }
     createGain() { return { gain: { setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect() {} }; }
     resume() {}
 };
+ctx.window.AudioContext = ctx.AudioContext = SilentAudio;
 
+const pageSource = scripts.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n');
 let error = null;
 try {
-    const src = scripts.map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n') +
-        '\n;globalThis.__ui = ui;';
+    const src = pageSource + '\n;globalThis.__ui = ui;';
     vm.runInContext(src, ctx, { filename: 'page.js' });
 } catch (e) { error = e; }
 check('every script loads and the UI starts' + (error ? ': ' + error.stack : ''), !error);
@@ -679,5 +680,44 @@ run('New Game asks for a size, then resets', () => {
     if (ui.overlay !== 'size' || ui.state.turn === 1) throw new Error('the picker must not reset the game yet');
     key('2');
     if (ui.state.turn !== 1 || ui.overlay) throw new Error('not reset');
+});
+// D-41: a fresh page per pointer kind, each with its own stub DOM. `media` is what
+// window.matchMedia reports for the touch-only query, or undefined for no matchMedia at all.
+function bootPointer(media) {
+    const pageEls = {};
+    const listeners = {};
+    const page = {
+        getElementById: id => (pageEls[id] ||= fakeEl(id)),
+        createElement: tag => fakeEl(tag),
+        body: fakeEl('body'),
+    };
+    const win = { innerWidth: 390, innerHeight: 844, addEventListener: (t, fn) => (listeners[t] ||= []).push(fn), AudioContext: SilentAudio };
+    const asked = [];
+    if (media !== undefined) win.matchMedia = q => { asked.push(q); return { matches: media, media: q }; };
+    const pageCtx = vm.createContext({
+        console, document: page, Math: seededMath, JSON, Number, String, Array, Map, Set, Object, Proxy, parseInt, Float64Array,
+        window: win, performance: { now: () => clock }, requestAnimationFrame: () => {},
+        setTimeout: fakeSetTimeout, clearTimeout: fakeClearTimeout, AudioContext: SilentAudio,
+    });
+    vm.runInContext(pageSource + '\n;globalThis.__boot = { ui, state, engine };', pageCtx, { filename: 'page.js' });
+    return { boot: pageCtx.__boot, els: pageEls, body: page.body, listeners, asked };
+}
+run('a coarse pointer with no hover gets the sorry page: no intro, no game, no input (D-41)', () => {
+    const p = bootPointer(true);
+    if (p.asked[0] !== '(pointer: coarse) and (hover: none)') throw new Error('asked matchMedia for ' + JSON.stringify(p.asked));
+    if (p.boot.ui || p.boot.state || p.boot.engine) throw new Error('a touch-only page must not build a game');
+    if (p.els['sorry-panel'].classList.set.has('hidden')) throw new Error('the sorry page must show');
+    if (!p.body.classList.set.has('touch-only')) throw new Error('the body must hide every other panel (intro included)');
+    if (p.els['sorry-picture'].children.length !== 1) throw new Error('the sorry page draws one Belt');
+    if (p.els['intro-sizes']?.children.length) throw new Error('the intro size buttons must not be built');
+    if (Object.keys(p.listeners).length) throw new Error('a touch-only page must not listen: ' + Object.keys(p.listeners));
+});
+run('a fine pointer, or no matchMedia at all, boots the game on the intro as before', () => {
+    for (const media of [false, undefined]) {
+        const p = bootPointer(media);
+        if (!p.boot.ui || !p.boot.state || p.boot.ui.overlay !== 'intro') throw new Error('matchMedia ' + media + ': the intro must show');
+        if (p.body.classList.set.has('touch-only') || p.els['sorry-picture']) throw new Error('matchMedia ' + media + ': no sorry page');
+        if (!p.listeners.keydown) throw new Error('matchMedia ' + media + ': input must be wired');
+    }
 });
 done();

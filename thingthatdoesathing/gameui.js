@@ -11,7 +11,7 @@ const GameUI = (function () {
     const {
         HEX_SIZE, COUNTER_SIZE, HOP_MS, RUN_GAP_MS, MILESTONE_MS, TERRAIN_COLORS, TERRAIN_NAMES, THING_LOOK,
         PIECE_LOOK, CRATE_SHADES, BIG_CRATE_SCALE, COLOR_INK, SPLAT_BLOTS, SOURCE_COLOR, BG_COLOR, UI_FONT, REACH_COLOR, MAP_SIZE_NOTES,
-        COLOR_PICKER_PX, ZOOM_DIVISORS, MIN_TEXT_PX
+        COLOR_PICKER_PX, ZOOM_DIVISORS, MIN_TEXT_PX, SORRY_PICTURE_PX
     } = GameDisplayArtifacts;
     const { TERRAIN, THINGS, WHITE, HAND_SIZE, MAP_SIZES, aims, nextMilestone } = GameArtifacts;
     const SIZE_KEYS = Object.keys(MAP_SIZES);
@@ -278,6 +278,15 @@ const GameUI = (function () {
         }
 
         // ---- Lifecycle ----
+        // A phone or tablet (D-41): the sorry page stands in for the whole game. The body class
+        // hides every other panel and the canvas; no GameUI is built, so nothing listens.
+        static showSorry() {
+            document.body.classList.add('touch-only');
+            const panel = document.getElementById('sorry-panel');
+            panel.classList.remove('hidden');
+            document.getElementById('sorry-picture').appendChild(cardPicture('BELT', SORRY_PICTURE_PX));
+        }
+
         // No board until a size is picked from the intro.
         start() {
             this.attach();

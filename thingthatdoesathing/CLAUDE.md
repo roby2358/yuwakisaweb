@@ -44,7 +44,7 @@ headless; `GameUI` is the only browser-coupled code.
 | Module | Global | Role |
 |---|---|---|
 | `artifacts.js` | `GameArtifacts` | Rules data: `MAP_SIZES`, `TERRAIN`, `THINGS` (the Thing templates: `push`, `pull`, `shove`, `splat`, `flies`, `overMountains`, `clears`, `blocks`, `traps`, `colored`, `slides`, `on`, `weight`), `WHITE`, `UNLOCKS` (the card-unlock order, one step per milestone), `PIECES` (the piece templates `crate`, `bigcrate`, `gremlin`: `label`, `cargo`, `value`, `wanders`, `splats`, `reemerges`), `aims(kind)`, `MOVEMENT_COST`, and every tunable number. |
-| `displayartifacts.js` | `GameDisplayArtifacts` | Client-only: `HEX_SIZE`, `COUNTER_SIZE`, `HOP_MS`, `ZOOM_DIVISORS`, `MIN_TEXT_PX`, terrain colors/names, `THING_LOOK` (name, verb line, colors, inset), `PIECE_LOOK` (hover name), `BIG_CRATE_SCALE`, `CRATE_SHADES`, `COLOR_PICKER_PX`, `MAP_SIZE_NOTES` (size-picker notes), port colors. |
+| `displayartifacts.js` | `GameDisplayArtifacts` | Client-only: `HEX_SIZE`, `COUNTER_SIZE`, `HOP_MS`, `ZOOM_DIVISORS`, `MIN_TEXT_PX`, terrain colors/names, `THING_LOOK` (name, verb line, colors, inset), `PIECE_LOOK` (hover name), `BIG_CRATE_SCALE`, `CRATE_SHADES`, `COLOR_PICKER_PX`, `MAP_SIZE_NOTES` (size-picker notes), `TOUCH_ONLY_QUERY` and `SORRY_PICTURE_PX` (the phone sorry page, D-41), port colors. |
 | `piece.js` | `Piece` | A positioned token. Crates and gremlins are `Piece`s with engine-set `id` and `kind`. |
 | `board.js` | `Board` | Query layer over the hex `Map` (passable = land). |
 | `gamestate.js` | `GameState` | Serializable data: `sources` (`{q, r, colors}`), `targets` (`{q, r, color, delivered}`), `pieces`, `things` (`{kind, color, q, r, facing}`), `hand` (`{kind}` cards), `unlocks` (how many `UNLOCKS` steps are open), `turn`, `delivered`, `lost`, `exGremlins`, `trapped`, `idleTicks`, `spawnTimer`, `nextId`, `phase`, `size`. |
@@ -67,6 +67,10 @@ tick animation) → `picked` card → bare map click.
   `D` calls `remove` on the selected hex's Thing (never the hovered one; no selection does nothing; a remove clears the selection, D-39); `B` calls `blast` on the hovered crate. With a card picked, the Discard spot or `X` calls `discard`.
 - **L2.1 primary action:** Wait button → `engine.wait()`. Enter toggles Go (`toggleRun()`), like the Go button. Space is `oneTick()`: a Wait when Go is off; when Go runs it turns Go off, and the tick in flight finishes.
 - **L2.2:** Esc and right-click put the card back.
+- **Boot (D-41):** `index.js` checks `matchMedia(TOUCH_ONLY_QUERY)` (coarse pointer, no
+  hover) before anything else; on a phone or tablet it builds no state, engine or UI and calls
+  `GameUI.showSorry()` (a static: unhides `#sorry-panel`, body class `touch-only` hides the
+  rest). No `matchMedia` counts as a desktop, so stub DOMs boot the game.
 - **L5:** the intro and New Game overlays are both board-size pickers (click or `1`–`4`); they
   consume all other input, and Esc closes New Game only. A milestone that opens a color shows
   the `news` overlay, which closes on a click or any key (`OVERLAY_KEYS` dispatches keys per

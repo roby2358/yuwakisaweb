@@ -13,6 +13,10 @@ as big crates, drawn bigger and worth 10 delivered (or 10 lost), and each milest
 commoner.
 Every Thing does exactly one thing, every tick.
 
+It needs a mouse and a keyboard (hover, right-click, the wheel, a few letter keys), so it plays
+on a computer, touchscreen laptops included. A phone or tablet gets a short sorry page instead
+of the game.
+
 Forked from the Hex & Counters base (`../ideas/hexandcounter`). See [DYNAMICS.md](DYNAMICS.md)
 for why it works and [ONTOLOGY.md](ONTOLOGY.md) for the rules.
 

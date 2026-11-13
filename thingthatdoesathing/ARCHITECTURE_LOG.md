@@ -2,6 +2,16 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-13 — Phones and tablets get a sorry page (D-41)
+The page used to boot the game for every browser. Now `index.js` checks
+`matchMedia(TOUCH_ONLY_QUERY)` (`'(pointer: coarse) and (hover: none)'`, in
+`displayartifacts.js`) first; on a match it builds no `GameState`, `GameEngine` or `GameUI`
+and calls `GameUI.showSorry()`, which unhides the new `#sorry-panel` (the name, a Belt from
+the card art, a line on the game, a mouse-and-keyboard note) and adds `touch-only` to the
+body so the CSS hides everything else. No `matchMedia` counts as a desktop. `uiboot.js`
+boots extra stub pages for a coarse pointer, a fine one and none; U-28 is the look on a phone
+(pjpd mobile-lock-twxz).
+
 ### 2026-11-12 — Map scale: 1, 2, ∞; fit above the hand (D-40)
 After a look in the browser: 1/4 came out smaller than the fit, so the `4` button is gone
 (`ZOOM_DIVISORS` [1, 2]). ∞ now fits the board between the window top and the top of the hand

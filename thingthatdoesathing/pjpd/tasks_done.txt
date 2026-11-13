@@ -1,3 +1,18 @@
+Priority:   95
+Status: Done
+ID: mobile-lock-twxz
+Created: 2026-11-12T16:37:41Z
+Updated: 2026-11-13T18:03:20Z
+
+On a phone or tablet, show a friendly "sorry" page instead of the intro screen: the game needs a mouse and keyboard (hover, right-click, R/D/B/X keys, wheel), so touch devices can't play it yet.
+
+- Detect at boot, before the intro overlay: treat it as mobile when the primary pointer is coarse and there's no hover — `matchMedia('(pointer: coarse) and (hover: none)')` — rather than user-agent sniffing (decide and log if a UA fallback is needed). A touchscreen laptop with a mouse must still get the game.
+- The sorry page replaces the intro/size picker: no board generated, no engine started, no input handlers that matter. Styled like the existing panels (index.css tokens, centered card), readable at phone width (16px side gutters, no horizontal scroll). Content: the game's name, a short line on what it is, a kind "this one needs a mouse and keyboard — try it on a computer" message, and maybe a small static picture of a crate/Belt drawn with the existing art. Tone: gentle, not an error.
+- No way to bypass needed (decide and log whether a small "play anyway" link is worth it; default: no).
+- Plain <script> globals, runs from file:// like the rest; no new libraries.
+
+Docs: README (who can play), CLAUDE.md (L5 overlays / boot), RATIONALE new D-n, ARCHITECTURE_LOG, CRITERIA U-row (manual check on a phone or a mobile emulator). Test: extend test/integration/uiboot.js with a stub matchMedia that reports a coarse/no-hover pointer → the sorry page shows, the intro doesn't, and no game state is created; the default (fine pointer) boots as today. `just cc-test` green.
+----
 Priority:   80
 Status: Done
 ID: lockstep-ritf
