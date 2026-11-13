@@ -64,3 +64,56 @@ Design calls to settle:
 - UI: the ghost previews the blast area (outline every hex it will clear), so you can't misfire.
 
 Docs when built: ONTOLOGY (command and rule), CRITERIA row, RATIONALE D-n, README card list, help legend.
+----
+Score:   40
+ID: terrain-new-hamd
+Created: 2026-11-13T17:47:49Z
+Updated: 2026-11-13T17:47:49Z
+
+More terrain types beyond today's water, plains, mountain and ice, each changing how pieces move or what can be built, so board layout poses new routing puzzles. Candidates:
+- Sand / mud: sticky. A piece sliding or skidding onto it stops dead (the opposite of ice), and a bump doesn't carry across it. Maybe Belts can't be built on it.
+- River / current: water that flows one way. A crate dropped in drifts a hex per tick downstream instead of sinking, until it reaches a bank or the edge. A free conveyor the player can use or has to bridge.
+- Forest: blocks flights from landing (Springs and Rockets pass over it but can't come down on it), but ground movement is fine. Or the reverse: a low ceiling that stops Springs.
+- Lava / pit: destroys whatever enters it, gremlins included (a natural trap), and nothing can be built on it. Lost crates count as lost.
+- Rough / rubble: no building allowed, but pieces pass.
+- Wind or tunnel pairs are more exotic; probably later.
+
+Design notes: keep terrain data-driven in TERRAIN (artifacts.js), with flags like `slick`, `sticky`, `flow`, `noLand`, `kills`, plus the existing BUILDS_ON/`on` lists, so the movement rules read flags rather than kind checks. Generation (heightmap bands plus the ice carving) needs a placement rule for each new type, and the guaranteed land path from source to target still has to hold. Probably unlock the types by board size or milestone, so small boards stay readable. Each type needs a look (displayartifacts.js) and a hover name, and has to stay readable at zoom 1/2 (D-40), which ties into zoom-lod.
+
+Open: how many types, and which first (one or two that create the most interesting decisions, then playtest)? Do they appear from the start, or arrive at milestones like colors do? Interaction with Slide (buildable ice) and Bridge (a Belt on water): what can each Thing be built on?
+
+Needs an interview before it becomes tasks.
+----
+Score:   30
+ID: productize-pxhj
+Created: 2026-11-13T17:48:20Z
+Updated: 2026-11-13T17:48:20Z
+
+Turn Thing Factory from a playtest prototype into something a stranger can pick up, enjoy and come back to. A checklist to weigh, not a plan:
+
+- First five minutes: a guided tutorial or a set of handcrafted intro puzzles (deliver one crate with a Belt; cross water with a Bridge; throw with a Spring), so new players aren't dropped onto a random board with only a keys legend. Contextual hints the first time each card appears.
+- Saves and progress: autosave the run (localStorage, wrapped in try/catch) so a reload doesn't lose it; best turns per milestone per board size; maybe a seed share link ("play this board"). Note the no-save-migration rule while prototyping: decide when saves become durable.
+- Feel and polish: sound pass (sound.js cues for every event, volume/mute), juice on deliveries and milestones, a title screen with the name and art, consistent visual style (port-look, zoom-lod), a color-blind-safe crate palette or shape marks per color.
+- Settings: sound, animation speed (HOP_MS), Go speed (RUN_GAP_MS), remappable keys, maybe reduced motion.
+- Accessibility and reach: the mobile-lock page for now; later decide whether touch controls are worth it. Keyboard-only play. Readable text sizes.
+- Structure: whether the endless ladder is the product, or levels and goals (level-goals, goal-gen) make a better arc; daily seed challenge.
+- Packaging and distribution: hosting on yuwakisa.com, itch.io page (screenshots, GIF, description), maybe a desktop wrapper later. Cache-busting query strings on assets. Basic perf check on huge boards.
+- Name and identity: is "Thing Factory" the final name; logo, favicon, page title, social card.
+- Feedback loop: a way for players to report bugs or send a seed; optional, privacy-respecting play stats (or none).
+
+Open: what "product" means here (a free web game on itch/yuwakisa, or something bigger), what the minimum bar for "shippable" is, and which of these to do first. Needs an interview before it becomes tasks.
+----
+Score:   30
+ID: leaderboard-ndtw
+Created: 2026-11-13T17:48:38Z
+Updated: 2026-11-13T17:48:38Z
+
+A leaderboard: compare runs, your own or other players'. The score already exists: the turn each milestone was reached (fewer is better), per board size.
+
+Two very different sizes of this:
+- Local (cheap, fits today's pure-client game): a personal best table in localStorage (wrapped in try/catch; it can come back empty). Best turn for each milestone on each board size, top N runs with date and seed, shown on the intro/New Game picker or a Records button. No server.
+- Global (needs a backend; the game has none today): post runs to a server (yuwakisacloud? a Cloudflare Worker + D1/KV?) and show the top runs per board size and milestone. Real problems: cheating (the client is fully trusted; a mitigation is to submit the seed plus the full command log and replay it headless on the server, since the engine is deterministic and runs in Node — the State/Engine split already supports this); names and moderation; privacy (no emails, just a chosen handle).
+
+Fairness: random boards differ a lot, so a global board is fairest on shared seeds — a daily seed (everyone plays the same board that day) or a fixed weekly seed per size. Ties into productize and level-goals (if levels exist, rank per level instead).
+
+Open: local first, or straight to global? What's ranked (turns to milestone N, crates by turn T, ex-gremlins)? Daily seed or any seed? Needs an interview before it becomes tasks.

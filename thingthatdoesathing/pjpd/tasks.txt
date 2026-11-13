@@ -1,3 +1,83 @@
+Priority:   90
+Status: ToDo
+ID: port-look-jtj4
+Created: 2026-11-13T17:40:16Z
+Updated: 2026-11-13T17:40:16Z
+
+Redraw sources and targets (gameui.js drawSource / drawTarget / drawPort) so each one fills its whole hex with its color. The terrain underneath doesn't need to show: skip the terrain fill or paint over it.
+
+- Target: fill the hex with its crate color (CRATE_SHADES[t.color]). On top, draw 2 concentric circles (rings) in a lighter shade of that color, centered and sized to sit well inside the hex.
+- Source: fill the hex with its color. On top, draw a plus (+, crossed lines) that spans the hex, roughly vertex to vertex or edge to edge, whichever reads better, in a lighter shade of that color.
+- "Its color" for a source: a source makes one or more crate colors (`src.colors`). Single color: fill with that crate color. Several colors: decide and log a design call. Default: split the fill into equal wedges or stripes, one per color in `src.colors` order, with a neutral light plus over the top. If a source has no open color yet, fall back to SOURCE_COLOR (or a neutral fill).
+- Drop the old look: the glowing ring outline (drawPort), the "IN" and ★ labels, the black inner line on targets, and the color pips under sources (the fill now says which color it is). Keep a thin dark hex outline if pale colors (yellow, green) would otherwise blend into plains next to them. Check this against every crate color.
+- Lighter shade: derive it in one place, e.g. a CRATE_SHADES entry (`light`) or a helper that mixes toward white. No hand-picked hex values per color. Colors live in displayartifacts.js.
+- Draw order: sources and targets go under pieces (a crate standing on a source or target still shows). Hover and the selection outline still draw on top. Works at every map scale (D-40). These are shapes, not text, so the MIN_TEXT_PX gate doesn't apply, but keep line widths readable at 1/2.
+- The hover bar and help legend may describe sources and targets as "IN" and "★": update any wording that names the old marks.
+
+Docs: README (how sources and targets look), RATIONALE new D-n (why fill plus marks over rings plus labels; the multi-color source call), ARCHITECTURE_LOG line, CRITERIA U-row (manual look check), pjpd/decisions.md for any agent calls. `just cc-test` green (uiboot boots the renderer on a stub canvas).
+----
+Priority:   85
+Status: ToDo
+ID: spawn-cycle-jisb
+Created: 2026-11-13T17:44:19Z
+Updated: 2026-11-13T17:44:19Z
+
+Crate production cycles through the colors instead of rolling one random open color every SPAWN_INTERVAL (3) ticks.
+
+Designer's rule:
+- At the start of the game, shuffle CRATE_COLORS (all 4: red, green, blue, yellow) into a spawn sequence using the game's Rando, so the order is seeded and reproducible. Store it in GameState (e.g. `spawnCycle` plus a `spawnSlot` index replacing `spawnTimer`) so it survives toJSON/fromJSON.
+- Every tick, advance one slot. If that slot's color is open on this board, its source makes a crate of that color, as long as the board is under the crate cap (crateMax) and the source hex is clear; otherwise nothing comes that tick. If that color isn't open (yet), the tick is a wait.
+- So on a 1-color board (small) you get a crate, then 3 waits, then a crate, and so on (one every 4 ticks, against one every 3 today). On a 4-color board (huge) with all colors open, a crate comes every tick, one of each color per round. A color opened at a milestone (openColor) starts producing when its slot comes round. The shuffle is fixed for the whole game; it is not reshuffled at milestones.
+- The big-crate roll (bigCrateChance, D-34) stays per spawn as today.
+- A blocked source or a full board skips that slot's crate; it doesn't hold the cycle or retry. Decide and log if retrying looks better in the sim.
+- SPAWN_INTERVAL goes away (or becomes unused: remove it, no dead constant). The cycle length is CRATE_COLORS.length. Data-driven, no per-size special cases.
+
+Note: this changes pacing: slower on small boards, and much faster on big boards once several colors are open. Run `just cc-sim 200 small` and `just cc-sim-to 100 small 5` (plus a medium run) before and after, and record the numbers in RATIONALE. Flag it if the crate cap (crateCap) now binds constantly on big boards; don't retune the cap in this task, just report.
+
+Update: ONTOLOGY (the spawn rule and the new state fields), CRITERIA (rewrite the spawn rows: seeded shuffle, one slot per tick, closed slot = no crate, blocked/capped = skipped; tests in their test/R-n dirs), RATIONALE new D-n superseding the D-31 spawn timing (keep the cap), ARCHITECTURE_LOG, README and CLAUDE.md where they say "every SPAWN_INTERVAL ticks"/"a random open color", the thingfactory-tools skill if it mentions it, and test/sim.js if it reads spawnTimer. Agent calls go in pjpd/decisions.md. `just cc-test` green.
+----
+Priority:   80
+Status: ToDo
+ID: port-clears-kh58
+Created: 2026-11-13T17:45:48Z
+Updated: 2026-11-13T17:47:14Z
+
+When a milestone opens a color and reveals a new source or target (openColor), the new endpoint takes its hex whatever is on it: Things, gremlins and crates are all cleared. Today, freeEndHexes skips any hex holding a Thing or a piece, so a built-up or gremlin-filled end slice can leave fewer spots, or none, and openColor returns null.
+
+Designer's rule (settled):
+- Candidate hexes for a new source (left slice) or target (right slice) no longer exclude hexes with a Thing or a piece. They still exclude existing sources and targets, still need terrain where an endpoint can stand, and the target still needs a land path from its source (board.hasPath, which already runs on terrain only). No preference for empty hexes: pick uniformly over every candidate.
+- On reveal, everything on that hex goes:
+  - A Thing is removed (no card back to the hand).
+  - A gremlin is destroyed and counts as an ex-gremlin (exGremlins, not trapped).
+  - A crate is destroyed and counts as lost, whatever its color and whether the hex becomes a source or a target. C'est la vie.
+- An enhanced source (a color added to an existing source) changes nothing on the board; only newly placed hexes clear.
+
+Events: emit what the animation needs, e.g. the existing splat/fade for the gremlin or crate plus a remove for the Thing, at the end of the tick next to the `open` event. The tally updates from state. Keep `open{color, source, target}` as is; no new overlay.
+
+Docs: ONTOLOGY (the openColor rule), CRITERIA (rewrite the R-38 placement row(s): reveal clears a Thing, kills a gremlin (+1 ex-gremlin), destroys a crate (+1 lost), and opens even when every end hex is occupied; tests in the test/R-n dirs), RATIONALE new D-n (designer-settled), ARCHITECTURE_LOG, README if it describes where colors open. Agent calls go in pjpd/decisions.md. `just cc-test` green; run `just cc-sim-to 100 medium 5` to confirm colors still open.
+----
+Priority:   50
+Status: ToDo
+ID: seed-words-fsee
+Created: 2026-11-13T17:50:15Z
+Updated: 2026-11-13T17:53:19Z
+
+Split the randomness into a build seed (makes the board) and a run seed (plays it), and name the build seed with three words taken from a static word list, so a board can be shared and rebuilt ("frost-lantern-otter").
+
+Today, newGame(seed, size) seeds the single global Rando once (generateMap calls Rando.seed), and the same stream goes on to place the first color, the starting crate and gremlins, the hand, and then every tick (spawns, wander, draws, openColor). So two players on the same seed get the same board only if they also play identically.
+
+Designer's rule:
+- Build seed: makes the starting board: the hex grid, terrain (heightmap and ice), the first source and target, and the first color. Decide and log whether the starting gremlins and the starting crate belong to build or run; default build, so the opening position is identical.
+- Run seed: everything after the board is built: the hand, spawns, gremlin wandering, big-crate rolls, openColor, redraws. Rolled separately and randomly for each game, so the same three words give the same board but a different run. Store both in GameState (e.g. `buildSeed` and `runSeed`, replacing `seed`). The engine reseeds Rando with the run seed right after generation. Rando stays one global with `seed(n)`; no second instance needed unless that turns out cleaner (log it).
+- Three words: a static list in artifacts.js (or its own words.js plain-script global, included in index.html and the test loader). Short, common, family-friendly, distinct-looking English words; no near-duplicates or homophones. Size it to a power of two, e.g. 1024 words (3 words = 30 bits) or 2048 (33 bits).
+  - Direction: the words are the identity. Build seed = a hash of the normalized words (lowercase, trimmed, joined with '-'; a small stable string hash like FNV-1a, written in the engine/artifacts, no library). Rolling a new game picks 3 random words (with Math.random in the UI, like the seed today) and hashes them.
+  - newGame takes the words (or the build seed) plus the size, and an optional run seed for tests and replays. All randomness stays reproducible from (words, size, runSeed). Validate: exactly three words, each on the list, or ok:false.
+- Generation fallback (designer's call): if the board from build seed h doesn't generate (no source→target land path), try h+1, then h+2, and so on until one does (expected to be extremely rare). Each try reseeds Rando with that seed, so it's deterministic: the same words always land on the same board, and the words shown always rebuild the board you see. This replaces both the GEN_MAX_ATTEMPTS in-stream retry and the knownGoodSeed fallback; remove MAP_SIZES.knownGoodSeed and GEN_MAX_ATTEMPTS if nothing else uses them (no dead constants). Store the seed that actually generated if that's useful for debugging, but the words stay the identity. Add a sanity cap (e.g. 1000 tries, then throw) so a broken generator fails loudly instead of hanging.
+- UI: show the three words for the current board somewhere unobtrusive (the HUD under Turn, or the help overlay) where they can be selected and copied. The New Game / intro size picker gets an optional "board words" field: blank = random; typed words = that board (an invalid entry shows a gentle inline message and doesn't start). The field mustn't swallow the picker's 1–4 hotkeys while focused; decide and log how keys behave in it.
+- test/sim.js and tests that call newGame(seed, size) with integers: keep an integer path, newGame accepting a build seed directly, or update the callers. Decide and log; don't break `just cc-sim` reproducibility.
+
+Docs: ONTOLOGY (state fields, newGame contract, which randomness belongs to which seed, the h+1 fallback), CRITERIA rows (same words + size = same board; different run seeds = same board, different spawns/hand; invalid words → ok:false; a seed that fails to generate falls through to h+1 deterministically, testable by stubbing or finding a failing seed; tests in the test/R-n dirs), RATIONALE new D-n, ARCHITECTURE_LOG, README (sharing a board), CLAUDE.md (GameState fields, the newGame signature, L5 overlay field, the knownGoodSeed mention). Agent calls go in pjpd/decisions.md. `just cc-test` green; cc-sim numbers unchanged in spirit (seeds shift, but the medians should be close).
+----
 Priority:   40
 Status: ToDo
 ID: mobile-lock-twxz
