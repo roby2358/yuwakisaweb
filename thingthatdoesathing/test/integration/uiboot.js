@@ -629,9 +629,23 @@ run('the map-scale buttons set the scale, light up, keep the center, and round-t
     }
     zoomButton('∞').fire('click');
     if (!(ui.scale > 0 && ui.scale <= 1) || litZoom() !== '∞' || !roundTrips()) throw new Error('∞ on the small board: ' + ui.scale);
-    if (!ui.readable(11) || !ui.readable(16)) throw new Error('at 1x the port labels must show');
+    if (!ui.readable(11) || !ui.readable(16)) throw new Error('at 1x 11px and 16px text must show');
     zoomButton('2').fire('click');
-    if (ui.readable(11) || !ui.readable(16)) throw new Error('at 1/2 the IN label hides, the ★ stays');
+    if (ui.readable(11) || !ui.readable(16)) throw new Error('at 1/2 11px text hides, 16px text stays');
+});
+run('every crate color has a derived light shade for port marks; a source of 0, 1 or every color renders (D-42)', () => {
+    const shades = vm.runInContext('GameDisplayArtifacts.CRATE_SHADES', ctx);
+    const sum = hex => [1, 3, 5].reduce((n, i) => n + parseInt(hex.slice(i, i + 2), 16), 0);
+    for (const [color, s] of Object.entries(shades)) {
+        if (!/^#[0-9a-f]{6}$/.test(s.light)) throw new Error(`${color}: no light shade`);
+        if (!(sum(s.light) > sum(s.left))) throw new Error(`${color}: light ${s.light} is not lighter than ${s.left}`);
+    }
+    const src = ui.state.sources[0], kept = src.colors;
+    for (const colors of [[], [kept[0]], Object.keys(shades)]) {
+        src.colors = colors;
+        ui.render();
+    }
+    src.colors = kept;
 });
 run('at 1/2 a click selects and places on the right hex, a tick animates, and a drag cannot lose the board', () => {
     const s = ui.state, e = ui.engine;

@@ -136,7 +136,7 @@ ARCHITECTURE_LOG.md.
 - **Unreviewed calls:** (1) Drawing goes through one canvas transform (`scale` then pan), so
   art, line widths and fonts all scale together; at small fits the hex borders and outlines come out
   hairline-thin rather than being held at a minimum width. Text is the only thing gated
-  (`readable(px)`, `MIN_TEXT_PX` 8): at 1/2 the source's "IN" hides and the target's ★ stays;
+  (`readable(px)`, `MIN_TEXT_PX` 8): at 1/2 11px text hides and 16px stays (written for the source's "IN" and the target's ★, which D-42 removed);
   at a small fit all on-map text hides. That gate is where a detail switch would hang later. (2) ∞
   centers the board in the space above the hand (it doesn't keep the old center), ignores the
   top-left HUD panels, and stays lit afterwards. (3) The clamp keeps the canvas center
@@ -176,6 +176,30 @@ ARCHITECTURE_LOG.md.
 - **Evidence:** `uiboot.js` (a coarse/no-hover `matchMedia` shows the sorry page, hides the
   rest, builds no game and wires no input; a fine pointer and a missing `matchMedia` both boot
   to the intro); U-28.
+
+### D-42 Sources and targets fill their hex: a plus for a source, two rings for a target — *Decided 2026-11-13 (pjpd port-look-jtj4: each fills its whole hex with its color, no terrain showing; a target gets two concentric rings, a source a plus spanning the hex, both in a lighter shade of that color; the glow ring, IN and ★ labels, the target's black inner line and the source's color pips go; the lighter shade is derived in one place, not picked per color; a source making several colors splits its fill into equal wedges, one per color in `colors` order, under a neutral light plus), Proposed (*unreviewed*: the rest)*
+- **Alternatives:** keep the glowing ring with labels (the old look); a colored ring over the
+  terrain with the pips; stripes instead of wedges for a shared source; hand-picked light
+  shades per color.
+- **Why:** a ring over the terrain read as a decoration on a hex rather than a place, and the
+  labels vanished at small scales (D-40). A solid hex in the crate's own color says "red goes
+  here" at a glance and at every scale, since shapes need no text gate. The plus and the rings
+  tell a source from a target without words, and wedges show every color a shared source
+  makes in the same language as the fill.
+- **Unreviewed calls:** (1) The light shade is the crate's mid (`left`) face mixed 60% toward
+  white (`PORT_MARK_LIGHTEN` 0.6, by `lighten` in `displayartifacts.js`, stored as
+  `CRATE_SHADES[c].light`). Yellow's marks are the faintest (about 1.4:1 against its fill,
+  against 1.7 to 2.5 for the others); a watch point for the look check. (2) Every source and
+  target keeps a dark outline (`PORT_OUTLINE`, 2px at 70% black), not just the pale colors:
+  measured against the terrain beside them, green on plains is 1.04:1, red on mountain 1.07,
+  red on water 1.15, blue on water 1.34 and yellow on ice 1.37, so no color is safe
+  everywhere. (3) The plus runs vertex to vertex up and down and edge to edge across, its
+  arms 86% of the way to the rim; the rings sit at 68% and 34% of the inner radius; marks are
+  4.5 world px (2.25 on screen at 1/2). (4) Wedges start at the top and go clockwise; the
+  neutral plus is `PORT_NEUTRAL_MARK` (#f2f2f2). A source with no open color (none today)
+  falls back to `SOURCE_COLOR` with the neutral plus. (5) The intro's "★ target" lost its ★.
+- **Evidence:** `uiboot.js` (every crate color has a `light` shade lighter than its fill; a
+  source of none, one and every color renders); U-29.
 
 ---
 

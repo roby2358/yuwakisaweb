@@ -58,3 +58,10 @@ decision, and where the full reasoning lives (a RATIONALE `D-n` tagged *unreview
 - [agent] mobile-lock-twxz: the picture is one Belt from the card art (`cardPicture`, `SORRY_PICTURE_PX` 64) (D-41 call 5).
 - [agent] mobile-lock-twxz: viewport meta was already `width=device-width, initial-scale=1.0`, left as is; the card scrolls inside a 16px gutter on a short landscape phone (D-41 call 6).
 - [agent] mobile-lock-twxz: `TOUCH_ONLY_QUERY` lives in displayartifacts.js (client-only); README says who can play, CLAUDE.md gets a Boot bullet, ONTOLOGY's overlay row a one-line note; U-28 added.
+
+## port-look (2026-11-13)
+- [agent] port-look-jtj4: light shade = the crate's mid (`left`) face mixed 60% toward white (`lighten`, `PORT_MARK_LIGHTEN` 0.6) as `CRATE_SHADES[c].light`; yellow's marks are the faintest (~1.4:1 on its fill), a look-check watch point (D-42 call 1).
+- [agent] port-look-jtj4: a dark outline (2px, 70% black) on every source and target, all colors: measured contrast against neighboring terrain is as low as 1.04:1 (green on plains), 1.07 (red on mountain), 1.15 (red on water), 1.34 (blue on water), 1.37 (yellow on ice) (D-42 call 2).
+- [agent] port-look-jtj4: plus = vertex to vertex vertically, edge to edge across, arms at 86% to the rim; rings at 68% and 34% of the inner radius; marks 4.5 world px (D-42 call 3).
+- [agent] port-look-jtj4: wedges start at the top and go clockwise; neutral plus #f2f2f2 (`PORT_NEUTRAL_MARK`); a source with no colors falls back to `SOURCE_COLOR` with the neutral plus (D-42 call 4).
+- [agent] port-look-jtj4: dropped the ★ from the intro's "★ target"; U-19 trimmed to the tally/hover parts and points at the new U-29; D-40 call 1's IN/★ example annotated as removed (D-42 call 5).

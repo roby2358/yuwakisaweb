@@ -55,6 +55,7 @@ that comes onto a target dies there, so they can't camp it.
 
 ## UI
 
+- A source fills its hex with the color of the crates it makes, with a light plus across it; a source that makes several colors is split into equal wedges, one per color, under a pale plus. A target fills its hex with its color, with two light rings. Both have a dark outline so they stand out from the land and water around them
 - `1` `2` `3` or click a card to pick it; legal hexes tint yellow
 - `R` / `Shift+R` / mouse wheel turn the Thing before placing
 - A Pusher or Puller asks for its crate color after you click its hex: click a swatch or press `1`–`4`; Esc, right-click or a click elsewhere backs out with the card still picked

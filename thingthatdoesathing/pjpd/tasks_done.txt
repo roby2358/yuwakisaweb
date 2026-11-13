@@ -13,6 +13,24 @@ On a phone or tablet, show a friendly "sorry" page instead of the intro screen: 
 
 Docs: README (who can play), CLAUDE.md (L5 overlays / boot), RATIONALE new D-n, ARCHITECTURE_LOG, CRITERIA U-row (manual check on a phone or a mobile emulator). Test: extend test/integration/uiboot.js with a stub matchMedia that reports a coarse/no-hover pointer → the sorry page shows, the intro doesn't, and no game state is created; the default (fine pointer) boots as today. `just cc-test` green.
 ----
+Priority:   90
+Status: Done
+ID: port-look-jtj4
+Created: 2026-11-13T17:40:16Z
+Updated: 2026-11-13T18:12:54Z
+
+Redraw sources and targets (gameui.js drawSource / drawTarget / drawPort) so each one fills its whole hex with its color. The terrain underneath doesn't need to show: skip the terrain fill or paint over it.
+
+- Target: fill the hex with its crate color (CRATE_SHADES[t.color]). On top, draw 2 concentric circles (rings) in a lighter shade of that color, centered and sized to sit well inside the hex.
+- Source: fill the hex with its color. On top, draw a plus (+, crossed lines) that spans the hex, roughly vertex to vertex or edge to edge, whichever reads better, in a lighter shade of that color.
+- "Its color" for a source: a source makes one or more crate colors (`src.colors`). Single color: fill with that crate color. Several colors: decide and log a design call. Default: split the fill into equal wedges or stripes, one per color in `src.colors` order, with a neutral light plus over the top. If a source has no open color yet, fall back to SOURCE_COLOR (or a neutral fill).
+- Drop the old look: the glowing ring outline (drawPort), the "IN" and ★ labels, the black inner line on targets, and the color pips under sources (the fill now says which color it is). Keep a thin dark hex outline if pale colors (yellow, green) would otherwise blend into plains next to them. Check this against every crate color.
+- Lighter shade: derive it in one place, e.g. a CRATE_SHADES entry (`light`) or a helper that mixes toward white. No hand-picked hex values per color. Colors live in displayartifacts.js.
+- Draw order: sources and targets go under pieces (a crate standing on a source or target still shows). Hover and the selection outline still draw on top. Works at every map scale (D-40). These are shapes, not text, so the MIN_TEXT_PX gate doesn't apply, but keep line widths readable at 1/2.
+- The hover bar and help legend may describe sources and targets as "IN" and "★": update any wording that names the old marks.
+
+Docs: README (how sources and targets look), RATIONALE new D-n (why fill plus marks over rings plus labels; the multi-color source call), ARCHITECTURE_LOG line, CRITERIA U-row (manual look check), pjpd/decisions.md for any agent calls. `just cc-test` green (uiboot boots the renderer on a stub canvas).
+----
 Priority:   80
 Status: Done
 ID: lockstep-ritf

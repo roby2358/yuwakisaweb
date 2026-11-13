@@ -6,6 +6,24 @@
 const GameDisplayArtifacts = (function () {
     const T = GameArtifacts.TERRAIN;
 
+    // Mixes a '#rrggbb' color toward white by t (0 = unchanged, 1 = white).
+    const lighten = (hex, t) => '#' + [1, 3, 5].map(i => {
+        const v = parseInt(hex.slice(i, i + 2), 16);
+        return Math.round(v + (255 - v) * t).toString(16).padStart(2, '0');
+    }).join('');
+
+    // Isometric crate faces per CRATE_COLORS name: lit top, mid left, dark right. Each also
+    // gets `light`, its mid face mixed toward white: the marks over a source or target filled
+    // with that color (D-42). Derived here, never picked per color.
+    const PORT_MARK_LIGHTEN = 0.6;
+    const CRATE_SHADES = {
+        red:    { top: '#ff7a6b', left: '#d83a2e', right: '#8e1f18' },
+        green:  { top: '#8ff08a', left: '#3fbf45', right: '#22762a' },
+        blue:   { top: '#8ec4ff', left: '#3d7fe0', right: '#204a8e' },
+        yellow: { top: '#fff08a', left: '#e8c230', right: '#9a7a12' },
+    };
+    for (const shades of Object.values(CRATE_SHADES)) shades.light = lighten(shades.left, PORT_MARK_LIGHTEN);
+
     return {
         HEX_SIZE: 34,
         COUNTER_SIZE: 30,
@@ -63,16 +81,18 @@ const GameDisplayArtifacts = (function () {
             bigcrate: { name: 'Big crate — worth 10' },
             gremlin: { name: 'Gremlin — wanders' },
         },
-        // Isometric crate faces per CRATE_COLORS name: lit top, mid left, dark right.
-        CRATE_SHADES: {
-            red:    { top: '#ff7a6b', left: '#d83a2e', right: '#8e1f18' },
-            green:  { top: '#8ff08a', left: '#3fbf45', right: '#22762a' },
-            blue:   { top: '#8ec4ff', left: '#3d7fe0', right: '#204a8e' },
-            yellow: { top: '#fff08a', left: '#e8c230', right: '#9a7a12' },
-        },
+        CRATE_SHADES,                // built above: top / left / right faces, plus `light`
         BIG_CRATE_SCALE: 1.5,        // a big crate is drawn this much bigger than a crate (D-34)
         SPLAT_BLOTS: 8,              // drops in a splat burst
-        SOURCE_COLOR: '#4ce08a',
+        // Sources and targets (D-42): a fill with light marks and a dark outline, since
+        // several crate colors sit close to the terrain they border.
+        SOURCE_COLOR: '#4ce08a',               // a source with no open color yet
+        PORT_NEUTRAL_MARK: '#f2f2f2',          // the plus over a source that makes several colors
+        PORT_OUTLINE: 'rgba(0, 0, 0, 0.7)',
+        PORT_OUTLINE_WIDTH: 2,
+        PORT_MARK_WIDTH: 4.5,                  // rings and plus, world px (2.25 on screen at 1/2)
+        PORT_RING_RADII: [0.68, 0.34],         // a target's rings, as fractions of the hex's inner radius
+        PORT_PLUS_REACH: 0.86,                 // how far the plus's arms reach toward the hex's rim
         // Canvas chrome — mirror --bg and --font in index.css.
         BG_COLOR: '#0e1116',
         UI_FONT: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',

@@ -10,7 +10,8 @@
 const GameUI = (function () {
     const {
         HEX_SIZE, COUNTER_SIZE, HOP_MS, RUN_GAP_MS, MILESTONE_MS, TERRAIN_COLORS, TERRAIN_NAMES, THING_LOOK,
-        PIECE_LOOK, CRATE_SHADES, BIG_CRATE_SCALE, COLOR_INK, SPLAT_BLOTS, SOURCE_COLOR, BG_COLOR, UI_FONT, REACH_COLOR, MAP_SIZE_NOTES,
+        PIECE_LOOK, CRATE_SHADES, BIG_CRATE_SCALE, COLOR_INK, SPLAT_BLOTS, SOURCE_COLOR, PORT_NEUTRAL_MARK, PORT_OUTLINE,
+        PORT_MARK_WIDTH, PORT_RING_RADII, PORT_PLUS_REACH, PORT_OUTLINE_WIDTH, BG_COLOR, UI_FONT, REACH_COLOR, MAP_SIZE_NOTES,
         COLOR_PICKER_PX, ZOOM_DIVISORS, MIN_TEXT_PX, SORRY_PICTURE_PX
     } = GameDisplayArtifacts;
     const { TERRAIN, THINGS, WHITE, HAND_SIZE, MAP_SIZES, aims, nextMilestone } = GameArtifacts;
@@ -969,51 +970,68 @@ const GameUI = (function () {
             ctx.fill();
         }
 
-        // Source/target: a glowing ring with a label.
-        // A target: a ring in its color with a black line just inside it, so pale colors
-        // (green, yellow) still stand out on plains.
+        // Sources and targets fill their hex with their color, marks in its light shade, under
+        // a dark outline (D-42). A target: two rings.
         drawTarget(t) {
-            this.drawPort(t, CRATE_SHADES[t.color].left, '★');
-            const ctx = this.ctx;
+            const shades = CRATE_SHADES[t.color];
             const { x, y } = this.hexToWorld(t.q, t.r);
-            drawHexPath(ctx, x, y, HEX_SIZE - 5);
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
-            ctx.stroke();
+            this.fillPort(x, y, [shades.left]);
+            const ctx = this.ctx;
+            const inner = HEX_SIZE * Math.sqrt(3) / 2;
+            ctx.strokeStyle = shades.light;
+            ctx.lineWidth = PORT_MARK_WIDTH;
+            for (const r of PORT_RING_RADII) {
+                ctx.beginPath();
+                ctx.arc(x, y, inner * r, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            this.outlinePort(x, y);
         }
 
-        // A source: the IN ring, with one pip per color it makes.
+        // A source: a plus, vertex to vertex up and down, edge to edge across. One color fills
+        // the hex; several split it into equal wedges (in `colors` order) under a neutral plus.
         drawSource(src) {
-            this.drawPort(src, SOURCE_COLOR, 'IN');
-            const ctx = this.ctx;
             const { x, y } = this.hexToWorld(src.q, src.r);
-            const gap = 9, y0 = y + HEX_SIZE * 0.62;
-            src.colors.forEach((color, i) => {
+            const fills = src.colors.length ? src.colors.map(c => CRATE_SHADES[c].left) : [SOURCE_COLOR];
+            this.fillPort(x, y, fills);
+            const ctx = this.ctx;
+            const reachY = HEX_SIZE * PORT_PLUS_REACH, reachX = HEX_SIZE * Math.sqrt(3) / 2 * PORT_PLUS_REACH;
+            ctx.strokeStyle = src.colors.length === 1 ? CRATE_SHADES[src.colors[0]].light : PORT_NEUTRAL_MARK;
+            ctx.lineWidth = PORT_MARK_WIDTH;
+            ctx.beginPath();
+            ctx.moveTo(x, y - reachY);
+            ctx.lineTo(x, y + reachY);
+            ctx.moveTo(x - reachX, y);
+            ctx.lineTo(x + reachX, y);
+            ctx.stroke();
+            this.outlinePort(x, y);
+        }
+
+        // Fills the hex with equal wedges, one per color, clockwise from the top.
+        fillPort(x, y, colors) {
+            const ctx = this.ctx;
+            ctx.save();
+            drawHexPath(ctx, x, y, HEX_SIZE);
+            ctx.clip();
+            const step = Math.PI * 2 / colors.length;
+            colors.forEach((color, i) => {
+                const from = -Math.PI / 2 + i * step;
                 ctx.beginPath();
-                ctx.arc(x + (i - (src.colors.length - 1) / 2) * gap, y0, 3.5, 0, Math.PI * 2);
-                ctx.fillStyle = CRATE_SHADES[color].left;
+                ctx.moveTo(x, y);
+                ctx.arc(x, y, HEX_SIZE * 1.2, from, from + step);
+                ctx.closePath();
+                ctx.fillStyle = color;
                 ctx.fill();
             });
+            ctx.restore();
         }
 
-        drawPort(at, color, label) {
+        outlinePort(x, y) {
             const ctx = this.ctx;
-            const { x, y } = this.hexToWorld(at.q, at.r);
-            ctx.save();
-            ctx.shadowColor = color;
-            ctx.shadowBlur = 12;
-            drawHexPath(ctx, x, y, HEX_SIZE - 2);
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 3;
+            drawHexPath(ctx, x, y, HEX_SIZE - PORT_OUTLINE_WIDTH / 2);
+            ctx.strokeStyle = PORT_OUTLINE;
+            ctx.lineWidth = PORT_OUTLINE_WIDTH;
             ctx.stroke();
-            ctx.restore();
-            const px = label.length > 1 ? 11 : 16;
-            if (!this.readable(px)) return;
-            ctx.fillStyle = color;
-            ctx.font = `bold ${px}px ${UI_FONT}`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(label, x, y - HEX_SIZE * 0.62);
         }
 
         roundRect(x, y, w, h, r) {

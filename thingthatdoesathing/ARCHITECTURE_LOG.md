@@ -2,6 +2,17 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-13 — Sources and targets fill their hex (D-42)
+A source or target used to be a glowing ring over its terrain with an "IN" or ★ label; a
+target also had a black line inside the ring and a source a row of color pips. Now each
+fills its hex with its crate color (a shared source in equal wedges, one per color) under a
+dark outline; a target carries two light rings and a source a light plus (neutral when it
+makes several colors). `drawPort` is gone; `fillPort` and `outlinePort` replace it.
+`CRATE_SHADES` moved above the return in `displayartifacts.js` and each entry gains a derived
+`light` (`lighten`, `PORT_MARK_LIGHTEN`); the new `PORT_*` constants hold the mark sizes and
+outline. The intro's "★ target" is just "target". U-19 points at the new U-29; `uiboot.js`
+checks the light shades and renders sources of 0, 1 and every color (pjpd port-look-jtj4).
+
 ### 2026-11-13 — Phones and tablets get a sorry page (D-41)
 The page used to boot the game for every browser. Now `index.js` checks
 `matchMedia(TOUCH_ONLY_QUERY)` (`'(pointer: coarse) and (hover: none)'`, in

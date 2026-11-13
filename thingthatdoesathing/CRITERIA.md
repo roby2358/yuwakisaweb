@@ -105,7 +105,7 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | U-16 | A Rocket's flight is one long hop-by-hop slide; a gremlin it hits bursts in its own color when the flier lands, with a splat sound; a launched gremlin bursts where it lands | manual — rocket a crate into a gremlin, then a gremlin into a Wall |
 | U-17 | A gremlin that walks or is pushed onto a Trap bursts there with a splat sound, Trapped goes up, and a new gremlin appears on the shore | manual — belt a gremlin onto a Trap |
 | U-18 | A gremlin that steps onto a crate: the crate bursts in its color as the gremlin arrives, and the lost count goes up | manual — watch a gremlin beside a stalled crate |
-| U-19 | Each target is ringed in its color, with a black line just inside, and a ★; a source shows one pip per color it makes; once a second color opens, the tally shows a count per color; the hover bar names a source's colors and a target's color | manual — reach 10 on a medium board |
+| U-19 | Once a second color opens, the new source and target show it (U-29); the tally shows a count per color; the hover bar names a source's colors and a target's color | manual — reach 10 on a medium board |
 | U-20 | A Pusher shows a ram with a chevron; a placed Pusher or Puller draws its glyph in its color and its hover bar reads e.g. "Red Pusher" and says "only red crates, and gremlins"; its card and ghost are white, and the card says "you pick its crate color when you place it" | manual — reach 10 on a medium board and draw a Pusher |
 | U-21 | `B` over a crate bursts it in its color and the lost count goes up; over a gremlin or empty hex nothing happens | manual — jam a line and press B on a crate |
 | U-22 | A card the idle rule redrew glows once in the hand | manual — press Go and watch the hand |
@@ -115,6 +115,7 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 | U-26 | A big crate is drawn as its color's isometric box, `BIG_CRATE_SCALE` times a crate's size; hovering it names it "Big crate — worth 10"; its delivery moves the progress bar by 10 | manual — play past the second milestone and watch a big crate in |
 | U-27 | The Map buttons `1` `2` `∞` (a row under the HUD, the active one lit) show the board at full and half size, or all of it above the hand (none of it hidden under the cards); at every scale the art is the same pictures scaled (text too small to read is gone), hovering, placing, selecting, the color picker, the tick animation and the milestone banner all still line up; zooming keeps the middle of the screen in place and dragging can't lose the board; a new game opens at `1`; the buttons don't overlap the hand, tally or Go/Wait in a small window | manual — open huge, try each button, place a Thing at 1/2 and at ∞, drag hard, shrink the window |
 | U-28 | On a phone or tablet the page opens on a sorry card instead of the intro: the game's name, a Belt, a line on what it is, and a kind note that it needs a mouse and keyboard; nothing else shows, it fits the width with no sideways scroll, and taps do nothing; a touchscreen laptop with a mouse still gets the intro (D-41) | manual — open on a phone (or a browser's mobile emulator with touch), portrait and landscape; then on a desktop |
+| U-29 | A target fills its hex with its crate color and two concentric light rings of that color; a source fills its hex with its color and a light plus spanning the hex (top vertex to bottom vertex, edge to edge across); a source making several colors shows equal wedges, one per color in order, under a pale neutral plus; no glow, IN, ★, black inner line or color pips; every port has a thin dark outline and stands out from plains, ice, water and mountain beside it, for all four colors; a crate on a port still shows, and hover/selection outlines draw on top; the marks read at `1`, `2` and `∞` (D-42) | manual — play a huge board on until all four colors are open and a source makes two (new games until one does), look at each port beside different terrain at each map scale |
 
 ---
 
@@ -131,7 +132,7 @@ file, the integration tests (`smoke.js`: random legal play with invariant checks
 
 ## Status (2026-11-12)
 
-- **Manual only:** U-1…U-28, X-1.
+- **Manual only:** U-1…U-29, X-1.
 - **Retired:** R-17 (Spinner), R-20 (final win).
 - **Not yet covered:** X-2, X-3, X-4 (need playtests).
 - **Partial coverage:** R-18 checks that wandering gremlins land on land and never step into
