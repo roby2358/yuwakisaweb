@@ -84,9 +84,10 @@ Then a gremlin rides your belt into the sea, and you laugh and fix it.
   split. A crate at the wrong target just sits there, jamming, which you can read at a glance.
 - **Endless milestones** (10, 20, 50, 100, …) → feed accumulation: the machine keeps paying
   off, and each milestone asks whether it still holds up with gremlins wandering through.
-- **Big crates** (D-34) → feed accumulation and give the payoff weight: past the first
-  milestone some crates come out big, worth 10, and each milestone makes them commoner, so
-  the growing gaps of the 1-2-5 series fill at a steady pace. Losing one costs 10, so a big
+- **Big crates** (D-34, D-45) → feed accumulation and give the payoff weight: a rare crate
+  comes out big, worth 10 (1% at the start, 5% by the fifth milestone), and past the fifth
+  each milestone makes them much commoner, so the growing gaps of the 1-2-5 series fill at a
+  steadier pace there. Losing one costs 10, so a big
   crate drifting toward a lake or sitting beside a gremlin is the one you guard.
 - **Go/Pause** → lets the payoff run by itself; you watch, then pick a card to step in.
 

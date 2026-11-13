@@ -11,9 +11,9 @@ gremlin or a crate (counted as an ex-gremlin, or lost). A target takes only its 
 Crates keep coming from a fixed cycle of the four colors, one slot a tick: an open color's slot
 makes a crate at its source and a closed color's slot makes nothing, so one color gets a crate
 every 4 ticks and four colors one every tick. That goes on until the board holds its
-cap (more on bigger boards, one more per milestone). After the first milestone some come out
-as big crates, drawn bigger and worth 10 delivered (or 10 lost), and each milestone makes them
-commoner.
+cap (more on bigger boards, one more per milestone). Now and then one comes out as a big
+crate, drawn bigger and worth 10 delivered (or 10 lost): 1 in 100 at the start, 1 in 20 by the
+fifth milestone, and commoner with each milestone after that, toward nearly all of them.
 Every Thing does exactly one thing, every tick.
 
 It needs a mouse and a keyboard (hover, right-click, the wheel, a few letter keys), so it plays

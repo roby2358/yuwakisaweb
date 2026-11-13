@@ -304,6 +304,47 @@ ARCHITECTURE_LOG.md.
   the shifted random stream, likely account for fewer games reaching the second milestone.
   Unmeasured in play.
 
+### D-45 Big crates: 1% at the start, 5% by the fifth milestone, then easing toward 1 — *Decided 2026-11-13 (pjpd bigcrate-odd-755q: 1% with no milestones reached, 5% at the fifth, asymptotic to 100% after that, never reaching it; one function of m in artifacts.js with named tunables; `BIG_CRATE_HALF` removed; the per-spawn roll and the value 10 unchanged), Proposed (*unreviewed*: the rest)*
+- **Supersedes** D-34's curve, call (2) (p = m / (m + `BIG_CRATE_HALF`): 0, 20%, 33%, 43%,
+  50% at m = 0…4) and call (3) (no roll while p is 0). The rest of D-34 stands.
+- **Alternatives:** keep m / (m + 4) (20% after the first milestone, 56% by the fifth); a
+  logistic through the three points; a slower or faster ratio past the fifth.
+- **Why:** the designer found the old curve far too generous early: big crates carried most of
+  the advancement from the first milestone on. Now they're a rare treat through the fifth
+  milestone and become the main currency only after it, where the 1-2-5 gaps get long.
+- **Unreviewed calls:** (1) A straight line between the two early points, 1% + 0.8%·m
+  (1, 1.8, 2.6, 3.4, 4.2, 5%), the task's default. (2) Past the fifth, 1 − 0.95·r^(m − 5),
+  continuous at 5%, with r = `BIG_CRATE_EASE` = 0.85 (19% at 6, 31% at 7, 42% at 8, 58% at
+  10, 81% at 15). Picked by `node test/sim.js 30 small 8` across r: past the fifth milestone
+  the gaps run #5→#6 821, #6→#7 798, #7→#8 815 turns at 0.85, roughly flat; at 0.9 the
+  seventh comes at 2415 and no game reaches the eighth inside the sim's 3200-turn cap; at 0.8
+  and 0.75 the seventh comes at 2146 and 2068. 0.85 holds the gaps steady with no reason yet
+  to go faster. (3) A fourth name, `BIG_CRATE_KNEE` = 5, for where the line hands over to the
+  easing, so the formula has no bare 5. (4) Every spawn now rolls `Rando`, from the first
+  tick: the chance is never 0, so the "no roll while p is 0" guard is gone, and every seed's
+  game diverges from its first spawn (the D-3/D-7/D-43 first-milestone baselines shift a
+  little: small median 53 → 52, medium 60 → 58). (5) R-52 checks the two end points, strict
+  rise and < 1 over m = 0…30 (10^10 crates); in floats the formula reaches exactly 1 near
+  m = 230, far past any game, so no clamp.
+- **Milestone gaps balloon.** As the task expected, the bot's pace to the fifth milestone
+  falls back to about where it was with big crates off (D-34's 49 / 82 / 180 / 342 / 662):
+  gaps on small now roughly double each milestone (40, 94, 158, 305 turns) where they held
+  near 30. Not retuned here; it bears on the separate idea about how big crates drive
+  advancement.
+- **Evidence:** R-52. `Measured by:` before → after (seeds 5000+):
+  - `cc-sim-to 100 small 5`: all 100 reach the fifth both ways; median 236 → 649 (p10 207 →
+    567, p90 262 → 731); milestones 53 / 79 / 112 / 159 / 236 → 52 / 92 / 186 / 344 / 649; big
+    crates/game 18.4 → 5.0; lost 3.84 → 3.11.
+  - `cc-sim-to 50 medium 5`: reached the fifth 15 → 22 of 50; milestones 60 / 87 / 118 / 178 /
+    248 (50 / 21 / 15 / 15 / 15 games) → 57 / 96 / 216 / 365 / 685 (50 / 25 / 22 / 22 / 22);
+    big crates/game 8.7 → 2.8; lost 14.84 → 14.08; at cap 57% → 43%. (More games get through
+    with fewer big crates, likely the shifted stream and fewer 10-crate losses; the bot still
+    routes only the first color.)
+  - `cc-sim 200 small`: median 53 → 52; `cc-sim 100 medium`: median 60 → 58.
+  - `node test/sim.js 30 small 8` (r = 0.85): 51 / 91 / 189 / 356 / 668 / 1489 / 2287 / 3102
+    (6 of 30 reach the eighth inside the 3200-turn cap), 121 big crates/game.
+  Unmeasured in play.
+
 ---
 
 ## Things
@@ -782,6 +823,7 @@ ARCHITECTURE_LOG.md.
   starts. `bump`/`advance`/`follow` are gone; the line and follow are phases of the one motion.
 
 ### D-34 Big crates, worth 10, grow more likely with each milestone — *Decided (a crate worth 10 deliveries whose share of spawns rises toward 1), Proposed (the rest; reviewed and accepted 2026-11-12)*
+- **Curve superseded by D-45** (2026-11-13): calls (2) and (3) below are history; the chance is now 1% at the start, 5% at the fifth milestone, then easing toward 1, with a roll on every spawn.
 - **Alternatives:** a `value` field on each crate piece instead of a kind; p = 1 − (1 −
   base)^m; make later milestones closer together; spawn faster per milestone.
 - **Why:** the designer asked for it (pjpd big-crate-jat8). The milestones run on the 1-2-5

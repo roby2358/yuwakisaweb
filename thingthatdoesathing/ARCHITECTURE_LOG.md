@@ -2,6 +2,15 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-13 — Big crates: 1% at the start, 5% by the fifth milestone (D-45)
+`bigCrateChance(m)` used to be m / (m + `BIG_CRATE_HALF`) with `BIG_CRATE_HALF` = 4: 0 before
+the first milestone (with no `Rando` roll), 20% after it, 56% by the fifth. Now it's a
+straight rise from `BIG_CRATE_START` (0.01) to `BIG_CRATE_AT_FIFTH` (0.05) over
+`BIG_CRATE_KNEE` (5) milestones, then 1 − 0.95·`BIG_CRATE_EASE`^(m − 5) with `BIG_CRATE_EASE`
+= 0.85. `BIG_CRATE_HALF` is gone, and `spawnKind()` rolls on every spawn. R-52 rewritten
+(end points, strict rise, < 1; a roll below the first milestone). The bot's turn to the fifth
+milestone on small went from a median of 236 to 649 (pjpd bigcrate-odd-755q).
+
 ### 2026-11-13 — A new source or target clears its hex (D-44)
 `openColor` used to pick new sources and targets only from free end-slice hexes
 (`freeEndHexes`: no Thing, no piece, no endpoint), so a built-up or crowded slice could

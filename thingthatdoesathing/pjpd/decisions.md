@@ -84,3 +84,11 @@ decision, and where the full reasoning lives (a RATIONALE `D-n` tagged *unreview
 - [agent] port-clears-kh58: a crate on its own color's new target is destroyed and lost, not delivered ("whatever its color") (D-44 call 6).
 - [agent] port-clears-kh58: `freeEndHexes` → `openEndHexes`; `openColor(hop)` returns a list; `reachMilestones(before, after, hop)`; R-62 is a new row for the clears, R-38 keeps placement (D-44 call 7).
 - [agent] port-clears-kh58: `test/sim.js` with a milestone count prints colors opened and endpoint clears per game; medium to 5: colors opened 1.00/game, 0.19 clears/game, fewer games reach #2 (50 → 45), likely the bot's belts under a new wrong-color target (D-44 call 8).
+
+## bigcrate-odd (2026-11-13)
+- [agent] bigcrate-odd-755q: straight line between the designer's two early points, 1% + 0.8%·m (1, 1.8, 2.6, 3.4, 4.2, 5%), the task's default (D-45 call 1).
+- [agent] bigcrate-odd-755q: past the fifth, 1 − 0.95·r^(m−5) with r = 0.85; sim to the 8th milestone on small keeps the gaps after the 5th roughly flat (~800 turns each), 0.9 stretches them (no game reaches the 8th in 3200 turns), 0.8/0.75 shorten them a little (D-45 call 2).
+- [agent] bigcrate-odd-755q: added `BIG_CRATE_KNEE` = 5 beside `BIG_CRATE_START`, `BIG_CRATE_AT_FIFTH`, `BIG_CRATE_EASE`, so the formula has no bare 5; `BIG_CRATE_HALF` removed (D-45 call 3).
+- [agent] bigcrate-odd-755q: the chance is never 0 now, so `spawnKind()` drops the "no roll while p is 0" guard and rolls on every spawn; first-milestone baselines shift a little (small 53 → 52, medium 60 → 58) (D-45 call 4).
+- [agent] bigcrate-odd-755q: R-52 checks strict rise and < 1 over m = 0…30; the float reaches exactly 1 near m = 230, unreachable, so no clamp (D-45 call 5).
+- [agent] bigcrate-odd-755q: milestone gaps balloon as the task expected (small to the 5th: 236 → 649, near the old big-crates-off 662); not retuned, flagged for the separate big-crate-advancement idea.

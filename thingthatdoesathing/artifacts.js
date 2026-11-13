@@ -133,12 +133,18 @@ const GameArtifacts = (function () {
         return n;
     };
 
-    const BIG_CRATE_HALF = 4;   // milestones reached at which half the spawns are big crates
+    const BIG_CRATE_START = 0.01;      // big-crate chance at the start, no milestones reached
+    const BIG_CRATE_AT_FIFTH = 0.05;   // big-crate chance by the fifth milestone
+    const BIG_CRATE_EASE = 0.85;       // past the fifth, the share still plain shrinks by this per milestone
+    const BIG_CRATE_KNEE = 5;          // the milestone where the straight rise hands over to the easing
 
-    // The chance a spawned crate is a big crate (D-34, R-52), with `m` milestones reached:
-    // m / (m + BIG_CRATE_HALF). None before the first milestone, 1 in 5 after it, half at
-    // BIG_CRATE_HALF, and on toward 1 without reaching it.
-    const bigCrateChance = m => m / (m + BIG_CRATE_HALF);
+    // The chance a spawned crate is a big crate (D-45, R-52), with `m` milestones reached: a
+    // straight rise from BIG_CRATE_START to BIG_CRATE_AT_FIFTH over the first five milestones
+    // (1, 1.8, 2.6, 3.4, 4.2, 5%), then 1 − 0.95·BIG_CRATE_EASE^(m − 5), easing toward 1
+    // without reaching it (19% at 6, 58% at 10, 81% at 15).
+    const bigCrateChance = m => m <= BIG_CRATE_KNEE
+        ? BIG_CRATE_START + (BIG_CRATE_AT_FIFTH - BIG_CRATE_START) * m / BIG_CRATE_KNEE
+        : 1 - (1 - BIG_CRATE_AT_FIFTH) * Math.pow(BIG_CRATE_EASE, m - BIG_CRATE_KNEE);
 
     // Does this kind of Thing have a facing (it pushes, pulls or shoves)? Only those can be turned.
     const aims = kind => THINGS[kind].push > 0 || THINGS[kind].pull > 0 || THINGS[kind].shove > 0;
@@ -168,7 +174,10 @@ const GameArtifacts = (function () {
 
         FIRST_MILESTONE,
         CRATE_CAP_PER_ROOT,
-        BIG_CRATE_HALF,
+        BIG_CRATE_START,
+        BIG_CRATE_AT_FIFTH,
+        BIG_CRATE_EASE,
+        BIG_CRATE_KNEE,
         ENHANCE_CHANCE: 0.5,         // a newly opened color comes out of an existing source, else a new one
         HAND_SIZE: 3,
         BUMP_ADVANCE: 2,             // hexes a bumped line advances; its bumper follows to one behind it (D-33)

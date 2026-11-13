@@ -434,8 +434,8 @@ color = spawnCycle[spawnSlot]; spawnSlot = (spawnSlot + 1) % length(spawnCycle) 
 if color is open and crates on the board < crateCap(size) + milestonesReached(delivered):   # crateCap ∝ √area (D-31)
     src = the source that makes color
     if no piece on src:                                             # else the slot is skipped, not retried
-        p = bigCrateChance(milestonesReached(delivered))              # D-34
-        kind = 'bigcrate' if p > 0 and Rando.random() < p else 'crate'   # no roll while p is 0
+        p = bigCrateChance(milestonesReached(delivered))              # D-34, D-45
+        kind = 'bigcrate' if Rando.random() < p else 'crate'          # one roll per spawn, from the start
         a kind of color on src; emit spawn{id, q, r}
 idleTicks = 0 if the command used a card (place, discard) else idleTicks + 1   # D-26
 if idleTicks >= IDLE_REDRAW_TICKS: slot = Rando.int(0, HAND_SIZE-1); hand[slot] = draw(); idleTicks = 0; emit redraw{slot}
@@ -517,7 +517,10 @@ The code constant in `GameArtifacts` is the single source.
 | `ENHANCE_CHANCE` | 0.5 | chance a new color comes out of an existing source [D] |
 | `FIRST_MILESTONE` | 10 | crates (then the 1-2-5 series, forever) |
 | `CRATE_CAP_PER_ROOT` | 0.6 | crates of the cap per hex of √(board area); `crateCap(size)` = max(1, round(this × √(cols × rows))): small 8, medium 12, large 18, huge 36; +1 per milestone reached (D-31) [D: sqrt shape; T: the constant] |
-| `BIG_CRATE_HALF` | 4 | milestones reached at which half the spawns are big crates; `bigCrateChance(m)` = m / (m + this): 0, 0.2, 0.33, 0.43, 0.5 at m = 0…4, toward 1 (D-34) [T] |
+| `BIG_CRATE_START` | 0.01 | big-crate chance with no milestones reached (D-45) [D] |
+| `BIG_CRATE_AT_FIFTH` | 0.05 | big-crate chance at `BIG_CRATE_KNEE` milestones (D-45) [D] |
+| `BIG_CRATE_KNEE` | 5 | milestones over which the chance rises in a straight line, START → AT_FIFTH; `bigCrateChance(m)` = START + (AT_FIFTH − START)·m / KNEE for m ≤ KNEE: 1, 1.8, 2.6, 3.4, 4.2, 5% (D-45) [D: the end points; T: the straight line] |
+| `BIG_CRATE_EASE` | 0.85 | past the knee, `bigCrateChance(m)` = 1 − (1 − AT_FIFTH)·this^(m − KNEE): 19% at 6, 31% at 7, 58% at 10, 81% at 15, toward 1, never 1 (D-45) [D: asymptotic to 1; T: the ratio] |
 | `PIECES.bigcrate.value` | 10 | crates a big crate is worth (D-34) [D] |
 | `HAND_SIZE` | 3 | cards |
 | `BUMP_ADVANCE` | 2 | hexes a bumped line advances; its bumper follows to one hex behind it (D-33) [D] |
@@ -571,7 +574,7 @@ Illegal → `{ ok:false }` and nothing changed (hand and `Rando` included).
 - `affects(thing, piece)` — whether a Thing's color lets it act on that piece.
 - `thingAt(q, r)`, `pieceAt(q, r)`, `targetAt(q, r)`, `sourceOf(color)`, `openColors()`, `isEndpoint(hex)`.
 - `unlockedKinds()`, `drawableKinds()` — the kinds open so far, and the deck the Draw rule uses.
-- `spawnKind()` — `'bigcrate'` or `'crate'` for the next spawn (Tick rule; rolls `Rando` only once a milestone is reached, D-34).
+- `spawnKind()` — `'bigcrate'` or `'crate'` for the next spawn (Tick rule; one `Rando` roll per spawn, D-34, D-45).
 - `board.*`.
 
 ### Events (each `move` with its start hop, each end with the hop it happened on)

@@ -339,11 +339,10 @@ const GameEngine = (function () {
             return this.addPiece(this.spawnKind(), src.q, src.r, color);
         }
 
-        // A spawn is a big crate with bigCrateChance(milestones reached), else a crate. No
-        // roll while the chance is 0 (before the first milestone), so Rando is untouched (D-34).
+        // A spawn is a big crate with bigCrateChance(milestones reached), else a crate; one
+        // Rando roll per spawn, from the start (D-34, D-45).
         spawnKind() {
-            const p = bigCrateChance(milestonesReached(this.state.delivered));
-            return p > 0 && Rando.random() < p ? 'bigcrate' : 'crate';
+            return Rando.random() < bigCrateChance(milestonesReached(this.state.delivered)) ? 'bigcrate' : 'crate';
         }
 
         spawnGremlins() {

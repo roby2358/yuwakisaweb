@@ -1,6 +1,6 @@
 // R-52: a big crate is a crate worth PIECES.bigcrate.value (10). A spawn is a big crate with
-// bigCrateChance(milestones reached) = m / (m + BIG_CRATE_HALF): 0 before the first
-// milestone (and no Rando roll then), rising toward 1 without reaching it. Delivering one adds
+// bigCrateChance(milestones reached) (D-45): BIG_CRATE_START (1%) at m = 0, a straight rise to
+// BIG_CRATE_AT_FIFTH (5%) at m = 5, then easing toward 1 without reaching it. Delivering one adds
 // its value to `delivered` and to its target's count; losing one (sunk, wrecked, blasted) adds
 // its value to `lost`. It counts as one crate toward the cap, and Things move it like a crate.
 // A big delivery that crosses several milestones fires each one's milestone/open/unlock in turn.
@@ -10,30 +10,35 @@ const { flatGame, DIR } = require('../helpers/load');
 
 {
     const { g } = flatGame();
-    const { bigCrateChance, BIG_CRATE_HALF, PIECES } = g.GameArtifacts;
+    const { bigCrateChance, BIG_CRATE_START, BIG_CRATE_AT_FIFTH, PIECES } = g.GameArtifacts;
     check('values: crate 1, big crate 10, gremlin 0',
         PIECES.crate.value === 1 && PIECES.bigcrate.value === 10 && PIECES.gremlin.value === 0);
-    const ps = [0, 1, 2, 3, 5, 10, 100, 1e6].map(bigCrateChance);
-    check(`bigCrateChance rises from 0 toward 1, never 1 (${ps.map(p => p.toFixed(3)).join(' ')})`,
-        ps[0] === 0 && ps.every((p, i) => i === 0 || (p > ps[i - 1] && p < 1)));
-    check('half the spawns are big at BIG_CRATE_HALF milestones', bigCrateChance(BIG_CRATE_HALF) === 0.5);
+    check('1% at the start, 5% at the fifth milestone',
+        BIG_CRATE_START === 0.01 && BIG_CRATE_AT_FIFTH === 0.05 &&
+        bigCrateChance(0) === BIG_CRATE_START && Math.abs(bigCrateChance(5) - BIG_CRATE_AT_FIFTH) < 1e-12);
+    // m = 30 is 10^10 crates, past any game; beyond about m = 230 the float rounds to 1.
+    const ps = [...Array(31).keys()].map(bigCrateChance);
+    check(`bigCrateChance strictly increasing, always below 1 (${[0, 1, 5, 6, 10, 15, 30].map(m => ps[m].toFixed(3)).join(' ')})`,
+        ps.every((p, i) => p < 1 && (i === 0 || p > ps[i - 1])));
 }
 {
-    // Before the first milestone every spawn is a plain crate and the kind takes no roll.
+    // Every spawn rolls, from the start: at 9 delivered (none reached) about 1 in 100 is big.
     const { g, state, engine } = flatGame();
     state.delivered = 9;
     g.Rando.seed(99);
-    const kinds = [...Array(50)].map(() => engine.spawnKind());
-    const next = g.Rando.random();
+    engine.spawnKind();
+    const second = g.Rando.random();
     g.Rando.seed(99);
-    check('below the first milestone: all crates, and Rando untouched',
-        kinds.every(k => k === 'crate') && next === g.Rando.random());
-    // After many milestones (5000 delivered: 9 reached) most, not all, spawns are big.
+    g.Rando.random();
+    check('below the first milestone the kind still takes one Rando roll', second === g.Rando.random());
+    const big = [...Array(4000)].map(() => engine.spawnKind()).filter(k => k === 'bigcrate').length / 4000;
+    check(`no milestones: big share ${big.toFixed(3)} near bigCrateChance(0) = 0.01`, big > 0 && big < 0.03);
+    // After many milestones (5000 delivered: 9 reached) about half the spawns are big.
     state.delivered = 5000;
     const p = g.GameArtifacts.bigCrateChance(9);
-    const big = [...Array(400)].map(() => engine.spawnKind()).filter(k => k === 'bigcrate').length / 400;
-    check(`9 milestones: big share ${big.toFixed(2)} near bigCrateChance(9) = ${p.toFixed(2)}`,
-        Math.abs(big - p) < 0.1 && big < 1);
+    const late = [...Array(400)].map(() => engine.spawnKind()).filter(k => k === 'bigcrate').length / 400;
+    check(`9 milestones: big share ${late.toFixed(2)} near bigCrateChance(9) = ${p.toFixed(2)}`,
+        Math.abs(late - p) < 0.1 && late < 1);
 }
 {
     // A spawn past the milestones puts a big crate on the source sometimes; it counts once toward the cap.

@@ -108,14 +108,14 @@ in `hexToScreen` / `screenToHex`.
   two hexes ahead back into the hex between (both are drawn plain and get a crate color the player picks at placement, `place(slot, q, r, facing, color)` checked against `colorChoices(kind)`; they move only that color's crates, and gremlins; they're rare draws, D-32); a gremlin coming onto a target dies; Wall blocks; Bridge is a Belt built on water (it carries the piece on it 1 hex); Slide is buildable ice, on plains or water, never bare ice (`slides`). One Thing per hex (placing on one replaces it), none on a target; movers may be built
   under a piece.
 - **Tick:** claims as the tick starts, Pushers and Pullers first, then the other Things, each in placement order (each piece gets one motion; that order is also the rank for same-hex ties), unclaimed gremlins
-  wander (direction picked at hop 1); then every motion runs in lockstep, one hex per hop (D-38); a blocked piece stops for the tick; every tick takes the next slot of `spawnCycle` (all four colors, shuffled once per game, D-43): if that color is open, the board holds fewer crates than `crateCap(size)` (grows with √area: small 8 … huge 36) plus one per milestone reached (D-31), and its source is clear, a crate spawns there; otherwise the slot is skipped, a big crate worth 10 with `bigCrateChance(milestones)` (D-34); each milestone may open a color (`openColor`) and unlocks the next card step (`unlock`).
+  wander (direction picked at hop 1); then every motion runs in lockstep, one hex per hop (D-38); a blocked piece stops for the tick; every tick takes the next slot of `spawnCycle` (all four colors, shuffled once per game, D-43): if that color is open, the board holds fewer crates than `crateCap(size)` (grows with √area: small 8 … huge 36) plus one per milestone reached (D-31), and its source is clear, a crate spawns there; otherwise the slot is skipped, a big crate worth 10 with `bigCrateChance(milestones)` (1% at the start, 5% at the fifth milestone, then easing toward 1; D-34, D-45); each milestone may open a color (`openColor`) and unlocks the next card step (`unlock`).
 - **Step:** blocked by off-map / mountain / Wall / a piece that stays this hop (a piece with no motion standing on slick ground is bumped instead, by any mover or flight: from that hop the line
   from it advances 2, the bumper follows from the next to right behind it, each piece once per tick, D-33); two airborne pieces entering one hex (or swapping) both crash; a gremlin on a Trap dies; open water sinks; slick ground (bare ice or a Slide, `isSlick`) slides
   free; a crate on its color's target is delivered (other colors' targets block it on the ground).
 - **Tuning harness:** `just cc-sim 200 small`, which runs `node test/sim.js 200 small` (greedy builder bot; lays belts and
   springs, throws every other card away with `discard`; before the first milestone only Belts,
   Bridges, Walls and Traps are dealt, D-30); `just cc-sim-to 100 small 5` plays on to the fifth
-  milestone and reports turns per milestone and big crates spawned (D-34).
+  milestone and reports turns per milestone and big crates spawned (D-34, D-45).
 
 ## Conventions
 
