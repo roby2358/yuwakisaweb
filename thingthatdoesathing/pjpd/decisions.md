@@ -137,3 +137,4 @@ decision, and where the full reasoning lives (a RATIONALE `D-n` tagged *unreview
 - [agent, mute-button] mute-button-twa8: the flag and its localStorage live in GameSound; toggling plays no cue; M has no modifier check (separate task) (D-53).
 - [agent, grem-splat] grem-splat-263u: "sliding" = a skid or a ground motion whose last arrival was free onto slick ground; both-splat keys off the bumped piece having splatsOnSlideBump too; a wandering gremlin's step into a crate still wrecks it first (D-54 calls 1-3).
 - [agent, reject-why] reject-why-23qa: a queued (D-49) command shows no reason, only an actual refusal does; a non-legal build click still puts the card back and also says why, the reason picked by terrain/endpoint in the UI; wording in REASONS, 2.5 s (D-55).
+- [agent, meta-tags] meta-tags-dagy: favicon is the Rocket glyph hand-copied as SVG (45 degrees); description is the README's first two sentences; og.png listed in SHIP.md as waiting on the user (D-56).

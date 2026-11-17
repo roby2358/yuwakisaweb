@@ -92,8 +92,8 @@ it needs the author: it gets no pjpd task.
 | WEB-7 | A way back | T2 | missing | no link to yuwakisa.com | credits-55gy |
 | MENU-6 | End payoff | T2 | partial | endless; milestone banners only; New Game drops the run unseen | run-stats-m6pe |
 | SAVE-7 | Player can wipe data | T2 | missing | nothing to wipe yet | wipe-data-mw24 |
-| WEB-3 | Title, description, favicon | T2 | partial | title only | meta-tags-dagy |
-| WEB-4 | Link previews | T2 | missing | no og tags | meta-tags-dagy |
+| WEB-3 | Title, description, favicon | T2 | done | tags in index.html (D-56) | meta-tags-dagy |
+| WEB-4 | Link previews | T2 | partial | tags in; waiting on the user for og.png (1200x630, repo root) | meta-tags-dagy |
 | WEB-6 | One-paragraph pitch | T2 | missing | intro text is close but not written as a pitch | listing-r8fn |
 | PORT-8 | Listing complete | T2 | missing | no listings | listing-r8fn |
 | PORT-9 | Portal AI disclosure field | T2 | missing | no listings | listing-r8fn |

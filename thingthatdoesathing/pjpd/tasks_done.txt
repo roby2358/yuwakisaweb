@@ -282,6 +282,17 @@ Updated: 2026-11-17T19:22:32Z
 When a click or key does nothing, say why in the hover bar.
 Today rejected actions are silent: clicking a hex that isn't a legal placement, a bare hex in Mover pick-up mode, D with nothing selected, B with no crate under the cursor, a card or Wait while carrying or mid-bomb. Done looks like: each of these shows a short reason in the hover bar for a couple of seconds ("Can't build on water", "Pick a Thing to move", "Select a Thing first, then D", "Put the Thing down or Esc first"); strings kept in one place in displayartifacts.js; no sound. SHIP.md item: ONB-8. Done when `just cc-test` passes.
 ----
+Priority:   52
+Status: Done
+ID: meta-tags-dagy
+Created: 2026-11-17T02:44:57Z
+Updated: 2026-11-17T19:24:07Z
+
+favicon is the rocket symbol.
+
+Add a meta description, favicon and link-preview tags to index.html.
+Today index.html has only the title. Done looks like: a meta description (the pitch's first sentence), an inline SVG favicon (data: URL, a crate or hex drawn in the game's colors), and og:title, og:description, og:url (https://ttdat.yuwakisa.com/), og:image (absolute URL to a 1200x630 preview image path; the user supplies the image from real play, so use a fixed filename like og.png and list it in SHIP.md as waiting on the user), and twitter:card summary_large_image. SHIP.md items: WEB-3, WEB-4. Done when the tags are in index.html and `just cc-test` passes.
+----
 Priority:   50
 Status: Done
 ID: bigcrate-odd-755q

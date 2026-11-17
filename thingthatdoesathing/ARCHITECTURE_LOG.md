@@ -2,6 +2,9 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-17 — Meta description, Rocket favicon and link-preview tags (D-56)
+index.html gains a description, an inline-SVG Rocket favicon, og:title/description/type/url/image and twitter:card. `og.png` is not in the repo yet.
+
 ### 2026-11-17 — Refused clicks and keys say why (D-55)
 `GameUI.notify` puts a reason from `REASONS` (displayartifacts.js) in the hover bar for
 `NOTICE_MS`, no sound, for a non-legal build or pick hex, a bare hex in pick-up, D or B with
