@@ -1,135 +1,4 @@
-Priority:   88
-Status: ToDo
-ID: save-resume-tbe3
-Created: 2026-11-17T02:44:11Z
-Updated: 2026-11-17T02:44:11Z
-
-Save the run so a reload or closed tab doesn't lose an endless game.
-Today nothing is stored (no localStorage anywhere), so an hours-long Thing Factory run is gone on reload. Done looks like: the UI autosaves the full GameState (including the Rando stream state and the seed, so resume is the same world) after every completed command/tick, to localStorage under a namespaced key (e.g. "ttdat.save.v1"); on boot, if a valid save exists, the intro offers Continue (resume) next to the board-size picker, and picking a size there asks before overwriting the saved run. Every storage touch (including the first access of window.localStorage) is in try/catch; if storage is unavailable the game plays normally and says saving is off in one quiet line. A save with bad JSON, an unexpected shape or a different version number is discarded with a short message and falls back to a new game, never a blank page. The save carries a `version` field; a version bump discards old saves with a message (no migration). Never call localStorage.clear(). State/engine stay DOM-free (GameState gets toJSON/fromJSON if missing; the UI does the storage). Tests: round-trip a mid-game state through JSON and check the next tick is identical to an unsaved copy; a corrupt save falls back cleanly. Record a D-n in RATIONALE and reconcile docs. SHIP.md items: SAVE-1, SAVE-2, SAVE-3, SAVE-4, SAVE-5, SAVE-8, MENU-5. Done when `just cc-test` passes.
-----
-Priority:   86
-Status: ToDo
-ID: ship-bundle-wyxt
-Created: 2026-11-17T02:44:16Z
-Updated: 2026-11-17T02:44:16Z
-
-Build a ship bundle with only the game files, plus cache-busting and a portal zip.
-Today the whole folder (design docs, test/, pjpd/, justfile) is what gets served. Done looks like: a `just ship` recipe (plain shell/node, no npm deps) that copies only what the page needs (index.html, index.css, the game .js files) into dist/, stamps each script/stylesheet URL in dist/index.html with a version query (?v=<short commit hash>) so a returning player never runs new HTML against old JS, writes the commit hash where the game can show it (e.g. a tiny version.js global or a data attribute), and produces dist/ttdat-<hash>.zip with index.html at the zip root, every path relative, exact filename case. dist/ is git-ignored. Add a test that runs the recipe and checks the zip has index.html at root and contains no .md, test/ or pjpd/ files. Document it in CLAUDE.md and a short SHIP.md deploy note. SHIP.md items: WEB-2, PORT-1, LOAD-3. Done when `just ship` produces the zip and `just cc-test` passes.
-----
-Priority:   85
-Status: ToDo
-ID: own-deploy-kfi7
-Created: 2026-11-17T02:44:22Z
-Updated: 2026-11-17T02:44:22Z
-
-Prepare the move to its own repo and a Cloudflare deploy at ttdat.yuwakisa.com.
-The game will leave yuwakisaweb for its own repo and be served over HTTPS at ttdat.yuwakisa.com on Cloudflare. The AI part: write the deploy config for serving dist/ (from the ship-bundle recipe) as Cloudflare static assets (a wrangler.jsonc with an assets directory; leave room for a Worker + D1 binding later for telemetry, but don't add one), a `just deploy` recipe that runs the ship build then `wrangler deploy`, a LICENSE file for the new repo (MIT, same holder as the yuwakisaweb LICENSE, unless told otherwise), a README "Deploy" section listing the steps the user must do by hand (create the repo, move the folder with history if wanted, create the Cloudflare project, add the ttdat.yuwakisa.com custom domain, wrangler login), and how a patch reaches each target (own site: just deploy; itch.io and Newgrounds: upload the new zip). Note in SHIP.md's Targets table how to deploy each target. Also note the old copy at yuwakisa.com/thingthatdoesathing/ should redirect or be removed after the move (the user decides when). Don't run wrangler or touch any account. SHIP.md items: WEB-1, LEGAL-7, OPS-3, OPS-4, X-2. Done when the config, recipe, LICENSE and README section exist and `just cc-test` passes.
-----
-Priority:   84
-Status: ToDo
-ID: sorry-past-zwbb
-Created: 2026-11-17T02:44:25Z
-Updated: 2026-11-17T02:44:25Z
-
-Let phone/tablet visitors past the sorry screen, detect touch better, and offer copy-link.
-Today the sorry page (D-41, index.js, TOUCH_ONLY_QUERY '(pointer: coarse) and (hover: none)') is a hard block, and a tablet with a mouse attached still gets it. Done looks like: the query also requires that no fine pointer is attached ('(any-pointer: fine)' false); the sorry card gets a "Try it anyway" button that boots the normal game (build state, engine and UI then, as index.js does on desktop); and a "Copy link" button (navigator.share when present, else clipboard copy of location.href with a "copied" note) so they can come back on a computer. Keep the existing copy and picture. Update D-41 in RATIONALE, the R-row that tests the boot check, and docs. SHIP.md items: MOB-2, MOB-3, MOB-5. Done when `just cc-test` passes.
-----
-Priority:   82
-Status: ToDo
-ID: key-mods-dsxi
-Created: 2026-11-17T02:44:27Z
-Updated: 2026-11-17T02:44:27Z
-
-Ignore game keys when Ctrl, Alt or Meta is held, so browser shortcuts work and don't act.
-Today gameui.js onKeyDown acts on letters with modifiers held: Ctrl+D (bookmark) also removes the selected Thing, Ctrl+R (reload) also turns the ghost, Ctrl/Cmd+number picks a card, and Space/Enter are preventDefault'ed even with modifiers. Done looks like: onKeyDown (and the overlay key path) returns early without preventDefault when e.ctrlKey, e.altKey or e.metaKey is set; Shift stays allowed (Shift+R turns the other way). Add a uiboot or unit check that Ctrl+D doesn't remove a Thing. SHIP.md item: INP-1. Done when `just cc-test` passes.
-----
-Priority:   80
-Status: ToDo
-ID: portal-frame-aqns
-Created: 2026-11-17T02:44:31Z
-Updated: 2026-11-17T02:44:31Z
-
-Make the game behave in a portal iframe: fit a declared 1280x720 frame and regain key focus.
-On itch.io and Newgrounds the game runs in an iframe at a size we declare (use 1280x720) and gets no keys until clicked. Done looks like: the HUD, tally, hand, Go button and every overlay (intro, help, New Game, news, color picker, sorry) fit at 1280x720 and at a smaller 960x600 with nothing clipped or overlapping (adjust index.css with sizes that shrink, not hardcoded widths); a mousedown on the canvas or panels calls window.focus(); when the window loses focus mid-game (window blur) a small "Click to resume keys" note shows over the board until the next click. No scrollbars on the page at any size. SHIP.md items: PORT-2, PORT-3, MOB-7. Done when `just cc-test` passes (layout itself is checked by the user in a browser).
-----
-Priority:   80
-Status: ToDo
-ID: listing-r8fn
-Created: 2026-11-17T02:44:35Z
-Updated: 2026-11-17T02:44:35Z
-
-Draft the itch.io and Newgrounds listings, the pitch and the AI disclosure in SHIP-LISTING.md.
-Write SHIP-LISTING.md in the game folder with: a one-paragraph pitch (what it is, what you do, how long a session is) reused for the page, both portals and the link preview; a short tagline; genre and tags; input method (mouse and keyboard, desktop only: "mobile friendly" stays OFF on both portals); session length (endless, play in short sittings); content rating notes (cartoon splats, no gore); the declared frame size 1280x720 with fullscreen enabled; the AI disclosure statement (the one in SHIP.md Decisions: code, design, art and sound made with Claude via Claude Code; procedural art and synthesized sound, no generated images or samples) worded for each portal's AI field; and a checklist of the images the user must capture from real play (capsule 630x500 for itch.io, 3+ screenshots at 1280x720, Newgrounds icon sizes per their current upload page). Check each portal's current upload docs and cite the URLs. SHIP.md items: PORT-7, PORT-8, PORT-9, WEB-6. Done when SHIP-LISTING.md exists with every section filled.
-----
-Priority:   80
-Status: ToDo
-ID: cannon-first-xkni
-Created: 2026-11-17T08:27:22Z
-Updated: 2026-11-17T08:27:22Z
-
-Swap the Cannon and the Rocket in the card-unlock order, so the Cannon unlocks first.
-
-Goal: the Cannon arrives one milestone before the Rocket. UNLOCKS in artifacts.js becomes: Belt/Bridge/Wall/Trap, Pusher/Puller, Slide, Spring, Mover, Cannon, Rocket, Bomb (the Bomb stays last).
-
-Settled design: only the order of those two steps changes; no other numbers or rules. Update every place that states the order: artifacts.js UNLOCKS and its comment, ONTOLOGY.md (UNLOCKS numbers row / any rule text naming the order), CRITERIA.md rows that name it, CLAUDE.md, README.md, and any tests that assert the order or which milestone unlocks the Rocket or Cannon (grep for ROCKET/CANNON near unlock). Record it as a user call (an amendment on the decision that set the order, or a new D-n) in RATIONALE.md and add an ARCHITECTURE_LOG.md entry.
-
-Done when: UNLOCKS lists CANNON before ROCKET, the docs agree, `just cc-test` passes, and `just cc-sim 200 small` still runs (median near 52).
-----
-Priority:   64
-Status: ToDo
-ID: credits-55gy
-Created: 2026-11-17T02:44:41Z
-Updated: 2026-11-17T02:44:41Z
-
-Add an About panel: credits, AI disclosure, version, feedback link, privacy note, way back.
-There's no credits or about screen. Done looks like: an "About" button in the top button row (and a link on the intro) opens an overlay (same pattern as Help, an OVERLAY_KEYS entry, closes on click or any key) with: the author (Rob Young / Yuwakisa) and a link to yuwakisa.com; the AI disclosure from SHIP.md Decisions, stated plainly and proudly; tools and libraries (none third-party; system fonts; the 🗑 emoji from the system font); the version (the commit hash the ship build stamps; fall back to "dev" when unstamped) next to the board's seed, both selectable for bug reports; a feedback link (the itch.io page comments, filled in once the page exists; a placeholder constant until then, not shown when empty); and a one-line privacy note that says what the browser keeps (the saved run and settings) and what leaves it (nothing, until telemetry is decided; update when it is). Every external link opens with target="_blank" rel="noopener". SHIP.md items: LEGAL-4, LEGAL-5, WEB-7, OPS-1, OPS-2, PRIV-3, PORT-5. Done when `just cc-test` passes, with a uiboot check that the panel opens and closes.
-----
-Priority:   62
-Status: ToDo
-ID: settings-rrcw
-Created: 2026-11-17T02:44:46Z
-Updated: 2026-11-17T02:44:46Z
-
-Add a Settings panel: volume, animation speed, reduced motion, fullscreen, saved apart from the run.
-There's no settings screen. Done looks like: a "Settings" button in the top button row opens an overlay (OVERLAY_KEYS pattern) with: sound on/off (the same flag as the mute button) and a volume slider (GameSound gets setVolume); animation speed (normal / fast / instant, scaling HOP_MS and RUN_GAP_MS in the UI only); reduced motion (skips bursts and fades; defaults on when prefers-reduced-motion matches); a fullscreen toggle (requestFullscreen on the document, label follows fullscreenchange; hidden if the API is missing); and the "help seen" flag so the keys legend shows once per browser, not every load (still reachable from Help). Settings persist in localStorage under their own namespaced key (e.g. "ttdat.settings.v1"), separate from the saved run, with try/catch and defaults when storage fails; New Game never resets them. Client-only; the engine never sees settings. SHIP.md items: SET-1, SET-2, SET-3, SET-4, AUD-4, SAVE-6, ONB-9, PORT-4. Done when `just cc-test` passes, with a uiboot check that a setting survives a UI reboot on the stub DOM.
-----
-Priority:   60
-Status: ToDo
-ID: hidden-pause-y9wi
-Created: 2026-11-17T02:44:49Z
-Updated: 2026-11-17T02:44:49Z
-
-Stop Go when the tab is hidden, so the game doesn't tick on while nobody watches.
-Today Go keeps ticking from setTimeout (gameui.js scheduleRun) while the tab is in the background. Done looks like: on document visibilitychange to hidden, the UI calls setRunning(false) (Go shows as stopped; the tick in flight finishes); nothing restarts on its own when the tab comes back. Burst/animation frames already stop with requestAnimationFrame. Add a uiboot check with a stubbed visibilitychange. SHIP.md items: MENU-7, LOAD-5. Done when `just cc-test` passes.
-----
-Priority:   60
-Status: ToDo
-ID: crash-screen-zruz
-Created: 2026-11-17T02:44:52Z
-Updated: 2026-11-17T02:44:52Z
-
-Show a "something broke" screen with Reload and Start fresh when an uncaught error happens.
-Today an uncaught error leaves a frozen canvas. Done looks like: window 'error' and 'unhandledrejection' handlers (installed first thing in index.js) show a plain overlay: one line saying the game hit a bug, the error message and the version/seed for a bug report (selectable text), a Reload button, and a Start fresh button that removes only this game's saved-run key (try/catch) and reloads, in case the save is the cause. Shown once; later errors don't stack overlays. SHIP.md item: ERR-3. Done when `just cc-test` passes, with a uiboot check that a thrown error shows the overlay.
-----
-Priority:   60
-Status: ToDo
-ID: crate-start-gtz5
-Created: 2026-11-17T09:05:23Z
-Updated: 2026-11-17T09:05:23Z
-
-Start each board with a much smaller crate cap: small 2, medium 3, large 4, huge 5, still +1 per milestone.
-
-Goal: early play has only a few crates on the board, and the count climbs as milestones are reached. Today `crateCap(size)` in artifacts.js is 0.6 × √area (small 8, medium 12, large 18, huge 36), plus one per milestone reached (gameengine.js crate cap = crateCap(size) + milestonesReached(delivered)).
-
-Settled design:
-- Replace the √area formula with a per-size number: add `crates` to each MAP_SIZES row (small 2, medium 3, large 4, huge 5), and have `crateCap(size)` return `MAP_SIZES[size].crates`. Remove CRATE_CAP_PER_ROOT and its export.
-- Keep the +1 per milestone reached exactly as it is (D-31). Nothing else about spawning changes (the D-43 color cycle, big-crate chance, a clear source).
-- Docs: amend D-31 in RATIONALE.md as a user call (the √area cap is replaced by 2/3/4/5 per size; the +1 per milestone stands), update ONTOLOGY.md (the numbers row and any rule text naming the cap), CRITERIA.md (R-19 and any row that names the cap values), CLAUDE.md (the Tick bullet's "small 8 … huge 36"), DYNAMICS.md if it cites the cap, and add an ARCHITECTURE_LOG.md entry.
-- Tests: fix any test that asserts the old cap values (grep crateCap, CRATE_CAP, R-19) so it checks the new ones.
-
-Done when: crateCap gives 2/3/4/5 for small/medium/large/huge, the cap still grows by one per milestone, docs agree, `just cc-test` passes, and `just cc-sim 200 small` runs; report the new median turns to the first milestone (it is expected to move from 52; record the new number in the D-31 amendment, no retuning).
-----
-Priority:   60
+Priority:   90
 Status: ToDo
 ID: input-queue-pyi5
 Created: 2026-11-17T18:16:12Z
@@ -151,61 +20,21 @@ Settled design:
 
 Done when: a new test in test/integration/uiboot.js turns Go on, catches a tick mid-animation (the existing pattern `for (let i = 0; i < 40 && !ui.anim; i++) advance(50);`), picks a card and presses X; the card is not discarded yet, then after `settle()` the discard has run (turn advanced by one, card slot redrawn). A second case: queue X, then press Esc before the animation ends; nothing is discarded. `just cc-test` passes.
 ----
-Priority:   58
+Priority:   80
 Status: ToDo
-ID: hidpi-678j
-Created: 2026-11-17T02:44:55Z
-Updated: 2026-11-17T02:44:55Z
+ID: cannon-first-xkni
+Created: 2026-11-17T08:27:22Z
+Updated: 2026-11-17T08:27:22Z
 
-Scale the canvas backing store by devicePixelRatio so the board is crisp on HiDPI screens.
-Today resize() sets canvas.width/height to window.innerWidth/innerHeight (gameui.js), so the board is blurry on retina displays and at browser zoom. Done looks like: the backing store is innerWidth*dpr by innerHeight*dpr with CSS size at innerWidth/innerHeight; render() folds dpr into its one setTransform; hexToScreen/screenToHex and the color picker placement stay in CSS pixels so clicks land correctly; MIN_TEXT_PX readability is judged in CSS pixels; the hand card canvases get the same treatment. Re-check on a matchMedia resolution change or resize. SHIP.md item: MOB-8. Done when `just cc-test` passes.
-----
-Priority:   58
-Status: ToDo
-ID: meta-tags-dagy
-Created: 2026-11-17T02:44:57Z
-Updated: 2026-11-17T02:44:57Z
+Swap the Cannon and the Rocket in the card-unlock order, so the Cannon unlocks first.
 
-Add a meta description, favicon and link-preview tags to index.html.
-Today index.html has only the title. Done looks like: a meta description (the pitch's first sentence), an inline SVG favicon (data: URL, a crate or hex drawn in the game's colors), and og:title, og:description, og:url (https://ttdat.yuwakisa.com/), og:image (absolute URL to a 1200x630 preview image path; the user supplies the image from real play, so use a fixed filename like og.png and list it in SHIP.md as waiting on the user), and twitter:card summary_large_image. SHIP.md items: WEB-3, WEB-4. Done when the tags are in index.html and `just cc-test` passes.
-----
-Priority:   57
-Status: ToDo
-ID: rules-ref-6h66
-Created: 2026-11-17T02:45:04Z
-Updated: 2026-11-17T02:45:04Z
+Goal: the Cannon arrives one milestone before the Rocket. UNLOCKS in artifacts.js becomes: Belt/Bridge/Wall/Trap, Pusher/Puller, Slide, Spring, Mover, Cannon, Rocket, Bomb (the Bomb stays last).
 
-Add a rules page to Help: what each Thing and piece does, with the real numbers.
-Today Help lists keys only; the rules live in the README. Done looks like: the Help overlay gets a second page or section (toggle with a tab or Tab key) listing each card that's unlocked so far (and greyed-out ones still to come) with its picture, name and one-line rule with numbers taken from the artifacts at runtime (Spring throws 3, Rocket 8, Cannon clears 4 and lands on the 5th, Bomb clears up to 3, etc.), plus crates/big crates (worth 10), gremlins (wander, die on Traps and targets), ice and Slides (slide free, bumps move 2), water (sinks) and the milestone ladder. Numbers must come from GameArtifacts so they can't drift. SHIP.md item: ONB-4. Done when `just cc-test` passes, with a test that the rendered rule numbers match the artifacts.
-----
-Priority:   56
-Status: ToDo
-ID: color-shapes-r5qq
-Created: 2026-11-17T02:45:00Z
-Updated: 2026-11-17T02:45:00Z
+Settled design: only the order of those two steps changes; no other numbers or rules. Update every place that states the order: artifacts.js UNLOCKS and its comment, ONTOLOGY.md (UNLOCKS numbers row / any rule text naming the order), CRITERIA.md rows that name it, CLAUDE.md, README.md, and any tests that assert the order or which milestone unlocks the Rocket or Cannon (grep for ROCKET/CANNON near unlock). Record it as a user call (an amendment on the decision that set the order, or a new D-n) in RATIONALE.md and add an ARCHITECTURE_LOG.md entry.
 
-Give each crate color a shape mark so color isn't the only signal.
-The four crate colors (and their sources, targets and colored Pushers/Pullers) differ only by color, which colorblind players can't tell apart. Done looks like: each CRATE_COLORS entry gets a distinct small glyph in displayartifacts.js (e.g. circle, triangle, square, diamond) drawn on its crates, on its source's plus and target's rings, on Pusher/Puller Things and cards of that color, and in the color picker swatches and the tally's per-color rows; readable at 1x zoom, skipped below MIN_TEXT_PX like on-map text. Client-only. SHIP.md item: A11Y-2. Done when `just cc-test` passes.
+Done when: UNLOCKS lists CANNON before ROCKET, the docs agree, `just cc-test` passes, and `just cc-sim 200 small` still runs (median near 52).
 ----
-Priority:   55
-Status: ToDo
-ID: reject-why-23qa
-Created: 2026-11-17T02:45:07Z
-Updated: 2026-11-17T02:45:07Z
-
-When a click or key does nothing, say why in the hover bar.
-Today rejected actions are silent: clicking a hex that isn't a legal placement, a bare hex in Mover pick-up mode, D with nothing selected, B with no crate under the cursor, a card or Wait while carrying or mid-bomb. Done looks like: each of these shows a short reason in the hover bar for a couple of seconds ("Can't build on water", "Pick a Thing to move", "Select a Thing first, then D", "Put the Thing down or Esc first"); strings kept in one place in displayartifacts.js; no sound. SHIP.md item: ONB-8. Done when `just cc-test` passes.
-----
-Priority:   55
-Status: ToDo
-ID: action-btns-pebc
-Created: 2026-11-17T02:45:11Z
-Updated: 2026-11-17T02:45:11Z
-
-Put on-screen buttons for Remove, Blast and Turn, with their keys shown.
-Today D (remove the selected Thing), B (blast the hovered crate) and R (turn the ghost) are keyboard-only. Done looks like: a small action bar near the hover bar with "Remove (D)" (enabled when a hex with a Thing is selected), "Turn (R)" (enabled when a card that aims is picked, or a mover is selected, where it turns like clicking the selected hex), and "Blast (B)", which arms a one-shot "click a crate to blast it" mode since a button can't hover (Esc cancels). Each button shows its key. SHIP.md item: INP-4. Done when `just cc-test` passes, with uiboot clicks on each.
-----
-Priority:   55
+Priority:   80
 Status: ToDo
 ID: card-discard-jen3
 Created: 2026-11-17T02:45:30Z
@@ -214,16 +43,25 @@ Updated: 2026-11-17T02:45:30Z
 Discard a card in one action: a red X on each hand card, and Shift+1/2/3.
 Today discarding takes two steps (pick a card, then the Discard spot or X). Done looks like: each card in the hand shows a small red X button in its corner (visible on hover of the card, or always at low opacity); clicking the X discards that card at once through engine.discard(slot), exactly as pick-then-Discard does (one tick, same sound and animation), without picking it first. Shift+1, Shift+2, Shift+3 discard slot 1/2/3 in a single keypress: read the slot from e.code ('Digit1'..'Digit3', also 'Numpad1'..) with e.shiftKey, since e.key gives '!' '@' '#' on US layouts and other characters elsewhere. Both are ignored when the card can't be discarded right now: while an overlay is open, during the tick animation (like a place), while the Mover is carrying a Thing or a bomb has boomed. If a card is picked and its own X or Shift+number is used, that card is discarded; if a different card is picked, the picked one goes back first. Add both to the help legend in index.html, the README controls, CLAUDE.md's input section and the Discard spot's tooltip; record a D-n in RATIONALE and an ARCHITECTURE_LOG entry; add uiboot checks for the X click and Shift+2. Done when `just cc-test` passes.
 ----
-Priority:   55
+Priority:   75
 Status: ToDo
-ID: screencap-wpsv
-Created: 2026-11-17T02:50:58Z
-Updated: 2026-11-17T02:50:58Z
+ID: crate-start-gtz5
+Created: 2026-11-17T09:05:23Z
+Updated: 2026-11-17T09:05:23Z
 
-Add an in-game screencap key that saves the board as PNGs sized for the listings.
-The listings and link preview need images taken from real play (SHIP.md WEB-5, the og:image for WEB-4, itch.io capsule). Done looks like: pressing P (unbound today; ignored with Ctrl/Alt/Meta held and while an overlay is open) saves PNGs of what's on the board right now, drawn from the game canvas: (1) the full canvas at its current size, (2) a 1200x630 crop/scale centered on the board's view for og:image, (3) a 630x500 crop for the itch.io capsule, and (4) a 1280x720 one for screenshots. Each is rendered into an offscreen canvas at that size by re-running render() with a temporary size and transform (so it's sharp, not a scaled bitmap), without the hover highlight or ghost, then downloaded via a temporary <a download="ttdat-<seed>-<turn>-<size>.png"> with canvas.toBlob. A short "Saved 4 screenshots" note shows in the hover bar. The DOM HUD isn't included (OS screenshots cover full-UI shots). Works from file:// too. Client-only. Add P to the help legend and the README (as a capture key), a D-n in RATIONALE, an ARCHITECTURE_LOG entry, and list the outputs in SHIP.md under WEB-5. Add a uiboot check that P calls the download path on the stub DOM (stub toBlob). Done when `just cc-test` passes.
+Start each board with a much smaller crate cap: small 2, medium 3, large 4, huge 5, still +1 per milestone.
+
+Goal: early play has only a few crates on the board, and the count climbs as milestones are reached. Today `crateCap(size)` in artifacts.js is 0.6 × √area (small 8, medium 12, large 18, huge 36), plus one per milestone reached (gameengine.js crate cap = crateCap(size) + milestonesReached(delivered)).
+
+Settled design:
+- Replace the √area formula with a per-size number: add `crates` to each MAP_SIZES row (small 2, medium 3, large 4, huge 5), and have `crateCap(size)` return `MAP_SIZES[size].crates`. Remove CRATE_CAP_PER_ROOT and its export.
+- Keep the +1 per milestone reached exactly as it is (D-31). Nothing else about spawning changes (the D-43 color cycle, big-crate chance, a clear source).
+- Docs: amend D-31 in RATIONALE.md as a user call (the √area cap is replaced by 2/3/4/5 per size; the +1 per milestone stands), update ONTOLOGY.md (the numbers row and any rule text naming the cap), CRITERIA.md (R-19 and any row that names the cap values), CLAUDE.md (the Tick bullet's "small 8 … huge 36"), DYNAMICS.md if it cites the cap, and add an ARCHITECTURE_LOG.md entry.
+- Tests: fix any test that asserts the old cap values (grep crateCap, CRATE_CAP, R-19) so it checks the new ones.
+
+Done when: crateCap gives 2/3/4/5 for small/medium/large/huge, the cap still grows by one per milestone, docs agree, `just cc-test` passes, and `just cc-sim 200 small` runs; report the new median turns to the first milestone (it is expected to move from 52; record the new number in the D-31 amendment, no retuning).
 ----
-Priority:   55
+Priority:   70
 Status: ToDo
 ID: slide-max-u2s8
 Created: 2026-11-17T03:30:43Z
@@ -232,7 +70,88 @@ Updated: 2026-11-17T03:30:43Z
 Cap a slide at 4 hexes: a piece slides over at most 4 slick hexes in a row, then stops.
 Today slick ground (bare ice or a Slide, `isSlick`, D-29) is free in the Motion rules: a piece on the ground keeps going the same way for as long as the slick hexes last, both in a `ground` motion (slick doesn't use up its `n`) and in a `skid` after a landing (D-37). New rule: in one motion, a piece can travel at most 4 hexes by sliding (hexes entered on slick ground beyond its normal step count); when it enters its 4th free slick hex it stops there, as if blocked, even if more ice lies ahead. Settled details: the count is per motion and resets each tick; non-slick ground still costs a ground motion's `n` as now; a skid after a landing counts the same 4; airborne hexes (a flight) don't count; the D-33 bump advance (the line moves 2) is unchanged and doesn't count as sliding; everything that happens on entering a hex (sink, deliver, Trap, bump, target block) still happens on the hexes it does reach. Put the number in artifacts.js as a tunable (e.g. MAX_SLIDE = 4) and the D-n's rationale. Add a CRITERIA R-row with a test dir (a long ice run stops after 4; a skid after a Spring landing stops after 4; a run of 3 is unchanged), update any existing slide/skid tests that assumed unlimited slides, record a D-n in RATIONALE, and reconcile ONTOLOGY (the Motion table and pseudocode), CLAUDE.md and ARCHITECTURE_LOG. Run `just cc-sim 200 small` and `just cc-sim-to 100 small 5` and report the change in turns per milestone. Done when `just cc-test` passes.
 ----
+Priority:   60
+Status: ToDo
+ID: mute-button-twa8
+Created: 2026-11-17T02:32:23Z
+Updated: 2026-11-17T02:45:23Z
+
+Add a mute button to Thing Factory. A "Sound" button sits in the top button row next to Help (index.html, the row with Wait / New Game / Help). It toggles all sound on and off: when muted, every GameSound cue is silent (add a muted flag to sound.js, e.g. GameSound.setMuted(bool) / isMuted(), checked at the single point where cues play; muting must not create the AudioContext). The button shows its state (label "Sound: on" / "Sound: off", or a speaker glyph with a struck-through version, plus a title tooltip) and the M key toggles it too (M isn't bound yet), working at any time, including mid-animation and with a card picked, but not while an overlay that eats keys is open (follow how OVERLAY_KEYS dispatch works). The choice is remembered per player in localStorage (key like "thingfactory.muted"), with every read and write wrapped in try/catch so the game still runs from file:// or with storage blocked (default: sound on). Sound and the mute flag stay client-only; the engine never sees them. Add M to the help legend in index.html and the README controls list, note it in CLAUDE.md's input section, add a short RATIONALE D-n (next free number) and an ARCHITECTURE_LOG entry; add a UI check to test/integration/uiboot.js that clicking the button and pressing M flip the muted flag (stub DOM, no real audio). SHIP.md item: AUD-2 (Tier 1). Done when `just cc-test` passes.
+----
+Priority:   55
+Status: ToDo
+ID: grem-splat-263u
+Created: 2026-11-17T02:42:56Z
+Updated: 2026-11-17T02:42:56Z
+
+Thing Factory: a sliding gremlin that bumps into another piece goes splat. Today (D-33 bumping) when a moving piece runs into a piece standing on slick ground (bare ice or a Slide) with no motion of its own, the bumped piece's line advances 2 hexes and the bumper follows to right behind it. New rule, for a gremlin that is sliding (moving across slick ground, its skid/slide motion) when it makes such a bump: if the bumped piece is a crate (or big crate), the crate moves its 2 hexes as usual, but the gremlin doesn't follow; it splats where it is, at the hop of the bump. If the bumped piece is another gremlin, both gremlins splat at that hop and neither moves on. Splatted gremlins count as ex-gremlins and re-emerge per their template, like any other gremlin splat; emit the existing `splat` events (with `hop`) so the UI animates it with no UI change. Unchanged: a sliding crate bumping anything; a non-sliding gremlin bumping (a gremlin walking or pushed onto a piece, not on slick ground); a sliding gremlin that is simply blocked (Wall, mountain, a piece not on slick ground) stops as now. Make it data-driven if it fits (e.g. a field on the gremlin template in PIECES such as `splatsOnSlideBump`), not a kind check in the engine. Add a CRITERIA R-row with a test dir (crate case, gremlin-gremlin case, and a non-sliding gremlin bump staying as before), a RATIONALE D-n, and reconcile ONTOLOGY, CLAUDE.md and ARCHITECTURE_LOG. Done when `just cc-test` passes and `just cc-sim 200 small` runs clean.
+----
+Priority:   54
+Status: ToDo
+ID: reject-why-23qa
+Created: 2026-11-17T02:45:07Z
+Updated: 2026-11-17T02:45:07Z
+
+When a click or key does nothing, say why in the hover bar.
+Today rejected actions are silent: clicking a hex that isn't a legal placement, a bare hex in Mover pick-up mode, D with nothing selected, B with no crate under the cursor, a card or Wait while carrying or mid-bomb. Done looks like: each of these shows a short reason in the hover bar for a couple of seconds ("Can't build on water", "Pick a Thing to move", "Select a Thing first, then D", "Put the Thing down or Esc first"); strings kept in one place in displayartifacts.js; no sound. SHIP.md item: ONB-8. Done when `just cc-test` passes.
+----
 Priority:   52
+Status: ToDo
+ID: key-mods-dsxi
+Created: 2026-11-17T02:44:27Z
+Updated: 2026-11-17T02:44:27Z
+
+Ignore game keys when Ctrl, Alt or Meta is held, so browser shortcuts work and don't act.
+Today gameui.js onKeyDown acts on letters with modifiers held: Ctrl+D (bookmark) also removes the selected Thing, Ctrl+R (reload) also turns the ghost, Ctrl/Cmd+number picks a card, and Space/Enter are preventDefault'ed even with modifiers. Done looks like: onKeyDown (and the overlay key path) returns early without preventDefault when e.ctrlKey, e.altKey or e.metaKey is set; Shift stays allowed (Shift+R turns the other way). Add a uiboot or unit check that Ctrl+D doesn't remove a Thing. SHIP.md item: INP-1. Done when `just cc-test` passes.
+----
+Priority:   52
+Status: ToDo
+ID: meta-tags-dagy
+Created: 2026-11-17T02:44:57Z
+Updated: 2026-11-17T02:44:57Z
+
+favicon is the rocket symbol.
+
+Add a meta description, favicon and link-preview tags to index.html.
+Today index.html has only the title. Done looks like: a meta description (the pitch's first sentence), an inline SVG favicon (data: URL, a crate or hex drawn in the game's colors), and og:title, og:description, og:url (https://ttdat.yuwakisa.com/), og:image (absolute URL to a 1200x630 preview image path; the user supplies the image from real play, so use a fixed filename like og.png and list it in SHIP.md as waiting on the user), and twitter:card summary_large_image. SHIP.md items: WEB-3, WEB-4. Done when the tags are in index.html and `just cc-test` passes.
+----
+Priority:   51
+Status: ToDo
+ID: sorry-past-zwbb
+Created: 2026-11-17T02:44:25Z
+Updated: 2026-11-17T02:44:25Z
+
+Let phone/tablet visitors past the sorry screen, detect touch better, and offer copy-link.
+Today the sorry page (D-41, index.js, TOUCH_ONLY_QUERY '(pointer: coarse) and (hover: none)') is a hard block, and a tablet with a mouse attached still gets it. Done looks like: the query also requires that no fine pointer is attached ('(any-pointer: fine)' false); the sorry card gets a "Try it anyway" button that boots the normal game (build state, engine and UI then, as index.js does on desktop); and a "Copy link" button (navigator.share when present, else clipboard copy of location.href with a "copied" note) so they can come back on a computer. Keep the existing copy and picture. Update D-41 in RATIONALE, the R-row that tests the boot check, and docs. SHIP.md items: MOB-2, MOB-3, MOB-5. Done when `just cc-test` passes.
+----
+Priority:   49
+Status: ToDo
+ID: own-deploy-kfi7
+Created: 2026-11-17T02:44:22Z
+Updated: 2026-11-17T02:44:22Z
+
+Prepare the move to its own repo and a Cloudflare deploy at ttdat.yuwakisa.com.
+The game will leave yuwakisaweb for its own repo and be served over HTTPS at ttdat.yuwakisa.com on Cloudflare. The AI part: write the deploy config for serving dist/ (from the ship-bundle recipe) as Cloudflare static assets (a wrangler.jsonc with an assets directory; leave room for a Worker + D1 binding later for telemetry, but don't add one), a `just deploy` recipe that runs the ship build then `wrangler deploy`, a LICENSE file for the new repo (MIT, same holder as the yuwakisaweb LICENSE, unless told otherwise), a README "Deploy" section listing the steps the user must do by hand (create the repo, move the folder with history if wanted, create the Cloudflare project, add the ttdat.yuwakisa.com custom domain, wrangler login), and how a patch reaches each target (own site: just deploy; itch.io and Newgrounds: upload the new zip). Note in SHIP.md's Targets table how to deploy each target. Also note the old copy at yuwakisa.com/thingthatdoesathing/ should redirect or be removed after the move (the user decides when). Don't run wrangler or touch any account. SHIP.md items: WEB-1, LEGAL-7, OPS-3, OPS-4, X-2. Done when the config, recipe, LICENSE and README section exist and `just cc-test` passes.
+----
+Priority:   49
+Status: ToDo
+ID: credits-55gy
+Created: 2026-11-17T02:44:41Z
+Updated: 2026-11-17T02:44:41Z
+
+Add an About panel: credits, AI disclosure, version, feedback link, privacy note, way back.
+There's no credits or about screen. Done looks like: an "About" button in the top button row (and a link on the intro) opens an overlay (same pattern as Help, an OVERLAY_KEYS entry, closes on click or any key) with: the author (Rob Young / Yuwakisa) and a link to yuwakisa.com; the AI disclosure from SHIP.md Decisions, stated plainly and proudly; tools and libraries (none third-party; system fonts; the 🗑 emoji from the system font); the version (the commit hash the ship build stamps; fall back to "dev" when unstamped) next to the board's seed, both selectable for bug reports; a feedback link (the itch.io page comments, filled in once the page exists; a placeholder constant until then, not shown when empty); and a one-line privacy note that says what the browser keeps (the saved run and settings) and what leaves it (nothing, until telemetry is decided; update when it is). Every external link opens with target="_blank" rel="noopener". SHIP.md items: LEGAL-4, LEGAL-5, WEB-7, OPS-1, OPS-2, PRIV-3, PORT-5. Done when `just cc-test` passes, with a uiboot check that the panel opens and closes.
+----
+Priority:   49
+Status: ToDo
+ID: crash-screen-zruz
+Created: 2026-11-17T02:44:52Z
+Updated: 2026-11-17T02:44:52Z
+
+Show a "something broke" screen with Reload and Start fresh when an uncaught error happens.
+Today an uncaught error leaves a frozen canvas. Done looks like: window 'error' and 'unhandledrejection' handlers (installed first thing in index.js) show a plain overlay: one line saying the game hit a bug, the error message and the version/seed for a bug report (selectable text), a Reload button, and a Start fresh button that removes only this game's saved-run key (try/catch) and reloads, in case the save is the cause. Shown once; later errors don't stack overlays. SHIP.md item: ERR-3. Done when `just cc-test` passes, with a uiboot check that a thrown error shows the overlay.
+----
+Priority:   49
 Status: ToDo
 ID: run-stats-m6pe
 Created: 2026-11-17T02:45:14Z
@@ -241,32 +160,7 @@ Updated: 2026-11-17T02:45:14Z
 Show a run summary: milestones and the turns they took, with the tally.
 The game is endless, so there's no end screen; the payoff is the milestone banner, and New Game discards the run without a look back. Done looks like: the New Game panel (and a "Run" line in the tally that opens the same view) shows this run's board size, seed, turn count, each milestone reached with its turn, and delivered / lost / ex-gremlins / trapped. Milestone turns are recorded in GameState (if not already) so they survive save/resume. SHIP.md item: MENU-6. Done when `just cc-test` passes.
 ----
-Priority:   51
-Status: ToDo
-ID: wipe-data-mw24
-Created: 2026-11-17T02:45:16Z
-Updated: 2026-11-17T02:45:16Z
-
-Add a "Forget my data" control that deletes only this game's saved run and settings.
-Done looks like: a button in Settings (or About, if Settings isn't built yet) that asks to confirm, then removes only this game's localStorage keys (the saved run and settings keys; never localStorage.clear()), in try/catch, and starts a fresh intro. SHIP.md item: SAVE-7. Done when `just cc-test` passes.
-----
-Priority:   50
-Status: ToDo
-ID: mute-button-twa8
-Created: 2026-11-17T02:32:23Z
-Updated: 2026-11-17T02:45:23Z
-
-Add a mute button to Thing Factory. A "Sound" button sits in the top button row next to Help (index.html, the row with Wait / New Game / Help). It toggles all sound on and off: when muted, every GameSound cue is silent (add a muted flag to sound.js, e.g. GameSound.setMuted(bool) / isMuted(), checked at the single point where cues play; muting must not create the AudioContext). The button shows its state (label "Sound: on" / "Sound: off", or a speaker glyph with a struck-through version, plus a title tooltip) and the M key toggles it too (M isn't bound yet), working at any time, including mid-animation and with a card picked, but not while an overlay that eats keys is open (follow how OVERLAY_KEYS dispatch works). The choice is remembered per player in localStorage (key like "thingfactory.muted"), with every read and write wrapped in try/catch so the game still runs from file:// or with storage blocked (default: sound on). Sound and the mute flag stay client-only; the engine never sees them. Add M to the help legend in index.html and the README controls list, note it in CLAUDE.md's input section, add a short RATIONALE D-n (next free number) and an ARCHITECTURE_LOG entry; add a UI check to test/integration/uiboot.js that clicking the button and pressing M flip the muted flag (stub DOM, no real audio). SHIP.md item: AUD-2 (Tier 1). Done when `just cc-test` passes.
-----
-Priority:   50
-Status: ToDo
-ID: grem-splat-263u
-Created: 2026-11-17T02:42:56Z
-Updated: 2026-11-17T02:42:56Z
-
-Thing Factory: a sliding gremlin that bumps into another piece goes splat. Today (D-33 bumping) when a moving piece runs into a piece standing on slick ground (bare ice or a Slide) with no motion of its own, the bumped piece's line advances 2 hexes and the bumper follows to right behind it. New rule, for a gremlin that is sliding (moving across slick ground, its skid/slide motion) when it makes such a bump: if the bumped piece is a crate (or big crate), the crate moves its 2 hexes as usual, but the gremlin doesn't follow; it splats where it is, at the hop of the bump. If the bumped piece is another gremlin, both gremlins splat at that hop and neither moves on. Splatted gremlins count as ex-gremlins and re-emerge per their template, like any other gremlin splat; emit the existing `splat` events (with `hop`) so the UI animates it with no UI change. Unchanged: a sliding crate bumping anything; a non-sliding gremlin bumping (a gremlin walking or pushed onto a piece, not on slick ground); a sliding gremlin that is simply blocked (Wall, mountain, a piece not on slick ground) stops as now. Make it data-driven if it fits (e.g. a field on the gremlin template in PIECES such as `splatsOnSlideBump`), not a kind check in the engine. Add a CRITERIA R-row with a test dir (crate case, gremlin-gremlin case, and a non-sliding gremlin bump staying as before), a RATIONALE D-n, and reconcile ONTOLOGY, CLAUDE.md and ARCHITECTURE_LOG. Done when `just cc-test` passes and `just cc-sim 200 small` runs clean.
-----
-Priority:   50
+Priority:   49
 Status: ToDo
 ID: string-table-c2cy
 Created: 2026-11-17T02:45:19Z
@@ -274,6 +168,42 @@ Updated: 2026-11-17T02:45:19Z
 
 Move player-facing text into one keyed string table with whole-sentence templates.
 English only for now, but the text is scattered: index.html panels, THING_LOOK names and verb lines, gameui.js literals (banners, hover bar, card text, news), and some sentences are built by concatenation. Done looks like: a STRINGS table in displayartifacts.js keyed by id, with named-slot templates ("{n} more booms; Esc ends it") filled by one small format helper; gameui.js and the static panels read from it (static HTML text set at boot from the table); no player-facing sentence assembled with +. Behavior and wording unchanged. SHIP.md items: LOC-2, LOC-3. Done when `just cc-test` passes and a grep finds no player-facing string literals left in gameui.js outside the table.
+----
+Priority:   48
+Status: ToDo
+ID: settings-rrcw
+Created: 2026-11-17T02:44:46Z
+Updated: 2026-11-17T02:44:46Z
+
+Add a Settings panel: volume, animation speed, reduced motion, fullscreen, saved apart from the run.
+There's no settings screen. Done looks like: a "Settings" button in the top button row opens an overlay (OVERLAY_KEYS pattern) with: sound on/off (the same flag as the mute button) and a volume slider (GameSound gets setVolume); animation speed (normal / fast / instant, scaling HOP_MS and RUN_GAP_MS in the UI only); reduced motion (skips bursts and fades; defaults on when prefers-reduced-motion matches); a fullscreen toggle (requestFullscreen on the document, label follows fullscreenchange; hidden if the API is missing); and the "help seen" flag so the keys legend shows once per browser, not every load (still reachable from Help). Settings persist in localStorage under their own namespaced key (e.g. "ttdat.settings.v1"), separate from the saved run, with try/catch and defaults when storage fails; New Game never resets them. Client-only; the engine never sees settings. SHIP.md items: SET-1, SET-2, SET-3, SET-4, AUD-4, SAVE-6, ONB-9, PORT-4. Done when `just cc-test` passes, with a uiboot check that a setting survives a UI reboot on the stub DOM.
+----
+Priority:   46
+Status: ToDo
+ID: ship-bundle-wyxt
+Created: 2026-11-17T02:44:16Z
+Updated: 2026-11-17T02:44:16Z
+
+Build a ship bundle with only the game files, plus cache-busting and a portal zip.
+Today the whole folder (design docs, test/, pjpd/, justfile) is what gets served. Done looks like: a `just ship` recipe (plain shell/node, no npm deps) that copies only what the page needs (index.html, index.css, the game .js files) into dist/, stamps each script/stylesheet URL in dist/index.html with a version query (?v=<short commit hash>) so a returning player never runs new HTML against old JS, writes the commit hash where the game can show it (e.g. a tiny version.js global or a data attribute), and produces dist/ttdat-<hash>.zip with index.html at the zip root, every path relative, exact filename case. dist/ is git-ignored. Add a test that runs the recipe and checks the zip has index.html at root and contains no .md, test/ or pjpd/ files. Document it in CLAUDE.md and a short SHIP.md deploy note. SHIP.md items: WEB-2, PORT-1, LOAD-3. Done when `just ship` produces the zip and `just cc-test` passes.
+----
+Priority:   45
+Status: ToDo
+ID: save-resume-tbe3
+Created: 2026-11-17T02:44:11Z
+Updated: 2026-11-17T02:44:11Z
+
+Save the run so a reload or closed tab doesn't lose an endless game.
+Today nothing is stored (no localStorage anywhere), so an hours-long Thing Factory run is gone on reload. Done looks like: the UI autosaves the full GameState (including the Rando stream state and the seed, so resume is the same world) after every completed command/tick, to localStorage under a namespaced key (e.g. "ttdat.save.v1"); on boot, if a valid save exists, the intro offers Continue (resume) next to the board-size picker, and picking a size there asks before overwriting the saved run. Every storage touch (including the first access of window.localStorage) is in try/catch; if storage is unavailable the game plays normally and says saving is off in one quiet line. A save with bad JSON, an unexpected shape or a different version number is discarded with a short message and falls back to a new game, never a blank page. The save carries a `version` field; a version bump discards old saves with a message (no migration). Never call localStorage.clear(). State/engine stay DOM-free (GameState gets toJSON/fromJSON if missing; the UI does the storage). Tests: round-trip a mid-game state through JSON and check the next tick is identical to an unsaved copy; a corrupt save falls back cleanly. Record a D-n in RATIONALE and reconcile docs. SHIP.md items: SAVE-1, SAVE-2, SAVE-3, SAVE-4, SAVE-5, SAVE-8, MENU-5. Done when `just cc-test` passes.
+----
+Priority:   45
+Status: ToDo
+ID: screencap-wpsv
+Created: 2026-11-17T02:50:58Z
+Updated: 2026-11-17T02:50:58Z
+
+Add an in-game screencap key that saves the board as PNGs sized for the listings.
+The listings and link preview need images taken from real play (SHIP.md WEB-5, the og:image for WEB-4, itch.io capsule). Done looks like: pressing P (unbound today; ignored with Ctrl/Alt/Meta held and while an overlay is open) saves PNGs of what's on the board right now, drawn from the game canvas: (1) the full canvas at its current size, (2) a 1200x630 crop/scale centered on the board's view for og:image, (3) a 630x500 crop for the itch.io capsule, and (4) a 1280x720 one for screenshots. Each is rendered into an offscreen canvas at that size by re-running render() with a temporary size and transform (so it's sharp, not a scaled bitmap), without the hover highlight or ghost, then downloaded via a temporary <a download="ttdat-<seed>-<turn>-<size>.png"> with canvas.toBlob. A short "Saved 4 screenshots" note shows in the hover bar. The DOM HUD isn't included (OS screenshots cover full-UI shots). Works from file:// too. Client-only. Add P to the help legend and the README (as a capture key), a D-n in RATIONALE, an ARCHITECTURE_LOG entry, and list the outputs in SHIP.md under WEB-5. Add a uiboot check that P calls the download path on the stub DOM (stub toBlob). Done when `just cc-test` passes.
 ----
 Priority:   45
 Status: ToDo
@@ -296,3 +226,59 @@ Designer's rule:
 - test/sim.js and tests that call newGame(seed, size) with integers: keep an integer path, newGame accepting a build seed directly, or update the callers. Decide and log; don't break `just cc-sim` reproducibility.
 
 Docs: ONTOLOGY (state fields, newGame contract, which randomness belongs to which seed, the h+1 fallback), CRITERIA rows (same words + size = same board; different run seeds = same board, different spawns/hand; invalid words → ok:false; a seed that fails to generate falls through to h+1 deterministically, testable by stubbing or finding a failing seed; tests in the test/R-n dirs), RATIONALE new D-n, ARCHITECTURE_LOG, README (sharing a board), CLAUDE.md (GameState fields, the newGame signature, L5 overlay field, the knownGoodSeed mention). Agent calls go in pjpd/decisions.md. `just cc-test` green; cc-sim numbers unchanged in spirit (seeds shift, but the medians should be close).
+----
+Priority:   40
+Status: ToDo
+ID: portal-frame-aqns
+Created: 2026-11-17T02:44:31Z
+Updated: 2026-11-17T02:44:31Z
+
+Make the game behave in a portal iframe: fit a declared 1280x720 frame and regain key focus.
+On itch.io and Newgrounds the game runs in an iframe at a size we declare (use 1280x720) and gets no keys until clicked. Done looks like: the HUD, tally, hand, Go button and every overlay (intro, help, New Game, news, color picker, sorry) fit at 1280x720 and at a smaller 960x600 with nothing clipped or overlapping (adjust index.css with sizes that shrink, not hardcoded widths); a mousedown on the canvas or panels calls window.focus(); when the window loses focus mid-game (window blur) a small "Click to resume keys" note shows over the board until the next click. No scrollbars on the page at any size. SHIP.md items: PORT-2, PORT-3, MOB-7. Done when `just cc-test` passes (layout itself is checked by the user in a browser).
+----
+Priority:   40
+Status: ToDo
+ID: listing-r8fn
+Created: 2026-11-17T02:44:35Z
+Updated: 2026-11-17T02:44:35Z
+
+Draft the itch.io and Newgrounds listings, the pitch and the AI disclosure in SHIP-LISTING.md.
+Write SHIP-LISTING.md in the game folder with: a one-paragraph pitch (what it is, what you do, how long a session is) reused for the page, both portals and the link preview; a short tagline; genre and tags; input method (mouse and keyboard, desktop only: "mobile friendly" stays OFF on both portals); session length (endless, play in short sittings); content rating notes (cartoon splats, no gore); the declared frame size 1280x720 with fullscreen enabled; the AI disclosure statement (the one in SHIP.md Decisions: code, design, art and sound made with Claude via Claude Code; procedural art and synthesized sound, no generated images or samples) worded for each portal's AI field; and a checklist of the images the user must capture from real play (capsule 630x500 for itch.io, 3+ screenshots at 1280x720, Newgrounds icon sizes per their current upload page). Check each portal's current upload docs and cite the URLs. SHIP.md items: PORT-7, PORT-8, PORT-9, WEB-6. Done when SHIP-LISTING.md exists with every section filled.
+----
+Priority:   40
+Status: ToDo
+ID: hidden-pause-y9wi
+Created: 2026-11-17T02:44:49Z
+Updated: 2026-11-17T02:44:49Z
+
+Hm, talk about if we want to do this one, or if we want the game to idle-run when it's offscreen.
+
+Stop Go when the tab is hidden, so the game doesn't tick on while nobody watches.
+Today Go keeps ticking from setTimeout (gameui.js scheduleRun) while the tab is in the background. Done looks like: on document visibilitychange to hidden, the UI calls setRunning(false) (Go shows as stopped; the tick in flight finishes); nothing restarts on its own when the tab comes back. Burst/animation frames already stop with requestAnimationFrame. Add a uiboot check with a stubbed visibilitychange. SHIP.md items: MENU-7, LOAD-5. Done when `just cc-test` passes.
+----
+Priority:   40
+Status: ToDo
+ID: hidpi-678j
+Created: 2026-11-17T02:44:55Z
+Updated: 2026-11-17T02:44:55Z
+
+Scale the canvas backing store by devicePixelRatio so the board is crisp on HiDPI screens.
+Today resize() sets canvas.width/height to window.innerWidth/innerHeight (gameui.js), so the board is blurry on retina displays and at browser zoom. Done looks like: the backing store is innerWidth*dpr by innerHeight*dpr with CSS size at innerWidth/innerHeight; render() folds dpr into its one setTransform; hexToScreen/screenToHex and the color picker placement stay in CSS pixels so clicks land correctly; MIN_TEXT_PX readability is judged in CSS pixels; the hand card canvases get the same treatment. Re-check on a matchMedia resolution change or resize. SHIP.md item: MOB-8. Done when `just cc-test` passes.
+----
+Priority:   40
+Status: ToDo
+ID: action-btns-pebc
+Created: 2026-11-17T02:45:11Z
+Updated: 2026-11-17T02:45:11Z
+
+Put on-screen buttons for Remove, Blast and Turn, with their keys shown.
+Today D (remove the selected Thing), B (blast the hovered crate) and R (turn the ghost) are keyboard-only. Done looks like: a small action bar near the hover bar with "Remove (D)" (enabled when a hex with a Thing is selected), "Turn (R)" (enabled when a card that aims is picked, or a mover is selected, where it turns like clicking the selected hex), and "Blast (B)", which arms a one-shot "click a crate to blast it" mode since a button can't hover (Esc cancels). Each button shows its key. SHIP.md item: INP-4. Done when `just cc-test` passes, with uiboot clicks on each.
+----
+Priority:   40
+Status: ToDo
+ID: wipe-data-mw24
+Created: 2026-11-17T02:45:16Z
+Updated: 2026-11-17T02:45:16Z
+
+Add a "Forget my data" control that deletes only this game's saved run and settings.
+Done looks like: a button in Settings (or About, if Settings isn't built yet) that asks to confirm, then removes only this game's localStorage keys (the saved run and settings keys; never localStorage.clear()), in try/catch, and starts a fresh intro. SHIP.md item: SAVE-7. Done when `just cc-test` passes.

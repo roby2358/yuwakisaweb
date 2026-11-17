@@ -118,6 +118,26 @@ Open questions to settle before it becomes a task:
 - Rarity and place in UNLOCKS; only useful on boards with inland water, so maybe only dealt when there's water.
 - Look: a boat glyph; a line to its partner when hovered or while placing.
 ----
+Score:   50
+ID: rules-hi6e
+Created: 2026-11-17T18:38:42Z
+Updated: 2026-11-17T18:38:42Z
+
+TODO Mark this as an idea and let's talk about it.
+
+Add a rules page to Help: what each Thing and piece does, with the real numbers.
+Today Help lists keys only; the rules live in the README. Done looks like: the Help overlay gets a second page or section (toggle with a tab or Tab key) listing each card that's unlocked so far (and greyed-out ones still to come) with its picture, name and one-line rule with numbers taken from the artifacts at runtime (Spring throws 3, Rocket 8, Cannon clears 4 and lands on the 5th, Bomb clears up to 3, etc.), plus crates/big crates (worth 10), gremlins (wander, die on Traps and targets), ice and Slides (slide free, bumps move 2), water (sinks) and the milestone ladder. Numbers must come from GameArtifacts so they can't drift. SHIP.md item: ONB-4. Done when `just cc-test` passes, with a test that the rendered rule numbers match the artifacts.
+----
+Score:   50
+ID: color-67p7
+Created: 2026-11-17T18:38:42Z
+Updated: 2026-11-17T18:38:42Z
+
+TODO move this to an idea and let's talk about it
+
+Give each crate color a shape mark so color isn't the only signal.
+The four crate colors (and their sources, targets and colored Pushers/Pullers) differ only by color, which colorblind players can't tell apart. Done looks like: each CRATE_COLORS entry gets a distinct small glyph in displayartifacts.js (e.g. circle, triangle, square, diamond) drawn on its crates, on its source's plus and target's rings, on Pusher/Puller Things and cards of that color, and in the color picker swatches and the tally's per-color rows; readable at 1x zoom, skipped below MIN_TEXT_PX like on-map text. Client-only. SHIP.md item: A11Y-2. Done when `just cc-test` passes.
+----
 Score:   40
 ID: zoom-lod-t65a
 Created: 2026-11-12T08:52:10Z
