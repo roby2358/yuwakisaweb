@@ -111,6 +111,24 @@ Updated: 2026-11-17T02:44:52Z
 Show a "something broke" screen with Reload and Start fresh when an uncaught error happens.
 Today an uncaught error leaves a frozen canvas. Done looks like: window 'error' and 'unhandledrejection' handlers (installed first thing in index.js) show a plain overlay: one line saying the game hit a bug, the error message and the version/seed for a bug report (selectable text), a Reload button, and a Start fresh button that removes only this game's saved-run key (try/catch) and reloads, in case the save is the cause. Shown once; later errors don't stack overlays. SHIP.md item: ERR-3. Done when `just cc-test` passes, with a uiboot check that a thrown error shows the overlay.
 ----
+Priority:   60
+Status: ToDo
+ID: crate-start-gtz5
+Created: 2026-11-17T09:05:23Z
+Updated: 2026-11-17T09:05:23Z
+
+Start each board with a much smaller crate cap: small 2, medium 3, large 4, huge 5, still +1 per milestone.
+
+Goal: early play has only a few crates on the board, and the count climbs as milestones are reached. Today `crateCap(size)` in artifacts.js is 0.6 × √area (small 8, medium 12, large 18, huge 36), plus one per milestone reached (gameengine.js crate cap = crateCap(size) + milestonesReached(delivered)).
+
+Settled design:
+- Replace the √area formula with a per-size number: add `crates` to each MAP_SIZES row (small 2, medium 3, large 4, huge 5), and have `crateCap(size)` return `MAP_SIZES[size].crates`. Remove CRATE_CAP_PER_ROOT and its export.
+- Keep the +1 per milestone reached exactly as it is (D-31). Nothing else about spawning changes (the D-43 color cycle, big-crate chance, a clear source).
+- Docs: amend D-31 in RATIONALE.md as a user call (the √area cap is replaced by 2/3/4/5 per size; the +1 per milestone stands), update ONTOLOGY.md (the numbers row and any rule text naming the cap), CRITERIA.md (R-19 and any row that names the cap values), CLAUDE.md (the Tick bullet's "small 8 … huge 36"), DYNAMICS.md if it cites the cap, and add an ARCHITECTURE_LOG.md entry.
+- Tests: fix any test that asserts the old cap values (grep crateCap, CRATE_CAP, R-19) so it checks the new ones.
+
+Done when: crateCap gives 2/3/4/5 for small/medium/large/huge, the cap still grows by one per milestone, docs agree, `just cc-test` passes, and `just cc-sim 200 small` runs; report the new median turns to the first milestone (it is expected to move from 52; record the new number in the D-31 amendment, no retuning).
+----
 Priority:   58
 Status: ToDo
 ID: hidpi-678j
