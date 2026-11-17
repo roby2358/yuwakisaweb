@@ -2,7 +2,7 @@
 // everything (water, mountains, Walls, pieces, gremlins unsplatted, targets, Traps), then the
 // 5th is an ordinary ground step (sinks, delivers, blocked, bumps a line on slick ground, slides
 // on ice, kills a gremlin on a Trap). Blocked there, it comes down on the 4th hex if the ground
-// could take it, else it doesn't fire; a path off the map doesn't fire (D-36). It unlocks last.
+// could take it, else it doesn't fire; a path off the map doesn't fire (D-36). It is the last Thing to unlock (only the Bomb card comes after it, D-48).
 'use strict';
 const { check, done } = require('../helpers/check');
 const { flatGame, DIR } = require('../helpers/load');
@@ -138,7 +138,8 @@ for (const [what, fourth] of Object.entries(illegal4th)) {
 }
 {
     const { UNLOCKS } = flatGame().g.GameArtifacts;
-    check('the Cannon is the last unlock step, right after the Rocket',
-        UNLOCKS[UNLOCKS.length - 1].join() === 'CANNON' && UNLOCKS[UNLOCKS.length - 2].join() === 'ROCKET');
+    check('the Cannon is the last Thing to unlock, right after the Rocket (only the Bomb card after it)',
+        UNLOCKS[UNLOCKS.length - 2].join() === 'CANNON' && UNLOCKS[UNLOCKS.length - 3].join() === 'ROCKET' &&
+        UNLOCKS[UNLOCKS.length - 1].join() === 'BOMB');
 }
 done();

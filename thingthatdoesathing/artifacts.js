@@ -56,12 +56,16 @@ const GameArtifacts = (function () {
 
     // Tool cards: cards that aren't Things. A tool is never built; it's played on the board
     // in its own command (D-47). A card's kind is a THINGS key or a TOOLS key.
-    //   picks   — what its first click on the board takes: 'thing' (a placed Thing)
+    //   picks   — what its clicks on the board take: 'thing' (a placed Thing), 'filled' (a hex
+    //             holding a Thing or a piece; a source or target itself is never taken)
+    //   wipes   — how many hexes it clears in one go (0: none, D-48; not THINGS' `clears`)
     //   colored — always false: a tool is dealt on any board (the deck's `colored` gate, D-22)
     //   weight  — relative draw chance for the hand (rare, like a Pusher or Puller, D-32)
     // MOVER: pick up a placed Thing and put it down again (same kind, same color), or scrap it.
+    // BOMB: clear up to `wipes` hexes of their Thing and piece, then one tick (D-48).
     const TOOLS = {
-        MOVER:   { picks: 'thing', colored: false, weight: 0.5 },
+        MOVER:   { picks: 'thing',  wipes: 0, colored: false, weight: 0.5 },
+        BOMB:    { picks: 'filled', wipes: 3, colored: false, weight: 0.5 },
     };
 
     // Every card kind, Things first, and the template a card's kind names.
@@ -80,6 +84,7 @@ const GameArtifacts = (function () {
         ['MOVER'],
         ['ROCKET'],
         ['CANNON'],
+        ['BOMB'],
     ];
 
     // Piece templates, keyed by Piece.kind:

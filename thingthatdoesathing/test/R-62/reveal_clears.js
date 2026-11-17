@@ -1,5 +1,5 @@
 // R-62: a newly opened source or target takes its hex whatever stands there (D-44): a Thing
-// is removed (`clear{kind, q, r}`, no card back), a gremlin is destroyed (`splat`, +1
+// is removed (`clear{kind, q, r, hop}` at the tick's last hop, no card back), a gremlin is destroyed (`splat`, +1
 // exGremlins, and it re-emerges like any splat), a crate is destroyed (`splat`, `lost` + its
 // value), source or target, except a crate on its own color's new target, which is
 // delivered (`deliver`, D-46). The splats come at the tick's last hop, after the `open`. An
@@ -77,7 +77,7 @@ for (let seed = 1; seed <= 30; seed++) {
     }
     if (t) {
         things++;
-        ok.push(clears.some(e => after.includes(e) && e.kind === t.kind && e.q === tgt.q && e.r === tgt.r),
+        ok.push(clears.some(e => after.includes(e) && e.kind === t.kind && e.q === tgt.q && e.r === tgt.r && e.hop === lastHop(res)),
             !state.things.includes(t));
     }
     if (enh) {

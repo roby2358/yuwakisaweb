@@ -1,11 +1,3 @@
-Priority:   55
-Status: ToDo
-ID: bomb-card-w466
-Created: 2026-11-17T01:51:18Z
-Updated: 2026-11-17T01:51:18Z
-
-Add a Bomb card to Thing Factory, a cleanup card that wipes up to 3 hexes. Picking the Bomb card from the hand arms a bomb. If you press Esc or right-click before the first clear, the card goes back and stays in the hand, nothing happens and nothing ticks. Clicking a hex that holds anything (a Thing, a crate or a gremlin) clears the whole hex: the Thing is removed, a crate counts as lost (loseValue), a gremlin counts as an ex-gremlin. From that first clear on the card is spent, but the bomb stays armed for 2 more clears (3 in all). Clicking an empty hex does nothing and doesn't use a clear. Sources and targets themselves can't be bombed (a piece standing on one can be). The bomb ends after the 3rd clear, or when the player presses Esc or right-clicks after at least one clear; either way the world ticks exactly once when the bomb ends (the clears themselves don't tick). Engine: one command taking the list of 1 to 3 hexes, so the whole bomb is a single atomic command that returns { ok, events } and ticks once; it fails with ok:false and changes nothing if any hex is empty, off the board, a source/target hex, or listed twice. The UI collects the clicks (showing which hexes are marked for clearing) and sends the command when the bomb ends. Events: per cleared hex, a Thing removal plus the existing splat event for any piece, so the animation can play it as a burst. Rarity: dealt rarely, through the same mechanism the Pusher and Puller use (D-32). Unlock: last in UNLOCKS (artifacts.js), after the Cannon's step. The sim bot in test/sim.js discards Bomb cards. The pick-then-act UI is close to the Mover card's (pick, click on the board, Esc backs out), so if the Mover is built first, share its pick-up mode. Reconcile ONTOLOGY, CRITERIA (a new R-row with a test dir), RATIONALE (a new D-n), ARCHITECTURE_LOG, CLAUDE.md, README card list, help legend and UI controls notes in the same change. Add THING_LOOK/hand display for the card.
-----
 Priority:   45
 Status: ToDo
 ID: seed-words-fsee

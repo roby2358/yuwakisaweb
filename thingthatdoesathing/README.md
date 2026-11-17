@@ -38,11 +38,12 @@ for why it works and [ONTOLOGY.md](ONTOLOGY.md) for the rules.
 | Bridge | built on water; carries what's on it 1 hex in its facing, like a Belt over water |
 | Slide | ice you can build, on plains or water (not on ice, which already slides): what comes onto it keeps sliding the same way (a Spring or Rocket that lands on it skids on) |
 | Mover | not a Thing but a card: pick up a Thing you've placed and put it down somewhere else (same kind, same color); back out after picking it up and the Thing is scrapped |
+| Bomb | not a Thing but a card: clear up to 3 hexes of whatever is on them (Things, crates, gremlins); a bombed crate counts as lost, a gremlin as an ex-gremlin; sources and targets stay |
 
 A new game deals only Belts, Bridges, Walls and Traps. Each milestone unlocks the next card
 and the milestone banner shows it: Pushers and Pullers (with the second color; a 16 × 10 board skips
-them), then the Slide, the Spring, the Mover, the Rocket, and the Cannon last. Cards already in your hand stay.
-The Mover is a rare card, like the Pusher and Puller.
+them), then the Slide, the Spring, the Mover, the Rocket, the Cannon, and the Bomb last. Cards already in your hand stay.
+The Mover and the Bomb are rare cards, like the Pusher and Puller.
 
 Pushers and Pullers always work in one crate color: a red one moves only red crates, and every
 gremlin. That's how you split a mixed line, so they're only dealt once a second color opens.
@@ -65,6 +66,7 @@ that comes onto a target dies there, so they can't camp it.
 - `R` / `Shift+R` / mouse wheel turn the Thing before placing
 - A Pusher or Puller asks for its crate color after you click its hex: click a swatch or press `1`–`4`; Esc, right-click or a click elsewhere backs out with the card still picked
 - The Mover: pick it, then click a Thing on the board (they tint yellow) to pick it up; the card becomes that Thing, and you place it like any card (one tick for the whole move). Esc or right-click before picking up puts the card back; after, it scraps the Thing (one tick), as Discard / `X` does. A click on a bare hex does nothing
+- The Bomb: pick it, then click hexes with something on them (they tint yellow) to mark them: a red ring and cross. Esc or right-click before the first mark puts the card back. The first mark spends the card; the third, or Esc / right-click / Discard after one or two, sets the bomb off: every marked hex is cleared and the world ticks once. A click on a bare hex does nothing
 - Click a yellow hex to place it; the world ticks once and animates. A yellow hex with a dashed ring holds a Thing: placing there replaces it (the old Thing's card is gone)
 - With no card picked, click a hex to select it: it lights up, a mover shows a white arrow, and Go holds. Click it again to turn a Belt/Spring/Rocket/Cannon/Pusher/Puller clockwise (free: no tick); click anywhere else (or Esc) to let go
 - `D` removes the Thing on the selected hex (click it first), leaving the hex bare and letting go of it; the card is gone and the world ticks once. With nothing selected, `D` does nothing

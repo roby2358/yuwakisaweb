@@ -2,6 +2,18 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-17 — The Bomb card (D-48)
+`TOOLS` gains `BOMB` (`picks: 'filled'`, `wipes: 3`, weight 0.5) and every tool a `wipes`
+field (the Mover's 0); `UNLOCKS` gains a last `[BOMB]` step, after `[CANNON]`. The engine's
+`PICKS` table gains `filled` (a hex holding a Thing or a piece), and the new command
+`bomb(slot, hexes)` clears 1 to `wipes` hexes and ticks once. `clearHex` (D-44) and `blast`
+now share `clearThing(h, hop)` and `smash(piece, hop)`; the `clear` event used to be
+`{kind, q, r}` and now carries `hop` too. `gameui.js` gains a `bomb` pick mode, an
+`AFTER_PICK.BOMB` row (`AFTER_PICK` rows became `{ pick, hint }`, and a mode's `hint` a
+function), `picked.marks` drawn as red ring-and-cross, and a burst for every `clear` event in
+the tick animation. R-64 added (test/R-64/), R-49 and R-54 updated for the order, R-62 checks
+the `clear` hop, U-31 added, `uiboot.js` drives the Bomb (pjpd bomb-card-w466).
+
 ### 2026-11-17 — The Mover card, and tool cards (D-47)
 Every card used to be a `THINGS` kind, and the UI's `picked` card only ever built. Now a card's
 kind may also be a `TOOLS` kind (`artifacts.js`: `TOOLS`, `CARDS`, `cardOf`); the deck,

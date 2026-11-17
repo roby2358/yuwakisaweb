@@ -13,9 +13,11 @@ const GameEngine = (function () {
         WATER_PCT, MOUNTAIN_PCT, ICE_FRAC, PLACE_SLICE_FRAC, PLACE_SLICE_MIN
     } = GameArtifacts;
 
-    // What a tool's first click may take, keyed by its template's `picks` (D-47).
+    // What a tool's click may take, keyed by its template's `picks` (D-47). `filled`: a hex
+    // holding a Thing or a piece; a source or target is taken only for what stands on it (D-48).
     const PICKS = {
         thing: (engine, hex) => !!engine.thingAt(hex.q, hex.r),
+        filled: (engine, hex) => !!engine.thingAt(hex.q, hex.r) || !!engine.pieceAt(hex.q, hex.r),
     };
     const MOVER = 'MOVER';   // the tool card move() and scrap() spend
     // A wanderer's own step, as a push; `wrecks` comes from its piece template.
@@ -330,24 +332,33 @@ const GameEngine = (function () {
         // gremlin's splat as an ex-gremlin and lets it re-emerge), except a crate on its own
         // color's new target, which is delivered (D-46). Returns the events.
         clearHex(h, hop) {
-            const s = this.state;
-            const events = [];
-            const thing = this.thingAt(h.q, h.r);
-            if (thing) {
-                s.things.splice(s.things.indexOf(thing), 1);
-                events.push({ type: 'clear', kind: thing.kind, q: h.q, r: h.r });
-            }
+            const events = this.clearThing(h, hop);
             const piece = this.pieceAt(h.q, h.r);
             const goal = piece && this.goalFor(piece, h);
             if (goal) {
                 this.deliver(piece, goal);
                 events.push({ type: 'deliver', id: piece.id, hop });
             } else if (piece) {
-                this.removePiece(piece);
-                this.loseValue(piece);
-                events.push({ type: 'splat', id: piece.id, by: null, trap: false, hop });
+                events.push(this.smash(piece, hop));
             }
             return events;
+        }
+
+        // The Thing on `h` is taken off, its card not returned: [its `clear` event at `hop`], or
+        // [] for a bare hex.
+        clearThing(h, hop) {
+            const thing = this.thingAt(h.q, h.r);
+            if (!thing) return [];
+            this.unbuild(thing);
+            return [{ type: 'clear', kind: thing.kind, q: h.q, r: h.r, hop }];
+        }
+
+        // `piece` is destroyed outside a motion (blasted, bombed, under a new endpoint): gone,
+        // its value lost. Returns its `splat` at `hop`.
+        smash(piece, hop) {
+            this.removePiece(piece);
+            this.loseValue(piece);
+            return { type: 'splat', id: piece.id, by: null, trap: false, hop };
         }
 
         addPiece(kind, q, r, color) {
@@ -1180,9 +1191,32 @@ const GameEngine = (function () {
         blast(q, r) {
             const piece = this.pieceAt(q, r);
             if (!piece || !PIECES[piece.kind].cargo) return { ok: false };
-            this.removePiece(piece);
-            this.loseValue(piece);
-            return this.tick({ events: [{ type: 'splat', id: piece.id, by: null, trap: false, hop: 0 }], gone: [piece.kind], usedCard: false });
+            return this.tick({ events: [this.smash(piece, 0)], gone: [piece.kind], usedCard: false });
+        }
+
+        // The Bomb card (D-48): clear each hex of `hexes` ([{q, r}], 1 up to the card's `wipes`,
+        // each holding a Thing or a piece, none twice) of its Thing and its piece, all at hop 0;
+        // a crate counts as lost, a gremlin as an ex-gremlin (it re-emerges). The card is spent
+        // and the world ticks once for the whole bomb.
+        bomb(slot, hexes) {
+            const s = this.state;
+            if (!Number.isInteger(slot) || slot < 0 || slot >= s.hand.length) return { ok: false };
+            const kind = s.hand[slot].kind;
+            const tool = TOOLS[kind];
+            if (!tool || !Array.isArray(hexes) || hexes.length < 1 || hexes.length > tool.wipes) return { ok: false };
+            const targets = hexes.map(h => h && this.board.get(h.q, h.r));
+            if (!targets.every(h => this.canPick(kind, h))) return { ok: false };
+            if (new Set(targets.map(h => Hex.key(h.q, h.r))).size !== targets.length) return { ok: false };
+            const pieces = targets.map(h => this.pieceAt(h.q, h.r)).filter(p => p);
+            const events = targets.flatMap(h => this.wipeHex(h));
+            s.hand[slot] = this.draw();
+            return this.tick({ events, gone: pieces.map(p => p.kind), usedCard: true });
+        }
+
+        // One bombed hex, at hop 0: its Thing's `clear`, then its piece's `splat`.
+        wipeHex(h) {
+            const piece = this.pieceAt(h.q, h.r);
+            return [...this.clearThing(h, 0), ...(piece ? [this.smash(piece, 0)] : [])];
         }
 
         // Take a placed Thing off the board, leaving the hex bare. The Thing's card is

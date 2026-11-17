@@ -12,7 +12,7 @@ const GameUI = (function () {
         HEX_SIZE, COUNTER_SIZE, HOP_MS, RUN_GAP_MS, MILESTONE_MS, TERRAIN_COLORS, TERRAIN_NAMES, THING_LOOK,
         PIECE_LOOK, CRATE_SHADES, BIG_CRATE_SCALE, COLOR_INK, SPLAT_BLOTS, SOURCE_COLOR, PORT_NEUTRAL_MARK, PORT_OUTLINE,
         PORT_MARK_WIDTH, PORT_RING_RADII, PORT_PLUS_REACH, PORT_OUTLINE_WIDTH, BG_COLOR, UI_FONT, REACH_COLOR, MAP_SIZE_NOTES,
-        COLOR_PICKER_PX, ZOOM_DIVISORS, MIN_TEXT_PX, SORRY_PICTURE_PX
+        COLOR_PICKER_PX, ZOOM_DIVISORS, MIN_TEXT_PX, SORRY_PICTURE_PX, BOMB_MARK_COLOR
     } = GameDisplayArtifacts;
     const { TERRAIN, THINGS, WHITE, HAND_SIZE, MAP_SIZES, aims, cardOf, nextMilestone } = GameArtifacts;
     const SIZE_KEYS = Object.keys(MAP_SIZES);
@@ -47,36 +47,48 @@ const GameUI = (function () {
     // L1.2 What a picked card does, by its mode (D-47). A Thing card is in `build`; a tool card
     // starts in `pickup`, where its first click must take a hex the engine's legalPicks allows,
     // and AFTER_PICK[kind] says what that pick leads to (the Mover: `carry`, holding the picked
-    // Thing as a card). Per mode: `click` on a board hex (a lookup in `picked.legal`), `back`
+    // Thing as a card; the Bomb: `bomb`, marking hexes to clear, D-48). Per mode: `click` on a board hex (a lookup in `picked.legal`), `back`
     // (Esc, right-click), `discard` (the Discard spot, X), `legal` (the hexes it may click,
     // for the kind it holds), whether the hand is `locked` (the card is already spent), whether
-    // legal hexes get a ghost and replace `rings`, and the hover bar's `hint` over a Thing.
+    // legal hexes get a ghost and replace `rings`, and the hover bar's `hint` over a Thing (by the
+    // card in play).
     const PICK_MODES = {
         build: {
             click: (ui, hex, legal) => legal ? ui.placeOrAsk(hex.q, hex.r) : ui.unpick(),
             back: ui => ui.unpick(),
             discard: ui => ui.discardCard(),
             legal: (ui, kind) => ui.engine.legalPlacements(kind),
-            locked: false, ghost: true, rings: true, hint: '',
+            locked: false, ghost: true, rings: true, hint: () => '',
         },
         pickup: {
-            click: (ui, hex, legal) => { if (legal) AFTER_PICK[ui.picked.card](ui, hex); },   // a bare hex does nothing
+            click: (ui, hex, legal) => { if (legal) AFTER_PICK[ui.picked.card].pick(ui, hex); },   // a bare hex does nothing
             back: ui => ui.unpick(),
             discard: ui => ui.discardCard(),
             legal: (ui, kind) => ui.engine.legalPicks(kind),
-            locked: false, ghost: false, rings: false, hint: ' (click to pick up)',
+            locked: false, ghost: false, rings: false, hint: ui => AFTER_PICK[ui.picked.card].hint,
         },
         carry: {
             click: (ui, hex, legal) => { if (legal) ui.putDown(hex.q, hex.r); },   // an illegal hex does nothing
             back: ui => ui.scrapCarried(),
             discard: ui => ui.scrapCarried(),
             legal: (ui, kind) => ui.engine.legalPlacements(kind),
-            locked: true, ghost: true, rings: true, hint: '',
+            locked: true, ghost: true, rings: true, hint: () => '',
+        },
+        // The Bomb after its first mark (D-48): the card is spent; each click on a filled hex
+        // not yet marked marks it; the last of its `wipes` marks, Esc, right-click or Discard
+        // sets it off (one command, one tick).
+        bomb: {
+            click: (ui, hex, legal) => { if (legal) ui.mark(hex); },   // a bare or marked hex does nothing
+            back: ui => ui.fireBomb(),
+            discard: ui => ui.fireBomb(),
+            legal: (ui, kind) => ui.unmarked(ui.engine.legalPicks(kind)),
+            locked: true, ghost: false, rings: false, hint: () => ' (click to clear)',
         },
     };
-    // A tool card's pick (the hex its first click took), by card kind.
+    // A tool card's pick (the hex its first click took) and its hover hint, by card kind.
     const AFTER_PICK = {
-        MOVER: (ui, hex) => ui.carry(hex),
+        MOVER: { pick: (ui, hex) => ui.carry(hex), hint: ' (click to pick up)' },
+        BOMB: { pick: (ui, hex) => ui.mark(hex), hint: ' (click to clear)' },
     };
     // The mode a freshly picked card starts in.
     const startMode = kind => THINGS[kind] ? 'build' : 'pickup';
@@ -255,6 +267,23 @@ const GameUI = (function () {
                 ctx.stroke();
             }
         },
+        BOMB(ctx, s) {
+            // A round bomb with a lit fuse: it clears what it lands on.
+            const r = s * 0.32;
+            ctx.beginPath();
+            ctx.arc(-s * 0.06, s * 0.1, r, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(s * 0.16, -s * 0.14);
+            ctx.quadraticCurveTo(s * 0.3, -s * 0.42, s * 0.46, -s * 0.36);
+            ctx.stroke();
+            for (const a of [0, 1.6, 3.2, 4.8]) {
+                ctx.beginPath();
+                ctx.moveTo(s * 0.46 + Math.cos(a) * s * 0.06, -s * 0.36 + Math.sin(a) * s * 0.06);
+                ctx.lineTo(s * 0.46 + Math.cos(a) * s * 0.14, -s * 0.36 + Math.sin(a) * s * 0.14);
+                ctx.stroke();
+            }
+        },
         SLIDE(ctx, s) {
             // Ice streaks on a slab: what comes onto it keeps going (it has no facing).
             ctx.lineWidth = Math.max(1, s * 0.06);
@@ -297,6 +326,12 @@ const GameUI = (function () {
     const thingName = (kind, color) => (cardOf(kind).colored && color !== WHITE ? capitalized(color) + ' ' : '') + THING_LOOK[kind].name;
     const thingDoes = (kind, color) => THING_LOOK[kind].does + (!cardOf(kind).colored ? '' :
         color === WHITE ? ' (you pick its crate color when you place it)' : ` (only ${color} crates, and gremlins)`);
+
+    // A Bomb's card once it has marks (D-48): how many more it may clear.
+    const bombLeft = p => {
+        const left = cardOf(p.card).wipes - p.marks.length;
+        return `${left} more hex${left === 1 ? '' : 'es'} to clear; Esc sets it off`;
+    };
 
     class GameUI {
         constructor(engine, canvas) {
@@ -520,12 +555,12 @@ const GameUI = (function () {
             this.selected = null;
             const card = this.state.hand[slot].kind;
             const mode = startMode(card);
-            this.picked = { slot, card, mode, legal: PICK_MODES[mode].legal(this, card), kind: card, color: WHITE, from: null };
+            this.picked = { slot, card, mode, legal: PICK_MODES[mode].legal(this, card), kind: card, color: WHITE, from: null, marks: [] };
             this.render();
         }
 
-        // Is the card in play already spent (the Mover carrying a Thing)? Then only its own
-        // put-down or scrap may follow (D-47).
+        // Is the card in play already spent (the Mover carrying a Thing, a Bomb with a mark)? Then
+        // only its own put-down, scrap or blast may follow (D-47, D-48).
         handLocked() {
             return !!this.picked && PICK_MODES[this.picked.mode].locked;
         }
@@ -542,7 +577,7 @@ const GameUI = (function () {
             const t = this.engine.thingAt(hex.q, hex.r);
             const p = this.picked;
             this.picked = { slot: p.slot, card: p.card, mode: 'carry', legal: PICK_MODES.carry.legal(this, t.kind),
-                kind: t.kind, color: t.color, from: { q: t.q, r: t.r } };
+                kind: t.kind, color: t.color, from: { q: t.q, r: t.r }, marks: [] };
             this.sound.step();
             this.render();
         }
@@ -558,6 +593,30 @@ const GameUI = (function () {
         scrapCarried() {
             const { slot, from } = this.picked;
             this.commit(() => this.engine.scrap(slot, from.q, from.r), () => this.sound.discard());
+        }
+
+        // The Bomb marks `hex` to clear (D-48): in the view only; the engine hears of every mark
+        // at once when it goes off. The first mark spends the card; the last one sets it off.
+        mark(hex) {
+            const p = this.picked;
+            p.mode = 'bomb';
+            p.marks = [...p.marks, { q: hex.q, r: hex.r }];
+            if (p.marks.length >= cardOf(p.card).wipes) { this.fireBomb(); return; }
+            p.legal = PICK_MODES.bomb.legal(this, p.card);
+            this.sound.step();
+            this.render();
+        }
+
+        // The keys of `keys` the Bomb hasn't marked.
+        unmarked(keys) {
+            const marked = new Set(this.picked.marks.map(m => Hex.key(m.q, m.r)));
+            return new Set([...keys].filter(k => !marked.has(k)));
+        }
+
+        // The Bomb goes off on its marks: one command, one tick (D-48).
+        fireBomb() {
+            const { slot, marks } = this.picked;
+            this.commit(() => this.engine.bomb(slot, marks), () => this.sound.splat());
         }
 
         // The Thing a carry took off the board, or null.
@@ -747,6 +806,7 @@ const GameUI = (function () {
             const opened = [];
             const unlocked = [];
             const redrawn = [];
+            const cleared = [];   // Things taken off mid-command (a bomb, a new endpoint): a burst on their hop
             const ends = new Set();
             const still = id => ({ q: before.get(id).q, r: before.get(id).r });
             const trackOf = id => tracks.get(id) || { ...before.get(id), pts: [still(id)], hop: 0, over: 0, end: null };
@@ -771,11 +831,14 @@ const GameUI = (function () {
                     unlocked.push(...e.kinds);
                 } else if (e.type === 'redraw') {
                     redrawn.push(e.slot);
+                } else if (e.type === 'clear') {
+                    cleared.push(e);
                 }
             }
-            const hops = Math.max(1, ...[...tracks.values()].map(t => t.pts.length - 1 + (t.end ? 1 : 0)));
+            const hops = Math.max(1, ...[...tracks.values()].map(t => t.pts.length - 1 + (t.end ? 1 : 0)),
+                ...cleared.map(e => e.hop + 1));
             this.anim = { t0: performance.now(), dur: hops * HOP_MS,
-                tracks, before, hidden, milestones, opened, unlocked, redrawn, ends };
+                tracks, before, hidden, milestones, opened, unlocked, redrawn, cleared, ends };
             const frame = now => {
                 if (!this.anim) return;
                 if (now - this.anim.t0 >= this.anim.dur) { this.finishAnim(); return; }
@@ -966,6 +1029,7 @@ const GameUI = (function () {
                     const { x, y } = this.hexToWorld(h.q, h.r);
                     drawThing(ctx, x, y, HEX_SIZE, this.picked.kind, this.picked.color, this.facing, 0.7);
                 }
+                for (const m of this.picked.marks) this.drawBombMark(m);
             } else if (this.hoveredHex && !this.anim) {
                 // A bare hover over a mover: outline it — clicking turns it.
                 const t = this.engine.thingAt(this.hoveredHex.q, this.hoveredHex.r);
@@ -995,6 +1059,23 @@ const GameUI = (function () {
             if (!this.picked || !PICK_MODES[this.picked.mode].rings || !h || !this.picked.legal.has(Hex.key(h.q, h.r))) return null;
             const t = this.engine.thingAt(h.q, h.r);
             return t && t !== this.carried() ? t : null;
+        }
+
+        // A hex the Bomb has marked to clear (D-48): a red ring and a cross over what's there.
+        drawBombMark(m) {
+            const ctx = this.ctx;
+            const { x, y } = this.hexToWorld(m.q, m.r);
+            const d = HEX_SIZE * 0.45;
+            ctx.save();
+            ctx.strokeStyle = BOMB_MARK_COLOR;
+            ctx.lineWidth = 3;
+            drawHexPath(ctx, x, y, HEX_SIZE - 2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x - d, y - d); ctx.lineTo(x + d, y + d);
+            ctx.moveTo(x + d, y - d); ctx.lineTo(x - d, y + d);
+            ctx.stroke();
+            ctx.restore();
         }
 
         // The selected hex: a bright outline, and over a mover a white arrow along its facing.
@@ -1039,8 +1120,16 @@ const GameUI = (function () {
                 }
                 return;
             }
-            // During a tick: tracked pieces follow their paths (gone ones included); the
-            // rest sit still; crates spawned this tick wait for the end.
+            // During a tick: a cleared Thing bursts in its colors over the hop after its own
+            // (D-48); tracked pieces follow their paths (gone ones included); the rest sit
+            // still; crates spawned this tick wait for the end.
+            const k = Math.max(0, (now - a.t0) / HOP_MS);
+            for (const e of a.cleared) {
+                if (k < e.hop || k >= e.hop + 1) continue;
+                const { x, y } = this.hexToWorld(e.q, e.r);
+                this.drawSplat(x, y, THING_LOOK[e.kind].fill, k - e.hop);
+                this.drawSplat(x, y, THING_LOOK[e.kind].ink, Math.min(1, k - e.hop + 0.2));
+            }
             for (const [id, t] of a.tracks) {
                 const pose = this.trackPose(t, now);
                 if (t.end === 'splat' && pose.alpha < 1) this.drawSplat(pose.x, pose.y, SPLAT_COLOR[t.kind](t), 1 - pose.alpha);
@@ -1280,7 +1369,7 @@ const GameUI = (function () {
         // What the mouse can do to the hovered Thing `t` on `h`, for the hover bar.
         thingHint(h, t) {
             if (this.replaceTarget(h)) return ' (click to replace)';
-            if (this.picked) return PICK_MODES[this.picked.mode].hint;
+            if (this.picked) return PICK_MODES[this.picked.mode].hint(this);
             if (this.selected && Hex.same(this.selected, h)) return aims(t.kind) ? ' (click to turn, D to remove)' : ' (D to remove)';
             return aims(t.kind) ? ' (click to select, then click to turn or D to remove)' : ' (click to select, then D to remove)';
         }
@@ -1292,7 +1381,7 @@ const GameUI = (function () {
             const s = this.state;
             document.getElementById('discard').classList.toggle('armed', !!this.picked);
             const p = this.picked;
-            const shown = JSON.stringify([s.hand, p && [p.slot, p.kind, p.color], this.facing]);
+            const shown = JSON.stringify([s.hand, p && [p.slot, p.kind, p.color, p.marks.length], this.facing]);
             if (shown === this.handDrawn && el.children.length === HAND_SIZE) return;
             this.handDrawn = shown;
             if (el.children.length !== HAND_SIZE) {
@@ -1308,12 +1397,13 @@ const GameUI = (function () {
             }
             [...el.children].forEach((b, i) => {
                 // Cards have no color (D-32); a picked card shows what it is now (a Mover
-                // carrying a Thing shows that Thing, in its color, D-47).
+                // carrying a Thing shows that Thing, in its color, D-47; a Bomb with marks, the
+                // clears it has left, D-48).
                 const picked = p && p.slot === i;
                 const kind = picked ? p.kind : s.hand[i].kind, color = picked ? p.color : WHITE;
                 b.classList.toggle('picked', !!picked);
                 b.querySelector('.name').textContent = thingName(kind, color);
-                b.querySelector('.does').textContent = thingDoes(kind, color);
+                b.querySelector('.does').textContent = picked && p.marks.length ? bombLeft(p) : thingDoes(kind, color);
                 const c = b.querySelector('canvas'), cx = c.getContext('2d');
                 cx.clearRect(0, 0, c.width, c.height);
                 drawThing(cx, 32, 32, 26, kind, color, aims(kind) ? (picked ? this.facing : 0) : null, 1);

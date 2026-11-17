@@ -411,6 +411,50 @@ ARCHITECTURE_LOG.md.
   356 / 668 / 1489): the bot's line is built before the Mover enters the deck, and a draw
   takes one `Rando` roll whatever it deals. Unmeasured in play.
 
+### D-48 The Bomb card: clear up to 3 hexes in one command — *Decided 2026-11-17 (pjpd bomb-card-w466: picking the card arms a bomb; Esc or right-click before the first clear returns the card, no tick; a click on a hex holding a Thing, crate or gremlin clears the whole hex (a crate counts as lost, a gremlin as an ex-gremlin); a bare hex does nothing; a source or target itself can't be bombed, a piece on one can; the first clear spends the card and the bomb stays armed for 2 more (3 in all); it ends after the 3rd or on Esc after at least one; the world ticks exactly once when it ends, the clears themselves don't; one atomic engine command taking 1 to 3 hexes, `ok:false` changing nothing on an empty, off-board, source/target or repeated hex; the UI shows the marked hexes before it sends; per hex a Thing removal and the existing splat, playable as a burst; rare through D-32's mechanism; last in `UNLOCKS`, after the Cannon; the sim bot discards it; reuse D-47's pick modes), Proposed (*unreviewed*: the rest)*
+- **Alternatives:** one command per clear (three ticks, or a tick-less command that breaks
+  "every command but rotate ticks once"); a Bomb placed as a Thing that goes off next tick;
+  `blast` with a card (only crates, one hex).
+- **Why:** a cleanup card for a board gone wrong: a jam of crates, a gremlin camping a line,
+  a stretch of Things built the wrong way. Three hexes for one tick is strong but costs a
+  rare card, a whole milestone's wait to unlock, and whatever crates it eats (they count as
+  lost).
+- **Unreviewed calls:** (1) **`wipes`, not `clears`.** The Bomb's count lives in a new
+  `TOOLS` field `wipes` (3), since `THINGS.clears` already names the Cannon's passed-over
+  hexes and `cardOf` reads both tables; the Mover gets `wipes: 0`, so every tool has one
+  schema. `bomb` accepts any tool card with `wipes` at least the number of hexes, so the
+  command reads data, not the card's name. (2) **`picks: 'filled'`:** a hex holding a Thing
+  or a piece. A Thing standing on a source (Belts may) counts too: the hex "holds anything",
+  and the source itself stays; a bare source or target has nothing on it and is refused.
+  (3) **`clear` events gained `hop`** (a bomb's at 0; D-44's at the tick's last hop, as its
+  splats), and the client bursts a cleared Thing in its fill and ink over the hop after it,
+  next to the pieces' splats. D-44's cleared Things now burst too. (4) **No delivery:** a
+  crate bombed on its own color's target is destroyed and counted lost, not delivered as
+  D-46 would; the task says a bombed crate counts as lost. (5) **Event order:** hex by hex
+  in the order marked, each hex's `clear` before its piece's `splat`, all at hop 0, ahead of
+  the tick's own events. (6) **A marked hex leaves the legal set,** so a second click on it
+  does nothing and the UI never sends a repeat; the engine still refuses one. (7) **Discard /
+  `X` after a mark sets the bomb off,** like Esc (the card is already spent, as the Mover's
+  carry scraps on Discard); before a mark, Discard throws the card away as any card.
+  (8) **Locked after the first mark:** the other cards, Wait/Space and `B` do nothing (the
+  `bomb` mode is `locked`, as `carry`). (9) **The hover hint** is per card now:
+  `AFTER_PICK[card]` rows became `{ pick, hint }` and the `pickup` mode reads the hint from
+  its card (" (click to clear)" for the Bomb, " (click to pick up)" for the Mover); like
+  every hint it shows over a Thing only. (10) **The card** reads "N more hexes to clear; Esc
+  sets it off" once marked. (11) **Sound:** the splat cue when it goes off (`blast` plays
+  none up front; a bomb is louder). (12) **Weight 0.5,** as the Mover, Pusher and Puller.
+  With the Bomb last, it unlocks at the 6th milestone (500) on small and the 7th (1000) on
+  bigger boards; the Cannon is now one step from the end. (13) A bombed gremlin re-emerges
+  on the shore like every gremlin gone but a trapped one (R-31). (14) `UI_CONTROLS.md` is
+  left as is (the family-wide spec), as for the Mover; the game's notes are in CLAUDE.md's
+  Input architecture and README.
+- **Evidence:** R-64 (bomb, illegal calls, picks), R-49 and R-54 (the new order), R-62 (the
+  `clear` hop), `uiboot.js` (the Bomb flow by clicks: back out, a bare click, three marks,
+  one mark then right-click). `cc-sim 200 small` is unchanged (median 52, p10 47, p90 58,
+  0.56 lost/game), and `node test/sim.js 30 small 6` reproduces the D-45 milestones exactly
+  (51 / 91 / 189 / 356 / 668 / 1489): the Bomb enters the deck at the 6th milestone and a
+  draw is one `Rando` roll whatever it deals. Unmeasured in play.
+
 ## Things
 
 ### D-4 Pushers act on the piece standing on them; the Puller acts two hexes ahead — *Proposed (pushers), Decided (Puller)*

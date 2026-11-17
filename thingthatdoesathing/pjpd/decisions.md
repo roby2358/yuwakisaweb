@@ -107,3 +107,15 @@ decision, and where the full reasoning lives (a RATIONALE `D-n` tagged *unreview
 - [agent, mover-card] mover-card-82t7: New Game while carrying drops the carry with nothing sent; Esc back to the game leaves the Thing in place and the Mover in hand; harmless, left as is (D-47 call 11).
 - [agent, mover-card] mover-card-82t7: the sim bot's existing "discard every non-Belt while building" covers the Mover; only its comment changed (D-47 call 12).
 - [agent, mover-card] mover-card-82t7: UI_CONTROLS.md left unchanged (it's the family-wide spec; the game's own notes live in CLAUDE.md's Input architecture and README).
+- [agent, bomb-card] bomb-card-w466: the Bomb's clear count is a new TOOLS field `wipes` (3; the Mover's 0), not `clears`, which THINGS uses for the Cannon; `bomb` checks `wipes`, not the card's name (D-48 call 1).
+- [agent, bomb-card] bomb-card-w466: `picks: 'filled'` = a hex holding a Thing or a piece; a Thing standing on a source can be bombed too (the source stays); a bare source or target is refused (D-48 call 2).
+- [agent, bomb-card] bomb-card-w466: `clear` events now carry `hop` (bomb's 0, D-44's the tick's last hop) and the UI bursts every cleared Thing, D-44's included (D-48 call 3).
+- [agent, bomb-card] bomb-card-w466: a crate bombed on its own color's target is destroyed and lost, not delivered (D-48 call 4).
+- [agent, bomb-card] bomb-card-w466: events hex by hex in marking order, clear before splat, all at hop 0 (D-48 call 5).
+- [agent, bomb-card] bomb-card-w466: a marked hex leaves the legal set, so clicking it again does nothing (D-48 call 6).
+- [agent, bomb-card] bomb-card-w466: Discard / X after a mark sets the bomb off like Esc; before a mark it discards the card (D-48 call 7).
+- [agent, bomb-card] bomb-card-w466: after the first mark the other cards, Wait/Space and B are locked, like the Mover's carry (D-48 call 8).
+- [agent, bomb-card] bomb-card-w466: AFTER_PICK rows became { pick, hint } so the pickup hover hint is per card ("click to clear" for the Bomb) (D-48 call 9).
+- [agent, bomb-card] bomb-card-w466: once marked, the card reads "N more hexes to clear; Esc sets it off"; the splat sound plays when it goes off (D-48 calls 10, 11).
+- [agent, bomb-card] bomb-card-w466: weight 0.5 like the Mover; last step unlocks at the 6th milestone on small, the 7th on bigger boards (D-48 call 12).
+- [agent, bomb-card] bomb-card-w466: UI_CONTROLS.md left unchanged, as for the Mover (D-48 call 14).
