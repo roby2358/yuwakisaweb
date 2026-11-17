@@ -410,6 +410,10 @@ ARCHITECTURE_LOG.md.
   and `node test/sim.js 30 small 6` reproduces the D-45 milestones exactly (51 / 91 / 189 /
   356 / 668 / 1489): the bot's line is built before the Mover enters the deck, and a draw
   takes one `Rando` roll whatever it deals. Unmeasured in play.
+- **Amended 2026-11-17 (user, pjpd tool-ghost-fewq):** a picked tool shows its ghost in
+  pick-up mode like any picked card: the Mover's green cross (the Bomb's bomb) follows the
+  mouse over every board hex, not only the legal ones (`PICK_MODES.pickup.ghostAnywhere`);
+  after the pick-up the lifted Thing follows the mouse as before. The ghost hides no Thing.
 
 ### D-48 The Bomb card: clear up to 3 hexes in one command — *Decided 2026-11-17 (pjpd bomb-card-w466: picking the card arms a bomb; Esc or right-click before the first clear returns the card, no tick; a click on a hex holding a Thing, crate or gremlin clears the whole hex (a crate counts as lost, a gremlin as an ex-gremlin); a bare hex does nothing; a source or target itself can't be bombed, a piece on one can; the first clear spends the card and the bomb stays armed for 2 more (3 in all); it ends after the 3rd or on Esc after at least one; the world ticks exactly once when it ends, the clears themselves don't; one atomic engine command taking 1 to 3 hexes, `ok:false` changing nothing on an empty, off-board, source/target or repeated hex; the UI shows the marked hexes before it sends (amended 2026-11-17, pjpd bomb-booms-mp74: each click blows its hex up on screen at once, burst + splat + sound, the hex drawn cleared; still no tick per boom and one tick when the bomb ends; the engine command and rules unchanged, a UI change only; the end's animation doesn't replay the bursts and splats already shown); per hex a Thing removal and the existing splat, playable as a burst; rare through D-32's mechanism; last in `UNLOCKS`, after the Cannon; the sim bot discards it; reuse D-47's pick modes), Proposed (*unreviewed*: the rest)*
 - **Alternatives:** one command per clear (three ticks, or a tick-less command that breaks

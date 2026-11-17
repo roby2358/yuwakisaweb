@@ -98,6 +98,15 @@ DONE WHEN: ONTOLOGY/CRITERIA/RATIONALE/ARCHITECTURE_LOG reconciled (new D-n for 
 ----
 Priority:   70
 Status: Done
+ID: tool-ghost-fewq
+Created: 2026-11-17T02:55:56Z
+Updated: 2026-11-17T03:06:15Z
+
+Show a picked tool card's ghost under the mouse in pick-up mode, like any other picked card.
+Today a picked Mover (or Bomb) draws no ghost on the board until its first click: PICK_MODES.pickup has ghost: false in gameui.js. The user wants: pick the Mover, and its green cross ghost appears and follows the mouse over every board hex (not only the legal ones, which are sparse, the hexes with Things); click a Thing, and that Thing is lifted from the map and follows the mouse the usual way (carry mode, unchanged). The Bomb's pick-up gets the same ghost (the bomb follows the mouse until the first boom). Done looks like: a pick mode can say its ghost follows the mouse over any board hex; pickup uses that; build and carry keep showing it on legal hexes only; the ghost hides no Thing (picking up replaces nothing). Note it in D-47 (RATIONALE), CLAUDE.md's pick-mode line and an ARCHITECTURE_LOG entry. Done when `just cc-test` passes.
+----
+Priority:   70
+Status: Done
 ID: nullhas-7q2s
 Created: 2026-11-12T03:28:16Z
 Updated: 2026-11-12T03:35:55Z

@@ -2,6 +2,12 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-17 — A picked tool shows its ghost before the pick-up (D-47 amended)
+`PICK_MODES.pickup` used to draw no ghost, so a picked Mover or Bomb showed nothing under
+the mouse until its first click. It now has `ghost: true` and a new `ghostAnywhere` flag:
+the tool's ghost (the Mover's green cross, the Bomb) follows the mouse over every board
+hex, where `build` and `carry` still show it on legal hexes only (pjpd tool-ghost-fewq).
+
 ### 2026-11-17 — The Bomb blows up each hex as it's clicked (D-48 amended)
 The Bomb used to mark its hexes with a red ring and cross (`picked.marks`,
 `drawBombMark`, `BOMB_MARK_COLOR`) and show nothing blowing up until it went off. Now each

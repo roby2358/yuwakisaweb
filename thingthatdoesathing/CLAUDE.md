@@ -64,7 +64,7 @@ tick animation) → `picked` card → bare map click.
 - **L1.2 pick-then-act:** picking a card (click or `1`–`3`) computes its legal set once
   (`engine.legalPlacements(kind)`, or `legalPicks` for a tool card); clicking a hex is a lookup
   into that set. What a click, Esc/right-click and Discard do comes from `PICK_MODES[picked.mode]`
-  (D-47): `build` (Thing cards), `pickup` (a tool's first click: a bare hex does nothing, Esc
+  (D-47): `build` (Thing cards), `pickup` (a tool's first click: its ghost follows the mouse over any hex, a bare hex does nothing, Esc
   returns the card), `carry` (the Mover holding the Thing it lifted, view-only until sent: a
   legal click sends `move`, Esc/right-click/Discard send `scrap`, the hand, Wait/Space and `B` are locked),
   `bomb` (the Bomb after its first boom, D-48: each legal click bursts its hex at once (`bursts`, splat sound) and

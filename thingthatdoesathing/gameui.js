@@ -50,7 +50,8 @@ const GameUI = (function () {
     // Thing as a card; the Bomb: `bomb`, blowing up hexes one click at a time, D-48). Per mode: `click` on a board hex (a lookup in `picked.legal`), `back`
     // (Esc, right-click), `discard` (the Discard spot, X), `legal` (the hexes it may click,
     // for the kind it holds), whether the hand is `locked` (the card is already spent), whether
-    // legal hexes get a ghost and replace `rings`, and the hover bar's `hint` over a Thing (by the
+    // legal hexes get a ghost and replace `rings` (`ghostAnywhere`: the ghost follows the mouse
+    // over every board hex, not only legal ones), and the hover bar's `hint` over a Thing (by the
     // card in play).
     const PICK_MODES = {
         build: {
@@ -65,7 +66,7 @@ const GameUI = (function () {
             back: ui => ui.unpick(),
             discard: ui => ui.discardCard(),
             legal: (ui, kind) => ui.engine.legalPicks(kind),
-            locked: false, ghost: false, rings: false, hint: ui => AFTER_PICK[ui.picked.card].hint,
+            locked: false, ghost: true, ghostAnywhere: true, rings: false, hint: ui => AFTER_PICK[ui.picked.card].hint,
         },
         carry: {
             click: (ui, hex, legal) => { if (legal) ui.putDown(hex.q, hex.r); },   // an illegal hex does nothing
@@ -1053,7 +1054,7 @@ const GameUI = (function () {
                     ctx.restore();
                 }
                 const h = this.ghostHex();
-                if (mode.ghost && h && this.picked.legal.has(Hex.key(h.q, h.r))) {
+                if (mode.ghost && h && (mode.ghostAnywhere || this.picked.legal.has(Hex.key(h.q, h.r)))) {
                     const { x, y } = this.hexToWorld(h.q, h.r);
                     drawThing(ctx, x, y, HEX_SIZE, this.picked.kind, this.picked.color, this.facing, 0.7);
                 }
