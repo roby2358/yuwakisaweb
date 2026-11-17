@@ -108,6 +108,27 @@ Fairness: random boards differ a lot, so a global board is fairest on shared see
 
 Open: local first, or straight to global? What's ranked (turns to milestone N, crates by turn T, ex-gremlins)? Daily seed or any seed? Needs an interview before it becomes tasks.
 ----
+Score:   30
+ID: bsky-login-paqn
+Created: 2026-11-17T02:33:12Z
+Updated: 2026-11-17T02:33:12Z
+
+Bluesky login: let players sign in to Thing Factory with their Bluesky (AT Protocol) account, as an optional identity rather than a requirement. What it could unlock: a handle on the leaderboard instead of an anonymous name, posting a milestone or a finished board to Bluesky ("reached 500 on the medium board in 1,489 turns"), possibly sharing a build seed, and keeping progress or settings across devices. Design calls to settle: the auth flow (AT Protocol OAuth for browser apps with a client-metadata document, PKCE and DPoP, versus app passwords, which should be avoided); whether a pure client-side game can do it alone or needs a small backend on the author's site (the client metadata must be hosted at a stable https URL, so it can't work from file://, where the login button should hide); what data is stored, where, and for how long (privacy, the minimum scopes, logout and forgetting the token); whether posting is ever automatic (it shouldn't be: an explicit share button with a preview); and how it ties into the leaderboard, telemetry and productize ideas. The game must stay fully playable signed out.
+----
+Score:   30
+ID: jackpot-2xa3
+Created: 2026-11-17T02:34:23Z
+Updated: 2026-11-17T02:34:23Z
+
+Jackpot events: rare, exciting moments where the game suddenly pays out big, a burst of reward that breaks the steady rhythm of the milestone ladder. The user's seed is just the phrase "jackpot events"; what that means is open. Candidate shapes to explore:
+- A jackpot crate: a rare special crate (gold?) worth far more than a big crate (10), or one that multiplies the next N deliveries.
+- A crate rush: for K ticks the source spills crates every tick (the cap lifted), so a contraption that can keep up cashes in.
+- A combo jackpot: delivering several crates in one tick, or a run of deliveries with no losses, triggers a payout. This rewards throughput and clean builds.
+- A card jackpot: a free pick from a fan of rare cards (Rocket, Cannon, Mover, Bomb), or a full hand of one rare kind.
+- A gremlin jackpot: trapping several gremlins in one tick, or a streak of traps, pays out.
+- Slot-machine flavor: when a jackpot hits, a banner, fanfare and visual flourish play (GameSound already has a fanfare).
+Design calls to settle: what triggers it (pure chance per tick, a skill feat, or chance boosted by play); what it pays (deliveries toward milestones, cards, unlocks, score); how rare it is and how it scales with milestones or board size; whether it's seeded by the game's Rando (reproducible, which matters for the seed-words and leaderboard ideas); whether a jackpot can be missed (it appears, and you have to catch it); and how it relates to the goal-gen, level-goals and big-crate pacing ideas. Needs an interview before it becomes tasks.
+----
 Score:   40
 ID: bomb-card-7z4j
 Created: 2026-11-13T17:34:37Z

@@ -1,3 +1,11 @@
+Priority:   50
+Status: ToDo
+ID: mute-button-twa8
+Created: 2026-11-17T02:32:23Z
+Updated: 2026-11-17T02:32:23Z
+
+Add a mute button to Thing Factory. A "Sound" button sits in the top button row next to Help (index.html, the row with Wait / New Game / Help). It toggles all sound on and off: when muted, every GameSound cue is silent (add a muted flag to sound.js, e.g. GameSound.setMuted(bool) / isMuted(), checked at the single point where cues play; muting must not create the AudioContext). The button shows its state (label "Sound: on" / "Sound: off", or a speaker glyph with a struck-through version, plus a title tooltip) and the M key toggles it too (M isn't bound yet), working at any time, including mid-animation and with a card picked, but not while an overlay that eats keys is open (follow how OVERLAY_KEYS dispatch works). The choice is remembered per player in localStorage (key like "thingfactory.muted"), with every read and write wrapped in try/catch so the game still runs from file:// or with storage blocked (default: sound on). Sound and the mute flag stay client-only; the engine never sees them. Add M to the help legend in index.html and the README controls list, note it in CLAUDE.md's input section, add a short RATIONALE D-n (next free number) and an ARCHITECTURE_LOG entry; add a UI check to test/integration/uiboot.js that clicking the button and pressing M flip the muted flag (stub DOM, no real audio). Done when `just cc-test` passes.
+----
 Priority:   45
 Status: ToDo
 ID: seed-words-fsee
