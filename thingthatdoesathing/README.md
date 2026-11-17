@@ -38,7 +38,7 @@ for why it works and [ONTOLOGY.md](ONTOLOGY.md) for the rules.
 | Bridge | built on water; carries what's on it 1 hex in its facing, like a Belt over water |
 | Slide | ice you can build, on plains or water (not on ice, which already slides): what comes onto it keeps sliding the same way (a Spring or Rocket that lands on it skids on) |
 | Mover | not a Thing but a card: pick up a Thing you've placed and put it down somewhere else (same kind, same color); back out after picking it up and the Thing is scrapped |
-| Bomb | not a Thing but a card: clear up to 3 hexes of whatever is on them (Things, crates, gremlins); a bombed crate counts as lost, a gremlin as an ex-gremlin; sources and targets stay |
+| Bomb | not a Thing but a card: clear up to 5 hexes of whatever is on them (Things, crates, gremlins); a bombed crate counts as lost, a gremlin as an ex-gremlin; sources and targets stay |
 
 A new game deals only Belts, Bridges, Walls and Traps. Each milestone unlocks the next card
 and the milestone banner shows it: Pushers and Pullers (with the second color; a 16 × 10 board skips

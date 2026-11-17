@@ -642,15 +642,17 @@ run('the Mover: Esc before a pick-up keeps the card, a bare hex does nothing, a 
     if (ui.picked || s.turn !== turn + 2 || e.thingAt(c.q, c.r) || s.things.length) throw new Error('backing out of a carry must scrap the Thing and tick once');
     settle();
 });
-run('the Bomb: Esc before a boom keeps the card, each click blows its hex up at once with no tick, 3 booms or Esc end it in one tick (D-48)', () => {
+run('the Bomb: Esc before a boom keeps the card, each click blows its hex up at once with no tick, 5 booms or Esc end it in one tick (D-48)', () => {
     els['new-game'].fire('click'); key('1');
     const s = ui.state, e = ui.engine;
     const free = [...s.hexes.values()].filter(h => !h.isEdge && h.terrain === 1 && !e.isEndpoint(h) && !e.pieceAt(h.q, h.r) && !e.thingAt(h.q, h.r));
-    const [a, b, c, d, bare] = free;
+    const [a, b, c, d, f, g, bare] = free;
     s.things.push({ kind: 'BELT', color: 'white', q: a.q, r: a.r, facing: 0 },
         { kind: 'WALL', color: 'white', q: b.q, r: b.r, facing: null },
         { kind: 'TRAP', color: 'white', q: c.q, r: c.r, facing: null },
-        { kind: 'TRAP', color: 'white', q: d.q, r: d.r, facing: null });
+        { kind: 'TRAP', color: 'white', q: d.q, r: d.r, facing: null },
+        { kind: 'WALL', color: 'white', q: f.q, r: f.r, facing: null },
+        { kind: 'WALL', color: 'white', q: g.q, r: g.r, facing: null });
     const crate = e.addPiece('crate', a.q, a.r, s.targets[0].color);
     s.hand[0] = { kind: 'BOMB' };
     ui.render();
@@ -672,16 +674,18 @@ run('the Bomb: Esc before a boom keeps the card, each click blows its hex up at 
     if (ui.picked.legal.has(`${a.q},${a.r}`)) throw new Error('a blown-up hex must leave the legal set');
     clickHex(a.q, a.r);
     if (ui.picked.booms.length !== 1) throw new Error('clicking a blown-up hex again must do nothing');
-    if (!/2 more booms/.test(els.cards.children[0].querySelector('.does').textContent)) throw new Error('the spent card must show the booms left');
+    if (!/4 more booms/.test(els.cards.children[0].querySelector('.does').textContent)) throw new Error('the spent card must show the booms left');
     advance(400);   // well over one hop (HOP_MS)
     if (ui.bursts.length) throw new Error('a boom\'s burst must play out over one hop');
     key('2'); key(' '); key('b'); els['end-turn'].fire('click');
     if (ui.picked.slot !== 0 || ui.picked.mode !== 'bomb' || s.turn !== turn) throw new Error('the hand, Wait and B are locked once the Bomb is spent');
     clickHex(b.q, b.r);
     if (ui.picked.booms.length !== 2 || s.turn !== turn || !e.thingAt(b.q, b.r)) throw new Error('the second boom must not send anything');
-    clickHex(c.q, c.r);
-    if (ui.picked || s.turn !== turn + 1 || e.thingAt(a.q, a.r) || e.thingAt(b.q, b.r) || e.thingAt(c.q, c.r) || s.things.length !== things - 3)
-        throw new Error('the third boom must end the Bomb: three hexes cleared in one tick');
+    clickHex(c.q, c.r); clickHex(f.q, f.r);
+    if (!ui.picked || ui.picked.booms.length !== 4 || s.turn !== turn) throw new Error('the third and fourth booms must not send anything');
+    clickHex(g.q, g.r);
+    if (ui.picked || s.turn !== turn + 1 || [a, b, c, f, g].some(h => e.thingAt(h.q, h.r)) || s.things.length !== things - 5)
+        throw new Error('the fifth boom must end the Bomb: five hexes cleared in one tick');
     if (e.pieceAt(a.q, a.r) === crate || s.lost !== lost + 1) throw new Error('the bombed crate must be gone and count as lost');
     const a2 = ui.anim;
     if (!a2 || a2.cleared.length || [...a2.tracks.keys()].includes(crate.id))

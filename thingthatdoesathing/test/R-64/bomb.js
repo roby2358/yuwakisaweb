@@ -1,4 +1,4 @@
-// R-64: the Bomb card (D-48). `bomb(slot, hexes)` clears 1 up to TOOLS.BOMB.wipes (3) hexes,
+// R-64: the Bomb card (D-48). `bomb(slot, hexes)` clears 1 up to TOOLS.BOMB.wipes (5) hexes,
 // each holding a Thing or a piece: the Thing is taken off (`clear{kind, q, r, hop: 0}`), the
 // piece destroyed (`splat`, hop 0, `by` null): a crate's value counts as lost, a gremlin as an
 // ex-gremlin (it re-emerges like any splat). Each hex's events come in the order listed, its
@@ -75,7 +75,7 @@ const card = kind => ({ kind });
         ['a Mover is not a Bomb', () => engine.bomb(2, [{ q: 3, r: 4 }])],
         ['no hexes', () => engine.bomb(1, [])],
         ['not a list', () => engine.bomb(1, { q: 3, r: 4 })],
-        ['four hexes, one over wipes', () => engine.bomb(1, [{ q: 3, r: 4 }, { q: 6, r: 4 }, { q: 7, r: 6 }, { q: 2, r: 2 }])],
+        ['six hexes, one over wipes', () => engine.bomb(1, [{ q: 3, r: 4 }, { q: 6, r: 4 }, { q: 7, r: 6 }, { q: 2, r: 2 }, { q: 5, r: 5 }, { q: 4, r: 6 }])],
         ['a bare hex among good ones', () => engine.bomb(1, [{ q: 3, r: 4 }, { q: 5, r: 5 }])],
         ['a bare source', () => engine.bomb(1, [{ q: src.q, r: src.r }])],
         ['a bare target', () => engine.bomb(1, [{ q: tgt.q, r: tgt.r }])],

@@ -73,7 +73,7 @@ const GameDisplayArtifacts = (function () {
             CANNON:  { name: 'Cannon',  does: 'lobs what is on it over 4 hexes of anything, down on the 5th (slides on ice)', fill: '#33383f', ink: '#c9d1d9', inset: 0.84 },
             // A tool card (D-47): drawn in the hand only, never on the board.
             MOVER:   { name: 'Mover',   does: 'pick up a placed Thing and put it down somewhere else (Esc after the pick-up scraps it)', fill: '#3b4a2c', ink: '#c8f07a', inset: 0.84 },
-            BOMB:    { name: 'Bomb',    does: 'blow up to 3 hexes of Things, crates and gremlins, one click each (Esc after the first ends it)', fill: '#4a2620', ink: '#ff8a4c', inset: 0.84 },
+            BOMB:    { name: 'Bomb',    does: 'blow up to 5 hexes of Things, crates and gremlins, one click each (Esc after the first ends it)', fill: '#4a2620', ink: '#ff8a4c', inset: 0.84 },
         },
         // Accent per color for colored kinds: white (a card), or the crate color's lit face.
         COLOR_PICKER_PX: 84,   // the color picker's width and height (D-32), for placing it beside the hex

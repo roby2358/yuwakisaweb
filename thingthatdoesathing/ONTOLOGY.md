@@ -149,7 +149,7 @@ built: it's played on the board in its own command. `TOOLS[kind]` is the templat
 | Field | Meaning |
 |---|---|
 | `picks` | What its clicks on the board take (`canPick`): `'thing'`, a hex holding a placed Thing (Mover); `'filled'`, a hex holding a Thing or a piece (Bomb; a source or target counts only for what stands on it, D-48). |
-| `wipes` | How many hexes it clears in one command: 0 (Mover), 3 (Bomb, D-48). Not `THINGS.clears` (a Cannon's passed-over hexes). |
+| `wipes` | How many hexes it clears in one command: 0 (Mover), 5 (Bomb, D-48). Not `THINGS.clears` (a Cannon's passed-over hexes). |
 | `colored` | Always false: a tool is dealt on any board. |
 | `weight` | Relative draw chance, as `THINGS.weight` (Draw rule). |
 
@@ -579,7 +579,7 @@ The code constant in `GameArtifacts` is the single source.
 | `UNLOCKS` | [BELT, BRIDGE, WALL, TRAP], [PUSHER, PULLER], [SLIDE], [SPRING], [MOVER], [ROCKET], [CANNON], [BOMB] | the order cards join the deck, one step per milestone [D; CANNON the last Thing D-36; MOVER after SPRING D-47; BOMB last D-48] |
 | `THINGS.*.weight` BELT/SPRING/ROCKET/PUSHER/PULLER/WALL/TRAP/BRIDGE/SLIDE/CANNON | 6 / 2 / 1 / 0.5 / 0.5 / 2 / 1 / 1 / 2 / 1 | relative (TRAP [D]: as ROCKET; PUSHER, PULLER [D]: rare, about one per color is plenty; SLIDE [D-29]: as WALL and SPRING; CANNON [D-36: low D, 1 P]: as ROCKET) |
 | `TOOLS.MOVER.weight` | 0.5 | relative, on the same scale; rare like a Pusher or Puller [D-47: rare D, the number P] |
-| `TOOLS.BOMB.weight` / `.wipes` | 0.5 / 3 | relative, rare like a Pusher or Puller / hexes one Bomb clears [D-48: rare D, 0.5 P; 3 D] |
+| `TOOLS.BOMB.weight` / `.wipes` | 0.5 / 5 | relative, rare like a Pusher or Puller / hexes one Bomb clears [D-48: rare D, 0.5 P; 5 D] |
 | `GREMLIN_HEXES_PER_DIE` / `GREMLIN_DICE_SIDES` | 160 / 4 | hexes of board area per die (the small board's area) [D] / sides; gremlins = `gremlinDice(size)` d sides |
 | `GEN_MAX_ATTEMPTS` | 10 | tries per seed |
 | `HEIGHTMAP_ROUGHNESS` | 0.55 | — |

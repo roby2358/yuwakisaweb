@@ -65,7 +65,7 @@ const GameArtifacts = (function () {
     // BOMB: clear up to `wipes` hexes of their Thing and piece, then one tick (D-48).
     const TOOLS = {
         MOVER:   { picks: 'thing',  wipes: 0, colored: false, weight: 0.5 },
-        BOMB:    { picks: 'filled', wipes: 3, colored: false, weight: 0.5 },
+        BOMB:    { picks: 'filled', wipes: 5, colored: false, weight: 0.5 },
     };
 
     // Every card kind, Things first, and the template a card's kind names.

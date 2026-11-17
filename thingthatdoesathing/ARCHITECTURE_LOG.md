@@ -2,6 +2,10 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-17 — The Bomb blows up 5 hexes, up from 3 (D-48 amended)
+`TOOLS.BOMB.wipes` went from 3 to 5 at the user's call: a Bomb now takes up to five booms
+before it ends on its own. Engine and UI already read `wipes`; tests and docs follow.
+
 ### 2026-11-17 — A picked tool shows its ghost before the pick-up (D-47 amended)
 `PICK_MODES.pickup` used to draw no ghost, so a picked Mover or Bomb showed nothing under
 the mouse until its first click. It now has `ghost: true` and a new `ghostAnywhere` flag:
