@@ -9,6 +9,8 @@ the tool's ghost (the Mover's green cross, the Bomb) follows the mouse over ever
 hex, where `build` still shows it on legal hexes only (pjpd tool-ghost-fewq). Tweaked
 the same day: `carry` got `ghostAnywhere` too, and `carry()` sets the ghost facing to the
 lifted Thing's, so the pick-up click swaps the cross for that Thing under the cursor at once.
+Later the same day `bomb` mode (after the first boom) got `ghost: true, ghostAnywhere: true`
+as well; it used to drop the ghost, so the bomb vanished after the first click (D-48 amended).
 
 ### 2026-11-17 — The Bomb blows up each hex as it's clicked (D-48 amended)
 The Bomb used to mark its hexes with a red ring and cross (`picked.marks`,

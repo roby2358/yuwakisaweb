@@ -83,7 +83,7 @@ const GameUI = (function () {
             back: ui => ui.endBomb(),
             discard: ui => ui.endBomb(),
             legal: (ui, kind) => ui.unboomed(ui.engine.legalPicks(kind)),
-            locked: true, ghost: false, rings: false, hint: () => ' (click to clear)',
+            locked: true, ghost: true, ghostAnywhere: true, rings: false, hint: () => ' (click to clear)',
         },
     };
     // A tool card's pick (the hex its first click took) and its hover hint, by card kind.

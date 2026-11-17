@@ -67,7 +67,7 @@ tick animation) → `picked` card → bare map click.
   (D-47): `build` (Thing cards), `pickup` (a tool's first click: its ghost follows the mouse over any hex, a bare hex does nothing, Esc
   returns the card), `carry` (the Mover holding the Thing it lifted, its ghost under the cursor at once with the Thing's facing, view-only until sent: a
   legal click sends `move`, Esc/right-click/Discard send `scrap`, the hand, Wait/Space and `B` are locked),
-  `bomb` (the Bomb after its first boom, D-48: each legal click bursts its hex at once (`bursts`, splat sound) and
+  `bomb` (the Bomb after its first boom, D-48: its bomb ghost still follows the mouse; each legal click bursts its hex at once (`bursts`, splat sound) and
   `picked.booms` draw as cleared, view-only until sent; the boom reaching `wipes`, or Esc/right-click/Discard, sends
   `bomb(slot, booms)`, whose already-shown `clear`s/`splat`s the animation skips; locked like `carry`).
   `AFTER_PICK[card]` says what a tool's pick leads to (`pick`) and its hover `hint`. `R`/wheel
