@@ -70,9 +70,16 @@ Needs an interview before it becomes tasks.
 Score:   40
 ID: telemetry-v54s
 Created: 2026-11-17T02:31:46Z
-Updated: 2026-11-17T02:31:46Z
+Updated: 2026-11-17T02:45:39Z
 
-Telemetry: learn how real players play Thing Factory, beyond what the sim bot shows. Candidate signals: board size picked, turn each milestone was reached, where players stop or quit (session length, last milestone), cards placed vs discarded per kind (is the Mover/Bomb used? is any card always thrown away?), crates lost / gremlins trapped, how often Go vs single ticks, help opened, mobile sorry page hits. Design calls to settle: where events go (the game is pure client-side with no server; options include a tiny endpoint on the author's site, a hosted analytics service, or local-only stats the player can export); privacy (anonymous, no personal data, opt-in or notice, honor Do Not Track); sampling and batching so it never slows a tick; whether the engine emits a telemetry-friendly event stream or the UI collects from the existing { ok, events } results (the engine must stay headless and never send anything itself); and whether it feeds the leaderboard idea or the productize work. Must still run from file:// with telemetry silently off when there's nowhere to send it.
+Telemetry: learn how real players play Thing Factory, beyond what the sim bot shows. Direction from the user (ship audit, 2026-11-17): log basically every action, stored in Cloudflare D1 behind a small Worker at ttdat.yuwakisa.com (the data is cheap). Still to brainstorm and settle: the event schema (per command: kind, slot/card, hex, facing, color, turn, ok, plus milestone/unlock/open events; per session: size, seed, version, start/stop); batching (buffer N events or T seconds, flush with navigator.sendBeacon on pagehide) so it never slows a tick; an anonymous per-session random id, no cookies, no personal data, no free text, no IPs stored; a privacy note in the game and on the portals (SHIP.md PRIV-3/PRIV-4) and whether it's opt-in, opt-out or notice-only; CORS for the itch.io and Newgrounds game-hosting CDN origins (PORT-6) and silent failure when blocked or offline or on file://; retention and a way to delete; rate limiting on the Worker; and what questions the data must answer (where players stop, which cards get discarded, turns per milestone per size, Mover/Bomb use) so the schema serves them. The engine stays headless and never sends anything; the UI collects from the existing { ok, events } results. Ties to the leaderboard, bsky-login and productize ideas.
+----
+Score:   35
+ID: undo-preview-k9rq
+Created: 2026-11-17T02:45:34Z
+Updated: 2026-11-17T02:45:34Z
+
+Preview consequences before committing, or undo the last command (from the ship audit, SHIP.md ONB-7). Today the legal hexes and the ghost's facing are shown, but not where a placed Spring/Rocket/Cannon will send the piece on it, and remove, blast, discard and Bomb tick at once with no undo. Options: draw the throw/push path of the ghost (from the engine's motion rules, a dry-run tick on a cloned state), a one-step Undo (restore the previous state snapshot, including Rando; does it cost anything? does it break the "every command ticks" pressure?), or confirm only the destructive commands. This is a design call (undo changes the game's tension), so it needs a conversation before it becomes a task.
 ----
 Score:   30
 ID: productize-pxhj
