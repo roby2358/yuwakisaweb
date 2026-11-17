@@ -92,3 +92,18 @@ decision, and where the full reasoning lives (a RATIONALE `D-n` tagged *unreview
 - [agent] bigcrate-odd-755q: the chance is never 0 now, so `spawnKind()` drops the "no roll while p is 0" guard and rolls on every spawn; first-milestone baselines shift a little (small 53 → 52, medium 60 → 58) (D-45 call 4).
 - [agent] bigcrate-odd-755q: R-52 checks strict rise and < 1 over m = 0…30; the float reaches exactly 1 near m = 230, unreachable, so no clamp (D-45 call 5).
 - [agent] bigcrate-odd-755q: milestone gaps balloon as the task expected (small to the 5th: 236 → 649, near the old big-crates-off 662); not retuned, flagged for the separate big-crate-advancement idea.
+
+## mover-card (2026-11-17)
+- [agent, mover-card] mover-card-82t7: the Mover is a tool card, not a Thing: `TOOLS` beside `THINGS`, `CARDS` = both, `cardOf(kind)` for the deck's weight/colored (D-47 call 1).
+- [agent, mover-card] mover-card-82t7: "rare like the Pusher/Puller" = weight 0.5, not their two-color gate; the Mover is dealt on every board size (D-47 call 2).
+- [agent, mover-card] mover-card-82t7: two engine commands, `move(slot, fq, fr, q, r, facing)` and `scrap(slot, fq, fr)`, instead of one with an optional landing hex (D-47 call 3).
+- [agent, mover-card] mover-card-82t7: the moved Thing goes last in placement order and replaces a Thing on its landing hex; putting it back on its own hex is legal (a paid rotate) (D-47 call 4).
+- [agent, mover-card] mover-card-82t7: no color picker on a put-down; the color is kept (D-32 call 6) (D-47 call 5).
+- [agent, mover-card] mover-card-82t7: lifting a Bridge (or a water Slide) sinks the piece it held at hop 0, as `remove` does, unless the Thing goes back on that hex (D-47 call 6).
+- [agent, mover-card] mover-card-82t7: `move` and `scrap` count as a card used (idle redraw resets) (D-47 call 7).
+- [agent, mover-card] mover-card-82t7: shared pick-up UI is a `PICK_MODES` table (build / pickup / carry) plus `AFTER_PICK[card]`; the Bomb adds a mode and a row (D-47 call 8).
+- [agent, mover-card] mover-card-82t7: while carrying, an illegal click does nothing, the hand, Wait/Space and B are locked, and Discard/X scraps like Esc; the carried Thing is hidden from its hex and the hover bar, and its card shows that Thing (D-47 call 9).
+- [agent, mover-card] mover-card-82t7: the pick-up click waits for a running tick animation, like a place (D-47 call 10).
+- [agent, mover-card] mover-card-82t7: New Game while carrying drops the carry with nothing sent; Esc back to the game leaves the Thing in place and the Mover in hand; harmless, left as is (D-47 call 11).
+- [agent, mover-card] mover-card-82t7: the sim bot's existing "discard every non-Belt while building" covers the Mover; only its comment changed (D-47 call 12).
+- [agent, mover-card] mover-card-82t7: UI_CONTROLS.md left unchanged (it's the family-wide spec; the game's own notes live in CLAUDE.md's Input architecture and README).

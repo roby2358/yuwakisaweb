@@ -71,6 +71,8 @@ const GameDisplayArtifacts = (function () {
             BRIDGE:  { name: 'Bridge',  does: 'carries what is on it 1 hex over water (build on water)', fill: '#a07a4a', ink: '#3d2812', inset: 0.84 },
             SLIDE:   { name: 'Slide',   does: 'what comes onto it slides on, like ice (build on plains or water)', fill: '#9fd3e6', ink: '#ffffff', inset: 0.84 },
             CANNON:  { name: 'Cannon',  does: 'lobs what is on it over 4 hexes of anything, down on the 5th (slides on ice)', fill: '#33383f', ink: '#c9d1d9', inset: 0.84 },
+            // A tool card (D-47): drawn in the hand only, never on the board.
+            MOVER:   { name: 'Mover',   does: 'pick up a placed Thing and put it down somewhere else (Esc after the pick-up scraps it)', fill: '#3b4a2c', ink: '#c8f07a', inset: 0.84 },
         },
         // Accent per color for colored kinds: white (a card), or the crate color's lit face.
         COLOR_PICKER_PX: 84,   // the color picker's width and height (D-32), for placing it beside the hex

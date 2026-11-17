@@ -4,7 +4,7 @@
 // and requestAnimationFrame, then drives the UI through clicks and keys: pick a board size
 // from the intro, pick each card, turn the ghost, place, select and rotate, remove the selected Thing with D, wait, run tick animations to completion,
 // play to the first milestone (checking that no two pieces are ever drawn on one hex at a hop,
-// D-38), drive the color picker (D-32), the map-scale buttons (D-40), and the sorry page a phone gets (D-41). Catches runtime errors in rendering and input wiring without a
+// D-38), drive the color picker (D-32), the Mover's pick-up and carry (D-47), the map-scale buttons (D-40), and the sorry page a phone gets (D-41). Catches runtime errors in rendering and input wiring without a
 // browser. It can't judge how anything looks; that stays manual (U-rows).
 'use strict';
 
@@ -601,6 +601,46 @@ run('with two colors open, a Pusher asks for its color: pick, cancel three ways,
     advance(1000);
     if (s.turn === held + 1) throw new Error('Go did not resume after the pick');
     els.go.fire('click'); settle();
+});
+run('the Mover: Esc before a pick-up keeps the card, a bare hex does nothing, a pick-up carries the Thing, put down or scrapped (D-47)', () => {
+    els['new-game'].fire('click'); key('1');
+    const s = ui.state, e = ui.engine;
+    const free = [...s.hexes.values()].filter(h => !h.isEdge && h.terrain === 1 && !e.isEndpoint(h) && !e.pieceAt(h.q, h.r));
+    const [a, b, c] = free;
+    s.things.push({ kind: 'BELT', color: 'white', q: a.q, r: a.r, facing: 0 });
+    s.hand[0] = { kind: 'MOVER' };
+    ui.render();
+    if (els.cards.children[0].querySelector('.name').textContent !== 'Mover') throw new Error('the card must read "Mover"');
+    const turn = s.turn;
+    key('1');
+    if (!ui.picked || ui.picked.mode !== 'pickup' || !ui.picked.legal.has(`${a.q},${a.r}`) || ui.picked.legal.has(`${b.q},${b.r}`))
+        throw new Error('pick-up mode must offer exactly the Thing hexes');
+    key('Escape');
+    if (ui.picked || s.turn !== turn || s.hand[0].kind !== 'MOVER') throw new Error('Esc before a pick-up must keep the card, no tick');
+    key('1');
+    clickHex(b.q, b.r);
+    if (!ui.picked || ui.picked.mode !== 'pickup' || s.turn !== turn) throw new Error('a bare hex must do nothing');
+    clickHex(a.q, a.r);
+    if (ui.picked.mode !== 'carry' || ui.picked.kind !== 'BELT' || s.turn !== turn || !e.thingAt(a.q, a.r))
+        throw new Error('the pick-up must carry the Belt without a tick (the engine still holds it)');
+    if (els.cards.children[0].querySelector('.name').textContent !== 'Belt') throw new Error('the spent card must show the carried Belt');
+    key('2'); key(' '); key('b'); els['end-turn'].fire('click');
+    if (ui.picked.slot !== 0 || ui.picked.mode !== 'carry' || s.turn !== turn) throw new Error('the hand, Wait and B are locked while carrying');
+    key('r');
+    const facing = ui.facing;
+    clickHex(c.q, c.r);
+    if (ui.picked || s.turn !== turn + 1 || e.thingAt(a.q, a.r) || e.thingAt(c.q, c.r).kind !== 'BELT' || e.thingAt(c.q, c.r).facing !== facing)
+        throw new Error('the put-down must move the Belt in one tick');
+    settle();
+    // Pick it up again and back out with a right-click: scrapped, one tick.
+    s.hand[1] = { kind: 'MOVER' };
+    ui.render();
+    key('2');
+    clickHex(c.q, c.r);
+    const { x, y } = ui.hexToScreen(c.q, c.r);
+    canvas.fire('mousedown', { button: 2, clientX: x, clientY: y });
+    if (ui.picked || s.turn !== turn + 2 || e.thingAt(c.q, c.r) || s.things.length) throw new Error('backing out of a carry must scrap the Thing and tick once');
+    settle();
 });
 // Map scale (D-40): the 1 / 2 / 4 / ∞ buttons. One scale drives drawing and hit-testing, so
 // screenToHex(hexToScreen(h)) must round-trip and clicks must land on the hex under them.

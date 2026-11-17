@@ -14,7 +14,7 @@ const GameUI = (function () {
         PORT_MARK_WIDTH, PORT_RING_RADII, PORT_PLUS_REACH, PORT_OUTLINE_WIDTH, BG_COLOR, UI_FONT, REACH_COLOR, MAP_SIZE_NOTES,
         COLOR_PICKER_PX, ZOOM_DIVISORS, MIN_TEXT_PX, SORRY_PICTURE_PX
     } = GameDisplayArtifacts;
-    const { TERRAIN, THINGS, WHITE, HAND_SIZE, MAP_SIZES, aims, nextMilestone } = GameArtifacts;
+    const { TERRAIN, THINGS, WHITE, HAND_SIZE, MAP_SIZES, aims, cardOf, nextMilestone } = GameArtifacts;
     const SIZE_KEYS = Object.keys(MAP_SIZES);
     // A splat burst's color, by piece kind: a gremlin's own color, a crate's side face.
     const SPLAT_COLOR = {
@@ -43,6 +43,43 @@ const GameUI = (function () {
     };
 
     const DRAG_THRESHOLD = 4;
+
+    // L1.2 What a picked card does, by its mode (D-47). A Thing card is in `build`; a tool card
+    // starts in `pickup`, where its first click must take a hex the engine's legalPicks allows,
+    // and AFTER_PICK[kind] says what that pick leads to (the Mover: `carry`, holding the picked
+    // Thing as a card). Per mode: `click` on a board hex (a lookup in `picked.legal`), `back`
+    // (Esc, right-click), `discard` (the Discard spot, X), `legal` (the hexes it may click,
+    // for the kind it holds), whether the hand is `locked` (the card is already spent), whether
+    // legal hexes get a ghost and replace `rings`, and the hover bar's `hint` over a Thing.
+    const PICK_MODES = {
+        build: {
+            click: (ui, hex, legal) => legal ? ui.placeOrAsk(hex.q, hex.r) : ui.unpick(),
+            back: ui => ui.unpick(),
+            discard: ui => ui.discardCard(),
+            legal: (ui, kind) => ui.engine.legalPlacements(kind),
+            locked: false, ghost: true, rings: true, hint: '',
+        },
+        pickup: {
+            click: (ui, hex, legal) => { if (legal) AFTER_PICK[ui.picked.card](ui, hex); },   // a bare hex does nothing
+            back: ui => ui.unpick(),
+            discard: ui => ui.discardCard(),
+            legal: (ui, kind) => ui.engine.legalPicks(kind),
+            locked: false, ghost: false, rings: false, hint: ' (click to pick up)',
+        },
+        carry: {
+            click: (ui, hex, legal) => { if (legal) ui.putDown(hex.q, hex.r); },   // an illegal hex does nothing
+            back: ui => ui.scrapCarried(),
+            discard: ui => ui.scrapCarried(),
+            legal: (ui, kind) => ui.engine.legalPlacements(kind),
+            locked: true, ghost: true, rings: true, hint: '',
+        },
+    };
+    // A tool card's pick (the hex its first click took), by card kind.
+    const AFTER_PICK = {
+        MOVER: (ui, hex) => ui.carry(hex),
+    };
+    // The mode a freshly picked card starts in.
+    const startMode = kind => THINGS[kind] ? 'build' : 'pickup';
 
     // The map-scale buttons (D-40), in order: one per ZOOM_DIVISORS entry (1/d size, keeping the
     // point at the canvas center where it is), then ∞, which fits the whole board once, when
@@ -203,6 +240,21 @@ const GameUI = (function () {
             ctx.lineWidth = width;
             chevron(ctx, s * 0.2, s * 0.3);
         },
+        MOVER(ctx, s) {
+            // A four-way move cross, an arrowhead on each arm: it takes a Thing somewhere else.
+            const r = s * 0.5, h = s * 0.14;
+            ctx.beginPath();
+            ctx.moveTo(-r, 0); ctx.lineTo(r, 0);
+            ctx.moveTo(0, -r); ctx.lineTo(0, r);
+            ctx.stroke();
+            for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                ctx.beginPath();
+                ctx.moveTo(dx * r - dy * h - dx * h, dy * r - dx * h - dy * h);
+                ctx.lineTo(dx * r, dy * r);
+                ctx.lineTo(dx * r + dy * h - dx * h, dy * r + dx * h - dy * h);
+                ctx.stroke();
+            }
+        },
         SLIDE(ctx, s) {
             // Ice streaks on a slab: what comes onto it keeps going (it has no facing).
             ctx.lineWidth = Math.max(1, s * 0.06);
@@ -219,7 +271,7 @@ const GameUI = (function () {
     // `facing` is null for kinds that don't aim; `color` is the Thing's (WHITE for most).
     function drawThing(ctx, x, y, s, kind, color, facing, alpha) {
         const look = THING_LOOK[kind];
-        const ink = THINGS[kind].colored ? COLOR_INK[color] : look.ink;
+        const ink = cardOf(kind).colored ? COLOR_INK[color] : look.ink;
         ctx.save();
         ctx.globalAlpha = alpha;
         drawHexPath(ctx, x, y, s * look.inset);
@@ -242,8 +294,8 @@ const GameUI = (function () {
 
     // A Thing's name and verb line: a colored kind in a crate color says so.
     const capitalized = w => w[0].toUpperCase() + w.slice(1);
-    const thingName = (kind, color) => (THINGS[kind].colored && color !== WHITE ? capitalized(color) + ' ' : '') + THING_LOOK[kind].name;
-    const thingDoes = (kind, color) => THING_LOOK[kind].does + (!THINGS[kind].colored ? '' :
+    const thingName = (kind, color) => (cardOf(kind).colored && color !== WHITE ? capitalized(color) + ' ' : '') + THING_LOOK[kind].name;
+    const thingDoes = (kind, color) => THING_LOOK[kind].does + (!cardOf(kind).colored ? '' :
         color === WHITE ? ' (you pick its crate color when you place it)' : ` (only ${color} crates, and gremlins)`);
 
     class GameUI {
@@ -265,7 +317,7 @@ const GameUI = (function () {
             this.panOrigX = 0;
             this.panOrigY = 0;
 
-            this.picked = null;      // L1.2 { slot, legal: Set<key> } — the card being placed
+            this.picked = null;      // L1.2 { slot, card, mode, legal: Set<key>, kind, color, from } — the card in play (PICK_MODES; kind/color: what a ghost draws; from: a carried Thing's hex)
             this.choosing = null;    // L5 { q, r, colors } — the color picker's hex and swatches, while it's open (D-32)
             this.facing = 0;         // ghost facing; remembered between placements
             this.overlay = null;     // L5 'intro' | 'size' (board-size pickers) | 'news' (a color opened) | 'help' (the keys) | 'color' (the color picker, D-32) | null
@@ -463,10 +515,54 @@ const GameUI = (function () {
         pick(slot) {
             if (this.overlay) return;
             if (slot < 0 || slot >= this.state.hand.length) return;
+            if (this.handLocked()) return;   // a spent card: no switching
             if (this.picked && this.picked.slot === slot) { this.unpick(); return; }
             this.selected = null;
-            this.picked = { slot, legal: this.engine.legalPlacements(this.state.hand[slot].kind) };
+            const card = this.state.hand[slot].kind;
+            const mode = startMode(card);
+            this.picked = { slot, card, mode, legal: PICK_MODES[mode].legal(this, card), kind: card, color: WHITE, from: null };
             this.render();
+        }
+
+        // Is the card in play already spent (the Mover carrying a Thing)? Then only its own
+        // put-down or scrap may follow (D-47).
+        handLocked() {
+            return !!this.picked && PICK_MODES[this.picked.mode].locked;
+        }
+
+        // Esc or right-click with a card in play: back one step, as its mode says.
+        backOut() {
+            PICK_MODES[this.picked.mode].back(this);
+        }
+
+        // The Mover's pick (D-47): the Thing on `hex` comes off the board (in the view only;
+        // the engine hears of it with the put-down or the scrap, one command) and the card
+        // becomes it: same kind, same color, placed by that kind's own rule.
+        carry(hex) {
+            const t = this.engine.thingAt(hex.q, hex.r);
+            const p = this.picked;
+            this.picked = { slot: p.slot, card: p.card, mode: 'carry', legal: PICK_MODES.carry.legal(this, t.kind),
+                kind: t.kind, color: t.color, from: { q: t.q, r: t.r } };
+            this.sound.step();
+            this.render();
+        }
+
+        // Put the carried Thing down on (q, r): one command, one tick. Its color is kept, so
+        // there's no color picker (D-32 call 6, D-47).
+        putDown(q, r) {
+            const { slot, from } = this.picked;
+            this.commit(() => this.engine.move(slot, from.q, from.r, q, r, this.facing), () => this.sound.place());
+        }
+
+        // Backing out of a carried Thing scraps it: the Thing is gone, the card spent, one tick.
+        scrapCarried() {
+            const { slot, from } = this.picked;
+            this.commit(() => this.engine.scrap(slot, from.q, from.r), () => this.sound.discard());
+        }
+
+        // The Thing a carry took off the board, or null.
+        carried() {
+            return this.picked && this.picked.from ? this.engine.thingAt(this.picked.from.q, this.picked.from.r) : null;
         }
 
         unpick() {
@@ -500,7 +596,7 @@ const GameUI = (function () {
         // A click on a legal hex: with one color to choose from (every kind but Pushers and
         // Pullers), place at once; otherwise ask for the color first (D-32).
         placeOrAsk(q, r) {
-            const colors = this.engine.colorChoices(this.state.hand[this.picked.slot].kind);
+            const colors = this.engine.colorChoices(this.picked.kind);
             if (colors.length === 1) { this.place(q, r, colors[0]); return; }
             this.openColorPicker(q, r, colors);
         }
@@ -573,23 +669,29 @@ const GameUI = (function () {
             if (this.commit(() => this.engine.remove(q, r), () => this.sound.sink())) this.selected = null;
         }
 
-        // Blow up the crate under the cursor (B).
+        // Blow up the crate under the cursor (B). Not while a spent card is in play (D-47).
         blastHovered() {
-            if (this.overlay || this.anim || !this.hoveredHex) return;
+            if (this.overlay || this.anim || !this.hoveredHex || this.handLocked()) return;
             const { q, r } = this.hoveredHex;
             this.commit(() => this.engine.blast(q, r), () => {});
         }
 
-        // Throw the picked card away (the Discard spot or X); it ticks like any command.
+        // The Discard spot or X: throw the card in play away, as its mode says; it ticks like
+        // any command.
         discardPicked() {
             if (this.overlay || this.anim || !this.picked) return;
+            PICK_MODES[this.picked.mode].discard(this);
+        }
+
+        discardCard() {
             const slot = this.picked.slot;
             this.commit(() => this.engine.discard(slot), () => this.sound.discard());
         }
 
-        // L2.1 the primary action (Wait button, Space).
+        // L2.1 the primary action (Wait button, Space). Not while a spent card is in play: the
+        // Mover's carry ends only in a put-down or a scrap (D-47).
         primaryAction() {
-            if (this.overlay || this.anim) return;
+            if (this.overlay || this.anim || this.handLocked()) return;
             this.commit(() => this.engine.wait(), () => this.sound.endTurn());
         }
 
@@ -830,9 +932,11 @@ const GameUI = (function () {
             for (const t of s.targets) this.drawTarget(t);
 
             // A Thing under the ghost is about to be replaced (D-28): the ghost stands in for it.
+            // A carried Thing is off the board, in the hand (D-47).
             const doomed = this.replaceTarget(this.ghostHex());
+            const carried = this.carried();
             for (const t of s.things) {
-                if (t === doomed) continue;
+                if (t === doomed || t === carried) continue;
                 const { x, y } = this.hexToWorld(t.q, t.r);
                 drawThing(ctx, x, y, HEX_SIZE, t.kind, t.color, t.facing, 1);
             }
@@ -840,13 +944,15 @@ const GameUI = (function () {
             // L1.2 legal placements for the picked card, plus a ghost under the cursor. A legal
             // hex holding a Thing (placing replaces it) also gets a dashed yellow ring.
             if (this.picked) {
+                const mode = PICK_MODES[this.picked.mode];
                 for (const key of this.picked.legal) {
                     const { q, r } = Hex.fromKey(key);
                     const { x, y } = this.hexToWorld(q, r);
                     drawHexPath(ctx, x, y, HEX_SIZE);
                     ctx.fillStyle = `rgba(${REACH_COLOR}, 0.28)`;
                     ctx.fill();
-                    if (!this.engine.thingAt(q, r)) continue;
+                    const there = this.engine.thingAt(q, r);
+                    if (!mode.rings || !there || there === carried) continue;
                     drawHexPath(ctx, x, y, HEX_SIZE - 2);
                     ctx.save();
                     ctx.setLineDash([4, 3]);
@@ -856,9 +962,9 @@ const GameUI = (function () {
                     ctx.restore();
                 }
                 const h = this.ghostHex();
-                if (h && this.picked.legal.has(Hex.key(h.q, h.r))) {
+                if (mode.ghost && h && this.picked.legal.has(Hex.key(h.q, h.r))) {
                     const { x, y } = this.hexToWorld(h.q, h.r);
-                    drawThing(ctx, x, y, HEX_SIZE, s.hand[this.picked.slot].kind, WHITE, this.facing, 0.7);
+                    drawThing(ctx, x, y, HEX_SIZE, this.picked.kind, this.picked.color, this.facing, 0.7);
                 }
             } else if (this.hoveredHex && !this.anim) {
                 // A bare hover over a mover: outline it — clicking turns it.
@@ -883,10 +989,12 @@ const GameUI = (function () {
             return this.choosing || this.hoveredHex;
         }
 
-        // The placed Thing that placing the picked card on `h` would replace, or null.
+        // The placed Thing that placing the picked card on `h` would replace, or null (a
+        // carried Thing's own hex replaces nothing; picking up replaces nothing).
         replaceTarget(h) {
-            if (!this.picked || !h || !this.picked.legal.has(Hex.key(h.q, h.r))) return null;
-            return this.engine.thingAt(h.q, h.r) || null;
+            if (!this.picked || !PICK_MODES[this.picked.mode].rings || !h || !this.picked.legal.has(Hex.key(h.q, h.r))) return null;
+            const t = this.engine.thingAt(h.q, h.r);
+            return t && t !== this.carried() ? t : null;
         }
 
         // The selected hex: a bright outline, and over a mover a white arrow along its facing.
@@ -1162,7 +1270,7 @@ const GameUI = (function () {
             if (src) parts.push(`Source — ${src.colors.join(', ')} crates appear here`);
             if (tgt) parts.push(`Target — deliver ${tgt.color} crates here`);
             const t = this.engine.thingAt(h.q, h.r);
-            if (t) parts.push(`${thingName(t.kind, t.color)}: ${thingDoes(t.kind, t.color)}` + this.thingHint(h, t));
+            if (t && t !== this.carried()) parts.push(`${thingName(t.kind, t.color)}: ${thingDoes(t.kind, t.color)}` + this.thingHint(h, t));
             const p = this.engine.pieceAt(h.q, h.r);
             if (p) parts.push(PIECE_LOOK[p.kind].name);
             hoverEl.textContent = parts.join(' · ');
@@ -1172,7 +1280,7 @@ const GameUI = (function () {
         // What the mouse can do to the hovered Thing `t` on `h`, for the hover bar.
         thingHint(h, t) {
             if (this.replaceTarget(h)) return ' (click to replace)';
-            if (this.picked) return '';
+            if (this.picked) return PICK_MODES[this.picked.mode].hint;
             if (this.selected && Hex.same(this.selected, h)) return aims(t.kind) ? ' (click to turn, D to remove)' : ' (D to remove)';
             return aims(t.kind) ? ' (click to select, then click to turn or D to remove)' : ' (click to select, then D to remove)';
         }
@@ -1183,7 +1291,8 @@ const GameUI = (function () {
             const el = document.getElementById('cards');
             const s = this.state;
             document.getElementById('discard').classList.toggle('armed', !!this.picked);
-            const shown = JSON.stringify([s.hand, this.picked && this.picked.slot, this.facing]);
+            const p = this.picked;
+            const shown = JSON.stringify([s.hand, p && [p.slot, p.kind, p.color], this.facing]);
             if (shown === this.handDrawn && el.children.length === HAND_SIZE) return;
             this.handDrawn = shown;
             if (el.children.length !== HAND_SIZE) {
@@ -1198,14 +1307,16 @@ const GameUI = (function () {
                 }
             }
             [...el.children].forEach((b, i) => {
-                const { kind } = s.hand[i];   // cards have no color (D-32)
-                const picked = this.picked && this.picked.slot === i;
+                // Cards have no color (D-32); a picked card shows what it is now (a Mover
+                // carrying a Thing shows that Thing, in its color, D-47).
+                const picked = p && p.slot === i;
+                const kind = picked ? p.kind : s.hand[i].kind, color = picked ? p.color : WHITE;
                 b.classList.toggle('picked', !!picked);
-                b.querySelector('.name').textContent = thingName(kind, WHITE);
-                b.querySelector('.does').textContent = thingDoes(kind, WHITE);
+                b.querySelector('.name').textContent = thingName(kind, color);
+                b.querySelector('.does').textContent = thingDoes(kind, color);
                 const c = b.querySelector('canvas'), cx = c.getContext('2d');
                 cx.clearRect(0, 0, c.width, c.height);
-                drawThing(cx, 32, 32, 26, kind, WHITE, aims(kind) ? (picked ? this.facing : 0) : null, 1);
+                drawThing(cx, 32, 32, 26, kind, color, aims(kind) ? (picked ? this.facing : 0) : null, 1);
             });
         }
 
@@ -1242,7 +1353,7 @@ const GameUI = (function () {
         onMouseDown(e) {
             // Right button: narrow cancel — put the picked card back (L2.2). No pan.
             if (e.button === 2) {
-                if (this.picked) this.unpick();
+                if (this.picked) this.backOut();
                 e.preventDefault();
                 return;
             }
@@ -1264,9 +1375,8 @@ const GameUI = (function () {
             const hex = this.screenToHex(e.clientX, e.clientY);
             const key = Hex.key(hex.q, hex.r);
             if (this.picked) {
-                if (this.anim) return;                              // L1.1 a place waits for the tick
-                if (this.picked.legal.has(key)) this.placeOrAsk(hex.q, hex.r);
-                else this.unpick();
+                if (this.anim) return;                              // L1.1 a place (or a pick-up) waits for the tick
+                PICK_MODES[this.picked.mode].click(this, hex, this.picked.legal.has(key));
                 return;
             }
             if (this.selected) {
@@ -1310,7 +1420,7 @@ const GameUI = (function () {
 
         onKeyDown(e) {
             if (this.overlay) { this.onOverlayKey(e); return; }
-            if (e.key === 'Escape') { if (this.picked) this.unpick(); else if (this.selected) this.deselect(); return; }   // L2.2
+            if (e.key === 'Escape') { if (this.picked) this.backOut(); else if (this.selected) this.deselect(); return; }   // L2.2
             if (e.key === ' ') { e.preventDefault(); this.oneTick(); return; }
             if (e.key === 'Enter') { e.preventDefault(); this.toggleRun(); return; }
             if (e.key >= '1' && e.key <= String(HAND_SIZE)) { this.pick(Number(e.key) - 1); return; }

@@ -2,6 +2,19 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-17 — The Mover card, and tool cards (D-47)
+Every card used to be a `THINGS` kind, and the UI's `picked` card only ever built. Now a card's
+kind may also be a `TOOLS` kind (`artifacts.js`: `TOOLS`, `CARDS`, `cardOf`); the deck,
+`everDealt` and `colorChoices` read `cardOf`, and `aims` is false for a tool. `UNLOCKS` gains
+a `[MOVER]` step after `[SPRING]`, so the Rocket and Cannon each unlock one milestone later.
+The engine gained `canPick`/`legalPicks` (a `PICKS` table keyed by a tool's `picks`), and the
+commands `move(slot, fq, fr, q, r, facing)` and `scrap(slot, fq, fr)`; `place`'s replace step
+became `build(thing)`, and `remove`'s stranded-piece sink became `stranded(q, r, usedCard)`,
+shared by all three. `gameui.js` routes a picked card through `PICK_MODES` (`build`, `pickup`,
+`carry`) instead of assuming it builds; Esc and right-click call `backOut()`. R-63 added
+(test/R-63/), R-27 and R-49 extended to tools and the new order, U-30 added, `uiboot.js`
+drives the Mover (pjpd mover-card-82t7).
+
 ### 2026-11-13 — A crate on its own color's new target is delivered (D-46)
 `clearHex` used to destroy any piece on a newly revealed source or target, a crate on its own
 color's new target included (D-44 call 6). Now that crate is delivered (`deliver` event at the

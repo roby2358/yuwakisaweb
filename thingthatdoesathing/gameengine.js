@@ -7,13 +7,17 @@
 // Every command re-checks its own legality; every legal command but rotate runs exactly one tick. All randomness goes through the seeded Rando.
 const GameEngine = (function () {
     const {
-        TERRAIN, THINGS, UNLOCKS, PIECES, CRATE_COLORS, WHITE, aims, nextMilestone, MAP_SIZES, ENHANCE_CHANCE, HAND_SIZE, IDLE_REDRAW_TICKS, BUMP_ADVANCE,
+        TERRAIN, THINGS, TOOLS, CARDS, cardOf, UNLOCKS, PIECES, CRATE_COLORS, WHITE, aims, nextMilestone, MAP_SIZES, ENHANCE_CHANCE, HAND_SIZE, IDLE_REDRAW_TICKS, BUMP_ADVANCE,
         gremlinDice, GREMLIN_DICE_SIDES, crateCap, milestonesReached, bigCrateChance,
         GEN_MAX_ATTEMPTS, HEIGHTMAP_ROUGHNESS,
         WATER_PCT, MOUNTAIN_PCT, ICE_FRAC, PLACE_SLICE_FRAC, PLACE_SLICE_MIN
     } = GameArtifacts;
 
-    const KINDS = Object.keys(THINGS);
+    // What a tool's first click may take, keyed by its template's `picks` (D-47).
+    const PICKS = {
+        thing: (engine, hex) => !!engine.thingAt(hex.q, hex.r),
+    };
+    const MOVER = 'MOVER';   // the tool card move() and scrap() spend
     // A wanderer's own step, as a push; `wrecks` comes from its piece template.
     const wanderOf = piece => ({ n: 1, splat: false, flies: false, overMountains: false, clears: 0, wrecks: PIECES[piece.kind].wrecks });
     // How each phase of a motion travels, one hex per hop (D-38):
@@ -132,8 +136,23 @@ const GameEngine = (function () {
         }
 
         legalPlacements(kind) {
-            const keys = [...this.state.hexes].filter(([, hex]) => this.canPlace(kind, hex)).map(([key]) => key);
-            return new Set(keys);
+            return this.hexesWhere(hex => this.canPlace(kind, hex));
+        }
+
+        // May the tool card `kind` take `hex` with its first click? Its template's `picks`
+        // says what it takes (D-47); a Thing card picks nothing.
+        canPick(kind, hex) {
+            const tool = TOOLS[kind];
+            return !!tool && !!hex && PICKS[tool.picks](this, hex);
+        }
+
+        legalPicks(kind) {
+            return this.hexesWhere(hex => this.canPick(kind, hex));
+        }
+
+        // The keys of the hexes that pass `test`.
+        hexesWhere(test) {
+            return new Set([...this.state.hexes].filter(([, hex]) => test(hex)).map(([key]) => key));
         }
 
         // ---- New game / generation ----
@@ -396,7 +415,7 @@ const GameEngine = (function () {
         drawableKinds() {
             const unlocked = this.unlockedKinds();
             const twoColors = this.openColors().length > 1;
-            return KINDS.filter(k => unlocked.includes(k) && (twoColors || !THINGS[k].colored));
+            return CARDS.filter(k => unlocked.includes(k) && (twoColors || !cardOf(k).colored));
         }
 
         unlockedKinds() {
@@ -405,7 +424,7 @@ const GameEngine = (function () {
 
         // Can this board ever deal `kind`? A colored kind needs a second color (D-22).
         everDealt(kind) {
-            return !THINGS[kind].colored || MAP_SIZES[this.state.size].colors > 1;
+            return !cardOf(kind).colored || MAP_SIZES[this.state.size].colors > 1;
         }
 
         // Open the next UNLOCKS step this board can ever deal from, passing over any it can't
@@ -435,19 +454,19 @@ const GameEngine = (function () {
         }
 
         drawKind(kinds) {
-            const total = kinds.reduce((sum, k) => sum + THINGS[k].weight, 0);
+            const total = kinds.reduce((sum, k) => sum + cardOf(k).weight, 0);
             let roll = Rando.random() * total;
             for (const k of kinds) {
-                roll -= THINGS[k].weight;
+                roll -= cardOf(k).weight;
                 if (roll < 0) return k;
             }
             return kinds[kinds.length - 1];
         }
 
         // The colors `kind` may be placed in: any open color for a colored kind (the player
-        // picks, D-32), WHITE for every other kind.
+        // picks, D-32), WHITE for every other kind (a tool card is never placed, so it's moot).
         colorChoices(kind) {
-            return THINGS[kind].colored ? this.openColors() : [WHITE];
+            return cardOf(kind).colored ? this.openColors() : [WHITE];
         }
 
         // Does this Thing act on this piece? White ones act on everything; a colored one only
@@ -1082,11 +1101,70 @@ const GameEngine = (function () {
             if (aimed && !(Number.isInteger(facing) && facing >= 0 && facing < 6)) return { ok: false };
             if (!this.colorChoices(kind).includes(color)) return { ok: false };
             if (!this.canPlace(kind, this.board.get(q, r))) return { ok: false };
-            const old = this.thingAt(q, r);   // replaced: the new one goes last in placement order (D-28)
-            if (old) s.things.splice(s.things.indexOf(old), 1);
-            s.things.push({ kind, color, q, r, facing: aimed ? facing : null });
+            this.build({ kind, color, q, r, facing: aimed ? facing : null });
             s.hand[slot] = this.draw();
             return this.tick(CARD_FIRST);
+        }
+
+        // Put a Thing on its hex. One already there is replaced; the new one goes last in
+        // placement order (D-28).
+        build(thing) {
+            const s = this.state;
+            const old = this.thingAt(thing.q, thing.r);
+            if (old) s.things.splice(s.things.indexOf(old), 1);
+            s.things.push(thing);
+        }
+
+        // Take the Thing off its hex, leaving it bare.
+        unbuild(thing) {
+            this.state.things.splice(this.state.things.indexOf(thing), 1);
+        }
+
+        // What a command that took a Thing off (q, r) did before its tick: a piece left
+        // standing there on open water (its Bridge is gone) sinks at hop 0.
+        stranded(q, r, usedCard) {
+            const piece = this.pieceAt(q, r);
+            if (!piece || !this.isOpenWater(this.board.get(q, r))) return usedCard ? CARD_FIRST : NOTHING_FIRST;
+            this.sink(piece);
+            return { events: [{ type: 'sink', id: piece.id, hop: 0 }], gone: [piece.kind], usedCard };
+        }
+
+        // Is `slot` a hand slot holding a Mover card, and is there a Thing on (fq, fr) for it
+        // to pick up? Returns that Thing, or null.
+        moverPick(slot, fq, fr) {
+            const s = this.state;
+            if (!Number.isInteger(slot) || slot < 0 || slot >= s.hand.length) return null;
+            const kind = s.hand[slot].kind;
+            if (kind !== MOVER || !this.canPick(kind, this.board.get(fq, fr))) return null;
+            return this.thingAt(fq, fr);
+        }
+
+        // The Mover card (D-47): pick up the Thing on (fq, fr) and put it down on (q, r), same
+        // kind and color, facing `facing` if it aims. The place rule is the Thing's own
+        // (canPlace), judged with it gone; (q, r) may be where it came from, and a Thing
+        // there is replaced (D-28). The whole move is one command and one tick.
+        move(slot, fq, fr, q, r, facing) {
+            const s = this.state;
+            const thing = this.moverPick(slot, fq, fr);
+            if (!thing) return { ok: false };
+            const aimed = aims(thing.kind);
+            if (aimed && !(Number.isInteger(facing) && facing >= 0 && facing < 6)) return { ok: false };
+            if (!this.canPlace(thing.kind, this.board.get(q, r))) return { ok: false };
+            this.unbuild(thing);
+            this.build({ kind: thing.kind, color: thing.color, q, r, facing: aimed ? facing : null });
+            s.hand[slot] = this.draw();
+            return this.tick(this.stranded(fq, fr, true));
+        }
+
+        // The Mover card picked up the Thing on (fq, fr) and was backed out of: the Thing is
+        // gone, the card spent, and the world ticks once (D-47).
+        scrap(slot, fq, fr) {
+            const s = this.state;
+            const thing = this.moverPick(slot, fq, fr);
+            if (!thing) return { ok: false };
+            this.unbuild(thing);
+            s.hand[slot] = this.draw();
+            return this.tick(this.stranded(fq, fr, true));
         }
 
         // Turn a placed mover clockwise. Free: no tick, so nothing happens (D-19).
@@ -1110,15 +1188,10 @@ const GameEngine = (function () {
         // Take a placed Thing off the board, leaving the hex bare. The Thing's card is
         // spent: nothing returns to the hand. (Placing on it replaces it instead, D-28.)
         remove(q, r) {
-            const s = this.state;
             const thing = this.thingAt(q, r);
             if (!thing) return { ok: false };
-            s.things.splice(s.things.indexOf(thing), 1);
-            // A piece left standing on open water (its Bridge is gone) sinks before the tick (hop 0).
-            const piece = this.pieceAt(q, r);
-            if (!piece || !this.isOpenWater(this.board.get(q, r))) return this.tick(NOTHING_FIRST);
-            this.sink(piece);
-            return this.tick({ events: [{ type: 'sink', id: piece.id, hop: 0 }], gone: [piece.kind], usedCard: false });
+            this.unbuild(thing);
+            return this.tick(this.stranded(q, r, false));
         }
 
         // Throw away a hand card: the slot gets a fresh draw, and the world ticks.

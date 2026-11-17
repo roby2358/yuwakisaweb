@@ -363,6 +363,54 @@ ARCHITECTURE_LOG.md.
 - **Evidence:** R-62's test seeds crates of every unopened color across the right slice; over
   30 seeds the one on the new target is delivered when it matches (7) and lost otherwise (18).
 
+### D-47 The Mover card: pick up a placed Thing, put it down elsewhere or scrap it — *Decided 2026-11-17 (pjpd mover-card-82t7: picking the card enters a pick-up mode; Esc or right-click before a pick-up returns the card, no tick; a click on a bare hex does nothing; a click on a Thing lifts it and the spent card becomes that Thing (same kind, a Pusher or Puller keeps its color), placed like any card (legal hexes, R/wheel facing); backing out after the pick-up destroys the Thing and ticks once; the pick-up itself doesn't tick, only the put-down, so a move is one tick and one engine command; the sim bot discards Movers; rare, through D-32's mechanism; its unlock step right after the Spring's; the pick-up mode built to be shared by the planned Bomb card), Proposed (*unreviewed*: the rest)*
+- **Alternatives:** `remove` plus a fresh card (no way to keep a placed Pusher's color, and
+  two ticks); a free "move" like `rotate` (a free relocation would make every misplacement
+  costless); a Mover that is a Thing on the board.
+- **Why:** a cleanup card. A contraption grows lopsided as it's built; the Mover fixes a
+  misplaced piece in one tick without spending a fresh card on it, and is the only way to
+  shift a colored Pusher or Puller without re-rolling its card.
+- **Unreviewed calls:** (1) **Tools.** The Mover isn't a Thing, so cards are now `CARDS` =
+  `THINGS` keys plus `TOOLS` keys, with `cardOf(kind)` giving the template the deck reads
+  (`weight`, `colored`). `TOOLS.MOVER` = `{ picks: 'thing', colored: false, weight: 0.5 }`.
+  `picks` names what a tool's first click may take; the engine's `PICKS` table answers it
+  (`canPick`, `legalPicks`), so the Bomb adds a row, not a branch. (2) **Rarity:** "the same
+  mechanism the Pusher and Puller use" read as their low draw weight, 0.5 each, not their
+  two-color gate: the Mover is useful on a one-color board, so `colored` is false and it's
+  dealt on every size. (3) **Two commands,** `move(slot, fq, fr, q, r, facing)` and
+  `scrap(slot, fq, fr)`, rather than one with an optional landing hex (the codebase avoids
+  optional parameters). Both check the slot holds a Mover, by name: they're the Mover's own
+  commands. (4) **The moved Thing** keeps kind and color, takes the new facing (none for a
+  fixture), goes last in placement order like any placement, and replaces a Thing on its
+  landing hex (D-28). The landing is judged by that kind's `canPlace`, which never looks at
+  Things, so its own hex is legal: putting it back, turned, is a paid rotate that also sends
+  it to the back of the order. (5) **No color picker** on a put-down: the color is kept (D-32
+  call 6 forbids recoloring), so "the color picker if it applies" never applies. (6) **A
+  lifted Bridge** (or a Slide on water) strands a piece on open water: it sinks at hop 0 before
+  the tick, as `remove` does, unless the Thing went back on the same hex. (7) **Both count as
+  a card used,** resetting the idle redraw (the Mover card was spent). (8) **UI: one table of
+  pick modes,** `PICK_MODES` in `gameui.js`, keyed by `picked.mode`: `build` (Thing cards),
+  `pickup` (a tool's first click), `carry` (the Mover holding a Thing), each with `click`,
+  `back`, `discard`, `legal`, `locked`, `ghost`, `rings` and `hint`. `AFTER_PICK[card]` says
+  what a tool's pick leads to (the Mover: `carry`); the Bomb adds its mode and its row.
+  (9) **While carrying:** an illegal click does nothing (so a stray click doesn't destroy the
+  Thing), the other hand cards and number keys do nothing (the card is spent), so do Wait,
+  Space and `B` (any other command would end the carry with the card back in hand), and Discard /
+  `X` scraps the Thing like Esc (it's the card in hand now). The carried Thing is hidden from
+  its hex and the hover bar; its card shows that Thing in its color. (10) **The pick-up waits
+  for a running tick animation,** like a place: since Go holds while a card is picked, no tick
+  can start while carrying, so the put-down or scrap never lands mid-animation. (11) New Game
+  while carrying drops the carry with nothing sent; pressing Esc on the size picker returns
+  to the game with the Thing still on its hex and the Mover card in hand. Harmless (nothing
+  ticked), left as is. (12) The sim bot already discards every card but a Belt (or a Spring
+  on a straight run) while it builds; the Mover joins that list, with no code change.
+- **Evidence:** R-63 (move, scrap, the stranded piece, illegal calls, picks), R-27, R-49
+  (deck and unlock order), `uiboot.js` (the pick-up/carry flow by clicks). `cc-sim 200 small`
+  is unchanged (median 52; the Mover unlocks at the third milestone on small, the fourth on bigger boards, past the sim's first),
+  and `node test/sim.js 30 small 6` reproduces the D-45 milestones exactly (51 / 91 / 189 /
+  356 / 668 / 1489): the bot's line is built before the Mover enters the deck, and a draw
+  takes one `Rando` roll whatever it deals. Unmeasured in play.
+
 ## Things
 
 ### D-4 Pushers act on the piece standing on them; the Puller acts two hexes ahead — *Proposed (pushers), Decided (Puller)*

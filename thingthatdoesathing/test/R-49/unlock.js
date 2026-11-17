@@ -26,9 +26,9 @@ const unlocks = events => events.filter(e => e.type === 'unlock').map(e => e.kin
 {
     const ctx = lineGame('medium');
     const { g, state, engine } = ctx;
-    const { UNLOCKS, THINGS } = g.GameArtifacts;
-    check('every THINGS kind is in exactly one UNLOCKS step',
-        UNLOCKS.flat().length === Object.keys(THINGS).length && Object.keys(THINGS).every(k => UNLOCKS.flat().includes(k)));
+    const { UNLOCKS, CARDS } = g.GameArtifacts;
+    check('every card kind (THINGS and TOOLS) is in exactly one UNLOCKS step',
+        UNLOCKS.flat().length === CARDS.length && CARDS.every(k => UNLOCKS.flat().includes(k)));
     check('flatGame starts with one step open', state.unlocks === 1 &&
         engine.unlockedKinds().join() === UNLOCKS[0].join());
     const hand = JSON.stringify(state.hand);
@@ -53,15 +53,20 @@ const unlocks = events => events.filter(e => e.type === 'unlock').map(e => e.kin
         UNLOCKS[1].every(k => g.GameArtifacts.THINGS[k].colored) &&
         unlocks(res.events).join() === UNLOCKS[2].join('+') && state.unlocks === 3);
     check('small: the passed-over kinds are still never drawn', !engine.drawableKinds().some(k => UNLOCKS[1].includes(k)));
-    for (const m of [20, 50]) reach(ctx, m);
-    check('small: the Rocket opens at 50, one step short of the end', state.unlocks === UNLOCKS.length - 1 &&
+    reach(ctx, 20);
+    const r50 = reach(ctx, 50);
+    check('small: the Mover opens at 50, the step right after the Spring', UNLOCKS.findIndex(st => st.includes('MOVER')) ===
+        UNLOCKS.findIndex(st => st.includes('SPRING')) + 1 && unlocks(r50.events).join() === 'MOVER' &&
+        engine.drawableKinds().includes('MOVER') && !engine.unlockedKinds().includes('ROCKET'));
+    reach(ctx, 100);
+    check('small: the Rocket opens at 100, one step short of the end', state.unlocks === UNLOCKS.length - 1 &&
         engine.unlockedKinds().includes('ROCKET') && !engine.unlockedKinds().includes('CANNON'));
-    const r100 = reach(ctx, 100);
-    check('small: the Cannon is the last step, after the Rocket, opening at 100',
+    const r200 = reach(ctx, 200);
+    check('small: the Cannon is the last step, after the Rocket, opening at 200',
         UNLOCKS[UNLOCKS.length - 1].join() === 'CANNON' && UNLOCKS[UNLOCKS.length - 2].join() === 'ROCKET' &&
-        unlocks(r100.events).join() === 'CANNON' && state.unlocks === UNLOCKS.length &&
+        unlocks(r200.events).join() === 'CANNON' && state.unlocks === UNLOCKS.length &&
         engine.drawableKinds().includes('CANNON'));
-    check('past the last step a milestone unlocks nothing', unlocks(reach(ctx, 200).events).length === 0 &&
+    check('past the last step a milestone unlocks nothing', unlocks(reach(ctx, 500).events).length === 0 &&
         state.unlocks === UNLOCKS.length);
 }
 {

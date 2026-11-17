@@ -54,15 +54,30 @@ const GameArtifacts = (function () {
         CANNON:  { push: 5, pull: 0, shove: 0, splat: false, flies: false, overMountains: false, clears: 4, blocks: false, traps: false, colored: false, slides: false, on: 'land',  weight: 1 },
     };
 
+    // Tool cards: cards that aren't Things. A tool is never built; it's played on the board
+    // in its own command (D-47). A card's kind is a THINGS key or a TOOLS key.
+    //   picks   — what its first click on the board takes: 'thing' (a placed Thing)
+    //   colored — always false: a tool is dealt on any board (the deck's `colored` gate, D-22)
+    //   weight  — relative draw chance for the hand (rare, like a Pusher or Puller, D-32)
+    // MOVER: pick up a placed Thing and put it down again (same kind, same color), or scrap it.
+    const TOOLS = {
+        MOVER:   { picks: 'thing', colored: false, weight: 0.5 },
+    };
+
+    // Every card kind, Things first, and the template a card's kind names.
+    const CARDS = [...Object.keys(THINGS), ...Object.keys(TOOLS)];
+    const cardOf = kind => THINGS[kind] || TOOLS[kind];
+
     // The order cards unlock in (R-49). A new game deals only from the first step; each
     // milestone opens the next step the board can ever deal from (a step of only `colored`
     // kinds is passed over on a board with one color, since those are never drawn there).
-    // Every THINGS kind is in exactly one step; past the last step nothing more unlocks.
+    // Every card kind (CARDS) is in exactly one step; past the last step nothing more unlocks.
     const UNLOCKS = [
         ['BELT', 'BRIDGE', 'WALL', 'TRAP'],
         ['PUSHER', 'PULLER'],
         ['SLIDE'],
         ['SPRING'],
+        ['MOVER'],
         ['ROCKET'],
         ['CANNON'],
     ];
@@ -146,12 +161,16 @@ const GameArtifacts = (function () {
         ? BIG_CRATE_START + (BIG_CRATE_AT_FIFTH - BIG_CRATE_START) * m / BIG_CRATE_KNEE
         : 1 - (1 - BIG_CRATE_AT_FIFTH) * Math.pow(BIG_CRATE_EASE, m - BIG_CRATE_KNEE);
 
-    // Does this kind of Thing have a facing (it pushes, pulls or shoves)? Only those can be turned.
-    const aims = kind => THINGS[kind].push > 0 || THINGS[kind].pull > 0 || THINGS[kind].shove > 0;
+    // Does this card kind have a facing (a Thing that pushes, pulls or shoves)? Only those can be
+    // turned. A tool has none.
+    const aims = kind => !!THINGS[kind] && (THINGS[kind].push > 0 || THINGS[kind].pull > 0 || THINGS[kind].shove > 0);
 
     return {
         TERRAIN,
         THINGS,
+        TOOLS,
+        CARDS,
+        cardOf,
         UNLOCKS,
         PIECES,
         CRATE_COLORS,
