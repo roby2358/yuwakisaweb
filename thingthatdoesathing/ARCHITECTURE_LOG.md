@@ -6,7 +6,9 @@ Dated entries, newest first. This is the only doc that records what something us
 `PICK_MODES.pickup` used to draw no ghost, so a picked Mover or Bomb showed nothing under
 the mouse until its first click. It now has `ghost: true` and a new `ghostAnywhere` flag:
 the tool's ghost (the Mover's green cross, the Bomb) follows the mouse over every board
-hex, where `build` and `carry` still show it on legal hexes only (pjpd tool-ghost-fewq).
+hex, where `build` still shows it on legal hexes only (pjpd tool-ghost-fewq). Tweaked
+the same day: `carry` got `ghostAnywhere` too, and `carry()` sets the ghost facing to the
+lifted Thing's, so the pick-up click swaps the cross for that Thing under the cursor at once.
 
 ### 2026-11-17 — The Bomb blows up each hex as it's clicked (D-48 amended)
 The Bomb used to mark its hexes with a red ring and cross (`picked.marks`,

@@ -73,7 +73,7 @@ const GameUI = (function () {
             back: ui => ui.scrapCarried(),
             discard: ui => ui.scrapCarried(),
             legal: (ui, kind) => ui.engine.legalPlacements(kind),
-            locked: true, ghost: true, rings: true, hint: () => '',
+            locked: true, ghost: true, ghostAnywhere: true, rings: true, hint: () => '',
         },
         // The Bomb after its first boom (D-48): the card is spent; each click on a filled hex
         // not yet blown up blows it up at once (in the view); the last of its `wipes` booms,
@@ -580,6 +580,7 @@ const GameUI = (function () {
             const p = this.picked;
             this.picked = { slot: p.slot, card: p.card, mode: 'carry', legal: PICK_MODES.carry.legal(this, t.kind),
                 kind: t.kind, color: t.color, from: { q: t.q, r: t.r }, booms: [] };
+            if (aims(t.kind)) this.facing = t.facing;   // the lifted Thing keeps its look under the cursor
             this.sound.step();
             this.render();
         }
