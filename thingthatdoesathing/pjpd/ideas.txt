@@ -41,6 +41,43 @@ Open questions:
 
 Needs an interview before it becomes tasks. Probably settle it together with goal-gen-tz9e.
 ----
+Score:   50
+ID: grem-hop-jdcs
+Created: 2026-11-17T09:10:30Z
+Updated: 2026-11-17T09:10:30Z
+
+Hopping gremlins: a wandering gremlin sometimes hops farther than one hex.
+
+Rough shape: when an unclaimed gremlin wanders, a 16% chance it hops 2 hexes and a 3% chance it hops 3 hexes (otherwise 1, as now).
+
+Open questions to settle before it becomes a task:
+- Is a hop airborne (passes over whatever is between, like a Spring/flies) or a ground walk of 2–3 steps (blocked by Walls, mountains, pieces along the way)?
+- Same direction for every hex of the hop, or re-picked each step?
+- What happens landing on water, ice (skid?), a Trap, a target, a Slide, or another piece (crash/splat like two flights, or blocked)?
+- Does a hopping gremlin dodge a Trap or target it passes over mid-hop?
+- Is the chance a flat number in artifacts.js, per gremlin per tick, rolled with Rando (seeded) at claim time, and does it scale with milestones?
+- Visual tell: a hop arc in the animation, and maybe a hover note.
+- Effect on the sim bot and turns-to-first-milestone (gremlins wander, so this mostly changes Trap and target-kill rates).
+----
+Score:   50
+ID: airlift-a858
+Created: 2026-11-17T09:12:48Z
+Updated: 2026-11-17T09:12:48Z
+
+Airlift: a colored Thing built near a target that periodically flies a crate straight to it.
+
+Rough shape: the Airlift must be placed within 2 hexes of a target (destination). Every 2–3 ticks it picks a random crate of its color within 6 hexes and lifts it directly onto that target, ignoring terrain and everything in between, delivering it. Colored like the Pusher/Puller (the player picks a crate color at placement; colorChoices).
+
+Open questions to settle before it becomes a task:
+- Which target: must it be within 2 of a target of its own color, and does it deliver only there?
+- "Within 6" measured from the Airlift or from the target?
+- Cadence: a fixed period (every 2 or every 3), or a seeded random 2–3 each time? Is the timer per Airlift, counted in ticks since placement, and does it need state on the Thing (cooldown field in GameState.things)?
+- Does a lift count as a motion in the lockstep hop sim (claim at tick start, a flight with `move{over}` events and a delivery at some hop), or happen outside it? Can it take a crate that another Thing has claimed this tick?
+- Gremlins: never lifted? Big crates: allowed?
+- Rarity and place in UNLOCKS (rare like the Pusher/Puller?), one per target or any number?
+- Look: drawing, the lift animation (an arc), and a range ring while placing.
+- Balance: it bypasses the contraption entirely, so it may trivialize delivery; consider a long cooldown, a small range, or late unlock. Check against the sim bot.
+----
 Score:   40
 ID: zoom-lod-t65a
 Created: 2026-11-12T08:52:10Z
