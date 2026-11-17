@@ -169,6 +169,15 @@ Updated: 2026-11-17T02:50:58Z
 Add an in-game screencap key that saves the board as PNGs sized for the listings.
 The listings and link preview need images taken from real play (SHIP.md WEB-5, the og:image for WEB-4, itch.io capsule). Done looks like: pressing P (unbound today; ignored with Ctrl/Alt/Meta held and while an overlay is open) saves PNGs of what's on the board right now, drawn from the game canvas: (1) the full canvas at its current size, (2) a 1200x630 crop/scale centered on the board's view for og:image, (3) a 630x500 crop for the itch.io capsule, and (4) a 1280x720 one for screenshots. Each is rendered into an offscreen canvas at that size by re-running render() with a temporary size and transform (so it's sharp, not a scaled bitmap), without the hover highlight or ghost, then downloaded via a temporary <a download="ttdat-<seed>-<turn>-<size>.png"> with canvas.toBlob. A short "Saved 4 screenshots" note shows in the hover bar. The DOM HUD isn't included (OS screenshots cover full-UI shots). Works from file:// too. Client-only. Add P to the help legend and the README (as a capture key), a D-n in RATIONALE, an ARCHITECTURE_LOG entry, and list the outputs in SHIP.md under WEB-5. Add a uiboot check that P calls the download path on the stub DOM (stub toBlob). Done when `just cc-test` passes.
 ----
+Priority:   55
+Status: ToDo
+ID: slide-max-u2s8
+Created: 2026-11-17T03:30:43Z
+Updated: 2026-11-17T03:30:43Z
+
+Cap a slide at 4 hexes: a piece slides over at most 4 slick hexes in a row, then stops.
+Today slick ground (bare ice or a Slide, `isSlick`, D-29) is free in the Motion rules: a piece on the ground keeps going the same way for as long as the slick hexes last, both in a `ground` motion (slick doesn't use up its `n`) and in a `skid` after a landing (D-37). New rule: in one motion, a piece can travel at most 4 hexes by sliding (hexes entered on slick ground beyond its normal step count); when it enters its 4th free slick hex it stops there, as if blocked, even if more ice lies ahead. Settled details: the count is per motion and resets each tick; non-slick ground still costs a ground motion's `n` as now; a skid after a landing counts the same 4; airborne hexes (a flight) don't count; the D-33 bump advance (the line moves 2) is unchanged and doesn't count as sliding; everything that happens on entering a hex (sink, deliver, Trap, bump, target block) still happens on the hexes it does reach. Put the number in artifacts.js as a tunable (e.g. MAX_SLIDE = 4) and the D-n's rationale. Add a CRITERIA R-row with a test dir (a long ice run stops after 4; a skid after a Spring landing stops after 4; a run of 3 is unchanged), update any existing slide/skid tests that assumed unlimited slides, record a D-n in RATIONALE, and reconcile ONTOLOGY (the Motion table and pseudocode), CLAUDE.md and ARCHITECTURE_LOG. Run `just cc-sim 200 small` and `just cc-sim-to 100 small 5` and report the change in turns per milestone. Done when `just cc-test` passes.
+----
 Priority:   52
 Status: ToDo
 ID: run-stats-m6pe
