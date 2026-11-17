@@ -99,6 +99,25 @@ Open questions to settle before it becomes a task:
 - Rarity and place in UNLOCKS; the sim bot discards it?
 - Look: a Y-shaped arrow, the ratio readable at 1x.
 ----
+Score:   50
+ID: ferry-krti
+Created: 2026-11-17T16:20:34Z
+Updated: 2026-11-17T16:20:34Z
+
+Ferry: a Thing built on water that sends a crate on it to the nearest other Ferry.
+
+Rough shape: placed only on water (like the Bridge). A crate on a Ferry is carried to the closest other Ferry on the board, crossing water (and maybe anything) in between.
+
+Open questions to settle before it becomes a task:
+- "Next closest": nearest by hex distance; ties broken how (placement order)? Can a Ferry's nearest be the one that just sent the crate, so two Ferries ping-pong a crate back and forth? Maybe one-way (a facing, or "nearest Ferry that isn't where the crate came from")?
+- Is it a flight (`flies`, over everything, like a Rocket) or a water-only trip along a path? Instant (one hop) or one hex per hop in the lockstep sim (D-38)?
+- What happens at the far Ferry: the crate lands on it and next tick is sent again (a chain), or it lands and stops; does the far Ferry need to push it ashore (a facing, like a Bridge)?
+- Only one Ferry on the board: does nothing? Far Ferry occupied by a piece: blocked, crash, swap?
+- Gremlins ride too?
+- Colored or white? Max range?
+- Rarity and place in UNLOCKS; only useful on boards with inland water, so maybe only dealt when there's water.
+- Look: a boat glyph; a line to its partner when hovered or while placing.
+----
 Score:   40
 ID: zoom-lod-t65a
 Created: 2026-11-12T08:52:10Z
