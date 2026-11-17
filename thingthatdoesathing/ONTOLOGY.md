@@ -576,7 +576,7 @@ The code constant in `GameArtifacts` is the single source.
 | `THINGS.CANNON.push` / `.clears` | 5 / 4 | hexes: its range, and how many of them it passes over untouched (D-36) [D] |
 | `THINGS.PULLER.pull` | 1 | hexes |
 | `THINGS.PUSHER.shove` | 1 | hexes [D] |
-| `UNLOCKS` | [BELT, BRIDGE, WALL, TRAP], [PUSHER, PULLER], [SLIDE], [SPRING], [MOVER], [ROCKET], [CANNON], [BOMB] | the order cards join the deck, one step per milestone [D; CANNON the last Thing D-36; MOVER after SPRING D-47; BOMB last D-48] |
+| `UNLOCKS` | [BELT, BRIDGE, WALL, TRAP], [PUSHER, PULLER], [SLIDE], [SPRING], [MOVER], [CANNON], [ROCKET], [BOMB] | the order cards join the deck, one step per milestone [D; CANNON the last Thing D-36, then moved before ROCKET D-51; MOVER after SPRING D-47; BOMB last D-48] |
 | `THINGS.*.weight` BELT/SPRING/ROCKET/PUSHER/PULLER/WALL/TRAP/BRIDGE/SLIDE/CANNON | 6 / 2 / 1 / 0.5 / 0.5 / 2 / 1 / 1 / 2 / 1 | relative (TRAP [D]: as ROCKET; PUSHER, PULLER [D]: rare, about one per color is plenty; SLIDE [D-29]: as WALL and SPRING; CANNON [D-36: low D, 1 P]: as ROCKET) |
 | `TOOLS.MOVER.weight` | 0.5 | relative, on the same scale; rare like a Pusher or Puller [D-47: rare D, the number P] |
 | `TOOLS.BOMB.weight` / `.wipes` | 0.5 / 5 | relative, rare like a Pusher or Puller / hexes one Bomb clears [D-48: rare D, 0.5 P; 5 D] |

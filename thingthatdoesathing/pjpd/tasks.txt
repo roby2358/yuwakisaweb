@@ -1,17 +1,3 @@
-Priority:   80
-Status: ToDo
-ID: cannon-first-xkni
-Created: 2026-11-17T08:27:22Z
-Updated: 2026-11-17T08:27:22Z
-
-Swap the Cannon and the Rocket in the card-unlock order, so the Cannon unlocks first.
-
-Goal: the Cannon arrives one milestone before the Rocket. UNLOCKS in artifacts.js becomes: Belt/Bridge/Wall/Trap, Pusher/Puller, Slide, Spring, Mover, Cannon, Rocket, Bomb (the Bomb stays last).
-
-Settled design: only the order of those two steps changes; no other numbers or rules. Update every place that states the order: artifacts.js UNLOCKS and its comment, ONTOLOGY.md (UNLOCKS numbers row / any rule text naming the order), CRITERIA.md rows that name it, CLAUDE.md, README.md, and any tests that assert the order or which milestone unlocks the Rocket or Cannon (grep for ROCKET/CANNON near unlock). Record it as a user call (an amendment on the decision that set the order, or a new D-n) in RATIONALE.md and add an ARCHITECTURE_LOG.md entry.
-
-Done when: UNLOCKS lists CANNON before ROCKET, the docs agree, `just cc-test` passes, and `just cc-sim 200 small` still runs (median near 52).
-----
 Priority:   75
 Status: ToDo
 ID: crate-start-gtz5

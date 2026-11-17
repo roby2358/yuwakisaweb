@@ -57,18 +57,20 @@ const unlocks = events => events.filter(e => e.type === 'unlock').map(e => e.kin
     const r50 = reach(ctx, 50);
     check('small: the Mover opens at 50, the step right after the Spring', UNLOCKS.findIndex(st => st.includes('MOVER')) ===
         UNLOCKS.findIndex(st => st.includes('SPRING')) + 1 && unlocks(r50.events).join() === 'MOVER' &&
-        engine.drawableKinds().includes('MOVER') && !engine.unlockedKinds().includes('ROCKET'));
-    reach(ctx, 100);
-    check('small: the Rocket opens at 100',
-        engine.unlockedKinds().includes('ROCKET') && !engine.unlockedKinds().includes('CANNON'));
+        engine.drawableKinds().includes('MOVER') && !engine.unlockedKinds().includes('CANNON'));
+    const r100 = reach(ctx, 100);
+    check('small: the Cannon opens at 100, right after the Mover, before the Rocket (D-51)',
+        UNLOCKS.findIndex(st => st.includes('CANNON')) === UNLOCKS.findIndex(st => st.includes('MOVER')) + 1 &&
+        unlocks(r100.events).join() === 'CANNON' &&
+        engine.drawableKinds().includes('CANNON') && !engine.unlockedKinds().includes('ROCKET'));
     const r200 = reach(ctx, 200);
-    check('small: the Cannon opens at 200, right after the Rocket, one step short of the end',
-        UNLOCKS.findIndex(st => st.includes('CANNON')) === UNLOCKS.findIndex(st => st.includes('ROCKET')) + 1 &&
-        unlocks(r200.events).join() === 'CANNON' && state.unlocks === UNLOCKS.length - 1 &&
-        engine.drawableKinds().includes('CANNON') && !engine.unlockedKinds().includes('BOMB'));
+    check('small: the Rocket opens at 200, right after the Cannon, one step short of the end',
+        UNLOCKS.findIndex(st => st.includes('ROCKET')) === UNLOCKS.findIndex(st => st.includes('CANNON')) + 1 &&
+        unlocks(r200.events).join() === 'ROCKET' && state.unlocks === UNLOCKS.length - 1 &&
+        engine.drawableKinds().includes('ROCKET') && !engine.unlockedKinds().includes('BOMB'));
     const r500 = reach(ctx, 500);
-    check('small: the Bomb is the last step, after the Cannon, opening at 500',
-        UNLOCKS[UNLOCKS.length - 1].join() === 'BOMB' && UNLOCKS[UNLOCKS.length - 2].join() === 'CANNON' &&
+    check('small: the Bomb is the last step, after the Rocket, opening at 500',
+        UNLOCKS[UNLOCKS.length - 1].join() === 'BOMB' && UNLOCKS[UNLOCKS.length - 2].join() === 'ROCKET' &&
         unlocks(r500.events).join() === 'BOMB' && state.unlocks === UNLOCKS.length &&
         engine.drawableKinds().includes('BOMB'));
     check('past the last step a milestone unlocks nothing', unlocks(reach(ctx, 1000).events).length === 0 &&

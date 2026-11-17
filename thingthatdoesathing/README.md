@@ -42,7 +42,7 @@ for why it works and [ONTOLOGY.md](ONTOLOGY.md) for the rules.
 
 A new game deals only Belts, Bridges, Walls and Traps. Each milestone unlocks the next card
 and the milestone banner shows it: Pushers and Pullers (with the second color; a 16 × 10 board skips
-them), then the Slide, the Spring, the Mover, the Rocket, the Cannon, and the Bomb last. Cards already in your hand stay.
+them), then the Slide, the Spring, the Mover, the Cannon, the Rocket, and the Bomb last. Cards already in your hand stay.
 The Mover and the Bomb are rare cards, like the Pusher and Puller.
 
 Pushers and Pullers always work in one crate color: a red one moves only red crates, and every

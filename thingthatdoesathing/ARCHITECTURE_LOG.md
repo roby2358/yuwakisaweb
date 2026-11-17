@@ -2,6 +2,11 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-17 — The Cannon unlocks before the Rocket (D-51)
+`UNLOCKS` swaps its `[ROCKET]` and `[CANNON]` steps: Mover, Cannon, Rocket, Bomb. Only the
+order moves; R-49 and R-54 now expect it, and ONTOLOGY, CRITERIA, README, DYNAMICS and
+CLAUDE.md state it.
+
 ### 2026-11-17 — One-action discard: a card's red × and Shift+1/2/3 (D-50)
 Discarding used to take a pick and then the Discard spot or `X`. Each hand card now has a
 red × (`.x`) and Shift+1/2/3 discards by slot (`e.code`); both call the new

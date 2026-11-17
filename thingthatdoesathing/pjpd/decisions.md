@@ -131,3 +131,4 @@ decision, and where the full reasoning lives (a RATIONALE `D-n` tagged *unreview
 - [agent, card-discard] card-discard-jen3: a separate `discardSlot(slot)` sends `discard` directly instead of picking then discarding; a different picked card is unpicked first (D-50 call 1).
 - [agent, card-discard] card-discard-jen3: the × is a `span role="button"` in the card's bottom-right corner, always shown at low opacity, brighter on card hover (D-50 call 2).
 - [agent, card-discard] card-discard-jen3: a queued slot discard keeps only the slot number; `pick()` clears the queue so the slot still names the card seen (D-50 call 3).
+- [agent, cannon-first] cannon-first-xkni: the order swap is recorded as a new D-51 (amending D-30/D-47/D-48) rather than edits to D-30's body; old D-36/D-47/D-48 remarks left as history.

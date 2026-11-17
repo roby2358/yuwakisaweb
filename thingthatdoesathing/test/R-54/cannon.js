@@ -138,8 +138,8 @@ for (const [what, fourth] of Object.entries(illegal4th)) {
 }
 {
     const { UNLOCKS } = flatGame().g.GameArtifacts;
-    check('the Cannon is the last Thing to unlock, right after the Rocket (only the Bomb card after it)',
-        UNLOCKS[UNLOCKS.length - 2].join() === 'CANNON' && UNLOCKS[UNLOCKS.length - 3].join() === 'ROCKET' &&
+    check('the Cannon unlocks right before the Rocket, the last Thing (only the Bomb card after it; D-51)',
+        UNLOCKS[UNLOCKS.length - 2].join() === 'ROCKET' && UNLOCKS[UNLOCKS.length - 3].join() === 'CANNON' &&
         UNLOCKS[UNLOCKS.length - 1].join() === 'BOMB');
 }
 done();

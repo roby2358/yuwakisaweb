@@ -82,8 +82,8 @@ const GameArtifacts = (function () {
         ['SLIDE'],
         ['SPRING'],
         ['MOVER'],
-        ['ROCKET'],
         ['CANNON'],
+        ['ROCKET'],
         ['BOMB'],
     ];
 

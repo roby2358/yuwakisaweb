@@ -73,6 +73,14 @@ ARCHITECTURE_LOG.md.
   picked, putting it back; Shift+2 mid-animation queues and fires at the end; the × does
   nothing under an overlay or with the hand locked).
 
+### D-51 The Cannon unlocks one milestone before the Rocket — *Decided 2026-11-17 (user call, pjpd cannon-first-xkni: swap the two steps, so `UNLOCKS` runs Belt/Bridge/Wall/Trap, Pusher+Puller, Slide, Spring, Mover, Cannon, Rocket, Bomb; only the order changes, no number or rule)*
+- **Amends:** D-30 (which set the order, with the Cannon last among Things, D-36), D-47 and D-48 (their "one step from the end" and unlock-milestone remarks).
+- **Alternatives:** keep the Rocket first.
+- **Why:** the designer asked for it (no reason given beyond the order).
+- **Effect:** on small the Cannon now opens at the fifth milestone (100) and the Rocket at the sixth (200), the Bomb still last at 500; bigger boards one milestone later each.
+- **Evidence:** R-49 and R-54 check the order; `cc-sim 200 small` is unchanged (200/200, median 52, p90 58): the bot's first milestone is before either card.
+- **Unreviewed call:** (1) the Effect line's milestone numbers are read from the sim's 10/20/50/100/200/500 ladder, not played.
+
 ### D-3 Four board sizes, picked at New Game: 16 × 10 (fits the screen), 20 × 20, 30 × 30, 60 × 60 (pan) — *Decided (sizes), Proposed (open on the source)*
 - **Alternatives:** one small board that always fits (G-2: cause and effect never
   off-screen); the base's 60×40 with panning; a free-form width × height entry.
@@ -801,7 +809,7 @@ ARCHITECTURE_LOG.md.
   No Slide on ice (2026-11-12): `just cc-sim 200 small` → 200/200, median 45, p90 51, 0.61
   lost, unchanged for the same reason. Unmeasured in play.
 
-### D-30 Cards unlock one step per milestone — *Decided (gradual unlock, order Belt/Bridge/Wall/Trap, then Pusher+Puller, Slide, Spring, Rocket, then the Cannon last (added 2026-11-12, D-36); hand kept), Proposed (the rest; reviewed and accepted 2026-11-12)*
+### D-30 Cards unlock one step per milestone — *Decided (gradual unlock, order Belt/Bridge/Wall/Trap, then Pusher+Puller, Slide, Spring, Rocket, then the Cannon last (added 2026-11-12, D-36; the Cannon and Rocket swapped 2026-11-17, D-51); hand kept), Proposed (the rest; reviewed and accepted 2026-11-12)*
 - **Alternatives:** every kind from turn 1 (the old rule); unlock by turn count rather than
   milestones; a fixed per-board card list; redrawing the hand on an unlock so the new card
   shows up at once.
