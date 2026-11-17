@@ -2,6 +2,12 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-17 — Sound button and M mute (D-53)
+`GameSound` gains `setMuted`/`isMuted` (remembered in `localStorage` `thingfactory.muted`);
+a muted `phrase()` plays nothing and never creates the AudioContext. New `#sound` button
+beside Help and the `M` key; help legend, README and CLAUDE.md note it. `uiboot.js` checks
+the button and `M` flip the flag.
+
 ### 2026-11-17 — A slide stops on its 4th slick hex (D-52)
 Slides were unlimited: a ground motion or a landing's skid kept going over bare ice or Slides
 until ground that wasn't slick. Now each motion counts its free slick hexes (`slid`,

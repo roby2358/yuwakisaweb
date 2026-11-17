@@ -459,6 +459,15 @@ run('Help shows the keys and holds Go; closing it lets Go pick up again', () => 
     if (s.turn === held || !ui.running) throw new Error('Go did not pick up after Help closed');
     els.go.fire('click'); settle();
 });
+run('the Sound button and M flip the muted flag', () => {
+    const before = ui.sound.isMuted();
+    els.sound.fire('click');
+    if (ui.sound.isMuted() === before) throw new Error('the Sound button did not flip the flag');
+    if (els.sound.textContent !== (before ? 'Sound: on' : 'Sound: off')) throw new Error('label does not show the state');
+    key('m');
+    if (ui.sound.isMuted() !== before) throw new Error('M did not flip it back');
+    if (els.sound.textContent !== (before ? 'Sound: off' : 'Sound: on')) throw new Error('label did not follow M');
+});
 run('Space while Go runs finishes the tick in flight, then stops', () => {
     els['new-game'].fire('click'); key('1');
     const s = ui.state;

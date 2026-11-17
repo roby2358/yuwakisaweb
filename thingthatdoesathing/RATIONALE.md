@@ -81,6 +81,10 @@ ARCHITECTURE_LOG.md.
 - **Evidence:** R-49 and R-54 check the order; `cc-sim 200 small` is unchanged (200/200, median 52, p90 58): the bot's first milestone is before either card.
 - **Unreviewed call:** (1) the Effect line's milestone numbers are read from the sim's 10/20/50/100/200/500 ladder, not played.
 
+### D-53 A Sound button and `M` mute every cue; the choice is remembered — *Decided 2026-11-17 (pjpd mute-button-twa8: `GameSound.setMuted/isMuted`, `phrase()` returns before `ensureCtx()` when muted; button label "Sound: on/off" next to Help, `M` toggles; overlays eat `M` like other keys; stored in `localStorage` `thingfactory.muted`), Proposed (*unreviewed*: the calls below)*
+- **Calls:** (1) The flag and its storage live in `GameSound` (client-only, the engine never sees it); every storage access is in try/catch and defaults to sound on. (2) Toggling plays no confirming cue. (3) `M` is handled before the Esc/Space keys in `onKeyDown`, with no modifier check (a separate task adds that for all keys).
+- **Alternatives:** storage in the UI; a speaker glyph instead of a text label.
+
 ### D-52 A slide stops on its 4th slick hex (`MAX_SLIDE` 4) — *Decided 2026-11-17 (pjpd slide-max-u2s8: in one motion a piece slides over at most 4 slick hexes, then stops there as if blocked; per motion, reset each tick; non-slick ground still costs a ground motion's `n`; a landing's skid counts the same 4; airborne hexes and the D-33 line advance don't count; whatever entering a hex does still happens on the hexes reached), Proposed (*unreviewed*: the calls below)*
 - **Amends:** D-29 (a Slide was "free" for as long as it lasted) and D-37 (a skid ran until ground that isn't slick).
 - **Alternatives:** unlimited slides (the old rule); a cap counted across a whole tick

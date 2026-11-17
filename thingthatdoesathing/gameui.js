@@ -1496,6 +1496,8 @@ const GameUI = (function () {
             document.getElementById('size-cancel').addEventListener('click', () => this.dismissOverlay());
             document.getElementById('news-panel').addEventListener('click', () => this.dismissOverlay());
             document.getElementById('help').addEventListener('click', () => this.showHelp());
+            document.getElementById('sound').addEventListener('click', () => this.toggleMute());
+            this.showMute();
             document.getElementById('help-panel').addEventListener('click', () => this.dismissOverlay());
             const colorPanel = document.getElementById('color-panel');
             colorPanel.addEventListener('click', () => this.closeColorPicker());
@@ -1580,6 +1582,7 @@ const GameUI = (function () {
 
         onKeyDown(e) {
             if (this.overlay) { this.onOverlayKey(e); return; }
+            if (e.key === 'm' || e.key === 'M') { this.toggleMute(); return; }
             if (e.key === 'Escape') { if (this.picked) this.backOut(); else if (this.selected) this.deselect(); return; }   // L2.2
             if (e.key === ' ') { e.preventDefault(); this.oneTick(); return; }
             if (e.key === 'Enter') { e.preventDefault(); this.toggleRun(); return; }
@@ -1592,6 +1595,17 @@ const GameUI = (function () {
             if (e.key === 'd' || e.key === 'D') { this.removeSelected(); return; }
             if (e.key === 'b' || e.key === 'B') { this.blastHovered(); return; }
             if (e.key === 'x' || e.key === 'X') this.discardPicked();
+        }
+
+        // D-53: Sound button and M; client-only, works mid-animation and with a card picked.
+        toggleMute() {
+            this.sound.setMuted(!this.sound.isMuted());
+            this.showMute();
+        }
+
+        showMute() {
+            const btn = document.getElementById('sound');
+            btn.textContent = this.sound.isMuted() ? 'Sound: off' : 'Sound: on';
         }
 
         onOverlayKey(e) {

@@ -45,10 +45,24 @@ const GameSound = (function () {
             () => pool[Math.floor(Math.random() * pool.length)]);
     }
 
+    const MUTE_KEY = 'thingfactory.muted';
+    function readMuted() {
+        try { return window.localStorage.getItem(MUTE_KEY) === '1'; } catch (e) { return false; }
+    }
+
     class GameSound {
         constructor() {
             this.ctx = null;
             this.pulseWave = null;
+            this.muted = readMuted();
+        }
+
+        isMuted() { return this.muted; }
+
+        // D-53: the choice is remembered per player; storage may be missing or blocked.
+        setMuted(muted) {
+            this.muted = !!muted;
+            try { window.localStorage.setItem(MUTE_KEY, this.muted ? '1' : '0'); } catch (e) { /* storage blocked: the flag still holds for this page */ }
         }
 
         // Lazy init on the first cue, inside whatever gesture triggered it.
@@ -77,6 +91,7 @@ const GameSound = (function () {
 
         // The one playback primitive: a list of pitches as evenly spaced 100ms notes.
         phrase(freqs) {
+            if (this.muted) return;   // muted: no cue, and no AudioContext made
             this.ensureCtx();
             const t = this.ctx.currentTime;
             freqs.forEach((freq, i) => this.scheduleNote(freq, t + i * (NOTE_DUR + GAP)));

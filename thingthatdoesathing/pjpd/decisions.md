@@ -134,3 +134,4 @@ decision, and where the full reasoning lives (a RATIONALE `D-n` tagged *unreview
 - [agent, cannon-first] cannon-first-xkni: the order swap is recorded as a new D-51 (amending D-30/D-47/D-48) rather than edits to D-30's body; old D-36/D-47/D-48 remarks left as history.
 - [agent, crate-start] crate-start-gtz5: `crates` lives on each MAP_SIZES row and CRATE_CAP_PER_ROOT is removed; R-19's test sets delivered = 10 for its three-crate sequence (cap 2 + 1) instead of changing the sequence (D-31 amendment).
 - [agent, slide-max] slide-max-u2s8: every free slick hex a ground motion enters counts toward MAX_SLIDE, the first one a Belt pushes onto included (a Belt onto 8 ice stops on the 4th); gremlin wanders share the cap; a Cannon shot's ground step and fallback skid share one count (D-52 calls 1-3).
+- [agent, mute-button] mute-button-twa8: the flag and its localStorage live in GameSound; toggling plays no cue; M has no modifier check (separate task) (D-53).

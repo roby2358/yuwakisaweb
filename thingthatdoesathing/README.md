@@ -80,5 +80,6 @@ that comes onto a target dies there, so they can't camp it.
 - Esc or right-click puts the card back; left-drag pans (the board can't be dragged off the screen)
 - Map `1` `2` `∞` (buttons under the top-left bar): the board at full or half size, or the whole board in the space above the hand; zooming keeps the middle of the screen where it is, and every new game starts at `1`. Buttons only: the number keys pick cards and the wheel turns the Thing
 - Top right: crates delivered toward the next milestone (and per color, once there are two), Ex-gremlins (gremlins done in), Trapped (gremlins a Trap caught), and crates lost
+- `M` / Sound (top left, by Help): turn all sound on or off; remembered in this browser, works any time (not while an overlay is open)
 - Help (top left): the keys legend, also shown once when the first game opens; ticks hold while it's open
 - New Game: pick a board size (click or `1`–`4`); Esc keeps the current game
