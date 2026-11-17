@@ -49,23 +49,6 @@ Updated: 2026-11-12T08:52:10Z
 Simplified renderings at small map scales (after the 1/2/4/∞ zoom buttons land; play it by ear once the user has seen 1/4 and fit on big boards). Candidates: crates as plain filled squares in their crate color (big crates bigger squares), gremlins as plain dots, terrain as flat fills with no texture/detail, Things as simple glyphs (a line/arrow for movers, a block for Walls, a ring for Traps) instead of the full art, sources/targets as bold outlines. Switch by a level-of-detail threshold on the on-screen hex size, not by zoom button, so ∞ on a medium board can still draw full detail. Only build what playtest shows is unreadable or slow.
 ----
 Score:   40
-ID: bomb-card-7z4j
-Created: 2026-11-13T17:34:37Z
-Updated: 2026-11-13T17:34:42Z
-
-A Bomb card: a one-shot card that clears the Things from several hexes at once, rather than removing them one by one with D (one command, so one tick, per Thing). Useful for tearing out a failed contraption or clearing room for a rebuild.
-
-Design calls to settle:
-- Area: the target hex plus its 6 neighbors (radius 1)? A line of hexes along the ghost's facing (R turns it, like the movers)? A radius that grows with milestones?
-- What it clears: Things only, or pieces too? Crates (lost? counted in the tally?), gremlins (killed, counting as ex-gremlins?). Terrain stays; sources and targets are never touched.
-- Placement: any hex, or only hexes holding a Thing? Is the card used up after one shot (yes, it's a card)? It costs one tick like any command.
-- Rarity and unlock: where it sits in UNLOCKS and how often it's dealt (rare like the Pusher/Puller, D-32?). How it relates to B (blast on the hovered crate) and D (remove the selected Thing, D-39). Does Bomb make D less needed, or do they live side by side?
-- Engine: a new `bomb` command, or `place` with a card whose kind is an effect rather than a Thing (data-driven, e.g. a `blastRadius` field; not `clears`, which the Cannon already uses; and not a kind check). Events: one remove/fade per cleared hex, so the animation can play it as a burst.
-- UI: the ghost previews the blast area (outline every hex it will clear), so you can't misfire.
-
-Docs when built: ONTOLOGY (command and rule), CRITERIA row, RATIONALE D-n, README card list, help legend.
-----
-Score:   40
 ID: terrain-new-hamd
 Created: 2026-11-13T17:47:49Z
 Updated: 2026-11-13T17:47:49Z
@@ -117,3 +100,20 @@ Two very different sizes of this:
 Fairness: random boards differ a lot, so a global board is fairest on shared seeds — a daily seed (everyone plays the same board that day) or a fixed weekly seed per size. Ties into productize and level-goals (if levels exist, rank per level instead).
 
 Open: local first, or straight to global? What's ranked (turns to milestone N, crates by turn T, ex-gremlins)? Daily seed or any seed? Needs an interview before it becomes tasks.
+----
+Score:   40
+ID: bomb-card-7z4j
+Created: 2026-11-13T17:34:37Z
+Updated: 2026-11-17T01:51:24Z
+
+(Done) A Bomb card: a one-shot card that clears the Things from several hexes at once, rather than removing them one by one with D (one command, so one tick, per Thing). Useful for tearing out a failed contraption or clearing room for a rebuild.
+
+Design calls to settle:
+- Area: the target hex plus its 6 neighbors (radius 1)? A line of hexes along the ghost's facing (R turns it, like the movers)? A radius that grows with milestones?
+- What it clears: Things only, or pieces too? Crates (lost? counted in the tally?), gremlins (killed, counting as ex-gremlins?). Terrain stays; sources and targets are never touched.
+- Placement: any hex, or only hexes holding a Thing? Is the card used up after one shot (yes, it's a card)? It costs one tick like any command.
+- Rarity and unlock: where it sits in UNLOCKS and how often it's dealt (rare like the Pusher/Puller, D-32?). How it relates to B (blast on the hovered crate) and D (remove the selected Thing, D-39). Does Bomb make D less needed, or do they live side by side?
+- Engine: a new `bomb` command, or `place` with a card whose kind is an effect rather than a Thing (data-driven, e.g. a `blastRadius` field; not `clears`, which the Cannon already uses; and not a kind check). Events: one remove/fade per cleared hex, so the animation can play it as a burst.
+- UI: the ghost previews the blast area (outline every hex it will clear), so you can't misfire.
+
+Docs when built: ONTOLOGY (command and rule), CRITERIA row, RATIONALE D-n, README card list, help legend.
