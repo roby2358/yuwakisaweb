@@ -7,7 +7,7 @@
 // Every command re-checks its own legality; every legal command but rotate runs exactly one tick. All randomness goes through the seeded Rando.
 const GameEngine = (function () {
     const {
-        TERRAIN, THINGS, TOOLS, CARDS, cardOf, UNLOCKS, PIECES, CRATE_COLORS, WHITE, aims, nextMilestone, MAP_SIZES, ENHANCE_CHANCE, HAND_SIZE, IDLE_REDRAW_TICKS, BUMP_ADVANCE,
+        TERRAIN, THINGS, TOOLS, CARDS, cardOf, UNLOCKS, PIECES, CRATE_COLORS, WHITE, aims, nextMilestone, MAP_SIZES, ENHANCE_CHANCE, HAND_SIZE, IDLE_REDRAW_TICKS, BUMP_ADVANCE, MAX_SLIDE,
         gremlinDice, GREMLIN_DICE_SIDES, crateCap, milestonesReached, bigCrateChance,
         GEN_MAX_ATTEMPTS, HEIGHTMAP_ROUGHNESS,
         WATER_PCT, MOUNTAIN_PCT, ICE_FRAC, PLACE_SLICE_FRAC, PLACE_SLICE_MIN
@@ -25,7 +25,8 @@ const GameEngine = (function () {
     // How each phase of a motion travels, one hex per hop (D-38):
     //   over   — a shot's cleared hexes: passes over everything, unseen (D-36)
     //   air    — a flight: meets what's on each hex it enters
-    //   ground — a ground push (slick ground free); skid — a landing's slide (D-37);
+    //   ground — a ground push (slick ground free, up to MAX_SLIDE hexes, D-52);
+    //   skid — a landing's slide (D-37), up to MAX_SLIDE slick hexes;
     //   line   — a bumped line's advance; follow — the bumper following it (D-33);
     //   drop   — a flight stopped over a mountain dropping back (D-35)
     // `lift` is how it meets other pieces; `bumps`: stopped by a still piece on slick ground,
@@ -669,7 +670,7 @@ const GameEngine = (function () {
                 piece, dir, rank, seq: run.motions.length, phase, left, groundLeft: 0,
                 start: { q: piece.q, r: piece.r }, path: [], hop: null, over: 0, flown: [],
                 splat: false, wrecks: false, doomed: false, aloft: false, overhead: false,
-                leader: null, followed: 0, waitHop: 0, dropTo: null,
+                leader: null, followed: 0, waitHop: 0, dropTo: null, slid: 0,
             };
             run.motions.push(m);
             run.byId.set(piece.id, m);
@@ -680,7 +681,7 @@ const GameEngine = (function () {
         // Start `piece` going `dir` as `how` says ({ n, splat, flies, overMountains, clears,
         // wrecks }, from a Thing's template or wanderOf). A shot (`clears`) is aimed by
         // `aimShot`; a flight's length is fixed now (`flightLength`, D-35); a ground push goes
-        // up to n hexes, slick ground free.
+        // up to n hexes, slick ground free (up to MAX_SLIDE of them, D-52).
         launch(run, piece, dir, how, rank) {
             if (how.clears) return this.aimShot(run, piece, dir, how, rank);
             const m = how.flies
@@ -941,13 +942,21 @@ const GameEngine = (function () {
         walkedInto(m, hex, run) {
             m.overhead = m.aloft = false;
             if (this.groundEnds(m, hex, run)) return;
-            if (!this.isSlick(hex)) m.left--;
-            if (m.left <= 0) this.finish(m, run);
+            if (!this.slidInto(m, hex)) m.left--;
+            if (m.left <= 0 || m.slid >= MAX_SLIDE) this.finish(m, run);
         }
 
         skidInto(m, hex, run) {
             if (this.groundEnds(m, hex, run)) return;
-            if (!this.isSlick(hex)) this.finish(m, run);
+            if (!this.slidInto(m, hex) || m.slid >= MAX_SLIDE) this.finish(m, run);
+        }
+
+        // Did `m` come onto `hex` by sliding (slick ground, free)? Counted per motion: a
+        // ground motion or skid stops on its MAX_SLIDE-th free slick hex (D-52).
+        slidInto(m, hex) {
+            if (!this.isSlick(hex)) return false;
+            m.slid++;
+            return true;
         }
 
         advancedInto(m, hex, run) {

@@ -81,6 +81,34 @@ ARCHITECTURE_LOG.md.
 - **Evidence:** R-49 and R-54 check the order; `cc-sim 200 small` is unchanged (200/200, median 52, p90 58): the bot's first milestone is before either card.
 - **Unreviewed call:** (1) the Effect line's milestone numbers are read from the sim's 10/20/50/100/200/500 ladder, not played.
 
+### D-52 A slide stops on its 4th slick hex (`MAX_SLIDE` 4) — *Decided 2026-11-17 (pjpd slide-max-u2s8: in one motion a piece slides over at most 4 slick hexes, then stops there as if blocked; per motion, reset each tick; non-slick ground still costs a ground motion's `n`; a landing's skid counts the same 4; airborne hexes and the D-33 line advance don't count; whatever entering a hex does still happens on the hexes reached), Proposed (*unreviewed*: the calls below)*
+- **Amends:** D-29 (a Slide was "free" for as long as it lasted) and D-37 (a skid ran until ground that isn't slick).
+- **Alternatives:** unlimited slides (the old rule); a cap counted across a whole tick
+  rather than per motion; slowing a slide (one hex per two hops) instead of capping it.
+- **Why:** the designer asked for it. An unlimited slide made a long ice field or a row of
+  Slides a teleporter: a crate crossed the board in one tick, and the line behind it never
+  had to be built. Four keeps a slide a real shortcut (a short run is unchanged) while making
+  a long run something you build along, not just once at the start. The number lives in
+  `artifacts.js` as `MAX_SLIDE`, to be tuned in play.
+- **How:** each motion carries `slid`; `slidInto(m, hex)` counts a ground or skid arrival
+  on slick ground (after the ground checks, so a sink, delivery or Trap still happens on that
+  hex), and the arrival stops the motion once `slid` reaches `MAX_SLIDE`.
+- **Unreviewed calls:** (1) *What counts:* every slick hex a `ground` motion enters free (that
+  didn't use up one of its `n`), including the first one a Belt pushes onto: so a Belt onto 8
+  ice stops on the 4th ice hex, not the 5th. The task's "its 4th free slick hex" reads that way;
+  the other reading (the first hex is the Belt's own step) would be one hex longer. (2) A
+  gremlin's wander slides under the same cap (it's a ground motion; no kind check). (3) A
+  Cannon shot's ground step and its 4th-hex fallback skid are one motion and share one count
+  (only one of them can slide in practice). (4) A piece stopped by the cap has had its motion,
+  so it can't be bumped again that tick (R-13, D-33); next tick it can.
+- **Evidence:** R-65 (`test/R-65/slide_cap.js`: a long ice run and a long Slide run stop on
+  the 4th; a skid after a Spring landing stops after 4; a run of 3 is unchanged; a cap stop
+  short of a lake; a slide still delivers); R-32's long-ice Rocket skid now stops at 11, not 12.
+  `Measured by: just cc-sim 200 small` → unchanged (198/200, median 94, p90 135, 0.53 lost);
+  `just cc-sim-to 100 small 5` → unchanged (100/100, milestones at 94 / 152 / 250 / 405 / 709).
+  The bot lays Belts and Springs on the small board, where ice runs of 5+ in its path are rare.
+  Unmeasured in play.
+
 ### D-3 Four board sizes, picked at New Game: 16 × 10 (fits the screen), 20 × 20, 30 × 30, 60 × 60 (pan) — *Decided (sizes), Proposed (open on the source)*
 - **Alternatives:** one small board that always fits (G-2: cause and effect never
   off-screen); the base's 60×40 with panning; a free-form width × height entry.

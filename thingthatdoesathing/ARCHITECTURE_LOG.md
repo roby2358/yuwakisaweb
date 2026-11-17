@@ -2,6 +2,14 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-17 — A slide stops on its 4th slick hex (D-52)
+Slides were unlimited: a ground motion or a landing's skid kept going over bare ice or Slides
+until ground that wasn't slick. Now each motion counts its free slick hexes (`slid`,
+`slidInto`) and stops on the `MAX_SLIDE`-th (4, new in `artifacts.js`). New R-65
+(`test/R-65/`); R-14 and R-48 note the cap; R-32's long-ice Rocket skid stops at 11, not 12.
+`just cc-sim 200 small` and `just cc-sim-to 100 small 5` unchanged (median 94; milestones
+94 / 152 / 250 / 405 / 709).
+
 ### 2026-11-17 — Crate cap is a number per board size (D-31)
 `crateCap(size)` returns the new `MAP_SIZES.*.crates` (small 2, medium 3, large 4, huge 5)
 instead of 0.6 × √area (8 / 12 / 18 / 36); `CRATE_CAP_PER_ROOT` is gone. The +1 per milestone

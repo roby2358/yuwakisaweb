@@ -138,7 +138,7 @@ gremlins treat it the same (D-34).
 | `blocks` | Pieces can't enter (Wall). |
 | `traps` | A piece that splats dies when it comes onto this hex: walked, pushed, slid, or coming down from a flight; a flight passing over doesn't count (Trap). Every target does the same, with no Thing (Motion rule). [D] |
 | `colored` | Placed in an open crate color the player picks, never white (`colorChoices`, D-32); its card is drawn plain, and only once two or more colors are open (Pusher, Puller). [D] |
-| `slides` | Slick ground: a piece that comes onto it on the ground keeps going the same way, free, exactly like bare ice (Slide). The one slick test, `isSlick`, reads it: a Thing on a hex decides by `slides`; with no Thing, the hex is slick if it's ICE. [D-29] |
+| `slides` | Slick ground: a piece that comes onto it on the ground keeps going the same way, free, exactly like bare ice (Slide), up to `MAX_SLIDE` hexes per motion (D-52). The one slick test, `isSlick`, reads it: a Thing on a hex decides by `slides`; with no Thing, the hex is slick if it's ICE. [D-29] |
 | `on` | `'land'` (plains/ice), `'water'`, or `'unslick'` (plains or water: not bare ice, which already slides) — where it may be built. [unslick D-29] |
 | `weight` | Relative draw chance for the hand, among the kinds in the deck (Draw rule). |
 
@@ -317,7 +317,7 @@ terrain fits THINGS[kind].on:  'land' → PLAINS or ICE;  'water' → WATER;  'u
 THINGS[kind].blocks ⇒ no piece on hex, and not a source   # the crates must flow
 ```
 
-### Motion — the lockstep hop simulation [D-38; splat, flies, wrecks, bump D; overMountains D-35; clears D-36; every landing skids D-37]
+### Motion — the lockstep hop simulation [D-38; splat, flies, wrecks, bump D; overMountains D-35; clears D-36; every landing skids D-37; slide cap D-52]
 *Serves:* G-1; one code path for every way a piece moves (movers, springs, rockets, cannons,
 ice, Slides, bumps, gremlins); the animation replays exactly what happened.
 
@@ -330,8 +330,8 @@ stopped do:
 |---|---|---|---|---|
 | `over` | over | no | passes over, touching nothing; after `clears` hexes → `ground` (still aloft) | — |
 | `air` | air | yes | its color's target delivers, the outer sea sinks; at its planned length it **lands** | comes down where it is |
-| `ground` | ground | yes | ground arrival; non-slick ground uses up one of its `n` hexes (slick is free) | stops (aloft: comes down where it is) |
-| `skid` | ground | yes | ground arrival; non-slick ground stops it | stops |
+| `ground` | ground | yes | ground arrival; non-slick ground uses up one of its `n` hexes (slick is free, but counts toward `MAX_SLIDE`: it stops on its 4th free slick hex) | stops (aloft: comes down where it is) |
+| `skid` | ground | yes | ground arrival; non-slick ground stops it, and so does its `MAX_SLIDE`-th slick hex | stops |
 | `line` | ground | no | ground arrival; stops after `BUMP_ADVANCE` hexes | stops |
 | `follow` | ground | no | ground arrival; follows as far as its line's first piece went | stops (a flier that followed 0: comes down where it is) |
 | `drop` | ground | no | lands | crashes |
@@ -348,6 +348,9 @@ comeDownHere: a flight over a MOUNTAIN or another color's target drops back (pha
         that's a MOUNTAIN, another color's target, a Wall or another piece crashes; else land
 crash:  remove it; lost += its value; emit splat{id, by: what it hit or null, trap: false}
 stop:   the motion is over; a doomed piece splats (splat{id, by: null})
+slide cap (D-52): a ground or skid arrival that survives the ground checks on slick ground is a
+        free slide: slid += 1 (per motion, from 0 each tick); at slid = MAX_SLIDE it stops there,
+        as if blocked. Hexes flown or passed over, line and follow steps never count.
 ```
 
 **Launch** (each claim as the tick starts):
@@ -414,7 +417,8 @@ the next hop if that's over a mountain. **Two airborne pieces entering one hex o
 hop, or swapping hexes, both crash** (D-38); a flight never blows up a piece on the ground. Every
 landing skids on bare ice or a Slide (D-29, D-37): the skid is a ground motion, so it sinks in
 open water, delivers on its color's target, stops at a Wall, a mountain or another color's
-target, kills a gremlin on a Trap and bumps a line on slick ground. The one exception: a flight
+target, kills a gremlin on a Trap and bumps a line on slick ground, and like any slide it stops
+on its `MAX_SLIDE`-th (4th) slick hex (D-52). The one exception: a flight
 that splatted a gremlin stops on that hex. A gremlin the Rocket carries splats where it lands.
 A Cannon's shot (`clears` 4, range 5) passes over anything for its first 4 hexes, unseen
 (it splats no gremlin, delivers on no target, springs no Trap, crashes into no flight, and
@@ -566,6 +570,7 @@ The code constant in `GameArtifacts` is the single source.
 | `PIECES.bigcrate.value` | 10 | crates a big crate is worth (D-34) [D] |
 | `HAND_SIZE` | 3 | cards |
 | `BUMP_ADVANCE` | 2 | hexes a bumped line advances; its bumper follows to one hex behind it (D-33) [D] |
+| `MAX_SLIDE` | 4 | free slick hexes (bare ice or a Slide) one ground motion or skid slides over; it stops on the 4th (D-52) [D] |
 | `IDLE_REDRAW_TICKS` | 10 | ticks in a row with no card used before one random card is redrawn (D-26) |
 | `CRATE_COLORS` | red, green, blue, yellow | the colors a game can open; their count is the spawn cycle's length (one crate chance per color per round, D-43) [D] |
 | `WHITE` | white | the color of a Thing that acts on every piece [D] |
