@@ -791,6 +791,18 @@ const GameUI = (function () {
             this.commit(() => this.engine.discard(slot), () => this.sound.discard());
         }
 
+        // A card's red X or Shift+1/2/3: throw that card away in one action, without picking it
+        // (D-50); the same discard and tick as pick-then-Discard. A different card in play goes
+        // back first. Not while the hand is locked (a carry, a bomb gone off) or an overlay is
+        // open; mid-animation it waits in the one-slot queue and re-checks when the tick ends (D-49).
+        discardSlot(slot) {
+            if (this.overlay || this.handLocked()) return;
+            if (slot < 0 || slot >= this.state.hand.length) return;
+            if (this.anim) { this.queued = () => this.discardSlot(slot); return; }
+            if (this.picked && this.picked.slot !== slot) this.unpick();
+            this.commit(() => this.engine.discard(slot), () => this.sound.discard());
+        }
+
         // L2.1 the primary action (Wait button, Space). Not while a spent card is in play: the
         // Mover's carry ends only in a put-down or a scrap (D-47).
         primaryAction() {
@@ -1441,8 +1453,10 @@ const GameUI = (function () {
                     const b = document.createElement('button');
                     b.className = 'card';
                     b.innerHTML = `<canvas width="64" height="64"></canvas><span class="name"></span>` +
-                        `<span class="does"></span><kbd>${i + 1}</kbd>`;
+                        `<span class="does"></span><kbd>${i + 1}</kbd>` +
+                        `<span class="x" role="button" title="Throw this card away (Shift+${i + 1}, ticks)">×</span>`;
                     b.addEventListener('click', () => this.pick(i));
+                    b.querySelector('.x').addEventListener('click', e => { e.stopPropagation(); this.discardSlot(i); });
                     el.appendChild(b);
                 }
             }
@@ -1569,6 +1583,10 @@ const GameUI = (function () {
             if (e.key === 'Escape') { if (this.picked) this.backOut(); else if (this.selected) this.deselect(); return; }   // L2.2
             if (e.key === ' ') { e.preventDefault(); this.oneTick(); return; }
             if (e.key === 'Enter') { e.preventDefault(); this.toggleRun(); return; }
+            // Shift+number discards that slot (D-50). e.key reads '!' '@' '#' (or other
+            // characters, by layout) with Shift, so the slot comes from e.code.
+            const digit = /^(Digit|Numpad)([1-9])$/.exec(e.code || '');
+            if (e.shiftKey && digit) { this.discardSlot(Number(digit[2]) - 1); return; }
             if (e.key >= '1' && e.key <= String(HAND_SIZE)) { this.pick(Number(e.key) - 1); return; }
             if ((e.key === 'r' || e.key === 'R') && this.picked) { this.turnGhost(e.shiftKey ? -1 : 1); return; }
             if (e.key === 'd' || e.key === 'D') { this.removeSelected(); return; }

@@ -50,6 +50,29 @@ ARCHITECTURE_LOG.md.
 - **Evidence:** `uiboot.js` (X mid-animation waits, then discards; Esc before the end
   cancels it).
 
+### D-50 Discard a card in one action: its red × or Shift+1/2/3 — *Decided 2026-11-17 (pjpd card-discard-jen3: a small red × in each hand card's corner, faint until the card is hovered, discards that card at once through `engine.discard(slot)`, the same tick, sound and animation as pick-then-Discard, without picking it; Shift+1/2/3 discard slot 1/2/3, the slot read from `e.code` (`Digit1`…, `Numpad1`…) since `e.key` is `!` `@` `#` or other characters by layout; ignored while an overlay is open or the hand is locked (the Mover carrying, a Bomb gone off); the picked card's own × / Shift+number discards it, a different picked card goes back first; lead's override, after D-49 landed: during a tick animation both go into D-49's one-slot queue and fire when it ends, re-checking those guards, rather than being dropped as the task first said), Proposed (*unreviewed*: the rest)*
+- **Alternatives:** keep the two-step pick-then-Discard only; drag a card onto the Discard
+  spot; drop input during the animation as the task was first written (D-49 made X queue,
+  and two discard paths that behaved differently under Go would be a trap).
+- **Why:** throwing away cards is most of what a player does with a hand they can't use,
+  and two clicks (or a number then `X`) for it is friction on the commonest move. A
+  one-action discard keeps the cost where it belongs, the tick.
+- **Unreviewed calls:** (1) **`discardSlot(slot)`** is its own method, not a pick then
+  `discardPicked`: picking would flash the card raised and arm the Discard spot for a frame,
+  and a pickup-mode tool's discard is a plain `discard` anyway. (2) **The × is a `span`
+  with `role="button"`** inside the card button (a button can't nest a button), its click
+  stopping propagation so the card isn't picked too. Bottom-right corner, since the slot's
+  number already sits top-right; always shown at 0.3 opacity, 0.85 on card hover, so it's
+  findable without hover and quiet otherwise. (3) **A queued slot discard** captures only
+  the slot, not the card: the hand doesn't change while an animation plays without a
+  command, and `pick()` clears the queue, so the slot still names the card the player saw.
+  (4) **A rejected discard after the other card went back** leaves nothing picked (it
+  can't fail with a valid slot; not worth a restore path). (5) Shift+R and Shift+number
+  don't collide: the number check reads `e.code`, R reads `e.key`.
+- **Evidence:** `uiboot.js` (the × click discards slot 1; Shift+2 discards slot 2 with card 1
+  picked, putting it back; Shift+2 mid-animation queues and fires at the end; the × does
+  nothing under an overlay or with the hand locked).
+
 ### D-3 Four board sizes, picked at New Game: 16 × 10 (fits the screen), 20 × 20, 30 × 30, 60 × 60 (pan) — *Decided (sizes), Proposed (open on the source)*
 - **Alternatives:** one small board that always fits (G-2: cause and effect never
   off-screen); the base's 60×40 with panning; a free-form width × height entry.

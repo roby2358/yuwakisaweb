@@ -2,6 +2,11 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-17 — One-action discard: a card's red × and Shift+1/2/3 (D-50)
+Discarding used to take a pick and then the Discard spot or `X`. Each hand card now has a
+red × (`.x`) and Shift+1/2/3 discards by slot (`e.code`); both call the new
+`discardSlot(slot)`, which queues mid-animation like D-49's X.
+
 ### 2026-11-17 — Input during a tick animation is queued, not dropped (D-49)
 `discardPicked`, a board click with a card picked (now `clickPicked(hex)`), `removeSelected`
 and `blastHovered` (now via `blastAt(q, r)`) used to return early while `anim` was set, so

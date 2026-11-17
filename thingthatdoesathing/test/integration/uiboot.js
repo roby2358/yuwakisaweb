@@ -295,6 +295,20 @@ run('the Discard spot throws away the picked card and ticks; X does too', () => 
     if (s.turn !== turn + 1 || ui.picked) throw new Error('X did not discard');
     settle();
 });
+run("a card's red X discards it at once; Shift+2 discards slot 2; a different picked card goes back first", () => {
+    const s = ui.state;
+    let turn = s.turn;
+    s.hand[0] = { kind: 'BOMB' };   // not dealt yet, so the redraw replaces it
+    els.cards.children[0].querySelector('.x').fire('click', { stopPropagation() {} });
+    if (s.turn !== turn + 1 || ui.picked || s.hand[0].kind === 'BOMB') throw new Error('the red X did not discard its card');
+    settle();
+    turn = s.turn;
+    s.hand[1] = { kind: 'BOMB' };
+    key('1');
+    windowListeners.keydown.forEach(fn => fn({ key: '@', code: 'Digit2', shiftKey: true, preventDefault() {} }));
+    if (s.turn !== turn + 1 || ui.picked || s.hand[1].kind === 'BOMB') throw new Error('Shift+2 did not discard slot 2 (and put card 1 back)');
+    settle();
+});
 run('a Rocket card draws, places, and its flight and splat animate', () => {
     const s = ui.state;
     s.hand[0] = { kind: 'ROCKET' };
@@ -484,6 +498,31 @@ run('X during a tick animation waits for the tick, then discards; Esc before the
     els.go.fire('click');   // Go off; the tick in flight finishes
     settle(); advance(2000);
     if (s.turn !== t || s.hand[1].kind !== 'BOMB') throw new Error('a discard ran after Esc');
+});
+run('Shift+2 and the red X during a tick animation wait for the tick, then discard; locked or under an overlay they do nothing', () => {
+    els['new-game'].fire('click'); key('1');
+    const s = ui.state;
+    els.go.fire('click');
+    advance(1000);
+    for (let i = 0; i < 40 && !ui.anim; i++) advance(50);
+    if (!ui.anim) throw new Error('expected a tick in flight');
+    const t = s.turn;
+    s.hand[1] = { kind: 'BOMB' };
+    windowListeners.keydown.forEach(fn => fn({ key: '@', code: 'Digit2', shiftKey: true, preventDefault() {} }));
+    if (s.turn !== t || s.hand[1].kind !== 'BOMB' || !ui.queued) throw new Error('Shift+2 mid-animation must queue, not discard');
+    els.go.fire('click');   // Go off; the tick in flight finishes, then the queued discard runs
+    settle();
+    if (s.turn !== t + 1 || s.hand[1].kind === 'BOMB') throw new Error('the queued Shift+2 did not discard when the tick ended');
+    settle();
+    const t2 = s.turn;
+    ui.showHelp();
+    els.cards.children[0].querySelector('.x').fire('click', { stopPropagation() {} });
+    if (s.turn !== t2) throw new Error('the red X must do nothing under an overlay');
+    ui.dismissOverlay();
+    ui.picked = { slot: 0, card: 'MOVER', mode: 'carry', legal: new Set(), kind: 'BELT', color: 'white', from: { q: 0, r: 0 }, booms: [] };
+    els.cards.children[1].querySelector('.x').fire('click', { stopPropagation() {} });
+    if (s.turn !== t2 || !ui.picked) throw new Error('the red X must do nothing while the hand is locked');
+    ui.picked = null;
 });
 run('a click selects a hex and holds Go; a second click turns its mover; a click elsewhere lets go', () => {
     els['new-game'].fire('click'); key('1');

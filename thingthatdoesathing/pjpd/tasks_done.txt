@@ -75,6 +75,15 @@ Update: ONTOLOGY (the spawn rule and the new state fields), CRITERIA (rewrite th
 ----
 Priority:   80
 Status: Done
+ID: card-discard-jen3
+Created: 2026-11-17T02:45:30Z
+Updated: 2026-11-17T18:50:07Z
+
+Discard a card in one action: a red X on each hand card, and Shift+1/2/3.
+Today discarding takes two steps (pick a card, then the Discard spot or X). Done looks like: each card in the hand shows a small red X button in its corner (visible on hover of the card, or always at low opacity); clicking the X discards that card at once through engine.discard(slot), exactly as pick-then-Discard does (one tick, same sound and animation), without picking it first. Shift+1, Shift+2, Shift+3 discard slot 1/2/3 in a single keypress: read the slot from e.code ('Digit1'..'Digit3', also 'Numpad1'..) with e.shiftKey, since e.key gives '!' '@' '#' on US layouts and other characters elsewhere. Both are ignored when the card can't be discarded right now: while an overlay is open, during the tick animation (like a place), while the Mover is carrying a Thing or a bomb has boomed. If a card is picked and its own X or Shift+number is used, that card is discarded; if a different card is picked, the picked one goes back first. Add both to the help legend in index.html, the README controls, CLAUDE.md's input section and the Discard spot's tooltip; record a D-n in RATIONALE and an ARCHITECTURE_LOG entry; add uiboot checks for the X click and Shift+2. Done when `just cc-test` passes.
+----
+Priority:   80
+Status: Done
 ID: port-clears-kh58
 Created: 2026-11-13T17:45:48Z
 Updated: 2026-11-13T18:40:50Z

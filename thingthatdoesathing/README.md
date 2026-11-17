@@ -73,6 +73,7 @@ that comes onto a target dies there, so they can't camp it.
 - Ten ticks in a row without placing or discarding a card redraws one card at random (it glows)
 - `B` blows up the crate under the cursor (a stuck line); it counts as lost and the world ticks once
 - Pick a card, then click Discard (right of the cards) or press `X` to throw it away; the world ticks once
+- Or throw a card away in one go: click the small red × in its corner, or press `Shift+1` / `Shift+2` / `Shift+3`; the world ticks once (not while the Mover carries a Thing or a Bomb has gone off)
 - Space: one tick, then stop. With Go running, Space finishes the tick in flight and turns Go off
 - Wait: let it run one tick
 - Enter / Go (top centre): keep ticking until Pause (Enter again finishes the tick in flight and stops); picking a card or selecting a hex holds the run

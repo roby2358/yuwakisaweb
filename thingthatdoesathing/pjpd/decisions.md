@@ -127,3 +127,7 @@ decision, and where the full reasoning lives (a RATIONALE `D-n` tagged *unreview
 - [agent, input-queue] input-queue-pyi5: a queued discard or board click runs only if the same `picked` object is still in play, on top of the method's own guards (D-49 call 1).
 - [agent, input-queue] input-queue-pyi5: a queued `D` captures no hex; it acts on the selection when it runs (D-49 call 2).
 - [agent, input-queue] input-queue-pyi5: UI_CONTROLS.md keeps its family-wide L1.1 drop rule, with a short Thing Factory note naming the exception (D-49 call 3).
+- [agent, card-discard] card-discard-jen3: the X button and Shift+number queue during the tick animation like D-49's X (lead's override of the task text), re-checking overlay/locked guards when they fire (D-50).
+- [agent, card-discard] card-discard-jen3: a separate `discardSlot(slot)` sends `discard` directly instead of picking then discarding; a different picked card is unpicked first (D-50 call 1).
+- [agent, card-discard] card-discard-jen3: the × is a `span role="button"` in the card's bottom-right corner, always shown at low opacity, brighter on card hover (D-50 call 2).
+- [agent, card-discard] card-discard-jen3: a queued slot discard keeps only the slot number; `pick()` clears the queue so the slot still names the card seen (D-50 call 3).
