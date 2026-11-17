@@ -2,6 +2,19 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-17 — The Bomb blows up each hex as it's clicked (D-48 amended)
+The Bomb used to mark its hexes with a red ring and cross (`picked.marks`,
+`drawBombMark`, `BOMB_MARK_COLOR`) and show nothing blowing up until it went off. Now each
+legal click bursts its hex at once: the UI's new `bursts` list plays the Thing's burst and
+the piece's splat (with the splat sound) outside the tick animation, and `picked.booms`
+hides that hex's Thing and piece (and drops them from the hover bar) until the command is
+sent. `mark`/`unmarked`/`fireBomb` became `boom`/`unboomed`/`endBomb`; `endBomb` sends the
+same `bomb(slot, hexes)` and filters the booms' `clear`s and `splat`s out of the tick's
+events before animating. The engine, its rules and R-64 are unchanged; the cleared-Thing
+burst is now `drawThingBurst`, shared by both. U-31, the help legend, README and the card
+text say "boom"; `uiboot.js` checks the burst, the hidden hex and the unreplayed events
+(pjpd bomb-booms-mp74).
+
 ### 2026-11-17 — The Bomb card (D-48)
 `TOOLS` gains `BOMB` (`picks: 'filled'`, `wipes: 3`, weight 0.5) and every tool a `wipes`
 field (the Mover's 0); `UNLOCKS` gains a last `[BOMB]` step, after `[CANNON]`. The engine's

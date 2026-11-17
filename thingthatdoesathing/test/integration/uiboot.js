@@ -4,7 +4,7 @@
 // and requestAnimationFrame, then drives the UI through clicks and keys: pick a board size
 // from the intro, pick each card, turn the ghost, place, select and rotate, remove the selected Thing with D, wait, run tick animations to completion,
 // play to the first milestone (checking that no two pieces are ever drawn on one hex at a hop,
-// D-38), drive the color picker (D-32), the Mover's pick-up and carry (D-47), the Bomb's marks (D-48), the map-scale buttons (D-40), and the sorry page a phone gets (D-41). Catches runtime errors in rendering and input wiring without a
+// D-38), drive the color picker (D-32), the Mover's pick-up and carry (D-47), the Bomb's booms (D-48), the map-scale buttons (D-40), and the sorry page a phone gets (D-41). Catches runtime errors in rendering and input wiring without a
 // browser. It can't judge how anything looks; that stays manual (U-rows).
 'use strict';
 
@@ -642,7 +642,7 @@ run('the Mover: Esc before a pick-up keeps the card, a bare hex does nothing, a 
     if (ui.picked || s.turn !== turn + 2 || e.thingAt(c.q, c.r) || s.things.length) throw new Error('backing out of a carry must scrap the Thing and tick once');
     settle();
 });
-run('the Bomb: Esc before a mark keeps the card, marks show before anything is sent, 3 marks or Esc set it off in one tick (D-48)', () => {
+run('the Bomb: Esc before a boom keeps the card, each click blows its hex up at once with no tick, 3 booms or Esc end it in one tick (D-48)', () => {
     els['new-game'].fire('click'); key('1');
     const s = ui.state, e = ui.engine;
     const free = [...s.hexes.values()].filter(h => !h.isEdge && h.terrain === 1 && !e.isEndpoint(h) && !e.pieceAt(h.q, h.r) && !e.thingAt(h.q, h.r));
@@ -651,42 +651,50 @@ run('the Bomb: Esc before a mark keeps the card, marks show before anything is s
         { kind: 'WALL', color: 'white', q: b.q, r: b.r, facing: null },
         { kind: 'TRAP', color: 'white', q: c.q, r: c.r, facing: null },
         { kind: 'TRAP', color: 'white', q: d.q, r: d.r, facing: null });
+    const crate = e.addPiece('crate', a.q, a.r, s.targets[0].color);
     s.hand[0] = { kind: 'BOMB' };
     ui.render();
     if (els.cards.children[0].querySelector('.name').textContent !== 'Bomb') throw new Error('the card must read "Bomb"');
-    const turn = s.turn, things = s.things.length;
+    const turn = s.turn, things = s.things.length, lost = s.lost;
     key('1');
     if (!ui.picked || ui.picked.mode !== 'pickup' || !ui.picked.legal.has(`${a.q},${a.r}`) || ui.picked.legal.has(`${bare.q},${bare.r}`))
         throw new Error('the armed Bomb must offer exactly the filled hexes');
     key('Escape');
-    if (ui.picked || s.turn !== turn || s.hand[0].kind !== 'BOMB') throw new Error('Esc before a mark must keep the card, no tick');
+    if (ui.picked || s.turn !== turn || s.hand[0].kind !== 'BOMB') throw new Error('Esc before a boom must keep the card, no tick');
     key('1');
     clickHex(bare.q, bare.r);
-    if (!ui.picked || ui.picked.marks.length || s.turn !== turn) throw new Error('a bare hex must do nothing');
+    if (!ui.picked || ui.picked.booms.length || ui.bursts.length || s.turn !== turn) throw new Error('a bare hex must do nothing');
     clickHex(a.q, a.r);
-    if (ui.picked.mode !== 'bomb' || ui.picked.marks.length !== 1 || s.turn !== turn || !e.thingAt(a.q, a.r))
-        throw new Error('the first mark must spend the card without a tick (the engine still holds the Belt)');
-    if (ui.picked.legal.has(`${a.q},${a.r}`)) throw new Error('a marked hex must leave the legal set');
+    if (ui.picked.mode !== 'bomb' || ui.picked.booms.length !== 1 || s.turn !== turn || !e.thingAt(a.q, a.r) || !e.pieceAt(a.q, a.r))
+        throw new Error('the first boom must spend the card without a tick (the engine still holds the Belt and crate)');
+    if (ui.bursts.length !== 1 || !ui.bursts[0].thing || !ui.bursts[0].piece) throw new Error('the first boom must burst the Belt and splat the crate at once');
+    if (!ui.boomed(a.q, a.r) || /Belt|Crate/i.test(els['hover-info'].textContent)) throw new Error('a blown-up hex must draw cleared, gone from the hover bar');
+    if (ui.picked.legal.has(`${a.q},${a.r}`)) throw new Error('a blown-up hex must leave the legal set');
     clickHex(a.q, a.r);
-    if (ui.picked.marks.length !== 1) throw new Error('clicking a marked hex again must do nothing');
-    if (!/2 more hexes to clear/.test(els.cards.children[0].querySelector('.does').textContent)) throw new Error('the spent card must show the clears left');
+    if (ui.picked.booms.length !== 1) throw new Error('clicking a blown-up hex again must do nothing');
+    if (!/2 more booms/.test(els.cards.children[0].querySelector('.does').textContent)) throw new Error('the spent card must show the booms left');
+    advance(400);   // well over one hop (HOP_MS)
+    if (ui.bursts.length) throw new Error('a boom\'s burst must play out over one hop');
     key('2'); key(' '); key('b'); els['end-turn'].fire('click');
     if (ui.picked.slot !== 0 || ui.picked.mode !== 'bomb' || s.turn !== turn) throw new Error('the hand, Wait and B are locked once the Bomb is spent');
     clickHex(b.q, b.r);
-    if (ui.picked.marks.length !== 2 || s.turn !== turn || !e.thingAt(b.q, b.r)) throw new Error('the second mark must not send anything');
-    ui.render();   // the marks draw over the board before the command
+    if (ui.picked.booms.length !== 2 || s.turn !== turn || !e.thingAt(b.q, b.r)) throw new Error('the second boom must not send anything');
     clickHex(c.q, c.r);
     if (ui.picked || s.turn !== turn + 1 || e.thingAt(a.q, a.r) || e.thingAt(b.q, b.r) || e.thingAt(c.q, c.r) || s.things.length !== things - 3)
-        throw new Error('the third mark must set the Bomb off: three hexes cleared in one tick');
+        throw new Error('the third boom must end the Bomb: three hexes cleared in one tick');
+    if (e.pieceAt(a.q, a.r) === crate || s.lost !== lost + 1) throw new Error('the bombed crate must be gone and count as lost');
+    const a2 = ui.anim;
+    if (!a2 || a2.cleared.length || [...a2.tracks.keys()].includes(crate.id))
+        throw new Error('the tick must not replay the bursts and splats the booms already showed');
     settle();
-    // One mark, then a right-click: it goes off on that one hex, one tick.
+    // One boom, then a right-click: it ends on that one hex, one tick.
     s.hand[1] = { kind: 'BOMB' };
     ui.render();
     key('2');
     clickHex(d.q, d.r);
     const { x, y } = ui.hexToScreen(d.q, d.r);
     canvas.fire('mousedown', { button: 2, clientX: x, clientY: y });
-    if (ui.picked || s.turn !== turn + 2 || e.thingAt(d.q, d.r)) throw new Error('backing out after a mark must set the Bomb off and tick once');
+    if (ui.picked || s.turn !== turn + 2 || e.thingAt(d.q, d.r)) throw new Error('backing out after a boom must end the Bomb and tick once');
     settle();
 });
 // Map scale (D-40): the 1 / 2 / 4 / ∞ buttons. One scale drives drawing and hit-testing, so

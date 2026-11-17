@@ -119,3 +119,8 @@ decision, and where the full reasoning lives (a RATIONALE `D-n` tagged *unreview
 - [agent, bomb-card] bomb-card-w466: once marked, the card reads "N more hexes to clear; Esc sets it off"; the splat sound plays when it goes off (D-48 calls 10, 11).
 - [agent, bomb-card] bomb-card-w466: weight 0.5 like the Mover; last step unlocks at the 6th milestone on small, the 7th on bigger boards (D-48 call 12).
 - [agent, bomb-card] bomb-card-w466: UI_CONTROLS.md left unchanged, as for the Mover (D-48 call 14).
+- [agent, bomb-booms] bomb-booms-mp74: the splat sound plays on every boom, even on a hex with only a Thing (it's the bomb's bang); the closing command plays no cue, so each hex is heard once (D-48 call 11).
+- [agent, bomb-booms] bomb-booms-mp74: a boom's burst lives in a UI `bursts` list outside the tick animation, so it plays at once and keeps playing over the end tick when the 3rd boom ends the bomb (D-48 call 15).
+- [agent, bomb-booms] bomb-booms-mp74: the end's animation drops each boomed hex's hop-0 `clear` and the `splat` of every piece that stood on one (ids taken before the command), so neither the burst nor the end sound repeats (D-48 call 15).
+- [agent, bomb-booms] bomb-booms-mp74: a bombed piece fades and shrinks with its splat like a tick's splat, rather than vanishing outright (D-48 call 15).
+- [agent, bomb-booms] bomb-booms-mp74: the card reads "N more booms; Esc ends it" and the hover hint "click to blow up"; the Bomb's verb line now says each click blows a hex up (D-48 call 10).

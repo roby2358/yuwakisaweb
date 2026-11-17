@@ -67,6 +67,13 @@ Open: how many types, and which first (one or two that create the most interesti
 
 Needs an interview before it becomes tasks.
 ----
+Score:   40
+ID: telemetry-v54s
+Created: 2026-11-17T02:31:46Z
+Updated: 2026-11-17T02:31:46Z
+
+Telemetry: learn how real players play Thing Factory, beyond what the sim bot shows. Candidate signals: board size picked, turn each milestone was reached, where players stop or quit (session length, last milestone), cards placed vs discarded per kind (is the Mover/Bomb used? is any card always thrown away?), crates lost / gremlins trapped, how often Go vs single ticks, help opened, mobile sorry page hits. Design calls to settle: where events go (the game is pure client-side with no server; options include a tiny endpoint on the author's site, a hosted analytics service, or local-only stats the player can export); privacy (anonymous, no personal data, opt-in or notice, honor Do Not Track); sampling and batching so it never slows a tick; whether the engine emits a telemetry-friendly event stream or the UI collects from the existing { ok, events } results (the engine must stay headless and never send anything itself); and whether it feeds the leaderboard idea or the productize work. Must still run from file:// with telemetry silently off when there's nowhere to send it.
+----
 Score:   30
 ID: productize-pxhj
 Created: 2026-11-13T17:48:20Z

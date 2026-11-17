@@ -411,7 +411,7 @@ ARCHITECTURE_LOG.md.
   356 / 668 / 1489): the bot's line is built before the Mover enters the deck, and a draw
   takes one `Rando` roll whatever it deals. Unmeasured in play.
 
-### D-48 The Bomb card: clear up to 3 hexes in one command — *Decided 2026-11-17 (pjpd bomb-card-w466: picking the card arms a bomb; Esc or right-click before the first clear returns the card, no tick; a click on a hex holding a Thing, crate or gremlin clears the whole hex (a crate counts as lost, a gremlin as an ex-gremlin); a bare hex does nothing; a source or target itself can't be bombed, a piece on one can; the first clear spends the card and the bomb stays armed for 2 more (3 in all); it ends after the 3rd or on Esc after at least one; the world ticks exactly once when it ends, the clears themselves don't; one atomic engine command taking 1 to 3 hexes, `ok:false` changing nothing on an empty, off-board, source/target or repeated hex; the UI shows the marked hexes before it sends; per hex a Thing removal and the existing splat, playable as a burst; rare through D-32's mechanism; last in `UNLOCKS`, after the Cannon; the sim bot discards it; reuse D-47's pick modes), Proposed (*unreviewed*: the rest)*
+### D-48 The Bomb card: clear up to 3 hexes in one command — *Decided 2026-11-17 (pjpd bomb-card-w466: picking the card arms a bomb; Esc or right-click before the first clear returns the card, no tick; a click on a hex holding a Thing, crate or gremlin clears the whole hex (a crate counts as lost, a gremlin as an ex-gremlin); a bare hex does nothing; a source or target itself can't be bombed, a piece on one can; the first clear spends the card and the bomb stays armed for 2 more (3 in all); it ends after the 3rd or on Esc after at least one; the world ticks exactly once when it ends, the clears themselves don't; one atomic engine command taking 1 to 3 hexes, `ok:false` changing nothing on an empty, off-board, source/target or repeated hex; the UI shows the marked hexes before it sends (amended 2026-11-17, pjpd bomb-booms-mp74: each click blows its hex up on screen at once, burst + splat + sound, the hex drawn cleared; still no tick per boom and one tick when the bomb ends; the engine command and rules unchanged, a UI change only; the end's animation doesn't replay the bursts and splats already shown); per hex a Thing removal and the existing splat, playable as a burst; rare through D-32's mechanism; last in `UNLOCKS`, after the Cannon; the sim bot discards it; reuse D-47's pick modes), Proposed (*unreviewed*: the rest)*
 - **Alternatives:** one command per clear (three ticks, or a tick-less command that breaks
   "every command but rotate ticks once"); a Bomb placed as a Thing that goes off next tick;
   `blast` with a card (only crates, one hex).
@@ -431,23 +431,31 @@ ARCHITECTURE_LOG.md.
   next to the pieces' splats. D-44's cleared Things now burst too. (4) **No delivery:** a
   crate bombed on its own color's target is destroyed and counted lost, not delivered as
   D-46 would; the task says a bombed crate counts as lost. (5) **Event order:** hex by hex
-  in the order marked, each hex's `clear` before its piece's `splat`, all at hop 0, ahead of
-  the tick's own events. (6) **A marked hex leaves the legal set,** so a second click on it
+  in the order clicked, each hex's `clear` before its piece's `splat`, all at hop 0, ahead of
+  the tick's own events. (6) **A blown-up hex leaves the legal set,** so a second click on it
   does nothing and the UI never sends a repeat; the engine still refuses one. (7) **Discard /
-  `X` after a mark sets the bomb off,** like Esc (the card is already spent, as the Mover's
-  carry scraps on Discard); before a mark, Discard throws the card away as any card.
-  (8) **Locked after the first mark:** the other cards, Wait/Space and `B` do nothing (the
+  `X` after a boom ends the bomb,** like Esc (the card is already spent, as the Mover's
+  carry scraps on Discard); before a boom, Discard throws the card away as any card.
+  (8) **Locked after the first boom:** the other cards, Wait/Space and `B` do nothing (the
   `bomb` mode is `locked`, as `carry`). (9) **The hover hint** is per card now:
   `AFTER_PICK[card]` rows became `{ pick, hint }` and the `pickup` mode reads the hint from
-  its card (" (click to clear)" for the Bomb, " (click to pick up)" for the Mover); like
-  every hint it shows over a Thing only. (10) **The card** reads "N more hexes to clear; Esc
-  sets it off" once marked. (11) **Sound:** the splat cue when it goes off (`blast` plays
-  none up front; a bomb is louder). (12) **Weight 0.5,** as the Mover, Pusher and Puller.
+  its card (" (click to blow up)" for the Bomb, " (click to pick up)" for the Mover); like
+  every hint it shows over a Thing only. (10) **The card** reads "N more booms; Esc ends
+  it" after the first boom. (11) **Sound:** the splat cue on every boom, whether or not a
+  piece stood there (it's the bomb's bang), and none when the bomb ends, so a hex is heard
+  once; `blast` plays none up front. (12) **Weight 0.5,** as the Mover, Pusher and Puller.
   With the Bomb last, it unlocks at the 6th milestone (500) on small and the 7th (1000) on
   bigger boards; the Cannon is now one step from the end. (13) A bombed gremlin re-emerges
   on the shore like every gremlin gone but a trapped one (R-31). (14) `UI_CONTROLS.md` is
   left as is (the family-wide spec), as for the Mover; the game's notes are in CLAUDE.md's
-  Input architecture and README.
+  Input architecture and README. (15) **Booms are shown as they happen** (the 2026-11-17
+  amendment): a boom's burst lives in the UI's `bursts` list, outside the tick animation, so it
+  plays at once and keeps playing over the end's tick when the third boom ends it; the hex's
+  Thing and piece are hidden while `picked.booms` holds it. When the bomb ends, `endBomb`
+  filters the engine's events before animating: each boomed hex's hop-0 `clear` and the
+  `splat` of every piece that stood on one (by id, taken before the command) are dropped, so
+  neither the burst nor the end sound repeats; everything else in the tick animates as usual.
+  The red ring-and-cross mark and its `BOMB_MARK_COLOR` are gone.
 - **Evidence:** R-64 (bomb, illegal calls, picks), R-49 and R-54 (the new order), R-62 (the
   `clear` hop), `uiboot.js` (the Bomb flow by clicks: back out, a bare click, three marks,
   one mark then right-click). `cc-sim 200 small` is unchanged (median 52, p10 47, p90 58,

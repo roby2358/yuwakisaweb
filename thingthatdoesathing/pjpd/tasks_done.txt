@@ -114,6 +114,14 @@ Thing Factory: give the Bridge a built-in belt so it pushes the piece on it in i
 ----
 Priority:   60
 Status: Done
+ID: bomb-booms-mp74
+Created: 2026-11-17T02:27:24Z
+Updated: 2026-11-17T02:32:17Z
+
+Change how the Thing Factory Bomb card plays: each click blows up its hex right away instead of marking it with a ring. The flow becomes: pick the Bomb card, click a hex (boom), click another (boom), click a third (boom), and the bomb is done; or click (boom) then Esc/right-click/Discard, which ends the bomb and uses up the card. Esc or right-click before the first boom still puts the card back with no tick. Ticking is unchanged: the booms themselves don't tick, and the world ticks exactly once when the bomb ends (after the 3rd boom, or Esc/right-click/Discard after at least one). Settled implementation: keep the engine's atomic `bomb(slot, hexes)` command and its rules exactly as they are (D-48, R-64); this is a UI change only. In gameui.js's `bomb` pick mode, a legal click plays the hex's burst (and splat for any crate/gremlin, with the splat sound) immediately and from then on draws that hex as cleared (its Thing and piece hidden, and gone from the hover bar), replacing the red ring-and-cross mark drawing (remove the mark look and its color from displayartifacts.js if nothing else uses it). The card text updates to show how many booms are left. When the bomb ends, send the single `bomb` call as now; when its events animate, don't replay the bursts/splats for the hexes already shown blowing up (the rest of the tick animates normally). Update test/integration/uiboot.js's Bomb flow if it checks marks, and reconcile D-48 (RATIONALE), ONTOLOGY/CRITERIA/README/help legend/CLAUDE.md wording about marks, plus an ARCHITECTURE_LOG entry. Done when `just cc-test` passes.
+----
+Priority:   60
+Status: Done
 ID: mover-card-82t7
 Created: 2026-11-17T01:46:16Z
 Updated: 2026-11-17T02:13:42Z

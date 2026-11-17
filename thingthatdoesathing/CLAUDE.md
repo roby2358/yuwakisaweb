@@ -67,8 +67,9 @@ tick animation) → `picked` card → bare map click.
   (D-47): `build` (Thing cards), `pickup` (a tool's first click: a bare hex does nothing, Esc
   returns the card), `carry` (the Mover holding the Thing it lifted, view-only until sent: a
   legal click sends `move`, Esc/right-click/Discard send `scrap`, the hand, Wait/Space and `B` are locked),
-  `bomb` (the Bomb after its first mark, D-48: `picked.marks` draw as red ring-and-cross, view-only until
-  sent; the mark reaching `wipes`, or Esc/right-click/Discard, sends `bomb(slot, marks)`; locked like `carry`).
+  `bomb` (the Bomb after its first boom, D-48: each legal click bursts its hex at once (`bursts`, splat sound) and
+  `picked.booms` draw as cleared, view-only until sent; the boom reaching `wipes`, or Esc/right-click/Discard, sends
+  `bomb(slot, booms)`, whose already-shown `clear`s/`splat`s the animation skips; locked like `carry`).
   `AFTER_PICK[card]` says what a tool's pick leads to (`pick`) and its hover `hint`. `R`/wheel
   turn the ghost's facing. With no card picked, a click selects a hex (`selected`: outline, white facing arrow over a mover, holds Go); a click on the selected hex calls `rotate`, which doesn't tick, so the UI just re-renders; a click elsewhere or Esc deselects. Selecting and turning work mid-animation.
   `D` calls `remove` on the selected hex's Thing (never the hovered one; no selection does nothing; a remove clears the selection, D-39); `B` calls `blast` on the hovered crate. With a card picked, the Discard spot or `X` calls `discard`.

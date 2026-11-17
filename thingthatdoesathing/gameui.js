@@ -12,7 +12,7 @@ const GameUI = (function () {
         HEX_SIZE, COUNTER_SIZE, HOP_MS, RUN_GAP_MS, MILESTONE_MS, TERRAIN_COLORS, TERRAIN_NAMES, THING_LOOK,
         PIECE_LOOK, CRATE_SHADES, BIG_CRATE_SCALE, COLOR_INK, SPLAT_BLOTS, SOURCE_COLOR, PORT_NEUTRAL_MARK, PORT_OUTLINE,
         PORT_MARK_WIDTH, PORT_RING_RADII, PORT_PLUS_REACH, PORT_OUTLINE_WIDTH, BG_COLOR, UI_FONT, REACH_COLOR, MAP_SIZE_NOTES,
-        COLOR_PICKER_PX, ZOOM_DIVISORS, MIN_TEXT_PX, SORRY_PICTURE_PX, BOMB_MARK_COLOR
+        COLOR_PICKER_PX, ZOOM_DIVISORS, MIN_TEXT_PX, SORRY_PICTURE_PX
     } = GameDisplayArtifacts;
     const { TERRAIN, THINGS, WHITE, HAND_SIZE, MAP_SIZES, aims, cardOf, nextMilestone } = GameArtifacts;
     const SIZE_KEYS = Object.keys(MAP_SIZES);
@@ -47,7 +47,7 @@ const GameUI = (function () {
     // L1.2 What a picked card does, by its mode (D-47). A Thing card is in `build`; a tool card
     // starts in `pickup`, where its first click must take a hex the engine's legalPicks allows,
     // and AFTER_PICK[kind] says what that pick leads to (the Mover: `carry`, holding the picked
-    // Thing as a card; the Bomb: `bomb`, marking hexes to clear, D-48). Per mode: `click` on a board hex (a lookup in `picked.legal`), `back`
+    // Thing as a card; the Bomb: `bomb`, blowing up hexes one click at a time, D-48). Per mode: `click` on a board hex (a lookup in `picked.legal`), `back`
     // (Esc, right-click), `discard` (the Discard spot, X), `legal` (the hexes it may click,
     // for the kind it holds), whether the hand is `locked` (the card is already spent), whether
     // legal hexes get a ghost and replace `rings`, and the hover bar's `hint` over a Thing (by the
@@ -74,21 +74,21 @@ const GameUI = (function () {
             legal: (ui, kind) => ui.engine.legalPlacements(kind),
             locked: true, ghost: true, rings: true, hint: () => '',
         },
-        // The Bomb after its first mark (D-48): the card is spent; each click on a filled hex
-        // not yet marked marks it; the last of its `wipes` marks, Esc, right-click or Discard
-        // sets it off (one command, one tick).
+        // The Bomb after its first boom (D-48): the card is spent; each click on a filled hex
+        // not yet blown up blows it up at once (in the view); the last of its `wipes` booms,
+        // Esc, right-click or Discard ends the bomb (one command, one tick).
         bomb: {
-            click: (ui, hex, legal) => { if (legal) ui.mark(hex); },   // a bare or marked hex does nothing
-            back: ui => ui.fireBomb(),
-            discard: ui => ui.fireBomb(),
-            legal: (ui, kind) => ui.unmarked(ui.engine.legalPicks(kind)),
+            click: (ui, hex, legal) => { if (legal) ui.boom(hex); },   // a bare or blown-up hex does nothing
+            back: ui => ui.endBomb(),
+            discard: ui => ui.endBomb(),
+            legal: (ui, kind) => ui.unboomed(ui.engine.legalPicks(kind)),
             locked: true, ghost: false, rings: false, hint: () => ' (click to clear)',
         },
     };
     // A tool card's pick (the hex its first click took) and its hover hint, by card kind.
     const AFTER_PICK = {
         MOVER: { pick: (ui, hex) => ui.carry(hex), hint: ' (click to pick up)' },
-        BOMB: { pick: (ui, hex) => ui.mark(hex), hint: ' (click to clear)' },
+        BOMB: { pick: (ui, hex) => ui.boom(hex), hint: ' (click to blow up)' },
     };
     // The mode a freshly picked card starts in.
     const startMode = kind => THINGS[kind] ? 'build' : 'pickup';
@@ -327,10 +327,10 @@ const GameUI = (function () {
     const thingDoes = (kind, color) => THING_LOOK[kind].does + (!cardOf(kind).colored ? '' :
         color === WHITE ? ' (you pick its crate color when you place it)' : ` (only ${color} crates, and gremlins)`);
 
-    // A Bomb's card once it has marks (D-48): how many more it may clear.
+    // A Bomb's card once it has gone off (D-48): how many booms it has left.
     const bombLeft = p => {
-        const left = cardOf(p.card).wipes - p.marks.length;
-        return `${left} more hex${left === 1 ? '' : 'es'} to clear; Esc sets it off`;
+        const left = cardOf(p.card).wipes - p.booms.length;
+        return `${left} more boom${left === 1 ? '' : 's'}; Esc ends it`;
     };
 
     class GameUI {
@@ -352,12 +352,13 @@ const GameUI = (function () {
             this.panOrigX = 0;
             this.panOrigY = 0;
 
-            this.picked = null;      // L1.2 { slot, card, mode, legal: Set<key>, kind, color, from } — the card in play (PICK_MODES; kind/color: what a ghost draws; from: a carried Thing's hex)
+            this.picked = null;      // L1.2 { slot, card, mode, legal: Set<key>, kind, color, from, booms } — the card in play (PICK_MODES; kind/color: what a ghost draws; from: a carried Thing's hex; booms: the hexes a Bomb has blown up, D-48)
             this.choosing = null;    // L5 { q, r, colors } — the color picker's hex and swatches, while it's open (D-32)
             this.facing = 0;         // ghost facing; remembered between placements
             this.overlay = null;     // L5 'intro' | 'size' (board-size pickers) | 'news' (a color opened) | 'help' (the keys) | 'color' (the color picker, D-32) | null
             this.hoveredHex = null;  // L1.3
             this.selected = null;    // {q, r} — a clicked hex: highlighted, holds Go; a second click turns its mover
+            this.bursts = [];        // [{ q, r, thing, piece, t0 }] — Bomb booms bursting now, outside any tick (D-48)
             this.anim = null;        // { t0, dur, tracks: Map<id, track {pts, hop, over, end}>, before, hidden: Set<id>, milestone, ends: Set<type> }
             this.running = false;    // Go/Pause: tick on its own after each animation
             this.runTimer = null;    // the pending RUN_GAP_MS timeout, if any
@@ -555,11 +556,11 @@ const GameUI = (function () {
             this.selected = null;
             const card = this.state.hand[slot].kind;
             const mode = startMode(card);
-            this.picked = { slot, card, mode, legal: PICK_MODES[mode].legal(this, card), kind: card, color: WHITE, from: null, marks: [] };
+            this.picked = { slot, card, mode, legal: PICK_MODES[mode].legal(this, card), kind: card, color: WHITE, from: null, booms: [] };
             this.render();
         }
 
-        // Is the card in play already spent (the Mover carrying a Thing, a Bomb with a mark)? Then
+        // Is the card in play already spent (the Mover carrying a Thing, a Bomb that has gone off)? Then
         // only its own put-down, scrap or blast may follow (D-47, D-48).
         handLocked() {
             return !!this.picked && PICK_MODES[this.picked.mode].locked;
@@ -577,7 +578,7 @@ const GameUI = (function () {
             const t = this.engine.thingAt(hex.q, hex.r);
             const p = this.picked;
             this.picked = { slot: p.slot, card: p.card, mode: 'carry', legal: PICK_MODES.carry.legal(this, t.kind),
-                kind: t.kind, color: t.color, from: { q: t.q, r: t.r }, marks: [] };
+                kind: t.kind, color: t.color, from: { q: t.q, r: t.r }, booms: [] };
             this.sound.step();
             this.render();
         }
@@ -595,28 +596,55 @@ const GameUI = (function () {
             this.commit(() => this.engine.scrap(slot, from.q, from.r), () => this.sound.discard());
         }
 
-        // The Bomb marks `hex` to clear (D-48): in the view only; the engine hears of every mark
-        // at once when it goes off. The first mark spends the card; the last one sets it off.
-        mark(hex) {
+        // The Bomb blows up `hex` (D-48): it bursts now and is drawn cleared from here on, in
+        // the view only; the engine hears of every boom at once when the bomb ends. The first
+        // boom spends the card; the last one ends the bomb.
+        boom(hex) {
             const p = this.picked;
+            const thing = this.engine.thingAt(hex.q, hex.r), piece = this.engine.pieceAt(hex.q, hex.r);
             p.mode = 'bomb';
-            p.marks = [...p.marks, { q: hex.q, r: hex.r }];
-            if (p.marks.length >= cardOf(p.card).wipes) { this.fireBomb(); return; }
+            p.booms = [...p.booms, { q: hex.q, r: hex.r }];
+            this.bursts.push({ q: hex.q, r: hex.r, thing: thing && { kind: thing.kind },
+                piece: piece && { kind: piece.kind, color: piece.color, label: piece.label }, t0: performance.now() });
+            this.sound.splat();
+            if (this.bursts.length === 1) this.burstFrames();
+            if (p.booms.length >= cardOf(p.card).wipes) { this.endBomb(); return; }
             p.legal = PICK_MODES.bomb.legal(this, p.card);
-            this.sound.step();
             this.render();
         }
 
-        // The keys of `keys` the Bomb hasn't marked.
-        unmarked(keys) {
-            const marked = new Set(this.picked.marks.map(m => Hex.key(m.q, m.r)));
-            return new Set([...keys].filter(k => !marked.has(k)));
+        // Redraw every frame while a boom is bursting (a tick's own animation may run alongside).
+        burstFrames() {
+            const frame = () => {
+                this.render();
+                if (this.bursts.length) requestAnimationFrame(frame);
+            };
+            requestAnimationFrame(frame);
         }
 
-        // The Bomb goes off on its marks: one command, one tick (D-48).
-        fireBomb() {
-            const { slot, marks } = this.picked;
-            this.commit(() => this.engine.bomb(slot, marks), () => this.sound.splat());
+        // The keys of `keys` the Bomb hasn't blown up.
+        unboomed(keys) {
+            const boomed = new Set(this.picked.booms.map(m => Hex.key(m.q, m.r)));
+            return new Set([...keys].filter(k => !boomed.has(k)));
+        }
+
+        // Is (q, r) a hex the Bomb in play has blown up (drawn cleared before the engine hears)?
+        boomed(q, r) {
+            return !!this.picked && this.picked.booms.some(m => m.q === q && m.r === r);
+        }
+
+        // The bomb ends: one command, one tick (D-48). Its booms already burst and splatted on
+        // screen, so their `clear`s and `splat`s are left out of the tick's animation (and its
+        // end sound); the rest of the tick animates as usual.
+        endBomb() {
+            const { slot, booms } = this.picked;
+            const shown = new Set(booms.map(m => Hex.key(m.q, m.r)));
+            const gone = new Set(booms.map(m => this.engine.pieceAt(m.q, m.r)).filter(p => p).map(p => p.id));
+            const unshown = e => !(e.type === 'clear' && e.hop === 0 && shown.has(Hex.key(e.q, e.r))) && !(e.type === 'splat' && gone.has(e.id));
+            this.commit(() => {
+                const res = this.engine.bomb(slot, booms);
+                return res.ok ? { ...res, events: res.events.filter(unshown) } : res;
+            }, () => {});
         }
 
         // The Thing a carry took off the board, or null.
@@ -999,7 +1027,7 @@ const GameUI = (function () {
             const doomed = this.replaceTarget(this.ghostHex());
             const carried = this.carried();
             for (const t of s.things) {
-                if (t === doomed || t === carried) continue;
+                if (t === doomed || t === carried || this.boomed(t.q, t.r)) continue;
                 const { x, y } = this.hexToWorld(t.q, t.r);
                 drawThing(ctx, x, y, HEX_SIZE, t.kind, t.color, t.facing, 1);
             }
@@ -1029,7 +1057,6 @@ const GameUI = (function () {
                     const { x, y } = this.hexToWorld(h.q, h.r);
                     drawThing(ctx, x, y, HEX_SIZE, this.picked.kind, this.picked.color, this.facing, 0.7);
                 }
-                for (const m of this.picked.marks) this.drawBombMark(m);
             } else if (this.hoveredHex && !this.anim) {
                 // A bare hover over a mover: outline it — clicking turns it.
                 const t = this.engine.thingAt(this.hoveredHex.q, this.hoveredHex.r);
@@ -1043,6 +1070,7 @@ const GameUI = (function () {
             }
 
             this.drawPieces(now);
+            this.drawBursts(now);
             if (this.selected) this.drawSelected(this.selected);
             ctx.restore();
             this.updateHUD();
@@ -1061,21 +1089,24 @@ const GameUI = (function () {
             return t && t !== this.carried() ? t : null;
         }
 
-        // A hex the Bomb has marked to clear (D-48): a red ring and a cross over what's there.
-        drawBombMark(m) {
-            const ctx = this.ctx;
-            const { x, y } = this.hexToWorld(m.q, m.r);
-            const d = HEX_SIZE * 0.45;
-            ctx.save();
-            ctx.strokeStyle = BOMB_MARK_COLOR;
-            ctx.lineWidth = 3;
-            drawHexPath(ctx, x, y, HEX_SIZE - 2);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(x - d, y - d); ctx.lineTo(x + d, y + d);
-            ctx.moveTo(x + d, y - d); ctx.lineTo(x - d, y + d);
-            ctx.stroke();
-            ctx.restore();
+        // The Bomb's booms bursting now (D-48), `k` going 0 → 1 over one hop: the Thing bursts
+        // in its colors, the piece fades and splats as a tick's splat does. Done ones drop off.
+        drawBursts(now) {
+            this.bursts = this.bursts.filter(b => now - b.t0 < HOP_MS);
+            for (const b of this.bursts) {
+                const k = Math.max(0, (now - b.t0) / HOP_MS);
+                const { x, y } = this.hexToWorld(b.q, b.r);
+                if (b.thing) this.drawThingBurst(x, y, b.thing.kind, k);
+                if (!b.piece) continue;
+                this.drawSplat(x, y, SPLAT_COLOR[b.piece.kind](b.piece), k);
+                this.drawPiece(x, y, b.piece, 1 - k, 0.6 + 0.4 * (1 - k));
+            }
+        }
+
+        // A Thing blown off its hex: a burst in its fill, then its ink, as `k` goes 0 → 1.
+        drawThingBurst(x, y, kind, k) {
+            this.drawSplat(x, y, THING_LOOK[kind].fill, k);
+            this.drawSplat(x, y, THING_LOOK[kind].ink, Math.min(1, k + 0.2));
         }
 
         // The selected hex: a bright outline, and over a mover a white arrow along its facing.
@@ -1115,6 +1146,7 @@ const GameUI = (function () {
             const a = this.anim;
             if (!a) {
                 for (const p of this.state.pieces) {
+                    if (this.boomed(p.q, p.r)) continue;   // blown up, the engine not yet told (D-48)
                     const { x, y } = this.hexToWorld(p.q, p.r);
                     this.drawPiece(x, y, p, 1, 1);
                 }
@@ -1127,8 +1159,7 @@ const GameUI = (function () {
             for (const e of a.cleared) {
                 if (k < e.hop || k >= e.hop + 1) continue;
                 const { x, y } = this.hexToWorld(e.q, e.r);
-                this.drawSplat(x, y, THING_LOOK[e.kind].fill, k - e.hop);
-                this.drawSplat(x, y, THING_LOOK[e.kind].ink, Math.min(1, k - e.hop + 0.2));
+                this.drawThingBurst(x, y, e.kind, k - e.hop);
             }
             for (const [id, t] of a.tracks) {
                 const pose = this.trackPose(t, now);
@@ -1358,10 +1389,11 @@ const GameUI = (function () {
             const tgt = this.engine.targetAt(h.q, h.r);
             if (src) parts.push(`Source — ${src.colors.join(', ')} crates appear here`);
             if (tgt) parts.push(`Target — deliver ${tgt.color} crates here`);
+            const cleared = this.boomed(h.q, h.r);   // a Bomb blew it up already (D-48)
             const t = this.engine.thingAt(h.q, h.r);
-            if (t && t !== this.carried()) parts.push(`${thingName(t.kind, t.color)}: ${thingDoes(t.kind, t.color)}` + this.thingHint(h, t));
+            if (t && t !== this.carried() && !cleared) parts.push(`${thingName(t.kind, t.color)}: ${thingDoes(t.kind, t.color)}` + this.thingHint(h, t));
             const p = this.engine.pieceAt(h.q, h.r);
-            if (p) parts.push(PIECE_LOOK[p.kind].name);
+            if (p && !cleared) parts.push(PIECE_LOOK[p.kind].name);
             hoverEl.textContent = parts.join(' · ');
             document.getElementById('hud-hover').classList.remove('hidden');
         }
@@ -1381,7 +1413,7 @@ const GameUI = (function () {
             const s = this.state;
             document.getElementById('discard').classList.toggle('armed', !!this.picked);
             const p = this.picked;
-            const shown = JSON.stringify([s.hand, p && [p.slot, p.kind, p.color, p.marks.length], this.facing]);
+            const shown = JSON.stringify([s.hand, p && [p.slot, p.kind, p.color, p.booms.length], this.facing]);
             if (shown === this.handDrawn && el.children.length === HAND_SIZE) return;
             this.handDrawn = shown;
             if (el.children.length !== HAND_SIZE) {
@@ -1397,13 +1429,13 @@ const GameUI = (function () {
             }
             [...el.children].forEach((b, i) => {
                 // Cards have no color (D-32); a picked card shows what it is now (a Mover
-                // carrying a Thing shows that Thing, in its color, D-47; a Bomb with marks, the
-                // clears it has left, D-48).
+                // carrying a Thing shows that Thing, in its color, D-47; a Bomb that has gone off,
+                // the booms it has left, D-48).
                 const picked = p && p.slot === i;
                 const kind = picked ? p.kind : s.hand[i].kind, color = picked ? p.color : WHITE;
                 b.classList.toggle('picked', !!picked);
                 b.querySelector('.name').textContent = thingName(kind, color);
-                b.querySelector('.does').textContent = picked && p.marks.length ? bombLeft(p) : thingDoes(kind, color);
+                b.querySelector('.does').textContent = picked && p.booms.length ? bombLeft(p) : thingDoes(kind, color);
                 const c = b.querySelector('canvas'), cx = c.getContext('2d');
                 cx.clearRect(0, 0, c.width, c.height);
                 drawThing(cx, 32, 32, 26, kind, color, aims(kind) ? (picked ? this.facing : 0) : null, 1);
