@@ -81,20 +81,21 @@ Open questions to settle before it becomes a task:
 Score:   50
 ID: splitter-k497
 Created: 2026-11-17T09:56:29Z
-Updated: 2026-11-17T09:56:29Z
+Updated: 2026-11-17T16:15:30Z
 
 Splitter: a Thing that takes crates in through one edge and sends them out the two far edges 60° either side of straight through, split 50/50.
 
 Rough shape: a facing Thing. A crate entering from its back edge leaves through one of the two edges flanking the straight-ahead edge (front-left or front-right, each 60° off the line of travel). The default split is 50/50. Possibly a placement panel (like the Pusher/Puller color picker) to pick the ratio: 10/90, 20/80, 33/66, 50/50, 66/33, 80/20, 90/10.
 
+Settled (user): deterministic, no Rando. Each Splitter keeps a counter that starts at 1 and goes up by one per crate it splits. With a ratio of 1 in n (50/50: n=2, 33/66: n=3, 20/80: n=5, 10/90: n=10), the crate goes to the minority side when counter % n == 0, else to the other side; the mirrored ratios (66/33, 80/20, 90/10) swap which side is the minority. So 50/50 sends crates right, left, right, left; 33/66 sends right, right, left. The counter is state on the placed Thing (a field in GameState.things, serialized).
+
 Open questions to settle before it becomes a task:
-- Random or deterministic: a seeded Rando roll per crate, or a counter that alternates (L, R, L, R; for 33/66, L R R ...) so the split is exact over time? A counter needs state on the Thing.
 - Does it act on the piece standing on it (like a Belt, pushing it 1 hex out the chosen edge) or redirect a piece arriving into it mid-motion?
 - What about a crate arriving from another edge, or a piece placed onto it: pass through, block, or treat like a Belt facing one way?
-- Blocked exit: does it try the other side, or stop the crate for the tick?
-- Gremlins: split too, or ignored?
+- Blocked exit: does it try the other side, or stop the crate for the tick? Does a blocked push still advance the counter?
+- Gremlins: split too (and count), or ignored?
 - Colored like the Pusher/Puller (only one color's crates), or white for all?
-- The ratio panel: is the ratio fixed at placement, changeable by clicking the placed Splitter, and how is it shown on the map (a label, asymmetric arrows)? Does the panel replace or follow the color picker?
+- The ratio panel: fixed at placement or changeable by clicking the placed Splitter; how it's shown on the map (a label, asymmetric arrows); does it replace or follow the color picker? Does a Mover keep the counter?
 - Rarity and place in UNLOCKS; the sim bot discards it?
 - Look: a Y-shaped arrow, the ratio readable at 1x.
 ----
