@@ -46,7 +46,8 @@ everything; G-2 beats G-1 (a funny interaction that can't be read is a bug, not 
   turn each milestone was reached.
 - Combat, unit stats.
 - Levels or a campaign; every board is generated.
-- Undo, or picking a Thing back up.
+- Undo, or getting a removed Thing's card back: removing costs the card and a tick (D-12); the
+  Mover lifts a Thing only by spending its own card (D-47).
 - A network layer.
 
 ---
@@ -72,7 +73,7 @@ everything; G-2 beats G-1 (a funny interaction that can't be read is a bug, not 
 | `lost` | int | Crates that sank, were wrecked by a gremlin or were blasted, each counted at its `value` (D-34). |
 | `exGremlins` | int | Gremlins gone any way but a Trap: sunk, splatted, bombed, or killed on a target (Tick rule). Shown in the tally. [D] |
 | `trapped` | int | Gremlins a Trap caught (Tick rule). Shown in the tally. [D] |
-| `idleTicks` | int | Ticks in a row with no card used (`place`, `discard`, `move`, `scrap`); at `IDLE_REDRAW_TICKS` one card is redrawn (Tick rule). [D] |
+| `idleTicks` | int | Ticks in a row with no card used (`place`, `discard`, `move`, `scrap`, `bomb`); at `IDLE_REDRAW_TICKS` one card is redrawn (Tick rule). [D] |
 | `spawnCycle` | [`CRATE_COLORS` name] | Every `CRATE_COLORS` color once, shuffled with `Rando` at `newGame`; fixed for the whole game, never reshuffled (D-43). [D] |
 | `spawnSlot` | int, 0 ≤ n < `spawnCycle.length` | The slot of `spawnCycle` the next tick takes; advances one per tick, wrapping. The crate cap isn't stored: it's `crateCap(size)` plus `milestonesReached(delivered)` (D-31). [D] |
 | `nextId` | int | Next piece id. |
@@ -166,14 +167,19 @@ in one command (`bomb`, D-48).
 ### GameUI view state (client only)
 | Field | Notes |
 |---|---|
-| `picked` | `{ slot, card, mode, legal: Set<key>, kind, color, from, booms }` \| null — the hand card in play. `mode` (`PICK_MODES`, D-47): `'build'` (a Thing card: `legal` is `legalPlacements`), `'pickup'` (a tool card: `legal` is `legalPicks`; a click on a legal hex leads where `AFTER_PICK[card]` says, a bare hex does nothing, Esc or right-click puts the card back), `'carry'` (the Mover holding the Thing it picked up from `from`: the card is spent and the hand, Wait/Space and `B` locked, the Thing is hidden from its hex, `kind`/`color` are that Thing's and draw the ghost and the card; a legal click sends `move`, an illegal one does nothing, Esc, right-click or Discard sends `scrap`), `'bomb'` (the Bomb after its first boom, D-48: `booms` are the hexes blown up so far; each bursts (its Thing in its colors, its piece splatting, the splat sound) the moment it's clicked and is drawn cleared from then on (Thing and piece hidden, gone from the hover bar), though the engine hears of them only when the bomb ends; the card is spent and the hand, Wait/Space and `B` locked; `legal` is `legalPicks` less the booms; a legal click booms, any other does nothing; the boom that reaches `wipes`, Esc, right-click or Discard sends `bomb` with every boom, and that tick's animation leaves out the booms' `clear`s and `splat`s, already shown). |
+| `picked` | `{ slot, card, mode, legal: Set<key>, kind, color, from, booms }` \| null — the hand card in play. `mode` (`PICK_MODES`, D-47): `'build'` (a Thing card: `legal` is `legalPlacements`; a legal click sends `place`, or opens the color picker, an illegal one puts the card back), `'pickup'` (a tool card: `legal` is `legalPicks`; a click on a legal hex leads where `AFTER_PICK[card]` says, a bare hex does nothing, Esc or right-click puts the card back), `'carry'` (the Mover holding the Thing it picked up from `from`: the card is spent and the hand, Wait/Space and `B` locked, the Thing is hidden from its hex, `kind`/`color` are that Thing's and draw the ghost and the card; a legal click sends `move`, an illegal one does nothing, Esc, right-click or Discard sends `scrap`), `'bomb'` (the Bomb after its first boom, D-48: `booms` are the hexes blown up so far; each bursts (its Thing in its colors, its piece splatting, the splat sound) the moment it's clicked and is drawn cleared from then on (Thing and piece hidden, gone from the hover bar), though the engine hears of them only when the bomb ends; the card is spent and the hand, Wait/Space and `B` locked; `legal` is `legalPicks` less the booms; a legal click booms, any other does nothing; the boom that reaches `wipes`, Esc, right-click or Discard sends `bomb` with every boom, and that tick's animation leaves out the booms' `clear`s and `splat`s, already shown). A click that does nothing, here or in `build`, says why in the hover bar (`notice`, D-55). |
 | `facing` | 0…5 — the ghost's facing, remembered between placements. |
-| `overlay` | `'intro'` \| `'size'` \| `'news'` \| `'help'` \| `'color'` \| null. `'intro'` and `'size'` are size pickers; picking a size starts a game, and `'size'` (New Game) also closes on Esc, back to the game. `'news'` shows the colors `open` events named and the cards `unlock` events named, on one panel, and closes on a click or any key (D-30). `'help'` is the keys legend: it opens after the intro's size pick and from the Help button, and closes on a click or any key. A phone or tablet never reaches `'intro'`: the sorry page replaces the whole UI at boot (D-41). `'color'` is the color picker (D-32): a click on a legal hex with a card whose `colorChoices` has more than one color opens it beside that hex, one swatch per choice; a swatch click or its number key sends `place` in that color; Esc, right-click or a click off the swatches closes it with the card still picked. [D] |
+| `overlay` | `'intro'` \| `'size'` \| `'news'` \| `'help'` \| `'color'` \| null. `'intro'` and `'size'` are size pickers; picking a size starts a game, and `'size'` (New Game) also closes on Esc, back to the game. `'news'` shows the colors `open` events named and the cards `unlock` events named, on one panel, and closes on a click or any key (D-30). `'help'` is the keys legend: it opens after the intro's size pick and from the Help button, and closes on a click or any key. A phone or tablet starts on the sorry page instead, with no UI built; its "Try it anyway" boots the game as on a desktop (D-41). `'color'` is the color picker (D-32): a click on a legal hex with a card whose `colorChoices` has more than one color opens it beside that hex, one swatch per choice; a swatch click or its number key sends `place` in that color; Esc, right-click or a click off the swatches closes it with the card still picked. [D] |
 | `choosing` | `{ q, r, colors }` \| null — the hex and swatches of the open color picker; the ghost stands there while it's open. [D-32] |
 | `hoveredHex`, `panX/Y`, drag fields | The hex under the cursor, the screen-space pan offset, and left-drag tracking (`DRAG_THRESHOLD`). |
-| `anim` | `{ t0, dur, tracks, before, hidden, milestone, opened, unlocked, redrawn, ends }` \| null — tick animation, played hop by hop as the engine ran it (each track `{pts, hop, over, end}`, `pts[k]` its hex after hop k, D-38); input waits while it runs (picking a card doesn't). |
-| `running` | bool — Go/Pause. While true, the client calls `wait()` `RUN_GAP_MS` after each animation ends, and holds while a card is picked. [D] |
-| `sound` | `GameSound`, `Math.random` only. |
+| `scale`, `zoom` | The view scale (screen px per world px) and the map-scale button last pressed (`1`, `2`, `∞`); a new game starts at 1x (D-40). |
+| `selected` | `{q, r}` \| null — a clicked hex: outlined, holds Go; clicking it again calls `rotate`; `D` removes its Thing (D-39). |
+| `bursts` | `[{q, r, thing, piece, t0}]` — Bomb booms bursting now, outside any tick (D-48). |
+| `notice` | string \| null — why the last refused click or key did nothing, from `REASONS`; it takes the hover bar for `NOTICE_MS` (D-55). |
+| `anim` | `{ t0, dur, tracks, before, hidden, milestone, opened, unlocked, redrawn, ends }` \| null — tick animation, played hop by hop as the engine ran it (each track `{pts, hop, over, end}`, `pts[k]` its hex after hop k, D-38). Commands that arrive while it runs go into `queue`; picking a card, selecting, turning and muting work at once. |
+| `queue` | `TickQueue` — one held command (the latest wins) that came in during `anim`: X / Discard, a card's × or Shift+number, a board click with a card picked, `D`, `B`; it runs when the animation ends, re-checking its own guards; picking or putting back a card and a new game clear it (D-49, D-50). |
+| `running` | bool — Go/Pause. While true, the client calls `wait()` `RUN_GAP_MS` after each animation ends, and holds while a card is picked, a hex is selected or an overlay is open. [D] |
+| `sound` | `GameSound`, `Math.random` only; muted by the Sound button or `M`, remembered in `localStorage` (D-53). |
 
 ---
 
@@ -226,7 +232,7 @@ ends = generateMap(seed, GEN_MAX_ATTEMPTS) or (seed = knownGoodSeed; generateMap
 color = Rando.choice(CRATE_COLORS)
 spawnCycle = Rando.shuffle(copy of CRATE_COLORS); spawnSlot = 0     # D-43
 sources = [{ends.source, colors: [color]}]; targets = [{ends.target, color, delivered: 0}]
-things = []; pieces = []; a crate of color on the source; spawnGremlins()
+things = []; pieces = []; a spawnKind() of color on the source; spawnGremlins()   # 1% big (D-45)
 unlocks = 1; hand = HAND_SIZE draws (from UNLOCKS[0]); turn = 1; delivered = lost = exGremlins = trapped = idleTicks = 0
 ```
 
@@ -272,7 +278,7 @@ unless it stands on its own color's new target, where it's delivered (D-46). An 
 ```
 dice = gremlinDice(size) = max(1, round(cols * rows / GREMLIN_HEXES_PER_DIE))
 count = sum of dice rolls of d GREMLIN_DICE_SIDES
-on shuffled passable hexes other than the source, the target, and the first crate
+on shuffled passable hexes other than the source and target (the first crate stands on the source)
 ```
 
 ### Emerge — `emerge(goneKinds)` [D]
@@ -388,7 +394,7 @@ each claim resolves along its chain of occupants (pieces on the hexes as the hop
 a bump (lowest rank first) starts the line (that piece and the pieces right behind it in dir with no
     motion this tick) as line motions of BUMP_ADVANCE hexes from this hop, ranked as the bumper;
     the bumper becomes a follow that waits this hop; then the hop is resolved again
-    — except a bumper with splatsOnSlideBump that is sliding (a skid, or a ground motion with
+    — except a bumper with splatsOnSlideBump that is sliding (a skid, or a ground motion
     whose last arrival was free onto slick ground, `sliding`) (D-54): if the bumped piece has splatsOnSlideBump too it
     is destroyed (splat{by: the bumper}) and no line starts, else the line starts as above; the
     bumper is destroyed where it stands (splat{by: the bumped piece}), both at this hop
@@ -471,7 +477,7 @@ if color is open and crates on the board < crateCap(size) + milestonesReached(de
         p = bigCrateChance(milestonesReached(delivered))              # D-34, D-45
         kind = 'bigcrate' if Rando.random() < p else 'crate'          # one roll per spawn, from the start
         a kind of color on src; emit spawn{id, q, r}
-idleTicks = 0 if the command used a card (place, discard) else idleTicks + 1   # D-26
+idleTicks = 0 if the command used a card (place, discard, move, scrap, bomb) else idleTicks + 1   # D-26; remove, blast, wait don't
 if idleTicks >= IDLE_REDRAW_TICKS: slot = Rando.int(0, HAND_SIZE-1); hand[slot] = draw(); idleTicks = 0; emit redraw{slot}
 for each milestone m with deliveredBefore < m <= delivered (read live: a reveal's delivery counts, D-46): milestone{count: m}; openColor(); unlock()   # reachMilestones; events held back
 gone = kinds of the command's own sink (remove) and this tick's sunk, splatted (cleared included) and crashed pieces
@@ -608,6 +614,7 @@ The code constant in `GameArtifacts` is the single source.
 | `HOP_MS` | 140 | ms per animated hop (client) |
 | `RUN_GAP_MS` | 250 | ms between ticks while Go runs (client) |
 | `MILESTONE_MS` | 3500 | ms the milestone banner shows (client) |
+| `NOTICE_MS` | 2500 | ms a refusal's reason holds the hover bar (client, D-55) |
 | `DRAG_THRESHOLD` | 4 | px (client) |
 | `SPLAT_BLOTS` | 8 | drops in the splat burst (client) |
 

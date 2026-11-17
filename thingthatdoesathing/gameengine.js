@@ -865,8 +865,7 @@ const GameEngine = (function () {
         // still advances, unless the bumped piece splatsOnSlideBump too, which splats with it.
         startBump(m, first, run) {
             if (this.splatsOnBump(m)) return this.splatBump(m, first, run);
-            const line = this.lineFrom(first, m.dir, run);
-            const motions = line.map(p => this.newMotion(run, p, m.dir, m.rank, 'line', BUMP_ADVANCE));
+            const motions = this.advanceLine(m, first, run);
             m.aloft = m.aloft || m.phase === 'air';
             m.phase = 'follow';
             m.leader = motions[0];
@@ -883,8 +882,13 @@ const GameEngine = (function () {
 
         splatBump(m, first, run) {
             if (PIECES[first.kind].splatsOnSlideBump) this.destroy(first, m.piece.id, run);
-            else this.lineFrom(first, m.dir, run).forEach(p => this.newMotion(run, p, m.dir, m.rank, 'line', BUMP_ADVANCE));
+            else this.advanceLine(m, first, run);
             this.crash(m, run, first.id);
+        }
+
+        // The line from `first` on starts advancing BUMP_ADVANCE hexes in `m.dir`, ranked as `m`.
+        advanceLine(m, first, run) {
+            return this.lineFrom(first, m.dir, run).map(p => this.newMotion(run, p, m.dir, m.rank, 'line', BUMP_ADVANCE));
         }
 
         lineFrom(first, dir, run) {

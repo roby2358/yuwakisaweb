@@ -2,6 +2,26 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-17 — ONTOLOGY checked against the code
+Doc-only, plus one code comment. The non-goal "picking a Thing back up" now reads as getting a
+removed Thing's card back (the Mover lifts Things, D-47). The idle-redraw reset lists every
+card command (`move`, `scrap`, `bomb` too; the `IDLE_REDRAW_TICKS` comment in artifacts.js
+said place or discard). Generate's first crate is a `spawnKind()` (it can be big). The GameUI
+view-state table gains `scale`/`zoom`, `selected`, `bursts`, `notice` and `queue`, and `anim`,
+`running`, `sound`, the sorry-page note and the pick modes' refused clicks match D-49, D-41,
+D-53 and D-55. `NOTICE_MS` joins the numbers.
+
+### 2026-11-17 — Coding-conventions pass over the D-49–D-57 work
+No behavior change. `PICK_MODES.locked` is now the lock's reason (`REASONS.carrying` /
+`REASONS.bombing`, null when unlocked) instead of a boolean, so `lockedReason()`'s branch on
+the mode is gone; `refusedLocked()` replaces four copies of check-and-notify. The D-49 queue
+is a `TickQueue` class (`defer(fn)`, `has`, `clear`, `flush`; built with a `busy()` check on
+the animation) in place of the `queued` field and five inline copies of the hold; card
+commands wrap with `whileSameCard(fn)`.
+`whyNotBuild` reads terrain from `BUILD_REFUSALS`; the sorry page's share/copy is
+`shareLink(onCopied)`. Engine: `advanceLine` is the bumped line's motions, shared by
+`startBump` and `splatBump`.
+
 ### 2026-11-17 — The slide cap counts slick-to-slick moves (D-52 amended)
 `MAX_SLIDE` was 4 free slick hexes, the first one entered from other ground included, so a
 Belt push covered 4 slick hexes but a skid or a piece already on ice 5. Now only moves from a

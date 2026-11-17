@@ -512,7 +512,7 @@ run('X during a tick animation waits for the tick, then discards; Esc before the
     s.hand[1] = { kind: 'BOMB' };   // not dealt on a new game, so a redraw replaces it
     key('2'); key('x');
     if (s.turn !== t || !ui.picked || s.hand[1].kind !== 'BOMB') throw new Error('X discarded mid-animation');
-    if (!ui.queued) throw new Error('X was dropped, not queued');
+    if (!ui.queue.has()) throw new Error('X was dropped, not queued');
     settle();
     if (s.turn !== t + 1 || ui.picked || s.hand[1].kind === 'BOMB') throw new Error('the queued X did not discard when the tick ended');
     advance(1000);
@@ -521,7 +521,7 @@ run('X during a tick animation waits for the tick, then discards; Esc before the
     t = s.turn;
     s.hand[1] = { kind: 'BOMB' };
     key('2'); key('x'); key('Escape');
-    if (ui.picked || ui.queued) throw new Error('Esc did not put the card back and drop the queued X');
+    if (ui.picked || ui.queue.has()) throw new Error('Esc did not put the card back and drop the queued X');
     els.go.fire('click');   // Go off; the tick in flight finishes
     settle(); advance(2000);
     if (s.turn !== t || s.hand[1].kind !== 'BOMB') throw new Error('a discard ran after Esc');
@@ -536,7 +536,7 @@ run('Shift+2 and the red X during a tick animation wait for the tick, then disca
     const t = s.turn;
     s.hand[1] = { kind: 'BOMB' };
     windowListeners.keydown.forEach(fn => fn({ key: '@', code: 'Digit2', shiftKey: true, preventDefault() {} }));
-    if (s.turn !== t || s.hand[1].kind !== 'BOMB' || !ui.queued) throw new Error('Shift+2 mid-animation must queue, not discard');
+    if (s.turn !== t || s.hand[1].kind !== 'BOMB' || !ui.queue.has()) throw new Error('Shift+2 mid-animation must queue, not discard');
     els.go.fire('click');   // Go off; the tick in flight finishes, then the queued discard runs
     settle();
     if (s.turn !== t + 1 || s.hand[1].kind === 'BOMB') throw new Error('the queued Shift+2 did not discard when the tick ended');
@@ -848,7 +848,7 @@ run('a refused click or key says why in the hover bar for a while, and a queued 
     ui.notice = null;
     ui.selected = { q: free.q, r: free.r };
     key('d');
-    if (!ui.queued || ui.notice) throw new Error('a queued remove must show no reason');
+    if (!ui.queue.has() || ui.notice) throw new Error('a queued remove must show no reason');
     settle();
 });
 run('the map-scale buttons set the scale, light up, keep the center, and round-trip hit-testing', () => {

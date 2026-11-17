@@ -49,7 +49,7 @@ const GameUI = (function () {
     // and AFTER_PICK[kind] says what that pick leads to (the Mover: `carry`, holding the picked
     // Thing as a card; the Bomb: `bomb`, blowing up hexes one click at a time, D-48). Per mode: `click` on a board hex (a lookup in `picked.legal`), `back`
     // (Esc, right-click), `discard` (the Discard spot, X), `legal` (the hexes it may click,
-    // for the kind it holds), whether the hand is `locked` (the card is already spent), whether
+    // for the kind it holds), why the hand is `locked` (the card is already spent: the `REASONS` line the hover bar shows; null when it isn't), whether
     // legal hexes get a ghost and replace `rings` (`ghostAnywhere`: the ghost follows the mouse
     // over every board hex, not only legal ones), and the hover bar's `hint` over a Thing (by the
     // card in play).
@@ -59,21 +59,21 @@ const GameUI = (function () {
             back: ui => ui.unpick(),
             discard: ui => ui.discardCard(),
             legal: (ui, kind) => ui.engine.legalPlacements(kind),
-            locked: false, ghost: true, rings: true, hint: () => '',
+            locked: null, ghost: true, rings: true, hint: () => '',
         },
         pickup: {
             click: (ui, hex, legal) => { if (legal) AFTER_PICK[ui.picked.card].pick(ui, hex); else ui.notify(AFTER_PICK[ui.picked.card].why); },   // a bare hex does nothing but say why
             back: ui => ui.unpick(),
             discard: ui => ui.discardCard(),
             legal: (ui, kind) => ui.engine.legalPicks(kind),
-            locked: false, ghost: true, ghostAnywhere: true, rings: false, hint: ui => AFTER_PICK[ui.picked.card].hint,
+            locked: null, ghost: true, ghostAnywhere: true, rings: false, hint: ui => AFTER_PICK[ui.picked.card].hint,
         },
         carry: {
             click: (ui, hex, legal) => { if (legal) ui.putDown(hex.q, hex.r); else ui.notify(REASONS.putDown); },   // an illegal hex does nothing but say why
             back: ui => ui.scrapCarried(),
             discard: ui => ui.scrapCarried(),
             legal: (ui, kind) => ui.engine.legalPlacements(kind),
-            locked: true, ghost: true, ghostAnywhere: true, rings: true, hint: () => '',
+            locked: REASONS.carrying, ghost: true, ghostAnywhere: true, rings: true, hint: () => '',
         },
         // The Bomb after its first boom (D-48): the card is spent; each click on a filled hex
         // not yet blown up blows it up at once (in the view); the last of its `wipes` booms,
@@ -83,13 +83,18 @@ const GameUI = (function () {
             back: ui => ui.endBomb(),
             discard: ui => ui.endBomb(),
             legal: (ui, kind) => ui.unboomed(ui.engine.legalPicks(kind)),
-            locked: true, ghost: true, ghostAnywhere: true, rings: false, hint: () => ' (click to clear)',
+            locked: REASONS.bombing, ghost: true, ghostAnywhere: true, rings: false, hint: () => ' (click to clear)',
         },
     };
     // A tool card's pick (the hex its first click took) and its hover hint, by card kind.
     const AFTER_PICK = {
         MOVER: { pick: (ui, hex) => ui.carry(hex), hint: ' (click to pick up)', why: REASONS.pickMover },
         BOMB: { pick: (ui, hex) => ui.boom(hex), hint: ' (click to blow up)', why: REASONS.pickBomb },
+    };
+    // Why a Thing card can't go on a hex, by its terrain (D-55); other terrain says buildThere.
+    const BUILD_REFUSALS = {
+        [TERRAIN.WATER]: REASONS.buildWater,
+        [TERRAIN.MOUNTAIN]: REASONS.buildMountain,
     };
     // The mode a freshly picked card starts in.
     const startMode = kind => THINGS[kind] ? 'build' : 'pickup';
@@ -334,6 +339,44 @@ const GameUI = (function () {
         return `${left} more boom${left === 1 ? '' : 's'}; Esc ends it`;
     };
 
+    // D-49: commands that come in during a tick animation wait here and run when it ends. One
+    // slot, the latest wins; a held command re-checks its own guards when it runs, so `flush`
+    // just runs it. `busy()` says whether an animation is playing.
+    class TickQueue {
+        constructor(busy) {
+            this.busy = busy;
+            this.held = null;
+        }
+
+        // Mid-animation, hold `fn` in place of whatever was held; true if held, false if the
+        // caller should run the command now.
+        defer(fn) {
+            if (!this.busy()) return false;
+            this.held = fn;
+            return true;
+        }
+
+        has() { return this.held !== null; }
+
+        clear() { this.held = null; }
+
+        // The animation ended: run the held command, if any, emptying the slot first.
+        flush() {
+            const fn = this.held;
+            this.held = null;
+            if (fn) fn();
+        }
+    }
+
+    // The sorry page's "Copy link" (D-41): the share sheet where there is one, else the
+    // clipboard, then onCopied. Either may be missing or refused; then nothing happens.
+    function shareLink(onCopied) {
+        const url = window.location.href;
+        const nav = typeof navigator === 'undefined' ? null : navigator;
+        if (nav && nav.share) { nav.share({ title: document.title, url }).catch(() => {}); return; }
+        if (nav && nav.clipboard) nav.clipboard.writeText(url).then(onCopied, () => {});
+    }
+
     class GameUI {
         constructor(engine, canvas) {
             this.engine = engine;
@@ -362,7 +405,7 @@ const GameUI = (function () {
             this.bursts = [];        // [{ q, r, thing, piece, t0 }] — Bomb booms bursting now, outside any tick (D-48)
             this.notice = null;      // the reason the last refused click or key did nothing, shown in the hover bar for NOTICE_MS (D-55)
             this.noticeTimer = null;
-            this.queued = null;      // a command that came in during the tick animation, run when it ends (one slot, the latest wins)
+            this.queue = new TickQueue(() => !!this.anim);   // commands that came in during the tick animation (D-49)
             this.anim = null;        // { t0, dur, tracks: Map<id, track {pts, hop, over, end}>, before, hidden: Set<id>, milestone, ends: Set<type> }
             this.running = false;    // Go/Pause: tick on its own after each animation
             this.runTimer = null;    // the pending RUN_GAP_MS timeout, if any
@@ -385,15 +428,8 @@ const GameUI = (function () {
                 panel.classList.add('hidden');
                 onPlay();
             });
-            document.getElementById('sorry-copy').addEventListener('click', () => {
-                const url = window.location.href;
-                const copied = () => document.getElementById('sorry-copied').classList.remove('hidden');
-                if (typeof navigator !== 'undefined' && navigator.share) {
-                    navigator.share({ title: document.title, url }).catch(() => {});
-                } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
-                    navigator.clipboard.writeText(url).then(copied, () => {});
-                }
-            });
+            document.getElementById('sorry-copy').addEventListener('click',
+                () => shareLink(() => document.getElementById('sorry-copied').classList.remove('hidden')));
         }
 
         // No board until a size is picked from the intro.
@@ -417,7 +453,7 @@ const GameUI = (function () {
             this.choosing = null;
             this.selected = null;
             this.anim = null;
-            this.queued = null;
+            this.queue.clear();
             this.hoveredHex = null;
             this.setRunning(false);
             this.scale = 1;          // every new game starts at full size (D-40)
@@ -572,10 +608,10 @@ const GameUI = (function () {
         pick(slot) {
             if (this.overlay) return;
             if (slot < 0 || slot >= this.state.hand.length) return;
-            if (this.handLocked()) { this.notify(this.lockedReason()); return; }   // a spent card: no switching
+            if (this.refusedLocked()) return;   // a spent card: no switching
             if (this.picked && this.picked.slot === slot) { this.unpick(); return; }
             this.selected = null;
-            this.queued = null;
+            this.queue.clear();
             const card = this.state.hand[slot].kind;
             const mode = startMode(card);
             this.picked = { slot, card, mode, legal: PICK_MODES[mode].legal(this, card), kind: card, color: WHITE, from: null, booms: [] };
@@ -585,7 +621,20 @@ const GameUI = (function () {
         // Is the card in play already spent (the Mover carrying a Thing, a Bomb that has gone off)? Then
         // only its own put-down, scrap or blast may follow (D-47, D-48).
         handLocked() {
-            return !!this.picked && PICK_MODES[this.picked.mode].locked;
+            return !!this.picked && !!PICK_MODES[this.picked.mode].locked;
+        }
+
+        // A locked hand refuses the command and says why (D-55); true if it refused.
+        refusedLocked() {
+            if (!this.handLocked()) return false;
+            this.notify(PICK_MODES[this.picked.mode].locked);
+            return true;
+        }
+
+        // `fn`, but only while the card in play now is still in play (for a queued command, D-49).
+        whileSameCard(fn) {
+            const p = this.picked;
+            return () => { if (this.picked === p) fn(); };
         }
 
         // Esc or right-click with a card in play: back one step, as its mode says.
@@ -689,19 +738,12 @@ const GameUI = (function () {
             const h = this.state.hexes.get(Hex.key(hex.q, hex.r));
             if (!h) return REASONS.buildThere;
             if (this.engine.isEndpoint(h)) return REASONS.buildEndpoint;
-            if (h.terrain === TERRAIN.WATER) return REASONS.buildWater;
-            if (h.terrain === TERRAIN.MOUNTAIN) return REASONS.buildMountain;
-            return REASONS.buildThere;
-        }
-
-        // Why the hand, Wait and B are locked: the spent card in play.
-        lockedReason() {
-            return this.picked.mode === 'carry' ? REASONS.carrying : REASONS.bombing;
+            return BUILD_REFUSALS[h.terrain] || REASONS.buildThere;
         }
 
         unpick() {
             this.picked = null;
-            this.queued = null;
+            this.queue.clear();
             this.choosing = null;
             this.render();
         }
@@ -803,7 +845,7 @@ const GameUI = (function () {
         removeSelected() {
             if (this.overlay) return;
             if (!this.selected) { this.notify(REASONS.selectFirst); return; }
-            if (this.anim) { this.queued = () => this.removeSelected(); return; }
+            if (this.queue.defer(() => this.removeSelected())) return;
             const { q, r } = this.selected;
             if (this.commit(() => this.engine.remove(q, r), () => this.sound.sink())) this.selected = null;
             else this.notify(REASONS.nothingToRemove);
@@ -813,14 +855,14 @@ const GameUI = (function () {
         // The hex is the one hovered at the keypress, even if the blast waits for the tick.
         blastHovered() {
             if (this.overlay) return;
-            if (this.handLocked()) { this.notify(this.lockedReason()); return; }
+            if (this.refusedLocked()) return;
             if (!this.hoveredHex) { this.notify(REASONS.noCrate); return; }
             this.blastAt(this.hoveredHex.q, this.hoveredHex.r);
         }
 
         blastAt(q, r) {
             if (this.overlay || this.handLocked()) return;
-            if (this.anim) { this.queued = () => this.blastAt(q, r); return; }
+            if (this.queue.defer(() => this.blastAt(q, r))) return;
             if (!this.commit(() => this.engine.blast(q, r), () => {})) this.notify(REASONS.noCrate);
         }
 
@@ -829,7 +871,7 @@ const GameUI = (function () {
         // is still in play.
         discardPicked() {
             if (this.overlay || !this.picked) return;
-            if (this.anim) { const p = this.picked; this.queued = () => { if (this.picked === p) this.discardPicked(); }; return; }
+            if (this.queue.defer(this.whileSameCard(() => this.discardPicked()))) return;
             PICK_MODES[this.picked.mode].discard(this);
         }
 
@@ -844,9 +886,9 @@ const GameUI = (function () {
         // open; mid-animation it waits in the one-slot queue and re-checks when the tick ends (D-49).
         discardSlot(slot) {
             if (this.overlay) return;
-            if (this.handLocked()) { this.notify(this.lockedReason()); return; }
+            if (this.refusedLocked()) return;
             if (slot < 0 || slot >= this.state.hand.length) return;
-            if (this.anim) { this.queued = () => this.discardSlot(slot); return; }
+            if (this.queue.defer(() => this.discardSlot(slot))) return;
             if (this.picked && this.picked.slot !== slot) this.unpick();
             this.commit(() => this.engine.discard(slot), () => this.sound.discard());
         }
@@ -855,7 +897,7 @@ const GameUI = (function () {
         // Mover's carry ends only in a put-down or a scrap (D-47).
         primaryAction() {
             if (this.overlay || this.anim) return;
-            if (this.handLocked()) { this.notify(this.lockedReason()); return; }
+            if (this.refusedLocked()) return;
             this.commit(() => this.engine.wait(), () => this.sound.endTurn());
         }
 
@@ -970,9 +1012,7 @@ const GameUI = (function () {
             if (a.opened.length) this.showNews(a.opened, a.unlocked);
             this.render();
             a.redrawn.forEach(slot => this.flashCard(slot));
-            const queued = this.queued;   // its own guards drop it if, say, a news overlay just opened
-            this.queued = null;
-            if (queued) queued();
+            this.queue.flush();   // its own guards drop it if, say, a news overlay just opened
             this.scheduleRun();
         }
 
@@ -1599,7 +1639,7 @@ const GameUI = (function () {
         // same card is still in play.
         clickPicked(hex) {
             if (this.overlay || !this.picked) return;
-            if (this.anim) { const p = this.picked; this.queued = () => { if (this.picked === p) this.clickPicked(hex); }; return; }
+            if (this.queue.defer(this.whileSameCard(() => this.clickPicked(hex)))) return;
             PICK_MODES[this.picked.mode].click(this, hex, this.picked.legal.has(Hex.key(hex.q, hex.r)));
         }
 

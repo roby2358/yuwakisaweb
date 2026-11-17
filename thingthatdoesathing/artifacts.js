@@ -207,7 +207,7 @@ const GameArtifacts = (function () {
         HAND_SIZE: 3,
         BUMP_ADVANCE: 2,             // hexes a bumped line advances; its bumper follows to one behind it (D-33)
         MAX_SLIDE: 3,                // slick-to-slick moves one ground motion or skid may make before it stops: at most 4 slick hexes in a row (D-52)
-        IDLE_REDRAW_TICKS: 10,       // ticks in a row with no card used (place or discard) before one random card is redrawn
+        IDLE_REDRAW_TICKS: 10,       // ticks in a row with no card used (place, discard, move, scrap, bomb) before one random card is redrawn
         GREMLIN_HEXES_PER_DIE,
         GREMLIN_DICE_SIDES: 4,
 

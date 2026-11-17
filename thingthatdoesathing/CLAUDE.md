@@ -60,7 +60,7 @@ Libs: `hex.js` (axial math, `NEIGHBOR_DIRS` = facing order E, NE, NW, W, SW, SE;
 `UI_CONTROLS.md` is the layered controls spec for the hex-game family; `gameui.js` cites
 its layers (`L1.2`, `L2.1`, `L5`). Dispatch order: `overlay` → `anim` (commands wait for the
 tick animation: X / Discard, a board click with a card picked, `D` and `B` go into the
-one-slot `queued`, latest wins, and fire when `finishAnim()` ends it, re-checking their guards;
+one-slot `queue` (a `TickQueue`: `defer`, `clear`, `flush`; `whileSameCard` drops a held card command if the card changed), latest wins, and fire when `finishAnim()` flushes it, re-checking their guards;
 `pick`/`unpick`/`startGame` clear it, D-49) → `picked` card → bare map click.
 
 - **L1.2 pick-then-act:** picking a card (click or `1`–`3`) computes its legal set once
