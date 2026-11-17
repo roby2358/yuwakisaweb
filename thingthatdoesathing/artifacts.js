@@ -99,10 +99,14 @@ const GameArtifacts = (function () {
     //               and takes the hex; being pushed, pulled or flung into one doesn't
     //   reemerges — when one sinks or splats (counted in exGremlins or trapped), a new one climbs out on a shore hex at the end
     //               of the tick
+    //   splatsOnSlideBump — sliding (a skid, or a ground motion that came onto slick ground
+    //               free) into a bump (D-33), it splats on the spot instead of following; the
+    //               line it bumped still advances, unless that piece splatsOnSlideBump too:
+    //               then both splat and nothing moves on (D-54)
     const PIECES = {
-        crate:    { label: '📦', cargo: true,  value: 1,  wanders: false, splats: false, wrecks: false, reemerges: false },
-        bigcrate: { label: '📦', cargo: true,  value: 10, wanders: false, splats: false, wrecks: false, reemerges: false },
-        gremlin:  { label: '👹', cargo: false, value: 0,  wanders: true,  splats: true,  wrecks: true,  reemerges: true },
+        crate:    { label: '📦', cargo: true,  value: 1,  wanders: false, splats: false, wrecks: false, reemerges: false, splatsOnSlideBump: false },
+        bigcrate: { label: '📦', cargo: true,  value: 10, wanders: false, splats: false, wrecks: false, reemerges: false, splatsOnSlideBump: false },
+        gremlin:  { label: '👹', cargo: false, value: 0,  wanders: true,  splats: true,  wrecks: true,  reemerges: true,  splatsOnSlideBump: true },
     };
 
     // The colors a game can open, one at a time. Each open color has one target, which

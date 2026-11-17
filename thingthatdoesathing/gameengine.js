@@ -860,7 +860,10 @@ const GameEngine = (function () {
         // `m` bumped `first` (D-33): the line from it on (it and the pieces right behind it in
         // `m.dir` that have had no motion this tick) starts advancing BUMP_ADVANCE hexes this
         // hop, ranked as `m`; `m` waits this hop and then follows as far as `first` went.
+        // A sliding piece that splatsOnSlideBump splats instead, at this hop (D-54): the line
+        // still advances, unless the bumped piece splatsOnSlideBump too, which splats with it.
         startBump(m, first, run) {
+            if (this.splatsOnBump(m)) return this.splatBump(m, first, run);
             const line = this.lineFrom(first, m.dir, run);
             const motions = line.map(p => this.newMotion(run, p, m.dir, m.rank, 'line', BUMP_ADVANCE));
             m.aloft = m.aloft || m.phase === 'air';
@@ -868,6 +871,19 @@ const GameEngine = (function () {
             m.leader = motions[0];
             m.followed = 0;
             m.waitHop = run.hop;
+        }
+
+        // Is `m` a sliding piece that splats when it bumps (D-54)? Sliding: a skid, or a ground
+        // motion whose last arrival was free onto slick ground (`slid`, D-52).
+        splatsOnBump(m) {
+            if (!PIECES[m.piece.kind].splatsOnSlideBump) return false;
+            return m.phase === 'skid' || (m.phase === 'ground' && m.slid > 0 && this.isSlick(this.hexOf(m.piece)));
+        }
+
+        splatBump(m, first, run) {
+            if (PIECES[first.kind].splatsOnSlideBump) this.destroy(first, m.piece.id, run);
+            else this.lineFrom(first, m.dir, run).forEach(p => this.newMotion(run, p, m.dir, m.rank, 'line', BUMP_ADVANCE));
+            this.crash(m, run, first.id);
         }
 
         lineFrom(first, dir, run) {
@@ -1020,7 +1036,8 @@ const GameEngine = (function () {
             m.dropTo = [...m.flown].reverse().find(h => this.canLand(m.piece, h)) || m.start;
         }
 
-        // `m`'s piece is destroyed in the air: gone, its value lost (splat, `by` what it hit).
+        // `m`'s piece is destroyed in the air (or splatted by a slide bump, D-54): gone, its
+        // value lost (splat, `by` what it hit).
         crash(m, run, by) {
             this.removePiece(m.piece);
             this.loseValue(m.piece);

@@ -110,6 +110,7 @@ A `Piece` (position, color, label) with two fields set by the engine. Each kind 
 | `splats` | no | no | yes | A Rocket's flight destroys it: the piece the flier lands on, and the launched piece once it lands; so does coming onto a Trap (Motion rule). [D] |
 | `wrecks` | no | no | yes | Its own wandering step into a cargo piece's hex destroys that piece (counted in `lost`) and takes the hex; pushed, pulled or flung into one, it's just blocked (Motion rule). [D] |
 | `reemerges` | no | no | yes | When one sinks or splats, a new one climbs out on a shore hex (Emerge rule). |
+| `splatsOnSlideBump` | no | no | yes | Sliding into a bump (a skid, or a ground motion that came onto slick ground free), it splats where it is at that hop instead of following; the bumped line still advances, unless the bumped piece has `splatsOnSlideBump` too, and then both splat and nothing moves on (Bump, D-54). [D: pjpd grem-splat] |
 
 A big crate is a crate in every rule but `value`: Things, ice, bumps, Traps, targets and
 gremlins treat it the same (D-34).
@@ -317,7 +318,7 @@ terrain fits THINGS[kind].on:  'land' → PLAINS or ICE;  'water' → WATER;  'u
 THINGS[kind].blocks ⇒ no piece on hex, and not a source   # the crates must flow
 ```
 
-### Motion — the lockstep hop simulation [D-38; splat, flies, wrecks, bump D; overMountains D-35; clears D-36; every landing skids D-37; slide cap D-52]
+### Motion — the lockstep hop simulation [D-38; splat, flies, wrecks, bump D; overMountains D-35; clears D-36; every landing skids D-37; slide cap D-52; slide-bump splat D-54]
 *Serves:* G-1; one code path for every way a piece moves (movers, springs, rockets, cannons,
 ice, Slides, bumps, gremlins); the animation replays exactly what happened.
 
@@ -385,6 +386,10 @@ each claim resolves along its chain of occupants (pieces on the hexes as the hop
 a bump (lowest rank first) starts the line (that piece and the pieces right behind it in dir with no
     motion this tick) as line motions of BUMP_ADVANCE hexes from this hop, ranked as the bumper;
     the bumper becomes a follow that waits this hop; then the hop is resolved again
+    — except a bumper with splatsOnSlideBump that is sliding (a skid, or a ground motion with
+    slid > 0 standing on slick ground) (D-54): if the bumped piece has splatsOnSlideBump too it
+    is destroyed (splat{by: the bumper}) and no line starts, else the line starts as above; the
+    bumper is destroyed where it stands (splat{by: the bumped piece}), both at this hop
 apply: victims go; every mover moves (all at once); each arrives by its phase; each blocked one stops
     by its phase. A hex freed by a sink, delivery, Trap or splat is open from the next hop (the
     splatter or wrecker takes its victim's hex at once).
@@ -403,7 +408,13 @@ ground step: a piece in the line can sink, deliver, die on a Trap or a target, o
 blocker or the piece ahead (the line compresses). There is no slide after the advance, and the
 bump ends the bumper's motion, a flight included. A bumper whose line can't move at all stays
 where it was stopped (a flight comes down there). A gremlin's own step into cargo still
-wrecks it, and a Rocket still splats a gremlin in its path, before any bump.
+wrecks it, and a Rocket still splats a gremlin in its path, before any bump. **A sliding
+gremlin that bumps goes splat (D-54):** a bumper whose template has `splatsOnSlideBump` (the
+gremlin) and that is sliding (skidding after a landing, or a ground motion that came onto
+slick ground free) splats where it is at the bump's hop instead of following; the line it
+bumped still advances 2, unless the bumped piece is another gremlin, and then both splat and
+neither moves on. Each counts as an ex-gremlin and re-emerges. A gremlin that bumps without
+sliding (pushed off plains, flying, or its first wander step off ice) follows as before.
 
 **Flights.** A flight meets whatever is on a hex at the hop it gets there. A Rocket's flight
 (`flies`, range `THINGS.ROCKET.push`) crosses movers, Bridges, ice, inland water and other
@@ -544,7 +555,7 @@ know only the board and occupancy. They pick a random free land or covered-water
 stay, and a crate on a neighbor counts as free: stepping there wrecks it. They never push
 crates; a gremlin in the way is a wall until it moves, unless it steps onto the crate.
 Pushed or pulled into a crate, a gremlin is only blocked, unless the crate stands on slick
-ground: then it bumps it (D-33), and a gremlin on slick ground gets bumped like a crate, or carried along in a bumped line. A gremlin standing on a
+ground: then it bumps it (D-33), and a gremlin on slick ground gets bumped like a crate, or carried along in a bumped line. A gremlin that bumps while sliding goes splat instead of following, and a gremlin it bumps splats with it (D-54). A gremlin standing on a
 mover (a Bridge too) gets carried. One that drowns or splats is replaced by a new one on the shore.
 The count only drops when the whole shore is walled off or full.
 

@@ -81,6 +81,30 @@ ARCHITECTURE_LOG.md.
 - **Evidence:** R-49 and R-54 check the order; `cc-sim 200 small` is unchanged (200/200, median 52, p90 58): the bot's first milestone is before either card.
 - **Unreviewed call:** (1) the Effect line's milestone numbers are read from the sim's 10/20/50/100/200/500 ladder, not played.
 
+### D-54 A sliding gremlin that bumps goes splat — *Decided 2026-11-17 (pjpd grem-splat-263u: a gremlin sliding into a D-33 bump splats on the spot at the bump's hop instead of following; a crate it bumps still advances 2; a gremlin it bumps splats with it and neither moves on; each counts as an ex-gremlin and re-emerges; existing `splat` events, no UI change; data-driven by a `PIECES` field; unchanged: a sliding crate, a gremlin bumping without sliding, a sliding gremlin simply blocked), Proposed (*unreviewed*: the calls below)*
+- **Amends:** D-33 (every bumper followed its line).
+- **Alternatives:** a kind check in the engine; splatting any gremlin that bumps, sliding or not.
+- **Why:** the designer asked for it: a gremlin skating helplessly into something and going
+  splat is the comedy gremlins are for (G-1; ONTOLOGY's gremlin *Serves:*), and it gives ice a second use as a gremlin hazard beside
+  Traps and targets.
+- **How:** `PIECES.*.splatsOnSlideBump` (true for the gremlin). `startBump` asks
+  `splatsOnBump(m)`; if so `splatBump` destroys a bumped piece that has the flag too, or starts
+  the line as usual, and then `crash`es the bumper where it stands (a `splat` at `run.hop`).
+  The hop is resolved again as after any bump, so the freed hexes count from there.
+- **Unreviewed calls:** (1) *Sliding* means the motion is a `skid`, or a `ground` motion whose
+  last arrival was free onto slick ground (`slid > 0` and its hex `isSlick`). A ground motion
+  that has just stepped off plains onto the hex before the bumped one isn't sliding, and nor is
+  a gremlin whose first wander step leaves ice (it hasn't slid yet); a flight isn't. (2) The
+  "both splat" case keys off the bumped piece having `splatsOnSlideBump` too (one field, no
+  separate "splats when bumped" flag). (3) A wandering gremlin's own step into a crate still
+  wrecks the crate first (D-33's order), so the crate case comes from a gremlin a Thing pushed
+  or one skidding after a throw. (4) `by` on the splats: the bumped piece for the bumper, the
+  bumper for a bumped gremlin.
+- **Evidence:** R-66 (`test/R-66/slide_bump_splat.js`: crate case, gremlin-gremlin case, a
+  non-sliding gremlin bump, a sliding crate bump, a sliding gremlin against a Wall).
+  `Measured by: just cc-sim 200 small` → unchanged (198/200, median 94, p90 135, 0.53 lost):
+  the bot's lines rarely slide gremlins into still pieces on ice. Unmeasured in play.
+
 ### D-53 A Sound button and `M` mute every cue; the choice is remembered — *Decided 2026-11-17 (pjpd mute-button-twa8: `GameSound.setMuted/isMuted`, `phrase()` returns before `ensureCtx()` when muted; button label "Sound: on/off" next to Help, `M` toggles; overlays eat `M` like other keys; stored in `localStorage` `thingfactory.muted`), Proposed (*unreviewed*: the calls below)*
 - **Calls:** (1) The flag and its storage live in `GameSound` (client-only, the engine never sees it); every storage access is in try/catch and defaults to sound on. (2) Toggling plays no confirming cue. (3) `M` is handled before the Esc/Space keys in `onKeyDown`, with no modifier check (a separate task adds that for all keys).
 - **Alternatives:** storage in the UI; a speaker glyph instead of a text label.

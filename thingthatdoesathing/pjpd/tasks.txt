@@ -1,11 +1,3 @@
-Priority:   55
-Status: ToDo
-ID: grem-splat-263u
-Created: 2026-11-17T02:42:56Z
-Updated: 2026-11-17T02:42:56Z
-
-Thing Factory: a sliding gremlin that bumps into another piece goes splat. Today (D-33 bumping) when a moving piece runs into a piece standing on slick ground (bare ice or a Slide) with no motion of its own, the bumped piece's line advances 2 hexes and the bumper follows to right behind it. New rule, for a gremlin that is sliding (moving across slick ground, its skid/slide motion) when it makes such a bump: if the bumped piece is a crate (or big crate), the crate moves its 2 hexes as usual, but the gremlin doesn't follow; it splats where it is, at the hop of the bump. If the bumped piece is another gremlin, both gremlins splat at that hop and neither moves on. Splatted gremlins count as ex-gremlins and re-emerge per their template, like any other gremlin splat; emit the existing `splat` events (with `hop`) so the UI animates it with no UI change. Unchanged: a sliding crate bumping anything; a non-sliding gremlin bumping (a gremlin walking or pushed onto a piece, not on slick ground); a sliding gremlin that is simply blocked (Wall, mountain, a piece not on slick ground) stops as now. Make it data-driven if it fits (e.g. a field on the gremlin template in PIECES such as `splatsOnSlideBump`), not a kind check in the engine. Add a CRITERIA R-row with a test dir (crate case, gremlin-gremlin case, and a non-sliding gremlin bump staying as before), a RATIONALE D-n, and reconcile ONTOLOGY, CLAUDE.md and ARCHITECTURE_LOG. Done when `just cc-test` passes and `just cc-sim 200 small` runs clean.
-----
 Priority:   54
 Status: ToDo
 ID: reject-why-23qa

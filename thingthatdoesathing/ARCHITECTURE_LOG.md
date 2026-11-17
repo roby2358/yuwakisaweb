@@ -2,6 +2,13 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-17 — A sliding gremlin that bumps goes splat (D-54)
+A gremlin sliding into a D-33 bump used to follow its line like any bumper. Now a piece with
+the new `PIECES.*.splatsOnSlideBump` (the gremlin) splats where it is at the bump's hop
+(`splatsOnBump`, `splatBump` in `startBump`); the bumped line still advances, unless the
+bumped piece has the flag too, and then both splat. New R-66 (`test/R-66/`). `just cc-sim 200
+small` unchanged (median 94).
+
 ### 2026-11-17 — Sound button and M mute (D-53)
 `GameSound` gains `setMuted`/`isMuted` (remembered in `localStorage` `thingfactory.muted`);
 a muted `phrase()` plays nothing and never creates the AudioContext. New `#sound` button
