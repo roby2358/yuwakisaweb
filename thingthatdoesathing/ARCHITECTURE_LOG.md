@@ -2,6 +2,14 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-17 — The slide cap counts slick-to-slick moves (D-52 amended)
+`MAX_SLIDE` was 4 free slick hexes, the first one entered from other ground included, so a
+Belt push covered 4 slick hexes but a skid or a piece already on ice 5. Now only moves from a
+slick hex onto a slick hex count (`slidInto(m, hex, fromSlick)`, motions carry `onSlick` and
+`sliding`) and `MAX_SLIDE` is 3: at most 4 slick hexes in a row. D-54 reads `sliding` instead
+of `slid > 0`. R-65 updated (skid stops 3 past the landing; new standing-on-ice case); R-32's
+long-ice Rocket stops at 10, not 11. `just cc-sim 200 small` unchanged (median 94).
+
 ### 2026-11-17 — Game keys ignore Ctrl/Alt/Meta chords (D-57)
 `GameUI.onKeyDown` returns early, without `preventDefault`, when Ctrl, Alt or Meta is held, so
 Ctrl+D, Ctrl+R and Cmd+number stay the browser's. Shift still works. New `uiboot.js` check.

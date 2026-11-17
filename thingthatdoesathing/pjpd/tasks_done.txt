@@ -161,6 +161,26 @@ Done when: crateCap gives 2/3/4/5 for small/medium/large/huge, the cap still gro
 ----
 Priority:   70
 Status: Done
+ID: slide-trans-4pqk
+Created: 2026-11-17T19:31:37Z
+Updated: 2026-11-17T19:37:14Z
+
+Count the slide cap in slick-to-slick moves: at most 3, so a piece covers at most 4 slick hexes in a row.
+
+Today (D-52, MAX_SLIDE: 4 in artifacts.js; walkedInto / skidInto / slidInto in gameengine.js) every slick hex a ground motion enters without spending one of its steps counts, including the first one entered from non-slick ground, and the motion stops on the 4th counted hex. So a crate a Belt pushes onto ice stops on the 4th ice hex, but a piece that lands on ice (a skid) or already stands on ice goes 4 hexes past its start, 5 slick hexes in all.
+
+Settled design (user):
+- Count only moves from a slick hex to another slick hex (slick = isSlick: bare ice or a Slide). Entering the first slick hex from non-slick ground, or landing from the air, doesn't count.
+- At most 3 such moves per motion; on the 3rd the piece stops there, as if blocked, even with more slick ahead. So any run covers at most 4 slick hexes: a Belt push onto a long ice run still stops on the 4th ice hex (unchanged); a skid after landing on ice stops 3 hexes past the landing hex; a piece standing on ice moved onto more ice stops 3 hexes on.
+- MAX_SLIDE becomes 3 with its comment saying it counts slick-to-slick moves (keep the name).
+- Everything else in D-52 stands: per motion, reset each tick; flights don't count; the D-33 bump advance and the bumper's follow don't count; whatever entering a hex does (sink, deliver, Trap, bump, target block) still happens on the hexes reached; a capped piece has had its motion. The D-54 "sliding gremlin" test (last step slid free) is unaffected unless it reads MAX_SLIDE; check.
+- Docs: amend D-52 in RATIONALE.md as a user call (count slick-to-slick moves, 3, at most 4 slick hexes), update ONTOLOGY.md (Motion table, pseudocode, numbers table, slides entry), CRITERIA.md R-65 wording, CLAUDE.md and README.md if they state the cap, and add an ARCHITECTURE_LOG.md entry.
+- Tests: update test/R-65/slide_cap.js to the new counts (a Belt push onto 8 ice stops on the 4th ice hex; a long run of Slides the same; a skid after a Spring landing on ice stops 3 past the landing; a piece standing on ice stops 3 on; a run of 3 slick hexes unchanged), and re-check test/R-32/rocket_flight.js (the Rocket landing on a long ice run, now stopping at 11) and any other slide/skid test for the new stopping hex.
+
+Done when: the rule counts slick-to-slick moves with MAX_SLIDE 3, the docs agree, `just cc-test` passes, and `just cc-sim 200 small` runs (report the numbers).
+----
+Priority:   70
+Status: Done
 ID: slide-max-u2s8
 Created: 2026-11-17T03:30:43Z
 Updated: 2026-11-17T19:06:45Z

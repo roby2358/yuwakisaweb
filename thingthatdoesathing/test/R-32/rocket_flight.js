@@ -28,8 +28,8 @@ const RANGE = load().GameArtifacts.THINGS.ROCKET.push;
     for (let q = 0; q <= 11; q++) terrain(q, 4, T.ICE);
     const c = piece('crate', -1, 4);
     engine.wait();
-    // Down on ice at 7, it skids 8–11 and stops on its 4th ice hex (MAX_SLIDE, D-52).
-    check('ice doesn\'t stretch the flight; down on ice, it skids on, up to 4 ice hexes (D-37, D-52)', c.isAt(11, 4));
+    // Down on ice at 7, it skids 8–10 and stops on its 3rd ice-to-ice move (MAX_SLIDE, D-52).
+    check('ice doesn\'t stretch the flight; down on ice, it skids on, 3 hexes at most (D-37, D-52)', c.isAt(10, 4));
 }
 {
     const { state, engine, put, piece, terrain, T } = flatGame();

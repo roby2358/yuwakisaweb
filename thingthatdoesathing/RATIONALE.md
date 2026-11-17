@@ -106,7 +106,7 @@ ARCHITECTURE_LOG.md.
   the line as usual, and then `crash`es the bumper where it stands (a `splat` at `run.hop`).
   The hop is resolved again as after any bump, so the freed hexes count from there.
 - **Unreviewed calls:** (1) *Sliding* means the motion is a `skid`, or a `ground` motion whose
-  last arrival was free onto slick ground (`slid > 0` and its hex `isSlick`). A ground motion
+  last arrival was free onto slick ground (`sliding`, D-52). A ground motion
   that has just stepped off plains onto the hex before the bumped one isn't sliding, and nor is
   a gremlin whose first wander step leaves ice (it hasn't slid yet); a flight isn't. (2) The
   "both splat" case keys off the bumped piece having `splatsOnSlideBump` too (one field, no
@@ -123,7 +123,7 @@ ARCHITECTURE_LOG.md.
 - **Calls:** (1) The flag and its storage live in `GameSound` (client-only, the engine never sees it); every storage access is in try/catch and defaults to sound on. (2) Toggling plays no confirming cue. (3) `M` is handled before the Esc/Space keys in `onKeyDown`, with no modifier check (a separate task adds that for all keys).
 - **Alternatives:** storage in the UI; a speaker glyph instead of a text label.
 
-### D-52 A slide stops on its 4th slick hex (`MAX_SLIDE` 4) — *Decided 2026-11-17 (pjpd slide-max-u2s8: in one motion a piece slides over at most 4 slick hexes, then stops there as if blocked; per motion, reset each tick; non-slick ground still costs a ground motion's `n`; a landing's skid counts the same 4; airborne hexes and the D-33 line advance don't count; whatever entering a hex does still happens on the hexes reached), Proposed (*unreviewed*: the calls below)*
+### D-52 A slide makes at most 3 slick-to-slick moves (`MAX_SLIDE` 3, at most 4 slick hexes in a row) — *Decided 2026-11-17 (amended by the user, pjpd slide-trans-4pqk: count only moves from a slick hex onto a slick hex; entering the first slick hex from other ground, or landing from the air, doesn't count; on the 3rd the piece stops there, as if blocked; a Belt push onto a long run still stops on the 4th slick hex, a skid stops 3 past the landing hex, a piece standing on ice stops 3 on; everything else below stands). Originally (pjpd slide-max-u2s8: in one motion a piece slides over at most 4 slick hexes, then stops there as if blocked; per motion, reset each tick; non-slick ground still costs a ground motion's `n`; a landing's skid counts the same 4; airborne hexes and the D-33 line advance don't count; whatever entering a hex does still happens on the hexes reached), Proposed (*unreviewed*: the calls below)*
 - **Amends:** D-29 (a Slide was "free" for as long as it lasted) and D-37 (a skid ran until ground that isn't slick).
 - **Alternatives:** unlimited slides (the old rule); a cap counted across a whole tick
   rather than per motion; slowing a slide (one hex per two hops) instead of capping it.
@@ -132,10 +132,20 @@ ARCHITECTURE_LOG.md.
   had to be built. Four keeps a slide a real shortcut (a short run is unchanged) while making
   a long run something you build along, not just once at the start. The number lives in
   `artifacts.js` as `MAX_SLIDE`, to be tuned in play.
-- **How:** each motion carries `slid`; `slidInto(m, hex)` counts a ground or skid arrival
-  on slick ground (after the ground checks, so a sink, delivery or Trap still happens on that
-  hex), and the arrival stops the motion once `slid` reaches `MAX_SLIDE`.
-- **Unreviewed calls:** (1) *What counts:* every slick hex a `ground` motion enters free (that
+- **How:** each motion carries `slid`, `onSlick` (is it standing on slick ground: its start
+  hex at launch, then each ground arrival, set true when a landing turns into a skid) and
+  `sliding` (its last arrival was free onto slick ground, which D-54 reads). `slidInto(m, hex,
+  fromSlick)` runs after the ground checks (so a sink, delivery or Trap still happens on that
+  hex), counts the arrival when both hexes are slick, and the arrival stops the motion once
+  `slid` reaches `MAX_SLIDE`.
+- **Why slick-to-slick (amendment):** the first count made a run's length depend on how the
+  piece got onto the ice: a Belt push covered 4 slick hexes, a skid or a piece already on ice 5.
+  Counting moves within the slick run makes every run at most 4 hexes, however it began.
+- **Unreviewed calls (amendment):** (5) A Cannon shot's ground step off its 4th passed-over hex
+  is coming down from the air, so it doesn't count even when that hex and the 5th are both
+  slick (`walkedInto` checks `aloft`). (6) The task text called R-32's long-ice Rocket stop
+  "now at 11"; by the rule (down on 7, 3 past the landing) it stops at 10, and the test says 10.
+- **Unreviewed calls:** (1) *What counts* (superseded by the amendment, which counts only slick-to-slick moves; the Belt result is the same): every slick hex a `ground` motion enters free (that
   didn't use up one of its `n`), including the first one a Belt pushes onto: so a Belt onto 8
   ice stops on the 4th ice hex, not the 5th. The task's "its 4th free slick hex" reads that way;
   the other reading (the first hex is the Belt's own step) would be one hex longer. (2) A
@@ -144,8 +154,11 @@ ARCHITECTURE_LOG.md.
   (only one of them can slide in practice). (4) A piece stopped by the cap has had its motion,
   so it can't be bumped again that tick (R-13, D-33); next tick it can.
 - **Evidence:** R-65 (`test/R-65/slide_cap.js`: a long ice run and a long Slide run stop on
-  the 4th; a skid after a Spring landing stops after 4; a run of 3 is unchanged; a cap stop
-  short of a lake; a slide still delivers); R-32's long-ice Rocket skid now stops at 11, not 12.
+  the 4th; a skid after a Spring landing stops 3 past the landing; a piece standing on ice
+  pushed onto more ice stops 3 on; a run of 3 is unchanged; a cap stop short of a lake; a
+  slide still delivers); R-32's long-ice Rocket skid stops at 10 (11 under the first count,
+  12 uncapped). Amendment: `just cc-sim 200 small` → unchanged (198/200, median 94, p90 135,
+  0.53 lost).
   `Measured by: just cc-sim 200 small` → unchanged (198/200, median 94, p90 135, 0.53 lost);
   `just cc-sim-to 100 small 5` → unchanged (100/100, milestones at 94 / 152 / 250 / 405 / 709).
   The bot lays Belts and Springs on the small board, where ice runs of 5+ in its path are rare.

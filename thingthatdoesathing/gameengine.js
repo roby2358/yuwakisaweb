@@ -25,8 +25,8 @@ const GameEngine = (function () {
     // How each phase of a motion travels, one hex per hop (D-38):
     //   over   — a shot's cleared hexes: passes over everything, unseen (D-36)
     //   air    — a flight: meets what's on each hex it enters
-    //   ground — a ground push (slick ground free, up to MAX_SLIDE hexes, D-52);
-    //   skid — a landing's slide (D-37), up to MAX_SLIDE slick hexes;
+    //   ground — a ground push (slick ground free, up to MAX_SLIDE slick-to-slick moves, D-52);
+    //   skid — a landing's slide (D-37), up to MAX_SLIDE slick-to-slick moves;
     //   line   — a bumped line's advance; follow — the bumper following it (D-33);
     //   drop   — a flight stopped over a mountain dropping back (D-35)
     // `lift` is how it meets other pieces; `bumps`: stopped by a still piece on slick ground,
@@ -670,7 +670,8 @@ const GameEngine = (function () {
                 piece, dir, rank, seq: run.motions.length, phase, left, groundLeft: 0,
                 start: { q: piece.q, r: piece.r }, path: [], hop: null, over: 0, flown: [],
                 splat: false, wrecks: false, doomed: false, aloft: false, overhead: false,
-                leader: null, followed: 0, waitHop: 0, dropTo: null, slid: 0,
+                leader: null, followed: 0, waitHop: 0, dropTo: null,
+                slid: 0, onSlick: this.isSlick(this.hexOf(piece)), sliding: false,
             };
             run.motions.push(m);
             run.byId.set(piece.id, m);
@@ -681,7 +682,7 @@ const GameEngine = (function () {
         // Start `piece` going `dir` as `how` says ({ n, splat, flies, overMountains, clears,
         // wrecks }, from a Thing's template or wanderOf). A shot (`clears`) is aimed by
         // `aimShot`; a flight's length is fixed now (`flightLength`, D-35); a ground push goes
-        // up to n hexes, slick ground free (up to MAX_SLIDE of them, D-52).
+        // up to n hexes, slick ground free (up to MAX_SLIDE slick-to-slick moves, D-52).
         launch(run, piece, dir, how, rank) {
             if (how.clears) return this.aimShot(run, piece, dir, how, rank);
             const m = how.flies
@@ -874,10 +875,10 @@ const GameEngine = (function () {
         }
 
         // Is `m` a sliding piece that splats when it bumps (D-54)? Sliding: a skid, or a ground
-        // motion whose last arrival was free onto slick ground (`slid`, D-52).
+        // motion whose last arrival was free onto slick ground (`sliding`, D-52).
         splatsOnBump(m) {
             if (!PIECES[m.piece.kind].splatsOnSlideBump) return false;
-            return m.phase === 'skid' || (m.phase === 'ground' && m.slid > 0 && this.isSlick(this.hexOf(m.piece)));
+            return m.phase === 'skid' || (m.phase === 'ground' && m.sliding);
         }
 
         splatBump(m, first, run) {
@@ -956,22 +957,25 @@ const GameEngine = (function () {
         }
 
         walkedInto(m, hex, run) {
+            const fromSlick = m.onSlick && !m.aloft;   // coming down from a shot doesn't count
             m.overhead = m.aloft = false;
             if (this.groundEnds(m, hex, run)) return;
-            if (!this.slidInto(m, hex)) m.left--;
+            if (!this.slidInto(m, hex, fromSlick)) m.left--;
             if (m.left <= 0 || m.slid >= MAX_SLIDE) this.finish(m, run);
         }
 
         skidInto(m, hex, run) {
             if (this.groundEnds(m, hex, run)) return;
-            if (!this.slidInto(m, hex) || m.slid >= MAX_SLIDE) this.finish(m, run);
+            if (!this.slidInto(m, hex, m.onSlick) || m.slid >= MAX_SLIDE) this.finish(m, run);
         }
 
-        // Did `m` come onto `hex` by sliding (slick ground, free)? Counted per motion: a
-        // ground motion or skid stops on its MAX_SLIDE-th free slick hex (D-52).
-        slidInto(m, hex) {
-            if (!this.isSlick(hex)) return false;
-            m.slid++;
+        // Did `m` come onto `hex` by sliding (slick ground, free)? Only a move from a slick hex
+        // to a slick hex counts, per motion: a ground motion or skid stops on its MAX_SLIDE-th
+        // (D-52), so it covers at most MAX_SLIDE + 1 slick hexes in a row.
+        slidInto(m, hex, fromSlick) {
+            m.onSlick = m.sliding = this.isSlick(hex);
+            if (!m.sliding) return false;
+            if (fromSlick) m.slid++;
             return true;
         }
 
@@ -1004,7 +1008,7 @@ const GameEngine = (function () {
             m.overhead = m.aloft = false;
             const res = this.landingResult(m.piece);
             if (res !== 'moved') return this.end(m, res, run);
-            if (skids && !m.doomed && this.isSlick(this.hexOf(m.piece))) { m.phase = 'skid'; return; }
+            if (skids && !m.doomed && this.isSlick(this.hexOf(m.piece))) { m.phase = 'skid'; m.onSlick = true; return; }
             this.finish(m, run);
         }
 

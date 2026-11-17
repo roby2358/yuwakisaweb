@@ -1,13 +1,14 @@
-// R-65: a slide is capped (D-52). In one motion a piece slides over at most MAX_SLIDE (4)
-// free slick hexes (bare ICE or a Slide); entering the 4th it stops there, as if blocked,
-// even with more ice ahead. A skid after a landing counts the same 4 (the landing hex,
-// reached in the air, doesn't count). A shorter run is unchanged.
+// R-65: a slide is capped (D-52). Only moves from a slick hex (bare ICE or a Slide) to a slick
+// hex count; on its MAX_SLIDE-th (3rd) such move in one motion a piece stops there, as if
+// blocked, even with more ice ahead, so it covers at most 4 slick hexes in a row. Entering the
+// first slick hex from other ground, or landing from the air, doesn't count. A shorter run is
+// unchanged.
 'use strict';
 const { check, done } = require('../helpers/check');
 const { flatGame, DIR } = require('../helpers/load');
 {
     const { g } = flatGame();
-    check('MAX_SLIDE is 4', g.GameArtifacts.MAX_SLIDE === 4);
+    check('MAX_SLIDE is 3', g.GameArtifacts.MAX_SLIDE === 3);
 }
 {
     const { engine, put, piece, terrain, T } = flatGame();
@@ -27,11 +28,19 @@ const { flatGame, DIR } = require('../helpers/load');
 }
 {
     const { engine, put, piece, terrain, T } = flatGame();
-    // Airborne over 0 and 1, down on ice at 2, then it skids 3, 4, 5, 6 and stops there.
+    // Airborne over 0 and 1, down on ice at 2, then it skids 3, 4, 5 and stops there.
     put('SPRING', -1, 4, DIR.E); for (let q = 0; q <= 10; q++) terrain(q, 4, T.ICE);
     const c = piece('crate', -1, 4);
     engine.wait();
-    check('a skid after a Spring landing stops after 4 ice hexes', c.isAt(6, 4));
+    check('a skid after a Spring landing on ice stops 3 hexes past the landing', c.isAt(5, 4));
+}
+{
+    const { engine, put, piece, terrain, T } = flatGame();
+    // Standing on ice at 1, pushed onto more ice: 2, 3, 4, and it stops there.
+    put('PUSHER', 0, 4, DIR.E); for (let q = 1; q <= 8; q++) terrain(q, 4, T.ICE);
+    const c = piece('crate', 1, 4);
+    engine.wait();
+    check('a piece standing on ice moved onto more ice stops 3 hexes on', c.isAt(4, 4));
 }
 {
     const { engine, put, piece, terrain, T } = flatGame();
