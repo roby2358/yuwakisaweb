@@ -34,6 +34,22 @@ ARCHITECTURE_LOG.md.
   place without racing the clock; the placement ticks and the run resumes.
 - **Evidence:** U-13 (manual); `uiboot.js` drives Go, the hold, and Pause.
 
+### D-49 Commands that arrive during a tick animation wait and fire, not drop — *Decided 2026-11-17 (pjpd input-queue-pyi5, user-reported: with Go on an animation plays nearly all the time, so X only landed in the short gap between ticks; a one-slot queue `queued`, the latest input replacing an earlier one; X / the Discard spot, a board click with a card picked, `D` and `B` queue; `B` keeps the hex hovered at the keypress; the closure re-checks its own guards when it runs; `pick()`, `unpick()` and a new game clear it; `finishAnim()` runs it after its render, before `scheduleRun()`; Go's hold rules unchanged), Proposed (*unreviewed*: the rest)*
+- **Alternatives:** keep dropping (UI_CONTROLS L1.1's plain phase gate); cut the
+  animation short on input; a multi-command queue.
+- **Why:** the engine is already post-tick while the animation plays, so nothing is
+  stale: the picked card's legal set is current, and the command can simply wait for the
+  view to catch up. One slot is enough for a player's one intent; a deeper queue would let
+  commands pile up behind an animation the player can't see the end of.
+- **Unreviewed calls:** (1) a queued discard or board click runs only if the very same
+  pick (the same `picked` object) is still in play, beyond the guards at the method's top,
+  so a card that changed under it some other way is never acted on. (2) `D` keeps no hex:
+  it acts on whatever is selected when it runs (the selection can't change to another
+  hex without a click, and a deselect drops it through the guard). (3) UI_CONTROLS.md
+  keeps its family-wide L1.1 rule; a short note there names this game's exception.
+- **Evidence:** `uiboot.js` (X mid-animation waits, then discards; Esc before the end
+  cancels it).
+
 ### D-3 Four board sizes, picked at New Game: 16 × 10 (fits the screen), 20 × 20, 30 × 30, 60 × 60 (pan) — *Decided (sizes), Proposed (open on the source)*
 - **Alternatives:** one small board that always fits (G-2: cause and effect never
   off-screen); the base's 60×40 with panning; a free-form width × height entry.

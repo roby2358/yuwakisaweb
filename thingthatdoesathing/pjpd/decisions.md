@@ -124,3 +124,6 @@ decision, and where the full reasoning lives (a RATIONALE `D-n` tagged *unreview
 - [agent, bomb-booms] bomb-booms-mp74: the end's animation drops each boomed hex's hop-0 `clear` and the `splat` of every piece that stood on one (ids taken before the command), so neither the burst nor the end sound repeats (D-48 call 15).
 - [agent, bomb-booms] bomb-booms-mp74: a bombed piece fades and shrinks with its splat like a tick's splat, rather than vanishing outright (D-48 call 15).
 - [agent, bomb-booms] bomb-booms-mp74: the card reads "N more booms; Esc ends it" and the hover hint "click to blow up"; the Bomb's verb line now says each click blows a hex up (D-48 call 10).
+- [agent, input-queue] input-queue-pyi5: a queued discard or board click runs only if the same `picked` object is still in play, on top of the method's own guards (D-49 call 1).
+- [agent, input-queue] input-queue-pyi5: a queued `D` captures no hex; it acts on the selection when it runs (D-49 call 2).
+- [agent, input-queue] input-queue-pyi5: UI_CONTROLS.md keeps its family-wide L1.1 drop rule, with a short Thing Factory note naming the exception (D-49 call 3).

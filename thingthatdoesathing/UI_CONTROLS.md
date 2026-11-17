@@ -70,6 +70,10 @@ mid-animation, queuing moves during the enemy turn — more reliably than enabli
 disabling individual widgets. Even when the opposing turn is instantaneous, keep the flag:
 it is the seam an animated AI phase later slots into without touching input code.
 
+*Thing Factory:* its engine is already post-tick while the animation plays, so instead of
+dropping them it queues a command that arrives mid-animation (one slot, latest wins) and
+runs it when the animation ends (D-49).
+
 ## 1.2 Select, then act
 
 Map interaction is a **two-step affordance**, not click-to-move.

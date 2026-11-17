@@ -58,8 +58,10 @@ Libs: `hex.js` (axial math, `NEIGHBOR_DIRS` = facing order E, NE, NW, W, SW, SE;
 ### Input architecture (see `UI_CONTROLS.md`)
 
 `UI_CONTROLS.md` is the layered controls spec for the hex-game family; `gameui.js` cites
-its layers (`L1.2`, `L2.1`, `L5`). Dispatch order: `overlay` → `anim` (input waits for the
-tick animation) → `picked` card → bare map click.
+its layers (`L1.2`, `L2.1`, `L5`). Dispatch order: `overlay` → `anim` (commands wait for the
+tick animation: X / Discard, a board click with a card picked, `D` and `B` go into the
+one-slot `queued`, latest wins, and fire when `finishAnim()` ends it, re-checking their guards;
+`pick`/`unpick`/`startGame` clear it, D-49) → `picked` card → bare map click.
 
 - **L1.2 pick-then-act:** picking a card (click or `1`–`3`) computes its legal set once
   (`engine.legalPlacements(kind)`, or `legalPicks` for a tool card); clicking a hex is a lookup

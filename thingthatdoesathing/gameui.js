@@ -360,6 +360,7 @@ const GameUI = (function () {
             this.hoveredHex = null;  // L1.3
             this.selected = null;    // {q, r} — a clicked hex: highlighted, holds Go; a second click turns its mover
             this.bursts = [];        // [{ q, r, thing, piece, t0 }] — Bomb booms bursting now, outside any tick (D-48)
+            this.queued = null;      // a command that came in during the tick animation, run when it ends (one slot, the latest wins)
             this.anim = null;        // { t0, dur, tracks: Map<id, track {pts, hop, over, end}>, before, hidden: Set<id>, milestone, ends: Set<type> }
             this.running = false;    // Go/Pause: tick on its own after each animation
             this.runTimer = null;    // the pending RUN_GAP_MS timeout, if any
@@ -398,6 +399,7 @@ const GameUI = (function () {
             this.choosing = null;
             this.selected = null;
             this.anim = null;
+            this.queued = null;
             this.hoveredHex = null;
             this.setRunning(false);
             this.scale = 1;          // every new game starts at full size (D-40)
@@ -555,6 +557,7 @@ const GameUI = (function () {
             if (this.handLocked()) return;   // a spent card: no switching
             if (this.picked && this.picked.slot === slot) { this.unpick(); return; }
             this.selected = null;
+            this.queued = null;
             const card = this.state.hand[slot].kind;
             const mode = startMode(card);
             this.picked = { slot, card, mode, legal: PICK_MODES[mode].legal(this, card), kind: card, color: WHITE, from: null, booms: [] };
@@ -656,6 +659,7 @@ const GameUI = (function () {
 
         unpick() {
             this.picked = null;
+            this.queued = null;
             this.choosing = null;
             this.render();
         }
@@ -752,23 +756,33 @@ const GameUI = (function () {
 
         // Remove the Thing on the selected hex (D), never the hovered one (D-39); a bare hex
         // or no selection does nothing. A remove lets go of the hex, so Go resumes.
+        // Mid-animation it waits for the tick to end, then runs (queued).
         removeSelected() {
-            if (this.overlay || this.anim || !this.selected) return;
+            if (this.overlay || !this.selected) return;
+            if (this.anim) { this.queued = () => this.removeSelected(); return; }
             const { q, r } = this.selected;
             if (this.commit(() => this.engine.remove(q, r), () => this.sound.sink())) this.selected = null;
         }
 
         // Blow up the crate under the cursor (B). Not while a spent card is in play (D-47).
+        // The hex is the one hovered at the keypress, even if the blast waits for the tick.
         blastHovered() {
-            if (this.overlay || this.anim || !this.hoveredHex || this.handLocked()) return;
-            const { q, r } = this.hoveredHex;
+            if (this.overlay || !this.hoveredHex) return;
+            this.blastAt(this.hoveredHex.q, this.hoveredHex.r);
+        }
+
+        blastAt(q, r) {
+            if (this.overlay || this.handLocked()) return;
+            if (this.anim) { this.queued = () => this.blastAt(q, r); return; }
             this.commit(() => this.engine.blast(q, r), () => {});
         }
 
         // The Discard spot or X: throw the card in play away, as its mode says; it ticks like
-        // any command.
+        // any command. Mid-animation it waits for the tick to end, then runs, if the same card
+        // is still in play.
         discardPicked() {
-            if (this.overlay || this.anim || !this.picked) return;
+            if (this.overlay || !this.picked) return;
+            if (this.anim) { const p = this.picked; this.queued = () => { if (this.picked === p) this.discardPicked(); }; return; }
             PICK_MODES[this.picked.mode].discard(this);
         }
 
@@ -895,6 +909,9 @@ const GameUI = (function () {
             if (a.opened.length) this.showNews(a.opened, a.unlocked);
             this.render();
             a.redrawn.forEach(slot => this.flashCard(slot));
+            const queued = this.queued;   // its own guards drop it if, say, a news overlay just opened
+            this.queued = null;
+            if (queued) queued();
             this.scheduleRun();
         }
 
@@ -1498,17 +1515,22 @@ const GameUI = (function () {
             if (this.overlay) return;                               // L5 captures & consumes
             const hex = this.screenToHex(e.clientX, e.clientY);
             const key = Hex.key(hex.q, hex.r);
-            if (this.picked) {
-                if (this.anim) return;                              // L1.1 a place (or a pick-up) waits for the tick
-                PICK_MODES[this.picked.mode].click(this, hex, this.picked.legal.has(key));
-                return;
-            }
+            if (this.picked) { this.clickPicked(hex); return; }
             if (this.selected) {
                 if (Hex.same(this.selected, hex)) this.rotate(hex.q, hex.r);
                 else this.deselect();
                 return;
             }
             if (this.state.hexes.has(key)) this.select(hex.q, hex.r);
+        }
+
+        // A board click with a card in play, as its mode says. L1.1 a place (or a pick-up)
+        // waits for the tick: mid-animation it's queued and runs when the tick ends, if the
+        // same card is still in play.
+        clickPicked(hex) {
+            if (this.overlay || !this.picked) return;
+            if (this.anim) { const p = this.picked; this.queued = () => { if (this.picked === p) this.clickPicked(hex); }; return; }
+            PICK_MODES[this.picked.mode].click(this, hex, this.picked.legal.has(Hex.key(hex.q, hex.r)));
         }
 
         // The intro and size cards don't cover the canvas, so the mouse reaches it under

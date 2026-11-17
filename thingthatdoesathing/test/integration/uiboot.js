@@ -460,6 +460,31 @@ run('Space while Go runs finishes the tick in flight, then stops', () => {
     key(' '); settle(); advance(2000);
     if (s.turn !== t + 1) throw new Error('Space with Go off must do exactly one tick');
 });
+run('X during a tick animation waits for the tick, then discards; Esc before then cancels it', () => {
+    els['new-game'].fire('click'); key('1');
+    const s = ui.state;
+    els.go.fire('click');
+    advance(1000);
+    for (let i = 0; i < 40 && !ui.anim; i++) advance(50);   // catch a tick mid-animation
+    if (!ui.anim) throw new Error('expected a tick in flight');
+    let t = s.turn;
+    s.hand[1] = { kind: 'BOMB' };   // not dealt on a new game, so a redraw replaces it
+    key('2'); key('x');
+    if (s.turn !== t || !ui.picked || s.hand[1].kind !== 'BOMB') throw new Error('X discarded mid-animation');
+    if (!ui.queued) throw new Error('X was dropped, not queued');
+    settle();
+    if (s.turn !== t + 1 || ui.picked || s.hand[1].kind === 'BOMB') throw new Error('the queued X did not discard when the tick ended');
+    advance(1000);
+    for (let i = 0; i < 40 && !ui.anim; i++) advance(50);
+    if (!ui.anim) throw new Error('expected a second tick in flight');
+    t = s.turn;
+    s.hand[1] = { kind: 'BOMB' };
+    key('2'); key('x'); key('Escape');
+    if (ui.picked || ui.queued) throw new Error('Esc did not put the card back and drop the queued X');
+    els.go.fire('click');   // Go off; the tick in flight finishes
+    settle(); advance(2000);
+    if (s.turn !== t || s.hand[1].kind !== 'BOMB') throw new Error('a discard ran after Esc');
+});
 run('a click selects a hex and holds Go; a second click turns its mover; a click elsewhere lets go', () => {
     els['new-game'].fire('click'); key('1');
     const s = ui.state;
