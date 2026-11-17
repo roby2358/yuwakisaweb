@@ -125,12 +125,13 @@ const GameArtifacts = (function () {
     // Board sizes offered at New Game, in menu order. `heightmap` is the diamond-square
     // grid side (2^n + 1, at least the board's longer side); `knownGoodSeed` has a
     // source→target path on its first attempt at that size (R-23); `colors` is how many
-    // CRATE_COLORS the board can open, one more per milestone (R-38).
+    // CRATE_COLORS the board can open, one more per milestone (R-38); `crates` is how many crates it holds
+    // at once before any milestone (D-31).
     const MAP_SIZES = {
-        small:  { cols: 16, rows: 10, heightmap: 33, knownGoodSeed: 1, colors: 1 },
-        medium: { cols: 20, rows: 20, heightmap: 33, knownGoodSeed: 1, colors: 2 },
-        large:  { cols: 30, rows: 30, heightmap: 33, knownGoodSeed: 1, colors: 3 },
-        huge:   { cols: 60, rows: 60, heightmap: 65, knownGoodSeed: 1, colors: 4 },
+        small:  { cols: 16, rows: 10, heightmap: 33, knownGoodSeed: 1, colors: 1, crates: 2 },
+        medium: { cols: 20, rows: 20, heightmap: 33, knownGoodSeed: 1, colors: 2, crates: 3 },
+        large:  { cols: 30, rows: 30, heightmap: 33, knownGoodSeed: 1, colors: 3, crates: 4 },
+        huge:   { cols: 60, rows: 60, heightmap: 65, knownGoodSeed: 1, colors: 4, crates: 5 },
     };
 
     const GREMLIN_HEXES_PER_DIE = 160;   // one die of gremlins per this many board hexes (the small board's area)
@@ -139,12 +140,9 @@ const GameArtifacts = (function () {
     // its area, rounded, at least one. Small 1, medium 3, large 6, huge 23.
     const gremlinDice = size => Math.max(1, Math.round(MAP_SIZES[size].cols * MAP_SIZES[size].rows / GREMLIN_HEXES_PER_DIE));
 
-    const CRATE_CAP_PER_ROOT = 0.6;   // crates of the board's cap per hex of sqrt(board area)
-
-    // How many crates a board size holds at once before any milestone: CRATE_CAP_PER_ROOT times
-    // the square root of its area, rounded, at least one: small 8, medium 12, large 18, huge 36.
-    // Each milestone reached adds one (D-31, R-19).
-    const crateCap = size => Math.max(1, Math.round(CRATE_CAP_PER_ROOT * Math.sqrt(MAP_SIZES[size].cols * MAP_SIZES[size].rows)));
+    // How many crates a board size holds at once before any milestone: its `crates` (small 2,
+    // medium 3, large 4, huge 5). Each milestone reached adds one (D-31, R-19).
+    const crateCap = size => MAP_SIZES[size].crates;
 
     // How many milestones `delivered` crates have reached (0 below FIRST_MILESTONE).
     const milestonesReached = delivered => {
@@ -197,7 +195,6 @@ const GameArtifacts = (function () {
         MAP_SIZES,
 
         FIRST_MILESTONE,
-        CRATE_CAP_PER_ROOT,
         BIG_CRATE_START,
         BIG_CRATE_AT_FIFTH,
         BIG_CRATE_EASE,

@@ -448,7 +448,7 @@ for piece with PIECES[kind].wanders (creation order), not claimed, ranked after 
 run hops 1, 2, … until every motion has stopped                     # Motion rule
 emit one move per piece that moved, then every end (sink/deliver/splat) in the order they happened
 color = spawnCycle[spawnSlot]; spawnSlot = (spawnSlot + 1) % length(spawnCycle)   # one slot a tick (D-43)
-if color is open and crates on the board < crateCap(size) + milestonesReached(delivered):   # crateCap ∝ √area (D-31)
+if color is open and crates on the board < crateCap(size) + milestonesReached(delivered):   # crateCap = MAP_SIZES[size].crates: 2/3/4/5 (D-31)
     src = the source that makes color
     if no piece on src:                                             # else the slot is skipped, not retried
         p = bigCrateChance(milestonesReached(delivered))              # D-34, D-45
@@ -558,7 +558,7 @@ The code constant in `GameArtifacts` is the single source.
 | `MAP_SIZES.*.colors` | 1 / 2 / 3 / 4 | most colors the board opens [D] |
 | `ENHANCE_CHANCE` | 0.5 | chance a new color comes out of an existing source [D] |
 | `FIRST_MILESTONE` | 10 | crates (then the 1-2-5 series, forever) |
-| `CRATE_CAP_PER_ROOT` | 0.6 | crates of the cap per hex of √(board area); `crateCap(size)` = max(1, round(this × √(cols × rows))): small 8, medium 12, large 18, huge 36; +1 per milestone reached (D-31) [D: sqrt shape; T: the constant] |
+| `MAP_SIZES.*.crates` | 2 / 3 / 4 / 5 | crates the board holds at once before any milestone; `crateCap(size)` returns it; +1 per milestone reached (D-31) [D] |
 | `BIG_CRATE_START` | 0.01 | big-crate chance with no milestones reached (D-45) [D] |
 | `BIG_CRATE_AT_FIFTH` | 0.05 | big-crate chance at `BIG_CRATE_KNEE` milestones (D-45) [D] |
 | `BIG_CRATE_KNEE` | 5 | milestones over which the chance rises in a straight line, START → AT_FIFTH; `bigCrateChance(m)` = START + (AT_FIFTH − START)·m / KNEE for m ≤ KNEE: 1, 1.8, 2.6, 3.4, 4.2, 5% (D-45) [D: the end points; T: the straight line] |

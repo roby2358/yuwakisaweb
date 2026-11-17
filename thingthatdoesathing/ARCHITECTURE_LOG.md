@@ -2,6 +2,12 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-17 — Crate cap is a number per board size (D-31)
+`crateCap(size)` returns the new `MAP_SIZES.*.crates` (small 2, medium 3, large 4, huge 5)
+instead of 0.6 × √area (8 / 12 / 18 / 36); `CRATE_CAP_PER_ROOT` is gone. The +1 per milestone
+reached is unchanged. R-19 and its test updated (the test seeds `delivered` 10 for its
+three-crate sequence). `just cc-sim 200 small`: first-milestone median 52 → 94.
+
 ### 2026-11-17 — The Cannon unlocks before the Rocket (D-51)
 `UNLOCKS` swaps its `[ROCKET]` and `[CANNON]` steps: Mover, Cannon, Rocket, Bomb. Only the
 order moves; R-49 and R-54 now expect it, and ONTOLOGY, CRITERIA, README, DYNAMICS and

@@ -26,6 +26,7 @@ const crates = () => state.pieces.filter(p => A.PIECES[p.kind].cargo);   // a bi
 // One open color (red) in the first slot of four: a crate, then L-1 ticks with none.
 state.spawnCycle = ['red', 'green', 'blue', 'yellow'];
 state.spawnSlot = 0;
+state.delivered = 10;   // one milestone's +1 on top of small's 2, so this sequence's third crate fits under the cap
 engine.wait();
 const c = crates()[0];
 check('the open color\'s slot spawns its crate on its source; the slot advances',
@@ -72,12 +73,11 @@ check('the next time round the slot spawns', crates().length === 3 && state.spaw
         A.milestonesReached(99) === 3 && A.milestonesReached(100) === 4);
 }
 {
-    // crateCap scales with the square root of area: CRATE_CAP_PER_ROOT per root hex, rounded, at least one.
-    const ok = Object.entries(A.MAP_SIZES).every(([size, { cols, rows }]) =>
-        A.crateCap(size) === Math.max(1, Math.round(A.CRATE_CAP_PER_ROOT * Math.sqrt(cols * rows))));
-    check('crateCap(size) = max(1, round(CRATE_CAP_PER_ROOT * sqrt(area))) on every size', ok);
+    // crateCap is the size's own number (MAP_SIZES.*.crates), not a formula of its area.
+    const ok = Object.entries(A.MAP_SIZES).every(([size, row]) => A.crateCap(size) === row.crates);
+    check('crateCap(size) = MAP_SIZES[size].crates on every size', ok);
     const caps = ['small', 'medium', 'large', 'huge'].map(A.crateCap).join(' ');
-    check(`caps by size are 8 12 18 36 (got ${caps})`, caps === '8 12 18 36');
+    check(`caps by size are 2 3 4 5 (got ${caps})`, caps === '2 3 4 5');
 }
 {
     // Two open colors, red jammed: blue's slot spawns at blue's source, red's slot nothing,

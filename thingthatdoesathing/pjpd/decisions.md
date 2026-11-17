@@ -132,3 +132,4 @@ decision, and where the full reasoning lives (a RATIONALE `D-n` tagged *unreview
 - [agent, card-discard] card-discard-jen3: the × is a `span role="button"` in the card's bottom-right corner, always shown at low opacity, brighter on card hover (D-50 call 2).
 - [agent, card-discard] card-discard-jen3: a queued slot discard keeps only the slot number; `pick()` clears the queue so the slot still names the card seen (D-50 call 3).
 - [agent, cannon-first] cannon-first-xkni: the order swap is recorded as a new D-51 (amending D-30/D-47/D-48) rather than edits to D-30's body; old D-36/D-47/D-48 remarks left as history.
+- [agent, crate-start] crate-start-gtz5: `crates` lives on each MAP_SIZES row and CRATE_CAP_PER_ROOT is removed; R-19's test sets delivered = 10 for its three-crate sequence (cap 2 + 1) instead of changing the sequence (D-31 amendment).

@@ -858,7 +858,7 @@ ARCHITECTURE_LOG.md.
   weight, was 6 of 15): it never sees a Spring before then, but it gets more Belts, so it's a
   little faster. No numbers retuned. Unmeasured in play.
 
-### D-31 Crates spawn up to a cap that grows with the square root of board area and by one per milestone — *Spawn timing superseded 2026-11-13 by D-43 (a fixed color cycle, one slot a tick; the cap stands); Decided (a cap growing with √area, settled 2026-11-12; a chance every third tick, +1 per milestone reached), Proposed (the rest; reviewed and accepted 2026-11-12)*
+### D-31 Crates spawn up to a per-size cap (small 2, medium 3, large 4, huge 5) plus one per milestone — *Amended 2026-11-17 (user call, pjpd crate-start-gtz5: the √area cap is replaced by a number per size, `MAP_SIZES.*.crates` = 2 / 3 / 4 / 5, so early play has only a few crates and the count climbs by the +1 per milestone, which stands; first-milestone median on `just cc-sim 200 small` moved 52 → 94 (p10 47 → 76, p90 58 → 135; 198 of 200 games reached it, crates on the board peak 2, at the cap 81% of ticks); no retuning, Proposed/unreviewed: `crates` lives on the `MAP_SIZES` row and `CRATE_CAP_PER_ROOT` is removed). The √area text below is history.* Spawn timing superseded 2026-11-13 by D-43 (a fixed color cycle, one slot a tick; the cap stands); Decided (a cap growing with √area, settled 2026-11-12; a chance every third tick, +1 per milestone reached), Proposed (the rest; reviewed and accepted 2026-11-12)*
 - **Alternatives:** the fixed timer it replaced (`SOURCE_INTERVAL`: a crate every 3 ticks
   whenever the rolled source was clear, retried every tick while jammed); a cap per color or
   per source; a cap with a fixed base plus a per-area term; storing a bonus counter in state;
