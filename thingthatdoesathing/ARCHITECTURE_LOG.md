@@ -2,6 +2,10 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-17 — Game keys ignore Ctrl/Alt/Meta chords (D-57)
+`GameUI.onKeyDown` returns early, without `preventDefault`, when Ctrl, Alt or Meta is held, so
+Ctrl+D, Ctrl+R and Cmd+number stay the browser's. Shift still works. New `uiboot.js` check.
+
 ### 2026-11-17 — Meta description, Rocket favicon and link-preview tags (D-56)
 index.html gains a description, an inline-SVG Rocket favicon, og:title/description/type/url/image and twitter:card. `og.png` is not in the repo yet.
 

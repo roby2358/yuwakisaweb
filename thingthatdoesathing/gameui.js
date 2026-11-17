@@ -1619,6 +1619,9 @@ const GameUI = (function () {
         }
 
         onKeyDown(e) {
+            // Ctrl/Alt/Meta chords belong to the browser (Ctrl+D, Ctrl+R, Cmd+1...): the game
+            // neither acts nor preventDefaults, overlays included (D-57). Shift stays ours.
+            if (e.ctrlKey || e.altKey || e.metaKey) return;
             if (this.overlay) { this.onOverlayKey(e); return; }
             if (e.key === 'm' || e.key === 'M') { this.toggleMute(); return; }
             if (e.key === 'Escape') { if (this.picked) this.backOut(); else if (this.selected) this.deselect(); return; }   // L2.2

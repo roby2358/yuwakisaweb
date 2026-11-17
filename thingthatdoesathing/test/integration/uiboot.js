@@ -257,6 +257,24 @@ run('D removes the selected Thing, never the hovered one; with no selection it d
     key('d'); settle();
     if (!e.thingAt(b.q, b.r) || s.turn !== turn) throw new Error('D after the remove must do nothing');
 });
+run('Ctrl/Alt/Meta chords are ignored and not preventDefaulted (D-57)', () => {
+    const s = ui.state, e = ui.engine;
+    s.hand[0] = { kind: 'BELT' };
+    key('1');
+    const k = [...ui.picked.legal].find(k => !e.thingAt(...k.split(',').map(Number)));
+    const [q, r] = k.split(',').map(Number);
+    clickHex(q, r); settle();
+    clickHex(q, r);   // select it (a second click would turn a mover; a Belt has no facing to turn)
+    const turn = s.turn;
+    for (const mod of ['ctrlKey', 'altKey', 'metaKey']) {
+        let prevented = false;
+        const ev = k2 => ({ key: k2, shiftKey: false, [mod]: true, preventDefault() { prevented = true; } });
+        for (const k2 of ['d', 'D', ' ', 'Enter', '1', 'm', 'r', 'x']) windowListeners.keydown.forEach(fn => fn(ev(k2)));
+        if (prevented) throw new Error(mod + ' chord was preventDefaulted');
+        if (!e.thingAt(q, r) || s.turn !== turn || ui.picked) throw new Error(mod + ' chord acted');
+    }
+    key('Escape');
+});
 run('a hand card button click picks it', () => {
     const btn = els.cards.children[1];
     btn.fire('click');

@@ -56,7 +56,7 @@ it needs the author: it gets no pjpd task.
 | PORT-3 | Fits the declared frame | T1 | partial | layout fills the window; 1280x720 never checked | portal-frame-aqns |
 | PORT-2 | Keyboard focus in the frame | T1 | partial | the intro click focuses the frame; no "click to resume" after focus is lost | portal-frame-aqns |
 | PORT-7 | Honest device flags | T1 | missing | no listings yet | listing-r8fn |
-| INP-1 | Game keys vs browser keys | T1 | partial | gameui.js:1543-1552: Ctrl+D also removes a Thing; Space and Enter preventDefault even with modifiers held | key-mods-dsxi |
+| INP-1 | Game keys vs browser keys | T1 | done | gameui.js onKeyDown returns early on Ctrl/Alt/Meta (D-57); uiboot check | |
 | AUD-2 | Mute, one action away, persisted | T1 | missing | no mute | mute-button-twa8 |
 | PRIV-1 | Telemetry decision recorded | T1 | partial | direction recorded; schema and notice open | you (telemetry-v54s) |
 | ONB-1 | A stranger makes a first move unaided | T1 | unverified | needs a cold play by someone new | you |
@@ -205,7 +205,7 @@ are T1 as well.
 
 | Id | Item | Tier | Status | Evidence | Task |
 |---|---|---|---|---|---|
-| INP-1 | Keys vs browser | T1 | partial | | key-mods-dsxi |
+| INP-1 | Keys vs browser | T1 | done | onKeyDown ignores Ctrl/Alt/Meta chords (D-57) | |
 | INP-2 | Right-click and drag | T1 | done | contextmenu blocked on the canvas (gameui.js:1451); `user-select: none` | |
 | INP-3 | Focus loss | T2 | done | no held keys; the drag ends on a window mouseup | |
 | INP-4 | Actions on screen | T2 | partial | | action-btns-pebc |

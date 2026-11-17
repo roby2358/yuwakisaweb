@@ -81,6 +81,11 @@ ARCHITECTURE_LOG.md.
 - **Evidence:** R-49 and R-54 check the order; `cc-sim 200 small` is unchanged (200/200, median 52, p90 58): the bot's first milestone is before either card.
 - **Unreviewed call:** (1) the Effect line's milestone numbers are read from the sim's 10/20/50/100/200/500 ladder, not played.
 
+### D-57 Game keys step aside for Ctrl, Alt and Meta chords — *Proposed (unreviewed; pjpd key-mods-dsxi)*
+- **Serves:** a stranger's browser shortcuts still working (SHIP.md INP-1).
+- **Calls (agent):** (1) `onKeyDown` returns first thing, before the overlay path, when `ctrlKey`, `altKey` or `metaKey` is set: no action, no `preventDefault`, so Ctrl+R reloads even over an overlay. (2) Shift stays ours (Shift+R turns the other way, Shift+1..3 discards, D-50). (3) M is covered by the same check (D-53). (4) A bare modifier press (Ctrl alone) no longer closes a click-or-any-key overlay.
+- **How:** one line in `GameUI.onKeyDown`; a `uiboot.js` check sends d, Space, Enter, 1, m, r, x with each modifier.
+
 ### D-56 Link-preview and favicon tags in index.html — *Proposed (unreviewed; pjpd meta-tags-dagy: the favicon is the Rocket glyph, user call)*
 - **Serves:** a stranger finding the game (SHIP.md WEB-3, WEB-4).
 - **Calls (agent):** (1) The favicon is an inline SVG `data:` URL: the Rocket's `drawThing` shapes (body, fins, exhaust) in its `THING_LOOK` ink `#ff5c8a` on its fill `#4a2234`, rounded square, turned 45 degrees to point up-right; hand-copied, so a change to the glyph does not follow. (2) The description is the README's first two sentences, "A thing that does a thing. Build a contraption on a hex board, one Thing at a time, while it runs." (3) `og:image` is `https://ttdat.yuwakisa.com/og.png`; the file does not exist yet (user supplies it, SHIP.md WEB-4). Also added `og:type` website.

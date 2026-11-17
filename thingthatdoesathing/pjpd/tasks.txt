@@ -1,12 +1,3 @@
-Priority:   52
-Status: ToDo
-ID: key-mods-dsxi
-Created: 2026-11-17T02:44:27Z
-Updated: 2026-11-17T02:44:27Z
-
-Ignore game keys when Ctrl, Alt or Meta is held, so browser shortcuts work and don't act.
-Today gameui.js onKeyDown acts on letters with modifiers held: Ctrl+D (bookmark) also removes the selected Thing, Ctrl+R (reload) also turns the ghost, Ctrl/Cmd+number picks a card, and Space/Enter are preventDefault'ed even with modifiers. Done looks like: onKeyDown (and the overlay key path) returns early without preventDefault when e.ctrlKey, e.altKey or e.metaKey is set; Shift stays allowed (Shift+R turns the other way). Add a uiboot or unit check that Ctrl+D doesn't remove a Thing. SHIP.md item: INP-1. Done when `just cc-test` passes.
-----
 Priority:   51
 Status: ToDo
 ID: sorry-past-zwbb
