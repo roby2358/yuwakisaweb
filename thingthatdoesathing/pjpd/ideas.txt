@@ -78,6 +78,26 @@ Open questions to settle before it becomes a task:
 - Look: drawing, the lift animation (an arc), and a range ring while placing.
 - Balance: it bypasses the contraption entirely, so it may trivialize delivery; consider a long cooldown, a small range, or late unlock. Check against the sim bot.
 ----
+Score:   50
+ID: splitter-k497
+Created: 2026-11-17T09:56:29Z
+Updated: 2026-11-17T09:56:29Z
+
+Splitter: a Thing that takes crates in through one edge and sends them out the two far edges 60° either side of straight through, split 50/50.
+
+Rough shape: a facing Thing. A crate entering from its back edge leaves through one of the two edges flanking the straight-ahead edge (front-left or front-right, each 60° off the line of travel). The default split is 50/50. Possibly a placement panel (like the Pusher/Puller color picker) to pick the ratio: 10/90, 20/80, 33/66, 50/50, 66/33, 80/20, 90/10.
+
+Open questions to settle before it becomes a task:
+- Random or deterministic: a seeded Rando roll per crate, or a counter that alternates (L, R, L, R; for 33/66, L R R ...) so the split is exact over time? A counter needs state on the Thing.
+- Does it act on the piece standing on it (like a Belt, pushing it 1 hex out the chosen edge) or redirect a piece arriving into it mid-motion?
+- What about a crate arriving from another edge, or a piece placed onto it: pass through, block, or treat like a Belt facing one way?
+- Blocked exit: does it try the other side, or stop the crate for the tick?
+- Gremlins: split too, or ignored?
+- Colored like the Pusher/Puller (only one color's crates), or white for all?
+- The ratio panel: is the ratio fixed at placement, changeable by clicking the placed Splitter, and how is it shown on the map (a label, asymmetric arrows)? Does the panel replace or follow the color picker?
+- Rarity and place in UNLOCKS; the sim bot discards it?
+- Look: a Y-shaped arrow, the ratio readable at 1x.
+----
 Score:   40
 ID: zoom-lod-t65a
 Created: 2026-11-12T08:52:10Z
