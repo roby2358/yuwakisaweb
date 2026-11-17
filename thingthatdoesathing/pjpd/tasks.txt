@@ -129,6 +129,28 @@ Settled design:
 
 Done when: crateCap gives 2/3/4/5 for small/medium/large/huge, the cap still grows by one per milestone, docs agree, `just cc-test` passes, and `just cc-sim 200 small` runs; report the new median turns to the first milestone (it is expected to move from 52; record the new number in the D-31 amendment, no retuning).
 ----
+Priority:   60
+Status: ToDo
+ID: input-queue-pyi5
+Created: 2026-11-17T18:16:12Z
+Updated: 2026-11-17T18:16:12Z
+
+X (discard) and hex clicks with a card picked are dropped while a tick animation plays; queue them for when it ends.
+
+Problem: with Go running, a tick animation is playing almost all the time. Picking a card works mid-animation, but `discardPicked()` (gameui.js, `if (this.overlay || this.anim || !this.picked) return;`) and the picked branch of `handleClick` (`if (this.anim) return; // L1.1 a place (or a pick-up) waits for the tick`) silently drop the input, so X only registers in the short RUN_GAP_MS gap between ticks and the player has to press it several times. `removeSelected()` (D) and `blastHovered()` (B) drop input the same way.
+
+Settled design:
+- Add a one-slot queue on GameUI: `this.queued = null` (a function). When one of these commands arrives during `this.anim`, store a closure that re-runs it instead of dropping it; the latest input replaces any earlier queued one.
+- Commands that queue: X / the Discard spot (`discardPicked`), a board click while a card is picked (factor the picked branch of `handleClick` into a method taking the hex, captured at click time), `D` (`removeSelected`), `B` (`blastHovered`, capturing the hovered hex's q, r at keypress, not at run time).
+- The queued closure re-checks its own guards when it runs (overlay open, no card picked, a different card picked, etc.) and does nothing if they fail. Re-entering the original method is fine since the guards are at its top.
+- Clear `this.queued` in `pick()` (picking or switching a card), `unpick()` (Esc/right-click back-out), and wherever a new game resets `this.anim` (startGame).
+- `finishAnim()` takes `this.queued`, sets it to null, and runs it after its `render()` and before `scheduleRun()`. If the milestone/news overlay opened in that same finishAnim, the closure's overlay guard drops it.
+- The engine state is already post-tick during an animation (the animation is view-only), so `picked.legal` computed mid-animation is current; no recomputation needed.
+- No change to Go's holding rules (a picked card or selection still holds Go).
+- Document it in CLAUDE.md's Input architecture (the "input waits for the tick animation" dispatch note: these commands wait and fire, not drop), UI_CONTROLS.md if it states the drop, and an ARCHITECTURE_LOG.md entry; a short RATIONALE.md D-n (or amendment of the D-n covering input during animation, if one exists) as a user-reported fix.
+
+Done when: a new test in test/integration/uiboot.js turns Go on, catches a tick mid-animation (the existing pattern `for (let i = 0; i < 40 && !ui.anim; i++) advance(50);`), picks a card and presses X; the card is not discarded yet, then after `settle()` the discard has run (turn advanced by one, card slot redrawn). A second case: queue X, then press Esc before the animation ends; nothing is discarded. `just cc-test` passes.
+----
 Priority:   58
 Status: ToDo
 ID: hidpi-678j
