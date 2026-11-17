@@ -787,6 +787,52 @@ const centerOnBoard = () => {
     const b = ui.boardBounds(), c = ui.centerWorld(ui.scale), eps = 1e-6;
     return c.x >= b.minX - eps && c.x <= b.maxX + eps && c.y >= b.minY - eps && c.y <= b.maxY + eps;
 };
+run('a refused click or key says why in the hover bar for a while, and a queued command shows no reason (D-55)', () => {
+    els['new-game'].fire('click'); key('1');
+    const s = ui.state, e = ui.engine;
+    const bar = () => els['hover-info'].textContent;
+    const water = [...s.hexes.values()].find(h => h.terrain === 0);
+    const free = [...s.hexes.values()].find(h => !h.isEdge && h.terrain === 1 && !e.isEndpoint(h) && !e.pieceAt(h.q, h.r) && !e.thingAt(h.q, h.r));
+    const turn = s.turn;
+    key('d');
+    if (bar() !== 'Select a Thing first, then D') throw new Error('D with nothing selected must say why, got: ' + bar());
+    key('b'); // no hovered hex
+    ui.hoveredHex = null; ui.notice = null; key('b');
+    if (!/crate/.test(bar())) throw new Error('B with nothing under the cursor must say why, got: ' + bar());
+    advance(3000);
+    if (ui.notice) throw new Error('a reason must go away after a couple of seconds');
+    key('1');
+    clickHex(water.q, water.r);
+    if (ui.picked || !/water/.test(bar())) throw new Error('a click on water must say why, got: ' + bar());
+    if (s.turn !== turn) throw new Error('a refusal must not tick');
+    advance(3000);
+    // Mover pick-up on a bare hex, then carrying.
+    s.things.push({ kind: 'BELT', color: 'white', q: free.q, r: free.r, facing: 0 });
+    s.hand[0] = { kind: 'MOVER' }; ui.render();
+    key('1');
+    const bare = [...s.hexes.values()].find(h => !h.isEdge && h.terrain === 1 && !e.isEndpoint(h) && !e.thingAt(h.q, h.r) && !e.pieceAt(h.q, h.r) && !(h.q === free.q && h.r === free.r));
+    clickHex(bare.q, bare.r);
+    if (ui.picked.mode !== 'pickup' || bar() !== 'Pick a Thing to move') throw new Error('a bare hex in Mover pick-up must say why, got: ' + bar());
+    clickHex(free.q, free.r);
+    if (ui.picked.mode !== 'carry') throw new Error('the Mover must be carrying');
+    key('2');
+    if (bar() !== 'Put the Thing down or Esc first') throw new Error('the hand while carrying must say why, got: ' + bar());
+    ui.notice = null;
+    els['end-turn'].fire('click');
+    if (bar() !== 'Put the Thing down or Esc first') throw new Error('Wait while carrying must say why');
+    key('Escape'); settle();
+    // A command queued during a tick is not a refusal.
+    ui.notice = null;
+    els['end-turn'].fire('click');
+    if (!ui.anim) throw new Error('Wait must start a tick animation');
+    key('d');
+    if (ui.notice !== 'Select a Thing first, then D') throw new Error('D with nothing selected still says why mid-animation');
+    ui.notice = null;
+    ui.selected = { q: free.q, r: free.r };
+    key('d');
+    if (!ui.queued || ui.notice) throw new Error('a queued remove must show no reason');
+    settle();
+});
 run('the map-scale buttons set the scale, light up, keep the center, and round-trip hit-testing', () => {
     els['new-game'].fire('click'); key('1');
     if (els['zoom-buttons'].children.map(b => b.textContent).join() !== '1,2,∞') throw new Error('expected buttons 1, 2, ∞');

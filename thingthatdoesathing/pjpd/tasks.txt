@@ -1,12 +1,3 @@
-Priority:   54
-Status: ToDo
-ID: reject-why-23qa
-Created: 2026-11-17T02:45:07Z
-Updated: 2026-11-17T02:45:07Z
-
-When a click or key does nothing, say why in the hover bar.
-Today rejected actions are silent: clicking a hex that isn't a legal placement, a bare hex in Mover pick-up mode, D with nothing selected, B with no crate under the cursor, a card or Wait while carrying or mid-bomb. Done looks like: each of these shows a short reason in the hover bar for a couple of seconds ("Can't build on water", "Pick a Thing to move", "Select a Thing first, then D", "Put the Thing down or Esc first"); strings kept in one place in displayartifacts.js; no sound. SHIP.md item: ONB-8. Done when `just cc-test` passes.
-----
 Priority:   52
 Status: ToDo
 ID: key-mods-dsxi

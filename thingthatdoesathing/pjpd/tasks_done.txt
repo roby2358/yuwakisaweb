@@ -273,6 +273,15 @@ Updated: 2026-11-11T21:06:14Z
 
 Thing Factory: unlock cards gradually. A new game draws only Belt, Bridge and Wall. Each milestone unlocks the next card: first Pushers and Pullers, then Springs, and Rocket last. The user didn't place Trap (or the planned Slide card) in this order, so ask. Make the unlock order a data list in artifacts.js, and have the draw filter THINGS to what's unlocked before weighting. Add a field to GameState for unlocked kinds or the unlock index. The milestone should emit an event, and the UI should announce the new card, maybe on the same panel as a new color or one like it. Decide whether cards already in hand are kept as they are. Retune with cc-sim: the bot only uses Belts and Springs, so early games get Belts only. Reconcile ONTOLOGY / CRITERIA (R-27 draw weights, R-6 starting hand) / RATIONALE / DYNAMICS / log.
 ----
+Priority:   54
+Status: Done
+ID: reject-why-23qa
+Created: 2026-11-17T02:45:07Z
+Updated: 2026-11-17T19:22:32Z
+
+When a click or key does nothing, say why in the hover bar.
+Today rejected actions are silent: clicking a hex that isn't a legal placement, a bare hex in Mover pick-up mode, D with nothing selected, B with no crate under the cursor, a card or Wait while carrying or mid-bomb. Done looks like: each of these shows a short reason in the hover bar for a couple of seconds ("Can't build on water", "Pick a Thing to move", "Select a Thing first, then D", "Put the Thing down or Esc first"); strings kept in one place in displayartifacts.js; no sound. SHIP.md item: ONB-8. Done when `just cc-test` passes.
+----
 Priority:   50
 Status: Done
 ID: bigcrate-odd-755q

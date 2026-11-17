@@ -29,6 +29,23 @@ const GameDisplayArtifacts = (function () {
         COUNTER_SIZE: 30,
         HOP_MS: 140,                 // ms per animated hop in a tick
         RUN_GAP_MS: 250,             // Go: pause between ticks
+        NOTICE_MS: 2500,             // how long a refusal's reason stays in the hover bar (D-55)
+        // Why a click or key did nothing, for the hover bar (D-55). One place for the wording.
+        REASONS: {
+            buildWater: "Can't build on water",
+            buildMountain: "Can't build on a mountain",
+            buildEndpoint: "Can't build on a source or target",
+            buildThere: "Can't build there",
+            pickMover: 'Pick a Thing to move',
+            pickBomb: 'Pick a Thing or a piece to clear',
+            putDown: "Can't put it down there",
+            bombHex: 'Pick a Thing or a piece to clear, or Esc to finish',
+            selectFirst: 'Select a Thing first, then D',
+            nothingToRemove: 'Nothing to remove there',
+            noCrate: 'Point at a crate first, then B',
+            carrying: 'Put the Thing down or Esc first',
+            bombing: 'Finish the bomb or Esc first',
+        },
         MILESTONE_MS: 3500,          // how long the milestone banner stays up
         // Map-scale buttons (D-40): each divisor is a button showing the board at 1/d size;
         // a last "∞" button fits the whole board to the canvas (never above 1x).

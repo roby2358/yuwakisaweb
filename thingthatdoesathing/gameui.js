@@ -9,7 +9,7 @@
 // picked card → bare map click. Go/Pause keeps issuing Waits between animations.
 const GameUI = (function () {
     const {
-        HEX_SIZE, COUNTER_SIZE, HOP_MS, RUN_GAP_MS, MILESTONE_MS, TERRAIN_COLORS, TERRAIN_NAMES, THING_LOOK,
+        HEX_SIZE, COUNTER_SIZE, HOP_MS, RUN_GAP_MS, MILESTONE_MS, NOTICE_MS, REASONS, TERRAIN_COLORS, TERRAIN_NAMES, THING_LOOK,
         PIECE_LOOK, CRATE_SHADES, BIG_CRATE_SCALE, COLOR_INK, SPLAT_BLOTS, SOURCE_COLOR, PORT_NEUTRAL_MARK, PORT_OUTLINE,
         PORT_MARK_WIDTH, PORT_RING_RADII, PORT_PLUS_REACH, PORT_OUTLINE_WIDTH, BG_COLOR, UI_FONT, REACH_COLOR, MAP_SIZE_NOTES,
         COLOR_PICKER_PX, ZOOM_DIVISORS, MIN_TEXT_PX, SORRY_PICTURE_PX
@@ -55,21 +55,21 @@ const GameUI = (function () {
     // card in play).
     const PICK_MODES = {
         build: {
-            click: (ui, hex, legal) => legal ? ui.placeOrAsk(hex.q, hex.r) : ui.unpick(),
+            click: (ui, hex, legal) => { if (legal) ui.placeOrAsk(hex.q, hex.r); else { ui.unpick(); ui.notify(ui.whyNotBuild(hex)); } },
             back: ui => ui.unpick(),
             discard: ui => ui.discardCard(),
             legal: (ui, kind) => ui.engine.legalPlacements(kind),
             locked: false, ghost: true, rings: true, hint: () => '',
         },
         pickup: {
-            click: (ui, hex, legal) => { if (legal) AFTER_PICK[ui.picked.card].pick(ui, hex); },   // a bare hex does nothing
+            click: (ui, hex, legal) => { if (legal) AFTER_PICK[ui.picked.card].pick(ui, hex); else ui.notify(AFTER_PICK[ui.picked.card].why); },   // a bare hex does nothing but say why
             back: ui => ui.unpick(),
             discard: ui => ui.discardCard(),
             legal: (ui, kind) => ui.engine.legalPicks(kind),
             locked: false, ghost: true, ghostAnywhere: true, rings: false, hint: ui => AFTER_PICK[ui.picked.card].hint,
         },
         carry: {
-            click: (ui, hex, legal) => { if (legal) ui.putDown(hex.q, hex.r); },   // an illegal hex does nothing
+            click: (ui, hex, legal) => { if (legal) ui.putDown(hex.q, hex.r); else ui.notify(REASONS.putDown); },   // an illegal hex does nothing but say why
             back: ui => ui.scrapCarried(),
             discard: ui => ui.scrapCarried(),
             legal: (ui, kind) => ui.engine.legalPlacements(kind),
@@ -79,7 +79,7 @@ const GameUI = (function () {
         // not yet blown up blows it up at once (in the view); the last of its `wipes` booms,
         // Esc, right-click or Discard ends the bomb (one command, one tick).
         bomb: {
-            click: (ui, hex, legal) => { if (legal) ui.boom(hex); },   // a bare or blown-up hex does nothing
+            click: (ui, hex, legal) => { if (legal) ui.boom(hex); else ui.notify(REASONS.bombHex); },   // a bare or blown-up hex does nothing but say why
             back: ui => ui.endBomb(),
             discard: ui => ui.endBomb(),
             legal: (ui, kind) => ui.unboomed(ui.engine.legalPicks(kind)),
@@ -88,8 +88,8 @@ const GameUI = (function () {
     };
     // A tool card's pick (the hex its first click took) and its hover hint, by card kind.
     const AFTER_PICK = {
-        MOVER: { pick: (ui, hex) => ui.carry(hex), hint: ' (click to pick up)' },
-        BOMB: { pick: (ui, hex) => ui.boom(hex), hint: ' (click to blow up)' },
+        MOVER: { pick: (ui, hex) => ui.carry(hex), hint: ' (click to pick up)', why: REASONS.pickMover },
+        BOMB: { pick: (ui, hex) => ui.boom(hex), hint: ' (click to blow up)', why: REASONS.pickBomb },
     };
     // The mode a freshly picked card starts in.
     const startMode = kind => THINGS[kind] ? 'build' : 'pickup';
@@ -360,6 +360,8 @@ const GameUI = (function () {
             this.hoveredHex = null;  // L1.3
             this.selected = null;    // {q, r} — a clicked hex: highlighted, holds Go; a second click turns its mover
             this.bursts = [];        // [{ q, r, thing, piece, t0 }] — Bomb booms bursting now, outside any tick (D-48)
+            this.notice = null;      // the reason the last refused click or key did nothing, shown in the hover bar for NOTICE_MS (D-55)
+            this.noticeTimer = null;
             this.queued = null;      // a command that came in during the tick animation, run when it ends (one slot, the latest wins)
             this.anim = null;        // { t0, dur, tracks: Map<id, track {pts, hop, over, end}>, before, hidden: Set<id>, milestone, ends: Set<type> }
             this.running = false;    // Go/Pause: tick on its own after each animation
@@ -554,7 +556,7 @@ const GameUI = (function () {
         pick(slot) {
             if (this.overlay) return;
             if (slot < 0 || slot >= this.state.hand.length) return;
-            if (this.handLocked()) return;   // a spent card: no switching
+            if (this.handLocked()) { this.notify(this.lockedReason()); return; }   // a spent card: no switching
             if (this.picked && this.picked.slot === slot) { this.unpick(); return; }
             this.selected = null;
             this.queued = null;
@@ -657,6 +659,30 @@ const GameUI = (function () {
             return this.picked && this.picked.from ? this.engine.thingAt(this.picked.from.q, this.picked.from.r) : null;
         }
 
+        // D-55: say why a click or key did nothing, in the hover bar, no sound. Never for a
+        // command that was queued for the tick's end (that isn't a refusal).
+        notify(text) {
+            this.notice = text;
+            clearTimeout(this.noticeTimer);
+            this.noticeTimer = setTimeout(() => { this.notice = null; this.noticeTimer = null; if (!this.anim) this.render(); }, NOTICE_MS);
+            this.render();
+        }
+
+        // Why a click on `hex` can't take the picked Thing card.
+        whyNotBuild(hex) {
+            const h = this.state.hexes.get(Hex.key(hex.q, hex.r));
+            if (!h) return REASONS.buildThere;
+            if (this.engine.isEndpoint(h)) return REASONS.buildEndpoint;
+            if (h.terrain === TERRAIN.WATER) return REASONS.buildWater;
+            if (h.terrain === TERRAIN.MOUNTAIN) return REASONS.buildMountain;
+            return REASONS.buildThere;
+        }
+
+        // Why the hand, Wait and B are locked: the spent card in play.
+        lockedReason() {
+            return this.picked.mode === 'carry' ? REASONS.carrying : REASONS.bombing;
+        }
+
         unpick() {
             this.picked = null;
             this.queued = null;
@@ -676,6 +702,7 @@ const GameUI = (function () {
             const res = fn();
             if (!res.ok) { this.render(); return false; }
             this.picked = null;
+            this.notice = null;
             cue();
             this.startAnim(before, res);
             return true;
@@ -758,23 +785,27 @@ const GameUI = (function () {
         // or no selection does nothing. A remove lets go of the hex, so Go resumes.
         // Mid-animation it waits for the tick to end, then runs (queued).
         removeSelected() {
-            if (this.overlay || !this.selected) return;
+            if (this.overlay) return;
+            if (!this.selected) { this.notify(REASONS.selectFirst); return; }
             if (this.anim) { this.queued = () => this.removeSelected(); return; }
             const { q, r } = this.selected;
             if (this.commit(() => this.engine.remove(q, r), () => this.sound.sink())) this.selected = null;
+            else this.notify(REASONS.nothingToRemove);
         }
 
         // Blow up the crate under the cursor (B). Not while a spent card is in play (D-47).
         // The hex is the one hovered at the keypress, even if the blast waits for the tick.
         blastHovered() {
-            if (this.overlay || !this.hoveredHex) return;
+            if (this.overlay) return;
+            if (this.handLocked()) { this.notify(this.lockedReason()); return; }
+            if (!this.hoveredHex) { this.notify(REASONS.noCrate); return; }
             this.blastAt(this.hoveredHex.q, this.hoveredHex.r);
         }
 
         blastAt(q, r) {
             if (this.overlay || this.handLocked()) return;
             if (this.anim) { this.queued = () => this.blastAt(q, r); return; }
-            this.commit(() => this.engine.blast(q, r), () => {});
+            if (!this.commit(() => this.engine.blast(q, r), () => {})) this.notify(REASONS.noCrate);
         }
 
         // The Discard spot or X: throw the card in play away, as its mode says; it ticks like
@@ -796,7 +827,8 @@ const GameUI = (function () {
         // back first. Not while the hand is locked (a carry, a bomb gone off) or an overlay is
         // open; mid-animation it waits in the one-slot queue and re-checks when the tick ends (D-49).
         discardSlot(slot) {
-            if (this.overlay || this.handLocked()) return;
+            if (this.overlay) return;
+            if (this.handLocked()) { this.notify(this.lockedReason()); return; }
             if (slot < 0 || slot >= this.state.hand.length) return;
             if (this.anim) { this.queued = () => this.discardSlot(slot); return; }
             if (this.picked && this.picked.slot !== slot) this.unpick();
@@ -806,7 +838,8 @@ const GameUI = (function () {
         // L2.1 the primary action (Wait button, Space). Not while a spent card is in play: the
         // Mover's carry ends only in a put-down or a scrap (D-47).
         primaryAction() {
-            if (this.overlay || this.anim || this.handLocked()) return;
+            if (this.overlay || this.anim) return;
+            if (this.handLocked()) { this.notify(this.lockedReason()); return; }
             this.commit(() => this.engine.wait(), () => this.sound.endTurn());
         }
 
@@ -1413,6 +1446,11 @@ const GameUI = (function () {
             this.renderHand();
 
             const hoverEl = document.getElementById('hover-info');
+            if (this.notice) {   // D-55: a refusal's reason takes the bar for a moment
+                hoverEl.textContent = this.notice;
+                document.getElementById('hud-hover').classList.remove('hidden');
+                return;
+            }
             const h = this.hoveredHex && s.hexes.get(Hex.key(this.hoveredHex.q, this.hoveredHex.r));
             if (!h) { document.getElementById('hud-hover').classList.add('hidden'); return; }
             const parts = [TERRAIN_NAMES[h.terrain]];

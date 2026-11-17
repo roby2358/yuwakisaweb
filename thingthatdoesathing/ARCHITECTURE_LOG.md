@@ -2,6 +2,12 @@
 
 Dated entries, newest first. This is the only doc that records what something used to be.
 
+### 2026-11-17 — Refused clicks and keys say why (D-55)
+`GameUI.notify` puts a reason from `REASONS` (displayartifacts.js) in the hover bar for
+`NOTICE_MS`, no sound, for a non-legal build or pick hex, a bare hex in pick-up, D or B with
+nothing to act on, and the hand, Wait or B while a spent card is in play. Commands queued
+mid-tick (D-49) show none. New `uiboot.js` check.
+
 ### 2026-11-17 — A sliding gremlin that bumps goes splat (D-54)
 A gremlin sliding into a D-33 bump used to follow its line like any bumper. Now a piece with
 the new `PIECES.*.splatsOnSlideBump` (the gremlin) splats where it is at the bump's hop
