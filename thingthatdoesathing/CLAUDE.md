@@ -79,9 +79,9 @@ one-slot `queued`, latest wins, and fire when `finishAnim()` ends it, re-checkin
 - **Mute (D-53):** the Sound button and `M` call `toggleMute()` (`GameSound.setMuted`, remembered in `localStorage` `thingfactory.muted`, try/catch); `phrase()` returns early when muted, so no AudioContext is made. Works mid-animation and with a card picked; overlays eat the key first.
 - **L2.2:** Esc and right-click put the card back.
 - **Boot (D-41):** `index.js` checks `matchMedia(TOUCH_ONLY_QUERY)` (coarse pointer, no
-  hover) before anything else; on a phone or tablet it builds no state, engine or UI and calls
-  `GameUI.showSorry()` (a static: unhides `#sorry-panel`, body class `touch-only` hides the
-  rest). No `matchMedia` counts as a desktop, so stub DOMs boot the game.
+  hover) before anything else; on a phone or tablet (no fine pointer attached) it builds no state, engine or UI and calls
+  `GameUI.showSorry(boot)` (a static: unhides `#sorry-panel`, body class `touch-only` hides the
+  rest; "Try it anyway" runs `boot()`, which builds them then; "Copy link" shares or copies the URL). No `matchMedia` counts as a desktop, so stub DOMs boot the game.
 - **L5:** the intro and New Game overlays are both board-size pickers (click or `1`–`4`); they
   consume all other input, and Esc closes New Game only. A milestone that opens a color shows
   the `news` overlay, which closes on a click or any key (`OVERLAY_KEYS` dispatches keys per

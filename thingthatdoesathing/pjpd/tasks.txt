@@ -1,12 +1,3 @@
-Priority:   51
-Status: ToDo
-ID: sorry-past-zwbb
-Created: 2026-11-17T02:44:25Z
-Updated: 2026-11-17T02:44:25Z
-
-Let phone/tablet visitors past the sorry screen, detect touch better, and offer copy-link.
-Today the sorry page (D-41, index.js, TOUCH_ONLY_QUERY '(pointer: coarse) and (hover: none)') is a hard block, and a tablet with a mouse attached still gets it. Done looks like: the query also requires that no fine pointer is attached ('(any-pointer: fine)' false); the sorry card gets a "Try it anyway" button that boots the normal game (build state, engine and UI then, as index.js does on desktop); and a "Copy link" button (navigator.share when present, else clipboard copy of location.href with a "copied" note) so they can come back on a computer. Keep the existing copy and picture. Update D-41 in RATIONALE, the R-row that tests the boot check, and docs. SHIP.md items: MOB-2, MOB-3, MOB-5. Done when `just cc-test` passes.
-----
 Priority:   49
 Status: ToDo
 ID: own-deploy-kfi7

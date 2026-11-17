@@ -162,6 +162,12 @@ makes several colors). `drawPort` is gone; `fillPort` and `outlinePort` replace 
 outline. The intro's "★ target" is just "target". U-19 points at the new U-29; `uiboot.js`
 checks the light shades and renders sources of 0, 1 and every color (pjpd port-look-jtj4).
 
+### 2026-11-17 — Past the sorry page: any-pointer, Try it anyway, Copy link (D-41)
+`TOUCH_ONLY_QUERY` now also needs `(not (any-pointer: fine))`. The sorry card gained "Try it
+anyway" (`index.js` `boot()` builds state, engine and UI then; `GameUI.showSorry(onPlay)`) and
+"Copy link" (`navigator.share`, else clipboard plus a "Link copied" note). `uiboot.js` covers
+the query, both buttons. D-41 amended, U-28 and README touched (pjpd sorry-past-zwbb).
+
 ### 2026-11-13 — Phones and tablets get a sorry page (D-41)
 The page used to boot the game for every browser. Now `index.js` checks
 `matchMedia(TOUCH_ONLY_QUERY)` (`'(pointer: coarse) and (hover: none)'`, in

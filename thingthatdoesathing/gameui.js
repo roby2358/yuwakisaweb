@@ -373,11 +373,27 @@ const GameUI = (function () {
         // ---- Lifecycle ----
         // A phone or tablet (D-41): the sorry page stands in for the whole game. The body class
         // hides every other panel and the canvas; no GameUI is built, so nothing listens.
-        static showSorry() {
+        // "Try it anyway" calls onPlay after the page is put back; "Copy link" shares or copies
+        // the URL so they can open it on a computer.
+        static showSorry(onPlay) {
             document.body.classList.add('touch-only');
             const panel = document.getElementById('sorry-panel');
             panel.classList.remove('hidden');
             document.getElementById('sorry-picture').appendChild(cardPicture('BELT', SORRY_PICTURE_PX));
+            document.getElementById('sorry-anyway').addEventListener('click', () => {
+                document.body.classList.remove('touch-only');
+                panel.classList.add('hidden');
+                onPlay();
+            });
+            document.getElementById('sorry-copy').addEventListener('click', () => {
+                const url = window.location.href;
+                const copied = () => document.getElementById('sorry-copied').classList.remove('hidden');
+                if (typeof navigator !== 'undefined' && navigator.share) {
+                    navigator.share({ title: document.title, url }).catch(() => {});
+                } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                    navigator.clipboard.writeText(url).then(copied, () => {});
+                }
+            });
         }
 
         // No board until a size is picked from the intro.

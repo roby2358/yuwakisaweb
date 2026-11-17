@@ -317,7 +317,9 @@ body.touch-only > :not(#sorry-panel) { display: none !important; }
 #sorry-picture { margin-bottom: 12px; }
 #sorry-picture canvas { display: block; margin: 0 auto; }
 .sorry-card p { color: var(--text-dim); margin-bottom: 12px; }
-.sorry-card .sorry-note { color: var(--text); margin-bottom: 0; }
+.sorry-card .sorry-note { color: var(--text); margin-bottom: 12px; }
+.sorry-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.sorry-card p.sorry-copied { margin: 12px 0 0; }
 
 /* The hand: three cards along the bottom, then the Discard spot. */
 #hand {

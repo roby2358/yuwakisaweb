@@ -51,8 +51,8 @@ it needs the author: it gets no pjpd task.
 | PORT-1 | Portal upload zip | T1 | missing | no build step; no zip | ship-bundle-wyxt |
 | WEB-2 | Only the game is deployed | T1 | partial | today the whole folder ships, docs, test/ and pjpd/ included | ship-bundle-wyxt |
 | SAVE-1 | Progress survives a reload | T1 | missing | nothing stored anywhere; an endless run is lost on reload | save-resume-tbe3 |
-| MOB-3 | A way past the sorry screen | T1 | missing | index.js: a touch device is hard-blocked | sorry-past-zwbb |
-| MOB-2 | Detect by capability | T1 | partial | displayartifacts.js:39 query lacks the `(any-pointer: fine)` check, so a tablet with a mouse is blocked | sorry-past-zwbb |
+| MOB-3 | A way past the sorry screen | T1 | done | "Try it anyway" on the sorry card boots the game (D-41) | |
+| MOB-2 | Detect by capability | T1 | done | query includes `not (any-pointer: fine)` (D-41) | |
 | PORT-3 | Fits the declared frame | T1 | partial | layout fills the window; 1280x720 never checked | portal-frame-aqns |
 | PORT-2 | Keyboard focus in the frame | T1 | partial | the intro click focuses the frame; no "click to resume" after focus is lost | portal-frame-aqns |
 | PORT-7 | Honest device flags | T1 | missing | no listings yet | listing-r8fn |
@@ -193,10 +193,10 @@ are T1 as well.
 | Id | Item | Tier | Status | Evidence | Task |
 |---|---|---|---|---|---|
 | MOB-1 | Sorry screen | T1 | done | viewport meta (index.html:5); `#sorry-panel` (D-41) | |
-| MOB-2 | Capability detection | T1 | partial | | sorry-past-zwbb |
-| MOB-3 | Way past it | T1 | missing | | sorry-past-zwbb |
+| MOB-2 | Capability detection | T1 | done | | |
+| MOB-3 | Way past it | T1 | done | | |
 | MOB-4 | Sells the game | T2 | done | name, picture, one line, plain "needs a mouse and a keyboard" | |
-| MOB-5 | Helps them come back | T2 | missing | no copy link or share | sorry-past-zwbb |
+| MOB-5 | Helps them come back | T2 | done | Copy link: share sheet or clipboard | |
 | MOB-6 | Before heavy loading | T2 | done | the whole game is about 208 KB with no assets; it boots nothing on touch | |
 | MOB-7 | Small window | T2 | unverified | | portal-frame-aqns |
 | MOB-8 | HiDPI / zoom | T2 | partial | | hidpi-678j |

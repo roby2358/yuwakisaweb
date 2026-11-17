@@ -17,8 +17,8 @@ fifth milestone, and commoner with each milestone after that, toward nearly all 
 Every Thing does exactly one thing, every tick.
 
 It needs a mouse and a keyboard (hover, right-click, the wheel, a few letter keys), so it plays
-on a computer, touchscreen laptops included. A phone or tablet gets a short sorry page instead
-of the game.
+on a computer, touchscreen laptops included. A phone or tablet (no mouse attached) gets a short sorry page
+instead of the game, with a "Try it anyway" button and a "Copy link" button for opening it on a computer.
 
 Forked from the Hex & Counters base (`../ideas/hexandcounter`). See [DYNAMICS.md](DYNAMICS.md)
 for why it works and [ONTOLOGY.md](ONTOLOGY.md) for the rules.

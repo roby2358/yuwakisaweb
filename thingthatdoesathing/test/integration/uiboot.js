@@ -933,7 +933,7 @@ run('New Game asks for a size, then resets', () => {
 });
 // D-41: a fresh page per pointer kind, each with its own stub DOM. `media` is what
 // window.matchMedia reports for the touch-only query, or undefined for no matchMedia at all.
-function bootPointer(media) {
+function bootPointer(media, nav) {
     const pageEls = {};
     const listeners = {};
     const page = {
@@ -941,7 +941,7 @@ function bootPointer(media) {
         createElement: tag => fakeEl(tag),
         body: fakeEl('body'),
     };
-    const win = { innerWidth: 390, innerHeight: 844, addEventListener: (t, fn) => (listeners[t] ||= []).push(fn), AudioContext: SilentAudio };
+    const win = { location: { href: 'https://example.test/thing' }, innerWidth: 390, innerHeight: 844, addEventListener: (t, fn) => (listeners[t] ||= []).push(fn), AudioContext: SilentAudio };
     const asked = [];
     if (media !== undefined) win.matchMedia = q => { asked.push(q); return { matches: media, media: q }; };
     const pageCtx = vm.createContext({
@@ -949,18 +949,35 @@ function bootPointer(media) {
         window: win, performance: { now: () => clock }, requestAnimationFrame: () => {},
         setTimeout: fakeSetTimeout, clearTimeout: fakeClearTimeout, AudioContext: SilentAudio,
     });
-    vm.runInContext(pageSource + '\n;globalThis.__boot = { ui, state, engine };', pageCtx, { filename: 'page.js' });
+    if (nav) pageCtx.navigator = nav;
+    vm.runInContext(pageSource + '\n;globalThis.__boot = { get ui() { return ui; }, get state() { return state; }, get engine() { return engine; } };', pageCtx, { filename: 'page.js' });
     return { boot: pageCtx.__boot, els: pageEls, body: page.body, listeners, asked };
 }
 run('a coarse pointer with no hover gets the sorry page: no intro, no game, no input (D-41)', () => {
     const p = bootPointer(true);
-    if (p.asked[0] !== '(pointer: coarse) and (hover: none)') throw new Error('asked matchMedia for ' + JSON.stringify(p.asked));
+    if (p.asked[0] !== '(pointer: coarse) and (hover: none) and (not (any-pointer: fine))') throw new Error('asked matchMedia for ' + JSON.stringify(p.asked));
     if (p.boot.ui || p.boot.state || p.boot.engine) throw new Error('a touch-only page must not build a game');
     if (p.els['sorry-panel'].classList.set.has('hidden')) throw new Error('the sorry page must show');
     if (!p.body.classList.set.has('touch-only')) throw new Error('the body must hide every other panel (intro included)');
     if (p.els['sorry-picture'].children.length !== 1) throw new Error('the sorry page draws one Belt');
     if (p.els['intro-sizes']?.children.length) throw new Error('the intro size buttons must not be built');
     if (Object.keys(p.listeners).length) throw new Error('a touch-only page must not listen: ' + Object.keys(p.listeners));
+});
+run('the sorry page has Try it anyway (boots the game) and Copy link (share, else clipboard + note) (D-41)', () => {
+    const p = bootPointer(true);
+    p.els['sorry-anyway'].fire('click');
+    if (!p.boot.ui || p.boot.ui.overlay !== 'intro') throw new Error('Try it anyway must boot to the intro');
+    if (p.body.classList.set.has('touch-only') || !p.els['sorry-panel'].classList.set.has('hidden')) throw new Error('the sorry page must go away');
+    if (!p.listeners.keydown) throw new Error('input must be wired after Try it anyway');
+    const shared = [];
+    const s = bootPointer(true, { share: o => (shared.push(o), Promise.resolve()), clipboard: { writeText: () => { throw new Error('share wins'); } } });
+    s.els['sorry-copy'].fire('click');
+    if (shared.length !== 1 || shared[0].url !== 'https://example.test/thing') throw new Error('navigator.share not used with the page URL');
+    const written = [];
+    const c = bootPointer(true, { clipboard: { writeText: t => (written.push(t), { then: ok => ok() }) } });
+    c.els['sorry-copy'].fire('click');
+    if (written[0] !== 'https://example.test/thing') throw new Error('clipboard not written');
+    if (c.els['sorry-copied'].classList.set.has('hidden')) throw new Error('no copied note');
 });
 run('a fine pointer, or no matchMedia at all, boots the game on the intro as before', () => {
     for (const media of [false, undefined]) {

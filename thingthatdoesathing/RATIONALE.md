@@ -270,7 +270,7 @@ ARCHITECTURE_LOG.md.
   above the hand;
   a new game resets to 1x); U-27.
 
-### D-41 Phones and tablets get a sorry page instead of the game — *Decided 2026-11-13 (pjpd mobile-lock-twxz: detect at boot with `matchMedia('(pointer: coarse) and (hover: none)')`, not the user agent, so a touchscreen laptop with a mouse still plays; the sorry page replaces the intro, with no board, engine or input; the game's name, what it is, and a kind "needs a mouse and keyboard, try it on a computer"; no bypass by default), Proposed (*unreviewed*: the rest)*
+### D-41 Phones and tablets get a sorry page instead of the game — *Decided 2026-11-13 (pjpd mobile-lock-twxz: detect at boot with `matchMedia('(pointer: coarse) and (hover: none)')`, not the user agent, so a touchscreen laptop with a mouse still plays; the sorry page replaces the intro, with no board, engine or input; the game's name, what it is, and a kind "needs a mouse and keyboard, try it on a computer"; no bypass by default; amended 2026-11-17, pjpd sorry-past-zwbb: a fine pointer anywhere also counts as a desktop, and the page gets a "Try it anyway" and a "Copy link" button), Proposed (*unreviewed*: the rest)*
 - **Alternatives:** user-agent sniffing (misreads iPads that report as desktop Safari, and
   touchscreen laptops); `'ontouchstart' in window` (true on touchscreen laptops, which have a
   mouse); a touch control scheme (a real project of its own: hover, right-click, the wheel and
@@ -281,9 +281,7 @@ ARCHITECTURE_LOG.md.
   board that ignores taps.
 - **Unreviewed calls:** (1) No user-agent fallback: every current mobile browser answers the
   pointer/hover media query, and a browser without `matchMedia` at all is treated as a
-  desktop (the tests' stub DOM relies on that). (2) No "play anyway" link: with no touch
-  controls behind it, it would only lead to a board that doesn't answer taps; easy to add if
-  a stylus-and-keyboard tablet player asks. (3) The check runs once in `index.js`, before
+  desktop (the tests' stub DOM relies on that). (2) (Superseded 2026-11-17, see 7-9.) No "play anyway" link. (3) The check runs once in `index.js`, before
   `GameState`/`GameEngine`/`GameUI` are built, and the page stays as it booted (no live
   re-check if a mouse is plugged in; reload to play). (4) The page is a hidden
   `#sorry-panel` in `index.html`; `GameUI.showSorry()` (a static, so no `GameUI` is
@@ -291,10 +289,18 @@ ARCHITECTURE_LOG.md.
   the canvas. (5) Its picture is a Belt drawn by the card art (`cardPicture`), the first
   Thing a player meets. (6) The card scrolls inside a 16px gutter if a landscape phone is
   too short for it; the existing viewport meta (`width=device-width, initial-scale=1.0`)
-  already lays it out at phone width.
+  already lays it out at phone width. (7) 2026-11-17 (sorry-past-zwbb, Proposed): the query
+  adds `(not (any-pointer: fine))`, so a tablet with a mouse or a stylus-and-keyboard setup
+  that reports a fine pointer plays; one media query, no JS combination. (8) "Try it anyway"
+  removes `touch-only`, hides the panel and runs the same boot a desktop does (`boot()` in
+  `index.js` builds state, engine and UI then; the page stays inert until the click), so
+  phone players can see for themselves what doesn't work; no touch controls were added.
+  (9) "Copy link" uses `navigator.share` when present (a cancelled or failed share is
+  ignored), else `navigator.clipboard.writeText(location.href)` and shows a "Link copied"
+  line; with neither API the button does nothing (no `execCommand` fallback).
 - **Evidence:** `uiboot.js` (a coarse/no-hover `matchMedia` shows the sorry page, hides the
   rest, builds no game and wires no input; a fine pointer and a missing `matchMedia` both boot
-  to the intro); U-28.
+  to the intro; Try it anyway boots the intro; Copy link shares or writes the clipboard); U-28.
 
 ### D-42 Sources and targets fill their hex: a plus for a source, two rings for a target — *Decided 2026-11-13 (pjpd port-look-jtj4: each fills its whole hex with its color, no terrain showing; a target gets two concentric rings, a source a plus spanning the hex, both in a lighter shade of that color; the glow ring, IN and ★ labels, the target's black inner line and the source's color pips go; the lighter shade is derived in one place, not picked per color; a source making several colors splits its fill into equal wedges, one per color in `colors` order, under a neutral light plus), Proposed (*unreviewed*: the rest)*
 - **Alternatives:** keep the glowing ring with labels (the old look); a colored ring over the
