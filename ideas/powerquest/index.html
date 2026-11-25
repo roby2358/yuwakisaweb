@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Power Quest</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <canvas id="game"></canvas>
+    <div id="hud-stack">
+        <div id="hud" class="panel">
+            <span id="lvl-info" class="stat"></span>
+            <span class="meter" title="Experience to next level"><span id="xp-fill"></span><span class="meter-text" id="xp-text"></span></span>
+            <span class="meter hp" title="Armor integrity"><span id="hp-fill"></span><span class="meter-text" id="hp-text"></span></span>
+            <span class="meter charge" title="Charge: shots, modules and boosts"><span id="charge-fill"></span><span class="meter-text" id="charge-text"></span></span>
+            <span id="mp-info" class="stat" title="Movement points this turn"></span>
+            <span id="pack-info" class="stat" title="Salvage you carry"></span>
+            <span id="turn-info" class="stat"></span>
+            <span class="buttons">
+                <button id="boost" class="btn" title="Spend 1 charge for +1 movement (B)">Boost</button>
+                <button id="found" class="btn" title="Found a new village here (F)">Found</button>
+                <button id="end-turn" class="btn primary">End Turn</button>
+                <button id="new-game" class="btn">New</button>
+            </span>
+        </div>
+        <div id="hud-hover" class="panel hidden"><span id="hover-info"></span></div>
+    </div>
+    <div id="village-panel" class="panel hidden"></div>
+    <div id="log-panel" class="panel"></div>
+    <div id="socket-bar" class="panel"></div>
+    <div id="perk-panel" class="panel hidden"></div>
+    <div id="intro-panel" class="panel">
+        <h1>Power Quest</h1>
+        <p>You found the old <strong>power armor</strong>. Range the wilds, hunt what menaces the tribes,
+            craft relic parts into modules, and grow &mdash; yourself and your villages.</p>
+        <dl class="keys">
+            <dt><kbd>Click</kbd> a yellow hex</dt><dd>move</dd>
+            <dt><kbd>Click</kbd> a red enemy</dt><dd>melee (1 move)</dd>
+            <dt><kbd>1</kbd>&ndash;<kbd>6</kbd></dt><dd>arm a weapon / use a module, then click an orange target</dd>
+            <dt><kbd>B</kbd></dt><dd>boost: charge into movement</dd>
+            <dt><kbd>Space</kbd></dt><dd>end turn</dd>
+            <dt><kbd>Drag</kbd></dt><dd>pan the map</dd>
+        </dl>
+        <p class="small">Enter a village to rest, deposit salvage and craft. Other villages open to you
+            when you hunt what threatens them.</p>
+        <button id="begin-btn" class="btn primary">Begin</button>
+    </div>
+    <!-- NOTE! We want to be able to double-click to run these games, so use plain
+    script includes (globals), not ES module imports. Order = dependency order:
+    artifacts → display artifacts → libs → piece/board → state → worldgen/ecology → engine → ui → bootstrap. -->
+    <script src="artifacts.js"></script>
+    <script src="displayartifacts.js"></script>
+    <script src="rando.js"></script>
+    <script src="hex.js"></script>
+    <script src="piece.js"></script>
+    <script src="pieces.js"></script>
+    <script src="board.js"></script>
+    <script src="sound.js"></script>
+    <script src="gamestate.js"></script>
+    <script src="worldgen.js"></script>
+    <script src="ecology.js"></script>
+    <script src="gameengine.js"></script>
+    <script src="gameui.js"></script>
+    <script src="index.js"></script>
+</body>
+</html>
