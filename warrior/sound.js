@@ -1,9 +1,9 @@
+'use strict';
 // sound.js — Combat audio for Warrior
 //
 // 12.5% pulse wave + noise burst for hits, square wave for ticks/fanfares.
 // 8 pentatonic notes: low 4 for enemy-hits-player, high 4 for player-hits-enemy.
 
-import { Rando } from './rando.js';
 
 const PENTATONIC = [0, 2, 4, 7, 9];
 const BASE_FREQ = 64;
@@ -41,7 +41,7 @@ const LOW = SCALE.slice(0, 4);    // enemy hits player
 const HIGH = SCALE.slice(4, 8);   // player hits enemy
 const FANFARE = buildScale(FANFARE_FREQ, 8).slice(4, 8); // victory flourish
 
-export class Sound {
+class Sound {
     constructor() {
         this.ctx = null;
         this.osc = null;

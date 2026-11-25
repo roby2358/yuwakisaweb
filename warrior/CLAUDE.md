@@ -4,43 +4,47 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Warrior is a single-player tactical hex RPG. Canvas rendering, ES6 modules, no build step or external dependencies. See `SPEC.md` and `DYNAMICS.md` for game design and mechanics.
+Warrior is a single-player tactical hex RPG. Canvas rendering, plain `<script>` includes (shared globals, not ES modules), no build step or external dependencies. See `SPEC.md` and `DYNAMICS.md` for game design and mechanics.
 
 ## Running / Developing
 
-No build or install step. Serve via HTTP for ES6 module imports:
-```bash
-npx serve .
-```
+No build or install step, and no server: double-click `index.html` (it must run from `file://`).
+
+Checks (Node, DOM-free): `node test/scripts.js` (the script includes load as one shared scope, no duplicate top-level names) and `node test/fx.js`.
+
+### Plain scripts, not modules
+
+Every file is a classic script listed in `index.html` in dependency order; a top-level `const`/`class`/`function` in one file is a global in the rest. So there is no `import`/`export`, top-level names must be unique across files, and a new file needs a `<script>` tag in the right place. `origitems.js`, `terrain.js` and `renderer.js` are not loaded.
 
 ## Architecture
 
 ### Module Dependency Graph
 ```
 index.js (orchestrator: rendering, input, UI, save/load, combat math, dialogs)
-  ├─ config.js       (constants, terrain, enemy/equipment/skill/POI defs; imports rando, origitems)
-  ├─ hex.js          (axial hex math, BFS/Dijkstra, A*, draw helpers; imports HEX_SIZE)
+  ├─ config.js       (constants, terrain, enemy/equipment/skill/POI defs; uses rando)
+  ├─ hex.js          (axial hex math, BFS/Dijkstra, A*, draw helpers; uses HEX_SIZE)
   ├─ rando.js        (Rando: shuffle, choice, int, bellCurve, weighted, bool)
   ├─ player.js       (Player class: stats, equipment, skills, inventory, toJSON/fromJSON)
   ├─ world.js        (GameWorld class: hex grid, POIs, fog, LOS; toJSON/fromJSON)
   ├─ skilllibrary.js (SkillLibrary class: partitions skill discovery channels so no skill is awarded twice)
-  ├─ enemies.js      (EnemyManager class: enemy list, spawn, defs; imports colortheory)
+  ├─ enemies.js      (EnemyManager class: enemy list, spawn, defs; uses colortheory)
   ├─ actions.js      (player Action classes + MP/aether cost helpers; see below)
-  ├─ enemy_ai.js     (enemy AI classes, maw-distance math, runEnemyPhase; see below)
+  ├─ enemy_ai.js     (enemy AI classes, maw-distance math, runEnemyAiPhase; see below)
   ├─ victory.js      (Victory class: score tracking and final breakdown)
   ├─ sound.js        (Sound class: WebAudio-synth combat sfx)
-  └─ sprite_sheet.js (SpriteSheet class: fixed-grid PNG sheet with tinting)
+  ├─ sprite_sheet.js (SpriteSheet class: fixed-grid PNG sheet with tinting)
+  └─ fx.js           (Fx class: token-slide and floating-number bookkeeping; DOM-free, checked by `node test/fx.js`)
 ```
 
-- `colortheory.js` is imported by `enemies.js` (for procedural creature tinting), not by `index.js`
+- `colortheory.js` is used by `enemies.js` (for procedural creature tinting), not by `index.js`
 - `terrain.js` and `renderer.js` exist but are unused — legacy from the Realm project
-- `origitems.js` is an archive of hand-crafted magical items, imported only by `config.js`
+- `origitems.js` is an archive of hand-crafted magical items, retired from play and not loaded
 - All persistent classes implement `toJSON()` / static `fromJSON(data)` for save/load
 
 ### Action / AI Extraction (the `ctx` injection pattern)
 
 `index.js` still owns all module-level game state and combat math, but the **player-action**
-and **enemy-AI** logic live in separate files that can't import `index.js` (circular). They
+and **enemy-AI** logic live in separate files that are loaded before `index.js` and don't reach into its state. They
 receive everything they need through a plain dependency-injected context object built in
 `index.js`:
 
@@ -49,7 +53,7 @@ receive everything they need through a plain dependency-injected context object 
   callbacks (`dealDamageToEnemy`, `refreshVision`, `showDialog`, `setCombatAlerted`, …).
   `actions.js` defines `Action` → `Strike`/`WeaponStrike`/`RangedStrike` and the concrete
   `MoveAction`, `MeleeAction`, `RangedAction`, `MoveAndAttackAction`, `SkillAction`.
-- `enemyAiCtx` (index.js ~202) — passed to `runEnemyPhase(enemyAiCtx)`. `enemy_ai.js` defines
+- `enemyAiCtx` (index.js ~202) — passed to `runEnemyAiPhase(enemyAiCtx)` (index.js wraps it as `runEnemyPhase()`). `enemy_ai.js` defines
   `EnemyAI` → `WildlifeAI`/`MonsterAI`/`RuinsGuardianAI`/`ChaosAI`, dispatched by `aiFor(behavior)`.
 
 When you add a callback or piece of state that actions/AI need, wire it into the relevant
@@ -87,7 +91,7 @@ Axial coordinates `(q, r)` with pointy-top hexes. Hex objects keyed by `"q,r"` s
 ### Turn Flow
 
 1. **Player phase**: select → move/attack/skill via `Action` classes → auto-end on 0 MP or manual end
-2. **Enemy phase** (async, awaited via `endTurnResolve`): `runEnemyPhase(enemyAiCtx)` runs each enemy's AI with `animDelay` between actions
+2. **Enemy phase** (async, awaited via `endTurnResolve`): `runEnemyAiPhase(enemyAiCtx)` runs each enemy's AI with `animDelay` between actions
 3. **Spawn phase**: breach spawning rolls (`pickSpawnPack`) → turn increment → MP reset (halved if engaged)
 
 Canvas clicks are ignored when `phase !== 'player'`.
@@ -100,7 +104,9 @@ Canvas clicks are ignored when `phase !== 'player'`.
   - `guardianSheet` (sprites_guardians.png, 5x2 grid) — guardians
 - HTML overlay panels (Character/Skills/Inventory) slide in from right
 - Dialog overlay for havens/villages/ruins/level-up/skill choice/shop
-- `render()` ends by calling `updateHUD()` — don't call both
+- `render()` = `drawScene()` (canvas only) + `updateHUD()` + `refreshOpenPanels()` — don't call `render()` and `updateHUD()` both
+- Motion is visual only and never blocks input or the turn: tokens are drawn via `tokenScreenPos(entity)`, which glides one from where it was drawn last frame (no call needed at the sites that move things), and `spawnDamageFloat` adds a rising number. While `fx.busy`, `kickAnim()` redraws `drawScene()` per animation frame
+- UI colours and fonts are CSS variables at the top of `index.css` (serif for titles/prose, monospace for numbers); the intro overlay deliberately keeps its own hardcoded look
 
 ### Save / Load
 
@@ -110,10 +116,10 @@ Canvas clicks are ignored when `phase !== 'player'`.
 
 ## Conventions
 
-- Pure client-side JavaScript (ES6 modules, no Node/npm)
+- Pure client-side JavaScript (plain script includes, no ES modules, no npm; Node is used only to run `test/`)
 - No build step, no bundler, no external dependencies
-- No tests
-- Game state lives as `index.js` module-level `let`s — no `window` pollution
+- No gameplay tests; `test/` holds the two load/motion checks above
+- Game state lives as `index.js` top-level `let`s (shared script scope, not `window` properties)
 - Lookups via config tables: `ALL_EQUIPMENT[id]`, `ENEMY_DEFS[type]`, `SKILLS[id]`, `TERRAIN[...]`
 - All randomness goes through `Rando` — `bellCurve(strength)` for damage rolls
 - Color values are 0-1 floats internally, converted to hex strings only for canvas

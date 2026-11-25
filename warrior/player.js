@@ -1,13 +1,6 @@
-import {
-    STARTING_STATS, STAT_POINTS_PER_LEVEL, MAX_DODGE,
-    maxHP, maxAether, PLAYER_MP, BASE_VISION,
-    EQUIP_SLOT, ALL_EQUIPMENT,
-    TERRAIN_DEFENSE_BONUS, TERRAIN_RANGE_BONUS,
-    RANGER_TERRAIN, isChaosTerrain, POI_RANGE_BONUS, weaponIsRanged, SKILLS
-} from './config.js';
-import { hexDistance } from './hex.js';
+'use strict';
 
-export class Player {
+class Player {
     constructor(startQ, startR) {
         this.q = startQ;
         this.r = startR;

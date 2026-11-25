@@ -1,11 +1,11 @@
+'use strict';
 // config.js — Game constants and data definitions
-import { Rando } from './rando.js';
 // Legacy hand-crafted items retired from play — kept sentimentally in origitems.js.
 // import { ORIG_WEAPONS, ORIG_ARMORS, ORIG_ARTIFACTS } from './origitems.js';
 
-export const HEX_SIZE = 24;
+const HEX_SIZE = 24;
 
-export const TERRAIN = {
+const TERRAIN = {
     WATER: 0,
     PLAINS: 1,
     HILLS: 2,
@@ -29,9 +29,9 @@ export const TERRAIN = {
     MAW: 19
 };
 
-export function isChaosTerrain(t) { return t >= TERRAIN.SHATTERED_PLAINS && t <= TERRAIN.DISTRESSED_QUARRY; }
+function isChaosTerrain(t) { return t >= TERRAIN.SHATTERED_PLAINS && t <= TERRAIN.DISTRESSED_QUARRY; }
 
-export const RANGER_TERRAIN = [
+const RANGER_TERRAIN = [
     TERRAIN.FOREST, TERRAIN.HILLS, TERRAIN.QUARRY,
     TERRAIN.SPECIAL_FOREST, TERRAIN.SPECIAL_HILLS,
     TERRAIN.SHATTERED_FOREST, TERRAIN.DISTRESSED_FOREST,
@@ -40,9 +40,9 @@ export const RANGER_TERRAIN = [
     TERRAIN.RUINS
 ];
 
-export const SELL_PRICE_RATIO = 0.4;
+const SELL_PRICE_RATIO = 0.4;
 
-export const TERRAIN_NAMES = {
+const TERRAIN_NAMES = {
     [TERRAIN.WATER]: 'Water',
     [TERRAIN.PLAINS]: 'Plains',
     [TERRAIN.HILLS]: 'Hills',
@@ -65,7 +65,7 @@ export const TERRAIN_NAMES = {
     [TERRAIN.MAW]: 'Maw'
 };
 
-export const MOVEMENT_COST = {
+const MOVEMENT_COST = {
     [TERRAIN.WATER]: Infinity,
     [TERRAIN.PLAINS]: 1,
     [TERRAIN.HILLS]: 2,
@@ -92,28 +92,28 @@ export const MOVEMENT_COST = {
 };
 
 // Shattered <-> normal terrain lookups
-export const SHATTERED_VERSION = {
+const SHATTERED_VERSION = {
     [TERRAIN.PLAINS]: TERRAIN.SHATTERED_PLAINS,
     [TERRAIN.HILLS]: TERRAIN.SHATTERED_HILLS,
     [TERRAIN.FOREST]: TERRAIN.SHATTERED_FOREST,
     [TERRAIN.QUARRY]: TERRAIN.SHATTERED_QUARRY
 };
 
-export const UNSHATTERED_VERSION = {
+const UNSHATTERED_VERSION = {
     [TERRAIN.SHATTERED_PLAINS]: TERRAIN.PLAINS,
     [TERRAIN.SHATTERED_HILLS]: TERRAIN.HILLS,
     [TERRAIN.SHATTERED_FOREST]: TERRAIN.FOREST,
     [TERRAIN.SHATTERED_QUARRY]: TERRAIN.QUARRY
 };
 
-export const DISTRESSED_VERSION = {
+const DISTRESSED_VERSION = {
     [TERRAIN.PLAINS]: TERRAIN.DISTRESSED_PLAINS,
     [TERRAIN.HILLS]: TERRAIN.DISTRESSED_HILLS,
     [TERRAIN.FOREST]: TERRAIN.DISTRESSED_FOREST,
     [TERRAIN.QUARRY]: TERRAIN.DISTRESSED_QUARRY
 };
 
-export const UNDISTRESSED_VERSION = {
+const UNDISTRESSED_VERSION = {
     [TERRAIN.DISTRESSED_PLAINS]: TERRAIN.PLAINS,
     [TERRAIN.DISTRESSED_HILLS]: TERRAIN.HILLS,
     [TERRAIN.DISTRESSED_FOREST]: TERRAIN.FOREST,
@@ -121,7 +121,7 @@ export const UNDISTRESSED_VERSION = {
 };
 
 // +1 defense in forest (including shattered and distressed)
-export const TERRAIN_DEFENSE_BONUS = {
+const TERRAIN_DEFENSE_BONUS = {
     [TERRAIN.FOREST]: 1,
     [TERRAIN.SPECIAL_FOREST]: 1,
     [TERRAIN.SHATTERED_FOREST]: 1,
@@ -129,7 +129,7 @@ export const TERRAIN_DEFENSE_BONUS = {
 };
 
 // +1 ranged range on hills (including shattered and distressed)
-export const TERRAIN_RANGE_BONUS = {
+const TERRAIN_RANGE_BONUS = {
     [TERRAIN.HILLS]: 1,
     [TERRAIN.SPECIAL_HILLS]: 1,
     [TERRAIN.SHATTERED_HILLS]: 1,
@@ -137,34 +137,34 @@ export const TERRAIN_RANGE_BONUS = {
     [TERRAIN.RUINS]: 1
 };
 
-export const CROP_ICONS = ['\u{1F33D}', '\u{1F345}', '\u{1F346}', '\u{1F955}', '\u{1F952}', '\u{1F33F}', '\u{1FAD1}', '\u{1F33E}'];
+const CROP_ICONS = ['\u{1F33D}', '\u{1F345}', '\u{1F346}', '\u{1F955}', '\u{1F952}', '\u{1F33F}', '\u{1FAD1}', '\u{1F33E}'];
 
-export const PLAYER_MP = 4;
-export const MAP_COLS = 100;
-export const MAP_ROWS = 100;
-export const BASE_VISION = 6;
+const PLAYER_MP = 4;
+const MAP_COLS = 100;
+const MAP_ROWS = 100;
+const BASE_VISION = 6;
 
 
 // ---- Player defaults ----
-export const STARTING_STATS = { might: 3, reflex: 3, warding: 2, vigor: 3 };
-export const STAT_POINTS_PER_LEVEL = 3;
-export const MAX_DODGE = 90;
-export const MAX_STUN_CHANCE = 90;
-export const STUN_DIVISOR_PRIMARY = 40;
-export const STUN_DIVISOR_OTHER = 60;
+const STARTING_STATS = { might: 3, reflex: 3, warding: 2, vigor: 3 };
+const STAT_POINTS_PER_LEVEL = 3;
+const MAX_DODGE = 90;
+const MAX_STUN_CHANCE = 90;
+const STUN_DIVISOR_PRIMARY = 40;
+const STUN_DIVISOR_OTHER = 60;
 
 // HP = 50 + vigor * 10
-export function maxHP(vigor) { return 50 + vigor * 10; }
+function maxHP(vigor) { return 50 + vigor * 10; }
 // Aether = 5 + warding * 2
-export function maxAether(warding) { return 5 + warding * 2; }
+function maxAether(warding) { return 5 + warding * 2; }
 
 // ---- XP curve: 50 * level^1.8 rounded to nearest 10 ----
-export function xpForLevel(level) {
+function xpForLevel(level) {
     return Math.round(50 * Math.pow(level, 1.8) / 10) * 10;
 }
 
 // ---- POI types ----
-export const POI = {
+const POI = {
     HAVEN: 'haven',
     VILLAGE: 'village',
     RUIN: 'ruin',
@@ -176,17 +176,17 @@ export const POI = {
     GARRISON: 'garrison'
 };
 
-export const POI_DEFENSE_BONUS = {
+const POI_DEFENSE_BONUS = {
     [POI.HAVEN]: 3,
     [POI.VILLAGE]: 2,
     [POI.GARRISON]: 3
 };
 
-export const POI_RANGE_BONUS = {
+const POI_RANGE_BONUS = {
     [POI.GARRISON]: 2
 };
 
-export const POI_SYMBOLS = {
+const POI_SYMBOLS = {
     [POI.HAVEN]: '\u{1F3F0}', // 🏰 castle
     [POI.VILLAGE]: '\u{1F3E1}', // 🏡 house with garden
     [POI.RUIN]: '\u26EB',    // ⛫ castle ruins
@@ -198,7 +198,7 @@ export const POI_SYMBOLS = {
     [POI.GARRISON]: '\u265C'  // ♜ black rook
 };
 
-export const POI_COLORS = {
+const POI_COLORS = {
     [POI.HAVEN]: '#4fc3f7',
     [POI.VILLAGE]: '#ffb74d',
     [POI.RUIN]: '#b0bec5',
@@ -211,7 +211,7 @@ export const POI_COLORS = {
 };
 
 // ---- Enemy types ----
-export const ENEMY_TYPE = {
+const ENEMY_TYPE = {
     VOID_STALKER: 'void_stalker',
     BREACH_CRAWLER: 'breach_crawler',
     FLUX_ARCHER: 'flux_archer',
@@ -220,7 +220,7 @@ export const ENEMY_TYPE = {
     UNRAVELER: 'unraveler'
 };
 
-export const ENEMY_DEFS = {
+const ENEMY_DEFS = {
     [ENEMY_TYPE.VOID_STALKER]: {
         name: 'Void Stalker', label: 'V', hp: 15, attack: 5, rangedAttack: 3, defense: 1,
         speed: 2, detectRange: 5, xp: 15, gold: 2, behavior: 'chase',
@@ -254,10 +254,10 @@ export const ENEMY_DEFS = {
 };
 
 // ---- Equipment ----
-export const EQUIP_SLOT = { WEAPON: 'weapon', ARMOR: 'armor', ARTIFACT: 'artifact' };
+const EQUIP_SLOT = { WEAPON: 'weapon', ARMOR: 'armor', ARTIFACT: 'artifact' };
 
 // Non-magical weapons
-export const WEAPONS = [
+const WEAPONS = [
     { id: 'rusty_blade', name: 'Rusty Blade', type: 'melee', damage: 1, range: 0, special: null, price: 0, tier: 0, magical: false },
     { id: 'stick_bow', name: 'Stick Bow', type: 'ranged', damage: 1, range: 2, special: null, price: 0, tier: 0, magical: false },
     { id: 'short_bow', name: 'Short Bow', type: 'ranged', damage: 1, range: 2, special: null, price: 5, tier: 1, magical: false },
@@ -276,12 +276,12 @@ export const WEAPONS = [
 // A weapon counts as ranged iff it has reach — range > 0. This (not the `type`
 // field) is the single source of truth for melee-vs-ranged behavior, so any
 // weapon granted range, magical or otherwise, fires and flows as a bow.
-export function weaponIsRanged(wep) {
+function weaponIsRanged(wep) {
     return !!(wep && wep.range > 0);
 }
 
 // Non-magical armor
-export const ARMORS = [
+const ARMORS = [
     { id: 'worn_leather', name: 'Worn Leather', defense: 1, special: null, price: 0, tier: 0, magical: false },
     { id: 'leather_armor', name: 'Leather Armor', defense: 2, special: null, price: 15, tier: 1, magical: false },
     { id: 'chain_mail', name: 'Chain Mail', defense: 3, special: null, price: 30, tier: 2, magical: false },
@@ -290,12 +290,12 @@ export const ARMORS = [
 ];
 
 // No static artifacts — all artifacts are magical and randomly generated
-export const ARTIFACTS = [];
+const ARTIFACTS = [];
 
 // All equipment in one lookup (generated items get registered here too)
-export const ALL_EQUIPMENT = {};
+const ALL_EQUIPMENT = {};
 
-export function resetEquipment() {
+function resetEquipment() {
     for (const key of Object.keys(ALL_EQUIPMENT)) delete ALL_EQUIPMENT[key];
     for (const w of WEAPONS) ALL_EQUIPMENT[w.id] = { ...w, slot: EQUIP_SLOT.WEAPON };
     for (const a of ARMORS) ALL_EQUIPMENT[a.id] = { ...a, slot: EQUIP_SLOT.ARMOR };
@@ -306,7 +306,7 @@ export function resetEquipment() {
 }
 resetEquipment();
 
-export const NON_MAGICAL_ITEMS = [...WEAPONS, ...ARMORS];
+const NON_MAGICAL_ITEMS = [...WEAPONS, ...ARMORS];
 
 // ---- Random Magical Item Generation ----
 
@@ -636,7 +636,7 @@ function _rollName(itemWords, naming) {
     }
 }
 
-export function rollMagicItem(category) {
+function rollMagicItem(category) {
     if (!category) category = Rando.choice(['melee', 'ranged', 'armor', 'artifact']);
 
     const id = `magic_${Object.keys(ALL_EQUIPMENT).length}`;
@@ -697,7 +697,7 @@ export function rollMagicItem(category) {
 }
 
 // ---- Skills ----
-export const SKILL_TARGET = {
+const SKILL_TARGET = {
     SELF: 'self',
     MELEE: 'melee',       // must be adjacent
     MELEE_EXECUTE: 'melee_execute', // adjacent + enemy below 50% HP
@@ -710,13 +710,13 @@ export const SKILL_TARGET = {
     MOUNTAIN_SKIP: 'mountain_skip' // land->mountain, mountain->mountain, or mountain->land
 };
 
-export const SKILL_USAGE = {
+const SKILL_USAGE = {
     PRISTINE: 'pristine',       // no enemies within 2, non-shattered hex
     NON_COMBAT: 'non_combat',   // no enemies within 2
     ANYTIME: 'anytime'          // no restrictions
 };
 
-export const SKILLS = {
+const SKILLS = {
     // ---- Combat skills (anytime) ----
     restore: {
         id: 'restore', name: 'Restore', cost: 0, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.NON_COMBAT,
@@ -936,18 +936,18 @@ export const SKILLS = {
 };
 
 // Levels at which skill choices are offered
-export const SKILL_UNLOCK_LEVELS = [2, 4, 6, 8, 10];
+const SKILL_UNLOCK_LEVELS = [2, 4, 6, 8, 10];
 
 // A tiered skill carries `scales` (the axis field names) and `tiers` (one tuple
 // per rank, 1..SKILL_MAX_RANK). Rank R reads tiers[R-1], whose values are zipped
 // onto the named axes. "Just do it" skills carry neither and never scale.
-export const SKILL_MAX_RANK = 5;
+const SKILL_MAX_RANK = 5;
 
 // Resolve a skill def to its concrete effect at `rank`. Untiered skills return
 // unchanged (same object, identity preserved). Tiered skills overlay this rank's
 // tuple onto the named axes, leaving all unscaled fields (cost, range fallbacks,
 // aetherPerHit, …) to pass through from the base def.
-export function effectiveSkill(skill, rank) {
+function effectiveSkill(skill, rank) {
     if (!skill || !skill.tiers) return skill;
     const tuple = skill.tiers[rank - 1];
     const scaled = {};

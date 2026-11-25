@@ -1,3 +1,4 @@
+'use strict';
 // skilllibrary.js — SkillLibrary: the single authority for how skills are
 // discovered, so no skill can ever be awarded twice.
 //
@@ -12,10 +13,8 @@
 // `taken` is the only per-run state that must persist (the rest is derivable from
 // the SKILLS table and the player's learned set), so it is the only thing saved.
 
-import { SKILLS } from './config.js';
-import { Rando } from './rando.js';
 
-export class SkillLibrary {
+class SkillLibrary {
     constructor() {
         this.taken = new Set();
     }

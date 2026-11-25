@@ -1,7 +1,4 @@
-import { ENEMY_TYPE, ENEMY_DEFS, MOVEMENT_COST, UNSHATTERED_VERSION, POI } from './config.js';
-import { hexKey, hexNeighbors, hexDistance, hexesInRange, findPath } from './hex.js';
-import { Rando } from './rando.js';
-import { ColorTheory } from './colortheory.js';
+'use strict';
 
 function wildlifeBehaviorFor(attack) {
     if (attack >= 30) return 'ruins-guardian';
@@ -9,10 +6,10 @@ function wildlifeBehaviorFor(attack) {
     return 'wildlife';
 }
 
-export const NUM_CREATURE_TIERS = 12;
+const NUM_CREATURE_TIERS = 12;
 
 // Gaussian weight over tiers, peaked at `peakTier`. Sigma = 2 so ±2 tiers common, ±4 rare.
-export function spawnTierWeights(creatureDefs, peakTier) {
+function spawnTierWeights(creatureDefs, peakTier) {
     const sigma = 2;
     return Object.keys(creatureDefs).map(type => {
         const d = (creatureDefs[type].tier - peakTier) / sigma;
@@ -20,7 +17,7 @@ export function spawnTierWeights(creatureDefs, peakTier) {
     });
 }
 
-export class EnemyManager {
+class EnemyManager {
     constructor() {
         this.enemies = [];
         this.creatureDefs = {};

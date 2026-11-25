@@ -1,3 +1,4 @@
+'use strict';
 // Player action classes — extracted from index.js so the core game logic
 // (move / melee / ranged / skill / move-and-attack) can be exercised
 // independently of the rendering and input layer.
@@ -19,13 +20,6 @@
 //   misc:
 //     playerTerrain   (function returning current hex terrain)
 
-import {
-    POI, ENEMY_TYPE, TERRAIN, STARTING_STATS, CROP_ICONS,
-    SKILLS, effectiveSkill, UNSHATTERED_VERSION, UNDISTRESSED_VERSION, DISTRESSED_VERSION,
-    isChaosTerrain, weaponIsRanged
-} from './config.js';
-import { hexKey, hexNeighbors, hexDistance, hexesInRange, hexToPixel } from './hex.js';
-import { Rando } from './rando.js';
 
 // ================================================================
 // Pure helpers — no ctx needed
@@ -33,14 +27,14 @@ import { Rando } from './rando.js';
 
 // MP cost tiers: 0 (free), 1 (natural melee), 2 (ranged), 'all' (zeroes MP).
 // 'free_action' magical affix forces 0 regardless of weapon type.
-export function weaponMpCost(wep) {
+function weaponMpCost(wep) {
     if (!wep) return 1;
     if (wep.special === 'free_action') return 0;
     if (wep.mpCost !== undefined) return wep.mpCost;
     return weaponIsRanged(wep) ? 2 : 1;
 }
 
-export function skillMpCost(skill) {
+function skillMpCost(skill) {
     return skill.mpCost === undefined ? 'all' : skill.mpCost;
 }
 
@@ -48,7 +42,7 @@ export function skillMpCost(skill) {
 // skill flows through it (affixes, range, MP floor). Neutral skills (no
 // weaponClass), 'direct' skills (fire from nothing — no weapon leveraged), and
 // type mismatches never match — those act as-is.
-export function skillWeaponMatches(player, skill) {
+function skillWeaponMatches(player, skill) {
     const cls = skill.weaponClass;
     const wep = player.weapon();
     if (!wep) return false;
@@ -59,7 +53,7 @@ export function skillWeaponMatches(player, skill) {
 
 // Weapon-flow skills pay max(skill MP, weapon MP) when a matching weapon is
 // held; neutral skills and mismatches pay the skill's own MP. 'all' stays 'all'.
-export function effectiveSkillMpCost(player, skill) {
+function effectiveSkillMpCost(player, skill) {
     const base = skillMpCost(skill);
     if (base === 'all' || !skillWeaponMatches(player, skill)) return base;
     return Math.max(base, weaponMpCost(player.weapon()));
@@ -69,16 +63,16 @@ function mpLabel(cost) {
     return cost === 'all' ? 'All MP' : `${cost} MP`;
 }
 
-export function skillMpLabel(skill) {
+function skillMpLabel(skill) {
     return mpLabel(skillMpCost(skill));
 }
 
-export function effectiveAetherCost(player, skill) {
+function effectiveAetherCost(player, skill) {
     const cost = skill.cost - player.sumEquipped('aether_discount', 'aetherDiscount');
     return Math.max(0, cost);
 }
 
-export function skillCostLabel(skill, player) {
+function skillCostLabel(skill, player) {
     return `${effectiveAetherCost(player, skill)} AE, ${mpLabel(effectiveSkillMpCost(player, skill))}`;
 }
 
@@ -107,7 +101,7 @@ function knockbackHex(fromQ, fromR, targetQ, targetR) {
 // Action base — ctx is injected; shared combat helpers live here.
 // ================================================================
 
-export class Action {
+class Action {
     constructor(ctx) { this.ctx = ctx; }
 
     execute() { throw new Error('Action.execute() must be implemented'); }
@@ -431,7 +425,7 @@ class Strike {
 const MELEE_AFFIX_LABEL = { chain: 'Chain bounce', reverberate: 'Reverberate bounce', cleave: 'Cleave', sweep: 'Sweep' };
 
 // Melee weapon strike: chain/reverberate, cleave/sweep, double/triple_strike.
-export class WeaponStrike extends Strike {
+class WeaponStrike extends Strike {
     weaponMatches() { return !!(this.wep && !weaponIsRanged(this.wep)); }
 
     weaponPrimaryHitCount() {
@@ -454,7 +448,7 @@ export class WeaponStrike extends Strike {
 // Ranged weapon strike: chain/reverberate, splash, piercing line, double/
 // triple_shot, sniper at max range, ignore_defense (skill or affix). Sniper
 // adds to primary damage during setup so it rides on every entry's dmg.
-export class RangedStrike extends Strike {
+class RangedStrike extends Strike {
     weaponMatches() { return !!(this.wep && weaponIsRanged(this.wep)); }
 
     setupDamage() {
@@ -513,7 +507,7 @@ export class RangedStrike extends Strike {
 // MoveAction — walk to a hex (cost pre-resolved by caller)
 // ================================================================
 
-export class MoveAction extends Action {
+class MoveAction extends Action {
     constructor(ctx, q, r, cost) {
         super(ctx);
         this.q = q;
@@ -541,7 +535,7 @@ export class MoveAction extends Action {
 // Returns { killed }.
 // ================================================================
 
-export class MeleeAction extends Action {
+class MeleeAction extends Action {
     constructor(ctx, enemy) {
         super(ctx);
         this.enemy = enemy;
@@ -576,7 +570,7 @@ export class MeleeAction extends Action {
 // and the per-shot aether tax for magical ranged weapons.
 // ================================================================
 
-export class RangedAction extends Action {
+class RangedAction extends Action {
     constructor(ctx, targetQ, targetR) {
         super(ctx);
         this.targetQ = targetQ;
@@ -612,7 +606,7 @@ export class RangedAction extends Action {
 // finds the cheapest adjacent hex via the caller-supplied `reachable` map.
 // ================================================================
 
-export class MoveAndAttackAction extends Action {
+class MoveAndAttackAction extends Action {
     constructor(ctx, enemyQ, enemyR) {
         super(ctx);
         this.enemyQ = enemyQ;
@@ -709,7 +703,7 @@ export class MoveAndAttackAction extends Action {
 // the MP spend (early-exit aborts, or persistent overlays like Ground Weeps).
 // ================================================================
 
-export class SkillAction extends Action {
+class SkillAction extends Action {
     constructor(ctx, skillId, targetQ, targetR) {
         super(ctx);
         this.skillId = skillId;

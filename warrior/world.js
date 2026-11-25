@@ -1,14 +1,12 @@
+'use strict';
 // world.js — GameWorld: hex grid, POIs, fog of war
 
-import { TERRAIN, MAP_COLS, MAP_ROWS, MOVEMENT_COST, POI, WEAPONS, ARMORS, ARTIFACTS, NON_MAGICAL_ITEMS, rollMagicItem } from './config.js';
-import { hexKey, hexNeighbors, hexDistance, hexesInRange, bfsHexes } from './hex.js';
-import { Rando } from './rando.js';
 
 const SPECIAL_TERRAINS = new Set([
     TERRAIN.SPECIAL_PLAINS, TERRAIN.SPECIAL_FOREST, TERRAIN.SPECIAL_HILLS
 ]);
 
-export class GameWorld {
+class GameWorld {
     constructor() {
         this.hexes = null;
         this.pois = [];

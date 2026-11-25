@@ -1,6 +1,7 @@
+'use strict';
 // victory.js — score tracking and final breakdown
 
-export class Victory {
+class Victory {
     constructor() {
         this.enemiesDefeated = 0;
         this.guardiansDefeated = 0;

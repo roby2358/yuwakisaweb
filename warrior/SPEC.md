@@ -4,7 +4,7 @@
 
 Warrior is a single-player tactical hex RPG set on a world where swords and sorcery collide with alien technology and creeping chaos. The player controls a cosmically powered warrior exploring a large procedurally generated world map, fighting enemies in tactical hex combat, gaining experience and loot, and ultimately sealing the Maw — a wound in the world itself where reality is dissolving into chaos.
 
-The game runs entirely client-side in the browser using canvas rendering and ES6 modules with no build step or external dependencies.
+The game runs entirely client-side in the browser using canvas rendering and plain script includes with no build step or external dependencies.
 
 ## UI Layout
 
@@ -329,7 +329,7 @@ Each artifact MUST have: name, and a passive effect.
 
 ### Code Quality
 
-- All game code MUST use ES6 modules with no external dependencies
+- All game code MUST be plain `<script>` includes (not ES modules) with no external dependencies, so the game runs when `index.html` is opened directly from disk
 - No build step, bundler, or package manager MUST be required
 - The game MUST function when served via any static HTTP server
 - Game state MUST be stored in module-level variables (no global window pollution)

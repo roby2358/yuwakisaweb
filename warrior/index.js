@@ -1,3 +1,4 @@
+'use strict';
 // MIT License
 //
 // Copyright (c) 2026 Rob Young
@@ -22,37 +23,6 @@
 
 // index.js — Warrior: Tactical Hex RPG
 
-import {
-    HEX_SIZE, MAP_COLS, MAP_ROWS, TERRAIN, TERRAIN_NAMES, MOVEMENT_COST,
-    STAT_POINTS_PER_LEVEL, STARTING_STATS,
-    MAX_STUN_CHANCE, STUN_DIVISOR_PRIMARY, STUN_DIVISOR_OTHER,
-    xpForLevel,
-    POI, POI_SYMBOLS, POI_COLORS, POI_DEFENSE_BONUS,
-    ENEMY_TYPE,
-    EQUIP_SLOT, WEAPONS, ARMORS, ARTIFACTS, ALL_EQUIPMENT, NON_MAGICAL_ITEMS, CROP_ICONS,
-    rollMagicItem, resetEquipment,
-    isChaosTerrain, SELL_PRICE_RATIO,
-    SKILL_TARGET, SKILL_USAGE, SKILLS, effectiveSkill, SKILL_MAX_RANK, SKILL_UNLOCK_LEVELS,
-    SHATTERED_VERSION, UNSHATTERED_VERSION, DISTRESSED_VERSION, UNDISTRESSED_VERSION,
-    weaponIsRanged
-} from './config.js';
-import { hexToPixel, pixelToHex, hexKey, parseHexKey, hexNeighbors, hexDistance, hexesInRange, bfsHexes, drawHexPath } from './hex.js';
-import { Rando } from './rando.js';
-import { Player } from './player.js';
-import { GameWorld } from './world.js';
-import { SkillLibrary } from './skilllibrary.js';
-import { EnemyManager, NUM_CREATURE_TIERS, spawnTierWeights } from './enemies.js';
-import { Victory } from './victory.js';
-import { Sound } from './sound.js';
-import { SpriteSheet } from './sprite_sheet.js';
-import {
-    MoveAction, RangedAction, MoveAndAttackAction, SkillAction,
-    weaponMpCost, skillCostLabel, effectiveAetherCost, skillWeaponMatches
-} from './actions.js';
-import {
-    runEnemyPhase as runEnemyPhaseImpl,
-    computeMawDistances, mawProximityBonus, mawDistancePeak, pickSpawnPack
-} from './enemy_ai.js';
 
 // ---- Sprite sheets ----
 const SPRITE_COLS = 5;
@@ -109,9 +79,7 @@ const PLAYER_COLOR = '#daa520';
 
 // A "special" hex hides its reward — gold, a skill gem, or a scroll — behind a
 // single sparkle, so you can't tell what you're getting until you step on it.
-const SPECIAL_TERRAINS = new Set([
-    TERRAIN.SPECIAL_PLAINS, TERRAIN.SPECIAL_FOREST, TERRAIN.SPECIAL_HILLS
-]);
+// (SPECIAL_TERRAINS is defined in world.js.)
 const PRIZE_GLYPH = '✨'; // ✨
 function specialPrizeHex(hex) {
     return SPECIAL_TERRAINS.has(hex.terrain)
@@ -359,6 +327,66 @@ const HIT_FLASH_MS = 100;            // matches the hit sfx (sound.js NOTE_DUR)
 const HIT_BANG_COLORS = ['#ff3b30', '#ffd60a'];
 let hitFlashes = [];
 
+// --- Motion: token slides and floating damage numbers (see fx.js) ---------
+const fx = new Fx();
+const SLIDE_MAX_JUMP = HEX_SIZE * 12;   // further than this (teleports, Return) just appears
+const FLOAT_RISE = HEX_SIZE * 0.9;
+const FLOAT_COLOR_ENEMY = '#fff3c4';
+const FLOAT_COLOR_PLAYER = '#ff6b5e';
+let animFrame = 0;
+
+// Screen position to draw a token at: its hex, or mid-glide toward it.
+function tokenScreenPos(entity) {
+    const p = fx.tokenPos(entity, hexToPixel(entity.q, entity.r), SLIDE_MAX_JUMP);
+    return { x: p.x + panX, y: p.y + panY };
+}
+
+function spawnFloat(q, r, text, color) {
+    fx.floatText(q, r, text, color, Rando.float(-COUNTER_SIZE * 0.3, COUNTER_SIZE * 0.3), performance.now());
+}
+
+function spawnDamageFloat(q, r, amount, color) {
+    spawnFloat(q, r, '-' + amount, color);
+}
+
+// Heals are applied in many places, so they're noticed here instead: any rise in
+// a token's HP since the previous frame floats a green "+N". Called for each
+// token as it is drawn; one that wasn't drawn last frame (out of sight, new game,
+// load) is only noted, so nothing floats for healing nobody watched.
+const FLOAT_COLOR_HEAL = '#8fe07a';
+const healWatch = new WeakMap();   // entity -> { hp, frame }
+function floatHeal(entity) {
+    const seen = healWatch.get(entity);
+    if (seen && seen.frame === fx.frame - 1 && entity.hp > seen.hp) {
+        spawnFloat(entity.q, entity.r, '+' + (entity.hp - seen.hp), FLOAT_COLOR_HEAL);
+    }
+    healWatch.set(entity, { hp: entity.hp, frame: fx.frame });
+}
+
+function drawFloats() {
+    ctx.font = 'bold 14px monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineWidth = 3; ctx.strokeStyle = '#000';
+    for (const f of fx.liveFloats()) {
+        const { x, y } = hexToScreen(f.q, f.r);
+        const fy = y - COUNTER_SIZE / 2 - FLOAT_RISE * f.t;
+        ctx.globalAlpha = 1 - f.t * f.t;
+        ctx.strokeText(f.text, x + f.dx, fy);
+        ctx.fillStyle = f.color;
+        ctx.fillText(f.text, x + f.dx, fy);
+    }
+    ctx.globalAlpha = 1;
+}
+
+// Keep redrawing the map (not the HUD or panels) while anything is in motion.
+function kickAnim() {
+    if (animFrame || !fx.busy) return;
+    animFrame = requestAnimationFrame(() => {
+        animFrame = 0;
+        if (!showingWorldMap) drawScene();
+    });
+}
+
 function drawHitBang(cx, cy, color, rot, points) {
     const outer = HEX_SIZE * 0.5, inner = HEX_SIZE * 0.2, N = points;
     ctx.beginPath();
@@ -515,12 +543,6 @@ function refreshVision() {
 // COMBAT
 // ================================================================
 
-function buildOccupiedSet() {
-    const occupied = new Set(em.enemies.map(e => hexKey(e.q, e.r)));
-    occupied.add(hexKey(player.q, player.r));
-    return occupied;
-}
-
 function enemyOnCorruptedTerrain(enemy, def) {
     if (!def.chaosSpawned) return false;
     const hex = world.getHex(enemy.q, enemy.r);
@@ -561,6 +583,7 @@ function dealDamageToEnemy(enemy, damage, source, opts = {}) {
     victory.damageDealt += dealt;
     logCombat(`${source}: ${dealt} dmg to ${def.name}`, 'log-dmg');
     sound.hitEnemy();
+    spawnDamageFloat(enemy.q, enemy.r, dealt, FLOAT_COLOR_ENEMY);
     spawnHitFlash(enemy.q, enemy.r);
     const stunned = rollPlayerStun(enemy, rolled, opts.stunBucket, opts.stunBonus || 0);
     const killed = enemy.hp <= 0;
@@ -627,6 +650,7 @@ function dealDamageToPlayer(damage, source, isSkillDamage, opts = {}) {
     victory.damageTaken += dealt;
     logCombat(`${source}: ${dealt} dmg to you`, 'log-dmg');
     sound.hitPlayer();
+    spawnDamageFloat(player.q, player.r, dealt, FLOAT_COLOR_PLAYER);
     spawnHitFlash(player.q, player.r);
     if (reflected > 0) {
         opts.attacker.hp -= reflected;
@@ -1238,7 +1262,7 @@ function endTurn() {
 }
 
 async function runEnemyPhase() {
-    await runEnemyPhaseImpl(enemyAiCtx);
+    await runEnemyAiPhase(enemyAiCtx);
 }
 
 function advanceTurn() {
@@ -1465,9 +1489,18 @@ function centerOn(hex) {
 // ================================================================
 
 function render() {
+    drawScene();
+    if (!em || !world || !player) return;
+    updateHUD();
+    refreshOpenPanels();
+}
+
+// The canvas alone — what the motion loop redraws each frame.
+function drawScene() {
     ctx.fillStyle = '#111';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     if (!em || !world || !player) return;
+    fx.beginFrame(performance.now());
 
     // Terrain
     for (const [key, hex] of world.hexes) {
@@ -1613,7 +1646,7 @@ function render() {
         if (!world.visible.has(ek)) continue;
         const def = em.getDef(enemy.type);
         if (!def) { console.warn('Missing def for enemy type:', enemy.type); continue; }
-        const { x, y } = hexToScreen(enemy.q, enemy.r);
+        const { x, y } = tokenScreenPos(enemy);
         const color = enemyColor(enemy.type);
         const effMaxHp = enemyEffectiveMaxHp(enemy);
         let sprite = enemySprites[enemy.type];
@@ -1629,11 +1662,13 @@ function render() {
         const spriteTint = (def.chaosSpawned && !isGuardianSprite) ? '#d580ff' : null;
         drawCounter(x, y, color, def.label, enemy.hp / effMaxHp, chaosLabelColor, { atk: enemyMeleeAttack(enemy, def), def: enemyDefense(enemy, def), mov: def.speed || 1 }, sprite, spriteTint);
         if (enemy.stunnedNextTurn) drawStunOverlay(x, y);
+        floatHeal(enemy);
     }
 
     // Player
     if (player) {
-        const { x, y } = hexToScreen(player.q, player.r);
+        floatHeal(player);
+        const { x, y } = tokenScreenPos(player);
         const playerLabelColor = phase === 'player' ? '#000' : '#b8941a';
         const wep = player.weapon();
         const pAtk = (wep ? wep.damage : 0) + (weaponIsRanged(wep) ? player.stats.reflex : player.stats.might);
@@ -1666,8 +1701,8 @@ function render() {
     // Attack-target icon overlays — drawn after enemies/player so sprites don't cover them
     drawAttackIcons();
 
-    updateHUD();
-    refreshOpenPanels();
+    drawFloats();
+    kickAnim();
 }
 
 function renderWorldMap() {
@@ -1819,14 +1854,14 @@ function updateHUD() {
     // HP bar color
     const hpPct = player.hp / mhp;
     const hpFill = document.getElementById('hp-fill');
-    if (hpPct > 0.5) hpFill.style.background = '#4caf50';
-    else if (hpPct > 0.25) hpFill.style.background = '#ff9800';
-    else hpFill.style.background = '#f44336';
+    if (hpPct > 0.5) hpFill.style.background = 'var(--life)';
+    else if (hpPct > 0.25) hpFill.style.background = 'var(--warn)';
+    else hpFill.style.background = 'var(--blood)';
 
     const mae = player.maxAether();
     document.getElementById('ae-text').textContent = player.aether + '/' + mae;
     document.getElementById('ae-fill').style.width = (player.aether / mae * 100) + '%';
-    document.getElementById('mp-info').textContent = 'MP: ' + player.mp + '/' + player.maxMP();
+    updateMpPips();
     document.getElementById('level-info').textContent = 'Lv ' + player.level;
     const xpNeeded = player.level < 10 ? xpForLevel(player.level + 1) : null;
     document.getElementById('xp-text').textContent = player.xp + '/' + (xpNeeded ?? '---');
@@ -1852,34 +1887,88 @@ function updateHUD() {
     }
 }
 
+// MP as pips: one per point of this turn's allowance, lit while unspent. Points
+// beyond the normal maximum (Sprint and the like) show as extra bonus pips.
+function updateMpPips() {
+    const el = document.getElementById('mp-info');
+    const max = player.maxMP();
+    const key = player.mp + '/' + max;
+    if (el.dataset.key === key) return;
+    el.dataset.key = key;
+    el.title = 'MP ' + key;
+    let html = '';
+    for (let i = 0; i < Math.max(player.mp, max); i++) {
+        const cls = i >= player.mp ? 'pip spent' : (i >= max ? 'pip bonus' : 'pip');
+        html += `<span class="${cls}"></span>`;
+    }
+    el.innerHTML = html;
+}
+
+// One glyph per targeting kind — the skill bar's icon says how a skill is aimed.
+const SKILL_TARGET_GLYPH = {
+    [SKILL_TARGET.SELF]: '✦',
+    [SKILL_TARGET.MELEE]: '⚔',
+    [SKILL_TARGET.MELEE_EXECUTE]: '☠',
+    [SKILL_TARGET.RANGED]: '➶',
+    [SKILL_TARGET.RANGED_AOE]: '✸',
+    [SKILL_TARGET.AOE_SELF]: '◎',
+    [SKILL_TARGET.TELEPORT]: '⇝',
+    [SKILL_TARGET.TELEPORT_REVEALED]: '⇝',
+    [SKILL_TARGET.WATER_SKIP]: '≈',
+    [SKILL_TARGET.MOUNTAIN_SKIP]: '▲',
+};
+const RANGED_SLOT_GLYPH = '➶';
+
+// Why an aether-costed action can't be used right now, or null. Only reasons the
+// player can act on — the enemy's turn dims the bar without comment.
+function aetherShortfall(cost) {
+    return player.aether < cost ? `Need ${cost} AE` : null;
+}
+
+// Paint one skill-bar slot. `why` (a reason string or null) replaces the cost line.
+function paintSkillSlot(slot, view) {
+    slot.querySelector('.skill-icon').textContent = view.icon;
+    slot.querySelector('.skill-name').textContent = view.name;
+    const costEl = slot.querySelector('.skill-cost');
+    costEl.textContent = view.why || view.cost;
+    costEl.classList.toggle('blocked', !!view.why);
+    slot.title = view.why || '';
+    slot.classList.toggle('disabled', !view.usable);
+    slot.classList.toggle('active', view.active);
+}
+
 function updateSkillBar() {
     // Ranged slot
     const rangedSlot = document.getElementById('ranged-slot');
     const wep = player.weapon();
     const hasRanged = weaponIsRanged(wep);
     const rangedCost = hasRanged && wep.magical && wep.special !== 'free_ranged' && wep.special !== 'channel' ? 1 : 0;
-    const canRanged = hasRanged && player.aether >= rangedCost && phase === 'player' && !gameOver;
-    rangedSlot.classList.toggle('disabled', !canRanged);
-    rangedSlot.classList.toggle('active', targeting && targeting.skill === '__ranged__');
+    const myTurn = phase === 'player' && !gameOver;
+    const rangedWhy = aetherShortfall(rangedCost);
+    paintSkillSlot(rangedSlot, {
+        icon: RANGED_SLOT_GLYPH, name: 'Ranged',
+        cost: rangedCost ? rangedCost + ' AE' : '',
+        why: rangedWhy, usable: hasRanged && myTurn && !rangedWhy,
+        active: !!targeting && targeting.skill === '__ranged__',
+    });
     rangedSlot.style.display = hasRanged ? '' : 'none';
 
     // Skill slots 1-N
     for (let i = 0; i < SKILL_SLOTS; i++) {
         const slot = document.querySelector(`.skill-slot[data-slot="${i}"]`);
-        const nameEl = slot.querySelector('.skill-name');
         const skillId = player.skills[i];
-        if (skillId) {
-            const skill = SKILLS[skillId];
-            nameEl.textContent = skill.name;
-            const canUse = player.aether >= effectiveAetherCost(player, skill) && phase === 'player' && !gameOver && !checkSkillUsage(skill);
-            slot.classList.toggle('disabled', !canUse);
-            slot.classList.toggle('used', false);
-            slot.classList.toggle('active', targeting && targeting.skill === skillId);
-        } else {
-            nameEl.textContent = '-';
-            slot.classList.add('disabled');
-            slot.classList.remove('used', 'active');
+        if (!skillId) {
+            paintSkillSlot(slot, { icon: '', name: '-', cost: '', why: null, usable: false, active: false });
+            continue;
         }
+        const skill = SKILLS[skillId];
+        const cost = effectiveAetherCost(player, skill);
+        const why = aetherShortfall(cost) || checkSkillUsage(skill);
+        paintSkillSlot(slot, {
+            icon: SKILL_TARGET_GLYPH[skill.target], name: skill.name,
+            cost: cost + ' AE', why, usable: myTurn && !why,
+            active: !!targeting && targeting.skill === skillId,
+        });
     }
 }
 
@@ -1916,7 +2005,7 @@ function updateCharPanel() {
     for (const slot of [EQUIP_SLOT.WEAPON, EQUIP_SLOT.ARMOR, EQUIP_SLOT.ARTIFACT]) {
         const id = player.equipment[slot];
         const item = id ? ALL_EQUIPMENT[id] : null;
-        ehtml += `<div class="equip-item"><span style="color:#888">${slot}:</span> <span class="item-name">${item ? item.name : '(empty)'}</span></div>`;
+        ehtml += `<div class="equip-item"><span style="color:#888">${slot}:</span> <span class="${item ? itemRarityClass(item) : 'rar-poor'}">${item ? item.name : '(empty)'}</span></div>`;
     }
     ehtml += '</div>';
     equip.innerHTML = ehtml;
@@ -2103,9 +2192,8 @@ function updateInvPanel() {
         if (!id) continue;
         const item = ALL_EQUIPMENT[id];
         if (!item) continue;
-        const nameColor = '#ffc107';
         html += `<div class="inv-item equipped">
-            <div><span style="color:${nameColor}">${item.name}</span> <span style="color:#888">(${slot})</span><br>
+            <div><span class="${itemRarityClass(item)}">${item.name}</span> <span style="color:#888">(${slot})</span><br>
             <span style="color:#aaa;font-size:11px">${itemStatLine(item)}</span></div>
             <button data-action="unequip" data-id="${id}" data-slot="${slot}">Unequip</button>
         </div>`;
@@ -2116,9 +2204,8 @@ function updateInvPanel() {
         const item = ALL_EQUIPMENT[id];
         if (!item) continue;
         const slot = item.slot;
-        const nameColor = (item.magical || id.startsWith('magic_')) ? '#e040fb' : '#ccc';
         html += `<div class="inv-item">
-            <div><span style="color:${nameColor}">${item.name}</span> <span style="color:#888">(${slot})</span><br>
+            <div><span class="${itemRarityClass(item)}">${item.name}</span> <span style="color:#888">(${slot})</span> ${compareToEquippedHtml(item)}<br>
             <span style="color:#aaa;font-size:11px">${itemStatLine(item)}</span></div>
             <button data-action="equip" data-id="${id}" data-slot="${slot}">Equip</button>
         </div>`;
@@ -2153,6 +2240,36 @@ function updateInvPanel() {
             render();
         });
     });
+}
+
+// Rarity class for an item's name: magical gear stands apart; mundane gear
+// steps up by smith tier.
+function itemRarityClass(item) {
+    if (item.magical) return 'rar-magic';
+    if (item.tier >= 3) return 'rar-fine';
+    if (item.tier === 0) return 'rar-poor';
+    return 'rar-common';
+}
+
+// The numeric stats worth comparing between two pieces of gear in the same slot.
+const COMPARE_STATS = [
+    { key: 'damage', label: 'Dmg' },
+    { key: 'range', label: 'Range' },
+    { key: 'defense', label: 'Def' },
+];
+
+// How an item's numbers differ from what's equipped in its slot, as HTML
+// ("Dmg +2 Range −1"). Empty when the slot is empty or the numbers match.
+function compareToEquippedHtml(item) {
+    const equippedId = player.equipment[item.slot];
+    if (!equippedId || equippedId === item.id) return '';
+    const equipped = ALL_EQUIPMENT[equippedId];
+    return COMPARE_STATS
+        .filter(st => item[st.key] !== undefined && equipped[st.key] !== undefined)
+        .map(st => ({ label: st.label, diff: item[st.key] - equipped[st.key] }))
+        .filter(d => d.diff !== 0)
+        .map(d => `<span class="delta ${d.diff > 0 ? 'up' : 'down'}">${d.label} ${d.diff > 0 ? '+' : '−'}${Math.abs(d.diff)}</span>`)
+        .join(' ');
 }
 
 function itemStatLine(item) {
@@ -2248,9 +2365,8 @@ function itemStatLine(item) {
 // The shop's inspect pane: a fuller readout of one item than its terse row —
 // name, slot, and full effect list — shown when a shop row is clicked.
 function shopItemDetailHtml(item) {
-    const nameColor = item.magical ? '#e040fb' : '#ccc';
-    return `<span class="si-name" style="color:${nameColor}">${item.name}</span>`
-        + ` <span style="color:#888">(${item.slot})</span>`
+    return `<span class="si-name ${itemRarityClass(item)}">${item.name}</span>`
+        + ` <span style="color:#888">(${item.slot})</span> ${compareToEquippedHtml(item)}`
         + `<div class="si-stats">${itemStatLine(item)}</div>`;
 }
 
@@ -2273,7 +2389,10 @@ function anyPanelOpen() {
 
 function updateCollapseBtn() {
     const btn = document.getElementById('btn-collapse');
-    if (btn) btn.textContent = anyPanelOpen() ? '✕' : '☰';
+    if (!btn) return;
+    const open = anyPanelOpen();
+    btn.textContent = open ? '' : '☰';   // open: an up chevron, drawn in CSS
+    btn.classList.toggle('open', open);
 }
 
 // Select a panel: always show it (never toggles off) — pressing S then S stays on Skills.
@@ -2285,7 +2404,7 @@ function showPanel(id) {
     updateCollapseBtn();
 }
 
-// The ☰ / ✕ button is the only hide/show control.
+// The ☰ / chevron button is the only hide/show control.
 function toggleCollapse() {
     if (anyPanelOpen()) closeAllPanels();
     else showPanel(activePanel);
@@ -2496,14 +2615,14 @@ function showHutDialog(poi) {
 
     if (!teachId) {
         showDialog(POI_SYMBOLS[POI.HUT] + " Wise Man's Hut",
-            `<p>An old sage peers at you.</p><p style="color:#a1887f">"I have nothing to teach you at this time."</p>`,
+            `<p><i>An old sage peers at you.</i></p><p style="color:#a1887f">"I have nothing to teach you at this time."</p>`,
             [trainBtn, { label: 'Leave', action: () => { player.mp = 0; } }]);
         return;
     }
 
     const skill = SKILLS[teachId];
     showDialog(POI_SYMBOLS[POI.HUT] + " Wise Man's Hut",
-        `<p>The sage's eyes light up.</p><p style="color:#b388ff">"I can teach you <b>${skill.name}</b>."</p><p class="s-cost">(${skillCostLabel(skill, player)})</p><p class="s-desc">${skill.desc}</p>`,
+        `<p><i>The sage's eyes light up.</i></p><p style="color:#b388ff">"I can teach you <b>${skill.name}</b>."</p>${skillBlurbHtml(skill)}`,
         [{
             label: 'Learn', cls: 'primary', action: () => {
                 learnSkill(teachId);
@@ -2544,9 +2663,8 @@ function pickUpScroll(poi) {
         ? 'You unfurl the scroll the sealed Maw left behind. The way home opens to you. Walk the land as long as you wish; invoke RETURN to tally your journey.'
         : 'You unfurl an ancient scroll. Its knowledge becomes yours.';
     showDialog('\u{1F4DC} ' + skill.name,
-        `<p>${intro}</p>` +
-        `<p class="s-cost">(${skillCostLabel(skill, player)})</p>` +
-        `<p class="s-desc">${skill.desc}</p>` +
+        `<p><i>${intro}</i></p>` +
+        skillBlurbHtml(skill) +
         `<p style="color:#aaa;font-size:12px">Added to your skills. If your hotbar was full, equip it from the Skills panel.</p>`,
         [{ label: 'Continue', cls: 'btn-primary' }]);
 }
@@ -2574,10 +2692,9 @@ function showShopDialog(poi, kind) {
         if (!equip) continue;
         if (owned.has(item.id)) continue;
         if (!smith.itemFilter(equip)) continue;
-        const nameColor = equip.magical ? '#e040fb' : '#ccc';
         const shopPrice = item.price;
         bodyHtml += `<div class="shop-item" data-detail="${item.id}">
-            <div><span style="color:${nameColor}">${item.name}</span><br><span style="color:#aaa;font-size:11px">${itemStatLine(equip)}</span></div>
+            <div><span class="${itemRarityClass(equip)}">${item.name}</span> ${compareToEquippedHtml(equip)}<br><span style="color:#aaa;font-size:11px">${itemStatLine(equip)}</span></div>
             <button data-id="${item.id}" data-price="${shopPrice}" ${player.gold < shopPrice ? 'disabled' : ''}>Buy ${shopPrice}g</button>
         </div>`;
     }
@@ -2613,9 +2730,8 @@ function showShopDialog(poi, kind) {
             if (!item) continue;
             if (!smith.itemFilter(item)) continue;
             const sp = sellPrice(item);
-            const sellColor = item.magical ? '#b388ff' : '#ccc';
             bodyHtml += `<div class="shop-item" data-detail="${id}">
-                <div style="color:${sellColor}">${item.name}</div>
+                <div class="${itemRarityClass(item)}">${item.name}</div>
                 <button data-sell="${id}" data-sell-idx="${i}" data-price="${sp}">Sell ${sp}g</button>
             </div>`;
         }
@@ -2792,6 +2908,12 @@ function skillSummary(skillId) {
     return { score: null, factors };
 }
 
+// A skill introduced in a dialog (sage, scroll): what it does, then its cost as a
+// quiet footnote.
+function skillBlurbHtml(skill) {
+    return `<p class="s-desc">${skill.desc}</p><p class="s-cost">(${skillCostLabel(skill, player)})</p>`;
+}
+
 // The summary as a one-line HTML fragment, shared by both panels. Empty string
 // for untiered skills (their prose desc carries everything).
 function skillSummaryHtml(skillId) {
@@ -2946,7 +3068,7 @@ const RUIN_TIER_BIAS = 2;
 
 function spawnRuinCreatures(poi) {
     if (Object.keys(em.creatureDefs).length === 0) return 0;
-    const occupied = buildOccupiedSet();
+    const occupied = buildOccupiedSet(player, em);   // defined in enemy_ai.js
     const spots = hexesInRange(poi.q, poi.r, 2).filter(h => {
         const hex = world.getHex(h.q, h.r);
         return hex && world.isPassable(hex) && !occupied.has(hexKey(h.q, h.r))
@@ -3026,7 +3148,7 @@ function showRuinLootDialog(poi) {
 function showLevelUpDialog() {
     // Stat allocation
     let body = `<p style="color:#ffc107;font-size:16px">Level ${player.level}!</p>`;
-    body += `<p>Assign ${player.statPoints} stat points:</p>`;
+    body += `<p><i>Assign ${player.statPoints} stat points:</i></p>`;
     const stats = ['might', 'reflex', 'warding', 'vigor'];
     const labels = { might: 'Might', reflex: 'Reflex', warding: 'Warding', vigor: 'Vigor' };
     for (const s of stats) {

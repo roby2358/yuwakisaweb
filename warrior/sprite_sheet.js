@@ -1,6 +1,7 @@
+'use strict';
 // sprite_sheet.js — A fixed-grid sprite sheet with optional color tinting
 
-export class SpriteSheet {
+class SpriteSheet {
     constructor(src, cellW, cellH) {
         this.cellW = cellW;
         this.cellH = cellH;

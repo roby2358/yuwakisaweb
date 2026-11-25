@@ -1,3 +1,4 @@
+'use strict';
 // ColorTheory - Combined color utilities
 // Ported from Scala ColorWheel, Schemes, and Colors
 //
@@ -14,7 +15,7 @@
 //   const [r, g, b] = ColorTheory.hslToRgb(h, s, l);
 //   const hex = ColorTheory.rgbToHex(r, g, b);
 
-export class ColorTheory {
+class ColorTheory {
     // --- ColorWheel ---
 
     static mod1(a) {

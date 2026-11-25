@@ -1,10 +1,11 @@
+'use strict';
 // enemy_ai.js — Per-behavior enemy AI classes and round orchestration.
 //
 // One AI subclass per enemy behavior bucket; aiFor(behavior) picks the AI.
 // Adding a new class of enemy means writing a new AI subclass and adding
-// one entry to BEHAVIOR_AI — no changes to runEnemyPhase needed.
+// one entry to BEHAVIOR_AI — no changes to runEnemyAiPhase needed.
 //
-// The ctx passed to runEnemyPhase must supply (mirrors actions.js pattern):
+// The ctx passed to runEnemyAiPhase must supply (mirrors actions.js pattern):
 //   state (live getters):    player, world, em, victory
 //   predicates (functions):  combatAlerted, isGameOver, playerInForest, playerTerrain
 //   combat math (functions): enemyMeleeAttack, enemyRangedAttack, enemyDefense,
@@ -13,14 +14,6 @@
 //                             logCombat, render, animDelay, tickGarrisons,
 //                             advanceTurn
 
-import { Rando } from './rando.js';
-import { hexKey, hexNeighbors, hexDistance, hexesInRange, bfsHexes } from './hex.js';
-import {
-    ENEMY_TYPE, POI, MOVEMENT_COST,
-    SHATTERED_VERSION, DISTRESSED_VERSION, UNDISTRESSED_VERSION,
-    isChaosTerrain
-} from './config.js';
-import { NUM_CREATURE_TIERS, spawnTierWeights } from './enemies.js';
 
 // ================================================================
 // Maw distance field — owned here because spawn weighting and chaos
@@ -30,7 +23,7 @@ import { NUM_CREATURE_TIERS, spawnTierWeights } from './enemies.js';
 let mawDistances = null;
 let mawMaxDist = 1;
 
-export function computeMawDistances(world) {
+function computeMawDistances(world) {
     const maw = world.pois.find(p => p.type === POI.MAW);
     if (!maw) { mawDistances = new Map(); mawMaxDist = 1; return; }
     const mawHex = world.getHex(maw.q, maw.r);
@@ -46,7 +39,7 @@ export function computeMawDistances(world) {
 
 // Peak creature tier at a hex: ramps linearly from NUM_CREATURE_TIERS-1 at the Maw
 // to 0 at the far edge. Hexes disconnected from the Maw default to peak 0 (easiest).
-export function mawDistancePeak(q, r) {
+function mawDistancePeak(q, r) {
     if (!mawDistances || mawMaxDist <= 0) return 0;
     const dist = mawDistances.get(hexKey(q, r));
     if (dist === undefined) return 0;
@@ -54,7 +47,7 @@ export function mawDistancePeak(q, r) {
     return (NUM_CREATURE_TIERS - 1) * (1 - t);
 }
 
-export function mawProximityBonus(q, r) {
+function mawProximityBonus(q, r) {
     if (!mawDistances) return { attack: 0, defense: 0, hp: 0 };
     const dist = mawDistances.get(hexKey(q, r));
     if (dist === undefined) return { attack: 0, defense: 0, hp: 0 };
@@ -71,7 +64,7 @@ export function mawProximityBonus(q, r) {
 // Spawn picker: closer to the Maw → tougher creatures, packs scale to player attack.
 // Pack size: bellCurve(playerAttack) / creature.attack — strong creatures spawn alone,
 // weak ones swarm.
-export function pickSpawnPack(q, r, player, em) {
+function pickSpawnPack(q, r, player, em) {
     const peak = mawDistancePeak(q, r);
     const type = Rando.weighted(spawnTierWeights(em.creatureDefs, peak));
     const def = em.getDef(type);
@@ -86,7 +79,7 @@ export function pickSpawnPack(q, r, player, em) {
 // Subclasses override takeTurn(enemy, def, occupied, ctx).
 // ================================================================
 
-export class EnemyAI {
+class EnemyAI {
     async takeTurn(enemy, def, occupied, ctx) {
         throw new Error('EnemyAI.takeTurn() not implemented');
     }
@@ -189,7 +182,7 @@ export class EnemyAI {
 // WildlifeAI — see player, run at player; otherwise wander.
 // ================================================================
 
-export class WildlifeAI extends EnemyAI {
+class WildlifeAI extends EnemyAI {
     async takeTurn(enemy, def, occupied, ctx) {
         const aggro = this.forestModifiedAggro(enemy, this.baseAggro(def, ctx), ctx);
         if (await this.tryAggroChase(enemy, def, aggro, occupied, ctx)) return;
@@ -207,7 +200,7 @@ export class WildlifeAI extends EnemyAI {
 // Lurks near a settlement (≤2), hunts within aggro*2, else wanders.
 // ================================================================
 
-export class MonsterAI extends EnemyAI {
+class MonsterAI extends EnemyAI {
     async takeTurn(enemy, def, occupied, ctx) {
         const aggro = this.forestModifiedAggro(enemy, this.baseAggro(def, ctx), ctx);
         if (await this.tryAggroChase(enemy, def, aggro, occupied, ctx)) return;
@@ -236,7 +229,7 @@ export class MonsterAI extends EnemyAI {
 // RuinsGuardianAI — patrols within 2 of a ruin, returns from further out.
 // ================================================================
 
-export class RuinsGuardianAI extends EnemyAI {
+class RuinsGuardianAI extends EnemyAI {
     async takeTurn(enemy, def, occupied, ctx) {
         const aggro = this.forestModifiedAggro(enemy, this.baseAggro(def, ctx), ctx);
         if (await this.tryAggroChase(enemy, def, aggro, occupied, ctx)) return;
@@ -281,7 +274,7 @@ export class RuinsGuardianAI extends EnemyAI {
 // keeping them in one class beats four trivial subclasses.
 // ================================================================
 
-export class ChaosAI extends EnemyAI {
+class ChaosAI extends EnemyAI {
     async takeTurn(enemy, def, occupied, ctx) {
         const { player, world } = ctx;
 
@@ -544,7 +537,7 @@ const BEHAVIOR_AI = {
     'ruins-guardian': ruinsGuardianAI,
 };
 
-export function aiFor(behavior) {
+function aiFor(behavior) {
     return BEHAVIOR_AI[behavior] || chaosAI;
 }
 
@@ -645,7 +638,7 @@ function spawnChaosAtBreaches(occupied, ctx) {
     }
 }
 
-export async function runEnemyPhase(ctx) {
+async function runEnemyAiPhase(ctx) {
     regenPlayerAtPhaseStart(ctx);
     tickBurns(ctx);
 
