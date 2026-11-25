@@ -31,6 +31,10 @@ const mainSheet = new SpriteSheet('sprites.png', 48, 51);
 // Guardian sheet: 5 cols × 2 rows, row 0 = breach guardians, row 1 = Unraveler
 const GSPRITE_COLS = 5;
 const guardianSheet = new SpriteSheet('sprites_guardians.png', 1024 / 5, 412 / 2);
+// Shape-shifters wear a random face from their row of the guardian sheet. A
+// face lasts until that shifter next acts (enemyAiCtx.enemyActing drops it).
+const SHIFTER_ROW = { [ENEMY_TYPE.BREACH_GUARDIAN]: 0, [ENEMY_TYPE.UNRAVELER]: 1 };
+const shifterFaces = new WeakMap();   // enemy -> column on the guardian sheet
 let playerSprite = null;    // { col, row }
 let enemySprites = {};      // { [enemyType]: { col, row } }
 
@@ -212,6 +216,7 @@ const enemyAiCtx = {
         return x >= -HEX_SIZE * 2 && x <= canvas.width + HEX_SIZE * 2 &&
                y >= -HEX_SIZE * 2 && y <= canvas.height + HEX_SIZE * 2;
     },
+    enemyActing: (e) => shifterFaces.delete(e),
     // round bookkeeping
     tickGarrisons: () => tickGarrisons(),
     advanceTurn: () => advanceTurn(),
@@ -1261,6 +1266,11 @@ function endTurn() {
     resolveEndTurn();
 }
 
+function shifterSprite(enemy) {
+    if (!shifterFaces.has(enemy)) shifterFaces.set(enemy, Rando.int(0, GSPRITE_COLS - 1));
+    return { sheet: guardianSheet, col: shifterFaces.get(enemy), row: SHIFTER_ROW[enemy.type] };
+}
+
 async function runEnemyPhase() {
     await runEnemyAiPhase(enemyAiCtx);
 }
@@ -1649,15 +1659,8 @@ function drawScene() {
         const { x, y } = tokenScreenPos(enemy);
         const color = enemyColor(enemy.type);
         const effMaxHp = enemyEffectiveMaxHp(enemy);
-        let sprite = enemySprites[enemy.type];
-        let isGuardianSprite = false;
-        if (enemy.type === ENEMY_TYPE.BREACH_GUARDIAN) {
-            sprite = { sheet: guardianSheet, col: Math.floor(Math.random() * GSPRITE_COLS), row: 0 };
-            isGuardianSprite = true;
-        } else if (enemy.type === ENEMY_TYPE.UNRAVELER) {
-            sprite = { sheet: guardianSheet, col: Math.floor(Math.random() * GSPRITE_COLS), row: 1 };
-            isGuardianSprite = true;
-        }
+        const isGuardianSprite = enemy.type in SHIFTER_ROW;
+        const sprite = isGuardianSprite ? shifterSprite(enemy) : enemySprites[enemy.type];
         const chaosLabelColor = (def.chaosSpawned && enemy.type !== ENEMY_TYPE.PHASE_WRAITH && !isGuardianSprite) ? '#d580ff' : null;
         const spriteTint = (def.chaosSpawned && !isGuardianSprite) ? '#d580ff' : null;
         drawCounter(x, y, color, def.label, enemy.hp / effMaxHp, chaosLabelColor, { atk: enemyMeleeAttack(enemy, def), def: enemyDefense(enemy, def), mov: def.speed || 1 }, sprite, spriteTint);

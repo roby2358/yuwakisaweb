@@ -654,6 +654,7 @@ async function runEnemyAiPhase(ctx) {
             continue;
         }
         enemy.turnsSinceSpawn++;
+        ctx.enemyActing(enemy);
         await aiFor(def.behavior).takeTurn(enemy, def, occupied, ctx);
     }
 
