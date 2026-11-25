@@ -251,7 +251,7 @@ const enemyAiCtx = {
 
 // ---- View state ----
 let panX = 0, panY = 0;
-let panning = false, panStartX = 0, panStartY = 0, panOrigX = 0, panOrigY = 0;
+let panning = false, dragCandidate = false, panStartX = 0, panStartY = 0, panOrigX = 0, panOrigY = 0;
 
 // ---- Canvas ----
 const canvas = document.getElementById('game');
@@ -3162,23 +3162,33 @@ document.getElementById('log-pin-btn').addEventListener('click', toggleLogPin);
 // INPUT HANDLING
 // ================================================================
 
+// A left press stays a click candidate until the pointer moves this many pixels;
+// moving past it turns the gesture into a camera pan.
+const DRAG_THRESHOLD = 4;
+
 canvas.addEventListener('mousedown', e => {
     sound.init();
-    if (e.button === 2) {
-        panning = true;
-        panStartX = e.clientX; panStartY = e.clientY;
-        panOrigX = panX; panOrigY = panY;
-        e.preventDefault();
-        return;
-    }
+    // Right button is cancel-targeting only (see the contextmenu handler). No pan.
+    if (e.button !== 0) return;
 
-    if (e.button === 0 && showingWorldMap) {
+    // Arm a click-or-pan. The click action is deferred to mouseup and only fires
+    // if the press stayed put; a drag past the threshold pans instead.
+    dragCandidate = true;
+    panning = false;
+    panStartX = e.clientX; panStartY = e.clientY;
+    panOrigX = panX; panOrigY = panY;
+    e.preventDefault();
+});
+
+// The stationary-click action. Reached from mouseup only when the press didn't become a pan.
+function handleClick(e) {
+    if (showingWorldMap) {
         showingWorldMap = false;
         render();
         return;
     }
 
-    if (e.button === 0 && !gameOver && phase === 'player') {
+    if (!gameOver && phase === 'player') {
         // Dismiss threat overlay on click
         if (threatOverlay) {
             threatOverlay = null;
@@ -3232,19 +3242,36 @@ canvas.addEventListener('mousedown', e => {
         updateSkillBar();
         checkEndTurn();
     }
-});
+}
 
 canvas.addEventListener('mousemove', e => {
+    if (dragCandidate && !panning) {
+        const dx = e.clientX - panStartX;
+        const dy = e.clientY - panStartY;
+        if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) panning = true;
+    }
     if (panning) {
         panX = panOrigX + (e.clientX - panStartX);
         panY = panOrigY + (e.clientY - panStartY);
         render();
+        return;
     }
-    hoveredHex = screenToHex(e.clientX, e.clientY);
-    updateHUD();
+    const hex = screenToHex(e.clientX, e.clientY);
+    if (hex.q !== hoveredHex?.q || hex.r !== hoveredHex?.r) {
+        hoveredHex = hex;
+        updateHUD();
+    }
 });
 
-canvas.addEventListener('mouseup', e => { if (e.button === 2) panning = false; });
+// On window, not the canvas: a drag released off-canvas must still end.
+window.addEventListener('mouseup', e => {
+    if (e.button !== 0) return;
+    if (!dragCandidate) return;    // press didn't start on the map (e.g. a HUD button)
+    const wasPan = panning;
+    dragCandidate = false;
+    panning = false;
+    if (!wasPan) handleClick(e);
+});
 canvas.addEventListener('contextmenu', e => {
     e.preventDefault();
     if (targeting) { targeting = null; render(); updateSkillBar(); }

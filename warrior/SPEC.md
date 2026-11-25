@@ -47,7 +47,7 @@ Overlay panels slide in from the right when toggled:
 - The world MUST be a rectangular hex grid (60 columns x 40 rows), pointy-top hexes, using axial coordinates
 - Terrain MUST be generated via diamond-square heightmap with the following distribution: 25% water, 50% plains, 10% forest, 10% hills, 1% gold deposits, 2% quarry, 5% mountains
 - Edge hexes MUST be water
-- The map MUST support panning via right-click drag
+- The map MUST support panning via left-button drag (a press that moves past a small threshold pans; one that stays put is a click)
 - The map MUST render terrain with distinct colors per terrain type
 
 ### Fog of War
@@ -289,7 +289,7 @@ Each artifact MUST have: name, and a passive effect.
 - Left-click on the player token MUST select the player and show reachable hexes (yellow highlight)
 - Left-click on a highlighted hex MUST move the player there
 - Left-click on a highlighted hex containing an enemy MUST initiate a melee attack
-- Right-click drag MUST pan the map
+- Left-button drag past a small threshold MUST pan the map; a left press released without crossing it is a click, acted on at release
 - Keyboard shortcut "E" or Space MUST end the current turn
 - Keyboard shortcut "1-4" MUST activate the corresponding equipped skill
 - Keyboard shortcut "C" MUST toggle the Character panel

@@ -67,7 +67,7 @@ When you add a callback or piece of state that actions/AI need, wire it into the
 - `targeting`: `{skill, validHexes: Set}` or null — for skill/ranged target picking
 - `turn`, `gameOver`, `gameWon`, `gameGeneration` (incremented on new game to halt old loops)
 - `combatAlerted`, `threatOverlay`, `showingWorldMap` — combat/overlay UI flags
-- `hoveredHex`, `panX/Y`, `panning`, `panStartX/Y`, `panOrigX/Y` — UI/input state
+- `hoveredHex`, `panX/Y`, `panning`, `dragCandidate`, `panStartX/Y`, `panOrigX/Y` — UI/input state (left-drag past `DRAG_THRESHOLD` pans; clicks act on mouseup via `handleClick`)
 - `endTurnResolve` — promise resolver used by the async enemy phase
 - `actionCtx`, `enemyAiCtx` — the injection objects described above
 
