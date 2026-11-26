@@ -314,13 +314,6 @@ Updated: 2026-11-26T20:20:04Z
 
 Core scrolls teach at any level, so every player can pick up Spirit Walk (normally level 6) and Renew/Retrain (level 4) at level 1 from the scrolls near the start. The 12-50 hex spread is the only gate. Watch in playtest; if it is too fast, a scroll could hold its skill until the player reaches its level.
 ----
-Score:   40
-ID: dodgestack-g2dm
-Created: 2026-11-26T22:59:38Z
-Updated: 2026-11-26T22:59:38Z
-
-Should several dodge_bonus items stack? Player.dodge() reads equipped('dodge_bonus'), so only the first equipped item with dodge counts, while vigor_bonus and most other bonuses use sumEquipped and stack. Stacking would let a dodge build reach MAX_DODGE through gear; keeping first-only keeps dodge armor a single-slot choice. Decide whether this is intended.
-----
 Score:   35
 ID: renew-dialog-rk9x
 Created: 2026-11-26T17:50:03Z
@@ -391,6 +384,13 @@ Created: 2026-11-26T20:54:41Z
 Updated: 2026-11-26T21:26:14Z
 
 (Done) Large parts of SPEC.md are still the original design: the skill list table (levels, costs, starting with Void Strike), the weapon/armor/artifact tables, enemy types and spawning numbers, gold sources (no gold terrain any more; prize gold is 10-20), the "2+ breaches closed before the Maw" rule (no check for it in the code), the victory and Maw interaction lines, and Haven Shop "3-5 items". These need a section rewrite, not line fixes. First decide whether SPEC.md should keep exact tuning numbers at all, or state the rules and point to config.js and DYNAMICS.md for numbers so it stops going stale.
+----
+Score:   40
+ID: dodgestack-g2dm
+Created: 2026-11-26T22:59:38Z
+Updated: 2026-11-26T23:28:35Z
+
+(Done) Should several dodge_bonus items stack? Player.dodge() reads equipped('dodge_bonus'), so only the first equipped item with dodge counts, while vigor_bonus and most other bonuses use sumEquipped and stack. Stacking would let a dodge build reach MAX_DODGE through gear; keeping first-only keeps dodge armor a single-slot choice. Decide whether this is intended.
 ----
 Score:   40
 ID: orphan-specs-d3zs

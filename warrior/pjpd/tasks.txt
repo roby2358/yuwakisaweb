@@ -1,13 +1,31 @@
+Priority:   55
+Status: ToDo
+ID: dodgestack-xjsk
+Created: 2026-11-26T23:28:35Z
+Updated: 2026-11-26T23:28:35Z
+
+Dodge bonuses from several items add up, capped at 90%.
+
+Goal: Player.dodge() in player.js reads equipped('dodge_bonus'), so only the first equipped item with a dodge bonus counts, while vigor_bonus and most other bonuses add up via sumEquipped. The designer wants every equipped dodge_bonus to count. The cap stays MAX_DODGE (90 in config.js), so there is always at least a 10% chance to be hit.
+
+Settled design: dodge = 2 × effectiveVigor() + sumEquipped('dodge_bonus', 'dodgeBonus'), then Math.min with MAX_DODGE, as now. Don't change MAX_DODGE or any item's dodgeBonus value. The character panel's dodge line already calls player.dodge(). Docs: ONTOLOGY.md player-damage rule's dodge comment says dodge_bonus sums across equipped items; DYNAMICS.md's two dodge lines say the same; add a decision to RATIONALE.md (dodge bonuses stack, MAX_DODGE keeps a 10% floor on being hit; alternative was first-item-only, which made dodge a single-slot choice) and an ARCHITECTURE_LOG.md entry. No save-shape change.
+
+Done when: node test/*.js pass; Player.dodge() uses sumEquipped for dodge_bonus and still caps at MAX_DODGE; docs match.
+----
 Priority:   50
 Status: ToDo
 ID: dodgerando-yuz7
 Created: 2026-11-26T22:59:38Z
-Updated: 2026-11-26T22:59:38Z
+Updated: 2026-11-26T23:28:35Z
 
-The dodge roll uses Math.random instead of Rando.
+All randomness goes through Rando; no direct Math.random() calls outside rando.js.
 
-Goal: index.js (~line 663, where an enemy attack checks the player's dodge) rolls with Math.random(), which breaks the project rule that all randomness goes through Rando.
+Goal: CLAUDE.md says all randomness goes through Rando, but loaded code still calls Math.random() directly: gameplay rolls in index.js (the dodge roll and the percent roll just above it in the player-damage path), enemy_ai.js (enemy teleport chance and two fixed-chance rolls), map generation in world.js, the creature palette in enemies.js (ColorTheory.randomScheme(() => Math.random())), and the noise buffer in sound.js. Rando has no seed today, so behaviour doesn't change; the point is one source of randomness.
 
-Settled design: replace the Math.random() call with the equivalent Rando call (a percent roll against player.dodge(), same odds as now). Grep index.js, actions.js and enemy_ai.js for any other Math.random() in gameplay code and switch those too; leave purely cosmetic uses (particle jitter, sound) alone if any exist, and say which you left.
+Settled design:
+- Replace every Math.random() in loaded files (everything index.html includes) with the matching Rando method: percent rolls "Math.random() * 100 < p" become Rando.bool(p / 100); "Math.random() < c" becomes Rando.bool(c); continuous values become Rando's float range method (check rando.js for its name); a function passed as an RNG becomes a Rando-backed function.
+- rando.js itself keeps Math.random() (it is the one source). Leave the unloaded files (terrain.js, renderer.js, origitems.js) and the commented example in colortheory.js alone.
+- Keep each roll's odds exactly as they are now, including any fallback chance already in the code.
+- If a Math.random() runs in a file that loads before rando.js, move the call or confirm load order in index.html so Rando is defined when it runs.
 
-Done when: node test/*.js pass; the dodge roll goes through Rando.
+Done when: node test/*.js pass; grep -n "Math.random" over the files index.html loads finds hits only in rando.js (and the colortheory.js comment).
