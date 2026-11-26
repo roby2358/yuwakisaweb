@@ -2,6 +2,10 @@
 // world.js — GameWorld: hex grid, POIs, fog of war
 
 
+// Wise Man's Huts per map: one per dealt hut skill (SkillLibrary.deal gives
+// each a distinct learnable optional skill).
+const HUT_COUNT = 12;
+
 const SPECIAL_TERRAINS = new Set([
     TERRAIN.SPECIAL_PLAINS, TERRAIN.SPECIAL_FOREST, TERRAIN.SPECIAL_HILLS
 ]);
@@ -224,8 +228,8 @@ class GameWorld {
                 if (type === POI.RUIN) { poi.ruinState = 'new'; hex.terrain = TERRAIN.RUINS; }
                 if (type === POI.BREACH) { poi.closed = false; poi.guardianId = null; hex.terrain = TERRAIN.BREACH; }
                 if (type === POI.MAW) { poi.closed = false; poi.guardianId = null; hex.terrain = TERRAIN.MAW; }
-                // HUT skills are assigned later by SkillLibrary.deal (a non-binding
-                // learnable optional skill), so the world doesn't pick one here.
+                // HUT skills are assigned later by SkillLibrary.deal (a distinct
+                // learnable optional skill each), so the world doesn't pick one here.
                 self.pois.push(poi);
                 placed++;
             }
@@ -239,7 +243,7 @@ class GameWorld {
         // Breaches must be reachable from the Maw — otherwise the player
         // can never close them and they waste an encounter slot.
         place(POI.BREACH, Rando.int(6, 8), false, this.mawDistanceMap());
-        place(POI.HUT, Rando.int(8, 12), false);
+        place(POI.HUT, HUT_COUNT, false);
     }
 
     // Every prize hex (special terrain, not claimed by a POI) holds one reward,

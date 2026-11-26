@@ -1476,33 +1476,27 @@ function initGame() {
         || settlements[0] || world.pois[0];
 
     // Drop the map scrolls now that the start is known. One scroll per core
-    // skill lies near the start (Channel Aether's nearest); FAR_SCROLL_SKILLS
-    // story scrolls hide in the half too far from the Maw to earn a proximity
-    // bonus. All must be reachable on foot. The story scrolls are placed empty
-    // (poi.skill === null) and the SkillLibrary deals one skill to each.
+    // skill lies near the start (Channel Aether's nearest); STORY_SCROLL_SKILLS
+    // story scrolls are scattered anywhere on the map. All must be reachable on
+    // foot. The story scrolls are placed empty (poi.skill === null) and the
+    // SkillLibrary deals one skill to each.
     skillLibrary = new SkillLibrary();
     skillLibrary.placeCoreScrolls(world, startHaven.q, startHaven.r);
-    const farScrolls = [];
-    if (mawDists) {
-        let mawMax = 1;
-        for (const c of mawDists.values()) if (c > mawMax) mawMax = c;
-        const farThreshold = mawMax * 0.5;
-        const farPred = h => (mawDists.get(hexKey(h.q, h.r)) ?? 0) > farThreshold;
-        for (let i = 0; i < FAR_SCROLL_SKILLS; i++) {
-            const scroll = world.placeScroll(null, startHaven.q, startHaven.r, farPred);
-            if (scroll) farScrolls.push(scroll);
-        }
+    const storyScrolls = [];
+    for (let i = 0; i < STORY_SCROLL_SKILLS; i++) {
+        const scroll = world.placeScroll(null, startHaven.q, startHaven.r, () => true);
+        if (scroll) storyScrolls.push(scroll);
     }
 
     player = new Player(startHaven.q, startHaven.r);
 
     // Deal this run's skill groups: optional skills are split into held out,
-    // far-scroll and learnable; the Wise Men get non-binding learnable skills.
+    // story-scroll and learnable; each Wise Man gets a distinct learnable skill.
     const huts = world.pois.filter(p => p.type === POI.HUT);
-    skillLibrary.deal(farScrolls, huts, player.learnedSkills);
+    skillLibrary.deal(storyScrolls, huts, player.learnedSkills);
     // A scroll is never blank: should fewer optional skills appear than there
-    // are far scrolls (not expected), the unfilled ones are removed.
-    for (const scroll of farScrolls) if (scroll.skill === null) world.removePoi(scroll);
+    // are story scrolls (not expected), the unfilled ones are removed.
+    for (const scroll of storyScrolls) if (scroll.skill === null) world.removePoi(scroll);
 
     refreshVision();
     computeMawDistances(world);

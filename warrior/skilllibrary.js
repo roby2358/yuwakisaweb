@@ -14,19 +14,23 @@
 //                dropped scroll), and the starting skill the player already knows.
 //   - optional : every other skill. Each run deals them: SKILL_HELD_OUT_FRACTION
 //                (rounded down) are held out and can't be obtained by any channel;
-//                of the rest, FAR_SCROLL_SKILLS are bound to far story scrolls
-//                (taken) and the remainder are learnable.
+//                of the rest, STORY_SCROLL_SKILLS are bound to story scrolls
+//                scattered over the map (taken) and the remainder are learnable.
+//                Each of the HUT_COUNT Wise Man's Huts is dealt a distinct
+//                learnable skill, so with 36 optional skills (18 appearing, 6 on
+//                scrolls) every skill in play sits somewhere on the map.
 //
 // The dynamic channel (Skill Seek) draws from poolSkills: the obtainable
 // skills (optional, unlearned, not taken, not held out) within the player's
 // level. Each Wise Man's Hut's standing assignment is dealt from the obtainable
-// skills, and its HUT_REROLL_CHANCE rerolls draw from them too, any level, so
-// huts and Skill Seek only ever give optional skills. taken and heldOut are the
+// skills (distinct while they last), and its HUT_REROLL_CHANCE rerolls draw
+// from them too, any level, so huts and Skill Seek only ever give optional
+// skills. taken and heldOut are the
 // per-run state that persists; everything else derives from SKILLS and the
 // learned set.
 
 const SKILL_HELD_OUT_FRACTION = 0.5;
-const FAR_SCROLL_SKILLS = 6;
+const STORY_SCROLL_SKILLS = 6;
 const CHANNEL_SCROLL_RADIUS = 11;
 const NEAR_CORE_SCROLL_RADIUS = 50;   // half the 100-wide map
 // The core skills whose scrolls lie past Channel Aether's.
@@ -62,20 +66,25 @@ class SkillLibrary {
 
     // One-time partition at new game. Shuffles the optional skills the player
     // doesn't know yet: the back part is held out, the front part appears. The
-    // first FAR_SCROLL_SKILLS appearing skills go to `farScrolls` (marked taken);
-    // a scroll left unfilled (fewer appearing skills than scrolls) keeps
-    // poi.skill === null, and the caller removes it. `huts` each get a
-    // non-binding display skill from the learnable optional skills (repeats OK).
-    deal(farScrolls, huts, learned) {
+    // first STORY_SCROLL_SKILLS appearing skills go to `storyScrolls` (marked
+    // taken); a scroll left unfilled (fewer appearing skills than scrolls) keeps
+    // poi.skill === null, and the caller removes it. `huts` get the learnable
+    // optional skills, shuffled and handed out in order, so each hut's skill is
+    // distinct; spare huts (more huts than learnable skills) get a random repeat
+    // (null if none is learnable), and extra skills stay learnable through Skill
+    // Seek and hut rerolls.
+    deal(storyScrolls, huts, learned) {
         const optional = Rando.shuffle(Object.values(SKILLS)
             .filter(s => this.isOptional(s) && !learned.has(s.id)).map(s => s.id));
         const appearing = optional.length - Math.floor(optional.length * SKILL_HELD_OUT_FRACTION);
         this.heldOut = new Set(optional.slice(appearing));
-        const dealt = optional.slice(0, Math.min(FAR_SCROLL_SKILLS, appearing, farScrolls.length));
+        const dealt = optional.slice(0, Math.min(STORY_SCROLL_SKILLS, appearing, storyScrolls.length));
         this.taken = new Set(dealt);
-        dealt.forEach((id, i) => { farScrolls[i].skill = id; });
-        const pool = this.obtainable(learned);
-        for (const hut of huts) hut.skill = pool.length ? Rando.choice(pool).id : null;
+        dealt.forEach((id, i) => { storyScrolls[i].skill = id; });
+        const pool = Rando.shuffle(this.obtainable(learned).map(s => s.id));
+        huts.forEach((hut, i) => {
+            hut.skill = i < pool.length ? pool[i] : Rando.choice(pool);
+        });
     }
 
     // Places one scroll per core skill, reachable on foot from (q, r): Channel

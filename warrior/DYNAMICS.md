@@ -24,7 +24,7 @@ Breaches bleed chaos into the world continuously, spawning twisted creatures (15
 Yellow hexes show where you can go. Red hexes show what you can attack. Blue hexes show targeting range. Counter stats (attack bottom-left, defense bottom-right) tell you exactly what you're facing. Enemy detection ranges, HP bars, and type labels are all visible, and ranged enemies carry an amber arrow badge in the token's top-right corner so ranged threats read without hovering. The counter label turns dark during player phase and gold-tinted during enemy phase — a glanceable indicator of whose turn it is. The R button on the skill bar makes ranged attacks discoverable. Skill usage categories (pristine/non-combat/anytime) are reflected in the skill bar — grayed out when conditions aren't met. Ground Weeps provides a full-map threat heatmap for strategic planning.
 
 ### Variable Reinforcement
-Map generation (diamond-square heightmap), enemy placement, loot tables, skill unlock choices — every game is different. Half the optional skills are held out each run (see Skill Groups) and only 3 are offered per successful Skill Seek (pick 1), so the player builds a different character each run. Wise Man huts (8-12 per map) add another source of skill discovery: each hut teaches optional skills (5% chance the hut's skill refreshes per visit, and an independent 5% chance the sage hands over a magic item instead of a lesson). The procedurally generated equipment means upgrade paths vary dramatically. Prospect's 20% gold discovery chance and Skill Seek's level-scaled gamble add controlled variance to non-combat play.
+Map generation (diamond-square heightmap), enemy placement, loot tables, skill unlock choices — every game is different. Half the optional skills are held out each run (see Skill Groups) and only 3 are offered per successful Skill Seek (pick 1), so the player builds a different character each run. Wise Man huts (12 per map) add another source of skill discovery: each hut starts with its own distinct optional skill and keeps teaching (5% chance the hut's skill refreshes per visit, and an independent 5% chance the sage hands over a magic item instead of a lesson). The procedurally generated equipment means upgrade paths vary dramatically. Prospect's 20% gold discovery chance and Skill Seek's level-scaled gamble add controlled variance to non-combat play.
 
 ### Near-Miss Architecture
 The polynomial XP curve and breach escalation create a natural tension point around levels 5-7. You're strong enough to challenge breaches but not strong enough to be comfortable. The Maw requires 2 closed breaches, which means at least 2 guardian fights. If you're under-leveled when you attempt the Maw, you'll *almost* win — close enough to see how, which drives the "one more game" loop.
@@ -157,7 +157,7 @@ Enemies can accumulate state from player attacks:
 | Ruin | 12-20 | ⛫ | — | Lootable once: 1-3 non-magical items + 1 magical item + 5-20 gold. Spawns 1-3 enemies (50/50 Void Stalker or Flux Archer). |
 | Breach | 6-8 | ֍ | — | Open breaches spawn enemies (15%/turn). Sealable after guardian defeated. |
 | Maw | 1 | ✸ | — | Final objective. Placed preferentially rightward. Requires 2 sealed breaches + Unraveler defeated. |
-| Hut | 8-12 | ⌂ | — | Wise Man's Hut. Teaches its assigned learnable optional skill; once that is known, 5% chance per visit it digs up a new unlearned optional one (never core or held out). No limit on how many skills a hut teaches. Separately, 5% chance per visit the sage gives a random magic item instead of that visit's lesson; the lesson waits for the next visit. |
+| Hut | 12 | ⌂ | — | Wise Man's Hut. Teaches its assigned learnable optional skill (no two huts share one); once that is known, 5% chance per visit it digs up a new unlearned optional one (never core or held out). No limit on how many skills a hut teaches. Separately, 5% chance per visit the sage gives a random magic item instead of that visit's lesson; the lesson waits for the next visit. |
 
 ### Haven Shop
 - Stocks 2-3 magical + 2-3 non-magical items (4-6 total)
@@ -232,15 +232,15 @@ Armor can also roll any artifact effect (from the combined armor + artifact pool
 - **Haven shops**: 2-3 magical + 2-3 non-magical items
 - **Sell price**: 40% of buy price
 
-## Skills (33)
+## Skills (46)
 
-Skills have three states: **learned** (in player's pool), **available** (meets level requirement, not yet learned), or **unlearned** (level too low). Restore is learned at start. Levelling up grants a Skill Point, never a skill; a successful Skill Seek lets the player pick 1 of 3 random available skills to learn. Learned skills can be freely equipped/unequipped into 4 active slots via the Skills panel. Wise Man huts (8-12 per map) scattered across the map can also teach skills.
+Skills have three states: **learned** (in player's pool), **available** (meets level requirement, not yet learned), or **unlearned** (level too low). Restore is learned at start. Levelling up grants a Skill Point, never a skill; a successful Skill Seek lets the player pick 1 of 3 random available skills to learn. Learned skills can be freely equipped/unequipped into 4 active slots via the Skills panel. Wise Man huts (12 per map) scattered across the map can also teach skills.
 
 ### Skill Groups
 Each run deals the skills differently, so every game has its own flavor (SkillLibrary in `skilllibrary.js`):
 - **Core** (`core: true`): Channel Aether, Spirit Walk, Mountain Skip, Water Skip (a screwy map can always be crossed) and Renew, Retrain (the meta skills). Never held out or dealt; each rides exactly one scroll near the start haven, and that scroll is the only way to learn it, so the player walks for the core kit. Channel Aether's scroll is always the nearest (within 11 hexes); the other five lie past it, within 50 hexes (half the map).
 - **Fixed**: RETURN comes only from the scroll the Maw leaves, Commune and Commission Garrison only from the Magicsmith, and Restore is the starting skill.
-- **Optional**: every other skill. Half (rounded down) are held out and can't be obtained by any channel this run; the player is not told which. Of the half that appears, 6 are bound to far story scrolls (one each, in the half of the map far from the Maw; every scroll carries a skill, none is blank) and the rest are learnable via Skill Seek and Wise Man huts. Huts and Skill Seek only ever give optional skills. Phase Step, Mending Light and Skill Seek are optional on purpose: survival skills are earned, and a run without Skill Seek means finding skills or camping huts.
+- **Optional**: every other skill. Half (rounded down) are held out and can't be obtained by any channel this run; the player is not told which. Of the half that appears (18 of 36), 6 are bound to story scrolls (one each, scattered anywhere on the map reachable on foot; every scroll carries a skill, none is blank) and the other 12 are learnable via Skill Seek and Wise Man huts, one per hut, so every skill in play this run sits somewhere on the map. Huts and Skill Seek only ever give optional skills. Phase Step, Mending Light and Skill Seek are optional on purpose: survival skills are earned, and a run without Skill Seek means finding skills or camping huts.
 
 ### Skill Usage Categories
 Each skill has a usage restriction that determines when it can be activated:
