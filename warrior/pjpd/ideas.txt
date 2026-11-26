@@ -230,6 +230,13 @@ Updated: 2026-11-26T17:42:48Z
 
 Prize scrolls (the empty scrolls world-gen places on special terrain) now always grant a Skill Point, because only the far story scrolls get skills from the per-run deal. Should a prize scroll instead carry a learnable optional skill, non-binding like a hut offer?
 ----
+Score:   35
+ID: renew-dialog-rk9x
+Created: 2026-11-26T17:50:03Z
+Updated: 2026-11-26T17:50:03Z
+
+Renew (respec) refunds stat points through the "Level Up!" dialog, so that title shows when the player has not levelled. A separate "Assign stat points" dialog might read better.
+----
 Score:   75
 ID: skill-groups-j5xe
 Created: 2026-11-26T16:44:43Z

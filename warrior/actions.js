@@ -1278,7 +1278,7 @@ function executeRespec(action) {
     player.hp = Math.min(player.hp, player.maxHP());
     player.aether = Math.min(player.aether, player.maxAether());
     logCombat(`Renew: ${refund} stat points refunded.`, 'log-info');
-    setTimeout(() => showLevelUpDialog(), 100);
+    setTimeout(() => showLevelUpDialog(0), 100);
 }
 
 // Open the Train panel anywhere, mirroring the haven training flow. The dialog's

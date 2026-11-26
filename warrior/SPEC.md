@@ -149,15 +149,15 @@ All enemies MUST have: name, HP, attack damage, defense, movement speed (hexes p
 
 - The player MUST have 4 active skill slots
 - Skills MUST cost Aether to use
-- The player MUST start with 1 skill (Restore) and gain access to new skills at levels 2, 4, 6, 8, and 10
-- At each skill-unlock level, the player MUST choose one skill from up to three randomly offered options drawn from the level-up pool (see Skill Groups)
+- The player MUST start with 1 skill (Restore); new skills MUST come only from places and actions (Wise Man huts, Skill Seek, scrolls), never from levelling up
+- When Skill Seek succeeds, the player MUST choose one skill from up to three randomly offered options drawn from the Skill Seek pool (see Skill Groups)
 
 #### Skill Groups
 - Every skill MUST belong to one group: core (`core: true`: Spirit Walk, Mountain Skip, Water Skip, Renew, Retrain), fixed (scroll-only Channel Aether and RETURN, shop-only Commune and Commission Garrison, the starting skill Restore), or optional (all others)
-- Core skills MUST always be obtainable by level-up or Skill Seek and MUST never be bound to a scroll or held out; each run MUST shuffle them and place non-binding scrolls for the last 3 within 25 hexes of the start haven
+- Core skills MUST always be obtainable by Skill Seek or Wise Man huts and MUST never be bound to a scroll or held out; each run MUST shuffle them and place non-binding scrolls for the last 3 within 25 hexes of the start haven
 - At new game, half the optional skills (rounded down) MUST be held out: no channel may grant them that run, and the game MUST NOT tell the player which
 - Of the appearing optional skills, 6 MUST be bound to far story scrolls (10 empty scrolls placed in the half of the map far from the Maw; the rest, and prize scrolls, become Skill-Point scrolls at pickup); the remainder are learnable
-- Level-up and Skill Seek MUST draw from unlearned skills that are not shop-only, not scroll-bound, not held out, and within level; each Wise Man hut MUST give one core lesson (the first core skill in the run's core order the player lacks), then teach its assigned learnable optional skill; its 5% per-visit reroll MAY also dig up an unlearned core skill, never a held-out, shop-only or scroll-bound one
+- Skill Seek MUST draw from unlearned skills that are not shop-only, not scroll-bound, not held out, and within level; each Wise Man hut MUST give one core lesson (the first core skill in the run's core order the player lacks), then teach its assigned learnable optional skill; its 5% per-visit reroll MAY also dig up an unlearned core skill, never a held-out, shop-only or scroll-bound one
 - The held-out set, scroll-bound set and core order MUST persist in the save, as MUST each hut's assigned skill and whether it has given its core lesson
 
 #### Skill List
@@ -191,6 +191,7 @@ All enemies MUST have: name, HP, attack damage, defense, movement speed (hexes p
   - Level 9: 1900 XP
   - Level 10: 2390 XP
 - Each level-up MUST grant 3 stat points to distribute freely
+- Each level-up MUST grant 1 Skill Point (nothing extra if Skill Points are already at their cap) and MUST NOT grant or offer a skill
 - Each level-up MUST fully restore HP and Aether
 - A level-up notification MUST appear prominently, and stat allocation MUST happen before the player can continue
 
@@ -275,7 +276,7 @@ Each artifact MUST have: name, and a passive effect.
 - MUST display all 4 skill slots with equipped skills
 - Each skill MUST show: name, Aether cost, effect description, and cooldown state
 - Unoccupied slots MUST be clearly indicated
-- When a skill unlock is available, MUST present the two skill options for selection
+- When Skill Seek succeeds, MUST present the offered skill options (up to three) for selection
 
 ### Inventory Panel
 

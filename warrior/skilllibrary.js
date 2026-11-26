@@ -14,7 +14,7 @@
 //                of the rest, FAR_SCROLL_SKILLS are bound to far story scrolls
 //                (taken) and the remainder are learnable.
 //
-// The dynamic channels (level-up, Skill Seek) draw from poolSkills: unlearned
+// The dynamic channel (Skill Seek) draws from poolSkills: unlearned
 // skills that are not shop, not taken, not held out. Each Wise Man's Hut gives
 // one core lesson (firstUnlearnedCore, front of coreOrder); its standing
 // assignment is dealt from the learnable optional skills, and its 5% rerolls
@@ -38,7 +38,7 @@ class SkillLibrary {
     isHeldOut(id) { return this.heldOut.has(id); }
     isOptional(s) { return !s.core && !s.shopOnly && !s.scrollOnly; }
 
-    // Skills level-up and Skill Seek may grant: not shop-only, not scroll-taken,
+    // Skills Skill Seek may grant: not shop-only, not scroll-taken,
     // not held out, not learned, and within the player's level. Includes
     // unlearned core skills.
     poolSkills(learned, level) {

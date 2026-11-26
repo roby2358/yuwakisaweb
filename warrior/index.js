@@ -173,7 +173,7 @@ const actionCtx = {
     showDialog: (...a) => showDialog(...a),
     showOnceDialog: (...a) => showOnceDialog(...a),
     showSkillChoiceDialog: () => showSkillChoiceDialog(),
-    showLevelUpDialog: () => showLevelUpDialog(),
+    showLevelUpDialog: (spGained) => showLevelUpDialog(spGained),
     invokeSanctuary: () => invokeSanctuary(),
     showTrainDialog: () => showTrainDialog(),
     // selection / movement
@@ -861,12 +861,12 @@ function gainXP(amount) {
         player.aether = player.maxAether();
         player.statPoints += STAT_POINTS_PER_LEVEL;
         logCombat(`LEVEL UP! Now level ${player.level}`, 'log-info');
-        // Check skill unlock
-        if (SKILL_UNLOCK_LEVELS.includes(player.level)) {
-            player.pendingSkillChoice = true;
-        }
+        // Skills come only from places and actions; levelling grants a Skill
+        // Point (nothing extra when SP is already capped).
+        const spGained = player.gainSP(1);
+        if (spGained > 0) logCombat(`+${spGained} Skill Point`, 'log-info');
         // Show level-up dialog after a short delay
-        setTimeout(() => showLevelUpDialog(), 300);
+        setTimeout(() => showLevelUpDialog(spGained), 300);
     }
 }
 
@@ -3163,9 +3163,11 @@ function showRuinLootDialog(poi) {
     }}]);
 }
 
-function showLevelUpDialog() {
+// spGained: Skill Points the level-up granted (0 for Renew's stat refund, or at the SP cap).
+function showLevelUpDialog(spGained) {
     // Stat allocation
     let body = `<p style="color:#ffc107;font-size:16px">Level ${player.level}!</p>`;
+    if (spGained > 0) body += `<p style="color:#ffc107">+${spGained} Skill Point</p>`;
     body += `<p><i>Assign ${player.statPoints} stat points:</i></p>`;
     const stats = ['might', 'reflex', 'warding', 'vigor'];
     const labels = { might: 'Might', reflex: 'Reflex', warding: 'Warding', vigor: 'Vigor' };
@@ -3175,13 +3177,7 @@ function showLevelUpDialog() {
     }
     body += `<div id="alloc-remaining" style="margin-top:8px;color:#ffc107">Remaining: ${player.statPoints}</div>`;
 
-    const buttons = [{ label: 'Done', cls: 'primary', action: () => {
-        if (player.pendingSkillChoice) {
-            setTimeout(() => showSkillChoiceDialog(), 100);
-        }
-    }}];
-
-    showDialog('Level Up!', body, buttons);
+    showDialog('Level Up!', body, [{ label: 'Done', cls: 'primary' }]);
 
     // Wire up allocation buttons
     const dialogBody = document.getElementById('dialog-body');

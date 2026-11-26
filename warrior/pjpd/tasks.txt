@@ -1,17 +1,3 @@
-Priority:   60
-Status: ToDo
-ID: levelup-sp-z5fp
-Created: 2026-11-26T16:57:48Z
-Updated: 2026-11-26T16:57:48Z
-
-Level-up grants 1 Skill Point instead of a skill choice.
-
-Goal: skills should come only from places and actions (Wise Man's Huts, Skill Seek, scrolls), so the small per-run learnable pool is not drained by levelling.
-
-Settled design (index.js): where levelling up currently sets player.pendingSkillChoice = true (near the level-up XP handling), call player.gainSP(1) instead. If Skill Points are already capped, nothing extra is given (no XP fallback at level-up). Show the gain in the Level Up dialog next to the stat points (e.g. "+1 Skill Point") and in the combat log. The 3 stat points and the full HP/Aether restore are unchanged. Skill Seek keeps using pendingSkillChoice and showSkillChoiceDialog exactly as now, so keep those. Remove any level-up-only code that becomes dead.
-
-Done when: node test/scripts.js and node test/fx.js pass; no code path from levelling up opens the "New Skill!" dialog; Skill Seek still does; SPEC.md's level-up requirements (the "Each level-up MUST..." lines) and DYNAMICS.md say level-up grants 1 Skill Point and no skill.
-----
 Priority:   59
 Status: ToDo
 ID: hut-gift-rers

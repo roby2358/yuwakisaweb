@@ -935,9 +935,6 @@ const SKILLS = {
     }
 };
 
-// Levels at which skill choices are offered
-const SKILL_UNLOCK_LEVELS = [2, 4, 6, 8, 10];
-
 // A tiered skill carries `scales` (the axis field names) and `tiers` (one tuple
 // per rank, 1..SKILL_MAX_RANK). Rank R reads tiers[R-1], whose values are zipped
 // onto the named axes. "Just do it" skills carry neither and never scale.
