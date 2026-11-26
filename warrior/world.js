@@ -225,7 +225,7 @@ class GameWorld {
                 if (type === POI.BREACH) { poi.closed = false; poi.guardianId = null; hex.terrain = TERRAIN.BREACH; }
                 if (type === POI.MAW) { poi.closed = false; poi.guardianId = null; hex.terrain = TERRAIN.MAW; }
                 // HUT skills are assigned later by SkillLibrary.deal (a non-binding
-                // pool skill), so the world doesn't pick one here.
+                // learnable optional skill), so the world doesn't pick one here.
                 self.pois.push(poi);
                 placed++;
             }
@@ -256,7 +256,8 @@ class GameWorld {
         for (const hex of hexes) Rando.weighted(prizes)(hex);
     }
 
-    // Prize scrolls are placed empty; SkillLibrary.deal assigns each a distinct skill.
+    // Prize scrolls are placed empty and stay so: SkillLibrary.deal only fills the
+    // far story scrolls, so a prize scroll becomes a Skill-Point scroll at pickup.
     _placeScrollPrize(hex) {
         this._makeScroll(null, hex);
     }

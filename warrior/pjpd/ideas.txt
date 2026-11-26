@@ -223,6 +223,13 @@ SKILLS:
 
 SCALING: both HP cost AND skill effect increase with skill level/rank (more invested = bigger spend = bigger payoff).
 ----
+Score:   40
+ID: prize-scroll-esnu
+Created: 2026-11-26T17:42:48Z
+Updated: 2026-11-26T17:42:48Z
+
+Prize scrolls (the empty scrolls world-gen places on special terrain) now always grant a Skill Point, because only the far story scrolls get skills from the per-run deal. Should a prize scroll instead carry a learnable optional skill, non-binding like a hut offer?
+----
 Score:   75
 ID: skill-groups-j5xe
 Created: 2026-11-26T16:44:43Z

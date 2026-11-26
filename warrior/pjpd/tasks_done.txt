@@ -34,6 +34,30 @@ Updated: 2026-04-26T21:49:42Z
 
 When the player tries to Restore the Maw but the Unraveler is still alive, show a dialog saying the Unraveler must be defeated first before the Maw can be sealed. Only show this dialog once, because the player will have to Restore multiple times.
 ----
+Priority:   62
+Status: Done
+ID: skill-groups-tikw
+Created: 2026-11-26T16:57:48Z
+Updated: 2026-11-26T17:43:10Z
+
+Skill groups: a guaranteed core plus a per-run mix of optional skills, half of them held out, so each game has its own flavor.
+
+Goal: today (skilllibrary.js, new-game setup in index.js near the placeScroll calls) the 10 far story scrolls each claim a random skill, every other skill is in the shared pool, and Renew/Retrain are scrollOnly on far scrolls. Change SkillLibrary so skills fall into groups and each run deals them differently.
+
+Settled design:
+- Core skills (mark with `core: true` in the SKILLS table in config.js): spirit_walk, mountain_skip, water_skip (so a screwy map can always be crossed) and respec (Renew), retrain (the meta skills). Exactly these five. Remove `scrollOnly` from respec and retrain. Phase Step, Mending Light and Skill Seek are deliberately NOT core: survival skills are earned, and Skill Seek is an optional skill that may be held out (a run without it means finding skills or camping huts).
+- Fixed skills are unchanged: channel and return stay scrollOnly, commune and garrison stay shopOnly, restore stays the starting skill.
+- Optional skills = every other skill. At new game SkillLibrary.deal shuffles them: half (round up) appear this run, the rest are held out and can not be obtained by any channel this run. Of the ones that appear, 6 are dealt to far scrolls (marked taken, as today) and the rest are learnable. Name the numbers as constants (held-out fraction 0.5, far-scroll skills 6, near core scrolls 3).
+- Far scrolls: keep placing 10 empty scrolls in the half of the map far from the Maw; 6 get a skill, the other 4 keep poi.skill === null and become Skill-Point scrolls at pickup (existing behavior). Drop the two dedicated far scrolls for respec and retrain.
+- Near core scrolls: SkillLibrary keeps a per-run shuffled `coreOrder` of the five core ids. Place 3 scrolls within hex distance 25 of the start haven (a quarter of the 100-wide map; same world.placeScroll call style as the Channel scroll, which stays within 11) carrying the LAST 3 skills of coreOrder. These are non-binding: core skills are never marked taken, and a scroll whose skill is already known becomes a Skill Point (existing behavior).
+- poolSkills(learned, level) returns unlearned skills that are not shop, not scroll-taken, not held out, and within level; it includes unlearned core skills. Skill Seek (when it appears this run) keeps using it unchanged.
+- Hut assignment in deal and rerollHutSkill draw only from the learnable optional skills (never core, never held out).
+- Persist taken, heldOut and coreOrder in toJSON/fromJSON. No migration for old saves; old saves may break.
+- Do not tell the player which skills are held out.
+- Follow the project rules in CLAUDE.md (plain scripts, no default or optional parameters in new code, lookups over mode conditionals).
+
+Done when: a new DOM-free check test/skilllibrary.js (same style as test/fx.js) deals many times and asserts: core skills are never taken or held out; held-out count is half the optional skills rounded down; exactly 6 far scrolls get distinct optional skills and the rest get null; no held-out or shop or fixed skill is ever returned by poolSkills or assigned to a hut; toJSON/fromJSON round-trips. node test/scripts.js and node test/fx.js still pass. CLAUDE.md, SPEC.md and DYNAMICS.md describe the groups.
+----
 Priority:   60
 Status: Done
 ID: return-mvp-8gj8

@@ -10,7 +10,7 @@ Warrior is a single-player tactical hex RPG. Canvas rendering, plain `<script>` 
 
 No build or install step, and no server: double-click `index.html` (it must run from `file://`).
 
-Checks (Node, DOM-free): `node test/scripts.js` (the script includes load as one shared scope, no duplicate top-level names) and `node test/fx.js`.
+Checks (Node, DOM-free): `node test/scripts.js` (the script includes load as one shared scope, no duplicate top-level names), `node test/fx.js` and `node test/skilllibrary.js` (skill-group dealing).
 
 ### Plain scripts, not modules
 
@@ -26,7 +26,7 @@ index.js (orchestrator: rendering, input, UI, save/load, combat math, dialogs)
   ├─ rando.js        (Rando: shuffle, choice, int, bellCurve, weighted, bool)
   ├─ player.js       (Player class: stats, equipment, skills, inventory, toJSON/fromJSON)
   ├─ world.js        (GameWorld class: hex grid, POIs, fog, LOS; toJSON/fromJSON)
-  ├─ skilllibrary.js (SkillLibrary class: partitions skill discovery channels so no skill is awarded twice)
+  ├─ skilllibrary.js (SkillLibrary class: per-run skill groups (core / fixed / optional, half of optional held out) and discovery channels so no skill is awarded twice; checked by `node test/skilllibrary.js`)
   ├─ enemies.js      (EnemyManager class: enemy list, spawn, defs; uses colortheory)
   ├─ actions.js      (player Action classes + MP/aether cost helpers; see below)
   ├─ enemy_ai.js     (enemy AI classes, maw-distance math, runEnemyAiPhase; see below)
@@ -118,7 +118,7 @@ Canvas clicks are ignored when `phase !== 'player'`.
 
 - Pure client-side JavaScript (plain script includes, no ES modules, no npm; Node is used only to run `test/`)
 - No build step, no bundler, no external dependencies
-- No gameplay tests; `test/` holds the two load/motion checks above
+- No gameplay tests; `test/` holds the load/motion/skill-dealing checks above
 - Game state lives as `index.js` top-level `let`s (shared script scope, not `window` properties)
 - Lookups via config tables: `ALL_EQUIPMENT[id]`, `ENEMY_DEFS[type]`, `SKILLS[id]`, `TERRAIN[...]`
 - All randomness goes through `Rando` — `bellCurve(strength)` for damage rolls

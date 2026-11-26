@@ -743,11 +743,11 @@ const SKILLS = {
     },
     water_skip: {
         id: 'water_skip', name: 'Water Skip', cost: 3, mpCost: 1, target: SKILL_TARGET.WATER_SKIP, usage: SKILL_USAGE.ANYTIME,
-        scales: ['range'], tiers: [[4], [4], [5], [5], [6]], desc: 'Skip to a nearby water hex. From water, may skip to water or land.', minLevel: 2
+        core: true, scales: ['range'], tiers: [[4], [4], [5], [5], [6]], desc: 'Skip to a nearby water hex. From water, may skip to water or land.', minLevel: 2
     },
     mountain_skip: {
         id: 'mountain_skip', name: 'Mountain Skip', cost: 3, mpCost: 1, target: SKILL_TARGET.MOUNTAIN_SKIP, usage: SKILL_USAGE.ANYTIME,
-        scales: ['range'], tiers: [[4], [4], [5], [5], [6]], desc: 'Skip to a nearby mountain hex. From mountain, may skip to mountain or land.', minLevel: 2
+        core: true, scales: ['range'], tiers: [[4], [4], [5], [5], [6]], desc: 'Skip to a nearby mountain hex. From mountain, may skip to mountain or land.', minLevel: 2
     },
     sprint: {
         id: 'sprint', name: 'Sprint', cost: 2, mpCost: 0, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
@@ -870,7 +870,7 @@ const SKILLS = {
     },
     spirit_walk: {
         id: 'spirit_walk', name: 'Spirit Walk', cost: 3, target: SKILL_TARGET.TELEPORT_REVEALED, usage: SKILL_USAGE.NON_COMBAT,
-        scales: ['range'], tiers: [[6], [8], [10], [12], [14]], desc: 'Teleport to any revealed hex nearby.', panelInvoke: true, minLevel: 6
+        core: true, scales: ['range'], tiers: [[6], [8], [10], [12], [14]], desc: 'Teleport to any revealed hex nearby.', panelInvoke: true, minLevel: 6
     },
     ground_weeps: {
         id: 'ground_weeps', name: 'Ground Weeps', cost: 4, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.NON_COMBAT,
@@ -914,12 +914,12 @@ const SKILLS = {
     },
     respec: {
         id: 'respec', name: 'Renew', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
-        scrollOnly: true, panelInvoke: true,
+        core: true, panelInvoke: true,
         desc: 'Refund all spent stat points and reallocate them. Requires clean hex, no enemies.', minLevel: 4
     },
     retrain: {
         id: 'retrain', name: 'Retrain', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
-        scrollOnly: true, panelInvoke: true,
+        core: true, panelInvoke: true,
         desc: 'Open the Train panel to reallocate your skill points. Requires clean hex, no enemies.', minLevel: 4
     },
     garrison: {

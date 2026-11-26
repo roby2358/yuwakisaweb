@@ -149,8 +149,16 @@ All enemies MUST have: name, HP, attack damage, defense, movement speed (hexes p
 
 - The player MUST have 4 active skill slots
 - Skills MUST cost Aether to use
-- The player MUST start with 1 skill (Void Strike) and gain access to new skills at levels 2, 4, 6, 8, and 10
-- At each skill-unlock level, the player MUST choose one skill from two randomly offered options
+- The player MUST start with 1 skill (Restore) and gain access to new skills at levels 2, 4, 6, 8, and 10
+- At each skill-unlock level, the player MUST choose one skill from up to three randomly offered options drawn from the level-up pool (see Skill Groups)
+
+#### Skill Groups
+- Every skill MUST belong to one group: core (`core: true`: Spirit Walk, Mountain Skip, Water Skip, Renew, Retrain), fixed (scroll-only Channel Aether and RETURN, shop-only Commune and Commission Garrison, the starting skill Restore), or optional (all others)
+- Core skills MUST always be obtainable by level-up or Skill Seek and MUST never be bound to a scroll or held out; each run MUST shuffle them and place non-binding scrolls for the last 3 within 25 hexes of the start haven
+- At new game, half the optional skills (rounded down) MUST be held out: no channel may grant them that run, and the game MUST NOT tell the player which
+- Of the appearing optional skills, 6 MUST be bound to far story scrolls (10 empty scrolls placed in the half of the map far from the Maw; the rest, and prize scrolls, become Skill-Point scrolls at pickup); the remainder are learnable
+- Level-up and Skill Seek MUST draw from unlearned skills that are not shop-only, not scroll-bound, not held out, and within level; Wise Man huts MUST teach only learnable optional skills
+- The held-out set, scroll-bound set and core order MUST persist in the save
 
 #### Skill List
 

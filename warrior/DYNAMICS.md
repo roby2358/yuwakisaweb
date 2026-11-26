@@ -7,7 +7,7 @@ The desperate ascent of a lone warrior through a world tearing itself apart from
 ## Key Drivers
 
 ### 1. Accumulation and Windfall
-The core RPG loop. XP, loot, stats, skills — every encounter makes you measurably stronger. The polynomial XP curve (`50 * level^1.8`, rounded to nearest 10) makes early levels feel fast (quick wins, dopamine) and later levels require deliberate engagement with dangerous content (breaches, ruins). Windfalls come from: breach guardian drops (non-magical bows + 10% chance of magical gear), level-up full heals (instant relief), ruin loot (1-3 mundane items + 1 magical + gold), and finding a powerful weapon when you've been swinging a Rusty Blade for 20 turns. Killing chaos-spawned enemies returns +1 Aether, creating a sustain loop that rewards aggression. With procedurally generated magical equipment and 33 skills, each run produces a meaningfully different character build.
+The core RPG loop. XP, loot, stats, skills — every encounter makes you measurably stronger. The polynomial XP curve (`50 * level^1.8`, rounded to nearest 10) makes early levels feel fast (quick wins, dopamine) and later levels require deliberate engagement with dangerous content (breaches, ruins). Windfalls come from: breach guardian drops (non-magical bows + 10% chance of magical gear), level-up full heals (instant relief), ruin loot (1-3 mundane items + 1 magical + gold), and finding a powerful weapon when you've been swinging a Rusty Blade for 20 turns. Killing chaos-spawned enemies returns +1 Aether, creating a sustain loop that rewards aggression. With procedurally generated magical equipment and a per-run deal of skills (half the optional skills held out), each run produces a meaningfully different character build.
 
 ### 2. Scarcity of Agency
 4 MP per turn. 4 skill slots from a pool of up to 33 learned skills. Limited Aether. You can't fight everything, explore everything, or be everywhere. Every turn is a triage decision: push toward the next breach or retreat to heal? Spend Aether on Void Strike for guaranteed damage or save it for Mending Light? Restore shattered terrain or conserve Aether for combat? Move deeper into fog or consolidate revealed territory? The constraint makes each action feel weighty. Engagement halves your MP, compounding the scarcity when you're in the thick of it. Skill usage restrictions add another layer: non-combat and pristine skills require safety, forcing you to choose *when* to use them.
@@ -24,7 +24,7 @@ Breaches bleed chaos into the world continuously, spawning twisted creatures (15
 Yellow hexes show where you can go. Red hexes show what you can attack. Blue hexes show targeting range. Counter stats (attack bottom-left, defense bottom-right) tell you exactly what you're facing. Enemy detection ranges, HP bars, and type labels are all visible. The counter label turns dark during player phase and gold-tinted during enemy phase — a glanceable indicator of whose turn it is. The R button on the skill bar makes ranged attacks discoverable. Skill usage categories (pristine/non-combat/anytime) are reflected in the skill bar — grayed out when conditions aren't met. Ground Weeps provides a full-map threat heatmap for strategic planning.
 
 ### Variable Reinforcement
-Map generation (diamond-square heightmap), enemy placement, loot tables, skill unlock choices — every game is different. With 33 skills and only 3 offered per level-up (pick 1), the player builds a different character each run. Wise Man huts (8-12 per map) add another source of skill discovery (5% chance the hut's skill refreshes per visit). The procedurally generated equipment means upgrade paths vary dramatically. Prospect's 20% gold discovery chance and Skill Seek's level-scaled gamble add controlled variance to non-combat play.
+Map generation (diamond-square heightmap), enemy placement, loot tables, skill unlock choices — every game is different. Half the optional skills are held out each run (see Skill Groups) and only 3 are offered per level-up (pick 1), so the player builds a different character each run. Wise Man huts (8-12 per map) add another source of skill discovery (5% chance the hut's skill refreshes per visit). The procedurally generated equipment means upgrade paths vary dramatically. Prospect's 20% gold discovery chance and Skill Seek's level-scaled gamble add controlled variance to non-combat play.
 
 ### Near-Miss Architecture
 The polynomial XP curve and breach escalation create a natural tension point around levels 5-7. You're strong enough to challenge breaches but not strong enough to be comfortable. The Maw requires 2 closed breaches, which means at least 2 guardian fights. If you're under-leveled when you attempt the Maw, you'll *almost* win — close enough to see how, which drives the "one more game" loop.
@@ -156,7 +156,7 @@ Enemies can accumulate state from player attacks:
 | Ruin | 12-20 | ⛫ | — | Lootable once: 1-3 non-magical items + 1 magical item + 5-20 gold. Spawns 1-3 enemies (50/50 Void Stalker or Flux Archer). |
 | Breach | 6-8 | ֍ | — | Open breaches spawn enemies (15%/turn). Sealable after guardian defeated. |
 | Maw | 1 | ✸ | — | Final objective. Placed preferentially rightward. Requires 2 sealed breaches + Unraveler defeated. |
-| Hut | 8-12 | ⌂ | — | Wise Man's Hut. Each has a fixed skill. Always offers teaching on visit. 5% chance per visit the skill refreshes to a new unlearned one. |
+| Hut | 8-12 | ⌂ | — | Wise Man's Hut. Each has a fixed skill. Always offers teaching on visit. 5% chance per visit the skill refreshes to a new unlearned one. Huts teach only this run's learnable optional skills (see Skill Groups). |
 
 ### Haven Shop
 - Stocks 2-3 magical + 2-3 non-magical items (4-6 total)
@@ -234,6 +234,12 @@ Armor can also roll any artifact effect (from the combined armor + artifact pool
 ## Skills (33)
 
 Skills have three states: **learned** (in player's pool), **available** (meets level requirement, not yet learned), or **unlearned** (level too low). Restore is learned at start. At levels 2, 4, 6, 8, 10, the player picks 1 of 3 random available skills to learn. Learned skills can be freely equipped/unequipped into 4 active slots via the Skills panel. Wise Man huts (8-12 per map) scattered across the map can also teach skills.
+
+### Skill Groups
+Each run deals the skills differently, so every game has its own flavor (SkillLibrary in `skilllibrary.js`):
+- **Core** (`core: true`): Spirit Walk, Mountain Skip, Water Skip (a screwy map can always be crossed) and Renew, Retrain (the meta skills). Always obtainable through level-ups and Skill Seek, never bound to a scroll or held out. Each run shuffles them; the last 3 also ride non-binding scrolls within 25 hexes of the start haven (a known core skill's scroll becomes a Skill Point instead).
+- **Fixed**: Channel Aether and RETURN come only from their own scrolls (Channel within 11 hexes of the start, RETURN from the Maw), Commune and Commission Garrison only from the Magicsmith, and Restore is the starting skill.
+- **Optional**: every other skill. Half (rounded down) are held out and can't be obtained by any channel this run; the player is not told which. Of the half that appears, 6 are bound to far story scrolls (10 scrolls in the half of the map far from the Maw; the other 4, and any prize scroll, become Skill-Point scrolls) and the rest are learnable via level-up, Skill Seek and Wise Man huts. Huts only ever teach learnable optional skills. Phase Step, Mending Light and Skill Seek are optional on purpose: survival skills are earned, and a run without Skill Seek means finding skills or camping huts.
 
 ### Skill Usage Categories
 Each skill has a usage restriction that determines when it can be activated:
@@ -341,7 +347,7 @@ Close the second breach. Gear up for the Maw. Starfall (level 10) trivializes mo
 ### Key Decisions
 - **Melee vs Ranged build**: Melee (Might + melee weapon) does more single-target damage and benefits from Void Strike/Dimensional Rend/Execute. Ranged (Reflex + ranged weapon) avoids counter-attacks and kites safely but has lower burst. Reflex double-scales: ranged damage AND dodge chance. Penetrating Shot and Void Salvo give Reflex builds skill scaling. Weapons with ignore_defense are excellent against high-defense targets (Breach Guardian at 5 def, Unraveler at 6 def).
 - **When to engage breaches**: Each sealed breach reduces spawn pressure but the guardian fight (50 HP, 10 atk, 8 ranged atk at range 5, 5 def) is dangerous. Their long ranged reach and aggro range of 6 means you can't safely plunk away from a distance. Sundering Blow (-3 def) makes guardians far more approachable.
-- **Skill slot management**: 33 skills, 4 slots. The Skills panel lets you swap freely, but mid-combat you're locked to your equipped 4. Do you bring 4 combat skills for the breach assault, or keep Restore equipped for the aftermath? Pristine skills incentivize returning to safe territory between fights.
+- **Skill slot management**: dozens of skills, 4 slots. The Skills panel lets you swap freely, but mid-combat you're locked to your equipped 4. Do you bring 4 combat skills for the breach assault, or keep Restore equipped for the aftermath? Pristine skills incentivize returning to safe territory between fights.
 - **High defense trade-off**: Armor with high_def_mp_penalty offers +5 defense but -1 MP (3 instead of 4), severely limiting mobility. Best paired with Phase Step for repositioning.
 - **Terrain stewardship**: Clean terrain fuels Aether Tap and enables Pristine skills. Letting corruption spread degrades your resource base. But Salvage extracts gold from shattered terrain, creating a tension between restoration and exploitation.
 

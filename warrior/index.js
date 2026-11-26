@@ -1437,32 +1437,35 @@ function initGame() {
         || settlements[0] || world.pois[0];
 
     // Drop the map scrolls now that the start is known. Channel Aether sits
-    // within 11 hexes of the start; Renew and Retrain hide in the half too far
-    // from the Maw to earn a proximity bonus. All must be reachable on foot.
-    // The fixed utility scrolls carry their own skill; the 10 story scrolls are
-    // placed empty (poi.skill === null) and the SkillLibrary deals them skills.
+    // within 11 hexes of the start; the 10 story scrolls hide in the half too
+    // far from the Maw to earn a proximity bonus. All must be reachable on foot.
+    // The story scrolls are placed empty (poi.skill === null) and the
+    // SkillLibrary deals skills to some of them.
     world.placeScroll('channel', startHaven.q, startHaven.r,
         h => hexDistance(h.q, h.r, startHaven.q, startHaven.r) <= 11);
+    const farScrolls = [];
     if (mawDists) {
         let mawMax = 1;
         for (const c of mawDists.values()) if (c > mawMax) mawMax = c;
         const farThreshold = mawMax * 0.5;
         const farPred = h => (mawDists.get(hexKey(h.q, h.r)) ?? 0) > farThreshold;
-        world.placeScroll('respec', startHaven.q, startHaven.r, farPred);
-        world.placeScroll('retrain', startHaven.q, startHaven.r, farPred);
-        for (let i = 0; i < 10; i++)
-            world.placeScroll(null, startHaven.q, startHaven.r, farPred);
+        for (let i = 0; i < 10; i++) {
+            const scroll = world.placeScroll(null, startHaven.q, startHaven.r, farPred);
+            if (scroll) farScrolls.push(scroll);
+        }
     }
 
     player = new Player(startHaven.q, startHaven.r);
 
-    // Partition every learnable skill across the discovery channels. Story and
-    // prize scrolls (the SCROLL POIs still awaiting a skill) each claim a distinct
-    // skill out of the shared pool; the Wise Men get non-binding pool skills.
+    // Deal this run's skill groups: optional skills are split into held out,
+    // far-scroll and learnable; the Wise Men get non-binding learnable skills.
+    // Then a few core skills ride non-binding scrolls near the start.
     skillLibrary = new SkillLibrary();
-    const unfilledScrolls = world.pois.filter(p => p.type === POI.SCROLL && !p.skill);
     const huts = world.pois.filter(p => p.type === POI.HUT);
-    skillLibrary.deal(unfilledScrolls, huts, player.learnedSkills);
+    skillLibrary.deal(farScrolls, huts, player.learnedSkills);
+    for (const id of skillLibrary.nearCoreSkills())
+        world.placeScroll(id, startHaven.q, startHaven.r,
+            h => hexDistance(h.q, h.r, startHaven.q, startHaven.r) <= NEAR_CORE_SCROLL_RADIUS);
 
     refreshVision();
     computeMawDistances(world);
@@ -2610,10 +2613,10 @@ function showHutDialog(poi) {
     grantVisitSP(poi);
     const trainBtn = { label: 'Train', action: () => showTrainDialog() };
 
-    // The hut's assigned skill is non-binding — it stays in the shared pool, so
-    // the player may already have learned it elsewhere. When it's no use (known
-    // or never assigned), a 5% chance the sage digs up a fresh untaken skill of
-    // any level. That find becomes the hut's new standing assignment, so if the
+    // The hut's assigned skill is non-binding — it stays learnable elsewhere, so
+    // the player may already have learned it. When it's no use (known or never
+    // assigned), a 5% chance the sage digs up a fresh learnable optional skill
+    // (never core, scroll-bound or held out) of any level. That find becomes the hut's new standing assignment, so if the
     // player Leaves and returns it's waiting for them (no fresh roll needed).
     let teachId = poi.skill;
     if (!teachId || player.learnedSkills.has(teachId)) {
