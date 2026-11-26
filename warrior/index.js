@@ -2282,7 +2282,6 @@ function updateInvPanel() {
                 const rmIdx = player.inventory.indexOf(id);
             if (rmIdx !== -1) player.inventory.splice(rmIdx, 1);
             } else if (action === 'unequip') {
-                // Can't unequip weapon to nothing
                 player.equipment[slot] = null;
                 player.inventory.unshift(id);
             }

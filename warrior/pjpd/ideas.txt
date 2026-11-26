@@ -44,11 +44,11 @@ Open questions:
 Score:   55
 ID: immolate-chk-8gse
 Created: 2026-11-26T17:05:18Z
-Updated: 2026-11-26T17:05:18Z
+Updated: 2026-11-26T21:26:14Z
 
 Double-check the Immolate skill: the user suspects it is not behaving as described ("I'm not sure it's immolating right").
 
-Investigate before changing anything: read the immolate entry in the SKILLS table (config.js) and its execute function in actions.js, and compare what the code does against the skill's description and tier values: who is hit, how much damage, whether the burn repeats or ticks over turns, whether it scales with rank and stats as stated, its aether/MP cost, and whether damage floats and the combat log show it. Check SPEC.md / DYNAMICS.md for the intended behavior.
+Investigate before changing anything: read the immolate entry in the SKILLS table (config.js) and its execute function in actions.js, and compare what the code does against the skill's description and tier values: who is hit, how much damage, whether the burn repeats or ticks over turns, whether it scales with rank and stats as stated, its aether/MP cost, and whether damage floats and the combat log show it. Check ONTOLOGY.md / DYNAMICS.md for the intended behavior.
 
 Open: the user has not said what looked wrong in play. Ask what they observed (no damage, wrong targets, wrong amount, no visible effect) and then file a fix task with the concrete defect.
 ----
@@ -90,6 +90,20 @@ Open questions:
 3. Should power track where a skill is found (stronger skills on far scrolls), which overlaps the open question about the minLevel field?
 4. Is the rebalance done before or after adding variants and hybrids, since those multiply the table?
 5. Does it include rank costs and the Skill Point economy (one point per level now), or only the skills' own numbers?
+----
+Score:   55
+ID: ripostedmg-64st
+Created: 2026-11-26T22:05:38Z
+Updated: 2026-11-26T22:05:38Z
+
+The riposte weapon effect (config.js riposteDamage 1/2/3; text "+N counter-atk") reads only as a special name: actions.js halves the counter damage when the weapon is riposte (counterDmg / 2), and riposteDamage is never read. So the item that advertises a stronger counter makes the counter weaker. Talk through what riposte should do (add riposteDamage to the counter, counter on enemy melee too, something else) and fix the code or the text.
+----
+Score:   55
+ID: countermast-8hym
+Created: 2026-11-26T22:05:38Z
+Updated: 2026-11-26T22:05:38Z
+
+The counter_mastery magic-item effect ("Counter-attack on enemy melee") fires only on chaos-enemy melee (enemy_ai.js ~416, in the chaos melee path). Wildlife and monster melee go through a different attack path and never trigger it. Talk through sending all enemy melee through one shared function so counter_mastery (and any other on-hit-by-melee effect) works against every enemy, and whether anything should stay chaos-only.
 ----
 Score:   50
 ID: rand-xvfp
@@ -223,6 +237,27 @@ SKILLS:
 
 SCALING: both HP cost AND skill effect increase with skill level/rank (more invested = bigger spend = bigger payoff).
 ----
+Score:   50
+ID: rangeddef-ccpj
+Created: 2026-11-26T22:05:38Z
+Updated: 2026-11-26T22:05:38Z
+
+The ranged_defense magic-armor effect (config.js effect pool, rangedDefenseBonus 2 or 4; text "+N def vs ranged") does nothing: no damage code reads rangedDefenseBonus. Talk through what it should do: add the bonus to defense when the hit comes from an enemy ranged attack (enemyRangedAttack in index.js), also against ranged skills/chaos bolts, or rework or drop the effect.
+----
+Score:   50
+ID: highdefmp-jczt
+Created: 2026-11-26T22:05:38Z
+Updated: 2026-11-26T22:05:38Z
+
+The high_def_mp_penalty armor effect (config.js, defBonus 5, mpPenalty 1; text "+5 def -1 MP") only half works: player.js applies the MP penalty but nothing adds defBonus to defense. Talk through whether to wire defBonus into the player's defense, change the numbers, or drop the effect.
+----
+Score:   50
+ID: wardskill-ya87
+Created: 2026-11-26T22:05:38Z
+Updated: 2026-11-26T22:05:38Z
+
+Warding's resistance to skill damage never applies. dealDamageToPlayer(damage, source, isSkillDamage, opts) in index.js adds warding% of the roll to defense when isSkillDamage is true, but no caller passes true (enemies have no skills as such; chaos ranged bolts and abilities go through as ordinary damage). Talk through which enemy attacks count as "skill" damage (chaos bolts? Unraveler? breach effects?) and wire them, or drop the parameter and the Warding claim.
+----
 Score:   45
 ID: more-flavor-gpai
 Created: 2026-11-26T18:22:20Z
@@ -238,11 +273,18 @@ Updated: 2026-11-26T18:38:29Z
 Flux Archers now actually shoot (they had a range but no rangedAttack, so the AI never fired them). That leaves the chaos/breach spawn pool about 5/7 ranged, well above the 20-30% ranged share wildlife gets. Playtest how strong Archers feel, then decide whether to rebalance the chaos pool.
 ----
 Score:   45
-ID: spec-rewrite-hvu5
-Created: 2026-11-26T20:54:41Z
-Updated: 2026-11-26T20:54:41Z
+ID: displaceimm-3i52
+Created: 2026-11-26T22:05:38Z
+Updated: 2026-11-26T22:05:38Z
 
-Large parts of SPEC.md are still the original design: the skill list table (levels, costs, starting with Void Strike), the weapon/armor/artifact tables, enemy types and spawning numbers, gold sources (no gold terrain any more; prize gold is 10-20), the "2+ breaches closed before the Maw" rule (no check for it in the code), the victory and Maw interaction lines, and Haven Shop "3-5 items". These need a section rewrite, not line fixes. First decide whether SPEC.md should keep exact tuning numbers at all, or state the rules and point to config.js and DYNAMICS.md for numbers so it stops going stale.
+The displacement_immune magic-item effect ("No displacement") does nothing: nothing in the game displaces the player (no knockback, pull or teleport-the-player enemy move). Talk through whether to add an enemy that displaces the player so the effect matters, repurpose it into something else, or drop it from the effect pool in config.js.
+----
+Score:   45
+ID: rendcost-adiw
+Created: 2026-11-26T22:14:29Z
+Updated: 2026-11-26T22:14:29Z
+
+Dimensional Rend takes its HP cost even when the cast fizzles, and the cost can push HP to 0 or below. Check its handler in actions.js: whether paying HP is checked against current HP before the cast, what happens at HP 0 (death? clamped?), and whether a fizzle should refund or skip the cost. Decide the intended behavior, then fix the code and the ONTOLOGY.md skill-use rule.
 ----
 Score:   40
 ID: prize-scroll-esnu
@@ -264,13 +306,6 @@ Created: 2026-11-26T18:38:29Z
 Updated: 2026-11-26T18:38:29Z
 
 Show an enemy's attack range in the hover bar next to its name and HP, so the ranged badge on the token has a number behind it.
-----
-Score:   40
-ID: orphan-specs-d3zs
-Created: 2026-11-26T19:20:16Z
-Updated: 2026-11-26T19:20:16Z
-
-Some item effects still have working code but no item carries them: mp_penalty, armor_aether_bonus and wall_crown (player.js), regen_combo (enemy_ai.js), and cleave (actions.js: hits every enemy next to the melee target). They came from the old hand-made magic items that were retired when items went procedural. Tie them back to items, e.g. as entries in the procedural magic-effect tables in config.js with text lines in text.js, or decide which to drop.
 ----
 Score:   40
 ID: core-level-byun
@@ -342,3 +377,17 @@ Open questions:
 4. Should a line that is stable on revisit (a hut's standing offer) keep the same variant, or re-roll each time?
 5. Does markup (italics for stage directions, colours for speech) live in the table or stay at the call site? Proposal: the table marks the kind (narration / speech) and one renderer applies the style.
 6. Tone rules to carry over: no vampire imagery; harm-coded verbs only on harm-doing effects.
+----
+Score:   45
+ID: spec-rewrite-hvu5
+Created: 2026-11-26T20:54:41Z
+Updated: 2026-11-26T21:26:14Z
+
+(Done) Large parts of SPEC.md are still the original design: the skill list table (levels, costs, starting with Void Strike), the weapon/armor/artifact tables, enemy types and spawning numbers, gold sources (no gold terrain any more; prize gold is 10-20), the "2+ breaches closed before the Maw" rule (no check for it in the code), the victory and Maw interaction lines, and Haven Shop "3-5 items". These need a section rewrite, not line fixes. First decide whether SPEC.md should keep exact tuning numbers at all, or state the rules and point to config.js and DYNAMICS.md for numbers so it stops going stale.
+----
+Score:   40
+ID: orphan-specs-d3zs
+Created: 2026-11-26T19:20:16Z
+Updated: 2026-11-26T22:20:57Z
+
+(Done) Some item effects still have working code but no item carries them: mp_penalty, armor_aether_bonus and wall_crown (player.js), regen_combo (enemy_ai.js), and cleave (actions.js: hits every enemy next to the melee target). They came from the old hand-made magic items that were retired when items went procedural. Tie them back to items, e.g. as entries in the procedural magic-effect tables in config.js with text lines in text.js, or decide which to drop.

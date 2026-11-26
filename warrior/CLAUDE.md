@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Warrior is a single-player tactical hex RPG. Canvas rendering, plain `<script>` includes (shared globals, not ES modules), no build step or external dependencies. See `SPEC.md` and `DYNAMICS.md` for game design and mechanics.
+Warrior is a single-player tactical hex RPG. Canvas rendering, plain `<script>` includes (shared globals, not ES modules), no build step or external dependencies. See `ONTOLOGY.md` (the implementation reference) and `DYNAMICS.md` (design philosophy) for game design and mechanics.
 
 ## Running / Developing
 
@@ -135,7 +135,8 @@ Canvas clicks are ignored when `phase !== 'player'`.
 
 ## Design Documents
 
-- `SPEC.md` — Full game specification with functional requirements
+- `ONTOLOGY.md` — Implementation reference: purpose and goals, entities, invariants, rules as pseudocode, numbers, commands and events; tagged [D]/[P]/[T]. Code wins where they disagree
+- `ARCHITECTURE_LOG.md` — Dated design changes, newest first; the only doc that records history
 - `DYNAMICS.md` — Game design philosophy, key drivers, strategy analysis
 - `docs/` — `ASPIRATIONS.md`, `RUST_WASM.md` (forward-looking notes)
 - `md/` — design brainstorms: `MAGIC_ITEMS.md`, `PRIME_GOALS.md`, `QUEST_BRAINSTORM.md`
