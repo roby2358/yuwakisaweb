@@ -122,6 +122,24 @@ Flavor justification: starter gear is supposed to feel like rusty/worn junk the 
 
 Quick fix; small config edit + maybe a one-line check in the sell flow.
 ----
+Priority:   59
+Status: Done
+ID: hut-gift-rers
+Created: 2026-11-26T17:06:15Z
+Updated: 2026-11-26T17:56:28Z
+
+Wise Man's Hut: 5% chance per visit that the sage hands over a magic item instead of a lesson.
+
+Goal: keep huts "alive" (map locations are never spent) and give visits a small surprise beyond skills.
+
+Settled design (showHutDialog in index.js):
+- On every hut visit, after grantVisitSP, roll Rando.bool with a named constant of 0.05. On a hit the sage gives a magic item INSTEAD of whatever the hut would have offered this visit; the hut's skill state (core lesson, assigned skill, standing assignment) is left untouched, so it is still there on the next visit. The gift roll is independent of the existing 5% new-skill roll and has no cap or cooldown.
+- The item is rollMagicItem() with a random category (the same call ruins and guardian drops use), pushed straight into player.inventory.
+- Dialog: title as the other hut dialogs; body in the same style, with the stage direction in italics and the sage's line "I have this lying around. Perhaps it will be of use." followed by the item's name shown the way magical loot is shown elsewhere (see formatLootHtml). Buttons: the existing Train button and a Continue/Leave button that sets player.mp = 0 like the other hut exits. Log "The Wise Man gives you <item name>!" in the combat log with the loot colour class.
+- On a miss, the hut dialog proceeds exactly as it does now.
+
+Done when: node test/scripts.js and node test/fx.js pass; showHutDialog handles the gift as an early-return guard clause before the skill logic; SPEC.md / DYNAMICS.md mention the hut gift chance.
+----
 Priority:   55
 Status: Done
 ID: combo-skill-56hq

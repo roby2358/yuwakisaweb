@@ -158,6 +158,7 @@ All enemies MUST have: name, HP, attack damage, defense, movement speed (hexes p
 - At new game, half the optional skills (rounded down) MUST be held out: no channel may grant them that run, and the game MUST NOT tell the player which
 - Of the appearing optional skills, 6 MUST be bound to far story scrolls (10 empty scrolls placed in the half of the map far from the Maw; the rest, and prize scrolls, become Skill-Point scrolls at pickup); the remainder are learnable
 - Skill Seek MUST draw from unlearned skills that are not shop-only, not scroll-bound, not held out, and within level; each Wise Man hut MUST give one core lesson (the first core skill in the run's core order the player lacks), then teach its assigned learnable optional skill; its 5% per-visit reroll MAY also dig up an unlearned core skill, never a held-out, shop-only or scroll-bound one
+- Each Wise Man hut visit MUST have an independent 5% chance (no cap or cooldown) that the sage gives a random magic item into the inventory instead of that visit's lesson or message, leaving the hut's core lesson, assigned skill and standing assignment untouched
 - The held-out set, scroll-bound set and core order MUST persist in the save, as MUST each hut's assigned skill and whether it has given its core lesson
 
 #### Skill List

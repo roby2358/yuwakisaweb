@@ -2614,9 +2614,15 @@ function invokeSanctuary() {
 // the player lacks it, then a 5% chance per visit to dig up a fresh skill from
 // the learnable pool (optional or unlearned core; never held out, shop or
 // scroll-taken), which becomes the hut's standing assignment. Huts are never
-// spent: camping one until the roll hits is fine.
+// spent: camping one until the roll hits is fine. Separately, HUT_GIFT_CHANCE per
+// visit the sage hands over a magic item instead, leaving the hut's skill state
+// untouched for the next visit.
+const HUT_GIFT_CHANCE = 0.05;
+const HUT_TITLE = POI_SYMBOLS[POI.HUT] + " Wise Man's Hut";
 function showHutDialog(poi) {
     grantVisitSP(poi);
+
+    if (Rando.bool(HUT_GIFT_CHANCE)) { giveHutGift(); return; }
 
     const coreId = poi.coreTaught ? null : skillLibrary.firstUnlearnedCore(player.learnedSkills);
     if (coreId) { offerHutLesson(coreId, () => { poi.coreTaught = true; }); return; }
@@ -2626,19 +2632,33 @@ function showHutDialog(poi) {
     const foundId = Rando.bool(0.05) ? skillLibrary.rerollHutSkill(player.learnedSkills) : null;
     if (foundId) { poi.skill = foundId; offerHutLesson(foundId, () => {}); return; }
 
-    showDialog(POI_SYMBOLS[POI.HUT] + " Wise Man's Hut",
+    showDialog(HUT_TITLE,
         `<p><i>An old sage peers at you.</i></p><p style="color:#a1887f">"I have nothing to teach you at this time."</p>`,
-        [hutTrainButton(), { label: 'Leave', action: () => { player.mp = 0; } }]);
+        [hutTrainButton(), hutLeaveButton()]);
+}
+
+// The sage's gift: a random magic item straight into the inventory.
+function giveHutGift() {
+    const item = rollMagicItem();
+    player.inventory.push(item.id);
+    logCombat(`The Wise Man gives you ${item.name}!`, 'log-gold');
+    showDialog(HUT_TITLE,
+        `<p><i>The sage rummages through a cluttered shelf.</i></p><p style="color:#a1887f">"I have this lying around. Perhaps it will be of use."</p><p style="color:#e040fb">${item.name}!</p>`,
+        [hutTrainButton(), hutLeaveButton()]);
 }
 
 function hutTrainButton() {
     return { label: 'Train', action: () => showTrainDialog() };
 }
 
+function hutLeaveButton() {
+    return { label: 'Leave', action: () => { player.mp = 0; } };
+}
+
 // The hut's teaching dialog for one skill; onLearn runs after the skill is learned.
 function offerHutLesson(teachId, onLearn) {
     const skill = SKILLS[teachId];
-    showDialog(POI_SYMBOLS[POI.HUT] + " Wise Man's Hut",
+    showDialog(HUT_TITLE,
         `<p><i>The sage's eyes light up.</i></p><p style="color:#b388ff">"I can teach you <b>${skill.name}</b>."</p>${skillBlurbHtml(skill)}`,
         [{
             label: 'Learn', cls: 'primary', action: () => {
@@ -2649,7 +2669,7 @@ function offerHutLesson(teachId, onLearn) {
             }
         },
         hutTrainButton(),
-        { label: 'Leave', action: () => { player.mp = 0; } }]);
+        hutLeaveButton()]);
 }
 
 // Stepping onto a scroll claims its skill and consumes the scroll. A scroll with
