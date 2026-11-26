@@ -230,6 +230,13 @@ Updated: 2026-11-26T17:42:48Z
 
 Prize scrolls (the empty scrolls world-gen places on special terrain) now always grant a Skill Point, because only the far story scrolls get skills from the per-run deal. Should a prize scroll instead carry a learnable optional skill, non-binding like a hut offer?
 ----
+Score:   40
+ID: text-static-7wcz
+Created: 2026-11-26T18:08:41Z
+Updated: 2026-11-26T18:08:41Z
+
+Static UI text in index.html (HUD HP/AE/MP labels, End Turn, New, panel headings, intro buttons, tooltips) and the score labels from the victory breakdown are not in the text table yet. Moving them needs either a fill-on-load pass over the HTML or say() calls in victory.js. Worth it only if the table is to be the single source for every visible string (e.g. for localization).
+----
 Score:   35
 ID: renew-dialog-rk9x
 Created: 2026-11-26T17:50:03Z

@@ -60,7 +60,7 @@ function effectiveSkillMpCost(player, skill) {
 }
 
 function mpLabel(cost) {
-    return cost === 'all' ? 'All MP' : `${cost} MP`;
+    return cost === 'all' ? say('mp_all', {}) : say('mp_n', { n: cost });
 }
 
 function skillMpLabel(skill) {
@@ -73,7 +73,7 @@ function effectiveAetherCost(player, skill) {
 }
 
 function skillCostLabel(skill, player) {
-    return `${effectiveAetherCost(player, skill)} AE, ${mpLabel(effectiveSkillMpCost(player, skill))}`;
+    return say('skill_cost', { ae: effectiveAetherCost(player, skill), mp: mpLabel(effectiveSkillMpCost(player, skill)) });
 }
 
 // Weapon damage a weapon-flow skill adds: the held weapon's damage only when
@@ -124,13 +124,13 @@ class Action {
         const breachBonus = player.sumEquipped('breach_jewel', 'breachBonus');
         if (breachBonus) {
             const near = world.pois.some(p => (p.type === POI.BREACH || p.type === POI.MAW) && hexDistance(player.q, player.r, p.q, p.r) <= 3);
-            if (near) { dmg += breachBonus; logCombat(`Breach Jewel: +${breachBonus} might!`, 'log-info'); }
+            if (near) { dmg += breachBonus; logCombat(say('log_breach_jewel', { n: breachBonus }), 'log-info'); }
         }
         const signet = player.equipped('aether_signet');
         if (signet && player.aether >= player.maxAether()) {
             dmg += signet.aetherSignetDamage;
             player.aether -= signet.aetherSignetCost;
-            logCombat(`Aether Signet: +${signet.aetherSignetDamage} dmg!`, 'log-info');
+            logCombat(say('log_aether_signet', { n: signet.aetherSignetDamage }), 'log-info');
         }
         if (isChaosTerrain(playerTerrain())) dmg += player.sumEquipped('chaos_attune', 'chaosAttuneMight');
         return dmg;
@@ -143,7 +143,7 @@ class Action {
         if (!wep) return {};
         if (wep.special === 'defense_shred') {
             enemy.defReduction = (enemy.defReduction || 0) + wep.shredAmount;
-            this.ctx.logCombat(`Shreds ${wep.shredAmount} defense!`, 'log-info');
+            this.ctx.logCombat(say('log_shreds', { n: wep.shredAmount }), 'log-info');
         }
         if (wep.special === 'armor_pierce') return { pierceAmount: wep.pierceAmount };
         return {};
@@ -158,15 +158,15 @@ class Action {
         if (wep.special === 'lifesteal') {
             const heal = wep.lifestealAmount;
             player.hp = Math.min(player.maxHP(), player.hp + heal);
-            logCombat(`+${heal} HP (lifesteal)`, 'log-heal');
+            logCombat(say('log_lifesteal', { n: heal }), 'log-heal');
         }
         if (wep.special === 'aether_siphon') {
             player.aether = Math.min(player.maxAether(), player.aether + wep.siphonAmount);
-            logCombat(`+${wep.siphonAmount} AE (siphon)`, 'log-info');
+            logCombat(say('log_siphon_ae', { n: wep.siphonAmount }), 'log-info');
         }
         if (wep.special === 'channel') {
             player.hp -= wep.channelDamage;
-            logCombat(`Channel: ${wep.channelDamage} dmg to you`, 'log-dmg');
+            logCombat(say('log_channel_self', { n: wep.channelDamage }), 'log-dmg');
             if (player.hp <= 0) { player.hp = 0; endGame(false); }
         }
 
@@ -174,7 +174,7 @@ class Action {
 
         if (wep.special === 'burn') {
             enemy.burnDamage = (enemy.burnDamage || 0) + wep.burnDamage;
-            logCombat(`${em.getDef(enemy.type).name} is burning!`, 'log-dmg');
+            logCombat(say('log_burning', { name: em.getDef(enemy.type).name }), 'log-dmg');
         }
         if (wep.special === 'knockback') {
             const dest = knockbackHex(player.q, player.r, enemy.q, enemy.r);
@@ -183,7 +183,7 @@ class Action {
             if (hex && world.isPassable(hex) && !occupied && !(dest.q === player.q && dest.r === player.r)) {
                 enemy.q = dest.q;
                 enemy.r = dest.r;
-                logCombat(`Knocked back!`, 'log-info');
+                logCombat(say('log_knocked_back', {}), 'log-info');
             }
         }
     }
@@ -254,7 +254,7 @@ class Action {
             const eDef = enemyDefense(closest, closestDef);
             const actualDmg = Math.max(1, dmg - eDef);
             closest.hp -= actualDmg;
-            logCombat(`${skillName} chain: ${actualDmg} dmg to ${closestDef.name}`, 'log-dmg');
+            logCombat(say('log_chain_hit', { source: skillName, dmg: actualDmg, name: closestDef.name }), 'log-dmg');
             sound.hitEnemy();
             rollPlayerStun(closest, dmg, stunBucket, 0);
             if (closest.hp <= 0) killEnemy(closest);
@@ -345,7 +345,7 @@ class Strike {
         let remaining = count;
         for (const adj of this.neighborEnemiesOf(player.q, player.r)) {
             if (remaining <= 0) break;
-            entries.push(this.secondaryEntry(adj, 'Sweep'));
+            entries.push(this.secondaryEntry(adj, say('src_sweep', {})));
             remaining--;
         }
     }
@@ -364,14 +364,14 @@ class Strike {
         this.hitTargets.add(entry.target);
         if (this.options.skillShred) {
             entry.target.defReduction = (entry.target.defReduction || 0) + this.options.skillShred;
-            this.ctx.logCombat(`Sundered ${this.options.skillShred} defense!`, 'log-info');
+            this.ctx.logCombat(say('log_sundered', { n: this.options.skillShred }), 'log-info');
         }
         const opts = this.buildOpts(entry.target);
         const result = this.deliverDamage(entry, opts);
         this.action.applyOnHitEffects(this.matched ? this.wep : null, entry.target);
         if (this.options.skillBurn && entry.target.hp > 0) {
             entry.target.burnDamage = (entry.target.burnDamage || 0) + this.options.skillBurn;
-            this.ctx.logCombat(`${this.ctx.em.getDef(entry.target.type).name} is burning!`, 'log-dmg');
+            this.ctx.logCombat(say('log_burning', { name: this.ctx.em.getDef(entry.target.type).name }), 'log-dmg');
         }
         if (entry.target === this.primary) this.primaryResult = result;
     }
@@ -389,7 +389,7 @@ class Strike {
         let result = null;
         for (let i = 1; i <= entry.hitCount; i++) {
             if (entry.target.hp <= 0) break;
-            const label = numbered ? `${entry.label} ${i}` : entry.label;
+            const label = numbered ? say('src_numbered', { label: entry.label, n: i }) : entry.label;
             result = dealDamageToEnemy(entry.target, entry.dmg, label, opts);
             this.totalDealt += result.dealt;
         }
@@ -416,13 +416,13 @@ class Strike {
         let dmg = this.dmg;
         for (const target of this.action.chainTargets(this.primary, bounceCount, bounceRange)) {
             dmg += perJumpBonus;
-            entries.push({ target, hitCount: 1, label: `${label} bounce`, dmg });
+            entries.push({ target, hitCount: 1, label: say('src_bounce', { label }), dmg });
         }
     }
 }
 
-// Per-affix label for the secondary entries a melee multi-target affix spawns.
-const MELEE_AFFIX_LABEL = { chain: 'Chain bounce', reverberate: 'Reverberate bounce', cleave: 'Cleave', sweep: 'Sweep' };
+// Per-affix text key for the secondary entries a melee multi-target affix spawns.
+const MELEE_AFFIX_LABEL = { chain: 'src_chain_bounce', reverberate: 'src_reverberate_bounce', cleave: 'src_cleave', sweep: 'src_sweep' };
 
 // Melee weapon strike: chain/reverberate, cleave/sweep, double/triple_strike.
 class WeaponStrike extends Strike {
@@ -435,7 +435,7 @@ class WeaponStrike extends Strike {
     }
 
     appendWeaponAffixes(entries) {
-        const label = MELEE_AFFIX_LABEL[this.wep.special];
+        const label = say(MELEE_AFFIX_LABEL[this.wep.special], {});
         const perJump = this.wep.special === 'reverberate' ? this.wep.chainBonus : 0;
         let dmg = this.dmg;
         for (const target of this.action.meleeAffixTargets(this.wep, this.primary)) {
@@ -457,7 +457,7 @@ class RangedStrike extends Strike {
         let dmg = this.action.applyEquipmentBonusDamage(this.baseDmg);
         if (this.matched && this.wep.special === 'sniper' && this.dist >= this.wep.range) {
             dmg += this.wep.sniperBonus;
-            logCombat(`Sniper: +${this.wep.sniperBonus} at max range`, 'log-info');
+            logCombat(say('log_sniper', { n: this.wep.sniperBonus }), 'log-info');
         }
         this.dmg = dmg;
     }
@@ -474,11 +474,11 @@ class RangedStrike extends Strike {
 
     appendWeaponAffixes(entries) {
         if (this.wep.special === 'chain') {
-            this.appendChain(entries, 'Chain', this.wep.chainCount, 2, 0);
+            this.appendChain(entries, say('src_chain', {}), this.wep.chainCount, 2, 0);
         } else if (this.wep.special === 'reverberate') {
-            this.appendChain(entries, 'Reverberate', this.wep.chainCount, 2, this.wep.chainBonus);
+            this.appendChain(entries, say('src_reverberate', {}), this.wep.chainCount, 2, this.wep.chainBonus);
         } else if (this.wep.special === 'splash') {
-            for (const adj of this.neighborEnemies()) entries.push(this.secondaryEntry(adj, 'Splash'));
+            for (const adj of this.neighborEnemies()) entries.push(this.secondaryEntry(adj, say('src_splash', {})));
         } else if (this.wep.special === 'piercing') {
             this.appendPiercingLine(entries);
         }
@@ -494,7 +494,7 @@ class RangedStrike extends Strike {
             const pq = this.primary.q + dq * i, pr = this.primary.r + dr * i;
             const target = em.enemies.find(e => e.q === pq && e.r === pr);
             if (target) {
-                entries.push(this.secondaryEntry(target, 'Pierce'));
+                entries.push(this.secondaryEntry(target, say('src_pierce', {})));
                 return;
             }
             const hex = world.getHex(pq, pr);
@@ -548,7 +548,7 @@ class MeleeAction extends Action {
         const enemy = this.enemy;
 
         const baseDmg = player.meleeDamage(em.getDef(enemy.type).chaosSpawned);
-        const { killed } = new WeaponStrike(this, baseDmg, 'Melee', 'primary').apply(enemy);
+        const { killed } = new WeaponStrike(this, baseDmg, say('src_melee', {}), 'primary').apply(enemy);
 
         if (!killed && !enemy.stunnedNextTurn) {
             const wep = player.weapon();
@@ -557,7 +557,7 @@ class MeleeAction extends Action {
             if (wep && wep.special === 'riposte') counterDmg = Math.floor(counterDmg / 2);
             const deflect = player.equipped('counter_deflect');
             if (deflect) counterDmg = Math.floor(counterDmg * (100 - deflect.counterDeflect) / 100);
-            dealDamageToPlayer(counterDmg, `${def.name} counters`, false, { attacker: enemy });
+            dealDamageToPlayer(counterDmg, say('src_counters', { name: def.name }), false, { attacker: enemy });
         }
 
         this.spendWeaponMP();
@@ -587,7 +587,7 @@ class RangedAction extends Action {
         const dist = hexDistance(player.q, player.r, this.targetQ, this.targetR);
         const baseDmg = player.rangedDamage(dist, em.getDef(enemy.type).chaosSpawned);
 
-        new RangedStrike(this, baseDmg, 'Ranged', 'other').apply(enemy);
+        new RangedStrike(this, baseDmg, say('src_ranged', {}), 'other').apply(enemy);
 
         // Magical ranged costs 1 aether by default; heavy variant doubles it.
         // free_ranged and channel bypass entirely.
@@ -636,7 +636,7 @@ class MoveAndAttackAction extends Action {
                     player.r = dest.r;
                     player.movedThisTurn = true;
                     refreshVision();
-                    logCombat(`Blink Ring: teleported!`, 'log-info');
+                    logCombat(say('log_blink', {}), 'log-info');
                     const origMight = player.stats.might;
                     player.stats.might += blink.blinkBonus;
                     const { killed } = new MeleeAction(ctx, enemy).execute();
@@ -719,7 +719,7 @@ class SkillAction extends Action {
         const { player, logCombat } = ctx;
         if (!this.skill) return;
         const cost = effectiveAetherCost(player, this.skill);
-        if (player.aether < cost) { logCombat('Not enough Aether!', 'log-info'); return; }
+        if (player.aether < cost) { logCombat(say('log_not_enough_aether', {}), 'log-info'); return; }
 
         const handler = SKILL_HANDLERS[this.skillId];
         if (!handler) return;
@@ -818,19 +818,19 @@ function executeRestore(action) {
         hexDistance(player.q, player.r, p.q, p.r) <= range
     );
     if (mawInRange && unravelerAlive) {
-        showOnceDialog('mawBlockedByUnraveler', 'The Maw Resists',
-            '<p>The Maw seethes with chaos and refuses to close. The Unraveler must be defeated first before the Maw can be sealed.</p>',
-            [{ label: 'OK', cls: 'btn-primary' }]);
+        showOnceDialog('mawBlockedByUnraveler', say('title_maw_resists', {}),
+            say('maw_resists', {}),
+            [{ label: say('btn_ok', {}), cls: 'btn-primary' }]);
     } else if (mawInRange && openBreach) {
         for (const p of world.pois) {
             if (p.type === POI.BREACH && !p.closed) world.revealed.add(hexKey(p.q, p.r));
         }
-        showOnceDialog('mawBlockedByBreaches', 'The Maw Hungers',
-            '<p>Open breaches still feed the Maw. Seal every breach before the Maw can be closed.</p><p>The remaining breaches reveal themselves on your map.</p>',
-            [{ label: 'OK', cls: 'btn-primary' }]);
+        showOnceDialog('mawBlockedByBreaches', say('title_maw_hungers', {}),
+            say('maw_hungers', {}),
+            [{ label: say('btn_ok', {}), cls: 'btn-primary' }]);
     }
     if (shatteredHexes.length === 0 && !breachInRange) {
-        return action.abortSkill('No shattered terrain in range!');
+        return action.abortSkill(say('log_no_shattered_in_range', {}));
     }
     action.restoreShatteredHexes(shatteredHexes);
     player.aether = Math.min(player.maxAether(), player.aether + 1);
@@ -842,8 +842,10 @@ function executeRestore(action) {
     victory.hexesRestored += shatteredHexes.length;
     if (shatteredHexes.length > 0) {
         gainXP(shatteredHexes.length * 3);
-        let msg = `Restored ${shatteredHexes.length} hex${shatteredHexes.length > 1 ? 'es' : ''}! +1 AE`;
-        if (goldFound > 0) msg += `, +${goldFound}g`;
+        const hexes = say(shatteredHexes.length > 1 ? 'word_hexes' : 'word_hex', {});
+        const msg = goldFound > 0
+            ? say('log_restored_gold', { n: shatteredHexes.length, hexes, gold: goldFound })
+            : say('log_restored', { n: shatteredHexes.length, hexes });
         logCombat(msg, 'log-heal');
         offerSettlementReward(shatteredHexes);
     }
@@ -852,7 +854,7 @@ function executeRestore(action) {
         if (Rando.bool(chance)) {
             closeBreach(breachInRange);
         } else {
-            showDialog('Restore', 'Restore did not close the breach.', [{ label: 'OK', cls: 'btn-primary' }]);
+            showDialog(say('title_restore', {}), say('restore_failed', {}), [{ label: say('btn_ok', {}), cls: 'btn-primary' }]);
         }
     }
 }
@@ -863,7 +865,7 @@ function executeVoidStrike(action) {
     if (!enemy) return;
     const base = matchedWeaponDamage(player, action.skill) + player.stats.might + player.stats.warding;
     const dmg = Math.round(base * action.skill.effectStrength / 5);
-    new WeaponStrike(action, dmg, 'Void Strike', 'primary').apply(enemy);
+    new WeaponStrike(action, dmg, say('src_void_strike', {}), 'primary').apply(enemy);
 }
 
 function executePhaseStep(action) {
@@ -872,7 +874,7 @@ function executePhaseStep(action) {
     player.r = action.targetR;
     player.phaseStepUsedThisTurn = true;
     refreshVision();
-    logCombat('Phase Step!', 'log-info');
+    logCombat(say('log_phase_step', {}), 'log-info');
     checkHexEntry();
 }
 
@@ -881,7 +883,7 @@ function executeWaterSkip(action) {
     player.q = action.targetQ;
     player.r = action.targetR;
     refreshVision();
-    logCombat('Water Skip!', 'log-info');
+    logCombat(say('log_water_skip', {}), 'log-info');
     checkHexEntry();
 }
 
@@ -890,7 +892,7 @@ function executeMountainSkip(action) {
     player.q = action.targetQ;
     player.r = action.targetR;
     refreshVision();
-    logCombat('Mountain Skip!', 'log-info');
+    logCombat(say('log_mountain_skip', {}), 'log-info');
     checkHexEntry();
 }
 
@@ -898,7 +900,7 @@ function executeCosmicBolt(action) {
     const { player, em, dealDamageToEnemy } = action.ctx;
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
-    dealDamageToEnemy(enemy, action.skill.baseDamage + player.stats.warding, 'Cosmic Bolt', { stunBucket: 'other' });
+    dealDamageToEnemy(enemy, action.skill.baseDamage + player.stats.warding, say('src_cosmic_bolt', {}), { stunBucket: 'other' });
 }
 
 function executeShockwave(action) {
@@ -909,11 +911,11 @@ function executeShockwave(action) {
     for (const h of hexesInRange(player.q, player.r, skill.range)) {
         const enemy = em.enemyAt(h.q, h.r);
         if (!enemy) continue;
-        dealDamageToEnemy(enemy, dmg, 'Shockwave', { stunBucket: 'primary' });
+        dealDamageToEnemy(enemy, dmg, say('src_shockwave', {}), { stunBucket: 'primary' });
         if (enemy.hp > 0) survivors.push(enemy);
     }
     for (const enemy of survivors) action.pushEnemyAway(enemy, player.q, player.r);
-    logCombat('Shockwave!', 'log-info');
+    logCombat(say('log_shockwave', {}), 'log-info');
 }
 
 function executeSiphonStrike(action) {
@@ -922,11 +924,11 @@ function executeSiphonStrike(action) {
     if (!enemy) return;
     const base = matchedWeaponDamage(player, action.skill) + player.stats.might;
     const dmg = Math.round(base * action.skill.effectStrength / 10);
-    const strike = new WeaponStrike(action, dmg, 'Siphon Strike', 'primary');
+    const strike = new WeaponStrike(action, dmg, say('src_siphon_strike', {}), 'primary');
     strike.apply(enemy);
     if (strike.totalDealt > 0) {
         player.hp = Math.min(player.maxHP(), player.hp + strike.totalDealt);
-        logCombat(`+${strike.totalDealt} HP (siphon)`, 'log-heal');
+        logCombat(say('log_siphon_hp', { n: strike.totalDealt }), 'log-heal');
     }
 }
 
@@ -935,26 +937,26 @@ function executePiercingShot(action) {
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
     const dmg = action.skill.baseDamage + player.stats.reflex;
-    new RangedStrike(action, dmg, 'Penetrating Shot', 'other', { bypassDefense: true }).apply(enemy);
+    new RangedStrike(action, dmg, say('src_penetrating_shot', {}), 'other', { bypassDefense: true }).apply(enemy);
 }
 
 function executeWarpShield(action) {
     const { player, logCombat } = action.ctx;
     player.warpShieldTurns = action.skill.duration;
-    logCombat('Warp Shield active!', 'log-info');
+    logCombat(say('log_warp_shield', {}), 'log-info');
 }
 
 function executeReflect(action) {
     const { player, logCombat } = action.ctx;
     player.reflectTurns = action.skill.duration;
-    logCombat('Reflect stance!', 'log-info');
+    logCombat(say('log_reflect', {}), 'log-info');
 }
 
 function executeChannel(action) {
     const { player, logCombat } = action.ctx;
     const aeDeficit = player.maxAether() - player.aether;
     if (aeDeficit <= 0) {
-        logCombat('Channel Aether: already at max AE.', 'log-info');
+        logCombat(say('log_channel_full', {}), 'log-info');
         return;
     }
     const ratio = action.skill.effectStrength;
@@ -962,12 +964,12 @@ function executeChannel(action) {
     const aeGain = Math.max(1, Math.floor(hpLost / ratio));
     player.hp -= hpLost;
     player.aether = Math.min(player.maxAether(), player.aether + aeGain);
-    logCombat(`Channel Aether: -${hpLost} HP, +${aeGain} AE`, 'log-info');
+    logCombat(say('log_channel', { hp: hpLost, ae: aeGain }), 'log-info');
 }
 
 function executeBreachPulse(action) {
     const { player } = action.ctx;
-    action.applyAoeDamage('Breach Pulse', action.skill.baseDamage + player.stats.warding, action.skill.range, 'other');
+    action.applyAoeDamage(say('src_breach_pulse', {}), action.skill.baseDamage + player.stats.warding, action.skill.range, 'other');
 }
 
 function executeChainLightning(action) {
@@ -976,8 +978,9 @@ function executeChainLightning(action) {
     if (!enemy) return;
     const skill = action.skill;
     const dmg = skill.baseDamage + player.stats.warding;
-    dealDamageToEnemy(enemy, dmg, 'Chain Lightning', { stunBucket: 'other' });
-    action.chainBounceRaw('Chain Lightning', dmg, action.targetQ, action.targetR, skill.hitCount, skill.effectStrength, new Set([enemy]), 0, 'other');
+    const label = say('src_chain_lightning', {});
+    dealDamageToEnemy(enemy, dmg, label, { stunBucket: 'other' });
+    action.chainBounceRaw(label, dmg, action.targetQ, action.targetR, skill.hitCount, skill.effectStrength, new Set([enemy]), 0, 'other');
 }
 
 // Melee weapon skill: weapon + Might to the targeted enemy, carrying one
@@ -991,22 +994,22 @@ function mightWeaponSkill(action, label, options) {
 }
 
 function executeImmolate(action) {
-    mightWeaponSkill(action, 'Immolate', { skillBurn: action.skill.effectStrength });
+    mightWeaponSkill(action, say('src_immolate', {}), { skillBurn: action.skill.effectStrength });
 }
 
 function executeSweep(action) {
-    mightWeaponSkill(action, 'Sweep', { skillSweep: action.skill.hitCount });
+    mightWeaponSkill(action, say('src_sweep', {}), { skillSweep: action.skill.hitCount });
 }
 
 function executeStunBlow(action) {
-    mightWeaponSkill(action, 'Stun', { skillStun: action.skill.effectStrength });
+    mightWeaponSkill(action, say('src_stun', {}), { skillStun: action.skill.effectStrength });
 }
 
 function executeMendingLight(action) {
     const { player, logCombat } = action.ctx;
     const heal = action.skill.effectStrength + player.stats.vigor * 3;
     player.hp = Math.min(player.maxHP(), player.hp + heal);
-    logCombat(`Healed ${heal} HP`, 'log-heal');
+    logCombat(say('log_healed', { n: heal }), 'log-heal');
 }
 
 function executeSprint(action) {
@@ -1014,7 +1017,7 @@ function executeSprint(action) {
     const bonus = action.skill.effectStrength;
     player.mp += bonus;
     player.sprintUsedThisTurn = true;
-    logCombat(`Sprint: +${bonus} MP`, 'log-info');
+    logCombat(say('log_sprint', { n: bonus }), 'log-info');
 }
 
 function executeGravityWell(action) {
@@ -1033,18 +1036,18 @@ function executeGravityWell(action) {
         }
         if (closest) { enemy.q = closest.q; enemy.r = closest.r; }
     }
-    logCombat('Gravity Well!', 'log-info');
+    logCombat(say('log_gravity_well', {}), 'log-info');
 }
 
 function executeSunderingBlow(action) {
-    mightWeaponSkill(action, 'Shredding Blow', { skillShred: action.skill.effectStrength });
+    mightWeaponSkill(action, say('src_shredding_blow', {}), { skillShred: action.skill.effectStrength });
 }
 
 function executeMeteor(action) {
     const { player, logCombat } = action.ctx;
     const dmg = action.skill.baseDamage + player.stats.warding;
-    action.applyAoeDamageAt('Meteor', dmg, action.targetQ, action.targetR, action.skill.effectStrength, 'other');
-    logCombat('Meteor!', 'log-info');
+    action.applyAoeDamageAt(say('src_meteor', {}), dmg, action.targetQ, action.targetR, action.skill.effectStrength, 'other');
+    logCombat(say('log_meteor', {}), 'log-info');
 }
 
 function executeDimensionalRend(action) {
@@ -1054,13 +1057,13 @@ function executeDimensionalRend(action) {
     const hpCost = action.skill.effectStrength - 4;
     const tooLow = player.hp <= hpCost;
     player.hp -= hpCost;
-    logCombat(`Dimensional Rend tears at you: -${hpCost} HP`, 'log-dmg');
+    logCombat(say('log_rend_cost', { n: hpCost }), 'log-dmg');
     if (tooLow) {
-        logCombat('Health too low — the rift fizzles.', 'log-info');
+        logCombat(say('log_rend_fizzle', {}), 'log-info');
         return;
     }
     const dmg = Math.round(matchedWeaponDamage(player, action.skill) * action.skill.effectStrength / 5) + player.stats.vigor;
-    new WeaponStrike(action, dmg, 'Dimensional Rend', 'other').apply(enemy);
+    new WeaponStrike(action, dmg, say('src_dimensional_rend', {}), 'other').apply(enemy);
 }
 
 function executeExecute(action) {
@@ -1069,7 +1072,7 @@ function executeExecute(action) {
     if (!enemy) return;
     const base = matchedWeaponDamage(player, action.skill) + player.stats.might;
     const dmg = Math.round(base * action.skill.effectStrength / 10);
-    new WeaponStrike(action, dmg, 'Execute', 'primary').apply(enemy);
+    new WeaponStrike(action, dmg, say('src_execute', {}), 'primary').apply(enemy);
 }
 
 function executeRicochet(action) {
@@ -1078,15 +1081,16 @@ function executeRicochet(action) {
     if (!enemy) return;
     const skill = action.skill;
     const dmg = skill.baseDamage + player.stats.reflex;
-    new RangedStrike(action, dmg, 'Ricochet', 'other', {
+    const label = say('src_ricochet', {});
+    new RangedStrike(action, dmg, label, 'other', {
         suppressWeaponMulti: true,
-        skillChain: { label: 'Ricochet', bounceCount: skill.hitCount, bounceRange: skill.effectStrength }
+        skillChain: { label, bounceCount: skill.hitCount, bounceRange: skill.effectStrength }
     }).apply(enemy);
 }
 
 function executeStarfall(action) {
     const { player } = action.ctx;
-    action.applyAoeDamage('Starfall', action.skill.baseDamage + player.stats.warding * 2, action.skill.range, 'other');
+    action.applyAoeDamage(say('src_starfall', {}), action.skill.baseDamage + player.stats.warding * 2, action.skill.range, 'other');
 }
 
 function executeVoidSalvo(action) {
@@ -1094,13 +1098,13 @@ function executeVoidSalvo(action) {
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
     const dmg = action.skill.baseDamage + player.stats.reflex;
-    new RangedStrike(action, dmg, 'Salvo', 'other', { hitCount: action.skill.hitCount, suppressWeaponMulti: true }).apply(enemy);
+    new RangedStrike(action, dmg, say('src_salvo', {}), 'other', { hitCount: action.skill.hitCount, suppressWeaponMulti: true }).apply(enemy);
 }
 
 function executeRecall(action) {
     const { player, world, refreshVision, centerOn, logCombat } = action.ctx;
     const havens = world.havens();
-    if (havens.length === 0) return action.abortSkillWithRefund('No havens exist!');
+    if (havens.length === 0) return action.abortSkillWithRefund(say('log_no_havens', {}));
     // Stable cycle order: clockwise around the havens' centroid, so repeated Recalls
     // from a haven walk the whole ring in visual order. Screen y points down, so an
     // ascending atan2 is clockwise on screen. The set never changes mid-run, making
@@ -1128,7 +1132,7 @@ function executeRecall(action) {
     player.r = dest.r;
     refreshVision();
     centerOn({ q: player.q, r: player.r });
-    logCombat(`Recall! Teleported to haven.`, 'log-info');
+    logCombat(say('log_recall', {}), 'log-info');
 }
 
 // ---- Non-combat skills ----
@@ -1149,7 +1153,7 @@ function executeAetherTap(action) {
     }
     const aeGain = Math.ceil(cleanCount / action.skill.effectStrength);
     player.aether = Math.min(player.maxAether(), player.aether + aeGain);
-    logCombat(`Aether Tap: +${aeGain} AE (${cleanCount} clean hexes)`, 'log-info');
+    logCombat(say('log_aether_tap', { ae: aeGain, n: cleanCount }), 'log-info');
 }
 
 function executeFarsight(action) {
@@ -1162,7 +1166,7 @@ function executeFarsight(action) {
             world.visible.add(key);
         }
     }
-    logCombat('Farsight! Vision expanded.', 'log-info');
+    logCombat(say('log_farsight', {}), 'log-info');
 }
 
 function executeProspect(action) {
@@ -1184,11 +1188,12 @@ function executeProspect(action) {
             const target = Rando.choice(candidates);
             target.goldDeposit = 10;
             world.revealed.add(hexKey(target.q, target.r));
-            logCombat('Struck gold nearby!', 'log-gold');
+            logCombat(say('log_struck_gold', {}), 'log-gold');
         }
     }
-    if (revealed > 0) logCombat(`Prospect: revealed ${revealed} gold deposit${revealed > 1 ? 's' : ''}`, 'log-gold');
-    else logCombat('Prospect: sensed the earth.', 'log-info');
+    if (revealed > 1) logCombat(say('log_prospect_many', { n: revealed }), 'log-gold');
+    else if (revealed === 1) logCombat(say('log_prospect_one', {}), 'log-gold');
+    else logCombat(say('log_prospect_none', {}), 'log-info');
 }
 
 function executeCommune(action) {
@@ -1201,8 +1206,9 @@ function executeCommune(action) {
         if (!world.revealed.has(key)) poiCount++;
         world.revealed.add(key);
     }
-    if (poiCount > 0) logCombat(`Commune: revealed ${poiCount} location${poiCount > 1 ? 's' : ''}!`, 'log-info');
-    else logCombat('Commune: the world has no more secrets.', 'log-info');
+    if (poiCount > 1) logCombat(say('log_commune_many', { n: poiCount }), 'log-info');
+    else if (poiCount === 1) logCombat(say('log_commune_one', {}), 'log-info');
+    else logCombat(say('log_commune_none', {}), 'log-info');
 }
 
 function executeSalvage(action) {
@@ -1211,7 +1217,7 @@ function executeSalvage(action) {
         .map(h => world.getHex(h.q, h.r))
         .filter(h => h && UNSHATTERED_VERSION[h.terrain] !== undefined);
     if (salvageHexes.length === 0) {
-        return action.abortSkill('No shattered terrain nearby to salvage!');
+        return action.abortSkill(say('log_no_salvage', {}));
     }
     action.restoreShatteredHexes(salvageHexes);
     let totalGold = 0;
@@ -1220,18 +1226,19 @@ function executeSalvage(action) {
         hex.goldDeposit = (hex.goldDeposit || 0) + gold;
         totalGold += gold;
     }
-    logCombat(`Salvage: restored ${salvageHexes.length} hex${salvageHexes.length > 1 ? 'es' : ''}, ${totalGold}g in deposits!`, 'log-gold');
+    const hexes = say(salvageHexes.length > 1 ? 'word_hexes' : 'word_hex', {});
+    logCombat(say('log_salvage', { n: salvageHexes.length, hexes, gold: totalGold }), 'log-gold');
 }
 
 function executeSkillSeek(action) {
     const { player, logCombat, showSkillChoiceDialog } = action.ctx;
     const chance = action.skill.effectStrength / 100;
     if (Rando.bool(chance)) {
-        logCombat('Insight! A new skill reveals itself!', 'log-info');
+        logCombat(say('log_insight', {}), 'log-info');
         player.pendingSkillChoice = true;
         setTimeout(() => showSkillChoiceDialog(), 300);
     } else {
-        logCombat('The patterns elude you...', 'log-info');
+        logCombat(say('log_insight_fail', {}), 'log-info');
     }
 }
 
@@ -1240,7 +1247,7 @@ function executeSpiritWalk(action) {
     player.q = action.targetQ;
     player.r = action.targetR;
     refreshVision();
-    logCombat('Spirit Walk!', 'log-info');
+    logCombat(say('log_spirit_walk', {}), 'log-info');
     checkHexEntry();
 }
 
@@ -1262,7 +1269,7 @@ function executeGroundWeeps(action) {
         if (threat > 0) overlay.set(key, threat);
     }
     setThreatOverlay(overlay);
-    logCombat('The ground weeps... threats revealed.', 'log-info');
+    logCombat(say('log_ground_weeps', {}), 'log-info');
     return false;
 }
 
@@ -1277,7 +1284,7 @@ function executeRespec(action) {
     player.statPoints += refund;
     player.hp = Math.min(player.hp, player.maxHP());
     player.aether = Math.min(player.aether, player.maxAether());
-    logCombat(`Renew: ${refund} stat points refunded.`, 'log-info');
+    logCombat(say('log_renew', { n: refund }), 'log-info');
     setTimeout(() => showLevelUpDialog(0), 100);
 }
 
@@ -1292,7 +1299,7 @@ function executeRetrain(action) {
 function executeSanctuary(action) {
     const { player, world } = action.ctx;
     if (world.poiAt(player.q, player.r)) {
-        return action.abortSkillWithRefund('Cannot sanctify — already a point of interest!');
+        return action.abortSkillWithRefund(say('log_sanctify_blocked', {}));
     }
     // Conjure the village, rest, and end turn — all in one cast (handled in index.js
     // so it can pop the dialog and reuse the village rest flow).
@@ -1316,8 +1323,10 @@ function executeLoot(action) {
         victory.goldCollected += goldStolen;
         total += goldStolen;
     }
-    const suffix = targets.length > 1 ? ` from ${targets.length} enemies` : '';
-    logCombat(`Looted ${total}g${suffix}!`, 'log-gold');
+    const msg = targets.length > 1
+        ? say('log_looted_many', { gold: total, n: targets.length })
+        : say('log_looted', { gold: total });
+    logCombat(msg, 'log-gold');
 }
 
 function executeHavensLight(action) {
@@ -1325,17 +1334,17 @@ function executeHavensLight(action) {
     const skill = action.skill;
     const poi = world.poiAt(player.q, player.r);
     if (!poi || (poi.type !== POI.HAVEN && poi.type !== POI.VILLAGE)) {
-        return action.abortSkillWithRefund('Must be at a haven or village!');
+        return action.abortSkillWithRefund(say('log_need_settlement', {}));
     }
     const dmg = skill.baseDamage + player.stats.warding;
     let hitCount = 0;
     for (const h of hexesInRange(player.q, player.r, skill.range)) {
         const enemy = em.enemyAt(h.q, h.r);
         if (!enemy) continue;
-        dealDamageToEnemy(enemy, dmg, "Haven's Light", { stunBucket: 'other' });
+        dealDamageToEnemy(enemy, dmg, say('src_havens_light', {}), { stunBucket: 'other' });
         hitCount++;
     }
-    logCombat(`Haven's Light: hit ${hitCount} enemies!`, 'log-info');
+    logCombat(say('log_havens_light', { n: hitCount }), 'log-info');
 }
 
 // ---- Peaceful skills ----
@@ -1347,11 +1356,11 @@ function executeAetherBlast(action) {
     for (const h of hexesInRange(player.q, player.r, skill.range)) {
         if (em.enemyAt(h.q, h.r)) hits++;
     }
-    action.applyAoeDamage('Aether Blast', skill.baseDamage + Math.floor(player.stats.warding / 2), skill.range, 'other');
+    action.applyAoeDamage(say('src_aether_blast', {}), skill.baseDamage + Math.floor(player.stats.warding / 2), skill.range, 'other');
     if (hits > 0) {
         const gained = hits * skill.aetherPerHit;
         player.aether = Math.min(player.maxAether(), player.aether + gained);
-        logCombat(`+${gained} AE (${hits} hit)`, 'log-info');
+        logCombat(say('log_ae_per_hit', { n: gained, hits }), 'log-info');
     }
 }
 
@@ -1362,11 +1371,11 @@ function executeLifedrainBlast(action) {
     for (const h of hexesInRange(player.q, player.r, skill.range)) {
         if (em.enemyAt(h.q, h.r)) hits++;
     }
-    action.applyAoeDamage('Lifedrain Blast', skill.baseDamage + player.stats.vigor, skill.range, 'primary');
+    action.applyAoeDamage(say('src_lifedrain_blast', {}), skill.baseDamage + player.stats.vigor, skill.range, 'primary');
     if (hits > 0) {
         const healed = hits * skill.hpPerHit;
         player.hp = Math.min(player.maxHP(), player.hp + healed);
-        logCombat(`+${healed} HP (${hits} hit)`, 'log-heal');
+        logCombat(say('log_hp_per_hit', { n: healed, hits }), 'log-heal');
     }
 }
 
@@ -1374,26 +1383,26 @@ function executeGarrison(action) {
     const { player, world, logCombat } = action.ctx;
     const skill = action.skill;
     if (player.gold < skill.goldCost) {
-        return action.abortSkillWithRefund(`Need ${skill.goldCost}g to commission a garrison.`);
+        return action.abortSkillWithRefund(say('log_garrison_gold', { gold: skill.goldCost }));
     }
     if (world.poiAt(player.q, player.r)) {
-        return action.abortSkillWithRefund('Cannot build on an existing point of interest.');
+        return action.abortSkillWithRefund(say('log_garrison_poi', {}));
     }
     const hex = world.getHex(player.q, player.r);
     if (!hex || !world.isPassable(hex)) {
-        return action.abortSkillWithRefund('Cannot build here.');
+        return action.abortSkillWithRefund(say('log_garrison_here', {}));
     }
     const hasNearbySettlement = world.pois.some(p =>
         (p.type === POI.HAVEN || p.type === POI.VILLAGE) && world.visible.has(hexKey(p.q, p.r))
     );
     if (!hasNearbySettlement) {
-        return action.abortSkillWithRefund('A haven or village must be in sight to commission a garrison.');
+        return action.abortSkillWithRefund(say('log_garrison_sight', {}));
     }
     player.gold -= skill.goldCost;
     const poi = { q: player.q, r: player.r, type: POI.GARRISON_BUILD, id: world.pois.length };
     world.pois.push(poi);
     hex.poi = POI.GARRISON_BUILD;
-    logCombat('Garrison commissioned. Construction underway.', 'log-info');
+    logCombat(say('log_garrison_commissioned', {}), 'log-info');
 }
 
 function executeBountifulHarvest(action) {
@@ -1408,8 +1417,9 @@ function executeBountifulHarvest(action) {
         hex.crop = Rando.choice(CROP_ICONS);
         crops++;
     }
-    if (crops > 0) logCombat(`Bountiful Harvest: ${crops} crop${crops > 1 ? 's' : ''} sprouted!`, 'log-gold');
-    else logCombat('No suitable ground for crops.', 'log-info');
+    if (crops > 1) logCombat(say('log_harvest_many', { n: crops }), 'log-gold');
+    else if (crops === 1) logCombat(say('log_harvest_one', {}), 'log-gold');
+    else logCombat(say('log_harvest_none', {}), 'log-info');
 }
 
 const SKILL_HANDLERS = {

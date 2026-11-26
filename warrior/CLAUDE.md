@@ -10,7 +10,7 @@ Warrior is a single-player tactical hex RPG. Canvas rendering, plain `<script>` 
 
 No build or install step, and no server: double-click `index.html` (it must run from `file://`).
 
-Checks (Node, DOM-free): `node test/scripts.js` (the script includes load as one shared scope, no duplicate top-level names), `node test/fx.js` and `node test/skilllibrary.js` (skill-group dealing).
+Checks (Node, DOM-free): `node test/scripts.js` (the script includes load as one shared scope, no duplicate top-level names), `node test/fx.js`, `node test/skilllibrary.js` (skill-group dealing) and `node test/text.js` (the text table's shape and fail-fast helper).
 
 ### Plain scripts, not modules
 
@@ -28,6 +28,7 @@ index.js (orchestrator: rendering, input, UI, save/load, combat math, dialogs)
   ├─ world.js        (GameWorld class: hex grid, POIs, fog, LOS; toJSON/fromJSON)
   ├─ skilllibrary.js (SkillLibrary class: per-run skill groups (core / fixed / optional, half of optional held out) and discovery channels so no skill is awarded twice; each Wise Man's hut gives one core lesson (`firstUnlearnedCore`), then teaches optional skills; checked by `node test/skilllibrary.js`)
   ├─ enemies.js      (EnemyManager class: enemy list, spawn, defs; uses colortheory)
+  ├─ text.js         (TEXT table of every player-facing line + say(key, vars): picks a variant via Rando, styles by kind, fills {placeholders}, throws on a missing key, an unfilled placeholder or an unused var; `itemSpecialText(item)` fills an item special's stat line from the item's own fields; checked by `node test/text.js`)
   ├─ actions.js      (player Action classes + MP/aether cost helpers; see below)
   ├─ enemy_ai.js     (enemy AI classes, maw-distance math, runEnemyAiPhase; see below)
   ├─ victory.js      (Victory class: score tracking and final breakdown)
@@ -118,9 +119,10 @@ Canvas clicks are ignored when `phase !== 'player'`.
 
 - Pure client-side JavaScript (plain script includes, no ES modules, no npm; Node is used only to run `test/`)
 - No build step, no bundler, no external dependencies
-- No gameplay tests; `test/` holds the load/motion/skill-dealing checks above
+- No gameplay tests; `test/` holds the load/motion/skill-dealing/text checks above
 - Game state lives as `index.js` top-level `let`s (shared script scope, not `window` properties)
 - Lookups via config tables: `ALL_EQUIPMENT[id]`, `ENEMY_DEFS[type]`, `SKILLS[id]`, `TERRAIN[...]`
+- Player-facing wording lives in `text.js`, not at call sites: `say('key', { name })` (always pass the vars object, `{}` when none). Prose kinds (narration/stage/speech) render to `<p>` blocks; labels and log lines are plain text. Log colour classes stay at the call site. Skill names/descriptions and item names stay in config.js as data.
 - All randomness goes through `Rando` — `bellCurve(strength)` for damage rolls
 - Color values are 0-1 floats internally, converted to hex strings only for canvas
 - Phase management gates input: canvas clicks ignored when `phase !== 'player'`

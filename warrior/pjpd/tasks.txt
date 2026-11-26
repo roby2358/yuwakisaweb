@@ -1,24 +1,3 @@
-Priority:   55
-Status: ToDo
-ID: text-table-97mh
-Created: 2026-11-26T17:31:13Z
-Updated: 2026-11-26T17:31:13Z
-
-Text table: move every user-facing string out of the code into one lookup table, so wording lives in one place and any line can carry variants.
-
-Today strings are hardcoded at each call site in index.js and actions.js (showDialog / showVerticalDialog bodies and titles, button labels, logCombat lines, HUD and panel labels). One spot already does variants: HAVEN_GRATITUDE_MESSAGES and VILLAGE_GRATITUDE_MESSAGES in index.js, picked with Rando.choice; fold those into the new table.
-
-Settled design:
-- New plain script text.js (add its <script> tag before actions.js and index.js) holding one table keyed by event or label name. Every entry is an array of variants, even when there is only one.
-- One helper picks a variant through Rando and fills named placeholders such as {skill}, {item}, {gold}, {name}. A missing key or an unfilled placeholder throws (fail fast, no fallback text).
-- Each entry marks its kind (narration, speech, log, label); one renderer applies the style (e.g. speech in quotes / italics for stage directions) so markup does not live in the strings. Log colour classes (log-gold, log-info, ...) stay chosen at the call site.
-- Scope is everything the player reads: dialog prose and titles, sage and villager speech, combat-log lines (including mechanical ones like "+N XP"), button labels, HUD and panel labels. Skill names and descriptions stay in SKILLS in config.js and generated item names stay in config.js; they are data, not prose.
-- Functional text (buttons, HUD/panel labels, mechanical log lines with numbers) keeps exactly one variant so the UI stays learnable. This task moves strings only; it does not write new variants beyond the existing gratitude lines.
-- Every visit re-rolls; no per-place stable picks.
-- Add test/text.js (Node, DOM-free): every entry is a non-empty array, every variant of an entry uses the same set of placeholders, and the helper throws on a missing key or placeholder.
-
-Done when: no player-facing string literal is left at call sites in index.js / actions.js except data from config.js; node test/scripts.js, node test/fx.js and node test/text.js pass; CLAUDE.md lists text.js in the module graph.
-----
 Priority:   53
 Status: ToDo
 ID: text-flavor-jm9x
@@ -37,6 +16,20 @@ Settled design:
 - Tone rules: no vampire imagery (no fangs, blood-drinking); harm-coded verbs (weeping, withering, draining) only on harm-doing effects, never on gifts, healing or gratitude.
 
 Done when: every flavor entry in those four areas has 20 variants; node test/text.js and node test/scripts.js pass; the user reviews text.js.
+----
+Priority:   52
+Status: ToDo
+ID: text-ai-logs-ss4a
+Created: 2026-11-26T18:08:41Z
+Updated: 2026-11-26T18:08:41Z
+
+Route the remaining hardcoded player-facing strings in enemy_ai.js through the text table (say(key, vars) in text.js).
+
+Goal: the text table should hold every string the player reads. enemy_ai.js still builds log and damage-source text inline: "Counter Mastery: N dmg!", "{name} (ranged)", "The Unraveler spawns a ...", "Chaos Circlet: +1 AE", "Burn: N dmg to ...", and any others in that file.
+
+Settled design: add one table entry per string in text.js (kind log or label, one variant, the same wording as now), and call say() with explicit vars at each site. enemy_ai.js loads after text.js, so it can call say directly; no ctx wiring is needed. Log colour classes stay at the call site.
+
+Done when: no player-facing string literals remain in enemy_ai.js, test/text.js also checks the literal say() keys in enemy_ai.js, and node test/scripts.js, test/fx.js, test/text.js all pass.
 ----
 Priority:   51
 Status: ToDo

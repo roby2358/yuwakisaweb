@@ -142,6 +142,27 @@ Done when: node test/scripts.js and node test/fx.js pass; showHutDialog handles 
 ----
 Priority:   55
 Status: Done
+ID: text-table-97mh
+Created: 2026-11-26T17:31:13Z
+Updated: 2026-11-26T18:15:52Z
+
+Text table: move every user-facing string out of the code into one lookup table, so wording lives in one place and any line can carry variants.
+
+Today strings are hardcoded at each call site in index.js and actions.js (showDialog / showVerticalDialog bodies and titles, button labels, logCombat lines, HUD and panel labels). One spot already does variants: HAVEN_GRATITUDE_MESSAGES and VILLAGE_GRATITUDE_MESSAGES in index.js, picked with Rando.choice; fold those into the new table.
+
+Settled design:
+- New plain script text.js (add its <script> tag before actions.js and index.js) holding one table keyed by event or label name. Every entry is an array of variants, even when there is only one.
+- One helper picks a variant through Rando and fills named placeholders such as {skill}, {item}, {gold}, {name}. A missing key or an unfilled placeholder throws (fail fast, no fallback text).
+- Each entry marks its kind (narration, speech, log, label); one renderer applies the style (e.g. speech in quotes / italics for stage directions) so markup does not live in the strings. Log colour classes (log-gold, log-info, ...) stay chosen at the call site.
+- Scope is everything the player reads: dialog prose and titles, sage and villager speech, combat-log lines (including mechanical ones like "+N XP"), button labels, HUD and panel labels. Skill names and descriptions stay in SKILLS in config.js and generated item names stay in config.js; they are data, not prose.
+- Functional text (buttons, HUD/panel labels, mechanical log lines with numbers) keeps exactly one variant so the UI stays learnable. This task moves strings only; it does not write new variants beyond the existing gratitude lines.
+- Every visit re-rolls; no per-place stable picks.
+- Add test/text.js (Node, DOM-free): every entry is a non-empty array, every variant of an entry uses the same set of placeholders, and the helper throws on a missing key or placeholder.
+
+Done when: no player-facing string literal is left at call sites in index.js / actions.js except data from config.js; node test/scripts.js, node test/fx.js and node test/text.js pass; CLAUDE.md lists text.js in the module graph.
+----
+Priority:   55
+Status: Done
 ID: combo-skill-56hq
 Created: 2026-04-27T05:55:51Z
 Updated: 2026-06-15T03:35:42Z

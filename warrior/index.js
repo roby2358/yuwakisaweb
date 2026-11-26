@@ -542,9 +542,9 @@ function refreshVision() {
     }
     // First-sight intro for the Unraveler
     if (unraveler && world.visible.has(hexKey(unraveler.q, unraveler.r))) {
-        showOnceDialog('unravelerSighted', 'The Unraveler',
-            '<p>A chaos-wrought figure stirs near the Maw. <b>The Unraveler</b> walks the world.</p><p>While it lives, the Maw cannot be sealed. Hunt it down — and beware: each time you fell it, it reforms within another chaos spawn until none remain.</p>',
-            [{ label: 'Steady', cls: 'btn-primary' }]);
+        showOnceDialog('unravelerSighted', say('title_unraveler', {}),
+            say('unraveler_sighted', {}),
+            [{ label: say('btn_steady', {}), cls: 'btn-primary' }]);
     }
 }
 
@@ -590,7 +590,7 @@ function dealDamageToEnemy(enemy, damage, source, opts = {}) {
     const dealt = Math.max(1, rolled - eDef);
     enemy.hp -= dealt;
     victory.damageDealt += dealt;
-    logCombat(`${source}: ${dealt} dmg to ${def.name}`, 'log-dmg');
+    logCombat(say('log_dmg_to_enemy', { source, dmg: dealt, name: def.name }), 'log-dmg');
     sound.hitEnemy();
     spawnDamageFloat(enemy.q, enemy.r, dealt, FLOAT_COLOR_ENEMY);
     spawnHitFlash(enemy.q, enemy.r);
@@ -618,7 +618,7 @@ function rollPlayerStun(enemy, rolledDmg, bucket, bonusPct) {
     pct = Math.min(pct, MAX_STUN_CHANCE);
     if (Math.random() * 100 < pct) {
         enemy.stunnedNextTurn = true;
-        logCombat('Stunned!', 'log-info');
+        logCombat(say('log_stunned', {}), 'log-info');
         return true;
     }
     return false;
@@ -626,19 +626,19 @@ function rollPlayerStun(enemy, rolledDmg, bucket, bonusPct) {
 
 function dealDamageToPlayer(damage, source, isSkillDamage, opts = {}) {
     if (opts.isRanged && player.equipped('ranged_immune')) {
-        logCombat('Ranged attack negated!', 'log-info');
+        logCombat(say('log_ranged_negated', {}), 'log-info');
         return { dealt: 0, avoided: true };
     }
     if (player.warpShieldTurns > 0) {
         const ws = effectiveSkill(SKILLS.warp_shield, player.rankOf('warp_shield'));
         if (Rando.bool(ws.effectStrength / 10)) {
-            logCombat('Warp Shield absorbed the hit!', 'log-info');
+            logCombat(say('log_warp_absorbed', {}), 'log-info');
             return { dealt: 0, avoided: true };
         }
-        logCombat('Warp Shield flickers — the hit lands.', 'log-info');
+        logCombat(say('log_warp_flickers', {}), 'log-info');
     }
     if (Math.random() * 100 < player.dodge()) {
-        logCombat('Dodged!', 'log-info');
+        logCombat(say('log_dodged', {}), 'log-info');
         return { dealt: 0, avoided: true };
     }
     const rolled = Rando.bellCurve(damage);
@@ -652,18 +652,18 @@ function dealDamageToPlayer(damage, source, isSkillDamage, opts = {}) {
             reflected = Math.max(1, Math.round(dealt * r.reflectPercent / 100));
             dealt = Math.max(1, Math.round(dealt * r.takePercent / 100));
         } else {
-            logCombat('Reflect fails!', 'log-info');
+            logCombat(say('log_reflect_fails', {}), 'log-info');
         }
     }
     player.hp -= dealt;
     victory.damageTaken += dealt;
-    logCombat(`${source}: ${dealt} dmg to you`, 'log-dmg');
+    logCombat(say('log_dmg_to_you', { source, dmg: dealt }), 'log-dmg');
     sound.hitPlayer();
     spawnDamageFloat(player.q, player.r, dealt, FLOAT_COLOR_PLAYER);
     spawnHitFlash(player.q, player.r);
     if (reflected > 0) {
         opts.attacker.hp -= reflected;
-        logCombat(`Reflect: ${reflected} dmg to ${em.getDef(opts.attacker.type).name}`, 'log-dmg');
+        logCombat(say('log_reflect_hit', { dmg: reflected, name: em.getDef(opts.attacker.type).name }), 'log-dmg');
         sound.hitEnemy();
         if (opts.attacker.hp <= 0) killEnemy(opts.attacker);
     }
@@ -673,7 +673,7 @@ function dealDamageToPlayer(damage, source, isSkillDamage, opts = {}) {
         if (thornsItem) {
             const thornDmg = Math.round(dealt * thornsItem.thornsPercent / 100);
             opts.attacker.hp -= thornDmg;
-            logCombat(`Thorns: ${thornDmg} dmg to ${em.getDef(opts.attacker.type).name}`, 'log-dmg');
+            logCombat(say('log_thorns', { dmg: thornDmg, name: em.getDef(opts.attacker.type).name }), 'log-dmg');
             sound.hitEnemy();
             if (opts.attacker.hp <= 0) killEnemy(opts.attacker);
         }
@@ -683,7 +683,7 @@ function dealDamageToPlayer(damage, source, isSkillDamage, opts = {}) {
                 const adj = em.enemies.find(e => e.q === n.q && e.r === n.r);
                 if (adj) {
                     adj.burnDamage = (adj.burnDamage || 0) + burnAura.burnAuraDamage;
-                    logCombat(`Burning aura: ${em.getDef(adj.type).name} is burning!`, 'log-dmg');
+                    logCombat(say('log_burning_aura', { name: em.getDef(adj.type).name }), 'log-dmg');
                 }
             }
         }
@@ -707,14 +707,14 @@ function killEnemy(enemy, opts = {}) {
                 respawned.noSpawn = true;
                 const maw = world.pois.find(p => p.type === POI.MAW);
                 if (maw) maw.guardianId = respawned.id;
-                logCombat('The Unraveler reforms within another chaos spawn!', 'log-dmg');
+                logCombat(say('log_unraveler_reforms', {}), 'log-dmg');
             }
             gainXP(def.xp);
             sound.killEnemy();
-            showDialog('The Unraveler', '<p>The Unraveler has jumped to another host!</p>', [{ label: 'OK', cls: 'btn-primary' }]);
+            showDialog(say('title_unraveler', {}), say('unraveler_jumped', {}), [{ label: say('btn_ok', {}), cls: 'btn-primary' }]);
             return;
         }
-        showDialog('The Unraveler Vanquished', '<p>The Unraveler is vanquished! Now close the Maw!</p>', [{ label: 'OK', cls: 'btn-primary' }]);
+        showDialog(say('title_unraveler_vanquished', {}), say('unraveler_vanquished', {}), [{ label: say('btn_ok', {}), cls: 'btn-primary' }]);
         sound.victory(2);
     }
     victory.enemiesDefeated++;
@@ -728,31 +728,31 @@ function killEnemy(enemy, opts = {}) {
     const goldGain = Rando.int(1, 5) + (def.gold || 0);
     player.gold += goldGain;
     victory.goldCollected += goldGain;
-    logCombat(`${def.name} defeated!`, 'log-info');
-    logCombat(`+${goldGain}g`, 'log-gold');
+    logCombat(say('log_defeated', { name: def.name }), 'log-info');
+    logCombat(say('log_gold', { gold: goldGain }), 'log-gold');
     if (def.chaosSpawned) {
         player.aether = Math.min(player.maxAether(), player.aether + 1);
-        logCombat('+1 AE', 'log-info');
+        logCombat(say('log_one_ae', {}), 'log-info');
     }
     // Heal on kill
     const healKill = player.equipped('heal_on_kill');
     if (healKill) {
         player.hp = Math.min(player.maxHP(), player.hp + healKill.healOnKill);
-        logCombat(`+${healKill.healOnKill} HP (heal on kill)`, 'log-heal');
+        logCombat(say('log_heal_on_kill', { n: healKill.healOnKill }), 'log-heal');
     }
     gainXP(def.xp);
     // Soul Harvest: bonus XP on kill
     const soulXP = player.sumEquipped('soul_harvest', 'soulHarvestXP');
     if (soulXP) {
         gainXP(soulXP);
-        logCombat(`Soul Harvest: +${soulXP} XP`, 'log-xp');
+        logCombat(say('log_soul_harvest', { n: soulXP }), 'log-xp');
     }
     // Opportunist: chance for bonus gold on kill
     if (player.equipped('opportunist') && Rando.bool(0.25)) {
         const bonusGold = Rando.int(3, 8);
         player.gold += bonusGold;
         victory.goldCollected += bonusGold;
-        logCombat(`Opportunist: +${bonusGold}g`, 'log-gold');
+        logCombat(say('log_opportunist', { gold: bonusGold }), 'log-gold');
     }
 
     // Skill gem drop: likelier the further SP sits below its ceiling.
@@ -768,12 +768,12 @@ function killEnemy(enemy, opts = {}) {
         const nmDrops = rollNonMagicalDrops(0, 3);
         for (const item of nmDrops) {
             player.inventory.push(item.id);
-            logCombat(`Found: ${item.name}`, 'log-gold');
+            logCombat(say('found_item', { item: item.name }), 'log-gold');
         }
         if (Rando.bool(0.1)) {
             const magicalDrop = rollMagicItem();
             player.inventory.push(magicalDrop.id);
-            logCombat(`Found: ${magicalDrop.name}!`, 'log-gold');
+            logCombat(say('found_magic_item', { item: magicalDrop.name }), 'log-gold');
         }
     }
 
@@ -781,7 +781,7 @@ function killEnemy(enemy, opts = {}) {
     for (const poi of world.pois) {
         if ((poi.type === POI.BREACH || poi.type === POI.MAW) && poi.guardianId === enemy.id) {
             poi.guardianDefeated = true;
-            logCombat(`The guardian falls! Use Restore near the breach to seal it.`, 'log-info');
+            logCombat(say('log_guardian_falls', {}), 'log-info');
         }
     }
 }
@@ -831,12 +831,13 @@ function rollPoiLoot(goldMin, goldMax) {
     return { goldFound, items };
 }
 
-function formatLootHtml(intro, loot) {
-    let body = `<p>${intro}</p><p style="color:#ffc107">Found ${loot.goldFound} gold!</p>`;
+// introHtml: an already-rendered narration line from the text table.
+function formatLootHtml(introHtml, loot) {
+    let body = `${introHtml}<p style="color:#ffc107">${say('loot_gold', { gold: loot.goldFound })}</p>`;
     for (const item of loot.items) {
         const color = item.magical ? '#e040fb' : '#ffc107';
-        const suffix = item.magical ? '!' : '';
-        body += `<p style="color:${color}">Found: ${item.name}${suffix}</p>`;
+        const line = say(item.magical ? 'found_magic_item' : 'found_item', { item: item.name });
+        body += `<p style="color:${color}">${line}</p>`;
     }
     return body;
 }
@@ -852,7 +853,7 @@ function rangedAttack(targetQ, targetR) {
 
 function gainXP(amount) {
     player.xp += amount;
-    logCombat(`+${amount} XP`, 'log-xp');
+    logCombat(say('log_xp', { n: amount }), 'log-xp');
     const needed = xpForLevel(player.level + 1);
     if (player.xp >= needed && player.level < 10) {
         player.level++;
@@ -860,11 +861,11 @@ function gainXP(amount) {
         player.hp = player.maxHP();
         player.aether = player.maxAether();
         player.statPoints += STAT_POINTS_PER_LEVEL;
-        logCombat(`LEVEL UP! Now level ${player.level}`, 'log-info');
+        logCombat(say('log_level_up', { level: player.level }), 'log-info');
         // Skills come only from places and actions; levelling grants a Skill
         // Point (nothing extra when SP is already capped).
         const spGained = player.gainSP(1);
-        if (spGained > 0) logCombat(`+${spGained} Skill Point`, 'log-info');
+        if (spGained > 0) logCombat(say('log_skill_point', { n: spGained }), 'log-info');
         // Show level-up dialog after a short delay
         setTimeout(() => showLevelUpDialog(spGained), 300);
     }
@@ -879,15 +880,15 @@ function gainXP(amount) {
 // terrain!") to display in tooltips and disable buttons. Skill handlers
 // themselves don't call this — they trust the caller has filtered.
 function checkSkillUsage(skill) {
-    if (skill.id === 'phase_step' && player.phaseStepUsedThisTurn) return 'Phase Step already used this turn!';
-    if (skill.id === 'sprint' && player.sprintUsedThisTurn) return 'Sprint already used this turn!';
+    if (skill.id === 'phase_step' && player.phaseStepUsedThisTurn) return say('why_phase_step_used', {});
+    if (skill.id === 'sprint' && player.sprintUsedThisTurn) return say('why_sprint_used', {});
     const usage = skill.usage || SKILL_USAGE.ANYTIME;
     if (usage === SKILL_USAGE.ANYTIME) return null;
     const nearbyEnemy = em.enemies.some(e => hexDistance(player.q, player.r, e.q, e.r) <= 2);
-    if (nearbyEnemy) return 'Too close to enemies!';
+    if (nearbyEnemy) return say('why_too_close', {});
     if (usage === SKILL_USAGE.PRISTINE) {
         const hex = world.getHex(player.q, player.r);
-        if (hex && UNSHATTERED_VERSION[hex.terrain] !== undefined) return 'Cannot use on shattered terrain!';
+        if (hex && UNSHATTERED_VERSION[hex.terrain] !== undefined) return say('why_shattered', {});
     }
     return null;
 }
@@ -1184,7 +1185,7 @@ function eatCrop() {
     const before = player.hp;
     player.hp = Math.min(player.maxHP(), player.hp + heal);
     const gained = player.hp - before;
-    if (gained > 0) logCombat(`+${gained} HP (food)`, 'log-heal');
+    if (gained > 0) logCombat(say('log_food', { n: gained }), 'log-heal');
 }
 
 function checkHexEntry() {
@@ -1197,7 +1198,7 @@ function checkHexEntry() {
         player.gold += goldAmt;
         victory.goldCollected += goldAmt;
         hex.goldDeposit = 0;
-        logCombat(`+${goldAmt}g (${hex.crop ? 'harvest' : 'gold deposit'})`, 'log-gold');
+        logCombat(say(hex.crop ? 'log_gold_harvest' : 'log_gold_deposit', { gold: goldAmt }), 'log-gold');
         if (hex.crop) eatCrop();
         hex.crop = false;
     }
@@ -1206,7 +1207,7 @@ function checkHexEntry() {
     if (hex.skillGem) {
         hex.skillGem = false;
         const c = grantConsolation();
-        logCombat(c.kind === 'sp' ? '+1 SP (skill gem)' : 'The skill gem dissolves into experience.', 'log-info');
+        logCombat(say(c.kind === 'sp' ? 'log_gem_sp' : 'log_gem_xp', {}), 'log-info');
         refreshOpenPanels();
     }
 
@@ -1220,7 +1221,7 @@ function closeBreach(poi) {
     const hex = world.getHex(poi.q, poi.r);
     if (hex) hex.terrain = TERRAIN.HILLS;
     victory.breachesSealed++;
-    logCombat(`Breach sealed! (${world.breachesClosed} total)`, 'log-info');
+    logCombat(say('log_breach_sealed', { n: world.breachesClosed }), 'log-info');
     sound.victory(poi.type === POI.MAW ? 2 : 1);
     if (poi.type === POI.BREACH) showBreachLootDialog();
     if (poi.type === POI.MAW) sealMaw(poi);
@@ -1232,17 +1233,15 @@ function closeBreach(poi) {
 // usually be in sight, but must be sought out and stepped on to be claimed.
 function sealMaw(maw) {
     world.dropScroll('return', maw.q, maw.r, h => hexDistance(h.q, h.r, maw.q, maw.r) <= 3);
-    logCombat('The Maw is sealed. A scroll smolders in the quieted ground nearby.', 'log-info');
-    showDialog('The Maw is Sealed',
-        '<p>You have closed the Maw. The world breathes again.</p>' +
-        '<p>Where the rift collapsed, a <b>\u{1F4DC} scroll</b> has settled into the ground nearby. Seek it out.</p>',
-        [{ label: 'Continue', cls: 'btn-primary' }]);
+    logCombat(say('log_maw_sealed', {}), 'log-info');
+    showDialog(say('title_maw_sealed', {}), say('maw_sealed', {}),
+        [{ label: say('btn_continue', {}), cls: 'btn-primary' }]);
 }
 
 function showBreachLootDialog() {
     const loot = rollPoiLoot(50, 100);
-    const body = formatLootHtml('Closing the breach scatters its hoard...', loot);
-    showDialog('Breach Sealed', body, [{ label: 'Continue', cls: 'btn-primary' }]);
+    const body = formatLootHtml(say('breach_loot', {}), loot);
+    showDialog(say('title_breach_sealed', {}), body, [{ label: say('btn_continue', {}), cls: 'btn-primary' }]);
 }
 
 // Dialog buttons set player.mp = 0 to make their action costly (turn ends
@@ -1284,7 +1283,7 @@ function advanceTurn() {
     player.mp = player.maxMP();
     if (player.isEngaged(em.enemies) && !player.equipped('disengage')) {
         player.mp = Math.max(1, Math.floor(player.mp / 2));
-        logCombat('Engaged! Half MP.', 'log-info');
+        logCombat(say('log_engaged', {}), 'log-info');
     }
     player.movedThisTurn = false;
     player.hexesMovedThisTurn = 0;
@@ -1639,7 +1638,7 @@ function drawScene() {
         ctx.fillStyle = '#fff';
         ctx.font = '13px monospace';
         ctx.textAlign = 'center';
-        ctx.fillText('Threat Map — Space/click to dismiss', canvas.width / 2, 70);
+        ctx.fillText(say('hud_threat_map', {}), canvas.width / 2, 70);
         ctx.textAlign = 'left';
     }
 
@@ -1820,7 +1819,7 @@ function renderWorldMap() {
     ctx.fillStyle = '#aaa';
     ctx.font = '13px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('World Map — M/Esc to close', cw / 2, ch - 18);
+    ctx.fillText(say('hud_world_map', {}), cw / 2, ch - 18);
     ctx.textAlign = 'left';
 }
 
@@ -1858,7 +1857,7 @@ function refreshOpenPanels() {
 }
 
 function updateHUD() {
-    document.getElementById('turn-info').textContent = 'Turn ' + turn;
+    document.getElementById('turn-info').textContent = say('hud_turn', { turn });
     const mhp = player.maxHP();
     document.getElementById('hp-text').textContent = player.hp + '/' + mhp;
     document.getElementById('hp-fill').style.width = (player.hp / mhp * 100) + '%';
@@ -1873,26 +1872,26 @@ function updateHUD() {
     document.getElementById('ae-text').textContent = player.aether + '/' + mae;
     document.getElementById('ae-fill').style.width = (player.aether / mae * 100) + '%';
     updateMpPips();
-    document.getElementById('level-info').textContent = 'Lv ' + player.level;
+    document.getElementById('level-info').textContent = say('hud_level', { level: player.level });
     const xpNeeded = player.level < 10 ? xpForLevel(player.level + 1) : null;
     document.getElementById('xp-text').textContent = player.xp + '/' + (xpNeeded ?? '---');
     document.getElementById('xp-fill').style.width = (xpNeeded ? (player.xp / xpNeeded * 100) : 100) + '%';
-    document.getElementById('gold-info').textContent = player.gold + 'g';
+    document.getElementById('gold-info').textContent = say('hud_gold', { gold: player.gold });
 
     // Context bar
     if (hoveredHex) {
         const hex = world.getHex(hoveredHex.q, hoveredHex.r);
         if (hex && world.revealed.has(hexKey(hex.q, hex.r))) {
-            document.getElementById('ctx-terrain').textContent = TERRAIN_NAMES[hex.terrain] || 'Unknown';
+            document.getElementById('ctx-terrain').textContent = TERRAIN_NAMES[hex.terrain] || say('hud_unknown', {});
             const enemy = em.enemies.find(e => e.q === hoveredHex.q && e.r === hoveredHex.r && world.visible.has(hexKey(e.q, e.r)));
             if (enemy) {
                 const def = em.getDef(enemy.type);
-                document.getElementById('ctx-entity').textContent = `${def.name} (HP ${enemy.hp}/${enemyEffectiveMaxHp(enemy)})`;
+                document.getElementById('ctx-entity').textContent = say('hud_enemy', { name: def.name, hp: enemy.hp, max: enemyEffectiveMaxHp(enemy) });
             } else {
                 document.getElementById('ctx-entity').textContent = '';
             }
         } else {
-            document.getElementById('ctx-terrain').textContent = 'Unknown';
+            document.getElementById('ctx-terrain').textContent = say('hud_unknown', {});
             document.getElementById('ctx-entity').textContent = '';
         }
     }
@@ -1906,7 +1905,7 @@ function updateMpPips() {
     const key = player.mp + '/' + max;
     if (el.dataset.key === key) return;
     el.dataset.key = key;
-    el.title = 'MP ' + key;
+    el.title = say('hud_mp', { mp: key });
     let html = '';
     for (let i = 0; i < Math.max(player.mp, max); i++) {
         const cls = i >= player.mp ? 'pip spent' : (i >= max ? 'pip bonus' : 'pip');
@@ -1933,7 +1932,7 @@ const RANGED_SLOT_GLYPH = '➶';
 // Why an aether-costed action can't be used right now, or null. Only reasons the
 // player can act on — the enemy's turn dims the bar without comment.
 function aetherShortfall(cost) {
-    return player.aether < cost ? `Need ${cost} AE` : null;
+    return player.aether < cost ? say('why_need_ae', { n: cost }) : null;
 }
 
 // Paint one skill-bar slot. `why` (a reason string or null) replaces the cost line.
@@ -1957,8 +1956,8 @@ function updateSkillBar() {
     const myTurn = phase === 'player' && !gameOver;
     const rangedWhy = aetherShortfall(rangedCost);
     paintSkillSlot(rangedSlot, {
-        icon: RANGED_SLOT_GLYPH, name: 'Ranged',
-        cost: rangedCost ? rangedCost + ' AE' : '',
+        icon: RANGED_SLOT_GLYPH, name: say('slot_ranged', {}),
+        cost: rangedCost ? say('ae_n', { n: rangedCost }) : '',
         why: rangedWhy, usable: hasRanged && myTurn && !rangedWhy,
         active: !!targeting && targeting.skill === '__ranged__',
     });
@@ -1977,7 +1976,7 @@ function updateSkillBar() {
         const why = aetherShortfall(cost) || checkSkillUsage(skill);
         paintSkillSlot(slot, {
             icon: SKILL_TARGET_GLYPH[skill.target], name: skill.name,
-            cost: cost + ' AE', why, usable: myTurn && !why,
+            cost: say('ae_n', { n: cost }), why, usable: myTurn && !why,
             active: !!targeting && targeting.skill === skillId,
         });
     }
@@ -1986,28 +1985,27 @@ function updateSkillBar() {
 function updateCharPanel() {
     const panel = document.getElementById('char-stats');
     const stats = ['might', 'reflex', 'warding', 'vigor'];
-    const labels = { might: 'Might', reflex: 'Reflex', warding: 'Warding', vigor: 'Vigor' };
     let html = '';
-    if (player.statPoints > 0) html += `<div style="color:#ffc107;margin-bottom:8px">Points: ${player.statPoints}</div>`;
+    if (player.statPoints > 0) html += `<div style="color:#ffc107;margin-bottom:8px">${say('char_points', { n: player.statPoints })}</div>`;
     for (const s of stats) {
-        html += `<div class="stat-row"><span>${labels[s]}: ${player.stats[s]}</span>`;
+        html += `<div class="stat-row"><span>${say('stat_line', { stat: say('stat_' + s, {}), n: player.stats[s] })}</span>`;
         if (player.statPoints > 0) {
             html += `<button class="plus-btn" data-stat="${s}">+</button>`;
         }
         html += '</div>';
     }
-    html += `<div class="stat-row"><span>SP: ${player.sp} / ${player.maxSP}</span></div>`;
+    html += `<div class="stat-row"><span>${say('char_sp', { sp: player.sp, max: player.maxSP })}</span></div>`;
     panel.innerHTML = html;
 
     // Derived
     const derived = document.getElementById('char-derived');
     const wep = player.weapon();
     derived.innerHTML = `<div class="derived-section">
-        <div>Attack: ${wep ? wep.damage : 0} + ${weaponIsRanged(wep) ? player.stats.reflex : player.stats.might}</div>
-        <div>Defense: ${playerDefense()}</div>
-        <div>Dodge: ${player.dodge()}%</div>
-        <div>Vision: ${player.vision()}</div>
-        <div>MP: ${player.maxMP()}</div>
+        <div>${say('char_attack', { wpn: wep ? wep.damage : 0, stat: weaponIsRanged(wep) ? player.stats.reflex : player.stats.might })}</div>
+        <div>${say('char_defense', { n: playerDefense() })}</div>
+        <div>${say('char_dodge', { n: player.dodge() })}</div>
+        <div>${say('char_vision', { n: player.vision() })}</div>
+        <div>${say('char_mp', { n: player.maxMP() })}</div>
     </div>`;
 
     // Equipment
@@ -2016,19 +2014,19 @@ function updateCharPanel() {
     for (const slot of [EQUIP_SLOT.WEAPON, EQUIP_SLOT.ARMOR, EQUIP_SLOT.ARTIFACT]) {
         const id = player.equipment[slot];
         const item = id ? ALL_EQUIPMENT[id] : null;
-        ehtml += `<div class="equip-item"><span style="color:#888">${slot}:</span> <span class="${item ? itemRarityClass(item) : 'rar-poor'}">${item ? item.name : '(empty)'}</span></div>`;
+        ehtml += `<div class="equip-item"><span style="color:#888">${slot}:</span> <span class="${item ? itemRarityClass(item) : 'rar-poor'}">${item ? item.name : say('char_empty_slot', {})}</span></div>`;
     }
     ehtml += '</div>';
     equip.innerHTML = ehtml;
 
     // Turn timing metrics (rolling, last 1000 turns)
     const metrics = document.getElementById('char-metrics');
-    const fmt = v => v == null ? '–' : Math.round(v) + 'ms';
+    const fmt = v => v == null ? '–' : say('metric_ms', { ms: Math.round(v) });
     const row = (label, s) => s
-        ? `<div style="margin-top:6px;color:#888;font-size:11px">${label} (n=${s.n})</div>
-           <div style="font-size:11px">avg ${fmt(s.avg)} · p10 ${fmt(s.p10)} · p25 ${fmt(s.p25)} · p50 ${fmt(s.p50)} · p75 ${fmt(s.p75)} · p90 ${fmt(s.p90)}</div>`
-        : `<div style="margin-top:6px;color:#888;font-size:11px">${label}</div><div style="font-size:11px;color:#555">no data</div>`;
-    metrics.innerHTML = `<div class="derived-section" style="margin-top:10px"><div style="color:#888;font-size:11px;margin-bottom:2px">TURN TIMING</div>${row('All turns', turnTimeStats(turnTimesAll))}${row('Outside POI', turnTimeStats(turnTimesNonPoi))}</div>`;
+        ? `<div style="margin-top:6px;color:#888;font-size:11px">${say('metric_row', { label, n: s.n })}</div>
+           <div style="font-size:11px">${say('metric_stats', { avg: fmt(s.avg), p10: fmt(s.p10), p25: fmt(s.p25), p50: fmt(s.p50), p75: fmt(s.p75), p90: fmt(s.p90) })}</div>`
+        : `<div style="margin-top:6px;color:#888;font-size:11px">${label}</div><div style="font-size:11px;color:#555">${say('metric_no_data', {})}</div>`;
+    metrics.innerHTML = `<div class="derived-section" style="margin-top:10px"><div style="color:#888;font-size:11px;margin-bottom:2px">${say('metric_title', {})}</div>${row(say('metric_all_turns', {}), turnTimeStats(turnTimesAll))}${row(say('metric_outside_poi', {}), turnTimeStats(turnTimesNonPoi))}</div>`;
 
     // Stat point buttons
     panel.querySelectorAll('.plus-btn').forEach(btn => {
@@ -2107,7 +2105,7 @@ function updateSkillsPanel() {
     const list = document.getElementById('skills-list');
     let html = '';
     // Show equipped slots
-    html += '<div style="color:#888;margin-bottom:4px;font-size:11px">EQUIPPED (click to unequip)</div>';
+    html += `<div style="color:#888;margin-bottom:4px;font-size:11px">${say('skills_equipped', {})}</div>`;
     for (let i = 0; i < SKILL_SLOTS; i++) {
         const skillId = player.skills[i];
         if (skillId) {
@@ -2118,7 +2116,7 @@ function updateSkillsPanel() {
                 ${powerLine(skillId)}
             </div>`;
         } else {
-            html += `<div class="skill-entry"><span style="color:#555">Slot ${i + 1}: Empty</span></div>`;
+            html += `<div class="skill-entry"><span style="color:#555">${say('skills_empty_slot', { n: i + 1 })}</span></div>`;
         }
     }
     // Show learned, trained (active), but not equipped
@@ -2129,7 +2127,7 @@ function updateSkillsPanel() {
     const latent = learnedUnequipped.filter(id => !player.activeSkills.has(id)).sort(byName);
     const canInvokeFromPanel = phase === 'player' && !gameOver;
     if (unequipped.length > 0) {
-        html += '<div style="color:#888;margin-top:8px;margin-bottom:4px;font-size:11px">LEARNED (click to equip)</div>';
+        html += `<div style="color:#888;margin-top:8px;margin-bottom:4px;font-size:11px">${say('skills_learned', {})}</div>`;
         for (const skillId of unequipped) {
             const skill = SKILLS[skillId];
             const isUsable = canInvokeFromPanel
@@ -2147,7 +2145,7 @@ function updateSkillsPanel() {
     }
     // Latent skills: learned but not trained — grayed and unavailable
     if (latent.length > 0) {
-        html += '<div style="color:#888;margin-top:8px;margin-bottom:4px;font-size:11px">Latent</div>';
+        html += `<div style="color:#888;margin-top:8px;margin-bottom:4px;font-size:11px">${say('skills_latent', {})}</div>`;
         for (const skillId of latent) {
             const skill = SKILLS[skillId];
             html += `<div class="skill-entry" style="opacity:0.4">
@@ -2193,7 +2191,7 @@ function updateSkillsPanel() {
 }
 
 function updateInvPanel() {
-    document.getElementById('inv-gold').innerHTML = `<div style="color:#ffc107;margin-bottom:8px">Gold: ${player.gold}</div>`;
+    document.getElementById('inv-gold').innerHTML = `<div style="color:#ffc107;margin-bottom:8px">${say('inv_gold', { gold: player.gold })}</div>`;
     const list = document.getElementById('inv-list');
     let html = '';
 
@@ -2206,7 +2204,7 @@ function updateInvPanel() {
         html += `<div class="inv-item equipped">
             <div><span class="${itemRarityClass(item)}">${item.name}</span> <span style="color:#888">(${slot})</span><br>
             <span style="color:#aaa;font-size:11px">${itemStatLine(item)}</span></div>
-            <button data-action="unequip" data-id="${id}" data-slot="${slot}">Unequip</button>
+            <button data-action="unequip" data-id="${id}" data-slot="${slot}">${say('btn_unequip', {})}</button>
         </div>`;
     }
 
@@ -2218,11 +2216,11 @@ function updateInvPanel() {
         html += `<div class="inv-item">
             <div><span class="${itemRarityClass(item)}">${item.name}</span> <span style="color:#888">(${slot})</span> ${compareToEquippedHtml(item)}<br>
             <span style="color:#aaa;font-size:11px">${itemStatLine(item)}</span></div>
-            <button data-action="equip" data-id="${id}" data-slot="${slot}">Equip</button>
+            <button data-action="equip" data-id="${id}" data-slot="${slot}">${say('btn_equip', {})}</button>
         </div>`;
     }
 
-    if (!html) html = '<div style="color:#555">No items</div>';
+    if (!html) html = `<div style="color:#555">${say('inv_no_items', {})}</div>`;
     list.innerHTML = html;
 
     list.querySelectorAll('button').forEach(btn => {
@@ -2264,9 +2262,9 @@ function itemRarityClass(item) {
 
 // The numeric stats worth comparing between two pieces of gear in the same slot.
 const COMPARE_STATS = [
-    { key: 'damage', label: 'Dmg' },
-    { key: 'range', label: 'Range' },
-    { key: 'defense', label: 'Def' },
+    { key: 'damage', label: 'stat_short_damage' },
+    { key: 'range', label: 'stat_short_range' },
+    { key: 'defense', label: 'stat_short_defense' },
 ];
 
 // How an item's numbers differ from what's equipped in its slot, as HTML
@@ -2277,7 +2275,7 @@ function compareToEquippedHtml(item) {
     const equipped = ALL_EQUIPMENT[equippedId];
     return COMPARE_STATS
         .filter(st => item[st.key] !== undefined && equipped[st.key] !== undefined)
-        .map(st => ({ label: st.label, diff: item[st.key] - equipped[st.key] }))
+        .map(st => ({ label: say(st.label, {}), diff: item[st.key] - equipped[st.key] }))
         .filter(d => d.diff !== 0)
         .map(d => `<span class="delta ${d.diff > 0 ? 'up' : 'down'}">${d.label} ${d.diff > 0 ? '+' : '−'}${Math.abs(d.diff)}</span>`)
         .join(' ');
@@ -2285,90 +2283,12 @@ function compareToEquippedHtml(item) {
 
 function itemStatLine(item) {
     const parts = [];
-    if (item.damage !== undefined) parts.push(`Dmg ${item.damage}`);
-    if (item.range) parts.push(`Range ${item.range}`);
-    if (item.type === 'melee' || item.type === 'ranged') parts.push(`${weaponMpCost(item)} MP`);
-    if (item.defense !== undefined) parts.push(`Def ${item.defense}`);
+    if (item.damage !== undefined) parts.push(say('stat_damage', { n: item.damage }));
+    if (item.range) parts.push(say('stat_range', { n: item.range }));
+    if (item.type === 'melee' || item.type === 'ranged') parts.push(say('mp_n', { n: weaponMpCost(item) }));
+    if (item.defense !== undefined) parts.push(say('stat_defense', { n: item.defense }));
     if (item.special) {
-        const specials = {
-            // Weapon effects
-            armor_pierce: `Pierce ${item.pierceAmount} def`,
-            aether_siphon: `+${item.siphonAmount} AE/hit`,
-            burn: `Burn ${item.burnDamage}/turn`,
-            chain: `Chain ${item.chainCount}`,
-            chaos_bonus: `+${item.chaosBonus} vs chaos`,
-            counter_mastery: 'Counter-attack on enemy melee',
-            defense_shred: `-${item.shredAmount} def/hit`,
-            double_strike: 'Double strike',
-            triple_strike: 'Triple strike',
-            ignore_defense: 'Ignore def',
-            knockback: 'Knockback 1',
-            lifesteal: `+${item.lifestealAmount} HP/hit`,
-            charge: item.chargeMultiplier
-                ? `x${item.chargeMultiplier} dmg if moved`
-                : `+${item.chargeBonus} if moved`,
-            channel: `+${item.channelBonus} dmg, ${item.channelDamage} self-dmg`,
-            reverberate: `Chain ${item.chainCount} +${item.chainBonus}/jump`,
-            riposte: `+${item.riposteDamage} counter-atk`,
-            // Ranged weapon effects
-            double_shot: 'Double shot',
-            triple_shot: 'Triple shot',
-            free_ranged: 'Free ranged',
-            free_action: '0 MP attack',
-            piercing: 'Pierce-through',
-            sniper: `+${item.sniperBonus} at max range`,
-            splash: `Splash ${item.splashDamage}`,
-            stun: `+${item.stunBonus}% stun`,
-            sweep: `Sweep ${item.sweepCount} adjacent to you`,
-            // Armor effects
-            burning_aura: `Burn adjacent ${item.burnAuraDamage}/turn`,
-            counter_deflect: `-${item.counterDeflect}% counter-attack dmg`,
-            dodge_bonus: `+${item.dodgeBonus}% dodge`,
-            heal_on_kill: `+${item.healOnKill} HP/kill`,
-            high_def_mp_penalty: `+${item.defBonus} def -${item.mpPenalty} MP`,
-            last_stand: `+${item.lastStandBonus} def <50% HP`,
-            momentum: `+${item.momentumBonus} def/hex moved`,
-            ranged_defense: `+${item.rangedDefenseBonus} def vs ranged`,
-            ranged_immune: 'Ranged immune',
-            thorns: `${item.thornsPercent}% reflect`,
-            wall_of_steel: `+${item.wallBonus} melee if stationary`,
-            // Passive effects
-            aether_bonus: `+${item.aetherBonus} max AE`,
-            aether_discount: `-${item.aetherDiscount} AE skill cost`,
-            aether_regen: `+${item.aetherRegen} AE/turn`,
-            aether_signet: `+${item.aetherSignetDamage} dmg when AE full (costs ${item.aetherSignetCost} AE)`,
-            blink_ring: `Blink ${item.blinkRange} hex melee +${item.blinkBonus}`,
-            breach_jewel: `+${item.breachBonus} might near breach`,
-            chaos_attune: `+${item.chaosAttuneMight} might +${item.chaosAttuneDef} def on corrupted`,
-            chaos_circlet: '+1 AE/turn on corrupted',
-            chaos_defense: `+${item.chaosDefenseBonus} def on shattered/distressed`,
-            disengage: 'No engagement MP penalty',
-            displacement_immune: 'No displacement',
-            heal: `+${item.healPerTurn} HP/turn`,
-            hp_bonus: `+${item.hpBonus} HP`,
-            mp_bonus: `+${item.mpBonus} MP`,
-            opportunist: '25% gold on kill',
-            ranger_defense: `+${item.rangerBonus} def on forest/hills`,
-            reveal_maw: 'Reveals chaos',
-            revive: `+${item.reviveHp} HP +${item.reviveAether} AE/turn`,
-            soul_harvest: `+${item.soulHarvestXP} XP/kill`,
-            strider: 'Rough terrain 1 MP',
-            threat_shroud: '-2 enemy detect range',
-            vigor_bonus: `+${item.vigorBonus} vigor`,
-            vision_bonus: `+${item.visionBonus} vision`,
-            wraith_immune: 'Wraith immune',
-            // Legacy specials (origitems compatibility)
-            mp_penalty: `-${item.mpPenalty} MP`,
-            regen: `+${item.regenAmount} HP/turn`,
-            armor_regen: `+${item.regenAmount} HP/turn`,
-            armor_aether_bonus: `+${item.aetherBonus} max AE`,
-            regen_combo: `+${item.regenAmount} HP +1 AE/turn`,
-            wall_crown: `+${item.wallCrownBonus} melee if stationary`,
-            aether_regen_small: '+1 AE/turn',
-            aether_regen_large: '+3 AE/turn',
-            cleave: 'Cleave'
-        };
-        parts.push(specials[item.special] || item.special);
+        parts.push(itemSpecialText(item));
     }
     return parts.join(' | ');
 }
@@ -2463,44 +2383,19 @@ function showOnceDialog(key, title, bodyHtml, buttons) {
     showDialog(title, bodyHtml, buttons);
 }
 
-const HAVEN_GRATITUDE_MESSAGES = [
-    'The garrison salutes you. "The realm stands stronger for your service."',
-    'A captain approaches with a pouch of coin. "The crown recognizes your valor."',
-    'The haven\'s council offers a formal thanks and a modest stipend.',
-    '"We feared the corruption would reach our walls. You have our gratitude."',
-    'A herald announces your deed to the fortress. Soldiers raise their blades in honor.',
-    '"The mages sensed the restoration. The haven is in your debt, warrior."',
-    'The keep\'s steward presents you with a reward from the treasury.',
-    '"Few would brave the chaos as you have. Accept this with our thanks."',
-    'Word of your deed spreads quickly through the haven. A collection is taken.',
-    'The haven commander clasps your hand. "You\'ve bought us time. Use this well."',
-];
-
-const VILLAGE_GRATITUDE_MESSAGES = [
-    'A farmer presses a few coins into your hand. "Bless you, stranger."',
-    'The village elder hobbles over with a small pouch. "It ain\'t much, but it\'s honest."',
-    'Children run out to greet you. Their parents follow with a modest gift.',
-    '"Our crops might grow again, thanks to you." A villager offers what they can spare.',
-    'An old woman waves you over. "Take this. You\'ve earned more than we can give."',
-    'The innkeeper sets out a meal and slides some coin across the table.',
-    '"We thought we\'d have to abandon our homes. Thank you." They pass the hat.',
-    'A shepherd offers a pouch of coin. "The flock can graze safely now."',
-    'Smoke rises from the village hearths again. A grateful elder finds you.',
-    '"Stranger, you\'ve given us hope." The village pools together a small reward.',
-];
-
 function offerSettlementReward(originHexes) {
     for (const poi of world.pois) {
         if (poi.type !== POI.HAVEN && poi.type !== POI.VILLAGE) continue;
         if (!originHexes.some(h => hexDistance(poi.q, poi.r, h.q, h.r) <= 3)) continue;
         const isHaven = poi.type === POI.HAVEN;
         const reward = isHaven ? Rando.int(5, 20) : Rando.int(1, 10);
-        const name = isHaven ? 'Haven' : 'Village';
         const symbol = POI_SYMBOLS[poi.type];
-        const msg = Rando.choice(isHaven ? HAVEN_GRATITUDE_MESSAGES : VILLAGE_GRATITUDE_MESSAGES);
-        showDialog(`${symbol} ${name}`, `<p>${msg}</p><p style="color:#ffc107">Offering: ${reward} gold</p>`, [
-            { label: 'Accept', cls: 'primary', action: () => { player.gold += reward; victory.goldCollected += reward; victory.settlementsRestored++; logCombat(`+${reward}g from ${name.toLowerCase()}`, 'log-gold'); }},
-            { label: 'Decline' }
+        const title = say(isHaven ? 'title_haven' : 'title_village', { symbol });
+        const msg = say(isHaven ? 'gratitude_haven' : 'gratitude_village', {});
+        const thanks = say(isHaven ? 'log_reward_haven' : 'log_reward_village', { gold: reward });
+        showDialog(title, `${msg}<p style="color:#ffc107">${say('offering', { gold: reward })}</p>`, [
+            { label: say('btn_accept', {}), cls: 'primary', action: () => { player.gold += reward; victory.goldCollected += reward; victory.settlementsRestored++; logCombat(thanks, 'log-gold'); }},
+            { label: say('btn_decline', {}) }
         ]);
         return true;
     }
@@ -2515,26 +2410,26 @@ function grantVisitSP(poi) {
     if (player.seenDialogs.has(key)) return;
     player.seenDialogs.add(key);
     if (player.gainSP(1) > 0) {
-        logCombat('+1 SP', 'log-info');
+        logCombat(say('log_one_sp', {}), 'log-info');
         refreshOpenPanels();
     }
 }
 
 function showHavenDialog(poi) {
     grantVisitSP(poi);
-    showVerticalDialog(POI_SYMBOLS[POI.HAVEN] + ' Haven', '<p>A place of safety amid the chaos.</p>', [
+    showVerticalDialog(say('title_haven', { symbol: POI_SYMBOLS[POI.HAVEN] }), say('haven_intro', {}), [
         {
-            label: 'Rest', cls: 'primary', action: () => {
+            label: say('btn_rest', {}), cls: 'primary', action: () => {
                 player.hp = player.maxHP();
                 player.aether = player.maxAether();
                 player.mp = 0;
-                logCombat('Fully rested.', 'log-heal');
+                logCombat(say('log_fully_rested', {}), 'log-heal');
             }
         },
-        { label: 'Weaponsmith', action: () => showShopDialog(poi, 'weapon') },
-        { label: 'Magicsmith', action: () => showShopDialog(poi, 'magic') },
-        { label: 'Train', action: () => showTrainDialog() },
-        { label: 'Leave' }
+        { label: say('btn_weaponsmith', {}), action: () => showShopDialog(poi, 'weapon') },
+        { label: say('btn_magicsmith', {}), action: () => showShopDialog(poi, 'magic') },
+        { label: say('btn_train', {}), action: () => showTrainDialog() },
+        { label: say('btn_leave', {}) }
     ]);
 }
 
@@ -2565,7 +2460,7 @@ function trySpawnSkillGem(q, r) {
     const nearest = Math.min(...scored.map(s => s.dist));
     const spot = Rando.choice(scored.filter(s => s.dist === nearest)).n;
     world.getHex(spot.q, spot.r).skillGem = true;
-    logCombat('A skill gem glints nearby!', 'log-info');
+    logCombat(say('log_gem_glints', {}), 'log-info');
 }
 
 function trySpawnVillageCrop(poi) {
@@ -2588,22 +2483,22 @@ function restHeal(fraction) {
     const aeAmt = Math.floor(player.maxAether() * fraction);
     player.aether = Math.min(player.maxAether(), player.aether + aeAmt);
     player.mp = 0;
-    logCombat(`Rested: +${healAmt} HP, +${aeAmt} AE`, 'log-heal');
+    logCombat(say('log_rested', { hp: healAmt, ae: aeAmt }), 'log-heal');
 }
 
 function showVillageDialog(poi) {
     trySpawnVillageCrop(poi);
-    showVerticalDialog(POI_SYMBOLS[POI.VILLAGE] + ' Village', '<p>A brief respite from the wilds.</p>', [
-        { label: 'Rest', cls: 'primary', action: () => { restHeal(0.5); } },
-        { label: 'Weaponsmith', action: () => showShopDialog(poi, 'weapon') },
-        { label: 'Leave' }
+    showVerticalDialog(say('title_village', { symbol: POI_SYMBOLS[POI.VILLAGE] }), say('village_intro', {}), [
+        { label: say('btn_rest', {}), cls: 'primary', action: () => { restHeal(0.5); } },
+        { label: say('btn_weaponsmith', {}), action: () => showShopDialog(poi, 'weapon') },
+        { label: say('btn_leave', {}) }
     ]);
 }
 
 // Sanctuary skill: rest in place in one cast — heal half HP/AE, roll the usual
 // crop chance, end turn (MP spent to 0). No dialog, no persistent POI.
 function invokeSanctuary() {
-    logCombat('Sanctuary! You rest in the wilds.', 'log-heal');
+    logCombat(say('log_sanctuary', {}), 'log-heal');
     trySpawnVillageCrop({ q: player.q, r: player.r });
     const sanct = effectiveSkill(SKILLS.sanctuary, player.rankOf('sanctuary'));
     restHeal(1 / sanct.effectStrength);
@@ -2618,7 +2513,6 @@ function invokeSanctuary() {
 // visit the sage hands over a magic item instead, leaving the hut's skill state
 // untouched for the next visit.
 const HUT_GIFT_CHANCE = 0.05;
-const HUT_TITLE = POI_SYMBOLS[POI.HUT] + " Wise Man's Hut";
 function showHutDialog(poi) {
     grantVisitSP(poi);
 
@@ -2632,8 +2526,8 @@ function showHutDialog(poi) {
     const foundId = Rando.bool(0.05) ? skillLibrary.rerollHutSkill(player.learnedSkills) : null;
     if (foundId) { poi.skill = foundId; offerHutLesson(foundId, () => {}); return; }
 
-    showDialog(HUT_TITLE,
-        `<p><i>An old sage peers at you.</i></p><p style="color:#a1887f">"I have nothing to teach you at this time."</p>`,
+    showDialog(hutTitle(),
+        say('sage_peers', {}) + `<div style="color:#a1887f">${say('sage_nothing', {})}</div>`,
         [hutTrainButton(), hutLeaveButton()]);
 }
 
@@ -2641,31 +2535,35 @@ function showHutDialog(poi) {
 function giveHutGift() {
     const item = rollMagicItem();
     player.inventory.push(item.id);
-    logCombat(`The Wise Man gives you ${item.name}!`, 'log-gold');
-    showDialog(HUT_TITLE,
-        `<p><i>The sage rummages through a cluttered shelf.</i></p><p style="color:#a1887f">"I have this lying around. Perhaps it will be of use."</p><p style="color:#e040fb">${item.name}!</p>`,
+    logCombat(say('log_sage_gift', { item: item.name }), 'log-gold');
+    showDialog(hutTitle(),
+        say('sage_rummages', {}) + `<div style="color:#a1887f">${say('sage_gift', {})}</div><p style="color:#e040fb">${say('gift_item', { item: item.name })}</p>`,
         [hutTrainButton(), hutLeaveButton()]);
 }
 
+function hutTitle() {
+    return say('title_hut', { symbol: POI_SYMBOLS[POI.HUT] });
+}
+
 function hutTrainButton() {
-    return { label: 'Train', action: () => showTrainDialog() };
+    return { label: say('btn_train', {}), action: () => showTrainDialog() };
 }
 
 function hutLeaveButton() {
-    return { label: 'Leave', action: () => { player.mp = 0; } };
+    return { label: say('btn_leave', {}), action: () => { player.mp = 0; } };
 }
 
 // The hut's teaching dialog for one skill; onLearn runs after the skill is learned.
 function offerHutLesson(teachId, onLearn) {
     const skill = SKILLS[teachId];
-    showDialog(HUT_TITLE,
-        `<p><i>The sage's eyes light up.</i></p><p style="color:#b388ff">"I can teach you <b>${skill.name}</b>."</p>${skillBlurbHtml(skill)}`,
+    showDialog(hutTitle(),
+        say('sage_eyes_light', {}) + `<div style="color:#b388ff">${say('sage_teach', { skill: skill.name })}</div>${skillBlurbHtml(skill)}`,
         [{
-            label: 'Learn', cls: 'primary', action: () => {
+            label: say('btn_learn', {}), cls: 'primary', action: () => {
                 learnSkill(teachId);
                 onLearn();
                 player.mp = 0;
-                logCombat(`The Wise Man teaches ${skill.name}!`, 'log-info');
+                logCombat(say('log_sage_teaches', { skill: skill.name }), 'log-info');
             }
         },
         hutTrainButton(),
@@ -2683,36 +2581,30 @@ function pickUpScroll(poi) {
     const skill = poi.skill ? SKILLS[poi.skill] : null;
     if (!skill || !learnSkill(poi.skill, { active: true })) {
         const c = grantConsolation();
-        logCombat(`You unfurl a scroll; its lore ${c.kind === 'sp'
-            ? 'crystallizes into a Skill Point.'
-            : 'dissolves into experience.'}`, 'log-info');
-        showDialog('\u{1F4DC} Ancient Scroll',
-            `<p>You unfurl an ancient scroll, but it holds no art new to you.</p>` +
-            `<p style="color:#aaa;font-size:12px">${c.kind === 'sp'
-                ? 'Its lingering knowledge condenses into a Skill Point.'
-                : `Your Skill Points are already at their peak, so it dissolves into ${c.amount} XP instead.`}</p>`,
-            [{ label: 'Continue', cls: 'btn-primary' }]);
+        logCombat(say(c.kind === 'sp' ? 'log_scroll_sp' : 'log_scroll_xp', {}), 'log-info');
+        const note = c.kind === 'sp' ? say('scroll_note_sp', {}) : say('scroll_note_xp', { xp: c.amount });
+        showDialog(say('title_ancient_scroll', {}),
+            say('scroll_empty', {}) + `<p style="color:#aaa;font-size:12px">${note}</p>`,
+            [{ label: say('btn_continue', {}), cls: 'btn-primary' }]);
         return;
     }
 
-    logCombat(`You unfurl a scroll and learn ${skill.name}!`, 'log-info');
+    logCombat(say('log_scroll_learn', { skill: skill.name }), 'log-info');
 
-    const intro = poi.skill === 'return'
-        ? 'You unfurl the scroll the sealed Maw left behind. The way home opens to you. Walk the land as long as you wish; invoke RETURN to tally your journey.'
-        : 'You unfurl an ancient scroll. Its knowledge becomes yours.';
-    showDialog('\u{1F4DC} ' + skill.name,
-        `<p><i>${intro}</i></p>` +
+    const intro = say(poi.skill === 'return' ? 'scroll_return' : 'scroll_learn', {});
+    showDialog(say('title_scroll', { skill: skill.name }),
+        intro +
         skillBlurbHtml(skill) +
-        `<p style="color:#aaa;font-size:12px">Added to your skills. If your hotbar was full, equip it from the Skills panel.</p>`,
-        [{ label: 'Continue', cls: 'btn-primary' }]);
+        `<p style="color:#aaa;font-size:12px">${say('scroll_added', {})}</p>`,
+        [{ label: say('btn_continue', {}), cls: 'btn-primary' }]);
 }
 
 // Haven shops are split into two smiths. Each shows a different slice of the
 // same shopItems list (by magical/non-magical); skills are arcane knowledge so
 // they live with the Magicsmith. The Sell section is identical in both.
 const SMITHS = {
-    weapon: { title: 'Weaponsmith', itemFilter: equip => !equip.magical, showSkills: false, sellAll: true },
-    magic:  { title: 'Magicsmith',  itemFilter: equip => equip.magical,   showSkills: true,  sellAll: false },
+    weapon: { titleKey: 'title_weaponsmith', itemFilter: equip => !equip.magical, showSkills: false, sellAll: true },
+    magic:  { titleKey: 'title_magicsmith',  itemFilter: equip => equip.magical,   showSkills: true,  sellAll: false },
 };
 
 function showShopDialog(poi, kind) {
@@ -2720,9 +2612,9 @@ function showShopDialog(poi, kind) {
     if (Rando.bool(0.03)) {
         const newItem = rollMagicItem();
         poi.shopItems.push(newItem);
-        logCombat(`A new ${newItem.name} has appeared in the shop!`, 'log-info');
+        logCombat(say('log_shop_new_item', { item: newItem.name }), 'log-info');
     }
-    let bodyHtml = `<div style="margin-bottom:8px;color:#ffc107" data-gold-display>Your gold: ${player.gold}</div>`;
+    let bodyHtml = `<div style="margin-bottom:8px;color:#ffc107" data-gold-display>${say('shop_gold', { gold: player.gold })}</div>`;
     bodyHtml += '<div class="shop-scroll">';
     const owned = new Set([...Object.values(player.equipment).filter(Boolean), ...player.inventory]);
     for (const item of poi.shopItems) {
@@ -2733,7 +2625,7 @@ function showShopDialog(poi, kind) {
         const shopPrice = item.price;
         bodyHtml += `<div class="shop-item" data-detail="${item.id}">
             <div><span class="${itemRarityClass(equip)}">${item.name}</span> ${compareToEquippedHtml(equip)}<br><span style="color:#aaa;font-size:11px">${itemStatLine(equip)}</span></div>
-            <button data-id="${item.id}" data-price="${shopPrice}" ${player.gold < shopPrice ? 'disabled' : ''}>Buy ${shopPrice}g</button>
+            <button data-id="${item.id}" data-price="${shopPrice}" ${player.gold < shopPrice ? 'disabled' : ''}>${say('btn_buy', { gold: shopPrice })}</button>
         </div>`;
     }
 
@@ -2742,11 +2634,11 @@ function showShopDialog(poi, kind) {
         ? skillLibrary.shopSkills(player.learnedSkills)
         : [];
     if (skillsForSale.length > 0) {
-        bodyHtml += '<div style="margin-top:12px;border-top:1px solid #333;padding-top:8px"><strong>Skills:</strong></div>';
+        bodyHtml += `<div style="margin-top:12px;border-top:1px solid #333;padding-top:8px"><strong>${say('shop_skills', {})}</strong></div>`;
         for (const skill of skillsForSale) {
             bodyHtml += `<div class="shop-item">
                 <div><span style="color:#ffd700">${skill.name}</span><br><span style="color:#aaa;font-size:11px">${skill.desc}</span></div>
-                <button data-buy-skill="${skill.id}" data-price="${skill.shopPrice}" ${player.gold < skill.shopPrice ? 'disabled' : ''}>Buy ${skill.shopPrice}g</button>
+                <button data-buy-skill="${skill.id}" data-price="${skill.shopPrice}" ${player.gold < skill.shopPrice ? 'disabled' : ''}>${say('btn_buy', { gold: skill.shopPrice })}</button>
             </div>`;
         }
     }
@@ -2754,12 +2646,12 @@ function showShopDialog(poi, kind) {
     // Sell section — each smith only buys back the kind of gear it deals in.
     const sellable = player.inventory.filter(id => { const it = ALL_EQUIPMENT[id]; return it && smith.itemFilter(it); });
     if (sellable.length > 0) {
-        bodyHtml += '<div style="margin-top:12px;border-top:1px solid #333;padding-top:8px"><strong>Sell:</strong></div>';
+        bodyHtml += `<div style="margin-top:12px;border-top:1px solid #333;padding-top:8px"><strong>${say('shop_sell', {})}</strong></div>`;
         if (smith.sellAll) {
             const sellAllTotal = sellable.reduce((sum, id) => sum + sellPrice(ALL_EQUIPMENT[id]), 0);
             bodyHtml += `<div class="shop-item">
-                <div style="color:#aaa">All non-magic items</div>
-                <button data-sell-all-nm data-price="${sellAllTotal}">Sell all ${sellAllTotal}g</button>
+                <div style="color:#aaa">${say('shop_sell_all_items', {})}</div>
+                <button data-sell-all-nm data-price="${sellAllTotal}">${say('btn_sell_all', { gold: sellAllTotal })}</button>
             </div>`;
         }
         for (let i = 0; i < player.inventory.length; i++) {
@@ -2770,15 +2662,15 @@ function showShopDialog(poi, kind) {
             const sp = sellPrice(item);
             bodyHtml += `<div class="shop-item" data-detail="${id}">
                 <div class="${itemRarityClass(item)}">${item.name}</div>
-                <button data-sell="${id}" data-sell-idx="${i}" data-price="${sp}">Sell ${sp}g</button>
+                <button data-sell="${id}" data-sell-idx="${i}" data-price="${sp}">${say('btn_sell', { gold: sp })}</button>
             </div>`;
         }
     }
 
     bodyHtml += '</div>'; // .shop-scroll
-    bodyHtml += '<div class="shop-info" data-shop-info><span class="si-hint">Click an item to inspect it.</span></div>';
+    bodyHtml += `<div class="shop-info" data-shop-info><span class="si-hint">${say('shop_hint', {})}</span></div>`;
 
-    showDialog((POI_SYMBOLS[poi.type] || POI_SYMBOLS[POI.HAVEN]) + ' ' + smith.title, bodyHtml, [{ label: 'Done', action: () => { player.mp = 0; } }]);
+    showDialog(say(smith.titleKey, { symbol: POI_SYMBOLS[poi.type] || POI_SYMBOLS[POI.HAVEN] }), bodyHtml, [{ label: say('btn_done', {}), action: () => { player.mp = 0; } }]);
 
     // Wire up buy/sell buttons
     const body = document.getElementById('dialog-body');
@@ -2799,7 +2691,7 @@ function showShopDialog(poi, kind) {
             if (player.gold < price) return;
             player.gold -= price;
             learnSkill(skillId);
-            logCombat(`Learned ${SKILLS[skillId].name}`, 'log-gold');
+            logCombat(say('log_bought_skill', { skill: SKILLS[skillId].name }), 'log-gold');
             refreshOpenPanels();
             showShopDialog(poi, kind);
         });
@@ -2811,7 +2703,7 @@ function showShopDialog(poi, kind) {
             if (player.gold >= price) {
                 player.gold -= price;
                 player.inventory.push(id);
-                logCombat(`Bought ${ALL_EQUIPMENT[id].name}`, 'log-gold');
+                logCombat(say('log_bought', { item: ALL_EQUIPMENT[id].name }), 'log-gold');
                 refreshOpenPanels();
                 showShopDialog(poi, kind); // refresh
             }
@@ -2830,7 +2722,7 @@ function showShopDialog(poi, kind) {
                 }
             }
             player.gold += total;
-            logCombat(`Sold ${sold.length} items for ${total}g`, 'log-gold');
+            logCombat(say('log_sold_all', { n: sold.length, gold: total }), 'log-gold');
             // Remove the sold rows and the sell-all button itself
             body.querySelectorAll('button[data-sell]').forEach(b => {
                 const it = ALL_EQUIPMENT[b.dataset.sell];
@@ -2840,7 +2732,7 @@ function showShopDialog(poi, kind) {
             // Reindex remaining sell buttons
             body.querySelectorAll('button[data-sell-idx]').forEach((b, i) => { b.dataset.sellIdx = i; });
             const goldDisplay = body.querySelector('[data-gold-display]');
-            if (goldDisplay) goldDisplay.textContent = `Your gold: ${player.gold}`;
+            if (goldDisplay) goldDisplay.textContent = say('shop_gold', { gold: player.gold });
             body.querySelectorAll('button[data-id]').forEach(b => {
                 b.disabled = player.gold < parseInt(b.dataset.price);
             });
@@ -2854,11 +2746,11 @@ function showShopDialog(poi, kind) {
             const rmIdx = parseInt(btn.dataset.sellIdx);
             player.inventory.splice(rmIdx, 1);
             player.gold += price;
-            logCombat(`Sold ${ALL_EQUIPMENT[id].name} for ${price}g`, 'log-gold');
+            logCombat(say('log_sold', { item: ALL_EQUIPMENT[id].name, gold: price }), 'log-gold');
             // Remove just this row and update gold display
             btn.closest('.shop-item').remove();
             const goldDisplay = body.querySelector('[data-gold-display]');
-            if (goldDisplay) goldDisplay.textContent = `Your gold: ${player.gold}`;
+            if (goldDisplay) goldDisplay.textContent = say('shop_gold', { gold: player.gold });
             // Shift down indices of remaining sell buttons after the removed one
             body.querySelectorAll('button[data-sell-idx]').forEach(b => {
                 const idx = parseInt(b.dataset.sellIdx);
@@ -2884,45 +2776,45 @@ function showShopDialog(poi, kind) {
 // actions.js, update the matching entry here.
 const SKILL_POWER = {
     // Flat: base damage + a stat. (`+War/2` floors, matching the executor.)
-    cosmic_bolt:     (e, s) => ({ score: e.baseDamage + s.warding,           factors: `${e.baseDamage}+War` }),
-    shockwave:       (e, s) => ({ score: e.baseDamage + s.might,             factors: `${e.baseDamage}+Mgt · AoE ${e.range} · push` }),
-    piercing_shot:   (e, s) => ({ score: e.baseDamage + s.reflex,            factors: `${e.baseDamage}+Ref · ignores def` }),
-    breach_pulse:    (e, s) => ({ score: e.baseDamage + s.warding,           factors: `${e.baseDamage}+War · AoE ${e.range}` }),
-    chain_lightning: (e, s) => ({ score: e.baseDamage + s.warding,           factors: `${e.baseDamage}+War · chains ${e.hitCount}` }),
-    meteor:          (e, s) => ({ score: e.baseDamage + s.warding,           factors: `${e.baseDamage}+War · blast r${e.effectStrength}` }),
-    starfall:        (e, s) => ({ score: e.baseDamage + s.warding * 2,       factors: `${e.baseDamage}+War×2 · AoE ${e.range}` }),
-    void_salvo:      (e, s) => ({ score: e.baseDamage + s.reflex,            factors: `${e.baseDamage}+Ref · ${e.hitCount} shots` }),
-    ricochet:        (e, s) => ({ score: e.baseDamage + s.reflex,            factors: `${e.baseDamage}+Ref · bounces ${e.hitCount}` }),
-    lifedrain_blast: (e, s) => ({ score: e.baseDamage + s.vigor,             factors: `${e.baseDamage}+Vig · AoE ${e.range} · +${e.hpPerHit}HP/hit` }),
-    aether_blast:    (e, s) => ({ score: e.baseDamage + Math.floor(s.warding / 2), factors: `${e.baseDamage}+War/2 · AoE ${e.range} · +${e.aetherPerHit}AE/hit` }),
-    havens_light:    (e, s) => ({ score: e.baseDamage + s.warding,           factors: `${e.baseDamage}+War · AoE ${e.range}` }),
+    cosmic_bolt:     (e, s) => ({ score: e.baseDamage + s.warding,           factors: say('pow_cosmic_bolt', { base: e.baseDamage }) }),
+    shockwave:       (e, s) => ({ score: e.baseDamage + s.might,             factors: say('pow_shockwave', { base: e.baseDamage, range: e.range }) }),
+    piercing_shot:   (e, s) => ({ score: e.baseDamage + s.reflex,            factors: say('pow_piercing_shot', { base: e.baseDamage }) }),
+    breach_pulse:    (e, s) => ({ score: e.baseDamage + s.warding,           factors: say('pow_breach_pulse', { base: e.baseDamage, range: e.range }) }),
+    chain_lightning: (e, s) => ({ score: e.baseDamage + s.warding,           factors: say('pow_chain_lightning', { base: e.baseDamage, n: e.hitCount }) }),
+    meteor:          (e, s) => ({ score: e.baseDamage + s.warding,           factors: say('pow_meteor', { base: e.baseDamage, radius: e.effectStrength }) }),
+    starfall:        (e, s) => ({ score: e.baseDamage + s.warding * 2,       factors: say('pow_starfall', { base: e.baseDamage, range: e.range }) }),
+    void_salvo:      (e, s) => ({ score: e.baseDamage + s.reflex,            factors: say('pow_void_salvo', { base: e.baseDamage, n: e.hitCount }) }),
+    ricochet:        (e, s) => ({ score: e.baseDamage + s.reflex,            factors: say('pow_ricochet', { base: e.baseDamage, n: e.hitCount }) }),
+    lifedrain_blast: (e, s) => ({ score: e.baseDamage + s.vigor,             factors: say('pow_lifedrain_blast', { base: e.baseDamage, range: e.range, n: e.hpPerHit }) }),
+    aether_blast:    (e, s) => ({ score: e.baseDamage + Math.floor(s.warding / 2), factors: say('pow_aether_blast', { base: e.baseDamage, range: e.range, n: e.aetherPerHit }) }),
+    havens_light:    (e, s) => ({ score: e.baseDamage + s.warding,           factors: say('pow_havens_light', { base: e.baseDamage, range: e.range }) }),
     // Weapon-scaling melee. `wpn` is the matched weapon's damage.
-    void_strike:     (e, s, w) => ({ score: Math.round((w + s.might + s.warding) * e.effectStrength / 5),  factors: `(wpn+Mgt+War)×${(e.effectStrength / 5).toFixed(1)}` }),
-    siphon_strike:   (e, s, w) => ({ score: Math.round((w + s.might) * e.effectStrength / 10),             factors: `(wpn+Mgt)×${(e.effectStrength / 10).toFixed(1)} · heals` }),
-    execute:         (e, s, w) => ({ score: Math.round((w + s.might) * e.effectStrength / 10),             factors: `(wpn+Mgt)×${(e.effectStrength / 10).toFixed(1)} · <50% HP` }),
-    dimensional_rend:(e, s, w) => ({ score: Math.round(w * e.effectStrength / 5) + s.vigor,                 factors: `wpn×${(e.effectStrength / 5).toFixed(1)}+Vig · −${e.effectStrength - 4} HP` }),
-    sweep:           (e, s, w) => ({ score: w + s.might, factors: `wpn+Mgt · +${e.hitCount} adjacent` }),
-    stun_blow:       (e, s, w) => ({ score: w + s.might, factors: `wpn+Mgt · +${e.effectStrength}% stun` }),
-    immolate:        (e, s, w) => ({ score: w + s.might, factors: `wpn+Mgt · burn ${e.effectStrength}` }),
-    sundering_blow:  (e, s, w) => ({ score: w + s.might, factors: `wpn+Mgt · shred ${e.effectStrength} def` }),
+    void_strike:     (e, s, w) => ({ score: Math.round((w + s.might + s.warding) * e.effectStrength / 5),  factors: say('pow_void_strike', { mult: (e.effectStrength / 5).toFixed(1) }) }),
+    siphon_strike:   (e, s, w) => ({ score: Math.round((w + s.might) * e.effectStrength / 10),             factors: say('pow_siphon_strike', { mult: (e.effectStrength / 10).toFixed(1) }) }),
+    execute:         (e, s, w) => ({ score: Math.round((w + s.might) * e.effectStrength / 10),             factors: say('pow_execute', { mult: (e.effectStrength / 10).toFixed(1) }) }),
+    dimensional_rend:(e, s, w) => ({ score: Math.round(w * e.effectStrength / 5) + s.vigor,                 factors: say('pow_dimensional_rend', { mult: (e.effectStrength / 5).toFixed(1), hp: e.effectStrength - 4 }) }),
+    sweep:           (e, s, w) => ({ score: w + s.might, factors: say('pow_sweep', { n: e.hitCount }) }),
+    stun_blow:       (e, s, w) => ({ score: w + s.might, factors: say('pow_stun_blow', { n: e.effectStrength }) }),
+    immolate:        (e, s, w) => ({ score: w + s.might, factors: say('pow_immolate', { n: e.effectStrength }) }),
+    sundering_blow:  (e, s, w) => ({ score: w + s.might, factors: say('pow_sundering_blow', { n: e.effectStrength }) }),
     // Heal.
-    mending_light:   (e, s) => ({ score: e.effectStrength + s.vigor * 3, factors: `${e.effectStrength}+Vig×3 heal` }),
+    mending_light:   (e, s) => ({ score: e.effectStrength + s.vigor * 3, factors: say('pow_mending_light', { n: e.effectStrength }) }),
     // Untiered, but range scales with character level (see executeRestore).
-    restore:         () => ({ score: null, factors: `Range ${1 + Math.floor(player.level / 3)}` }),
+    restore:         () => ({ score: null, factors: say('stat_range', { n: 1 + Math.floor(player.level / 3) }) }),
 };
 
 // Per-skill rendering of the effectStrength axis for utility skills that aren't
 // in SKILL_POWER (no damage/heal score). effectStrength means something different
 // per skill, so the trickiness is centralized here keyed by skill id.
 const EFFECT_STRENGTH_DISPLAY = {
-    sprint:           es => `+${es} MP`,
-    warp_shield:      es => `Block ${es * 10}%`,
-    reflect:          es => `Reflect ${es * 10}% chance`,
-    channel:          es => `${es}:1 HP→AE`,
-    aether_tap:       es => `1 AE / ${es} hex`,
-    skill_seek:       es => `Learn ${es}%`,
-    sanctuary:        es => `Heal 1/${es}`,
-    loot:             es => `Gold ×${(es / 10).toFixed(1)}`,
+    sprint:           es => say('es_sprint', { n: es }),
+    warp_shield:      es => say('es_warp_shield', { n: es * 10 }),
+    reflect:          es => say('es_reflect', { n: es * 10 }),
+    channel:          es => say('es_channel', { n: es }),
+    aether_tap:       es => say('es_aether_tap', { n: es }),
+    skill_seek:       es => say('es_skill_seek', { n: es }),
+    sanctuary:        es => say('es_sanctuary', { n: es }),
+    loot:             es => say('es_loot', { mult: (es / 10).toFixed(1) }),
 };
 
 // Unified summary of a skill at its current rank with current stats: an optional
@@ -2938,9 +2830,9 @@ function skillSummary(skillId) {
     }
     if (!def.tiers) return null;
     const factors = def.scales.map(axis => {
-        if (axis === 'baseDamage') return `Dmg ${eff.baseDamage}`;
-        if (axis === 'range') return `Range ${eff.range}`;
-        if (axis === 'hitCount') return `Hits ${eff.hitCount}`;
+        if (axis === 'baseDamage') return say('stat_damage', { n: eff.baseDamage });
+        if (axis === 'range') return say('stat_range', { n: eff.range });
+        if (axis === 'hitCount') return say('pow_hits', { n: eff.hitCount });
         return EFFECT_STRENGTH_DISPLAY[skillId] ? EFFECT_STRENGTH_DISPLAY[skillId](eff.effectStrength) : '';
     }).filter(Boolean).join(' · ');
     return { score: null, factors };
@@ -2986,11 +2878,11 @@ function rankInsignia(rank) {
 // description, and current-rank values — the same content the Skills overlay shows.
 function trainInfoHtml(skillId) {
     if (!skillId || !player.learnedSkills.has(skillId)) {
-        return '<span class="ti-hint">Click a skill to train it or level it up.</span>';
+        return `<span class="ti-hint">${say('train_hint', {})}</span>`;
     }
     const def = SKILLS[skillId];
     const active = player.activeSkills.has(skillId);
-    const state = !active ? 'latent' : (def.tiers ? rankInsignia(player.rankOf(skillId)) : 'trained');
+    const state = !active ? say('train_state_latent', {}) : (def.tiers ? rankInsignia(player.rankOf(skillId)) : say('train_state_trained', {}));
     const summary = skillSummaryHtml(skillId);
     const vals = summary ? `<div class="ti-vals">${summary}</div>` : '';
     return `<div><span class="ti-name">${def.name}</span> <span style="color:#888">${state}</span></div>`
@@ -3007,10 +2899,10 @@ function showTrainDialog() {
     // Train (SP allocation) list — keep them out so they can't be made latent.
     const learned = [...player.learnedSkills].filter(id => !SKILLS[id].freeAttune).sort((a, b) => SKILLS[a].name.localeCompare(SKILLS[b].name));
     const free = player.freeSP();
-    let body = '<p style="color:#aaa;font-size:12px">Click → to train and level up (rising cost +1, +2, +3, +4, +5; max 5). Click ← to level down, or make latent at level 1.</p>';
-    body += `<p style="color:${free > 0 ? '#b388ff' : '#888'};font-size:13px">SP available: ${free} of ${player.sp}</p>`;
+    let body = `<p style="color:#aaa;font-size:12px">${say('train_help', {})}</p>`;
+    body += `<p style="color:${free > 0 ? '#b388ff' : '#888'};font-size:13px">${say('train_sp', { free, sp: player.sp })}</p>`;
     body += '<div class="train-scroll">';
-    body += '<div class="train-row train-head-row"><div class="train-side">Latent</div><div class="train-mid"></div><div class="train-side right">Trained</div></div>';
+    body += `<div class="train-row train-head-row"><div class="train-side">${say('train_col_latent', {})}</div><div class="train-mid"></div><div class="train-side right">${say('train_col_trained', {})}</div></div>`;
     for (const id of learned) {
         const def = SKILLS[id];
         const active = player.activeSkills.has(id);
@@ -3024,22 +2916,22 @@ function showTrainDialog() {
         let canAdvance, advTitle;
         if (!active) {
             canAdvance = free >= 1;
-            advTitle = canAdvance ? 'Train (1 SP)' : 'Need 1 SP';
+            advTitle = say(canAdvance ? 'train_tip_train' : 'train_tip_need_one', {});
         } else if (!tiered) {
             canAdvance = false;
-            advTitle = 'No levels';
+            advTitle = say('train_tip_no_levels', {});
         } else if (rank >= SKILL_MAX_RANK) {
             canAdvance = false;
-            advTitle = 'Max level';
+            advTitle = say('train_tip_max', {});
         } else {
             canAdvance = free >= advanceCost;
-            advTitle = canAdvance ? `Level up (${advanceCost} SP)` : `Need ${advanceCost} SP`;
+            advTitle = say(canAdvance ? 'train_tip_level_up' : 'train_tip_need', { n: advanceCost });
         }
         const advance = canAdvance
             ? `<button class="train-arrow" data-advance="${id}" title="${advTitle}">→</button>`
             : `<span class="train-arrow" style="opacity:0.3;cursor:default" title="${advTitle}">→</span>`;
         // ← steps the rank down, dropping to latent from level 1.
-        const reduceBtn = active ? `<button class="train-arrow" data-reduce="${id}" title="${rank > 1 ? 'Level down' : 'Make latent'}">←</button>` : '';
+        const reduceBtn = active ? `<button class="train-arrow" data-reduce="${id}" title="${say(rank > 1 ? 'train_tip_level_down' : 'train_tip_make_latent', {})}">←</button>` : '';
         body += `<div class="train-row" data-row="${id}">`
             + `<div class="train-side">${active ? '' : def.name}</div>`
             + `<div class="train-mid">${reduceBtn}${advance}</div>`
@@ -3048,8 +2940,8 @@ function showTrainDialog() {
     }
     body += '</div>';
     body += `<div class="train-info">${trainInfoHtml(lastTrainSkill)}</div>`;
-    showDialog(POI_SYMBOLS[POI.HAVEN] + ' Train', body, [
-        { label: 'Done', action: () => { player.mp = 0; } }
+    showDialog(say('title_train', { symbol: POI_SYMBOLS[POI.HAVEN] }), body, [
+        { label: say('btn_done', {}), action: () => { player.mp = 0; } }
     ]);
     document.getElementById('dialog-box').classList.add('dialog-wide');
     const root = document.getElementById('dialog-body');
@@ -3141,34 +3033,34 @@ function activateRuinSpawn(poi, message) {
 
 function tryRuinInteraction(poi) {
     if (ruinEnemiesNearby(poi)) {
-        logCombat('Clear the area before exploring the ruins.', 'log-info');
+        logCombat(say('log_ruins_clear_first', {}), 'log-info');
         return;
     }
 
-    const ruinTitle = POI_SYMBOLS[POI.RUIN] + ' Ruins';
+    const ruinTitle = say('title_ruins', { symbol: POI_SYMBOLS[POI.RUIN] });
 
     if (poi.ruinState === 'new') {
-        showDialog(ruinTitle, '<p>Ancient ruins loom before you.</p>', [
-            { label: 'Search', cls: 'primary', action: () => {
-                const spawned = activateRuinSpawn(poi, 'Something stirs in the ruins...');
+        showDialog(ruinTitle, say('ruins_new', {}), [
+            { label: say('btn_search', {}), cls: 'primary', action: () => {
+                const spawned = activateRuinSpawn(poi, say('log_ruins_stir', {}));
                 if (spawned === 0) player.mp = 0;
             }},
-            { label: 'Leave' }
+            { label: say('btn_leave', {}) }
         ]);
     } else if (poi.ruinState === 'spawned') {
         showRuinLootDialog(poi);
     } else {
-        showDialog(ruinTitle, '<p>The ruins are quiet\u2026</p>', [
-            { label: 'Search', cls: 'primary', action: () => {
+        showDialog(ruinTitle, say('ruins_quiet', {}), [
+            { label: say('btn_search', {}), cls: 'primary', action: () => {
                 let spawned = 0;
                 if (Rando.bool(0.10)) {
-                    spawned = activateRuinSpawn(poi, 'New creatures have moved into the ruins!');
+                    spawned = activateRuinSpawn(poi, say('log_ruins_new_creatures', {}));
                 } else {
-                    logCombat('Nothing of interest here.', 'log-info');
+                    logCombat(say('log_ruins_nothing', {}), 'log-info');
                 }
                 if (spawned === 0) player.mp = 0;
             }},
-            { label: 'Leave' }
+            { label: say('btn_leave', {}) }
         ]);
     }
 }
@@ -3177,8 +3069,8 @@ function showRuinLootDialog(poi) {
     poi.ruinState = 'explored';
     victory.ruinsExplored++;
     const loot = rollPoiLoot(5, 20);
-    const body = formatLootHtml('You explore the ruins...', loot);
-    showDialog(POI_SYMBOLS[POI.RUIN] + ' Ruins', body, [{ label: 'Continue', action: () => {
+    const body = formatLootHtml(say('ruins_loot', {}), loot);
+    showDialog(say('title_ruins', { symbol: POI_SYMBOLS[POI.RUIN] }), body, [{ label: say('btn_continue', {}), action: () => {
         player.mp = 0;
     }}]);
 }
@@ -3186,18 +3078,17 @@ function showRuinLootDialog(poi) {
 // spGained: Skill Points the level-up granted (0 for Renew's stat refund, or at the SP cap).
 function showLevelUpDialog(spGained) {
     // Stat allocation
-    let body = `<p style="color:#ffc107;font-size:16px">Level ${player.level}!</p>`;
-    if (spGained > 0) body += `<p style="color:#ffc107">+${spGained} Skill Point</p>`;
-    body += `<p><i>Assign ${player.statPoints} stat points:</i></p>`;
+    let body = `<p style="color:#ffc107;font-size:16px">${say('levelup_level', { level: player.level })}</p>`;
+    if (spGained > 0) body += `<p style="color:#ffc107">${say('log_skill_point', { n: spGained })}</p>`;
+    body += say('levelup_assign', { n: player.statPoints });
     const stats = ['might', 'reflex', 'warding', 'vigor'];
-    const labels = { might: 'Might', reflex: 'Reflex', warding: 'Warding', vigor: 'Vigor' };
     for (const s of stats) {
-        body += `<div class="alloc-row"><span>${labels[s]}: <span id="alloc-${s}">${player.stats[s]}</span></span>
+        body += `<div class="alloc-row"><span>${say('stat_line', { stat: say('stat_' + s, {}), n: `<span id="alloc-${s}">${player.stats[s]}</span>` })}</span>
             <button data-stat="${s}">+</button></div>`;
     }
-    body += `<div id="alloc-remaining" style="margin-top:8px;color:#ffc107">Remaining: ${player.statPoints}</div>`;
+    body += `<div id="alloc-remaining" style="margin-top:8px;color:#ffc107">${say('levelup_remaining', { n: player.statPoints })}</div>`;
 
-    showDialog('Level Up!', body, [{ label: 'Done', cls: 'primary' }]);
+    showDialog(say('title_level_up', {}), body, [{ label: say('btn_done', {}), cls: 'primary' }]);
 
     // Wire up allocation buttons
     const dialogBody = document.getElementById('dialog-body');
@@ -3208,7 +3099,7 @@ function showLevelUpDialog(spGained) {
             player.stats[stat]++;
             player.statPoints--;
             document.getElementById(`alloc-${stat}`).textContent = player.stats[stat];
-            document.getElementById('alloc-remaining').textContent = 'Remaining: ' + player.statPoints;
+            document.getElementById('alloc-remaining').textContent = say('levelup_remaining', { n: player.statPoints });
             player.hp = Math.min(player.hp, player.maxHP());
             player.aether = Math.min(player.aether, player.maxAether());
             updateHUD();
@@ -3223,15 +3114,13 @@ function showSkillChoiceDialog() {
         // Nothing left to learn at this level — the insight condenses into a Skill
         // Point, or XP once Skill Points are maxed.
         const c = grantConsolation();
-        logCombat(c.kind === 'sp'
-            ? 'No new arts within reach — the insight becomes a Skill Point.'
-            : 'No new arts within reach — the insight dissolves into experience.', 'log-info');
+        logCombat(say(c.kind === 'sp' ? 'log_no_arts_sp' : 'log_no_arts_xp', {}), 'log-info');
         return;
     }
     Rando.shuffle(available);
     const offered = available.slice(0, 3);
 
-    let body = '<p>Choose a skill to learn:</p><div style="max-height:260px;overflow-y:auto">';
+    let body = say('skill_choice_prompt', {}) + '<div style="max-height:260px;overflow-y:auto">';
     for (const skill of offered) {
         body += `<div class="skill-choice" data-skill="${skill.id}">
             <div><span class="sc-name">${skill.name}</span> <span class="sc-cost">(${skillCostLabel(skill, player)})</span></div>
@@ -3240,7 +3129,7 @@ function showSkillChoiceDialog() {
     }
     body += '</div>';
 
-    showDialog('New Skill!', body, []);
+    showDialog(say('title_new_skill', {}), body, []);
 
     // Wire up choices
     document.getElementById('dialog-body').querySelectorAll('.skill-choice').forEach(el => {
@@ -3249,7 +3138,7 @@ function showSkillChoiceDialog() {
             learnSkill(skillId);
             document.getElementById('dialog-overlay').classList.add('hidden');
             changePhase('player');
-            logCombat(`Learned ${SKILLS[skillId].name}!`, 'log-info');
+            logCombat(say('log_learned', { skill: SKILLS[skillId].name }), 'log-info');
             render();
             updateHUD();
         });
@@ -3266,16 +3155,16 @@ function endGame(won) {
     resolveEndTurn();
     changePhase('dialog');
     const overlay = document.getElementById('endgame-overlay');
-    document.getElementById('endgame-title').textContent = won ? 'VICTORY!' : 'DEFEAT';
+    document.getElementById('endgame-title').textContent = say(won ? 'endgame_victory' : 'endgame_defeat', {});
     document.getElementById('endgame-title').style.color = won ? '#ffc107' : '#f44336';
     const rows = victory.breakdown().map(b =>
         `<div style="display:flex;justify-content:space-between;gap:16px"><span>${b.label}: ${b.value}</span><span style="color:#888">${b.points >= 0 ? '+' : ''}${b.points}</span></div>`
     ).join('');
     document.getElementById('endgame-body').innerHTML = `
-        <div>Turns: ${turn}</div>
-        <div>Level: ${player.level}</div>
+        <div>${say('endgame_turns', { turn })}</div>
+        <div>${say('endgame_level', { level: player.level })}</div>
         <div style="margin:8px 0;border-top:1px solid #444;padding-top:8px">${rows}</div>
-        <div style="margin-top:8px;border-top:1px solid #444;padding-top:8px;font-size:18px;color:#ffc107">Final Score: ${victory.score()}</div>
+        <div style="margin-top:8px;border-top:1px solid #444;padding-top:8px;font-size:18px;color:#ffc107">${say('endgame_score', { score: victory.score() })}</div>
     `;
     overlay.classList.remove('hidden');
 }
@@ -3436,7 +3325,7 @@ canvas.addEventListener('contextmenu', e => {
 document.getElementById('end-turn').addEventListener('click', hexAction);
 
 document.getElementById('new-game').addEventListener('click', () => {
-    if (confirm('Start a new game?')) initGame();
+    if (confirm(say('confirm_new_game', {}))) initGame();
 });
 
 document.getElementById('endgame-newgame').addEventListener('click', initGame);
@@ -3517,7 +3406,7 @@ function tickGarrisons() {
             if (hex) hex.poi = POI.GARRISON;
             victory.garrisonsCompleted++;
             if (world.visible.has(hexKey(poi.q, poi.r))) {
-                logCombat('A garrison stands ready!', 'log-info');
+                logCombat(say('log_garrison_ready', {}), 'log-info');
             }
         }
     }
@@ -3537,7 +3426,7 @@ function tickGarrisons() {
         const def = em.getDef(target.type);
         killEnemy(target, { byGarrison: true });
         if (world.visible.has(hexKey(poi.q, poi.r)) || world.visible.has(hexKey(target.q, target.r))) {
-            logCombat(`Garrison slays ${def.name}!`, 'log-dmg');
+            logCombat(say('log_garrison_slays', { name: def.name }), 'log-dmg');
         }
     }
 }
@@ -3556,9 +3445,9 @@ function activateMeleeAttack() {
 
 function activateRangedWeapon() {
     const wep = player.weapon();
-    if (!weaponIsRanged(wep)) { logCombat('No ranged weapon!', 'log-info'); return; }
+    if (!weaponIsRanged(wep)) { logCombat(say('log_no_ranged_weapon', {}), 'log-info'); return; }
     const cost = (!wep.magical || wep.special === 'free_ranged' || wep.special === 'channel') ? 0 : 1;
-    if (player.aether < cost) { logCombat('Not enough Aether!', 'log-info'); return; }
+    if (player.aether < cost) { logCombat(say('log_not_enough_aether', {}), 'log-info'); return; }
     const playerPoi = world.poiAt(player.q, player.r);
     const range = player.weaponRange(playerTerrain(), playerPoi ? playerPoi.type : null);
     const validHexes = new Set();
@@ -3567,7 +3456,7 @@ function activateRangedWeapon() {
             validHexes.add(hexKey(h.q, h.r));
         }
     }
-    if (validHexes.size === 0) { logCombat('No targets in range!', 'log-info'); return; }
+    if (validHexes.size === 0) { logCombat(say('log_no_targets_in_range', {}), 'log-info'); return; }
     targeting = { skill: '__ranged__', validHexes };
     deselectPlayer();
     render();
@@ -3578,14 +3467,14 @@ function activateSkill(skillId) {
     if (phase !== 'player' || gameOver) return;
     const skill = SKILLS[skillId];
     if (!skill) return;
-    if (player.aether < effectiveAetherCost(player, skill)) { logCombat('Not enough Aether!', 'log-info'); return; }
+    if (player.aether < effectiveAetherCost(player, skill)) { logCombat(say('log_not_enough_aether', {}), 'log-info'); return; }
     const usageBlock = checkSkillUsage(skill);
     if (usageBlock) { logCombat(usageBlock, 'log-info'); return; }
     if (skillId === 'return') {
-        showDialog('Return',
-            '<p>End your journey here? Your final score will be tallied.</p>',
-            [{ label: 'Cancel', action: () => {} },
-             { label: 'Return', cls: 'btn-primary', action: () => endGame(true) }]);
+        showDialog(say('title_return', {}),
+            say('return_confirm', {}),
+            [{ label: say('btn_cancel', {}), action: () => {} },
+             { label: say('btn_return', {}), cls: 'btn-primary', action: () => endGame(true) }]);
         return;
     }
 
@@ -3607,7 +3496,7 @@ function activateSkill(skillId) {
     // can move the player adjacent.
     if (isMeleeSkill(skill)) computeReachable();
     const validHexes = getSkillTargets(skillId);
-    if (validHexes.size === 0) { logCombat('No valid targets!', 'log-info'); return; }
+    if (validHexes.size === 0) { logCombat(say('log_no_valid_targets', {}), 'log-info'); return; }
     targeting = { skill: skillId, validHexes };
     if (isMeleeSkill(skill)) selected = false; // hide selection box; keep reachable for the move step
     else deselectPlayer();
