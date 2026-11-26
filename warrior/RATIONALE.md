@@ -59,9 +59,8 @@ still uses base Vigor; filed as a tracker task.
 - **Why:** designer's call; to be filled in.
 - **Evidence:** not measured.
 
-### D-7 Hut Leave does not end the turn — *Decided, unbuilt*
-Leaving a hut will be free, as Leave is at havens and villages. The code still sets MP to 0;
-filed as a tracker task.
+### D-7 Hut Leave does not end the turn — *Decided*
+Leaving a hut is free, as Leave is at havens and villages; only Learn ends the turn's movement.
 - **Alternatives:** keep hut Leave ending the turn's movement.
 - **Why:** designer's call; to be filled in.
 - **Evidence:** not measured.

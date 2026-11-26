@@ -1,17 +1,3 @@
-Priority:   65
-Status: ToDo
-ID: hutleave-yysd
-Created: 2026-11-26T22:05:38Z
-Updated: 2026-11-26T22:05:38Z
-
-Leaving a hut no longer ends your turn.
-
-Goal: hutLeaveButton() in index.js sets player.mp = 0, so walking away from a hut costs the rest of your movement, while Leave at a haven or village is free. Hut Leave should be free too.
-
-Settled design: hutLeaveButton's action does nothing beyond closing the dialog (same as haven/village Leave). Don't change Rest at havens (it still ends movement). Update ONTOLOGY.md (hut visit rule, the commands table, Q-16 reference) and DYNAMICS.md if it says leaving a hut ends movement.
-
-Done when: node test/*.js pass; hutLeaveButton no longer touches player.mp; ONTOLOGY.md matches.
-----
 Priority:   60
 Status: ToDo
 ID: dodgegear-ztsr

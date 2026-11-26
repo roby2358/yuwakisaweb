@@ -2598,7 +2598,7 @@ function hutTrainButton() {
 }
 
 function hutLeaveButton() {
-    return { label: say('btn_leave', {}), action: () => { player.mp = 0; } };
+    return { label: say('btn_leave', {}) };
 }
 
 // The hut's teaching dialog for one skill.

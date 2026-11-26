@@ -2,6 +2,11 @@
 
 Dated entries, newest first. This is the only design doc that records history.
 
+### 2026-11-26 — Hut Leave is free (D-7 built)
+
+Leave at a hut no longer sets MP to 0, matching haven and village Leave; Learn still ends
+movement. D-7 is now *Decided*, and ONTOLOGY drops its [D, unbuilt] tag.
+
 ### 2026-11-26 — Conversion questions ruled on; RATIONALE.md started
 
 The designer ruled on the open questions from the conversion entry below. RATIONALE.md was

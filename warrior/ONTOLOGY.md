@@ -903,8 +903,7 @@ chance(HUT_GIFT_CHANCE): a magic item, hut unchanged; stop
 if hut.skill unknown: offer it
 else if chance(HUT_REROLL_CHANCE) and an obtainable skill exists: hut.skill = it; offer it
 else: "nothing to teach"
-Learn: learnSkill (latent unless freeAttune); mp = 0.  Leave: mp = 0.  Train: Train dialog
-# [D, unbuilt] (D-7): Leave will be free (no mp change), as at havens and villages
+Learn: learnSkill (latent unless freeAttune); mp = 0.  Leave: free (D-7).  Train: Train dialog
 ```
 
 ### Scroll pickup [D]
@@ -1218,7 +1217,7 @@ formalized from the code]
 | dismissOverlay (click, Space, Esc) | threat overlay or world map shown | hides it | |
 | haven: Rest / Weaponsmith / Magicsmith / Train / Leave | on a haven | see Haven visit | Rest: mp = 0 |
 | village: Rest / Weaponsmith / Leave | on a village | see Village visit | Rest: mp = 0 |
-| hut: Learn / Train / Leave | on a hut, lesson offered | see Hut visit | Learn, Leave: mp = 0 [D, unbuilt] (D-7): Leave free |
+| hut: Learn / Train / Leave | on a hut, lesson offered | see Hut visit | Learn: mp = 0; Leave: free (D-7) |
 | ruin: Search / Leave / Continue | on a ruin, none within RUIN_CLEAR_RADIUS† | see Ruin search | may spawn; mp = 0 |
 | shop: Buy item / Buy skill / Sell / Sell All / Done | shop open, gold ≥ price | see Shops | Done: mp = 0 |
 | train: → / ← / Done | Train open | see Train | Done: mp = 0 |
