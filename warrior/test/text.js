@@ -50,9 +50,18 @@ for (const item of Object.values(ALL_EQUIPMENT)) {
     if (item.special) itemSpecialText(item);
 }
 
-// Rendering by kind.
-assert.equal(say('sage_teach', { skill: 'Sprint' }), '<p>"I can teach you <b>Sprint</b>."</p>');
-assert.equal(say('sage_peers', {}), '<p><i>An old sage peers at you.</i></p>');
+// Rendering by kind, checked on every variant (flavor entries have many).
+TEXT.sage_teach.variants.forEach(v =>
+    assert.match(TEXT_RENDER.speech(v), /^<p>"[^"<]*<b>\{skill\}<\/b>[^"<]*"<\/p>$/, 'sage_teach: ' + v));
+TEXT.sage_peers.variants.forEach(v =>
+    assert.match(TEXT_RENDER.stage(v), /^<p><i>[^<]+<\/i><\/p>$/, 'sage_peers: ' + v));
+assert.match(say('sage_teach', { skill: 'Sprint' }), /<b>Sprint<\/b>/);
+
+// Speech is wrapped in quotes, so a variant must not carry its own.
+for (const [key, entry] of Object.entries(TEXT)) {
+    if (entry.kind !== 'speech') continue;
+    entry.variants.forEach(v => assert.ok(!v.includes('"'), key + ': speech variant has its own quotes: ' + v));
+}
 assert.equal((say('maw_hungers', {}).match(/<p>/g) || []).length, 2);
 
 // Every literal key the game passes to say() exists.

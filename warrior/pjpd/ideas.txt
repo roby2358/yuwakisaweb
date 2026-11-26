@@ -223,6 +223,13 @@ SKILLS:
 
 SCALING: both HP cost AND skill effect increase with skill level/rank (more invested = bigger spend = bigger payoff).
 ----
+Score:   45
+ID: more-flavor-gpai
+Created: 2026-11-26T18:22:20Z
+Updated: 2026-11-26T18:28:24Z
+
+More flavor variants beyond the huts / scrolls & ruins / havens & villages / level-up / Skill Seek / smith batch: the breach-loot line ("Closing the breach scatters its hoard...") and the Maw and Unraveler narration lines. Also consider whether Renew's stat refund should skip the level-up prose (it reuses the Level Up dialog).
+----
 Score:   40
 ID: prize-scroll-esnu
 Created: 2026-11-26T17:42:48Z

@@ -2591,7 +2591,7 @@ function pickUpScroll(poi) {
 
     logCombat(say('log_scroll_learn', { skill: skill.name }), 'log-info');
 
-    const intro = say(poi.skill === 'return' ? 'scroll_return' : 'scroll_learn', {});
+    const intro = poi.skill === 'return' ? say('scroll_return', {}) + say('scroll_return_how', {}) : say('scroll_learn', {});
     showDialog(say('title_scroll', { skill: skill.name }),
         intro +
         skillBlurbHtml(skill) +
@@ -2603,8 +2603,8 @@ function pickUpScroll(poi) {
 // same shopItems list (by magical/non-magical); skills are arcane knowledge so
 // they live with the Magicsmith. The Sell section is identical in both.
 const SMITHS = {
-    weapon: { titleKey: 'title_weaponsmith', itemFilter: equip => !equip.magical, showSkills: false, sellAll: true },
-    magic:  { titleKey: 'title_magicsmith',  itemFilter: equip => equip.magical,   showSkills: true,  sellAll: false },
+    weapon: { titleKey: 'title_weaponsmith', greetKey: 'shop_greet_weapon', itemFilter: equip => !equip.magical, showSkills: false, sellAll: true },
+    magic:  { titleKey: 'title_magicsmith',  greetKey: 'shop_greet_magic',  itemFilter: equip => equip.magical,   showSkills: true,  sellAll: false },
 };
 
 function showShopDialog(poi, kind) {
@@ -2614,7 +2614,8 @@ function showShopDialog(poi, kind) {
         poi.shopItems.push(newItem);
         logCombat(say('log_shop_new_item', { item: newItem.name }), 'log-info');
     }
-    let bodyHtml = `<div style="margin-bottom:8px;color:#ffc107" data-gold-display>${say('shop_gold', { gold: player.gold })}</div>`;
+    let bodyHtml = say(smith.greetKey, {});
+    bodyHtml += `<div style="margin-bottom:8px;color:#ffc107" data-gold-display>${say('shop_gold', { gold: player.gold })}</div>`;
     bodyHtml += '<div class="shop-scroll">';
     const owned = new Set([...Object.values(player.equipment).filter(Boolean), ...player.inventory]);
     for (const item of poi.shopItems) {
@@ -3080,6 +3081,7 @@ function showLevelUpDialog(spGained) {
     // Stat allocation
     let body = `<p style="color:#ffc107;font-size:16px">${say('levelup_level', { level: player.level })}</p>`;
     if (spGained > 0) body += `<p style="color:#ffc107">${say('log_skill_point', { n: spGained })}</p>`;
+    body += say('levelup_prose', {});
     body += say('levelup_assign', { n: player.statPoints });
     const stats = ['might', 'reflex', 'warding', 'vigor'];
     for (const s of stats) {

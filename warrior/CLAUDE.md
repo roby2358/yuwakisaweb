@@ -122,7 +122,7 @@ Canvas clicks are ignored when `phase !== 'player'`.
 - No gameplay tests; `test/` holds the load/motion/skill-dealing/text checks above
 - Game state lives as `index.js` top-level `let`s (shared script scope, not `window` properties)
 - Lookups via config tables: `ALL_EQUIPMENT[id]`, `ENEMY_DEFS[type]`, `SKILLS[id]`, `TERRAIN[...]`
-- Player-facing wording lives in `text.js`, not at call sites: `say('key', { name })` (always pass the vars object, `{}` when none). Prose kinds (narration/stage/speech) render to `<p>` blocks; labels and log lines are plain text. Log colour classes stay at the call site. Skill names/descriptions and item names stay in config.js as data.
+- Player-facing wording lives in `text.js`, not at call sites: `say('key', { name })` (always pass the vars object, `{}` when none). Prose kinds (narration/stage/speech) render to `<p>` blocks; labels and log lines are plain text. Functional entries keep one variant; flavor entries (huts, scrolls/ruins, havens/villages/smith greetings, level-up/Skill Seek) carry 20, every variant with the same placeholders. Log colour classes stay at the call site. Skill names/descriptions and item names stay in config.js as data.
 - All randomness goes through `Rando` — `bellCurve(strength)` for damage rolls
 - Color values are 0-1 floats internally, converted to hex strings only for canvas
 - Phase management gates input: canvas clicks ignored when `phase !== 'player'`

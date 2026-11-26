@@ -344,7 +344,7 @@ Each artifact MUST have: name, and a passive effect.
 - The game MUST function when served via any static HTTP server
 - Game state MUST be stored in module-level variables (no global window pollution)
 - Color values MUST use 0-1 floats internally, converting to hex strings only for rendering
-- Every player-facing string (dialog prose and titles, speech, combat-log lines, button, HUD and panel labels) MUST live in the `TEXT` table in `text.js`, not at call sites. Each entry MUST be an array of variants, picked through `Rando` on every use, with named `{placeholders}`; a missing key or unfilled placeholder MUST throw. Functional text (buttons, labels, mechanical log lines) MUST keep exactly one variant. Skill names/descriptions and item names stay in `config.js` as data
+- Every player-facing string (dialog prose and titles, speech, combat-log lines, button, HUD and panel labels) MUST live in the `TEXT` table in `text.js`, not at call sites. Each entry MUST be an array of variants, picked through `Rando` on every use, with named `{placeholders}`; a missing key or unfilled placeholder MUST throw. Functional text (buttons, labels, mechanical log lines) MUST keep exactly one variant. Flavor entries (narration, stage directions, speech, flavor log lines) for Wise Man's huts, scrolls and ruins, havens, villages and their smiths' greetings, and level-up and Skill Seek MUST carry 20 variants each, all with the same placeholders, so repeated events rarely read the same. Skill names/descriptions and item names stay in `config.js` as data
 
 ## Dependencies
 

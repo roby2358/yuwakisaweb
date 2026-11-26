@@ -214,6 +214,25 @@ Updated: 2026-04-26T21:57:00Z
 
 Final gold score is gold/10 (in Warrior — when computing the player's end-of-game score, divide accumulated gold by 10).
 ----
+Priority:   53
+Status: Done
+ID: text-flavor-jm9x
+Created: 2026-11-26T17:31:13Z
+Updated: 2026-11-26T18:28:41Z
+
+Flavor variants: write 20 variants for each flavor line so repeated events rarely read the same.
+
+Depends on the one-table-for-all-strings work being in place (a text.js table where each entry is an array of variants with named placeholders and a kind of narration / speech / log / label). If that is not done yet, do it first.
+
+Settled design:
+- Flavor entries only get variants: narration, speech, and flavor log lines. Functional text (buttons, HUD and panel labels, mechanical log lines with numbers) keeps its single variant.
+- 20 variants per flavor entry, written by the agent in the existing voice: terse, a little weathered, the world fraying under chaos and its people holding on. Variety in rhythm and angle (a gesture, a smell, a remark, a silence), not just synonyms.
+- Events in this batch: Wise Man's Huts (greeting, offering a lesson, teaching, nothing to teach, the magic-item gift "I have this lying around. Perhaps it will be of use." if present); scrolls and ruins (unfurling a scroll, exploring ruins, quiet ruins, loot found); havens and villages (arrival, rest, shop greetings, and the existing cleaning-reward gratitude lines, expanded from their current handful to 20); level-up and Skill Seek (Level Up dialog prose, a new skill revealed, the patterns eluding you).
+- Keep each entry's placeholders identical across all its variants (test/text.js checks this).
+- Tone rules: no vampire imagery (no fangs, blood-drinking); harm-coded verbs (weeping, withering, draining) only on harm-doing effects, never on gifts, healing or gratitude.
+
+Done when: every flavor entry in those four areas has 20 variants; node test/text.js and node test/scripts.js pass; the user reviews text.js.
+----
 Priority:   50
 Status: Done
 ID: stacking-eckg
