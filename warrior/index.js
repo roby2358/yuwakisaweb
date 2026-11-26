@@ -354,18 +354,22 @@ function spawnDamageFloat(q, r, amount, color) {
     spawnFloat(q, r, '-' + amount, color);
 }
 
-// Heals are applied in many places, so they're noticed here instead: any rise in
-// a token's HP since the previous frame floats a green "+N". Called for each
-// token as it is drawn; one that wasn't drawn last frame (out of sight, new game,
-// load) is only noted, so nothing floats for healing nobody watched.
-const FLOAT_COLOR_HEAL = '#8fe07a';
-const healWatch = new WeakMap();   // entity -> { hp, frame }
-function floatHeal(entity) {
-    const seen = healWatch.get(entity);
-    if (seen && seen.frame === fx.frame - 1 && entity.hp > seen.hp) {
-        spawnFloat(entity.q, entity.r, '+' + (entity.hp - seen.hp), FLOAT_COLOR_HEAL);
+// HP and aether are restored in many places, so gains are noticed here instead:
+// any rise in a token's stat since the previous frame floats a "+N" in that
+// stat's colour. Called for each token as it is drawn; one that wasn't drawn
+// last frame (out of sight, new game, load) is only noted, so nothing floats
+// for a gain nobody watched.
+const GAIN_FLOATS = {
+    hp:     { color: '#8fe07a', seen: new WeakMap() },   // entity -> { value, frame }
+    aether: { color: '#6fb8ff', seen: new WeakMap() },
+};
+function floatGain(entity, stat) {
+    const { color, seen } = GAIN_FLOATS[stat];
+    const last = seen.get(entity);
+    if (last && last.frame === fx.frame - 1 && entity[stat] > last.value) {
+        spawnFloat(entity.q, entity.r, '+' + (entity[stat] - last.value), color);
     }
-    healWatch.set(entity, { hp: entity.hp, frame: fx.frame });
+    seen.set(entity, { value: entity[stat], frame: fx.frame });
 }
 
 function drawFloats() {
@@ -1665,12 +1669,13 @@ function drawScene() {
         const spriteTint = (def.chaosSpawned && !isGuardianSprite) ? '#d580ff' : null;
         drawCounter(x, y, color, def.label, enemy.hp / effMaxHp, chaosLabelColor, { atk: enemyMeleeAttack(enemy, def), def: enemyDefense(enemy, def), mov: def.speed || 1 }, sprite, spriteTint);
         if (enemy.stunnedNextTurn) drawStunOverlay(x, y);
-        floatHeal(enemy);
+        floatGain(enemy, 'hp');
     }
 
     // Player
     if (player) {
-        floatHeal(player);
+        floatGain(player, 'hp');
+        floatGain(player, 'aether');
         const { x, y } = tokenScreenPos(player);
         const playerLabelColor = phase === 'player' ? '#000' : '#b8941a';
         const wep = player.weapon();
