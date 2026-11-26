@@ -835,7 +835,8 @@ function executeRestore(action) {
         return action.abortSkill(say('log_no_shattered_in_range', {}));
     }
     action.restoreShatteredHexes(shatteredHexes);
-    player.aether = Math.min(player.maxAether(), player.aether + 1);
+    const ae = Math.min(player.maxAether() - player.aether, shatteredHexes.length);
+    player.aether += ae;
     let goldFound = 0;
     for (let i = 0; i < shatteredHexes.length; i++) {
         if (Rando.bool(0.16)) goldFound++;
@@ -846,8 +847,8 @@ function executeRestore(action) {
         gainXP(shatteredHexes.length * 3);
         const hexes = sayCount(shatteredHexes.length, { one: 'word_hex', many: 'word_hexes' }, {});
         const msg = goldFound > 0
-            ? say('log_restored_gold', { n: shatteredHexes.length, hexes, gold: goldFound })
-            : say('log_restored', { n: shatteredHexes.length, hexes });
+            ? say('log_restored_gold', { n: shatteredHexes.length, hexes, ae, gold: goldFound })
+            : say('log_restored', { n: shatteredHexes.length, hexes, ae });
         logCombat(msg, 'log-heal');
         offerSettlementReward(shatteredHexes);
     }

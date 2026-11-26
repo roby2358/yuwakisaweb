@@ -812,8 +812,8 @@ const TEXT = (() => {
 
         // ---- Combat log: skills ----
         log_no_shattered_in_range: log('No shattered terrain in range!'),
-        log_restored: log('Restored {n} {hexes}! +1 AE'),
-        log_restored_gold: log('Restored {n} {hexes}! +1 AE, +{gold}g'),
+        log_restored: log('Restored {n} {hexes}! +{ae} AE'),
+        log_restored_gold: log('Restored {n} {hexes}! +{ae} AE, +{gold}g'),
         log_phase_step: log('Phase Step!'),
         log_water_skip: log('Water Skip!'),
         log_mountain_skip: log('Mountain Skip!'),

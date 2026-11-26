@@ -254,7 +254,7 @@ The skill bar visually grays out skills whose usage conditions aren't met, provi
 
 | Skill | Cost | Target | Scales | Usage | Level | Effect |
 |-------|------|--------|--------|-------|-------|--------|
-| Restore | 0 | AoE Self (1+Lv/3) | — | Non-combat | 0 | Restore shattered terrain. Gain 1 AE. Ends turn. 3 XP per hex. |
+| Restore | 0 | AoE Self (1+Lv/3) | — | Non-combat | 0 | Restore shattered terrain. Gain 1 AE per hex restored. Ends turn. 3 XP per hex. |
 | Void Strike | 1 AE | Melee | Might+Warding | Anytime | 1 | weapon + Might + Warding damage. No counter-attack. |
 | Loot | 0 | Melee | — | Anytime | 2 | Take 1-5 gold from adjacent enemy instead of dealing damage. |
 | Phase Step | 2 AE | Teleport (3) | — | Anytime | 2 | Teleport to visible hex within 3. Free action. |

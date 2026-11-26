@@ -727,7 +727,7 @@ const SKILLS = {
     // ---- Combat skills (anytime) ----
     restore: {
         id: 'restore', name: 'Restore', cost: 0, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.NON_COMBAT,
-        desc: 'Restore shattered terrain and attempt to seal breaches. Gain 1 AE.', panelInvoke: true, minLevel: 0
+        desc: 'Restore shattered terrain and attempt to seal breaches. Gain 1 AE per hex restored.', panelInvoke: true, minLevel: 0
     },
     void_strike: {
         id: 'void_strike', name: 'Void Strike', cost: 1, target: SKILL_TARGET.MELEE, usage: SKILL_USAGE.ANYTIME,
