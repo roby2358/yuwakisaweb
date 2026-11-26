@@ -2609,39 +2609,46 @@ function invokeSanctuary() {
     restHeal(1 / sanct.effectStrength);
 }
 
+// A Wise Man's Hut, case by case: its one core lesson (the first unlearned skill
+// in coreOrder, until this hut has given it), then its assigned optional skill if
+// the player lacks it, then a 5% chance per visit to dig up a fresh skill from
+// the learnable pool (optional or unlearned core; never held out, shop or
+// scroll-taken), which becomes the hut's standing assignment. Huts are never
+// spent: camping one until the roll hits is fine.
 function showHutDialog(poi) {
     grantVisitSP(poi);
-    const trainBtn = { label: 'Train', action: () => showTrainDialog() };
 
-    // The hut's assigned skill is non-binding — it stays learnable elsewhere, so
-    // the player may already have learned it. When it's no use (known or never
-    // assigned), a 5% chance the sage digs up a fresh learnable optional skill
-    // (never core, scroll-bound or held out) of any level. That find becomes the hut's new standing assignment, so if the
-    // player Leaves and returns it's waiting for them (no fresh roll needed).
-    let teachId = poi.skill;
-    if (!teachId || player.learnedSkills.has(teachId)) {
-        teachId = Rando.bool(0.05) ? skillLibrary.rerollHutSkill(player.learnedSkills) : null;
-        if (teachId) poi.skill = teachId;
-    }
+    const coreId = poi.coreTaught ? null : skillLibrary.firstUnlearnedCore(player.learnedSkills);
+    if (coreId) { offerHutLesson(coreId, () => { poi.coreTaught = true; }); return; }
 
-    if (!teachId) {
-        showDialog(POI_SYMBOLS[POI.HUT] + " Wise Man's Hut",
-            `<p><i>An old sage peers at you.</i></p><p style="color:#a1887f">"I have nothing to teach you at this time."</p>`,
-            [trainBtn, { label: 'Leave', action: () => { player.mp = 0; } }]);
-        return;
-    }
+    if (poi.skill && !player.learnedSkills.has(poi.skill)) { offerHutLesson(poi.skill, () => {}); return; }
 
+    const foundId = Rando.bool(0.05) ? skillLibrary.rerollHutSkill(player.learnedSkills) : null;
+    if (foundId) { poi.skill = foundId; offerHutLesson(foundId, () => {}); return; }
+
+    showDialog(POI_SYMBOLS[POI.HUT] + " Wise Man's Hut",
+        `<p><i>An old sage peers at you.</i></p><p style="color:#a1887f">"I have nothing to teach you at this time."</p>`,
+        [hutTrainButton(), { label: 'Leave', action: () => { player.mp = 0; } }]);
+}
+
+function hutTrainButton() {
+    return { label: 'Train', action: () => showTrainDialog() };
+}
+
+// The hut's teaching dialog for one skill; onLearn runs after the skill is learned.
+function offerHutLesson(teachId, onLearn) {
     const skill = SKILLS[teachId];
     showDialog(POI_SYMBOLS[POI.HUT] + " Wise Man's Hut",
         `<p><i>The sage's eyes light up.</i></p><p style="color:#b388ff">"I can teach you <b>${skill.name}</b>."</p>${skillBlurbHtml(skill)}`,
         [{
             label: 'Learn', cls: 'primary', action: () => {
                 learnSkill(teachId);
+                onLearn();
                 player.mp = 0;
                 logCombat(`The Wise Man teaches ${skill.name}!`, 'log-info');
             }
         },
-        trainBtn,
+        hutTrainButton(),
         { label: 'Leave', action: () => { player.mp = 0; } }]);
 }
 

@@ -53,6 +53,17 @@ for (let n = 0; n < DEALS; n++) {
     // Huts: learnable optional skills only.
     const hutBad = id => !optional.includes(id) || lib.heldOut.has(id) || lib.taken.has(id);
     for (const h of huts) assert.ok(h.skill !== null && !hutBad(h.skill), 'bad hut skill: ' + h.skill);
+    for (const h of huts) assert.equal(h.coreTaught, false);
+
+    // Core lessons: coreOrder's first unlearned skill, null once all five are known.
+    const coreLearned = new Set([STARTING]);
+    for (const id of lib.coreOrder) {
+        assert.equal(lib.firstUnlearnedCore(coreLearned), id);
+        coreLearned.add(id);
+    }
+    assert.equal(lib.firstUnlearnedCore(coreLearned), null);
+    const skipFirst = new Set([STARTING, lib.coreOrder[0], lib.coreOrder[2]]);
+    assert.equal(lib.firstUnlearnedCore(skipFirst), lib.coreOrder[1]);
 
     // poolSkills and hut rerolls with a random learned set and level.
     const someLearned = new Set([STARTING, ...all.filter(() => Rando.bool(0.3)).map(s => s.id)]);
@@ -65,7 +76,12 @@ for (let n = 0; n < DEALS; n++) {
     for (const id of CORE)
         if (!someLearned.has(id) && SKILLS[id].minLevel <= level) assert.ok(pool.includes(id), 'core missing from pool: ' + id);
     const reroll = lib.rerollHutSkill(someLearned);
-    if (reroll !== null) assert.ok(!hutBad(reroll) && !someLearned.has(reroll), 'bad hut reroll: ' + reroll);
+    const rerollBad = id => !(CORE.has(id) || optional.includes(id)) || lib.heldOut.has(id) || lib.taken.has(id) || someLearned.has(id);
+    if (reroll !== null) assert.ok(!rerollBad(reroll), 'bad hut reroll: ' + reroll);
+    const rerollPool = lib.hutRerollPool(someLearned).map(s => s.id);
+    for (const id of rerollPool) assert.ok(!rerollBad(id), 'bad reroll pool skill: ' + id);
+    for (const id of CORE)
+        if (!someLearned.has(id)) assert.ok(rerollPool.includes(id), 'core missing from reroll pool: ' + id);
 
     // Save round-trip.
     const back = SkillLibrary.fromJSON(JSON.parse(JSON.stringify(lib.toJSON())));

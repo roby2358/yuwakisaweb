@@ -157,8 +157,8 @@ All enemies MUST have: name, HP, attack damage, defense, movement speed (hexes p
 - Core skills MUST always be obtainable by level-up or Skill Seek and MUST never be bound to a scroll or held out; each run MUST shuffle them and place non-binding scrolls for the last 3 within 25 hexes of the start haven
 - At new game, half the optional skills (rounded down) MUST be held out: no channel may grant them that run, and the game MUST NOT tell the player which
 - Of the appearing optional skills, 6 MUST be bound to far story scrolls (10 empty scrolls placed in the half of the map far from the Maw; the rest, and prize scrolls, become Skill-Point scrolls at pickup); the remainder are learnable
-- Level-up and Skill Seek MUST draw from unlearned skills that are not shop-only, not scroll-bound, not held out, and within level; Wise Man huts MUST teach only learnable optional skills
-- The held-out set, scroll-bound set and core order MUST persist in the save
+- Level-up and Skill Seek MUST draw from unlearned skills that are not shop-only, not scroll-bound, not held out, and within level; each Wise Man hut MUST give one core lesson (the first core skill in the run's core order the player lacks), then teach its assigned learnable optional skill; its 5% per-visit reroll MAY also dig up an unlearned core skill, never a held-out, shop-only or scroll-bound one
+- The held-out set, scroll-bound set and core order MUST persist in the save, as MUST each hut's assigned skill and whether it has given its core lesson
 
 #### Skill List
 

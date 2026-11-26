@@ -15,9 +15,11 @@
 //                (taken) and the remainder are learnable.
 //
 // The dynamic channels (level-up, Skill Seek) draw from poolSkills: unlearned
-// skills that are not shop, not taken, not held out. Huts draw only from the
-// learnable optional skills. taken, heldOut and coreOrder are the per-run state
-// that persists; everything else derives from SKILLS and the learned set.
+// skills that are not shop, not taken, not held out. Each Wise Man's Hut gives
+// one core lesson (firstUnlearnedCore, front of coreOrder); its standing
+// assignment is dealt from the learnable optional skills, and its 5% rerolls
+// also reach unlearned core skills (hutRerollPool). taken, heldOut and
+// coreOrder are the per-run state that persists; everything else derives from SKILLS and the learned set.
 
 const SKILL_HELD_OUT_FRACTION = 0.5;
 const FAR_SCROLL_SKILLS = 6;
@@ -46,7 +48,7 @@ class SkillLibrary {
     }
 
     // Optional skills appearing this run and not bound to a scroll or learned,
-    // any level. The only skills a Wise Man's Hut teaches.
+    // any level. The skills a Wise Man's Hut is dealt at new game.
     learnableOptional(learned) {
         return Object.values(SKILLS).filter(s =>
             this.isOptional(s) && !this.taken.has(s.id) && !this.isHeldOut(s.id) &&
@@ -63,7 +65,8 @@ class SkillLibrary {
     // part appears. The first FAR_SCROLL_SKILLS appearing skills go to
     // `farScrolls` (marked taken); leftover scrolls keep poi.skill === null and
     // become Skill-Point scrolls at pickup. `huts` each get a non-binding display
-    // skill from the learnable optional skills (repeats OK).
+    // skill from the learnable optional skills (repeats OK) and owes its one
+    // core lesson (coreTaught false).
     deal(farScrolls, huts, learned) {
         this.coreOrder = Rando.shuffle(Object.values(SKILLS).filter(s => s.core).map(s => s.id));
         const optional = Rando.shuffle(Object.values(SKILLS)
@@ -73,16 +76,33 @@ class SkillLibrary {
         const dealt = optional.slice(0, Math.min(FAR_SCROLL_SKILLS, appearing, farScrolls.length));
         this.taken = new Set(dealt);
         farScrolls.forEach((poi, i) => { poi.skill = dealt[i] ?? null; });
-        for (const hut of huts) hut.skill = this.rerollHutSkill(learned);
+        const pool = this.learnableOptional(learned);
+        for (const hut of huts) {
+            hut.skill = pool.length ? Rando.choice(pool).id : null;
+            hut.coreTaught = false;
+        }
     }
 
     // The core skills that ride the non-binding scrolls near the start.
     nearCoreSkills() { return this.coreOrder.slice(-NEAR_CORE_SCROLLS); }
 
-    // A learnable optional skill the player lacks, any level, or null. Used by
-    // the Wise Man's hut when its assigned skill is already known.
+    // The first core skill in this run's coreOrder the player hasn't learned, or
+    // null. A Wise Man's Hut's one guaranteed core lesson.
+    firstUnlearnedCore(learned) {
+        return this.coreOrder.find(id => !learned.has(id)) ?? null;
+    }
+
+    // Learnable optional skills plus unlearned core skills: what a hut's 5%
+    // reroll may dig up. Never held out, shop or scroll-taken.
+    hutRerollPool(learned) {
+        return this.learnableOptional(learned)
+            .concat(this.coreOrder.filter(id => !learned.has(id)).map(id => SKILLS[id]));
+    }
+
+    // A skill from hutRerollPool, any level, or null. Used by the Wise Man's hut
+    // when its assigned skill is already known.
     rerollHutSkill(learned) {
-        const pool = this.learnableOptional(learned);
+        const pool = this.hutRerollPool(learned);
         return pool.length ? Rando.choice(pool).id : null;
     }
 
