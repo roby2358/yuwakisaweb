@@ -101,8 +101,7 @@ class Player {
 
     maxAether() {
         return maxAether(this.stats.warding)
-            + this.sumEquipped('aether_bonus', 'aetherBonus')
-            + this.sumEquipped('armor_aether_bonus', 'aetherBonus');
+            + this.sumEquipped('aether_bonus', 'aetherBonus');
     }
 
     vision() {
@@ -111,8 +110,6 @@ class Player {
 
     maxMP() {
         let m = PLAYER_MP;
-        const mpPen = this.equipped('mp_penalty');
-        if (mpPen) m -= mpPen.mpPenalty;
         const highDef = this.equipped('high_def_mp_penalty');
         if (highDef) m -= highDef.mpPenalty;
         m += this.sumEquipped('mp_bonus', 'mpBonus');
@@ -132,8 +129,8 @@ class Player {
             if (wep.chargeMultiplier) dmg *= wep.chargeMultiplier;
         }
         if (wep && wep.special === 'channel') dmg += wep.channelBonus;
-        const wallItem = this.equipped('wall_of_steel') || this.equipped('wall_crown');
-        if (wallItem && !this.movedThisTurn) dmg += (wallItem.wallBonus || wallItem.wallCrownBonus);
+        const wallItem = this.equipped('wall_of_steel');
+        if (wallItem && !this.movedThisTurn) dmg += wallItem.wallBonus;
         return dmg;
     }
 

@@ -2,6 +2,15 @@
 
 Dated entries, newest first. This is the only design doc that records history.
 
+### 2026-11-26 — Uncarried item effects removed (Q-2 → D-10)
+
+mp_penalty, armor_aether_bonus, wall_crown, regen_combo and cleave were deleted from player.js
+(maxAether, maxMP, meleeDamage), enemy_ai.js (the player regen step), actions.js
+(meleeAffixTargets, MELEE_AFFIX_LABEL) and text.js (src_cleave). No item in config.js carried
+them; high_def_mp_penalty, aether_bonus, wall_of_steel, heal plus aether_regen, and sweep/chain
+cover them. Q-2 is now D-10, which records sweep as the designer's cleave-style hit. No save
+shape changed.
+
 ### 2026-11-26 — Gear changes only in the player phase (D-9 built)
 
 The Inventory panel's equip/unequip handler now returns unless phase is 'player' and the game

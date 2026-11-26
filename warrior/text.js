@@ -770,7 +770,6 @@ const TEXT = (() => {
         src_chain_bounce: label('Chain bounce'),
         src_reverberate: label('Reverberate'),
         src_reverberate_bounce: label('Reverberate bounce'),
-        src_cleave: label('Cleave'),
         src_sweep: label('Sweep'),
         src_splash: label('Splash'),
         src_pierce: label('Pierce'),

@@ -77,6 +77,15 @@ and the game is not over; outside it the buttons render disabled. Equipping cost
 - **Why:** designer's call; to be filled in.
 - **Evidence:** not measured.
 
+### D-10 Item effects with no carrier are removed — *Decided*
+An item effect that no item in config.js carries has no code; the five such effects are
+removed (ARCHITECTURE_LOG.md names them).
+- **Alternatives:** tie them back to new magic-item effects.
+- **Why:** newer effects cover each one: high_def_mp_penalty's MP loss, aether_bonus,
+  wall_of_steel, heal plus aether_regen, and sweep/chain. Sweep, hitting enemies around the
+  player, is how the designer wants a cleaving hit to work.
+- **Evidence:** not measured.
+
 ---
 
 ## Open questions
@@ -90,13 +99,6 @@ only part of what they say). Filed as a tracker idea for discussion.
 - **Options:** wire each one up; remove each one; mix per effect.
 - **Recommendation:** decide per effect; wire the ones whose text players see on items, drop
   the rest.
-
-### Q-2 Dead effect names from retired items
-regen_combo, mp_penalty, armor_aether_bonus, wall_crown and cleave are still referenced but no
-live item carries them. An existing tracker idea covers tying them back to items or dropping
-them.
-- **Options:** tie them back to new magic-item effects; delete the references.
-- **Recommendation:** delete the references unless the tracker idea revives them as effects.
 
 ### Q-3 counter_mastery fires only against chaos melee
 Wildlife melee does not trigger it. Filed as a tracker idea for discussion.

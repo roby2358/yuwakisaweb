@@ -233,7 +233,6 @@ class Action {
     // One targeting dispatch shared by WeaponStrike (damage) and Loot (theft).
     meleeAffixTargets(weapon, primary) {
         if (weapon.special === 'chain' || weapon.special === 'reverberate') return this.chainTargets(primary, weapon.chainCount, 2);
-        if (weapon.special === 'cleave') return this.adjacentEnemies(primary.q, primary.r, primary);
         if (weapon.special === 'sweep') return this.adjacentEnemies(this.ctx.player.q, this.ctx.player.r, primary).slice(0, weapon.sweepCount);
         return [];
     }
@@ -403,7 +402,7 @@ class Strike {
     }
 
     // Helper: enemies adjacent to a hex, excluding the primary target. Used by
-    // cleave / splash (around the target) and sweep (around the player).
+    // splash (around the target) and sweep (around the player).
     neighborEnemiesOf(q, r) {
         return this.action.adjacentEnemies(q, r, this.primary);
     }
@@ -422,9 +421,9 @@ class Strike {
 }
 
 // Per-affix text key for the secondary entries a melee multi-target affix spawns.
-const MELEE_AFFIX_LABEL = { chain: 'src_chain_bounce', reverberate: 'src_reverberate_bounce', cleave: 'src_cleave', sweep: 'src_sweep' };
+const MELEE_AFFIX_LABEL = { chain: 'src_chain_bounce', reverberate: 'src_reverberate_bounce', sweep: 'src_sweep' };
 
-// Melee weapon strike: chain/reverberate, cleave/sweep, double/triple_strike.
+// Melee weapon strike: chain/reverberate, sweep, double/triple_strike.
 class WeaponStrike extends Strike {
     weaponMatches() { return !!(this.wep && !weaponIsRanged(this.wep)); }
 
@@ -1311,7 +1310,7 @@ function executeLoot(action) {
     const { player, em, victory, logCombat } = action.ctx;
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
-    // Chain/cleave/sweep weapon affixes extend the grab to nearby enemies,
+    // Chain/sweep weapon affixes extend the grab to nearby enemies,
     // each robbed for up to its own might (same roll as the primary target).
     const targets = [enemy, ...action.meleeAffixTargets(player.weapon(), enemy)];
     const mult = action.skill.effectStrength / 10;

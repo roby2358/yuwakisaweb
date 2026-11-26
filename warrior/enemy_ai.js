@@ -570,11 +570,6 @@ function regenPlayerAtPhaseStart(ctx) {
         player.hp = Math.min(player.maxHP(), player.hp + reviveItem.reviveHp);
         player.aether = Math.min(player.maxAether(), player.aether + reviveItem.reviveAether);
     }
-    const regenCombo = player.equipped('regen_combo');
-    if (regenCombo) {
-        player.hp = Math.min(player.maxHP(), player.hp + regenCombo.regenAmount);
-        player.aether = Math.min(player.maxAether(), player.aether + 1);
-    }
     const aeAmt = player.sumEquipped('aether_regen', 'aetherRegen');
     if (aeAmt) player.aether = Math.min(player.maxAether(), player.aether + aeAmt);
     const chaosCirclet = player.equipped('chaos_circlet');

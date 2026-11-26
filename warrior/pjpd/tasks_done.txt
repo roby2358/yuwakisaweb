@@ -384,6 +384,26 @@ Tuning: don't overpopulate ranged on a single map — they're a counter to slow 
 ----
 Priority:   50
 Status: Done
+ID: deadspecs-izyv
+Created: 2026-11-26T22:20:57Z
+Updated: 2026-11-26T22:54:04Z
+
+Remove five item effects that no item carries.
+
+Goal: mp_penalty, armor_aether_bonus, wall_crown, regen_combo and cleave are left over from the retired hand-made items. No item in config.js has them, and newer mechanics replace or offset each one (high_def_mp_penalty's MP loss, aether_bonus, wall_of_steel, heal + aether_regen, sweep/chain). Their code is dead weight.
+
+Settled design: delete every trace of the five:
+- player.js: the armor_aether_bonus sum in maxAether(), the mp_penalty lines in maxMP(), the wall_crown alternative (and wallCrownBonus fallback) in meleeDamage().
+- enemy_ai.js: the regen_combo block in the player regen step.
+- actions.js: the cleave branch in meleeAffixTargets, cleave in MELEE_AFFIX_LABEL, and cleave mentions in comments.
+- text.js: src_cleave and any spec_/label entries for the five.
+- Any other reference found by grepping the five names (skip origitems.js, which is an unloaded archive, and pjpd history).
+Keep wall_of_steel, high_def_mp_penalty, sweep, chain, heal and aether_regen unchanged. Docs: remove the five from ONTOLOGY.md and DYNAMICS.md if mentioned; in RATIONALE.md turn open question Q-2 into a decision (the five effects are removed because newer effects cover them; in particular sweep, hitting enemies around the player, is how the designer wants a cleave-style hit to work) and add an ARCHITECTURE_LOG.md entry recording it. No save-shape change, so SAVE_VERSION stays.
+
+Done when: node test/*.js all pass (test/text.js still finds every literal say() key); grepping the five names outside origitems.js, pjpd/ and ARCHITECTURE_LOG.md finds nothing.
+----
+Priority:   50
+Status: Done
 ID: invphase-dedz
 Created: 2026-11-26T22:05:38Z
 Updated: 2026-11-26T22:49:38Z

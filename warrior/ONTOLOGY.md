@@ -693,7 +693,7 @@ matched = held weapon kind == strike kind
 dmg = base + breach_jewel (near breach/Maw) + aether_signet (at full AE; costs AE)
       + chaos_attune (on chaos terrain) [+ sniper bonus, ranged at max range]
 targets = primary (hitCount from double/triple affix, or option)
-  + if matched: chain/reverberate bounces, cleave/sweep neighbours, splash, piercing line
+  + if matched: chain/reverberate bounces, sweep neighbours, splash, piercing line
   + skill options: skillChain, skillSweep
 for each target once: skillShred; preHit (defense_shred, armor_pierce);
   hitCount × dealDamageToEnemy; onHit (lifesteal, siphon, channel self-hit;
