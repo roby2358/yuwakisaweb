@@ -93,7 +93,7 @@ Shattered terrain is visually distinct (dark red tones) and distressed terrain s
 - Starts with Rusty Blade (1 melee damage) and Worn Leather (1 defense) equipped, Stick Bow (1 ranged damage, range 2) in inventory, Restore learned
 - Regenerates PLAYER_REGEN HP per turn naturally (at start of enemy phase)
 - Defense = armor + Vigor (with vigor_bonus) / VIGOR_PER_DEFENSE + Might / MIGHT_PER_DEFENSE (both rounded down) + terrain + POI + situational armor and passive bonuses
-- Dodge chance = 2% × Vigor (vigor_bonus gear counts) + dodge_bonus armor, capped at `MAX_DODGE`
+- Dodge chance = 2% × Vigor (vigor_bonus gear counts) + every equipped dodge_bonus item's bonus, summed, capped at `MAX_DODGE`
 - Melee damage = weapon damage + Might (+ special bonuses: chaos_bonus, charge, channel, wall_of_steel). A ranged weapon used in melee deals a quarter of its damage (rounded up) + Might; bare hands deal 1 + Might
 - Ranged damage = weapon damage + Reflex (+ chaos_bonus, channel, sniper bonus at max range)
 - Bell curve damage rolls: 3 rolls of 1..strength×2, averaged. Mean ≈ strength, with natural variance.
@@ -115,7 +115,7 @@ Press 1-5 to activate a hotbar skill; some skills (Restore, Recall, the utility 
 ### Defensive Mechanics
 - **Warp Shield**: For the coming enemy turn, each hit has a chance (50% at rank 1, rising to certain at rank 5) to be blocked entirely.
 - **Reflect**: For the coming enemy turn, each melee hit has a chance to be cut to 10% with 90% sent back at the attacker.
-- **Dodge**: 2% × Vigor (gear included) + dodge_bonus armor (cap `MAX_DODGE`). Checked before damage.
+- **Dodge**: 2% × Vigor (gear included) + dodge_bonus summed across equipped items (cap `MAX_DODGE`). Checked before damage.
 - **Stun**: One stun roll per enemy per player turn. Chance = rolled damage / `STUN_DIVISOR_PRIMARY` for melee attacks and Might/Vigor-based skills; / `STUN_DIVISOR_OTHER` for everything else. Melee `stun` weapon affix adds +20/30/40%, and the Stun skill adds its own bonus. Cap `MAX_STUN_CHANCE`. On success: suppresses that attack's counter, target loses next turn.
 - **Ranged Immune**: ranged_immune armor negates all incoming ranged damage.
 - **Thorns**: thorns armor reflects 50-100% of damage to melee attackers.

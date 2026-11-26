@@ -95,6 +95,15 @@ player phase, and every enemy's, float as they happen.
   is noise.
 - **Evidence:** not measured.
 
+### D-12 Dodge bonuses stack — *Decided*
+Every equipped item's dodge_bonus adds to dodge, as vigor_bonus and other bonuses do. The
+total stays capped at MAX_DODGE (90%), so there is always at least a 10% chance to be hit.
+- **Alternatives:** count only the first equipped dodge_bonus item, which made dodge a
+  single-slot choice.
+- **Why:** designer's call; stacking lets dodge be a build across several slots, and the cap
+  keeps a floor on being hit.
+- **Evidence:** not measured.
+
 ---
 
 ## Open questions

@@ -2,6 +2,14 @@
 
 Dated entries, newest first. This is the only design doc that records history.
 
+### 2026-11-26 — Dodge bonuses stack (D-12)
+
+`Player.dodge()` in player.js now adds `sumEquipped('dodge_bonus', 'dodgeBonus')` instead of
+the first equipped dodge_bonus item's bonus, so every equipped dodge_bonus counts. The total
+is still capped at MAX_DODGE (90). No item values or MAX_DODGE changed; the character panel
+already reads `player.dodge()`. New decision D-12; ONTOLOGY's player-damage rule and
+DYNAMICS's dodge lines say the bonus sums. No save shape changed.
+
 ### 2026-11-26 — Player gain floats show as a turn total (D-11)
 
 `floatGain` in index.js no longer floats the player's HP/AE rises during the player phase; it

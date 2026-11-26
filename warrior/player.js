@@ -145,11 +145,7 @@ class Player {
     }
 
     dodge() {
-        let d = 2 * this.effectiveVigor();
-        const dodgeItem = this.equipped('dodge_bonus');
-        if (dodgeItem) d += dodgeItem.dodgeBonus;
-        d = Math.min(d, MAX_DODGE);
-        return d;
+        return Math.min(2 * this.effectiveVigor() + this.sumEquipped('dodge_bonus', 'dodgeBonus'), MAX_DODGE);
     }
 
     weaponRange(terrainType, poiType) {

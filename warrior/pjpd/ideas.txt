@@ -314,6 +314,15 @@ Updated: 2026-11-26T20:20:04Z
 
 Core scrolls teach at any level, so every player can pick up Spirit Walk (normally level 6) and Renew/Retrain (level 4) at level 1 from the scrolls near the start. The 12-50 hex spread is the only gate. Watch in playtest; if it is too fast, a scroll could hold its skill until the player reaches its level.
 ----
+Score:   40
+ID: dodgesource-bgih
+Created: 2026-11-26T23:33:39Z
+Updated: 2026-11-26T23:33:39Z
+
+More sources of dodge_bonus so stacking matters.
+
+Dodge bonuses now add up across equipped items (capped at MAX_DODGE), but only armor carries dodge_bonus and the player has one armor slot, so no one can stack two today. Options: put dodge_bonus in the artifact pool, add a second armor-type slot, or give a skill a dodge bonus.
+----
 Score:   35
 ID: renew-dialog-rk9x
 Created: 2026-11-26T17:50:03Z

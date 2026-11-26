@@ -231,6 +231,20 @@ Done when: all test/*.js pass; a new game has exactly 12 huts with 12 different 
 ----
 Priority:   55
 Status: Done
+ID: dodgestack-xjsk
+Created: 2026-11-26T23:28:35Z
+Updated: 2026-11-26T23:34:00Z
+
+Dodge bonuses from several items add up, capped at 90%.
+
+Goal: Player.dodge() in player.js reads equipped('dodge_bonus'), so only the first equipped item with a dodge bonus counts, while vigor_bonus and most other bonuses add up via sumEquipped. The designer wants every equipped dodge_bonus to count. The cap stays MAX_DODGE (90 in config.js), so there is always at least a 10% chance to be hit.
+
+Settled design: dodge = 2 × effectiveVigor() + sumEquipped('dodge_bonus', 'dodgeBonus'), then Math.min with MAX_DODGE, as now. Don't change MAX_DODGE or any item's dodgeBonus value. The character panel's dodge line already calls player.dodge(). Docs: ONTOLOGY.md player-damage rule's dodge comment says dodge_bonus sums across equipped items; DYNAMICS.md's two dodge lines say the same; add a decision to RATIONALE.md (dodge bonuses stack, MAX_DODGE keeps a 10% floor on being hit; alternative was first-item-only, which made dodge a single-slot choice) and an ARCHITECTURE_LOG.md entry. No save-shape change.
+
+Done when: node test/*.js pass; Player.dodge() uses sumEquipped for dodge_bonus and still caps at MAX_DODGE; docs match.
+----
+Priority:   55
+Status: Done
 ID: text-table-97mh
 Created: 2026-11-26T17:31:13Z
 Updated: 2026-11-26T18:15:52Z
