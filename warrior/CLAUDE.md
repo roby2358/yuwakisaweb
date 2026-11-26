@@ -28,7 +28,7 @@ index.js (orchestrator: rendering, input, UI, save/load, combat math, dialogs)
   ├─ world.js        (GameWorld class: hex grid, POIs, fog, LOS; toJSON/fromJSON)
   ├─ skilllibrary.js (SkillLibrary class: per-run skill groups (core / fixed / optional, half of optional held out) and discovery channels so no skill is awarded twice; each Wise Man's hut gives one core lesson (`firstUnlearnedCore`), then teaches optional skills; checked by `node test/skilllibrary.js`)
   ├─ enemies.js      (EnemyManager class: enemy list, spawn, defs; uses colortheory)
-  ├─ text.js         (TEXT table of every player-facing line + say(key, vars): picks a variant via Rando, styles by kind, fills {placeholders}, throws on a missing key, an unfilled placeholder or an unused var; `itemSpecialText(item)` fills an item special's stat line from the item's own fields; checked by `node test/text.js`)
+  ├─ text.js         (TEXT table of every player-facing line + say(key, vars): picks a variant via Rando, styles by kind, fills {placeholders}, throws on a missing key, an unfilled placeholder or an unused var; `itemSpecialText(item)` fills an item special's stat line from the item's own fields; checked by `node test/text.js`, which also checks every literal `say()` key in index.js, actions.js and enemy_ai.js)
   ├─ actions.js      (player Action classes + MP/aether cost helpers; see below)
   ├─ enemy_ai.js     (enemy AI classes, maw-distance math, runEnemyAiPhase; see below)
   ├─ victory.js      (Victory class: score tracking and final breakdown)
@@ -56,6 +56,8 @@ receive everything they need through a plain dependency-injected context object 
   `MoveAction`, `MeleeAction`, `RangedAction`, `MoveAndAttackAction`, `SkillAction`.
 - `enemyAiCtx` (index.js ~202) — passed to `runEnemyAiPhase(enemyAiCtx)` (index.js wraps it as `runEnemyPhase()`). `enemy_ai.js` defines
   `EnemyAI` → `WildlifeAI`/`MonsterAI`/`RuinsGuardianAI`/`ChaosAI`, dispatched by `aiFor(behavior)`.
+
+`say()` and the `TEXT` table are stateless and load before both files, so actions and AI call `say()` directly rather than through `ctx`.
 
 When you add a callback or piece of state that actions/AI need, wire it into the relevant
 `ctx` object — don't reach back into `index.js` from those modules.

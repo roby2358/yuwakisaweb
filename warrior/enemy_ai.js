@@ -410,14 +410,14 @@ class ChaosAI extends EnemyAI {
             const eDef = ctx.enemyDefense(enemy, def);
             const actualDmg = Math.max(1, rolled - eDef);
             enemy.hp -= actualDmg;
-            logCombat(`Counter Mastery: ${actualDmg} dmg!`, 'log-dmg');
+            logCombat(say('log_counter_mastery', { dmg: actualDmg }), 'log-dmg');
             ctx.sound.hitEnemy();
             if (enemy.hp <= 0) killEnemy(enemy);
         }
     }
 
     doEnemyRanged(enemy, def, ctx) {
-        ctx.dealDamageToPlayer(ctx.enemyRangedAttack(enemy, def), `${def.name} (ranged)`, false, { attacker: enemy, isRanged: true });
+        ctx.dealDamageToPlayer(ctx.enemyRangedAttack(enemy, def), say('src_enemy_ranged', { name: def.name }), false, { attacker: enemy, isRanged: true });
     }
 
     enemyAttacks(enemy, def, prefersRanged, newDist, ctx) {
@@ -462,7 +462,7 @@ class ChaosAI extends EnemyAI {
         const spawned = em.spawn(spawnType, spot.q, spot.r);
         if (spawned) {
             occupied.add(hexKey(spot.q, spot.r));
-            logCombat(`The Unraveler spawns a ${em.getDef(spawnType).name}!`, 'log-info');
+            logCombat(say('log_unraveler_spawns', { name: em.getDef(spawnType).name }), 'log-info');
         }
     }
 
@@ -574,7 +574,7 @@ function regenPlayerAtPhaseStart(ctx) {
     const chaosCirclet = player.equipped('chaos_circlet');
     if (chaosCirclet && isChaosTerrain(ctx.playerTerrain())) {
         player.aether = Math.min(player.maxAether(), player.aether + 1);
-        logCombat('Chaos Circlet: +1 AE', 'log-info');
+        logCombat(say('log_chaos_circlet', {}), 'log-info');
     }
 }
 
@@ -584,7 +584,7 @@ function tickBurns(ctx) {
         if (!enemy.burnDamage || enemy.burnDamage <= 0) continue;
         const bDef = em.getDef(enemy.type);
         enemy.hp -= enemy.burnDamage;
-        logCombat(`Burn: ${enemy.burnDamage} dmg to ${bDef.name}`, 'log-dmg');
+        logCombat(say('log_burn', { dmg: enemy.burnDamage, name: bDef.name }), 'log-dmg');
         enemy.burnDamage = 0;
         if (enemy.hp <= 0) killEnemy(enemy);
     }

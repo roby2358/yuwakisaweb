@@ -1,7 +1,8 @@
 // Checks text.js: every entry has a known kind and a non-empty array of string
 // variants, every variant of an entry uses the same placeholders, the keys are
 // unique, and say() fails fast on a missing key, an unfilled placeholder or an
-// unused var, and that every item special's line fills from the item. Also checks that every say('key') named in index.js / actions.js
+// unused var, and that every item special's line fills from the item. Also
+// checks that every say('key') named in index.js / actions.js / enemy_ai.js
 // exists. Run: node test/text.js
 'use strict';
 
@@ -65,7 +66,7 @@ for (const [key, entry] of Object.entries(TEXT)) {
 assert.equal((say('maw_hungers', {}).match(/<p>/g) || []).length, 2);
 
 // Every literal key the game passes to say() exists.
-for (const file of ['index.js', 'actions.js']) {
+for (const file of ['index.js', 'actions.js', 'enemy_ai.js']) {
     const code = fs.readFileSync(path.join(ROOT, file), 'utf8');
     for (const m of code.matchAll(/say\(([^()]*?),/g)) {
         for (const k of m[1].matchAll(/(?<!=== ?)'(\w+)'(?! *\+)/g)) assert.ok(k[1] in TEXT, file + ': say() names missing key ' + k[1]);

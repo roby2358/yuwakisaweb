@@ -233,6 +233,20 @@ Settled design:
 
 Done when: every flavor entry in those four areas has 20 variants; node test/text.js and node test/scripts.js pass; the user reviews text.js.
 ----
+Priority:   52
+Status: Done
+ID: text-ai-logs-ss4a
+Created: 2026-11-26T18:08:41Z
+Updated: 2026-11-26T18:33:47Z
+
+Route the remaining hardcoded player-facing strings in enemy_ai.js through the text table (say(key, vars) in text.js).
+
+Goal: the text table should hold every string the player reads. enemy_ai.js still builds log and damage-source text inline: "Counter Mastery: N dmg!", "{name} (ranged)", "The Unraveler spawns a ...", "Chaos Circlet: +1 AE", "Burn: N dmg to ...", and any others in that file.
+
+Settled design: add one table entry per string in text.js (kind log or label, one variant, the same wording as now), and call say() with explicit vars at each site. enemy_ai.js loads after text.js, so it can call say directly; no ctx wiring is needed. Log colour classes stay at the call site.
+
+Done when: no player-facing string literals remain in enemy_ai.js, test/text.js also checks the literal say() keys in enemy_ai.js, and node test/scripts.js, test/fx.js, test/text.js all pass.
+----
 Priority:   50
 Status: Done
 ID: stacking-eckg
