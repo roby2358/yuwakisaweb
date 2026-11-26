@@ -1,0 +1,13 @@
+Priority:   50
+Status: ToDo
+ID: dodgerando-yuz7
+Created: 2026-11-26T22:59:38Z
+Updated: 2026-11-26T22:59:38Z
+
+The dodge roll uses Math.random instead of Rando.
+
+Goal: index.js (~line 663, where an enemy attack checks the player's dodge) rolls with Math.random(), which breaks the project rule that all randomness goes through Rando.
+
+Settled design: replace the Math.random() call with the equivalent Rando call (a percent roll against player.dodge(), same odds as now). Grep index.js, actions.js and enemy_ai.js for any other Math.random() in gameplay code and switch those too; leave purely cosmetic uses (particle jitter, sound) alone if any exist, and say which you left.
+
+Done when: node test/*.js pass; the dodge roll goes through Rando.
