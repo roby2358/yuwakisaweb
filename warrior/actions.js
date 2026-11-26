@@ -435,10 +435,12 @@ class WeaponStrike extends Strike {
     }
 
     appendWeaponAffixes(entries) {
+        const targets = this.action.meleeAffixTargets(this.wep, this.primary);
+        if (targets.length === 0) return;
         const label = say(MELEE_AFFIX_LABEL[this.wep.special], {});
         const perJump = this.wep.special === 'reverberate' ? this.wep.chainBonus : 0;
         let dmg = this.dmg;
-        for (const target of this.action.meleeAffixTargets(this.wep, this.primary)) {
+        for (const target of targets) {
             dmg += perJump;
             entries.push({ target, hitCount: 1, label, dmg });
         }
