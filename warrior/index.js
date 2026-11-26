@@ -599,7 +599,7 @@ function enemyMeleeAttack(enemy, def) {
 }
 
 function enemyRangedAttack(enemy, def) {
-    let atk = (def.rangedAttack || def.attack) + mawProximityBonus(enemy.q, enemy.r).attack;
+    let atk = def.rangedAttack + mawProximityBonus(enemy.q, enemy.r).attack;
     if (enemyOnCorruptedTerrain(enemy, def)) atk += 3;
     return atk;
 }
@@ -1229,7 +1229,7 @@ function checkHexEntry() {
     if (hex.skillGem) {
         hex.skillGem = false;
         const c = grantConsolation();
-        logCombat(say(c.kind === 'sp' ? 'log_gem_sp' : 'log_gem_xp', {}), 'log-info');
+        logCombat(say(CONSOLATION_TEXT.gem[c.kind].logKey, {}), 'log-info');
         refreshOpenPanels();
     }
 
@@ -1347,7 +1347,7 @@ function animDelay(ms) { return new Promise(r => setTimeout(r, ms)); }
 const SAVE_KEY = 'warrior_save';
 // Bump by 1 whenever a change breaks old saves (a field added to or renamed in any
 // toJSON/fromJSON, a changed save shape); leave it for non-breaking changes.
-const SAVE_VERSION = 1;
+const SAVE_VERSION = 2;
 
 function saveGame() {
     const data = {
@@ -1379,9 +1379,7 @@ function deleteSave() {
 }
 
 function loadGame() {
-    const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return false;
-    const data = JSON.parse(raw);
+    const data = JSON.parse(localStorage.getItem(SAVE_KEY));
 
     // Stop any existing game loop
     gameOver = true;
@@ -1424,7 +1422,6 @@ function loadGame() {
     centerOn(player);
     updateSkillBar();
     gameLoop();
-    return true;
 }
 
 // ================================================================
@@ -2100,6 +2097,23 @@ function learnSkill(skillId, { active = false } = {}) {
 // goes nowhere; revisit per pjpd.) Returns { kind: 'sp' | 'xp', amount } so callers
 // can flavor the message; the XP branch logs its own "+N XP" via gainXP.
 const CONSOLATION_XP = 10;
+
+// What each consolation source says, by the kind grantConsolation returned.
+// logKey is the combat-log line; a scroll also shows a note in its dialog.
+const CONSOLATION_TEXT = {
+    gem: {
+        sp: { logKey: 'log_gem_sp' },
+        xp: { logKey: 'log_gem_xp' }
+    },
+    scroll: {
+        sp: { logKey: 'log_scroll_sp', note: c => say('scroll_note_sp', {}) },
+        xp: { logKey: 'log_scroll_xp', note: c => say('scroll_note_xp', { xp: c.amount }) }
+    },
+    noArts: {
+        sp: { logKey: 'log_no_arts_sp' },
+        xp: { logKey: 'log_no_arts_xp' }
+    }
+};
 function grantConsolation() {
     let result;
     if (player.gainSP(1) > 0) {
@@ -2417,16 +2431,22 @@ function showOnceDialog(key, title, bodyHtml, buttons) {
     showDialog(title, bodyHtml, buttons);
 }
 
+// Per-settlement text and the gold a restored settlement offers, keyed by POI type.
+const SETTLEMENTS = {
+    [POI.HAVEN]:   { titleKey: 'title_haven',   gratitudeKey: 'gratitude_haven',   rewardKey: 'log_reward_haven',   reward: [5, 20] },
+    [POI.VILLAGE]: { titleKey: 'title_village', gratitudeKey: 'gratitude_village', rewardKey: 'log_reward_village', reward: [1, 10] }
+};
+
 function offerSettlementReward(originHexes) {
     for (const poi of world.pois) {
-        if (poi.type !== POI.HAVEN && poi.type !== POI.VILLAGE) continue;
+        const settlement = SETTLEMENTS[poi.type];
+        if (!settlement) continue;
         if (!originHexes.some(h => hexDistance(poi.q, poi.r, h.q, h.r) <= 3)) continue;
-        const isHaven = poi.type === POI.HAVEN;
-        const reward = isHaven ? Rando.int(5, 20) : Rando.int(1, 10);
+        const reward = Rando.int(settlement.reward[0], settlement.reward[1]);
         const symbol = POI_SYMBOLS[poi.type];
-        const title = say(isHaven ? 'title_haven' : 'title_village', { symbol });
-        const msg = say(isHaven ? 'gratitude_haven' : 'gratitude_village', {});
-        const thanks = say(isHaven ? 'log_reward_haven' : 'log_reward_village', { gold: reward });
+        const title = say(settlement.titleKey, { symbol });
+        const msg = say(settlement.gratitudeKey, {});
+        const thanks = say(settlement.rewardKey, { gold: reward });
         showDialog(title, `${msg}<p style="color:#ffc107">${say('offering', { gold: reward })}</p>`, [
             { label: say('btn_accept', {}), cls: 'primary', action: () => { player.gold += reward; victory.goldCollected += reward; victory.settlementsRestored++; logCombat(thanks, 'log-gold'); }},
             { label: say('btn_decline', {}) }
@@ -2451,7 +2471,7 @@ function grantVisitSP(poi) {
 
 function showHavenDialog(poi) {
     grantVisitSP(poi);
-    showVerticalDialog(say('title_haven', { symbol: POI_SYMBOLS[POI.HAVEN] }), say('haven_intro', {}), [
+    showVerticalDialog(say(SETTLEMENTS[POI.HAVEN].titleKey, { symbol: POI_SYMBOLS[POI.HAVEN] }), say('haven_intro', {}), [
         {
             label: say('btn_rest', {}), cls: 'primary', action: () => {
                 player.hp = player.maxHP();
@@ -2522,7 +2542,7 @@ function restHeal(fraction) {
 
 function showVillageDialog(poi) {
     trySpawnVillageCrop(poi);
-    showVerticalDialog(say('title_village', { symbol: POI_SYMBOLS[POI.VILLAGE] }), say('village_intro', {}), [
+    showVerticalDialog(say(SETTLEMENTS[POI.VILLAGE].titleKey, { symbol: POI_SYMBOLS[POI.VILLAGE] }), say('village_intro', {}), [
         { label: say('btn_rest', {}), cls: 'primary', action: () => { restHeal(0.5); } },
         { label: say('btn_weaponsmith', {}), action: () => showShopDialog(poi, 'weapon') },
         { label: say('btn_leave', {}) }
@@ -2540,13 +2560,14 @@ function invokeSanctuary() {
 
 // A Wise Man's Hut, case by case: its one core lesson (the first unlearned skill
 // in coreOrder, until this hut has given it), then its assigned optional skill if
-// the player lacks it, then a 5% chance per visit to dig up a fresh skill from
-// the learnable pool (optional or unlearned core; never held out, shop or
+// the player lacks it, then HUT_REROLL_CHANCE per visit to dig up a fresh skill
+// from the obtainable pool (optional or unlearned core; never held out, shop or
 // scroll-taken), which becomes the hut's standing assignment. Huts are never
 // spent: camping one until the roll hits is fine. Separately, HUT_GIFT_CHANCE per
 // visit the sage hands over a magic item instead, leaving the hut's skill state
 // untouched for the next visit.
 const HUT_GIFT_CHANCE = 0.05;
+const HUT_REROLL_CHANCE = 0.05;
 function showHutDialog(poi) {
     grantVisitSP(poi);
 
@@ -2557,7 +2578,7 @@ function showHutDialog(poi) {
 
     if (poi.skill && !player.learnedSkills.has(poi.skill)) { offerHutLesson(poi.skill, () => {}); return; }
 
-    const foundId = Rando.bool(0.05) ? skillLibrary.rerollHutSkill(player.learnedSkills) : null;
+    const foundId = Rando.bool(HUT_REROLL_CHANCE) ? skillLibrary.rerollHutSkill(player.learnedSkills) : null;
     if (foundId) { poi.skill = foundId; offerHutLesson(foundId, () => {}); return; }
 
     showDialog(hutTitle(),
@@ -2604,9 +2625,9 @@ function offerHutLesson(teachId, onLearn) {
         hutLeaveButton()]);
 }
 
-// Stepping onto a scroll claims its skill and consumes the scroll. A scroll with
-// no skill (supply ran out at game start) or one whose skill the player already
-// has crystallizes into a Skill Point instead — absorbed if the player is capped.
+// Stepping onto a scroll claims its skill and consumes the scroll. A scroll
+// dealt no skill (prize scrolls, far scrolls past FAR_SCROLL_SKILLS) or one whose
+// skill the player already has crystallizes into a Skill Point instead — absorbed if the player is capped.
 function pickUpScroll(poi) {
     world.pois = world.pois.filter(p => p !== poi);
     const hex = world.getHex(poi.q, poi.r);
@@ -2615,8 +2636,9 @@ function pickUpScroll(poi) {
     const skill = poi.skill ? SKILLS[poi.skill] : null;
     if (!skill || !learnSkill(poi.skill, { active: true })) {
         const c = grantConsolation();
-        logCombat(say(c.kind === 'sp' ? 'log_scroll_sp' : 'log_scroll_xp', {}), 'log-info');
-        const note = c.kind === 'sp' ? say('scroll_note_sp', {}) : say('scroll_note_xp', { xp: c.amount });
+        const text = CONSOLATION_TEXT.scroll[c.kind];
+        logCombat(say(text.logKey, {}), 'log-info');
+        const note = text.note(c);
         showDialog(say('title_ancient_scroll', {}),
             say('scroll_empty', {}) + `<p style="color:#aaa;font-size:12px">${note}</p>`,
             [{ label: say('btn_continue', {}), cls: 'btn-primary' }]);
@@ -3144,13 +3166,12 @@ function showLevelUpDialog(spGained) {
 }
 
 function showSkillChoiceDialog() {
-    player.pendingSkillChoice = false;
     const available = skillLibrary.poolSkills(player.learnedSkills, player.level);
     if (available.length === 0) {
         // Nothing left to learn at this level — the insight condenses into a Skill
         // Point, or XP once Skill Points are maxed.
         const c = grantConsolation();
-        logCombat(say(c.kind === 'sp' ? 'log_no_arts_sp' : 'log_no_arts_xp', {}), 'log-info');
+        logCombat(say(CONSOLATION_TEXT.noArts[c.kind].logKey, {}), 'log-info');
         return;
     }
     Rando.shuffle(available);

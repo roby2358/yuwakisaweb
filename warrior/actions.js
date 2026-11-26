@@ -842,7 +842,7 @@ function executeRestore(action) {
     victory.hexesRestored += shatteredHexes.length;
     if (shatteredHexes.length > 0) {
         gainXP(shatteredHexes.length * 3);
-        const hexes = say(shatteredHexes.length > 1 ? 'word_hexes' : 'word_hex', {});
+        const hexes = sayCount(shatteredHexes.length, { one: 'word_hex', many: 'word_hexes' }, {});
         const msg = goldFound > 0
             ? say('log_restored_gold', { n: shatteredHexes.length, hexes, gold: goldFound })
             : say('log_restored', { n: shatteredHexes.length, hexes });
@@ -1191,9 +1191,8 @@ function executeProspect(action) {
             logCombat(say('log_struck_gold', {}), 'log-gold');
         }
     }
-    if (revealed > 1) logCombat(say('log_prospect_many', { n: revealed }), 'log-gold');
-    else if (revealed === 1) logCombat(say('log_prospect_one', {}), 'log-gold');
-    else logCombat(say('log_prospect_none', {}), 'log-info');
+    logCombat(sayCount(revealed, { none: 'log_prospect_none', one: 'log_prospect_one', many: 'log_prospect_many' }, {}),
+        revealed > 0 ? 'log-gold' : 'log-info');
 }
 
 function executeCommune(action) {
@@ -1206,9 +1205,7 @@ function executeCommune(action) {
         if (!world.revealed.has(key)) poiCount++;
         world.revealed.add(key);
     }
-    if (poiCount > 1) logCombat(say('log_commune_many', { n: poiCount }), 'log-info');
-    else if (poiCount === 1) logCombat(say('log_commune_one', {}), 'log-info');
-    else logCombat(say('log_commune_none', {}), 'log-info');
+    logCombat(sayCount(poiCount, { none: 'log_commune_none', one: 'log_commune_one', many: 'log_commune_many' }, {}), 'log-info');
 }
 
 function executeSalvage(action) {
@@ -1226,7 +1223,7 @@ function executeSalvage(action) {
         hex.goldDeposit = (hex.goldDeposit || 0) + gold;
         totalGold += gold;
     }
-    const hexes = say(salvageHexes.length > 1 ? 'word_hexes' : 'word_hex', {});
+    const hexes = sayCount(salvageHexes.length, { one: 'word_hex', many: 'word_hexes' }, {});
     logCombat(say('log_salvage', { n: salvageHexes.length, hexes, gold: totalGold }), 'log-gold');
 }
 
@@ -1235,7 +1232,6 @@ function executeSkillSeek(action) {
     const chance = action.skill.effectStrength / 100;
     if (Rando.bool(chance)) {
         logCombat(say('log_insight', {}), 'log-info');
-        player.pendingSkillChoice = true;
         setTimeout(() => showSkillChoiceDialog(), 300);
     } else {
         logCombat(say('log_insight_fail', {}), 'log-info');
@@ -1323,10 +1319,7 @@ function executeLoot(action) {
         victory.goldCollected += goldStolen;
         total += goldStolen;
     }
-    const msg = targets.length > 1
-        ? say('log_looted_many', { gold: total, n: targets.length })
-        : say('log_looted', { gold: total });
-    logCombat(msg, 'log-gold');
+    logCombat(sayCount(targets.length, { one: 'log_looted', many: 'log_looted_many' }, { gold: total }), 'log-gold');
 }
 
 function executeHavensLight(action) {
@@ -1417,9 +1410,8 @@ function executeBountifulHarvest(action) {
         hex.crop = Rando.choice(CROP_ICONS);
         crops++;
     }
-    if (crops > 1) logCombat(say('log_harvest_many', { n: crops }), 'log-gold');
-    else if (crops === 1) logCombat(say('log_harvest_one', {}), 'log-gold');
-    else logCombat(say('log_harvest_none', {}), 'log-info');
+    logCombat(sayCount(crops, { none: 'log_harvest_none', one: 'log_harvest_one', many: 'log_harvest_many' }, {}),
+        crops > 0 ? 'log-gold' : 'log-info');
 }
 
 const SKILL_HANDLERS = {

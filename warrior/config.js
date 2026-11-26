@@ -232,7 +232,7 @@ const ENEMY_DEFS = {
         chaosSpawned: true
     },
     [ENEMY_TYPE.FLUX_ARCHER]: {
-        name: 'Flux Archer', label: 'A', hp: 12, attack: 6, defense: 1,
+        name: 'Flux Archer', label: 'A', hp: 12, attack: 6, rangedAttack: 6, defense: 1,
         speed: 1, detectRange: 5, xp: 20, gold: 3, behavior: 'kite',
         range: 4, chaosSpawned: true
     },
@@ -254,8 +254,8 @@ const ENEMY_DEFS = {
 };
 
 // An enemy counts as ranged iff it has reach — range > 0 — mirroring
-// weaponIsRanged. Its shot uses rangedAttack when set, else attack (see
-// enemyRangedAttack). The token draw marks these so the threat reads at a glance.
+// weaponIsRanged. Every ranged def carries rangedAttack, the strength of its
+// shot (see enemyRangedAttack). The token draw marks these so the threat reads at a glance.
 function enemyIsRanged(def) {
     return def.range > 0;
 }

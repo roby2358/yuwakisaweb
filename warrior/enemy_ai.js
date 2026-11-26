@@ -114,8 +114,8 @@ class EnemyAI {
         return aggro;
     }
 
-    enemyCanRangedAttack(enemy, def, newDist, ctx) {
-        return enemyIsRanged(def) && newDist <= def.range
+    enemyCanRangedAttack(enemy, def, dist, ctx) {
+        return enemyIsRanged(def) && dist > 1 && dist <= def.range
             && ctx.world.hasLOS(enemy, ctx.player);
     }
 
@@ -131,7 +131,7 @@ class EnemyAI {
         const dist = hexDistance(enemy.q, enemy.r, player.q, player.r);
         if (dist > aggro) return false;
         this.soundAlarm(enemy, ctx);
-        if (dist > 1 && this.enemyCanRangedAttack(enemy, def, dist, ctx)) {
+        if (this.enemyCanRangedAttack(enemy, def, dist, ctx)) {
             this.doEnemyRanged(enemy, def, ctx);
             await ctx.animDelay(150); ctx.render();
             return true;
@@ -428,7 +428,7 @@ class ChaosAI extends EnemyAI {
 
     enemyAttacks(enemy, def, prefersRanged, newDist, ctx) {
         if (def.behavior === 'kite') {
-            if (Rando.bool(0.5) && newDist > 1 && this.enemyCanRangedAttack(enemy, def, newDist, ctx)) {
+            if (Rando.bool(0.5) && this.enemyCanRangedAttack(enemy, def, newDist, ctx)) {
                 this.doEnemyRanged(enemy, def, ctx);
                 return true;
             }

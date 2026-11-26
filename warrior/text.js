@@ -1046,16 +1046,6 @@ const TEXT = (() => {
         spec_vigor_bonus: label('+{vigorBonus} vigor'),
         spec_vision_bonus: label('+{visionBonus} vision'),
         spec_wraith_immune: label('Wraith immune'),
-        // ---- Legacy specials (origitems compatibility)
-        spec_mp_penalty: label('-{mpPenalty} MP'),
-        spec_regen: label('+{regenAmount} HP/turn'),
-        spec_armor_regen: label('+{regenAmount} HP/turn'),
-        spec_armor_aether_bonus: label('+{aetherBonus} max AE'),
-        spec_regen_combo: label('+{regenAmount} HP +1 AE/turn'),
-        spec_wall_crown: label('+{wallCrownBonus} melee if stationary'),
-        spec_aether_regen_small: label('+1 AE/turn'),
-        spec_aether_regen_large: label('+3 AE/turn'),
-        spec_cleave: label('Cleave'),
         spec_charge_mult: label('x{chargeMultiplier} dmg if moved'),
         spec_charge: label('+{chargeBonus} if moved'),
 
@@ -1135,6 +1125,16 @@ function say(key, vars) {
         if (!used.has(name)) throw new Error(`text: "${key}" has no {${name}}`);
     }
     return out;
+}
+
+// A line chosen by count: keys.many when n > 1, keys.one when n === 1, else
+// keys.none. A key the count needs but keys lacks throws. n is added to vars
+// only for a line that shows {n}, so say() still fails fast on any var a line
+// doesn't use.
+function sayCount(n, keys, vars) {
+    const key = n > 1 ? keys.many : n === 1 ? keys.one : keys.none;
+    if (key === undefined) throw new Error(`text: sayCount has no key for n=${n}`);
+    return say(key, 'n' in textVarsFrom(key, { n }) ? { ...vars, n } : vars);
 }
 
 // An item special's stat-line text. Each spec_ line's placeholders are named

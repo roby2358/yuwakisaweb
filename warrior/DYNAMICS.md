@@ -122,7 +122,7 @@ Press 1-4 to activate. Each skill usable once per turn. Costs Aether. Some requi
 | The Unraveler | 100 | 12 | 6 (range 6) | 6 | 1 | 6 | Boss | Spawns a Void Stalker every 3 turns. Dual melee+ranged. |
 
 ### Dual Attack System
-Any enemy with a `range` is ranged (`enemyIsRanged`); its shot uses `rangedAttack` when set, else its `attack` stat (Flux Archer). Ranged tokens carry an amber arrow badge in the top-right corner. Dual attackers (Void Stalker, Breach Guardian, Unraveler) fire ranged *in addition to* melee when in melee range. The kiting Flux Archer fires only when not in melee range. Ranged-capable chasers (Void Stalker) have a 50% chance per turn to prefer ranged fire and skip closing in. Flux Archers only fire 50% of the time when in range.
+Any enemy with a `range` is ranged (`enemyIsRanged`); every ranged def carries `rangedAttack`, the strength of its shot (equal to `attack` for the Flux Archer and ranged wildlife). Ranged tokens carry an amber arrow badge in the top-right corner. Dual attackers (Void Stalker, Breach Guardian, Unraveler) fire ranged *in addition to* melee when in melee range. The kiting Flux Archer fires only when not in melee range. Ranged-capable chasers (Void Stalker) have a 50% chance per turn to prefer ranged fire and skip closing in. Flux Archers only fire 50% of the time when in range.
 
 ### Enemy Behaviors
 - **Chase**: A* pathfinding toward player when within detection range, else 50% chance to wander randomly.

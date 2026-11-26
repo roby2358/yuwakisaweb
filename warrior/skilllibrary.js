@@ -14,11 +14,12 @@
 //                of the rest, FAR_SCROLL_SKILLS are bound to far story scrolls
 //                (taken) and the remainder are learnable.
 //
-// The dynamic channel (Skill Seek) draws from poolSkills: unlearned
-// skills that are not shop, not taken, not held out. Each Wise Man's Hut gives
-// one core lesson (firstUnlearnedCore, front of coreOrder); its standing
-// assignment is dealt from the learnable optional skills, and its 5% rerolls
-// also reach unlearned core skills (hutRerollPool). taken, heldOut and
+// The dynamic channel (Skill Seek) draws from poolSkills: the obtainable
+// skills (unlearned, not shop, not taken, not held out) within the player's
+// level. Each Wise Man's Hut gives one core lesson (firstUnlearnedCore, front
+// of coreOrder); its standing assignment is dealt from the learnable optional
+// skills, and its HUT_REROLL_CHANCE rerolls draw from all obtainable skills,
+// any level, so they also reach unlearned core skills. taken, heldOut and
 // coreOrder are the per-run state that persists; everything else derives from SKILLS and the learned set.
 
 const SKILL_HELD_OUT_FRACTION = 0.5;
@@ -38,13 +39,17 @@ class SkillLibrary {
     isHeldOut(id) { return this.heldOut.has(id); }
     isOptional(s) { return !s.core && !s.shopOnly && !s.scrollOnly; }
 
-    // Skills Skill Seek may grant: not shop-only, not scroll-taken,
-    // not held out, not learned, and within the player's level. Includes
-    // unlearned core skills.
-    poolSkills(learned, level) {
+    // Skills some channel may still grant: not shop-only, not scroll-taken,
+    // not held out, not learned, any level. Includes unlearned core skills.
+    obtainable(learned) {
         return Object.values(SKILLS).filter(s =>
             !this.isShop(s.id) && !this.isTaken(s.id) && !this.isHeldOut(s.id) &&
-            !learned.has(s.id) && s.minLevel <= level);
+            !learned.has(s.id));
+    }
+
+    // Skills Skill Seek may grant: the obtainable ones within the player's level.
+    poolSkills(learned, level) {
+        return this.obtainable(learned).filter(s => s.minLevel <= level);
     }
 
     // Optional skills appearing this run and not bound to a scroll or learned,
@@ -75,7 +80,7 @@ class SkillLibrary {
         this.heldOut = new Set(optional.slice(appearing));
         const dealt = optional.slice(0, Math.min(FAR_SCROLL_SKILLS, appearing, farScrolls.length));
         this.taken = new Set(dealt);
-        farScrolls.forEach((poi, i) => { poi.skill = dealt[i] ?? null; });
+        dealt.forEach((id, i) => { farScrolls[i].skill = id; });
         const pool = this.learnableOptional(learned);
         for (const hut of huts) {
             hut.skill = pool.length ? Rando.choice(pool).id : null;
@@ -92,17 +97,10 @@ class SkillLibrary {
         return this.coreOrder.find(id => !learned.has(id)) ?? null;
     }
 
-    // Learnable optional skills plus unlearned core skills: what a hut's 5%
-    // reroll may dig up. Never held out, shop or scroll-taken.
-    hutRerollPool(learned) {
-        return this.learnableOptional(learned)
-            .concat(this.coreOrder.filter(id => !learned.has(id)).map(id => SKILLS[id]));
-    }
-
-    // A skill from hutRerollPool, any level, or null. Used by the Wise Man's hut
+    // An obtainable skill, any level, or null. Used by the Wise Man's hut
     // when its assigned skill is already known.
     rerollHutSkill(learned) {
-        const pool = this.hutRerollPool(learned);
+        const pool = this.obtainable(learned);
         return pool.length ? Rando.choice(pool).id : null;
     }
 

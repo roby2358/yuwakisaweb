@@ -28,7 +28,6 @@ class Player {
         this.skillRanks = {};
         this.inventory = ['stick_bow'];
         this.statPoints = 0;
-        this.pendingSkillChoice = false;
         this.mp = PLAYER_MP;
         this.warpShieldTurns = 0;
         this.reflectTurns = 0;
@@ -216,7 +215,7 @@ class Player {
             skills: this.skills, sp: this.sp, maxSP: this.maxSP,
             skillRanks: this.skillRanks,
             inventory: this.inventory,
-            statPoints: this.statPoints, pendingSkillChoice: this.pendingSkillChoice,
+            statPoints: this.statPoints,
             mp: this.mp, warpShieldTurns: this.warpShieldTurns, reflectTurns: this.reflectTurns,
             seenDialogs: [...this.seenDialogs]
         };

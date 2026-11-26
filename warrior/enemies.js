@@ -16,6 +16,10 @@ const CREATURE_NAME_SUFFIXES = [
     'ax','or','ith','old','un','ek','ang','us','ar','on',
     'ine','oth','usk','el','arn','ox'
 ];
+const CREATURE_NAME_PREDATORS = [
+    'tiger','lion','cheetah','wolf','bear','hawk',
+    'shark','viper','panther','cobra','eagle','falcon'
+];
 
 // Each tier has a melee creature and a rarer ranged one. The ranged weight
 // keeps them near a quarter of wildlife on the map (their packs run a bit
@@ -23,16 +27,13 @@ const CREATURE_NAME_SUFFIXES = [
 // not so many that clusters of shooters pin the player down.
 const RANGED_CREATURE_SPAWN_WEIGHT = 0.25;
 
-// Ranged role words by tier band (early / mid / late), appended to the
-// creature's procedural name so the role reads in the log too.
-const RANGED_CREATURE_ROLES = [
-    ['Slinger', 'Skirmisher', 'Spitter', 'Archer'],
-    ['Hexer', 'Hurler', 'Spellslinger', 'Caster'],
-    ['Warden', 'Sentinel', 'Stormcaller', 'Magus']
+// Ranged tier bands (early / mid / late): each band's reach, and the role words
+// appended to the creature's procedural name so the role reads in the log too.
+const RANGED_CREATURE_BANDS = [
+    { range: 2, roles: ['Slinger', 'Skirmisher', 'Spitter', 'Archer'] },
+    { range: 3, roles: ['Hexer', 'Hurler', 'Spellslinger', 'Caster'] },
+    { range: 4, roles: ['Warden', 'Sentinel', 'Stormcaller', 'Magus'] }
 ];
-
-// Ranged reach by the same tier bands: 2 early, 3 mid, 4 late.
-const RANGED_CREATURE_RANGE = [2, 3, 4];
 
 // Draws names from makeName until one is unused, and claims it.
 function uniqueCreatureName(usedNames, makeName) {
@@ -100,11 +101,6 @@ class EnemyManager {
     }
 
     generateCreatureTypes() {
-        const predators = [
-            'tiger','lion','cheetah','wolf','bear','hawk',
-            'shark','viper','panther','cobra','eagle','falcon'
-        ];
-
         const usedNames = new Set();
         const palette = ColorTheory.randomScheme(() => Math.random());
 
@@ -126,7 +122,7 @@ class EnemyManager {
             };
 
             const name = uniqueCreatureName(usedNames, () =>
-                Rando.choice(CREATURE_NAME_PREFIXES) + Rando.choice(predators) + Rando.choice(CREATURE_NAME_SUFFIXES));
+                Rando.choice(CREATURE_NAME_PREFIXES) + Rando.choice(CREATURE_NAME_PREDATORS) + Rando.choice(CREATURE_NAME_SUFFIXES));
             this.creatureDefs['creature_' + i] = {
                 ...tierFields,
                 name,
@@ -144,20 +140,22 @@ class EnemyManager {
     }
 
     // The ranged counterpart of a tier: frailer than its melee kin, shoots
-    // and strikes at three-quarters of the tier's attack (no rangedAttack, so
-    // the shot uses attack). Behavior keys off the tier's attack, so the top
+    // and strikes at three-quarters of the tier's attack (rangedAttack equals
+    // attack). Behavior keys off the tier's attack, so the top
     // tier is a ranged ruins-guardian.
     rangedCreatureDef(tierFields, tierAttack, baseColor, usedNames) {
-        const band = Math.min(2, Math.floor(tierFields.tier / 4));
+        const band = RANGED_CREATURE_BANDS[Math.min(RANGED_CREATURE_BANDS.length - 1, Math.floor(tierFields.tier / 4))];
         const name = uniqueCreatureName(usedNames, () =>
-            Rando.choice(CREATURE_NAME_PREFIXES) + Rando.choice(CREATURE_NAME_SUFFIXES) + ' ' + Rando.choice(RANGED_CREATURE_ROLES[band]));
+            Rando.choice(CREATURE_NAME_PREFIXES) + Rando.choice(CREATURE_NAME_SUFFIXES) + ' ' + Rando.choice(band.roles));
+        const attack = Math.max(1, Math.round(tierAttack * 0.75));
         return {
             ...tierFields,
             name,
             label: name[0],
             hp: Math.max(4, Math.round(tierAttack * 2.5) + Rando.int(-2, 2)),
-            attack: Math.max(1, Math.round(tierAttack * 0.75)),
-            range: RANGED_CREATURE_RANGE[band],
+            attack,
+            rangedAttack: attack,
+            range: band.range,
             defense: Math.floor(tierAttack / 6),
             spawnWeight: RANGED_CREATURE_SPAWN_WEIGHT,
             color: variedCreatureColor(baseColor, -0.15)
