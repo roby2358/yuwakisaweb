@@ -1,17 +1,3 @@
-Priority:   60
-Status: ToDo
-ID: dodgegear-ztsr
-Created: 2026-11-26T22:05:38Z
-Updated: 2026-11-26T22:05:38Z
-
-Make dodge use gear-boosted Vigor.
-
-Goal: Player.dodge() in player.js computes 2 × this.stats.vigor, so vigor_bonus from equipped gear (counted in player.vigor()/effective vigor, player.js ~77) never raises dodge. Gear Vigor should count like base Vigor.
-
-Settled design: dodge = 2 × effective vigor (base stats.vigor plus sumEquipped('vigor_bonus', 'vigorBonus'), using the existing accessor that already sums them) + dodge_bonus, capped at MAX_DODGE as now. The character panel's dodge line (index.js, say('char_dodge')) shows the same value since it calls player.dodge(). Update ONTOLOGY.md's player-damage rule (the dodge comment line) and its Q-13 reference, RATIONALE.md if it lists Q-13, and DYNAMICS.md wherever it describes dodge.
-
-Done when: node test/*.js all pass; reading Player.dodge() shows it uses the effective (gear-inclusive) vigor; ONTOLOGY.md matches.
-----
 Priority:   50
 Status: ToDo
 ID: skillvis-btfk

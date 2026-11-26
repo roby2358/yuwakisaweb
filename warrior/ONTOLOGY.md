@@ -729,8 +729,7 @@ if random < min(pct, MAX_STUN_CHANCE): stunnedNextTurn = true
 ```
 if ranged and ranged_immune: avoid
 if warpShieldTurns > 0 and chance(warp effectStrength / 10): avoid
-if chance(dodge()): avoid            # dodge = 2 × base vigor + dodge_bonus, cap MAX_DODGE
-                                     # [D, unbuilt] (D-6): use effective (gear-boosted) vigor
+if chance(dodge()): avoid            # dodge = 2 × effective vigor + dodge_bonus, cap MAX_DODGE (D-6)
 rolled = bellCurve(damage); dealt = max(1, rolled − playerDefense())
 if melee, reflectTurns > 0 and chance(reflect effectStrength / 10):
   reflected = max(1, dealt × reflectPercent%); dealt = max(1, dealt × takePercent%)

@@ -2,6 +2,11 @@
 
 Dated entries, newest first. This is the only design doc that records history.
 
+### 2026-11-26 — Dodge uses gear-boosted Vigor (D-6 built)
+
+`Player.dodge()` now reads `effectiveVigor()`, so vigor_bonus gear raises dodge like base Vigor.
+D-6 is now *Decided*, and ONTOLOGY drops its [D, unbuilt] tag.
+
 ### 2026-11-26 — Hut Leave is free (D-7 built)
 
 Leave at a hut no longer sets MP to 0, matching haven and village Leave; Learn still ends

@@ -52,9 +52,8 @@ The player may unequip the weapon and fight unarmed (damage 1).
 - **Why:** designer's call; to be filled in.
 - **Evidence:** not measured.
 
-### D-6 Dodge uses gear-boosted Vigor — *Decided, unbuilt*
-Dodge will read effective Vigor (base plus vigor_bonus gear), as defense already does. The code
-still uses base Vigor; filed as a tracker task.
+### D-6 Dodge uses gear-boosted Vigor — *Decided*
+Dodge reads effective Vigor (base plus vigor_bonus gear), as defense and max HP already do.
 - **Alternatives:** keep dodge on base Vigor.
 - **Why:** designer's call; to be filled in.
 - **Evidence:** not measured.
