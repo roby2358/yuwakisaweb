@@ -92,25 +92,6 @@ Open questions:
 5. Does it include rank costs and the Skill Point economy (one point per level now), or only the skills' own numbers?
 ----
 Score:   50
-ID: text-vary-hr8q
-Created: 2026-11-26T17:07:07Z
-Updated: 2026-11-26T17:07:07Z
-
-Move static flavor text out of the code into lookup tables that hold several variations of each line, picked at random, so repeated events do not always read the same.
-
-Today the prose is hardcoded at each call site in index.js and actions.js: dialog bodies ("An old sage peers at you.", "The sage's eyes light up.", "You unfurl an ancient scroll. Its knowledge becomes yours.", "You explore the ruins..."), sage speech ("I have nothing to teach you at this time."), and combat-log lines ("Insight! A new skill reveals itself!", "The patterns elude you...").
-
-Sketch: one text table (its own plain script file, loaded before index.js) keyed by event name, each entry an array of variants with named placeholders for things like the skill or item name; one helper that picks a variant through Rando and fills the placeholders. Call sites ask for a key instead of carrying a string.
-
-Open questions:
-1. Scope: flavor prose only, or also functional text (button labels, HUD labels, skill descriptions)? Proposal: flavor only; functional text stays fixed so the UI is learnable.
-2. Which events get variants first (huts, scrolls, ruins, havens/villages, level-up, combat log)?
-3. Who writes the variants, and how many per line (proposal: 3 to 5)?
-4. Should a line that is stable on revisit (a hut's standing offer) keep the same variant, or re-roll each time?
-5. Does markup (italics for stage directions, colours for speech) live in the table or stay at the call site? Proposal: the table marks the kind (narration / speech) and one renderer applies the style.
-6. Tone rules to carry over: no vampire imagery; harm-coded verbs only on harm-doing effects.
-----
-Score:   50
 ID: rand-xvfp
 Created: 2026-11-26T17:08:55Z
 Updated: 2026-11-26T17:08:55Z
@@ -118,7 +99,7 @@ Updated: 2026-11-26T17:08:55Z
 Procedurally generated attack skills as a parallel pool to the hand-crafted SKILLS table. When the player gets to pick a skill (level-up via pendingSkillChoice, or possibly at ruins/POIs), roll first: with some probability pick a standard skill from SKILLS as today, otherwise roll a randomized attack skill instead.
 
 Random skill template:
-  - Pick 2 random stats from {might, reflex, vigor, warding} as the scaling pair (matches the combo-skill-56hq design philosophy — every attack skill should scale on 2 stats, never 1)
+  - Pick 2 random stats from {might, reflex, vigor, warding} as the scaling pair (matches the combo-skill design philosophy — every attack skill should scale on 2 stats, never 1)
   - Pick a damage formula: e.g. (statA × N) + (statB × M), or (statA + statB) × scale
   - Roll a bonus effect from a pool — AoE-1, knockback, bleed/DoT, stun, lifesteal, armor-pierce, chain-to-adjacent, mark-for-bonus-damage, terrain-aware multiplier, etc.
   - Generate a flavorful name (template-driven, e.g. "[Adjective] [Noun]" pulled from word pools, or stat-themed: might+reflex → "Searing Strike", warding+vigor → "Aether Bulwark Bolt")
@@ -152,6 +133,96 @@ Open questions:
 4. Does opening it pause input like a dialog, or sit beside the map like the other panels?
 5. Should it replace or absorb any of the existing one-time dialogs?
 ----
+Score:   50
+ID: land-zfdc
+Created: 2026-11-26T17:24:03Z
+Updated: 2026-11-26T17:24:03Z
+
+Land Health mechanic that rewards cleaning up chaos (shattered/distressed) hexes and offsets a ramped-up Maw bonus. Track total chaos-hex count vs. cleaned count as a world-level "Land Health" ratio (0..1). Pair with a ramped-up endgame Maw bonus so it Maw bonus is genuinely nastier unless the player has invested in restoration — rush the Maw weak, or sanitize first and fight it stronger.
+
+Player-side bonus delivered via 3 magic items, each tied to a physical archetype (mutually exclusive build choice, not stacking buffs). Deliberately no caster/warding item — pure-warding mages opt themselves out of the Land Health reward system.
+
+  1. Tank — Shield: boosts defense, vigor, and might
+  2. Archer — Void cannon: boosts reflex and vigor
+  3. Fighter — Cloak (or banner/warhorn/etc., name TBD): boosts might and vigor
+
+Item bonus scales with Land Health (cleaner world → bigger bonus). Item only activates / scales from level 6+ so it's a mid/late-game payoff, not an early-run crutch.
+
+Note on caster builds: this isn't anti-mage, it's anti-monomaniacal-warding. Once attack skills scale on two stats, hybrid casters who put points into reflex (cosmic bolt scales warding × 2 + reflex) or might (combat combos) ALSO benefit from these items — picking up the Archer or Fighter item makes their secondary stat hit harder. The build that gets shut out is the pure cosmic-bolt-and-starfall-your-way-to-the-Maw warding dump. Good luck to them.
+
+Details TBD: exact stat numbers per item, scaling curve (linear vs. tiered), whether the item is granted/found/bought, whether the choice is one-shot or swappable, final names/flavor for the fighter item. Requires: chaos hex accounting in world.js, Land Health calc readable from player.defense()/meleeDamage()/etc., the 3 items added to ALL_EQUIPMENT with new specials, optional HUD Land Health indicator, and tuning so Maw scaling stays beatable without full cleanup.
+----
+Score:   50
+ID: revive-5p4r
+Created: 2026-11-26T17:24:49Z
+Updated: 2026-11-26T17:24:49Z
+
+Earned revival mechanism: give the player one second-chance per run, but only if they've earned it — e.g. consumable dropped by a rare enemy, purchased at a haven for a steep gold cost, granted by closing N breaches, or rewarded for a quest. Keep hardcore feel by making it a meaningful resource decision, not a default safety net. Decide: one-shot consumable in inventory? Auto-trigger on lethal hit vs. activatable? Revive HP/AE/MP state? Penalty (lost gold, drained Aether, etc.)? Compatibility with existing 'revive' artifact affix.
+----
+Score:   50
+ID: xp-wxyj
+Created: 2026-11-26T17:25:07Z
+Updated: 2026-11-26T17:25:07Z
+
+Add a use for XP after reaching max level 10. Possible idea: spend accumulated XP to heal/restore chaos-corrupted hexes, giving endgame players something meaningful to do with excess XP.
+----
+Score:   50
+ID: map-xd9x
+Created: 2026-11-26T17:25:32Z
+Updated: 2026-11-26T17:25:32Z
+
+Dress up the hex map with per-terrain visual character. The current green/brown/yellow/gray/blue palette is good — clean and readable — but flat. Add subtle decorative accents so each terrain feels like a place, not a colored cell.
+
+Two approaches (probably both):
+  1. Sprite-sheet additions: extend or add a new sheet (e.g. `terrainSheet`) with small per-terrain icons — trees for forest, rocks/peaks for hills/mountains, reeds for marsh, ripples or waves for water, ruins/cracks for shattered/distressed hexes, grass tufts for plains. SpriteSheet.drawCell already handles tinting so terrain palette can still drive color.
+  2. Drawn accents: cheap programmatic canvas shapes — small triangles for mountains, dots for sand, wavy lines for water, jagged scribbles for chaos hexes. No asset pipeline needed.
+
+Design constraints:
+  - Tactical readability stays paramount. A decorated forest hex must still be obviously "forest" at a glance and not be confused with hills. Keep accents low-contrast and small relative to the hex.
+  - Determinism: per-hex accent variant should be picked from a Rando seeded on (q, r) so the map looks the same every render and across save/load — no flicker, no churn.
+  - Density: don't decorate every hex; some hexes plain, some with one accent, rare hexes with a "feature" sprite (a bigger tree, a boulder cluster). Variation > uniformity.
+  - Fog/visibility: accents fog and reveal alongside the terrain layer; revealed-but-not-visible accents desaturate same as everything else.
+  - Don't conflict with POI tokens, enemy tokens, or highlight overlays — accents draw beneath those layers.
+
+Implementation: extend the render pipeline in index.js's hex draw step, after terrain fill and before tokens/highlights. Probably a new helper like `drawTerrainAccent(ctx, hex, x, y)` that picks a deterministic variant from a per-terrain table. New sprite sheet PNG if going the sprite route.
+
+Stretch: chaos/shattered hexes get animated-feeling accents (jittered cracks redrawn each frame) — but that breaks determinism and could be a separate task.
+----
+Score:   50
+ID: medals-b87z
+Created: 2026-11-26T17:25:46Z
+Updated: 2026-11-26T17:25:46Z
+
+Run-end medals + villager testimonials + Unraveler jeers. (1) Medals: extend the Victory final-screen breakdown with thematic badges based on existing counters — e.g. Pacifist (≤20 enemiesDefeated), Cartographer (≥80% map revealed), Pyrrhic (≥10 nearDeathMoments), Restorer (≥50 hexesRestored), Treasurer (≥1000 goldCollected), Maw-Slayer (breachesSealed ≥1), Builder (≥3 garrisonsCompleted). One pass over existing Victory counters; no new tracking needed. (2) Testimonials from villagers: short flavor lines on the end screen "spoken" by havens/villages the player visited, conditional on what they did there (restored nearby terrain, built a garrison, slew an apex predator, accepted a bounty). Warm, grateful tone — extends the existing settlement-gratitude voice. (3) Jeers from the Unraveler: taunting counterparts on what the player failed to do or shied from — breaches left unsealed, corrupted hexes ignored, settlements never visited, weapons hoarded but unused, an ending reached without the Unraveler fully vanquished. Voice consistent with the existing host-jump / vanquished narrative. Pulls testimonials and jeers from separate pools keyed by event tags accumulated during the run. Likely v2 polish — file behind the gold-sink and land-health work.
+----
+Score:   50
+ID: vigor-bax7
+Created: 2026-11-26T17:26:57Z
+Updated: 2026-11-26T17:26:57Z
+
+Add a Vigor skill school — the "HP-as-mana" school. Vigor is the fourth stat with no offensive identity (currently just an HP sponge). Give "health monsters" oomph by making HP a resource you spend and convert, not just a buffer you hoard.
+
+TWO-AXIS MODEL (the key framing; weapon-leverage and source-of-power are SEPARATE questions):
+- Axis 1 — weapon class (the end-of-line glyph, the `weaponClass` field): does the skill layer the equipped weapon's affix/damage? melee 🗡️ / ranged 🏹 / direct ☄️ ("fires from nothing," no weapon leveraged).
+- Axis 2 — school / resource (cost line + factors text): where the power comes from and what it costs — Might/Reflex/Warding/Vigor, paid in MP/AE/HP. The scaling stat already shows in factors ("+Vig" etc.); resource cost shows in the cost line.
+- They compose freely: a skill can be weaponClass 'melee' (🗡️) AND cost HP / scale Vigor. That's exactly how a Vigor skill that flows through a weapon is expressed.
+
+NO new glyph (decided): do NOT add a heart or any "source of power" glyph. The scaling stat is already named in the factors text, and source-of-power isn't single-valued (e.g. void_strike = weapon+Might+Warding) so one icon can't represent it. Vigor-ness is conveyed by HP cost (cost line) + "+Vig" (factors). [Deferred idea, NOT now: color the factor stat tokens — Mgt red / Ref green / War purple / Vig crimson — for at-a-glance build scanning; handles multi-stat skills with no new symbols.]
+
+CONCEPT / power budget: each school has a signature resource — weapon skills spend MP, warding spends AE, Vigor spends HP. Vigor is a resource/amplifier school layered over your weapon: Might/Reflex/Warding answer "where does damage come from," Vigor answers "what will you pay to amplify it / how do you survive." Cross-pollinates with Might (bruiser builds: Might weapon + Vigor) — explicitly desired. No artificial HP-spend cap: the hostile board (Unraveller, 45-Might roamers) is the governor — dumping your whole bar into one hit is a real, usually-suicidal, occasionally-run-saving option (windfall/comedy). Glass cannons already do poorly here, so giving the survival stat offense rehabilitates a forced tax into a real build.
+
+DESIGN PRINCIPLE — brute force = restrained variety: option count scales inversely with bluntness. Melee has many riders (cleave/stun/burn/shred/execute), ranged has projectile geometry (penetrate/ricochet/volley), warding has area/chains. Vigor's quadrant is DISPLACEMENT & IMPACT and does NO tricks — no penetrate, ricochet, shred, or burn (those belong to other schools). Keep it to ~5 blunt, highly-readable skills.
+
+SKILLS:
+- Buildup strike (keystone) — SAME-TURN: spend HP for bonus damage flowing through the equipped weapon (weapon + Vigor, paid in HP); weaponClass = whatever weapon is held. This is dimensional_rend generalized/promoted — dimensional_rend is already this exact template (weapon + Vigor drawn from HP), so build on it. Deferred-charge/wind-up idea was REJECTED: same-turn is more readable, needs no state, truer to brute force.
+- Warp Shield — convert from AE cost to HP cost ("rechannel life force into a ward"); HP-fueled chance to block all damage for a turn. weaponClass 'direct'. Defensive pole of the HP economy.
+- Overwhelm — guaranteed stagger/stun paid in HP (reliability, NOT a chance — the brute version of stun_blow). Brute force is deterministic.
+- 2-hex Knockback — single big shove (vs shockwave's 1-hex AoE nudge); the drama/board-control verb (knock enemies into maws / off positioning / into each other).
+- Lifedrain AoE — adopt existing lifedrain_blast (Vigor AoE + heal per hit) as the refill that closes the HP loop.
+- (Maybe) Lay Bare — channel HP to strip a % of target's defense, deterministic, hefty all-in HP cost. CAVEAT: %-def-strip is "shred," which is melee's verb (sundering_blow) and collides with Vigor's no-tricks identity. If added, model as a Might/Vigor CROSSOVER: weaponClass 'melee' (layers the weapon) + HP cost — "sundering_blow's all-in big brother." Don't bolt on a fail-chance; the hefty HP cost vs the lethal board is the gamble. Decide whether it's worth the slight identity dilution before adding.
+
+SCALING: both HP cost AND skill effect increase with skill level/rank (more invested = bigger spend = bigger payoff).
+----
 Score:   75
 ID: skill-groups-j5xe
 Created: 2026-11-26T16:44:43Z
@@ -175,3 +246,22 @@ Open questions:
 3. Level-up: does it keep offering 3 skills from the learnable pool (drains it fast), or do level-ups stop granting skills and give a Skill Point, leaving huts / Skill Seek / scrolls as the only sources?
 4. Core delivery: how many near scrolls versus huts, and do Renew / Retrain move from far scrolls to this near/hut delivery?
 5. Is the player told which skills are absent this run? (proposal: hidden)
+----
+Score:   50
+ID: text-vary-hr8q
+Created: 2026-11-26T17:07:07Z
+Updated: 2026-11-26T17:31:13Z
+
+(Done) Move static flavor text out of the code into lookup tables that hold several variations of each line, picked at random, so repeated events do not always read the same.
+
+Today the prose is hardcoded at each call site in index.js and actions.js: dialog bodies ("An old sage peers at you.", "The sage's eyes light up.", "You unfurl an ancient scroll. Its knowledge becomes yours.", "You explore the ruins..."), sage speech ("I have nothing to teach you at this time."), and combat-log lines ("Insight! A new skill reveals itself!", "The patterns elude you...").
+
+Sketch: one text table (its own plain script file, loaded before index.js) keyed by event name, each entry an array of variants with named placeholders for things like the skill or item name; one helper that picks a variant through Rando and fills the placeholders. Call sites ask for a key instead of carrying a string.
+
+Open questions:
+1. Scope: flavor prose only, or also functional text (button labels, HUD labels, skill descriptions)? Proposal: flavor only; functional text stays fixed so the UI is learnable.
+2. Which events get variants first (huts, scrolls, ruins, havens/villages, level-up, combat log)?
+3. Who writes the variants, and how many per line (proposal: 3 to 5)?
+4. Should a line that is stable on revisit (a hut's standing offer) keep the same variant, or re-roll each time?
+5. Does markup (italics for stage directions, colours for speech) live in the table or stay at the call site? Proposal: the table marks the kind (narration / speech) and one renderer applies the style.
+6. Tone rules to carry over: no vampire imagery; harm-coded verbs only on harm-doing effects.
