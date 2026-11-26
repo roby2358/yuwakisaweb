@@ -1,0 +1,177 @@
+Score:   60
+ID: skill-minlvl-3i8p
+Created: 2026-11-26T16:59:39Z
+Updated: 2026-11-26T16:59:39Z
+
+Challenge the skill level requirement (the minLevel field on every skill in the SKILLS table). Does it still earn its place?
+
+Why now: minLevel existed to pace the level-up skill offers (a level 2 player could not be offered Starfall, L10). Once level-up grants a Skill Point instead of a skill, and skills come from huts, scrolls and Skill Seek, the only channel that still reads minLevel is Skill Seek (showSkillChoiceDialog filters poolSkills by player.level). Huts and scrolls already ignore it. So a level 3 player can learn Meteor (L6) from a hut or a far scroll but not from Skill Seek, which is itself L6.
+
+Pacing is now carried by other things: map distance (far scrolls), how many huts have been visited, aether cost, and which skills are held out this run.
+
+Options to weigh:
+1. Remove minLevel entirely; Skill Seek draws from the whole learnable pool.
+2. Keep it only as a Skill Seek filter (current state after the skill-group change), and say so in the docs.
+3. Repurpose it as a tier that drives placement: low-tier optional skills go to huts, high-tier ones to far scrolls, so power still arrives late without a level gate.
+4. Make it a use requirement instead of a learn requirement (you can hold the scroll's skill but not cast it yet).
+
+Open questions: is there any place a too-early big skill actually breaks the game, given aether costs? Does the Skills panel or any dialog show minLevel to the player? Should core skills (Skill Seek and Spirit Walk are L6) have any level at all?
+----
+Score:   60
+ID: skill-kin-famd
+Created: 2026-11-26T17:07:48Z
+Updated: 2026-11-26T17:07:59Z
+
+Double or triple the number of skills by adding close variants of the existing ones, and hybrids that combine two of them, so that holding out half the optional skills each run still leaves a rich, different set every game.
+
+Why: the SKILLS table has 46 skills, about 35 of them optional. With half held out per run only ~18 appear. At 2x to 3x (70 to 105 optional) each run would show 35 to 50, and two runs would share far fewer skills. Close variants also mean a held-out favourite often has a cousin in play that works a little differently (e.g. no Meteor this game, but a smaller, cheaper area blast).
+
+What a close variant could be: the same execute function with a different shape or trade-off: different target shape (single / line / cone / area), different cost mix (AE vs MP vs HP), different scaling stat (Might / Reflex / Warding / Vigor), different rider (stun, pull, burn, siphon, no-counter), range vs power trades, combat-only vs anytime.
+
+What a hybrid could be: one skill that joins the effects of two existing ones, usually weaker in each half or dearer than either parent: a teleport that strikes on arrival (Phase Step + Void Strike), a sweep that stuns (Sweep + Stun), a bolt that heals the caster (Cosmic Bolt + Mending Light), a sprint that ends in a blast (Sprint + Aether Blast). A hybrid can put a held-out combo back in play in a single, costlier package.
+
+Sketch: express a variant as data over a shared executor (a base skill id plus overrides), and a hybrid as an ordered pair of executors with its own cost and tiers, so most new skills cost a table row, not new code; give each its own name and description.
+
+Open questions:
+1. Target count: 2x or 3x, and is it even across kinds (attack, movement, utility, meta) or mostly attacks? What share are variants and what share hybrids?
+2. Hand-authored rows, or generated from parts? There is already a backlog task for procedurally generated attack skills as a parallel pool; does this replace it, feed it, or stay separate?
+3. Should the per-run deal avoid putting two near-identical cousins in play together, or guarantee at least one of each family (one area nuke, one heal, one gap-closer)? Is a hybrid dealt independently of its parents?
+4. Can existing executors be chained cleanly for hybrids (targeting, MP/AE cost, counter-attack and end-of-action handling happen once, not twice)?
+5. Do variants or hybrids of core skills exist, and if so are they core too? (Proposal: no; core stays the five named skills.)
+6. Naming and flavor rules: distinct names per skill; no vampire imagery; harm-coded verbs only on harm-doing effects.
+7. Balance stance: overlapping-strong options and game-breaking combos are intended; add alternatives rather than weakening existing skills.
+----
+Score:   55
+ID: immolate-chk-8gse
+Created: 2026-11-26T17:05:18Z
+Updated: 2026-11-26T17:05:18Z
+
+Double-check the Immolate skill: the user suspects it is not behaving as described ("I'm not sure it's immolating right").
+
+Investigate before changing anything: read the immolate entry in the SKILLS table (config.js) and its execute function in actions.js, and compare what the code does against the skill's description and tier values: who is hit, how much damage, whether the burn repeats or ticks over turns, whether it scales with rank and stats as stated, its aether/MP cost, and whether damage floats and the combat log show it. Check SPEC.md / DYNAMICS.md for the intended behavior.
+
+Open: the user has not said what looked wrong in play. Ask what they observed (no damage, wrong targets, wrong amount, no visible effect) and then file a fix task with the concrete defect.
+----
+Score:   55
+ID: mob-skills-6dzb
+Created: 2026-11-26T17:08:41Z
+Updated: 2026-11-26T17:08:41Z
+
+Monster skills: give enemies skills of their own, so fights differ by what a creature can do and not only by its HP / attack / defense numbers.
+
+Today an enemy is mostly a stat line in ENEMY_DEFS (hp, attack, optional rangedAttack, defense) plus a behavior (wildlife / monster / ruins-guardian / chaos) run by its AI class in enemy_ai.js. Chaos units heal on corrupted hexes; the shape-shifting guardians and the Unraveler are the main special cases.
+
+Sketch: a small enemy-skill table (data rows with an executor, like the player's SKILLS) and a list of skill ids on each enemy def; on its turn the AI may use one instead of a plain move/attack, through the existing enemyAiCtx. Candidates that mirror player skills: a stun blow, a sweep that hits the player and nothing else, a short teleport to close distance, a pull, a self-heal or ally-heal, a shield turn, a ranged burn, a summon, shattering the hex under the player, draining AE.
+
+Open questions:
+1. Which reading is meant: enemies USING skills (above), skills the player learns FROM monsters (defeat or observe a creature to learn its trick), or both?
+2. Fixed per enemy type, or dealt per run like the player's optional skills, so the same creature fights differently each game?
+3. How does the player see it coming: a token marker, a telegraph the turn before, a line in the inspect panel? No hidden one-shot surprises.
+4. Limits: cooldown, a per-enemy charge, or an aether-like pool? How often should a skill fire compared with a plain attack?
+5. Which enemies get them first (bosses and guardians only, or common enemies too), and does the spawn-difficulty gradient account for skilled enemies?
+6. Does Reflect / Warp Shield / stun on the player's side interact with enemy skills the same way it does with plain attacks?
+----
+Score:   55
+ID: skill-power-yfxy
+Created: 2026-11-26T17:09:26Z
+Updated: 2026-11-26T17:09:26Z
+
+Rebalance skill power: review how strong each skill is for its cost and when it arrives, now that the way skills are obtained is changing.
+
+Why now: skills used to be paced by level-up offers gated on minLevel. With level-up giving a Skill Point, a five-skill core, half the optional skills held out each run, far scrolls for late finds and huts teaching the rest, a player's kit in any one game is smaller and more random. A skill that was fine as one of forty may be a dud or a must-have as one of eighteen, and a run can lack a whole role (no heal, no area attack, no gap-closer).
+
+What to look at: AE / MP cost against effect at each of the five ranks (the tiers arrays in the SKILLS table); how each skill scales with its stat; whether early-arriving skills (hut and learnable pool) and late ones (far scrolls) differ in power on purpose; skills nobody picks and skills that end every fight; whether each run's deal can leave the player without a workable answer to ranged enemies, swarms or the Maw.
+
+Standing rules from the user, to respect: leave room for game-breaking combos (no reflexive floors or caps); do not nerf strong existing options such as the pure-Warding nukes, add alternatives instead; survival skills are earned, not guaranteed.
+
+Open questions:
+1. What prompted this: specific skills that feel too weak or too strong in play, or a general pass? Which ones?
+2. Method: playtest notes, or a headless Node sim that prices each skill (damage or value per AE at each rank) as a persistent script in test/?
+3. Should power track where a skill is found (stronger skills on far scrolls), which overlaps the open question about the minLevel field?
+4. Is the rebalance done before or after adding variants and hybrids, since those multiply the table?
+5. Does it include rank costs and the Skill Point economy (one point per level now), or only the skills' own numbers?
+----
+Score:   50
+ID: text-vary-hr8q
+Created: 2026-11-26T17:07:07Z
+Updated: 2026-11-26T17:07:07Z
+
+Move static flavor text out of the code into lookup tables that hold several variations of each line, picked at random, so repeated events do not always read the same.
+
+Today the prose is hardcoded at each call site in index.js and actions.js: dialog bodies ("An old sage peers at you.", "The sage's eyes light up.", "You unfurl an ancient scroll. Its knowledge becomes yours.", "You explore the ruins..."), sage speech ("I have nothing to teach you at this time."), and combat-log lines ("Insight! A new skill reveals itself!", "The patterns elude you...").
+
+Sketch: one text table (its own plain script file, loaded before index.js) keyed by event name, each entry an array of variants with named placeholders for things like the skill or item name; one helper that picks a variant through Rando and fills the placeholders. Call sites ask for a key instead of carrying a string.
+
+Open questions:
+1. Scope: flavor prose only, or also functional text (button labels, HUD labels, skill descriptions)? Proposal: flavor only; functional text stays fixed so the UI is learnable.
+2. Which events get variants first (huts, scrolls, ruins, havens/villages, level-up, combat log)?
+3. Who writes the variants, and how many per line (proposal: 3 to 5)?
+4. Should a line that is stable on revisit (a hut's standing offer) keep the same variant, or re-roll each time?
+5. Does markup (italics for stage directions, colours for speech) live in the table or stay at the call site? Proposal: the table marks the kind (narration / speech) and one renderer applies the style.
+6. Tone rules to carry over: no vampire imagery; harm-coded verbs only on harm-doing effects.
+----
+Score:   50
+ID: rand-xvfp
+Created: 2026-11-26T17:08:55Z
+Updated: 2026-11-26T17:08:55Z
+
+Procedurally generated attack skills as a parallel pool to the hand-crafted SKILLS table. When the player gets to pick a skill (level-up via pendingSkillChoice, or possibly at ruins/POIs), roll first: with some probability pick a standard skill from SKILLS as today, otherwise roll a randomized attack skill instead.
+
+Random skill template:
+  - Pick 2 random stats from {might, reflex, vigor, warding} as the scaling pair (matches the combo-skill-56hq design philosophy — every attack skill should scale on 2 stats, never 1)
+  - Pick a damage formula: e.g. (statA × N) + (statB × M), or (statA + statB) × scale
+  - Roll a bonus effect from a pool — AoE-1, knockback, bleed/DoT, stun, lifesteal, armor-pierce, chain-to-adjacent, mark-for-bonus-damage, terrain-aware multiplier, etc.
+  - Generate a flavorful name (template-driven, e.g. "[Adjective] [Noun]" pulled from word pools, or stat-themed: might+reflex → "Searing Strike", warding+vigor → "Aether Bulwark Bolt")
+  - Aether cost rolled in the standard tier (≤3 cheap, 4-5 mid, ≥6 finisher) keyed to power level
+
+System pieces:
+  - Random skill generator: takes a Rando, returns a runtime SKILL object with {id, name, scaling, cost, range, effect} matching the SKILLS table shape so the rest of the engine doesn't care if a skill came from the hand-crafted table or the RNG
+  - Skill-pick site: at level-up dialog (and any other skill-pick UI), roll once; if random-skill, generate one and offer it instead of (or alongside) a standard option
+  - Persistence: a rolled-and-kept random skill needs to survive save/load. Either serialize the full skill object on player.learnedSkills (currently a Set of string IDs — would need to widen) or seed-based regen so the same skill comes back from the same seed
+  - Scope check: should random skills be offered alongside standard ones (player picks among 3 of each), or as a separate "wild" option (player rolls into a random one)?
+
+Design feel: every run gets weird, unique tools. Pairs with the broader design principle of "discoverable rule-breaking combos are fun" — random skills + items + stat builds = more degrees of freedom for the player to find a busted combo.
+
+Details TBD: probability of random vs. standard, the bonus-effect pool, formula tuning, name generation pool, save format change for random skills.
+----
+Score:   50
+ID: help-panel-aj2t
+Created: 2026-11-26T17:09:57Z
+Updated: 2026-11-26T17:09:57Z
+
+Help panel: an in-game reference the player can open at any time to see how the game works.
+
+Today the game teaches through a stark intro overlay (which the user likes and wants left alone), one-time dialogs, tooltips and the combat log. There is no place to look something up mid-run: controls, what the stats do, how skills are found, what the map symbols mean.
+
+Sketch: a fourth slide-in panel beside Character / Skills / Inventory, opened from the HUD (a "?" button) and a key, styled with the existing panel CSS variables. Possible sections: controls (click to select and move, left-drag to pan, end turn, hotbar, targeting); the turn (MP, AE, engaged = halved MP); stats (Might, Reflex, Warding, Vigor); skills (Skill Points, ranks, latent vs trained, where skills come from: huts, scrolls, Skill Seek; some skills do not appear every game); map legend (haven, village, hut, ruin, scroll, breach, Maw, shattered and corrupted terrain); the goal (seal breaches, the Maw, RETURN).
+
+Open questions:
+1. Scope: a short controls-and-legend card, or a fuller manual with the sections above?
+2. How much to reveal: does it explain held-out skills and the hut 5% rolls, or leave those to be discovered?
+3. Static text, or partly generated from the config tables (POI symbols, terrain, skill list) so it cannot drift from the game?
+4. Does opening it pause input like a dialog, or sit beside the map like the other panels?
+5. Should it replace or absorb any of the existing one-time dialogs?
+----
+Score:   75
+ID: skill-groups-j5xe
+Created: 2026-11-26T16:44:43Z
+Updated: 2026-11-26T16:57:48Z
+
+(Done) Split skills into availability groups so each run has a guaranteed core plus an aggressively varying mix of the rest, giving each game its own flavor.
+
+Today (skilllibrary.js, index.js new-game ~1440): 10 story scrolls placed in the half of the map far from the Maw each claim a random pool skill, so a core skill can end up locked on a far scroll; nothing is ever absent (every non-scroll skill is in the shared pool for level-up / Skill Seek / huts); Renew and Retrain are scrollOnly on far scrolls; 8-12 Wise Man's Huts each hold one random non-binding pool skill; each level-up offers 3 pool skills within the player's level.
+
+Settled with the user (2026-11-26):
+- core group: guaranteed every run, delivered early by NEAR scrolls (within roughly a quarter of the map from the start) and by huts. The first ~6 huts the player visits act as "levelling up" into basic capabilities; only after the core is known do huts turn exotic. Examples: Renew, Retrain, Phase Step.
+- optional group: everything else. Held out aggressively: only about HALF of the optional skills appear in a given run, so a killer combo such as Sprint + Aether Blast may or may not exist this game.
+- Of the optional skills that do appear, some are learnable through huts and Skill Seek, and some sit on far scrolls so they do not turn up until late. Far scrolls stay.
+- fixed special cases unchanged: Channel Aether scroll near the start, RETURN, shop-only Commune / Commission Garrison.
+
+Numbers to respect: 46 skills; minus Restore, 4 fixed and a ~6 core leaves ~35 optional, so ~17 appear per run. With 10 far scrolls that leaves only ~7 learnable for ~9 level-up picks plus huts plus Skill Seek. Far scrolls with no skill already become Skill-Point scrolls, and an empty level-up pool already converts to a Skill Point.
+
+Open questions:
+1. Exact core list (proposal: Phase Step, Mending Light, Skill Seek, Renew, Retrain, Sprint or another movement skill; Skill Seek must be core or the guarantee is circular, but then Sprint + Aether Blast is only gated by Aether Blast).
+2. Split of the ~17 appearing optional skills between learnable and far scrolls (proposal: ~11 learnable, ~6 far scrolls, remaining far scrolls become Skill-Point scrolls).
+3. Level-up: does it keep offering 3 skills from the learnable pool (drains it fast), or do level-ups stop granting skills and give a Skill Point, leaving huts / Skill Seek / scrolls as the only sources?
+4. Core delivery: how many near scrolls versus huts, and do Renew / Retrain move from far scrolls to this near/hut delivery?
+5. Is the player told which skills are absent this run? (proposal: hidden)

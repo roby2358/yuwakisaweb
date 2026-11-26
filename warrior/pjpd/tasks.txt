@@ -1,8 +1,85 @@
+Priority:   62
+Status: ToDo
+ID: skill-groups-tikw
+Created: 2026-11-26T16:57:48Z
+Updated: 2026-11-26T17:02:01Z
+
+Skill groups: a guaranteed core plus a per-run mix of optional skills, half of them held out, so each game has its own flavor.
+
+Goal: today (skilllibrary.js, new-game setup in index.js near the placeScroll calls) the 10 far story scrolls each claim a random skill, every other skill is in the shared pool, and Renew/Retrain are scrollOnly on far scrolls. Change SkillLibrary so skills fall into groups and each run deals them differently.
+
+Settled design:
+- Core skills (mark with `core: true` in the SKILLS table in config.js): spirit_walk, mountain_skip, water_skip (so a screwy map can always be crossed) and respec (Renew), retrain (the meta skills). Exactly these five. Remove `scrollOnly` from respec and retrain. Phase Step, Mending Light and Skill Seek are deliberately NOT core: survival skills are earned, and Skill Seek is an optional skill that may be held out (a run without it means finding skills or camping huts).
+- Fixed skills are unchanged: channel and return stay scrollOnly, commune and garrison stay shopOnly, restore stays the starting skill.
+- Optional skills = every other skill. At new game SkillLibrary.deal shuffles them: half (round up) appear this run, the rest are held out and can not be obtained by any channel this run. Of the ones that appear, 6 are dealt to far scrolls (marked taken, as today) and the rest are learnable. Name the numbers as constants (held-out fraction 0.5, far-scroll skills 6, near core scrolls 3).
+- Far scrolls: keep placing 10 empty scrolls in the half of the map far from the Maw; 6 get a skill, the other 4 keep poi.skill === null and become Skill-Point scrolls at pickup (existing behavior). Drop the two dedicated far scrolls for respec and retrain.
+- Near core scrolls: SkillLibrary keeps a per-run shuffled `coreOrder` of the five core ids. Place 3 scrolls within hex distance 25 of the start haven (a quarter of the 100-wide map; same world.placeScroll call style as the Channel scroll, which stays within 11) carrying the LAST 3 skills of coreOrder. These are non-binding: core skills are never marked taken, and a scroll whose skill is already known becomes a Skill Point (existing behavior).
+- poolSkills(learned, level) returns unlearned skills that are not shop, not scroll-taken, not held out, and within level; it includes unlearned core skills. Skill Seek (when it appears this run) keeps using it unchanged.
+- Hut assignment in deal and rerollHutSkill draw only from the learnable optional skills (never core, never held out).
+- Persist taken, heldOut and coreOrder in toJSON/fromJSON. No migration for old saves; old saves may break.
+- Do not tell the player which skills are held out.
+- Follow the project rules in CLAUDE.md (plain scripts, no default or optional parameters in new code, lookups over mode conditionals).
+
+Done when: a new DOM-free check test/skilllibrary.js (same style as test/fx.js) deals many times and asserts: core skills are never taken or held out; held-out count is half the optional skills rounded down; exactly 6 far scrolls get distinct optional skills and the rest get null; no held-out or shop or fixed skill is ever returned by poolSkills or assigned to a hut; toJSON/fromJSON round-trips. node test/scripts.js and node test/fx.js still pass. CLAUDE.md, SPEC.md and DYNAMICS.md describe the groups.
+----
+Priority:   61
+Status: ToDo
+ID: hut-core-uwgm
+Created: 2026-11-26T16:57:48Z
+Updated: 2026-11-26T17:02:01Z
+
+Wise Man's Huts teach the core skills first, then turn exotic.
+
+Goal: the first huts a player visits should act as "levelling up" into the basic capabilities (the five skills flagged `core: true` in SKILLS: spirit_walk, mountain_skip, water_skip, respec, retrain). After that a hut offers its assigned optional skill. This assumes SkillLibrary already has core flags, a persisted per-run `coreOrder`, and held-out skills; if it does not, stop and report rather than building them here.
+
+Settled design (showHutDialog in index.js, SkillLibrary in skilllibrary.js):
+- Add a SkillLibrary method that returns the first skill in coreOrder the player has not learned, or null.
+- Each hut gives ONE guaranteed core lesson: a hut that has not yet given its core lesson offers that first-unlearned core skill, if there is one. On Learn, mark the hut poi (a field on the poi; make sure it survives save/load the way poi.skill does).
+- Otherwise the hut behaves as today: it offers its assigned optional skill if the player lacks it; if that skill is known or missing, each visit has the existing 5% chance to dig up a fresh skill, which becomes the hut's standing assignment. That reroll draws from the learnable pool including unlearned core skills (never held-out, shop or scroll-taken skills).
+- There is NO limit on how many skills a hut can teach over a game. Camping a hut and ending turns until the 5% roll hits is an accepted play style; do not add a cap or cooldown.
+- Dialog text, the Train button, grantVisitSP and the MP cost of visiting stay as they are.
+- No migration for old saves.
+
+Done when: node test/scripts.js and node test/fx.js pass; the SkillLibrary method is covered in test/skilllibrary.js (returns coreOrder's first unlearned skill, null when all five are known); reading showHutDialog shows the cases (core lesson, assigned optional, 5% reroll, nothing to teach) as guard clauses, not nested mode conditionals; CLAUDE.md / SPEC.md / DYNAMICS.md mention that each hut gives one core lesson and then teaches optional skills.
+----
+Priority:   60
+Status: ToDo
+ID: levelup-sp-z5fp
+Created: 2026-11-26T16:57:48Z
+Updated: 2026-11-26T16:57:48Z
+
+Level-up grants 1 Skill Point instead of a skill choice.
+
+Goal: skills should come only from places and actions (Wise Man's Huts, Skill Seek, scrolls), so the small per-run learnable pool is not drained by levelling.
+
+Settled design (index.js): where levelling up currently sets player.pendingSkillChoice = true (near the level-up XP handling), call player.gainSP(1) instead. If Skill Points are already capped, nothing extra is given (no XP fallback at level-up). Show the gain in the Level Up dialog next to the stat points (e.g. "+1 Skill Point") and in the combat log. The 3 stat points and the full HP/Aether restore are unchanged. Skill Seek keeps using pendingSkillChoice and showSkillChoiceDialog exactly as now, so keep those. Remove any level-up-only code that becomes dead.
+
+Done when: node test/scripts.js and node test/fx.js pass; no code path from levelling up opens the "New Skill!" dialog; Skill Seek still does; SPEC.md's level-up requirements (the "Each level-up MUST..." lines) and DYNAMICS.md say level-up grants 1 Skill Point and no skill.
+----
+Priority:   59
+Status: ToDo
+ID: hut-gift-rers
+Created: 2026-11-26T17:06:15Z
+Updated: 2026-11-26T17:06:15Z
+
+Wise Man's Hut: 5% chance per visit that the sage hands over a magic item instead of a lesson.
+
+Goal: keep huts "alive" (map locations are never spent) and give visits a small surprise beyond skills.
+
+Settled design (showHutDialog in index.js):
+- On every hut visit, after grantVisitSP, roll Rando.bool with a named constant of 0.05. On a hit the sage gives a magic item INSTEAD of whatever the hut would have offered this visit; the hut's skill state (core lesson, assigned skill, standing assignment) is left untouched, so it is still there on the next visit. The gift roll is independent of the existing 5% new-skill roll and has no cap or cooldown.
+- The item is rollMagicItem() with a random category (the same call ruins and guardian drops use), pushed straight into player.inventory.
+- Dialog: title as the other hut dialogs; body in the same style, with the stage direction in italics and the sage's line "I have this lying around. Perhaps it will be of use." followed by the item's name shown the way magical loot is shown elsewhere (see formatLootHtml). Buttons: the existing Train button and a Continue/Leave button that sets player.mp = 0 like the other hut exits. Log "The Wise Man gives you <item name>!" in the combat log with the loot colour class.
+- On a miss, the hut dialog proceeds exactly as it does now.
+
+Done when: node test/scripts.js and node test/fx.js pass; showHutDialog handles the gift as an early-return guard clause before the skill logic; SPEC.md / DYNAMICS.md mention the hut gift chance.
+----
 Priority:   55
 Status: ToDo
 ID: vigor-school-t5sp
 Created: 2026-06-20T15:28:55Z
 Updated: 2026-06-20T15:51:59Z
+
 Add a Vigor skill school — the "HP-as-mana" school. Vigor is the fourth stat with no offensive identity (currently just an HP sponge). Give "health monsters" oomph by making HP a resource you spend and convert, not just a buffer you hoard.
 
 TWO-AXIS MODEL (the key framing; weapon-leverage and source-of-power are SEPARATE questions):
@@ -31,6 +108,7 @@ Status: ToDo
 ID: ranged-enm-ue9z
 Created: 2026-04-27T06:48:49Z
 Updated: 2026-06-15T03:12:28Z
+
 Add more ranged enemies and put a visual marker on the enemy token so the player can tell at a glance which counters are ranged threats.
 
 (1) Roster expansion — current ranged enemy lineup is sparse. Add ranged variants across the tier curve so ranged threat shows up in early, mid, and late game, not just one or two creature types. Suggested directions, mapping to existing creature themes:
@@ -56,6 +134,7 @@ Status: ToDo
 ID: revive-zqkr
 Created: 2026-05-24T02:35:50Z
 Updated: 2026-06-15T03:12:31Z
+
 Earned revival mechanism: give the player one second-chance per run, but only if they've earned it — e.g. consumable dropped by a rare enemy, purchased at a haven for a steep gold cost, granted by closing N breaches, or rewarded for a quest. Keep hardcore feel by making it a meaningful resource decision, not a default safety net. Decide: one-shot consumable in inventory? Auto-trigger on lethal hit vs. activatable? Revive HP/AE/MP state? Penalty (lost gold, drained Aether, etc.)? Compatibility with existing 'revive' artifact affix.
 ----
 Priority:   43
@@ -63,6 +142,7 @@ Status: ToDo
 ID: land-hp-4mfy
 Created: 2026-04-19T02:40:01Z
 Updated: 2026-06-15T03:12:31Z
+
 Land Health mechanic that rewards cleaning up chaos (shattered/distressed) hexes and offsets a ramped-up Maw bonus. Track total chaos-hex count vs. cleaned count as a world-level "Land Health" ratio (0..1). Pair with warrior-69ti so the endgame Maw bonus is genuinely nastier unless the player has invested in restoration — rush the Maw weak, or sanitize first and fight it stronger.
 
 Player-side bonus delivered via 3 magic items, each tied to a physical archetype (mutually exclusive build choice, not stacking buffs). Deliberately no caster/warding item — pure-warding mages opt themselves out of the Land Health reward system.
@@ -82,37 +162,15 @@ Status: ToDo
 ID: xp-sink-wwg4
 Created: 2026-04-12T20:28:57Z
 Updated: 2026-06-15T03:12:32Z
+
 Add a use for XP after reaching max level 10. Possible idea: spend accumulated XP to heal/restore chaos-corrupted hexes, giving endgame players something meaningful to do with excess XP.
-----
-Priority:   30
-Status: ToDo
-ID: rand-skill-mj87
-Created: 2026-04-27T06:43:23Z
-Updated: 2026-04-27T06:43:23Z
-Procedurally generated attack skills as a parallel pool to the hand-crafted SKILLS table. When the player gets to pick a skill (level-up via pendingSkillChoice, or possibly at ruins/POIs), roll first: with some probability pick a standard skill from SKILLS as today, otherwise roll a randomized attack skill instead.
-
-Random skill template:
-  - Pick 2 random stats from {might, reflex, vigor, warding} as the scaling pair (matches the combo-skill-56hq design philosophy — every attack skill should scale on 2 stats, never 1)
-  - Pick a damage formula: e.g. (statA × N) + (statB × M), or (statA + statB) × scale
-  - Roll a bonus effect from a pool — AoE-1, knockback, bleed/DoT, stun, lifesteal, armor-pierce, chain-to-adjacent, mark-for-bonus-damage, terrain-aware multiplier, etc.
-  - Generate a flavorful name (template-driven, e.g. "[Adjective] [Noun]" pulled from word pools, or stat-themed: might+reflex → "Searing Strike", warding+vigor → "Aether Bulwark Bolt")
-  - Aether cost rolled in the standard tier (≤3 cheap, 4-5 mid, ≥6 finisher) keyed to power level
-
-System pieces:
-  - Random skill generator: takes a Rando, returns a runtime SKILL object with {id, name, scaling, cost, range, effect} matching the SKILLS table shape so the rest of the engine doesn't care if a skill came from the hand-crafted table or the RNG
-  - Skill-pick site: at level-up dialog (and any other skill-pick UI), roll once; if random-skill, generate one and offer it instead of (or alongside) a standard option
-  - Persistence: a rolled-and-kept random skill needs to survive save/load. Either serialize the full skill object on player.learnedSkills (currently a Set of string IDs — would need to widen) or seed-based regen so the same skill comes back from the same seed
-  - Scope check: should random skills be offered alongside standard ones (player picks among 3 of each), or as a separate "wild" option (player rolls into a random one)?
-
-Design feel: every run gets weird, unique tools. Pairs with the broader design principle of "discoverable rule-breaking combos are fun" — random skills + items + stat builds = more degrees of freedom for the player to find a busted combo.
-
-Details TBD: probability of random vs. standard, the bonus-effect pool, formula tuning, name generation pool, save format change for random skills.
 ----
 Priority:   28
 Status: ToDo
 ID: map-deco-hk27
 Created: 2026-04-27T06:45:15Z
 Updated: 2026-06-15T03:12:33Z
+
 Dress up the hex map with per-terrain visual character. The current green/brown/yellow/gray/blue palette is good — clean and readable — but flat. Add subtle decorative accents so each terrain feels like a place, not a colored cell.
 
 Two approaches (probably both):
@@ -135,4 +193,5 @@ Status: ToDo
 ID: medals-h92a
 Created: 2026-04-27T00:29:25Z
 Updated: 2026-04-27T00:31:09Z
+
 Run-end medals + villager testimonials + Unraveler jeers. (1) Medals: extend the Victory final-screen breakdown with thematic badges based on existing counters — e.g. Pacifist (≤20 enemiesDefeated), Cartographer (≥80% map revealed), Pyrrhic (≥10 nearDeathMoments), Restorer (≥50 hexesRestored), Treasurer (≥1000 goldCollected), Maw-Slayer (breachesSealed ≥1), Builder (≥3 garrisonsCompleted). One pass over existing Victory counters; no new tracking needed. (2) Testimonials from villagers: short flavor lines on the end screen "spoken" by havens/villages the player visited, conditional on what they did there (restored nearby terrain, built a garrison, slew an apex predator, accepted a bounty). Warm, grateful tone — extends the existing settlement-gratitude voice. (3) Jeers from the Unraveler: taunting counterparts on what the player failed to do or shied from — breaches left unsealed, corrupted hexes ignored, settlements never visited, weapons hoarded but unused, an ending reached without the Unraveler fully vanquished. Voice consistent with the existing host-jump / vanquished narrative. Pulls testimonials and jeers from separate pools keyed by event tags accumulated during the run. Likely v2 polish — file behind the gold-sink and land-health work.

@@ -3,6 +3,7 @@ Status: Done
 ID: recall-ctr-3yj3
 Created: 2026-04-27T06:58:59Z
 Updated: 2026-05-04T19:30:45Z
+
 Recall should re-center the map on the player. Currently it doesn't, which means after a long expedition the player has to manually pan back to find themselves on the map — defeats the point of "recall."
 
 Fix: in the recall handler, set panX/panY so the player's hex sits at the canvas center. The math is the inverse of hexToScreen for the player's (q, r). Trigger render() after to repaint with the new pan.
@@ -14,6 +15,7 @@ Status: Done
 ID: warrior-jfzf
 Created: 2026-04-19T02:37:28Z
 Updated: 2026-04-26T21:25:58Z
+
 Scale Ruin monster spawns linearly instead of quadratically. In index.js spawnRuinCreatures() at line 3155, replace `const targetMight = player.level * player.level * 2;` with a linear formula (e.g. player.level * K + base). Tune K so early ruins stay interesting while late-game ruins don't explode into unfair fights. Current quadratic: L1=2, L5=50, L10=200.
 ----
 Priority:   65
@@ -21,6 +23,7 @@ Status: Done
 ID: warrior-nzrr
 Created: 2026-04-12T20:26:23Z
 Updated: 2026-04-26T21:49:42Z
+
 When the Unraveler is defeated, show a dialog: if it reforms into another chaos spawn, say "The Unraveler has jumped to another host!"; if it's the final defeat (no chaos spawns left), say "The Unraveler is vanquished! Now close the Maw!"
 ----
 Priority:   65
@@ -28,6 +31,7 @@ Status: Done
 ID: warrior-g356
 Created: 2026-04-12T20:20:39Z
 Updated: 2026-04-26T21:49:42Z
+
 When the player tries to Restore the Maw but the Unraveler is still alive, show a dialog saying the Unraveler must be defeated first before the Maw can be sealed. Only show this dialog once, because the player will have to Restore multiple times.
 ----
 Priority:   60
@@ -35,6 +39,7 @@ Status: Done
 ID: return-mvp-8gj8
 Created: 2026-05-09T21:59:48Z
 Updated: 2026-05-10T17:16:44Z
+
 Closing the Maw grants the player a RETURN (all caps) skill via panel notification. The player can keep playing post-victory; the game ends only when the player dies or invokes RETURN. RETURN should trigger the victory/score breakdown flow.
 ----
 Priority:   60
@@ -42,6 +47,7 @@ Status: Done
 ID: bug-ckd5
 Created: 2026-05-10T16:12:14Z
 Updated: 2026-05-10T16:37:07Z
+
 Bug: chain damage stops if the first target dies in one hit. Investigate the chain/cleave skill logic — when the initial target is killed by the first hit, subsequent chain hops fail to fire. Expected: chain should continue propagating to remaining valid targets even when an earlier link is dispatched in one shot. Check skill resolution in index.js and skill defs in config.js for early-exit on dead target.
 ----
 Priority:   60
@@ -49,6 +55,7 @@ Status: Done
 ID: mundane-eq-28xc
 Created: 2026-04-27T06:55:55Z
 Updated: 2026-05-06T21:04:58Z
+
 Rusty blade and worn leather (the starter weapon/armor) are currently treated as magical items but should be classified as non-magical, so they sell alongside the other mundane gear at the appropriate (lower) price.
 
 Fix: tag `rusty_blade` and `worn_leather` in ALL_EQUIPMENT (config.js) the same way the other non-magic items are flagged — likely a `magical: false` flag, a missing `special` field, or whatever the existing sell logic checks. Verify that the shop/sell dialog routes them through the non-magic price tier and visual treatment, not the magic-item path.
@@ -62,6 +69,7 @@ Status: Done
 ID: combo-skill-56hq
 Created: 2026-04-27T05:55:51Z
 Updated: 2026-06-15T03:35:42Z
+
 Break the "dump everything into warding" dominant strategy by reshaping the skill roster around two tiers, AND repassing aether costs at the same time.
 
 Today the power trio (cosmic bolt, starfall, meteor) all scale ~3× warding, which double-dips with warding's role as the aether pool — at warding=27 each cast hits 81, dwarfing melee, and the aether costs are low enough to spam them.
@@ -90,6 +98,7 @@ Status: Done
 ID: gold-sink-e4ya
 Created: 2026-03-31T01:38:16Z
 Updated: 2026-05-09T18:55:15Z
+
 Add a gold sink or reward for accumulating 1000 gold. Could be a powerful item, a special upgrade, unlocking an ability, or a world event. Give the player something meaningful to spend or celebrate when hitting 1000g.
 ----
 Priority:   55
@@ -97,6 +106,7 @@ Status: Done
 ID: warrior-69ti
 Created: 2026-04-19T02:36:48Z
 Updated: 2026-04-27T00:21:30Z
+
 Double the Maw proximity bonus for enemies to make the endgame more challenging. In index.js mawProximityBonus(), change attack from 10→20, defense from 5→10, and hp from 10→20 at the Maw (scaling linearly to 0 at half the max BFS distance). Verify enemy counters and combat feel appropriately harder near the Maw without trivializing approach hexes.
 ----
 Priority:   55
@@ -104,6 +114,7 @@ Status: Done
 ID: warrior-spwy
 Created: 2026-04-26T08:28:59Z
 Updated: 2026-04-26T21:57:00Z
+
 Final gold score is gold/10 (in Warrior — when computing the player's end-of-game score, divide accumulated gold by 10).
 ----
 Priority:   50
@@ -111,6 +122,7 @@ Status: Done
 ID: stacking-eckg
 Created: 2026-05-24T02:30:02Z
 Updated: 2026-06-15T02:59:31Z
+
 armor and artifact effects don't stack — player.equipped(special) returns the first match across weapon/armor/artifact and stops, so e.g. two pieces with the same passive only apply once. Decide stacking policy per effect and update equipped() or callers accordingly.
 ----
 Priority:   50
@@ -118,6 +130,7 @@ Status: Done
 ID: defshred-nqya
 Created: 2026-05-24T06:38:39Z
 Updated: 2026-06-15T01:54:03Z
+
 Bug: -2 defense effect only applies -1. defense_shred at shredAmount=2 (config.js:414, 457) appears to reduce enemy defense by only 1. Investigate the apply path: actions.js:140-142 adds wep.shredAmount to enemy.defReduction, index.js:360 subtracts defReduction in enemyDefense. Check whether shredAmount is being read correctly off the rolled magical item (might be losing the field during rollMagicItem spread) or whether the cap/clamp is wrong. Compare to Sundering Blow path (actions.js:812) which uses skill.shredAmount.
 ----
 Priority:   50
@@ -125,6 +138,7 @@ Status: Done
 ID: warrior-qjct
 Created: 2026-04-27T00:35:03Z
 Updated: 2026-05-09T18:41:28Z
+
 Add a "Reflect" respec skill purchasable at a haven for 1000 gold. Functions as a gold sink (pairs with gold-sink-e4ya) and gives the player a way to rebuild their skill loadout late-run. The skill represents the warrior reflecting on their training: using Reflect returns all spent skill points to the pool so the player can re-allocate. Implementation: add Reflect to SKILLS in config.js, add a "Buy Reflect (1000g)" option to the haven dialog when the player has the gold and hasn't already learned it; deduct gold and add to player.learnedSkills on purchase. When activated, refund all learnedSkills (other than Restore and Reflect itself) back into an available-points pool the player can re-spend from the Skills panel. Decide whether Reflect itself is consumed on use or stays available.
 ----
 Priority:   48
@@ -132,6 +146,7 @@ Status: Done
 ID: loot-chain-3xgk
 Created: 2026-05-24T16:12:57Z
 Updated: 2026-06-15T03:29:28Z
+
 Loot skill combines with chain/cleave/sweep weapon affixes to loot multiple adjacent enemies. Current executeLoot (actions.js:1063) steals gold from one target only. Design as preAttack + postAttack actions on the Loot skill: primary loot on the target, then on a chain weapon, loot adjacent enemies up to chainCount; on cleave, loot all neighbors; on sweep, loot up to sweepCount neighbors. Per-target gold roll uses the looted enemy's attack stat as the cap (same formula as primary).
 ----
 Priority:   47
@@ -139,6 +154,7 @@ Status: Done
 ID: skill-lvl-fkd5
 Created: 2026-05-24T02:30:50Z
 Updated: 2026-06-20T06:47:42Z
+
 Skill levels: learning a skill multiple times levels it up and increases its power. Design how each skill scales per level (damage, range, AOE radius, duration, AE cost reduction, etc.), how level is stored on the player's skill entry, how the shop/level-up flow offers re-learning, and how the skill panel displays current level + next-level preview.
 ----
 Priority:   46
@@ -146,6 +162,7 @@ Status: Done
 ID: might-def-pmtb
 Created: 2026-04-27T05:57:05Z
 Updated: 2026-05-04T19:34:59Z
+
 Give might a small defense bonus so melee builds get inherent survivability from their primary stat. Add `Math.floor(this.stats.might / 5)` to player.defense() in player.js (alongside the existing `vigor / 3` term). At might=20 that's +4 def, at might=27 it's +5 — meaningful but not overpowering.
 
 Why: melee players currently rely on vigor for both HP and defense, while caster builds dump warding and hide behind range. A small might→def coupling rewards committing to melee and shores up the survivability gap that makes pure-warding so attractive.
@@ -159,6 +176,7 @@ Status: Done
 ID: bug-k3sj
 Created: 2026-05-10T20:45:51Z
 Updated: 2026-05-31T23:16:23Z
+
 Breach and Maw POI hexes should be impassable to the player and to all enemies except BREACH_GUARDIAN (which spawns on the POI hex by design and acts as the door). Today nothing in pathing blocks entry, so the player can walk onto a Maw/Breach hex and so can wraiths, crawlers, etc. — which both looks wrong (the POI is a chaos rift, not standable terrain) and lets units skip past the guardian. Implementation: extend the isPassable / occupancy checks in world.js (and any movement validators in hex.js / index.js that compute reachable hexes and enemy AI move targets) so any hex whose poi is BREACH or MAW is rejected unless the moving entity is a BREACH_GUARDIAN whose home POI matches that hex. Check both the player's reachable BFS (computeReachable) and the enemy AI move/path code in enemies.js. Edge cases: the BREACH_GUARDIAN must still be able to spawn on and occupy the hex; Restore from an adjacent hex must still work (range is from the player's hex, not onto the POI); the Unraveler can stand wherever it likes since it doesn't move via normal pathing.
 ----
 Priority:   45
@@ -166,6 +184,7 @@ Status: Done
 ID: bug-jzxy
 Created: 2026-05-10T20:44:11Z
 Updated: 2026-05-17T18:34:25Z
+
 Breaches must only spawn on land hexes reachable from the Maw via passable terrain (same connected component as the Maw). Today breach POIs can land on islands or disconnected landmasses where the player can never reach them — wasted breaches contribute nothing to encounter pressure or the breach-sealed victory tally. Fix the world-gen placement loop in world.js (see place() and the BREACH branch around the POI placement logic) to filter candidate hexes by BFS reachability from the Maw's hex over isPassable terrain before picking a spot. Probably reuse or mirror the BFS already used by computeMawDistances() in index.js. Verify by generating a few worlds and confirming every breach is in the same connected region as the Maw.
 ----
 Priority:   45
@@ -173,6 +192,7 @@ Status: Done
 ID: food-heal-tz8g
 Created: 2026-05-04T18:11:51Z
 Updated: 2026-05-09T19:07:57Z
+
 Food should heal as well as feed the wallet. When the player picks up a crop (Bountiful Harvest sprout, or any village/haven food source that currently just grants gold), heal 10-20 HP on top of the existing gold reward.
 
 Implementation: in the harvest path in index.js (around line 1617, where `hex.crop` is consumed and `+${goldAmt}g (harvest)` is logged), roll a heal in [10, 20] via Rando.int and apply it to player.hp clamped to player.maxHP(). Log it on its own line with the heal class (e.g. logCombat(`+${heal} HP (food)`, 'log-heal')) so the gold and heal feedback are both visible. Apply the same treatment to the village food pickup site if it's a separate code path.
@@ -186,6 +206,7 @@ Status: Done
 ID: ae-discount-84n9
 Created: 2026-04-27T06:05:45Z
 Updated: 2026-05-09T19:07:57Z
+
 Add passive artifact powers that reduce skill aether cost by 1 / 2 / 3 — the "flip side" of the existing +1 / +2 / +3 AE-per-turn regen artifacts. Same value tier and rarity as the matching regen items.
 
 Mechanics:
@@ -203,6 +224,7 @@ Status: Done
 ID: vigor-gear-zy62
 Created: 2026-04-27T06:40:59Z
 Updated: 2026-05-09T19:39:25Z
+
 Add armor and artifact items that grant +vigor as a stat boost (not flat HP), so the +vigor naturally propagates through both vigor-derived formulas:
   - maxHP(vigor) — bigger HP pool
   - Math.floor(vigor / 3) in player.defense() — extra defense
@@ -223,6 +245,7 @@ Status: Done
 ID: commune-ae-fjc2
 Created: 2026-04-27T06:03:42Z
 Updated: 2026-05-09T18:55:15Z
+
 Raise the Commune skill's aether cost to 20+ so it can only be cast late in the run. Right now it's affordable too early, which spoils the narrative reveal — Commune is meant to land as a late-game beat once the player has invested heavily in warding and aether-pool gear.
 
 Implementation: bump Commune's cost in the SKILLS table in config.js. With max aether scaling off warding plus +3 AE items being common, a 20+ cost means the player needs a strong warding investment and at least one aether-bonus item to even cast it once — naturally gating it past the early game without any explicit level lock.
@@ -234,6 +257,7 @@ Status: Done
 ID: savemigrate-ikfh
 Created: 2026-05-31T08:02:56Z
 Updated: 2026-06-15T04:24:56Z
+
 Remove all save-game migration logic. There are no outstanding old saves in the wild that need migrating, so the scattered backfill/upgrade branches can simply be deleted (no consolidation or version-stamping needed — the current per-class fromJSON structure is fine, it just shouldn't carry migration code anymore).
 
 Migrations to remove:
@@ -249,4 +273,5 @@ Status: Done
 ID: skill-arc-8bz5
 Created: 2026-04-19T02:38:32Z
 Updated: 2026-06-20T06:48:10Z
+
 Add a Skills archive tier so skills fall into three buckets: (1) HUD-equipped (the 4 slots in player.skills), (2) Learned-but-unequipped (swappable from the Skills panel), (3) Archived (learned but tucked away — shown in a collapsed/separate section, not offered for equip by default). Add `player.archivedSkills` (Set) alongside learnedSkills, a button in updateSkillsPanel() to archive/unarchive a learned skill, and persist it in toJSON/fromJSON. Archived skills should not appear in the default unequipped swap list but remain retrievable. Useful when the player accumulates skills they'll never slot (e.g. off-build casters on a melee run) and the swap list gets cluttered.
