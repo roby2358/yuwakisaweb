@@ -382,18 +382,43 @@ function spawnDamageFloat(q, r, amount, color) {
 // any rise in a token's stat since the previous frame floats a "+N" in that
 // stat's colour. Called for each token as it is drawn; one that wasn't drawn
 // last frame (out of sight, new game, load) is only noted, so nothing floats
-// for a gain nobody watched.
+// for a gain nobody watched. During the player's turn the player's own rises
+// are added to turnGains instead and float once, as a turn total, when the
+// turn ends (floatTurnGains).
 const GAIN_FLOATS = {
     hp:     { color: '#8fe07a', seen: new WeakMap() },   // entity -> { value, frame }
     aether: { color: '#6fb8ff', seen: new WeakMap() },
 };
-function floatGain(entity, stat) {
-    const { color, seen } = GAIN_FLOATS[stat];
+const turnGains = { hp: 0, aether: 0 };
+let totallingTurnGains = false;   // true from startPlayerTurn until floatTurnGains
+// The rise in an entity's stat since it was noted at sinceFrame (0 when it
+// wasn't noted then, or didn't rise); notes the current value at fx.frame.
+function sampleGain(entity, stat, sinceFrame) {
+    const { seen } = GAIN_FLOATS[stat];
     const last = seen.get(entity);
-    if (last && last.frame === fx.frame - 1 && entity[stat] > last.value) {
-        spawnFloat(entity.q, entity.r, '+' + (entity[stat] - last.value), color);
-    }
     seen.set(entity, { value: entity[stat], frame: fx.frame });
+    if (!last || last.frame !== sinceFrame || entity[stat] <= last.value) return 0;
+    return entity[stat] - last.value;
+}
+function floatGain(entity, stat) {
+    const rise = sampleGain(entity, stat, fx.frame - 1);
+    if (rise === 0) return;
+    if (entity === player && totallingTurnGains) turnGains[stat] += rise;
+    else spawnFloat(entity.q, entity.r, '+' + rise, GAIN_FLOATS[stat].color);
+}
+function resetTurnGains() {
+    for (const stat in turnGains) turnGains[stat] = 0;
+}
+// Picks up any gain since the last drawn frame first (an action can end the
+// turn before a frame shows its gain), then floats each stat's total.
+function floatTurnGains() {
+    totallingTurnGains = false;
+    for (const stat in turnGains) {
+        turnGains[stat] += sampleGain(player, stat, fx.frame);
+        if (turnGains[stat] > 0) spawnFloat(player.q, player.r, '+' + turnGains[stat], GAIN_FLOATS[stat].color);
+    }
+    resetTurnGains();
+    kickAnim();
 }
 
 function drawFloats() {
@@ -1329,6 +1354,8 @@ function startPlayerTurn() {
     combatAlerted = false;
     if (player.hp > 0 && player.hp / player.maxHP() < 0.10) victory.nearDeathMoments++;
     turnStartTime = performance.now();
+    resetTurnGains();
+    totallingTurnGains = true;
     render();
 }
 
@@ -1342,6 +1369,7 @@ async function gameLoop() {
 
         if (gameOver || gameGeneration !== gen) break;
 
+        floatTurnGains();
         saveGame();
         changePhase('enemy');
         await runEnemyPhase();

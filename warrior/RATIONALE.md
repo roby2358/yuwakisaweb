@@ -86,6 +86,15 @@ removed (ARCHITECTURE_LOG.md names them).
   player, is how the designer wants a cleaving hit to work.
 - **Evidence:** not measured.
 
+### D-11 The player's gain floats show as a turn total — *Decided*
+During the player phase the player's HP and AE rises are summed per stat and float once each,
+"+N" in the stat's colour, when the player ends the turn. Only rises count. Rises outside the
+player phase, and every enemy's, float as they happen.
+- **Alternatives:** float every rise as it lands (one "+1" per step of a stepped gain).
+- **Why:** one number per stat for the turn reads at a glance (G-6); a string of small floats
+  is noise.
+- **Evidence:** not measured.
+
 ---
 
 ## Open questions

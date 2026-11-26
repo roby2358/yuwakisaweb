@@ -1254,7 +1254,7 @@ formalized from the code]
 |---|---|---|
 | log line (`logCombat(msg, cls)`) | text from `say()`; cls log-dmg, log-heal, log-info, log-gold, log-xp | Always, except garrison lines, which log only when the garrison or its target is visible. |
 | damage float | hex, amount; enemy or player colour | On the hit hex. |
-| gain float | +HP / +AE on the player | When HP or AE rises between frames. |
+| gain float | +HP / +AE over a token | D-11. The player's rises during the player phase are totalled per stat and float once, "+N", when the turn ends; the player's rises outside that phase, and every enemy's, float when HP or AE rises between frames. |
 | hit flash | hex | On the hit hex. |
 | token slide | entity, from → to | Any drawn token; jumps beyond SLIDE_MAX_JUMP appear. |
 | enemy-phase pacing | animDelay per move / attack | Only for enemies visible and on screen. |

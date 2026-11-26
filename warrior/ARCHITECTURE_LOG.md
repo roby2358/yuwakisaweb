@@ -2,6 +2,16 @@
 
 Dated entries, newest first. This is the only design doc that records history.
 
+### 2026-11-26 — Player gain floats show as a turn total (D-11)
+
+`floatGain` in index.js no longer floats the player's HP/AE rises during the player phase; it
+adds them to `turnGains` (next to GAIN_FLOATS, reset in `startPlayerTurn`), and
+`floatTurnGains`, called in `gameLoop` where the player phase hands off to the enemy phase,
+floats each non-zero total once as "+N" and resets. Formerly every rise between drawn frames
+floated on its own, so a gain arriving in steps showed one "+1" per step. Enemy-phase gains and
+enemy tokens still float immediately. Restore itself adds its AE in one step, so actions.js is
+unchanged. New decision D-11; ONTOLOGY's gain-float event row cites it. No save shape changed.
+
 ### 2026-11-26 — Uncarried item effects removed (Q-2 → D-10)
 
 mp_penalty, armor_aether_bonus, wall_crown, regen_combo and cleave were deleted from player.js

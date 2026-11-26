@@ -384,6 +384,26 @@ Tuning: don't overpopulate ranged on a single map — they're a counter to slow 
 ----
 Priority:   50
 Status: Done
+ID: gainfloat-j7e8
+Created: 2026-11-26T22:25:14Z
+Updated: 2026-11-26T22:59:02Z
+
+The player's +AE and +HP floats show once, as a turn total, when the turn ends.
+
+Goal: when Restore cleans 5 hexes the player sees five blue "+1" floats. Gain floats come from floatGain() in index.js, which compares a token's hp/aether with the previous drawn frame and floats "+N" for each rise, so a gain that arrives in steps gets one float per step. The designer wants one number per stat for the whole turn, shown at end of turn: restore 5 hexes, see one blue "+5".
+
+Settled design:
+- During the player phase, the player token's hp and aether gains are added to a per-turn total (one for HP, one for AE) instead of floating right away. Keep the totals next to GAIN_FLOATS in index.js; reset them when the player phase starts.
+- When the player ends the turn (the point where the player phase hands off to the enemy phase), float each non-zero total once over the player, "+N" in the stat's existing colour (green HP, blue AE), then reset.
+- Only rises count (spending AE or taking damage doesn't subtract from the total; damage floats are unchanged).
+- Gains outside the player phase (regen and other enemy-phase effects) and every enemy token's gains keep floating immediately as now.
+- Don't change how AE or HP are gained.
+- Check why Restore's gain arrives in steps; if it is per-hex aether adds in actions.js, also add the total once there.
+
+Done when: node test/*.js pass; reading floatGain and the end-turn code shows player-phase gains are totalled and floated once at end of turn; ONTOLOGY.md's events section says the player's HP/AE gain floats show as a turn total at end of turn.
+----
+Priority:   50
+Status: Done
 ID: deadspecs-izyv
 Created: 2026-11-26T22:20:57Z
 Updated: 2026-11-26T22:54:04Z
