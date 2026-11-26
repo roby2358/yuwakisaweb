@@ -10,7 +10,7 @@ Warrior is a single-player tactical hex RPG. Canvas rendering, plain `<script>` 
 
 No build or install step, and no server: double-click `index.html` (it must run from `file://`).
 
-Checks (Node, DOM-free): `node test/scripts.js` (the script includes load as one shared scope, no duplicate top-level names), `node test/fx.js`, `node test/skilllibrary.js` (skill-group dealing) and `node test/text.js` (the text table's shape and fail-fast helper).
+Checks (Node, DOM-free): `node test/scripts.js` (the script includes load as one shared scope, no duplicate top-level names), `node test/fx.js`, `node test/skilllibrary.js` (skill-group dealing), `node test/text.js` (the text table's shape and fail-fast helper) and `node test/creatures.js` (each wildlife tier's melee/ranged pair and the ranged spawn share).
 
 ### Plain scripts, not modules
 
@@ -27,7 +27,7 @@ index.js (orchestrator: rendering, input, UI, save/load, combat math, dialogs)
   ├─ player.js       (Player class: stats, equipment, skills, inventory, toJSON/fromJSON)
   ├─ world.js        (GameWorld class: hex grid, POIs, fog, LOS; toJSON/fromJSON)
   ├─ skilllibrary.js (SkillLibrary class: per-run skill groups (core / fixed / optional, half of optional held out) and discovery channels so no skill is awarded twice; each Wise Man's hut gives one core lesson (`firstUnlearnedCore`), then teaches optional skills; checked by `node test/skilllibrary.js`)
-  ├─ enemies.js      (EnemyManager class: enemy list, spawn, defs; uses colortheory)
+  ├─ enemies.js      (EnemyManager class: enemy list, spawn, defs; per-run wildlife tiers, each a melee creature plus a rarer ranged one (`spawnWeight`); uses colortheory; checked by `node test/creatures.js`)
   ├─ text.js         (TEXT table of every player-facing line + say(key, vars): picks a variant via Rando, styles by kind, fills {placeholders}, throws on a missing key, an unfilled placeholder or an unused var; `itemSpecialText(item)` fills an item special's stat line from the item's own fields; checked by `node test/text.js`, which also checks every literal `say()` key in index.js, actions.js and enemy_ai.js)
   ├─ actions.js      (player Action classes + MP/aether cost helpers; see below)
   ├─ enemy_ai.js     (enemy AI classes, maw-distance math, runEnemyAiPhase; see below)
@@ -121,7 +121,7 @@ Canvas clicks are ignored when `phase !== 'player'`.
 
 - Pure client-side JavaScript (plain script includes, no ES modules, no npm; Node is used only to run `test/`)
 - No build step, no bundler, no external dependencies
-- No gameplay tests; `test/` holds the load/motion/skill-dealing/text checks above
+- No gameplay tests; `test/` holds the load/motion/skill-dealing/text/creature checks above
 - Game state lives as `index.js` top-level `let`s (shared script scope, not `window` properties)
 - Lookups via config tables: `ALL_EQUIPMENT[id]`, `ENEMY_DEFS[type]`, `SKILLS[id]`, `TERRAIN[...]`
 - Player-facing wording lives in `text.js`, not at call sites: `say('key', { name })` (always pass the vars object, `{}` when none). Prose kinds (narration/stage/speech) render to `<p>` blocks; labels and log lines are plain text. Functional entries keep one variant; flavor entries (huts, scrolls/ruins, havens/villages/smith greetings, level-up/Skill Seek) carry 20, every variant with the same placeholders. Log colour classes stay at the call site. Skill names/descriptions and item names stay in config.js as data.

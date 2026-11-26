@@ -114,13 +114,28 @@ class EnemyAI {
         return aggro;
     }
 
+    enemyCanRangedAttack(enemy, def, newDist, ctx) {
+        return enemyIsRanged(def) && newDist <= def.range
+            && ctx.world.hasLOS(enemy, ctx.player);
+    }
+
+    doEnemyRanged(enemy, def, ctx) {
+        ctx.dealDamageToPlayer(ctx.enemyRangedAttack(enemy, def), say('src_enemy_ranged', { name: def.name }), false, { attacker: enemy, isRanged: true });
+    }
+
     // Standard "see player → chase and melee" used by wildlife/monster/guardian.
+    // A ranged creature with a clear shot holds its ground and fires instead.
     // Returns true if the enemy spent its turn aggro-chasing.
     async tryAggroChase(enemy, def, aggro, occupied, ctx) {
         const { player, em, world } = ctx;
         const dist = hexDistance(enemy.q, enemy.r, player.q, player.r);
         if (dist > aggro) return false;
         this.soundAlarm(enemy, ctx);
+        if (dist > 1 && this.enemyCanRangedAttack(enemy, def, dist, ctx)) {
+            this.doEnemyRanged(enemy, def, ctx);
+            await ctx.animDelay(150); ctx.render();
+            return true;
+        }
         const prevKey = hexKey(enemy.q, enemy.r);
         em.moveWildlifeToward(enemy, player.q, player.r, occupied, player.q, player.r, world);
         if (this.enemyIsVisible(enemy, prevKey, ctx)) { await ctx.animDelay(80); ctx.render(); }
@@ -302,7 +317,7 @@ class ChaosAI extends EnemyAI {
         }
 
         // Ranged-capable chasers (Void Stalker): 50% prefer ranged, skip closing in
-        const prefersRanged = def.rangedAttack && def.behavior === 'chase' && Rando.bool(0.5);
+        const prefersRanged = enemyIsRanged(def) && def.behavior === 'chase' && Rando.bool(0.5);
 
         // Aggro check comes first: a detected player rouses the swarm and
         // overrides the swarm march. Guards camp their breach but still raise
@@ -394,11 +409,6 @@ class ChaosAI extends EnemyAI {
         return false;
     }
 
-    enemyCanRangedAttack(enemy, def, newDist, ctx) {
-        return def.rangedAttack && def.range && newDist <= def.range
-            && ctx.world.hasLOS(enemy, ctx.player);
-    }
-
     doEnemyMelee(enemy, def, ctx) {
         const { player, em, dealDamageToPlayer, logCombat, killEnemy } = ctx;
         dealDamageToPlayer(ctx.enemyMeleeAttack(enemy, def), def.name, false, { attacker: enemy });
@@ -414,10 +424,6 @@ class ChaosAI extends EnemyAI {
             ctx.sound.hitEnemy();
             if (enemy.hp <= 0) killEnemy(enemy);
         }
-    }
-
-    doEnemyRanged(enemy, def, ctx) {
-        ctx.dealDamageToPlayer(ctx.enemyRangedAttack(enemy, def), say('src_enemy_ranged', { name: def.name }), false, { attacker: enemy, isRanged: true });
     }
 
     enemyAttacks(enemy, def, prefersRanged, newDist, ctx) {

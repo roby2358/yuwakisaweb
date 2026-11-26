@@ -265,6 +265,28 @@ function drawStunOverlay(cx, cy) {
     ctx.fill();
 }
 
+// Ranged-threat badge: an amber disc with a dark arrow in the token's top-right
+// corner, clear of the sprite (centered) and the stats (bottom row).
+const RANGED_MARKER_FILL = '#ffb300';
+
+function drawRangedMarker(cx, cy) {
+    const r = 5.5;
+    const bx = cx + COUNTER_SIZE / 2 - 1, by = cy - COUNTER_SIZE / 2 + 1;
+    ctx.fillStyle = RANGED_MARKER_FILL;
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(bx, by, r, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    // Arrow: shaft lower-left to upper-right, head at the upper right
+    const a = r * 0.55;
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.moveTo(bx - a, by + a); ctx.lineTo(bx + a, by - a);
+    ctx.moveTo(bx + a, by - a); ctx.lineTo(bx + a - 3, by - a);
+    ctx.moveTo(bx + a, by - a); ctx.lineTo(bx + a, by - a + 3);
+    ctx.stroke();
+}
+
 const ATTACK_ICON_STROKE = 'rgba(200, 200, 200, 0.9)';
 
 function drawCrosshair(cx, cy) {
@@ -1670,6 +1692,7 @@ function drawScene() {
         const chaosLabelColor = (def.chaosSpawned && enemy.type !== ENEMY_TYPE.PHASE_WRAITH && !isGuardianSprite) ? '#d580ff' : null;
         const spriteTint = (def.chaosSpawned && !isGuardianSprite) ? '#d580ff' : null;
         drawCounter(x, y, color, def.label, enemy.hp / effMaxHp, chaosLabelColor, { atk: enemyMeleeAttack(enemy, def), def: enemyDefense(enemy, def), mov: def.speed || 1 }, sprite, spriteTint);
+        if (enemyIsRanged(def)) drawRangedMarker(x, y);
         if (enemy.stunnedNextTurn) drawStunOverlay(x, y);
         floatGain(enemy, 'hp');
     }

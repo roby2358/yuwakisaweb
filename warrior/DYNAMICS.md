@@ -21,7 +21,7 @@ One character. One life. No party, no reserves. Every HP point matters because d
 Breaches bleed chaos into the world continuously, spawning twisted creatures (15% per turn per open breach — 50% Void Stalkers, 25% Phase Wraiths, 25% Flux Archers). The longer you wait, the worse it gets. Meanwhile, chaos-spawned enemies shatter terrain as they move (2% per turn), increasing movement costs and degrading the map. Sealing breaches is the only way to reduce pressure, but each is guarded by a Breach Guardian. Standing still makes things worse — the game demands forward momentum.
 
 ### Readable Consequences
-Yellow hexes show where you can go. Red hexes show what you can attack. Blue hexes show targeting range. Counter stats (attack bottom-left, defense bottom-right) tell you exactly what you're facing. Enemy detection ranges, HP bars, and type labels are all visible. The counter label turns dark during player phase and gold-tinted during enemy phase — a glanceable indicator of whose turn it is. The R button on the skill bar makes ranged attacks discoverable. Skill usage categories (pristine/non-combat/anytime) are reflected in the skill bar — grayed out when conditions aren't met. Ground Weeps provides a full-map threat heatmap for strategic planning.
+Yellow hexes show where you can go. Red hexes show what you can attack. Blue hexes show targeting range. Counter stats (attack bottom-left, defense bottom-right) tell you exactly what you're facing. Enemy detection ranges, HP bars, and type labels are all visible, and ranged enemies carry an amber arrow badge in the token's top-right corner so ranged threats read without hovering. The counter label turns dark during player phase and gold-tinted during enemy phase — a glanceable indicator of whose turn it is. The R button on the skill bar makes ranged attacks discoverable. Skill usage categories (pristine/non-combat/anytime) are reflected in the skill bar — grayed out when conditions aren't met. Ground Weeps provides a full-map threat heatmap for strategic planning.
 
 ### Variable Reinforcement
 Map generation (diamond-square heightmap), enemy placement, loot tables, skill unlock choices — every game is different. Half the optional skills are held out each run (see Skill Groups) and only 3 are offered per successful Skill Seek (pick 1), so the player builds a different character each run. Wise Man huts (8-12 per map) add another source of skill discovery: each hut gives one core lesson, then teaches optional skills (5% chance the hut's skill refreshes per visit, and an independent 5% chance the sage hands over a magic item instead of a lesson). The procedurally generated equipment means upgrade paths vary dramatically. Prospect's 20% gold discovery chance and Skill Seek's level-scaled gamble add controlled variance to non-combat play.
@@ -122,7 +122,7 @@ Press 1-4 to activate. Each skill usable once per turn. Costs Aether. Some requi
 | The Unraveler | 100 | 12 | 6 (range 6) | 6 | 1 | 6 | Boss | Spawns a Void Stalker every 3 turns. Dual melee+ranged. |
 
 ### Dual Attack System
-Enemies with a `rangedAttack` field (Void Stalker, Breach Guardian, Unraveler) fire ranged *in addition to* melee when in melee range. Enemies without `rangedAttack` (Flux Archer) fire their `attack` stat at range but only when not in melee range. Ranged-capable chasers (Void Stalker) have a 50% chance per turn to prefer ranged fire and skip closing in. Flux Archers only fire 50% of the time when in range.
+Any enemy with a `range` is ranged (`enemyIsRanged`); its shot uses `rangedAttack` when set, else its `attack` stat (Flux Archer). Ranged tokens carry an amber arrow badge in the top-right corner. Dual attackers (Void Stalker, Breach Guardian, Unraveler) fire ranged *in addition to* melee when in melee range. The kiting Flux Archer fires only when not in melee range. Ranged-capable chasers (Void Stalker) have a 50% chance per turn to prefer ranged fire and skip closing in. Flux Archers only fire 50% of the time when in range.
 
 ### Enemy Behaviors
 - **Chase**: A* pathfinding toward player when within detection range, else 50% chance to wander randomly.
@@ -130,7 +130,7 @@ Enemies with a `rangedAttack` field (Void Stalker, Breach Guardian, Unraveler) f
 - **Guard**: Stays within guardRadius (2) of home POI. Chases if player enters detection range but won't leave the guard zone.
 - **Teleport**: 30% chance per turn to teleport to a random passable hex within teleportRange (3) of the player.
 - **Boss**: Chases when in detection range (6). Spawns Void Stalker adjacent every 3 turns.
-- **Wildlife**: Procedurally generated neutral creatures. Chase player when within aggro range (varies per creature), otherwise 30% chance to wander. Avoid shattered terrain when wandering.
+- **Wildlife**: Procedurally generated neutral creatures. Chase player when within aggro range (varies per creature), otherwise 30% chance to wander. Avoid shattered terrain when wandering. Ranged wildlife (any `range`) that is aggroed and has a clear shot from 2+ hexes holds its ground and fires instead of closing. The same hold applies to ranged monster and ruins-guardian tiers, which share this chase path.
 
 ### Enemy State
 Enemies can accumulate state from player attacks:
@@ -138,7 +138,7 @@ Enemies can accumulate state from player attacks:
 - `burnDamage`: damage dealt at start of next enemy phase (from burn weapon effects, Immolate skill), ignores defense
 
 ### Wildlife
-12 procedurally generated creature types per game, with random fantasy names (e.g., "Ashtigeron", "Velpantherine"), unique colors from a random color scheme, and stats scaling from 3-12 attack. Wildlife is distinct from chaos-spawned enemies: they don't shatter terrain, don't grant Aether on kill, and avoid shattered hexes. 20 wildlife spawn at game start (outside player vision, on non-shattered terrain), with a 2% per turn chance to spawn more.
+12 procedurally generated creature types per game, with random fantasy names (e.g., "Ashtigeron", "Velpantherine"), unique colors from a random color scheme, and stats scaling from 3-30 attack. Each tier also has a ranged counterpart (e.g. "Velith Slinger"): three-quarters of the tier's attack for both melee and shot, about 60% of its HP, range 2 (tiers 0-3), 3 (4-7) or 4 (8-11), so the top tier is a ranged ruins-guardian. Ranged creatures spawn at a quarter the weight of their melee kin (about a quarter of wildlife). When aggroed with a clear shot from 2+ hexes they hold and fire; otherwise they close and melee like other wildlife. Wildlife is distinct from chaos-spawned enemies: they don't shatter terrain, don't grant Aether on kill, and avoid shattered hexes. 20 wildlife spawn at game start (outside player vision, on non-shattered terrain), with a 2% per turn chance to spawn more.
 
 ### Initial Spawning
 - Void Stalkers: 2d4

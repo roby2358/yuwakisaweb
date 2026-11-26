@@ -230,6 +230,13 @@ Updated: 2026-11-26T18:28:24Z
 
 More flavor variants beyond the huts / scrolls & ruins / havens & villages / level-up / Skill Seek / smith batch: the breach-loot line ("Closing the breach scatters its hoard...") and the Maw and Unraveler narration lines. Also consider whether Renew's stat refund should skip the level-up prose (it reuses the Level Up dialog).
 ----
+Score:   45
+ID: chaos-mix-873g
+Created: 2026-11-26T18:38:29Z
+Updated: 2026-11-26T18:38:29Z
+
+Flux Archers now actually shoot (they had a range but no rangedAttack, so the AI never fired them). That leaves the chaos/breach spawn pool about 5/7 ranged, well above the 20-30% ranged share wildlife gets. Playtest how strong Archers feel, then decide whether to rebalance the chaos pool.
+----
 Score:   40
 ID: prize-scroll-esnu
 Created: 2026-11-26T17:42:48Z
@@ -244,12 +251,33 @@ Updated: 2026-11-26T18:08:41Z
 
 Static UI text in index.html (HUD HP/AE/MP labels, End Turn, New, panel headings, intro buttons, tooltips) and the score labels from the victory breakdown are not in the text table yet. Moving them needs either a fill-on-load pass over the HTML or say() calls in victory.js. Worth it only if the table is to be the single source for every visible string (e.g. for localization).
 ----
+Score:   40
+ID: enemy-hover-25zh
+Created: 2026-11-26T18:38:29Z
+Updated: 2026-11-26T18:38:29Z
+
+Show an enemy's attack range in the hover bar next to its name and HP, so the ranged badge on the token has a number behind it.
+----
 Score:   35
 ID: renew-dialog-rk9x
 Created: 2026-11-26T17:50:03Z
 Updated: 2026-11-26T17:50:03Z
 
 Renew (respec) refunds stat points through the "Level Up!" dialog, so that title shows when the player has not levelled. A separate "Assign stat points" dialog might read better.
+----
+Score:   30
+ID: sprite-rows-s27w
+Created: 2026-11-26T18:38:29Z
+Updated: 2026-11-26T18:38:29Z
+
+With ranged wildlife there are 24 wildlife types but only 18 enemy sprite rows, so rows wrap and some creatures share a row (they still get random columns). More sprite art, or a deliberate row mapping, would keep each creature distinct.
+----
+Score:   30
+ID: garrison-def-xpxh
+Created: 2026-11-26T18:38:29Z
+Updated: 2026-11-26T18:38:29Z
+
+Garrisons have no defender units. Should a garrison be staffed (including ranged defenders) so it feels held?
 ----
 Score:   75
 ID: skill-groups-j5xe

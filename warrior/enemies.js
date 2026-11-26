@@ -8,12 +8,57 @@ function wildlifeBehaviorFor(attack) {
 
 const NUM_CREATURE_TIERS = 12;
 
+const CREATURE_NAME_PREFIXES = [
+    'Ash','Vel','Dra','Gor','Mur','Thr','Zan','Kri','Vor','Eld',
+    'Grim','Sar','Fen','Bal','Rix','Nar','Osi','Bry','Cal','Dul'
+];
+const CREATURE_NAME_SUFFIXES = [
+    'ax','or','ith','old','un','ek','ang','us','ar','on',
+    'ine','oth','usk','el','arn','ox'
+];
+
+// Each tier has a melee creature and a rarer ranged one. The ranged weight
+// keeps them near a quarter of wildlife on the map (their packs run a bit
+// larger, since pack size divides by attack) — enough to shape an approach,
+// not so many that clusters of shooters pin the player down.
+const RANGED_CREATURE_SPAWN_WEIGHT = 0.25;
+
+// Ranged role words by tier band (early / mid / late), appended to the
+// creature's procedural name so the role reads in the log too.
+const RANGED_CREATURE_ROLES = [
+    ['Slinger', 'Skirmisher', 'Spitter', 'Archer'],
+    ['Hexer', 'Hurler', 'Spellslinger', 'Caster'],
+    ['Warden', 'Sentinel', 'Stormcaller', 'Magus']
+];
+
+// Ranged reach by the same tier bands: 2 early, 3 mid, 4 late.
+const RANGED_CREATURE_RANGE = [2, 3, 4];
+
+// Draws names from makeName until one is unused, and claims it.
+function uniqueCreatureName(usedNames, makeName) {
+    let name;
+    do { name = makeName(); } while (usedNames.has(name));
+    usedNames.add(name);
+    return name;
+}
+
+// The palette color with saturation shifted by satShift and lightness
+// jittered ±0.15 (held to 0.3-0.7), as a hex string.
+function variedCreatureColor(baseColor, satShift) {
+    const [h, s, l] = ColorTheory.rgbToHsl(baseColor[0], baseColor[1], baseColor[2]);
+    const sat = Math.max(0, Math.min(1, s + satShift));
+    const [r, g, b] = ColorTheory.hslToRgb(h, sat, Math.max(0.3, Math.min(0.7, l + Rando.float(-0.15, 0.15))));
+    return ColorTheory.rgbToHex(r, g, b);
+}
+
 // Gaussian weight over tiers, peaked at `peakTier`. Sigma = 2 so ±2 tiers common, ±4 rare.
+// Scaled by each def's spawnWeight.
 function spawnTierWeights(creatureDefs, peakTier) {
     const sigma = 2;
     return Object.keys(creatureDefs).map(type => {
-        const d = (creatureDefs[type].tier - peakTier) / sigma;
-        return { item: type, weight: Math.exp(-d * d) };
+        const def = creatureDefs[type];
+        const d = (def.tier - peakTier) / sigma;
+        return { item: type, weight: Math.exp(-d * d) * def.spawnWeight };
     });
 }
 
@@ -55,63 +100,68 @@ class EnemyManager {
     }
 
     generateCreatureTypes() {
-        const prefixes = [
-            'Ash','Vel','Dra','Gor','Mur','Thr','Zan','Kri','Vor','Eld',
-            'Grim','Sar','Fen','Bal','Rix','Nar','Osi','Bry','Cal','Dul'
-        ];
         const predators = [
             'tiger','lion','cheetah','wolf','bear','hawk',
             'shark','viper','panther','cobra','eagle','falcon'
-        ];
-        const suffixes = [
-            'ax','or','ith','old','un','ek','ang','us','ar','on',
-            'ine','oth','usk','el','arn','ox'
         ];
 
         const usedNames = new Set();
         const palette = ColorTheory.randomScheme(() => Math.random());
 
         for (let i = 0; i < NUM_CREATURE_TIERS; i++) {
-            let name;
-            do {
-                const prefix = Rando.choice(prefixes);
-                const predator = Rando.choice(predators);
-                const suffix = Rando.choice(suffixes);
-                name = prefix + predator + suffix;
-            } while (usedNames.has(name));
-            usedNames.add(name);
-
             const attack = Math.round(3 * Math.pow(10, i / 11));
-            const hp = attack * 4 + Rando.int(-3, 3);
-            const defense = Math.floor(attack / 4);
-            const xp = attack * 2;
-            const gold = Math.max(1, Math.floor(attack / 3));
             const detectRange = Math.min(7, 4 + Math.floor(attack / 4));
-            const aggroRange = Rando.int(3, detectRange);
-
             const baseColor = palette[i % palette.length];
-            const [bh, bs, bl] = ColorTheory.rgbToHsl(baseColor[0], baseColor[1], baseColor[2]);
-            const varied = ColorTheory.hslToRgb(bh, Math.min(1, bs + 0.1), Math.max(0.3, Math.min(0.7, bl + Rando.float(-0.15, 0.15))));
-            const color = ColorTheory.rgbToHex(varied[0], varied[1], varied[2]);
 
-            const typeKey = 'creature_' + i;
-            this.creatureDefs[typeKey] = {
-                name,
-                label: name[0],
-                hp,
-                attack,
-                defense,
+            // Fields the tier's melee and ranged creatures share.
+            const tierFields = {
                 speed: 1,
                 detectRange,
-                aggroRange,
-                xp,
-                gold,
+                aggroRange: Rando.int(3, detectRange),
+                xp: attack * 2,
+                gold: Math.max(1, Math.floor(attack / 3)),
                 tier: i,
                 behavior: wildlifeBehaviorFor(attack),
-                chaosSpawned: false,
-                color
+                chaosSpawned: false
             };
+
+            const name = uniqueCreatureName(usedNames, () =>
+                Rando.choice(CREATURE_NAME_PREFIXES) + Rando.choice(predators) + Rando.choice(CREATURE_NAME_SUFFIXES));
+            this.creatureDefs['creature_' + i] = {
+                ...tierFields,
+                name,
+                label: name[0],
+                hp: attack * 4 + Rando.int(-3, 3),
+                attack,
+                defense: Math.floor(attack / 4),
+                spawnWeight: 1,
+                color: variedCreatureColor(baseColor, 0.1)
+            };
+
+            this.creatureDefs['ranged_creature_' + i] =
+                this.rangedCreatureDef(tierFields, attack, baseColor, usedNames);
         }
+    }
+
+    // The ranged counterpart of a tier: frailer than its melee kin, shoots
+    // and strikes at three-quarters of the tier's attack (no rangedAttack, so
+    // the shot uses attack). Behavior keys off the tier's attack, so the top
+    // tier is a ranged ruins-guardian.
+    rangedCreatureDef(tierFields, tierAttack, baseColor, usedNames) {
+        const band = Math.min(2, Math.floor(tierFields.tier / 4));
+        const name = uniqueCreatureName(usedNames, () =>
+            Rando.choice(CREATURE_NAME_PREFIXES) + Rando.choice(CREATURE_NAME_SUFFIXES) + ' ' + Rando.choice(RANGED_CREATURE_ROLES[band]));
+        return {
+            ...tierFields,
+            name,
+            label: name[0],
+            hp: Math.max(4, Math.round(tierAttack * 2.5) + Rando.int(-2, 2)),
+            attack: Math.max(1, Math.round(tierAttack * 0.75)),
+            range: RANGED_CREATURE_RANGE[band],
+            defense: Math.floor(tierAttack / 6),
+            spawnWeight: RANGED_CREATURE_SPAWN_WEIGHT,
+            color: variedCreatureColor(baseColor, -0.15)
+        };
     }
 
     spawnInitial(world, playerQ, playerR) {

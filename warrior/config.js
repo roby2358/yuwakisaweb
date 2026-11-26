@@ -253,6 +253,13 @@ const ENEMY_DEFS = {
     }
 };
 
+// An enemy counts as ranged iff it has reach — range > 0 — mirroring
+// weaponIsRanged. Its shot uses rangedAttack when set, else attack (see
+// enemyRangedAttack). The token draw marks these so the threat reads at a glance.
+function enemyIsRanged(def) {
+    return def.range > 0;
+}
+
 // ---- Equipment ----
 const EQUIP_SLOT = { WEAPON: 'weapon', ARMOR: 'armor', ARTIFACT: 'artifact' };
 

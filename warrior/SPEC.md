@@ -122,6 +122,7 @@ All enemies MUST have: name, HP, attack damage, defense, movement speed (hexes p
 - **Flux Archer**: Ranged attacker (speed 1, range 3). Low HP, low defense. Tries to maintain 2-3 hex distance from the player. Found in ruins and open terrain
 - **Phase Wraith**: Teleporter (speed 1, but can teleport up to 3 hexes). Medium HP. Appears and disappears unpredictably. Found near breaches. 30% chance each turn to teleport to a random hex within 3 of the player
 - **Breach Guardian**: Mini-boss (speed 1). High HP, high damage, medium defense. Guards a breach. Does not wander — stays within 2 hexes of its breach. Defeating it while adjacent to the breach closes the breach
+- **Ranged wildlife**: Each procedural wildlife tier MUST have a ranged counterpart (range 2 early, 3 mid, 4 late tiers) that is frailer and hits softer than its melee kin, and spawns rarely enough that roughly a quarter of wildlife is ranged. When aggroed with line of sight from 2+ hexes it MUST hold position and fire rather than close
 - **The Unraveler**: Final boss at the Maw — a manifestation of the world's chaos given form. Very high HP, alternates between melee and ranged attacks. Spawns 1 Void Stalker every 3 turns during the fight
 
 #### Enemy Spawning
@@ -326,6 +327,7 @@ Each artifact MUST have: name, and a passive effect.
 - The player token MUST be visually distinct from all enemy tokens (gold color, "P" label)
 - Enemy tokens MUST use the existing ColorTheory-generated palette with letter labels matching their type (V for Void Stalker, C for Crawler, A for Archer, W for Wraith, G for Guardian, U for Unraveler)
 - HP bars MUST use green-to-red gradient based on percentage
+- Every ranged enemy token (any enemy with a range) MUST carry a small ranged-threat badge (amber arrow disc, top-right corner) that does not cover the sprite or the stat row
 - Skill and panel UI MUST use semi-transparent dark backgrounds consistent with the existing HUD style
 - Points of interest MUST be rendered with distinct icons/symbols on their hexes
 - Reachable hexes MUST highlight in yellow; attack targets MUST highlight in red; skill targets MUST highlight in blue
