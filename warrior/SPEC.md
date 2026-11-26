@@ -44,8 +44,8 @@ Overlay panels slide in from the right when toggled:
 
 ### World Map
 
-- The world MUST be a rectangular hex grid (60 columns x 40 rows), pointy-top hexes, using axial coordinates
-- Terrain MUST be generated via diamond-square heightmap with the following distribution: 25% water, 50% plains, 10% forest, 10% hills, 1% gold deposits, 2% quarry, 5% mountains
+- The world MUST be a rectangular hex grid (100 columns x 100 rows), pointy-top hexes, using axial coordinates
+- Terrain MUST be generated via diamond-square heightmap with the following distribution: 25% water, 50% plains, 10% forest, 8% hills, 2% quarry, 5% mountains
 - Edge hexes MUST be water
 - About 1% of the map MUST be prize hexes (lighter "special" plains, forest and hills) that each hide one reward behind the same sparkle: gold (weight 7), a skill gem (weight 2) or a random-category magic item (weight 1), given once on entry. Prize hexes MUST NOT hold scrolls; story scrolls placed later ride special plains of their own
 - The map MUST support panning via left-button drag (a press that moves past a small threshold pans; one that stays put is a click)
@@ -54,7 +54,7 @@ Overlay panels slide in from the right when toggled:
 ### Fog of War
 
 - All hexes MUST start hidden (black) except those within the player's vision radius
-- The player MUST reveal hexes within a radius of 4 hexes from their current position
+- The player MUST reveal hexes within a radius of 6 hexes (plus any vision bonus from equipment) from their current position
 - Previously revealed hexes MUST remain visible but SHOULD appear slightly dimmed compared to currently visible hexes
 - Enemy tokens MUST only be visible when within the player's current vision radius
 - Points of interest (settlements, ruins, breaches) MUST remain visible once revealed
@@ -63,10 +63,10 @@ Overlay panels slide in from the right when toggled:
 
 The map MUST generate the following points of interest on passable, non-edge terrain:
 
-- **Havens** (2-3): Major settlements. Fully heal and restore Aether. Offer equipment for sale. Marked with a shield icon
-- **Camps** (4-6): Minor rest stops. Heal 50% of max HP and restore 50% Aether. Marked with a campfire icon
-- **Ruins** (3-5): Contain loot (equipment or consumables) guarded by 1-3 enemies. Marked with a broken column icon. Each ruin MUST be lootable only once
-- **Breaches** (3-4): Wounds in the world where chaos seeps through, spawning twisted creatures. Each breach MUST have a guardian (mini-boss). Closing a breach (defeating its guardian while adjacent) stops its spawning. Marked with a swirl icon
+- **Havens** (4-6): Major settlements. Fully heal and restore Aether. Offer equipment for sale. Marked with a castle icon
+- **Villages** (8-12): Minor rest stops. Heal 50% of max HP and restore 50% Aether. A weaponsmith sells non-magical gear. Marked with a house icon
+- **Ruins** (12-20): Searching a fresh ruin MUST stir up creatures within 2 hexes of it (their tier peak biased two tiers above the surrounding wildlife's, spawning until their total attack reaches player level x 10). Once no enemy stands within 2 hexes, entering the ruin again MUST yield its loot: 5-20 gold, 1-3 non-magical items and 1 magical item. Ruins MUST never be used up: searching a looted (quiet) ruin MUST have a 10% chance to stir new creatures, which guard a fresh haul. A search that stirs nothing, and taking the loot, MUST end the player's movement for the turn. Marked with a castle-ruins icon
+- **Breaches** (6-8): Wounds in the world where chaos seeps through, spawning twisted creatures. Each breach MUST have a guardian (mini-boss). Closing a breach (defeating its guardian while adjacent) stops its spawning. Marked with a swirl icon
 - **The Maw** (1): The final objective — the deepest wound, where reality itself is dissolving. Placed on the right side of the map. Marked with a pulsing star icon. The player MUST have closed at least 2 breaches before the Maw can be challenged
 
 Points of interest MUST be placed with minimum distance constraints so they don't cluster.
@@ -82,8 +82,8 @@ Points of interest MUST be placed with minimum distance constraints so they don'
 - The player MUST have the following resources:
   - **HP**: Health points. Reaching 0 MUST trigger defeat
   - **Aether**: Cosmic energy for skills. Maximum is 5 + (Warding * 2). Restored at havens/camps
-  - **MP**: Movement points per turn. Base 5
-- The player MUST start at a randomly chosen haven
+  - **MP**: Movement points per turn. Base 4
+- The player MUST start at the haven or village farthest from the Maw by movement cost, skipping any that sits on hills terrain
 
 ### Combat
 
@@ -185,15 +185,15 @@ All enemies MUST have: name, HP, attack damage, defense, movement speed (hexes p
 
 - The player MUST gain XP from defeating enemies
 - Level-up XP thresholds MUST follow a polynomial curve: XP needed = 50 * level^1.8 (rounded to nearest 10)
-  - Level 2: 50 XP
-  - Level 3: 150 XP
-  - Level 4: 310 XP
-  - Level 5: 520 XP
-  - Level 6: 780 XP
-  - Level 7: 1100 XP
-  - Level 8: 1470 XP
-  - Level 9: 1900 XP
-  - Level 10: 2390 XP
+  - Level 2: 170 XP
+  - Level 3: 360 XP
+  - Level 4: 610 XP
+  - Level 5: 910 XP
+  - Level 6: 1260 XP
+  - Level 7: 1660 XP
+  - Level 8: 2110 XP
+  - Level 9: 2610 XP
+  - Level 10: 3150 XP
 - Each level-up MUST grant 3 stat points to distribute freely
 - Each level-up MUST grant 1 Skill Point (nothing extra if Skill Points are already at their cap) and MUST NOT grant or offer a skill
 - Each level-up MUST fully restore HP and Aether
@@ -322,8 +322,8 @@ Each artifact MUST have: name, and a passive effect.
 ### Interaction with Points of Interest
 
 - Moving onto a haven hex MUST open a dialog offering: Rest (full heal + Aether restore), Shop (buy/sell equipment), or Leave
-- Moving onto a camp hex MUST open a dialog offering: Rest (50% heal + 50% Aether restore) or Leave
-- Moving onto a ruin hex (unlooted) MUST trigger the ruin's encounter (enemies if any, then loot)
+- Moving onto a village hex MUST open a dialog offering: Rest (50% heal + 50% Aether restore, ends movement), Weaponsmith (buy/sell non-magical equipment), or Leave
+- Moving onto a ruin hex MUST open its encounter: a fresh ruin offers a search that stirs creatures, a stirred ruin with no enemy within 2 hexes yields its loot, and a looted ruin offers a search with a 10% chance to stir new creatures; while enemies stand within 2 hexes, the ruin MUST say to clear them first
 - Moving onto a breach hex while its guardian is defeated MUST close the breach with a visual effect
 - Moving onto the Maw hex (with 2+ breaches closed) MUST begin the final encounter
 

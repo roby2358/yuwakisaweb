@@ -237,6 +237,13 @@ Updated: 2026-11-26T18:38:29Z
 
 Flux Archers now actually shoot (they had a range but no rangedAttack, so the AI never fired them). That leaves the chaos/breach spawn pool about 5/7 ranged, well above the 20-30% ranged share wildlife gets. Playtest how strong Archers feel, then decide whether to rebalance the chaos pool.
 ----
+Score:   45
+ID: spec-rewrite-hvu5
+Created: 2026-11-26T20:54:41Z
+Updated: 2026-11-26T20:54:41Z
+
+Large parts of SPEC.md are still the original design: the skill list table (levels, costs, starting with Void Strike), the weapon/armor/artifact tables, enemy types and spawning numbers, gold sources (no gold terrain any more; prize gold is 10-20), the "2+ breaches closed before the Maw" rule (no check for it in the code), the victory and Maw interaction lines, and Haven Shop "3-5 items". These need a section rewrite, not line fixes. First decide whether SPEC.md should keep exact tuning numbers at all, or state the rules and point to config.js and DYNAMICS.md for numbers so it stops going stale.
+----
 Score:   40
 ID: prize-scroll-esnu
 Created: 2026-11-26T17:42:48Z

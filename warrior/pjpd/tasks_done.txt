@@ -336,6 +336,20 @@ Tuning: don't overpopulate ranged on a single map — they're a counter to slow 
 ----
 Priority:   50
 Status: Done
+ID: spec-stale-7jqi
+Created: 2026-11-26T20:29:43Z
+Updated: 2026-11-26T20:57:09Z
+
+Fix stale lines in SPEC.md that disagree with the code.
+
+Goal: SPEC.md still says the map is 60x40 (config.js MAP_COLS x MAP_ROWS is 100x100) and that each ruin is lootable only once (ruins are never used up: they re-stir and can yield again).
+
+Settled design: correct those lines to match the code (read config.js and the ruins code in index.js for the real behaviour). While there, scan SPEC.md for other numbers or rules that plainly contradict the code and correct them the same way; do not change any code.
+
+Done when: SPEC.md's map size and ruin rules match the code, and node test/scripts.js still passes.
+----
+Priority:   50
+Status: Done
 ID: save-version-tczz
 Created: 2026-11-26T18:51:06Z
 Updated: 2026-11-26T19:02:14Z

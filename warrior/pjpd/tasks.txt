@@ -1,13 +1,19 @@
-Priority:   50
+Priority:   51
 Status: ToDo
-ID: spec-stale-7jqi
-Created: 2026-11-26T20:29:43Z
-Updated: 2026-11-26T20:29:43Z
+ID: restore-ae-3s2j
+Created: 2026-11-26T20:52:54Z
+Updated: 2026-11-26T20:53:00Z
 
-Fix stale lines in SPEC.md that disagree with the code.
+Restore gives 1 Aether per corrupted (shattered) hex it cleans, instead of a flat 1 AE per cast.
 
-Goal: SPEC.md still says the map is 60x40 (config.js MAP_COLS x MAP_ROWS is 100x100) and that each ruin is lootable only once (ruins are never used up: they re-stir and can yield again).
+Goal: executeRestore in actions.js adds a flat +1 AE whenever it runs (player.aether + 1), however many hexes it restores. Cleaning more ground should pay more.
 
-Settled design: correct those lines to match the code (read config.js and the ruins code in index.js for the real behaviour). While there, scan SPEC.md for other numbers or rules that plainly contradict the code and correct them the same way; do not change any code.
+Settled design:
+- AE gained = the number of shattered hexes restored this cast, added to player.aether and limited only by player.maxAether() as today (no other cap). A cast that only tries a breach/Maw in range and restores no hexes gives 0 AE.
+- Log lines log_restored / log_restored_gold in text.js show the AE actually gained (after the maxAether limit) as "+{ae} AE" in place of the fixed "+1 AE"; pass ae explicitly.
+- Restore's desc in config.js SKILLS: "Gain 1 AE per hex restored." in place of "Gain 1 AE."
+- Use the existing blue +N aether float if Restore already shows one; don't add new visuals otherwise.
+- Update SPEC.md / DYNAMICS.md wherever they say Restore gives 1 AE.
 
-Done when: SPEC.md's map size and ruin rules match the code, and node test/scripts.js still passes.
+Done when: all test/*.js pass; restoring N hexes gives N AE (up to max), a breach-only Restore gives 0 AE, and the log, skill description and docs say so.
+  ----
