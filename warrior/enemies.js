@@ -102,7 +102,7 @@ class EnemyManager {
 
     generateCreatureTypes() {
         const usedNames = new Set();
-        const palette = ColorTheory.randomScheme(() => Math.random());
+        const palette = ColorTheory.randomScheme(() => Rando.float(0, 1));
 
         for (let i = 0; i < NUM_CREATURE_TIERS; i++) {
             const attack = Math.round(3 * Math.pow(10, i / 11));

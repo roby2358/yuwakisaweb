@@ -61,7 +61,7 @@ class Sound {
         const sr = this.ctx.sampleRate;
         this.noiseBuffer = this.ctx.createBuffer(1, sr, sr);
         const data = this.noiseBuffer.getChannelData(0);
-        for (let i = 0; i < sr; i++) data[i] = Math.random() * 2 - 1;
+        for (let i = 0; i < sr; i++) data[i] = Rando.float(-1, 1);
     }
 
     voice(freq, duration, pulse = false) {

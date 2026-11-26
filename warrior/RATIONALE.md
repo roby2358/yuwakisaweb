@@ -104,6 +104,18 @@ total stays capped at MAX_DODGE (90%), so there is always at least a 10% chance 
   keeps a floor on being hit.
 - **Evidence:** not measured.
 
+### D-13 All randomness goes through Rando — *Decided*
+Every random draw in the files index.html loads goes through a `Rando` method: percent rolls
+use `Rando.bool(p / 100)`, fixed chances `Rando.bool(c)`, continuous values `Rando.float`,
+and the creature palette's RNG function is `() => Rando.float(0, 1)`. Only rando.js calls
+`Math.random`. `Rando.bool` takes its probability explicitly.
+- **Alternatives:** leave the scattered `Math.random` calls (gameplay rolls, map noise,
+  palette, sound noise) as they were.
+- **Why:** one source of randomness, so a seed (Q-14) would cover every draw by changing
+  rando.js alone. Odds are unchanged.
+- **Evidence:** `grep -n Math.random` over the loaded files finds only rando.js and a
+  comment in colortheory.js.
+
 ---
 
 ## Open questions
@@ -139,7 +151,7 @@ Aggro uses hex distance with no fog or LOS check.
 - **Recommendation:** keep it unless playtests show it feels unfair; it keeps pressure up.
 
 ### Q-14 No seeded randomness
-All randomness goes through `Rando` over `Math.random`.
+All randomness goes through `Rando` (D-13), which draws from an unseeded `Math.random`.
 - **Options:** add a seed to Rando; keep unseeded.
 - **Recommendation:** keep unseeded for now (a non-goal); a seed becomes worth it if a headless
   sim or tests need reproducible runs.

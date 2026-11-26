@@ -2,6 +2,16 @@
 
 Dated entries, newest first. This is the only design doc that records history.
 
+### 2026-11-26 — All randomness goes through Rando (D-13)
+
+The remaining direct `Math.random()` calls in loaded files now use Rando: the stun and dodge
+percent rolls in index.js (`Rando.bool(p / 100)`), the Phase Wraith teleport (keeping its
+0.3 fallback), guardian respawn and breach chaos spawn in enemy_ai.js (`Rando.bool`), the
+diamond-square noise in world.js and the noise buffer in sound.js (`Rando.float`), and the
+creature palette RNG in enemies.js (`() => Rando.float(0, 1)`). `Rando.bool` lost its 0.5
+default; every caller passes a probability. Odds are unchanged and Q-14 stays open. New
+decision D-13 with a matching ONTOLOGY invariant. No save shape changed.
+
 ### 2026-11-26 — Dodge bonuses stack (D-12)
 
 `Player.dodge()` in player.js now adds `sumEquipped('dodge_bonus', 'dodgeBonus')` instead of

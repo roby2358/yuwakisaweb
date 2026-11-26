@@ -29,7 +29,7 @@ class Rando {
         return min + Math.random() * (max - min);
     }
 
-    static bool(probability = 0.5) {
+    static bool(probability) {
         return Math.random() < probability;
     }
 

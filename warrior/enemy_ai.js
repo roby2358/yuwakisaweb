@@ -312,7 +312,7 @@ class ChaosAI extends EnemyAI {
 
         // Phase Wraith teleport (blocked by wraith_immune)
         if (def.behavior === 'teleport' && dist <= aggro && !player.equipped('wraith_immune')
-            && Math.random() < (def.teleportChance || 0.3)) {
+            && Rando.bool(def.teleportChance || 0.3)) {
             await this.tryTeleport(enemy, def, occupied, prevKey, ctx);
         }
 
@@ -606,7 +606,7 @@ function respawnGuardians(occupied, ctx) {
             e.type === ENEMY_TYPE.BREACH_GUARDIAN && hexDistance(poi.q, poi.r, e.q, e.r) <= 3
         );
         if (hasGuardian) continue;
-        if (Math.random() >= 0.3) continue;
+        if (!Rando.bool(0.3)) continue;
         if (occupied.has(hexKey(poi.q, poi.r))) continue;
         const g = em.spawn(ENEMY_TYPE.BREACH_GUARDIAN, poi.q, poi.r, poi.q, poi.r);
         if (!g) continue;
@@ -625,7 +625,7 @@ function spawnChaosAtBreaches(occupied, ctx) {
         : [ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.FLUX_ARCHER, ENEMY_TYPE.FLUX_ARCHER, ENEMY_TYPE.BREACH_CRAWLER, ENEMY_TYPE.PHASE_WRAITH];
     for (const poi of world.pois) {
         if (poi.type !== POI.BREACH || poi.closed) continue;
-        if (Math.random() >= 0.075) continue;
+        if (!Rando.bool(0.075)) continue;
         const adj = hexNeighbors(poi.q, poi.r).filter(n => {
             const k = hexKey(n.q, n.r);
             const h = world.getHex(n.q, n.r);

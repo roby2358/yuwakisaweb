@@ -71,8 +71,7 @@ structure and is never traded away. "Room to break the game" beats balance tidin
 - Multiplayer or a server. [P]
 - Save migration or back-compat for old saves. [D] A version mismatch shows "New
   Version" and the save is not loaded.
-- Seeded or reproducible runs. [P] All randomness goes through `Rando`, which uses
-  `Math.random`; there is no seed (see Q-14).
+- Seeded or reproducible runs. [P] Rando has no seed (see Q-14).
 - Mobile/touch play. [P]
 
 ---
@@ -319,6 +318,8 @@ with its label (`Victory.LABELS`) and points.
   and its shatteredCount is not raised. [D]
 - Game over ⇒ no further enemy actions this phase; the save is deleted when the loop ends. [D]
 - A save with a version other than SAVE_VERSION is never loaded. [D]
+- Every random draw in the loaded code goes through `Rando`; `Math.random` is called only
+  in rando.js. [D] (D-13)
 - Determinism does **not** hold: same commands do not give the same state (no seed). [P]
 
 ---

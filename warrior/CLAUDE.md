@@ -23,7 +23,7 @@ Every file is a classic script listed in `index.html` in dependency order; a top
 index.js (orchestrator: rendering, input, UI, save/load, combat math, dialogs)
   ├─ config.js       (constants, terrain, enemy/equipment/skill/POI defs; uses rando)
   ├─ hex.js          (axial hex math, BFS/Dijkstra, A*, draw helpers; uses HEX_SIZE)
-  ├─ rando.js        (Rando: shuffle, choice, int, bellCurve, weighted, bool)
+  ├─ rando.js        (Rando: shuffle, choice, int, float, gaussian, bellCurve, weighted, bool; the only caller of `Math.random`)
   ├─ player.js       (Player class: stats, equipment, skills, inventory, toJSON/fromJSON)
   ├─ world.js        (GameWorld class: hex grid, POIs, fog, LOS; toJSON/fromJSON)
   ├─ skilllibrary.js (SkillLibrary class: per-run skill groups (core / fixed / optional, half of optional held out) and discovery channels so no skill is awarded twice; core skills come only from their one scroll each near the start (`placeCoreScrolls`, Channel Aether's nearest), story scrolls (`STORY_SCROLL_SKILLS`) land anywhere reachable and each of the `HUT_COUNT` huts gets a distinct optional skill; huts and Skill Seek give only optional skills; checked by `node test/skilllibrary.js`)

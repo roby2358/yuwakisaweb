@@ -398,6 +398,24 @@ Tuning: don't overpopulate ranged on a single map — they're a counter to slow 
 ----
 Priority:   50
 Status: Done
+ID: dodgerando-yuz7
+Created: 2026-11-26T22:59:38Z
+Updated: 2026-11-26T23:37:14Z
+
+All randomness goes through Rando; no direct Math.random() calls outside rando.js.
+
+Goal: CLAUDE.md says all randomness goes through Rando, but loaded code still calls Math.random() directly: gameplay rolls in index.js (the dodge roll and the percent roll just above it in the player-damage path), enemy_ai.js (enemy teleport chance and two fixed-chance rolls), map generation in world.js, the creature palette in enemies.js (ColorTheory.randomScheme(() => Math.random())), and the noise buffer in sound.js. Rando has no seed today, so behaviour doesn't change; the point is one source of randomness.
+
+Settled design:
+- Replace every Math.random() in loaded files (everything index.html includes) with the matching Rando method: percent rolls "Math.random() * 100 < p" become Rando.bool(p / 100); "Math.random() < c" becomes Rando.bool(c); continuous values become Rando's float range method (check rando.js for its name); a function passed as an RNG becomes a Rando-backed function.
+- rando.js itself keeps Math.random() (it is the one source). Leave the unloaded files (terrain.js, renderer.js, origitems.js) and the commented example in colortheory.js alone.
+- Keep each roll's odds exactly as they are now, including any fallback chance already in the code.
+- If a Math.random() runs in a file that loads before rando.js, move the call or confirm load order in index.html so Rando is defined when it runs.
+
+Done when: node test/*.js pass; grep -n "Math.random" over the files index.html loads finds hits only in rando.js (and the colortheory.js comment).
+----
+Priority:   50
+Status: Done
 ID: gainfloat-j7e8
 Created: 2026-11-26T22:25:14Z
 Updated: 2026-11-26T22:59:02Z

@@ -665,7 +665,7 @@ function rollPlayerStun(enemy, rolledDmg, bucket, bonusPct) {
     }
     pct += bonusPct;
     pct = Math.min(pct, MAX_STUN_CHANCE);
-    if (Math.random() * 100 < pct) {
+    if (Rando.bool(pct / 100)) {
         enemy.stunnedNextTurn = true;
         logCombat(say('log_stunned', {}), 'log-info');
         return true;
@@ -686,7 +686,7 @@ function dealDamageToPlayer(damage, source, isSkillDamage, opts = {}) {
         }
         logCombat(say('log_warp_flickers', {}), 'log-info');
     }
-    if (Math.random() * 100 < player.dodge()) {
+    if (Rando.bool(player.dodge() / 100)) {
         logCombat(say('log_dodged', {}), 'log-info');
         return { dealt: 0, avoided: true };
     }

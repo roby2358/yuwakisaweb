@@ -106,8 +106,8 @@ class GameWorld {
         const grid = new Float64Array(size * size);
         const get = (x, y) => grid[y * size + x];
         const set = (x, y, v) => { grid[y * size + x] = v; };
-        set(0, 0, Math.random()); set(size - 1, 0, Math.random());
-        set(0, size - 1, Math.random()); set(size - 1, size - 1, Math.random());
+        set(0, 0, Rando.float(0, 1)); set(size - 1, 0, Rando.float(0, 1));
+        set(0, size - 1, Rando.float(0, 1)); set(size - 1, size - 1, Rando.float(0, 1));
         let step = size - 1, scale = roughness;
         while (step > 1) {
             const half = step / 2;
@@ -115,7 +115,7 @@ class GameWorld {
                 for (let x = half; x < size - 1; x += step)
                     set(x, y, (get(x - half, y - half) + get(x + half, y - half) +
                         get(x - half, y + half) + get(x + half, y + half)) / 4 +
-                        (Math.random() - 0.5) * scale);
+                        Rando.float(-0.5, 0.5) * scale);
             for (let y = 0; y < size; y += half)
                 for (let x = (y + half) % step; x < size; x += step) {
                     let sum = 0, cnt = 0;
@@ -123,7 +123,7 @@ class GameWorld {
                     if (x + half < size) { sum += get(x + half, y); cnt++; }
                     if (y >= half) { sum += get(x, y - half); cnt++; }
                     if (y + half < size) { sum += get(x, y + half); cnt++; }
-                    set(x, y, sum / cnt + (Math.random() - 0.5) * scale);
+                    set(x, y, sum / cnt + Rando.float(-0.5, 0.5) * scale);
                 }
             step = half; scale *= roughness;
         }
