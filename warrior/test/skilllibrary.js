@@ -1,6 +1,7 @@
 // Checks SkillLibrary's per-run skill groups: core, fixed, held-out and dealt
-// optional skills, and the core scrolls placed near the start on generated
-// worlds. Run: node test/skilllibrary.js
+// optional skills, the core and far story scrolls placed on generated worlds
+// (none blank), and that generation itself places no scrolls.
+// Run: node test/skilllibrary.js
 'use strict';
 
 const assert = require('node:assert/strict');
@@ -14,9 +15,9 @@ const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const scripts = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map(m => m[1]);
 const g = load(scripts.slice(0, scripts.indexOf('skilllibrary.js') + 1),
     ['SKILLS', 'SkillLibrary', 'Rando', 'FAR_SCROLL_SKILLS', 'SKILL_HELD_OUT_FRACTION', 'GameWorld', 'POI',
-        'hexDistance', 'CHANNEL_SCROLL_RADIUS', 'NEAR_CORE_SCROLL_RADIUS', 'NEAR_CORE_SKILLS']);
+        'hexDistance', 'CHANNEL_SCROLL_RADIUS', 'NEAR_CORE_SCROLL_RADIUS', 'NEAR_CORE_SKILLS', 'SPECIAL_TERRAINS']);
 const { SKILLS, SkillLibrary, Rando, FAR_SCROLL_SKILLS, SKILL_HELD_OUT_FRACTION, GameWorld, POI,
-    hexDistance, CHANNEL_SCROLL_RADIUS, NEAR_CORE_SCROLL_RADIUS, NEAR_CORE_SKILLS } = g;
+    hexDistance, CHANNEL_SCROLL_RADIUS, NEAR_CORE_SCROLL_RADIUS, NEAR_CORE_SKILLS, SPECIAL_TERRAINS } = g;
 
 const all = Object.values(SKILLS);
 const CORE = new Set(['channel', 'spirit_walk', 'mountain_skip', 'water_skip', 'respec', 'retrain']);
@@ -29,12 +30,12 @@ assert.equal(NEAR_CORE_SKILLS.length, CORE.size - 1);
 const STARTING = 'restore';
 const fixed = new Set(all.filter(s => s.shopOnly || s.scrollOnly).map(s => s.id).concat([STARTING]));
 const optional = all.filter(s => !s.core && !fixed.has(s.id)).map(s => s.id);
-const FAR_SCROLLS = 10, HUTS = 12, DEALS = 2000;
+const HUTS = 12, DEALS = 2000;
 
 for (let n = 0; n < DEALS; n++) {
     const lib = new SkillLibrary();
     const learned = new Set([STARTING]);
-    const scrolls = Array.from({ length: FAR_SCROLLS }, () => ({ skill: null }));
+    const scrolls = Array.from({ length: FAR_SCROLL_SKILLS }, () => ({ skill: null }));
     const huts = Array.from({ length: HUTS }, () => ({ skill: null }));
     lib.deal(scrolls, huts, learned);
     // Every message names the failing deal, so a random failure can be read back.
@@ -51,7 +52,7 @@ for (let n = 0; n < DEALS; n++) {
     const dealt = scrolls.filter(p => p.skill !== null).map(p => p.skill);
     assert.equal(dealt.length, FAR_SCROLL_SKILLS, why('far scroll count'));
     assert.equal(new Set(dealt).size, FAR_SCROLL_SKILLS, why('far scroll skills not distinct'));
-    assert.equal(scrolls.filter(p => p.skill === null).length, FAR_SCROLLS - FAR_SCROLL_SKILLS, why('empty far scroll count'));
+    assert.equal(scrolls.filter(p => p.skill === null).length, 0, why('blank far scroll'));
     for (const id of dealt) {
         assert.ok(optional.includes(id) && !lib.heldOut.has(id), why('bad far scroll skill: ' + id));
         assert.ok(lib.taken.has(id), why('far scroll skill not taken: ' + id));
@@ -94,10 +95,14 @@ const WORLDS = 10;
 for (let n = 0; n < WORLDS; n++) {
     const world = new GameWorld();
     world.generate();
+    // Generation places no scrolls (prizes are gold, gems and magic items), and
+    // magic-item prizes sit only on prize hexes.
+    assert.equal(world.pois.filter(p => p.type === POI.SCROLL).length, 0, 'generation placed a scroll');
+    for (const h of world.hexes.values())
+        if (h.magicItem) assert.ok(SPECIAL_TERRAINS.has(h.terrain) && !h.poi, 'magic item off a prize hex');
     const start = world.pois.find(p => p.type === POI.HAVEN);
     const placed = new SkillLibrary().placeCoreScrolls(world, start.q, start.r);
-    // Generation already drops empty prize scrolls; the core ones carry a core skill.
-    const scrolls = world.pois.filter(p => p.type === POI.SCROLL && CORE.has(p.skill));
+    const scrolls = world.pois.filter(p => p.type === POI.SCROLL);
     assert.deepEqual(new Set(placed), new Set(scrolls), 'placed scrolls are the core scrolls');
     for (const id of CORE)
         assert.equal(scrolls.filter(p => p.skill === id).length, 1, 'one scroll for ' + id);
@@ -108,6 +113,12 @@ for (let n = 0; n < WORLDS; n++) {
         assert.ok(dist(p) > dist(channel), 'channel scroll not nearest: ' + p.skill);
         assert.ok(dist(p) <= NEAR_CORE_SCROLL_RADIUS, 'core scroll past ' + NEAR_CORE_SCROLL_RADIUS + ': ' + p.skill);
     }
+    // Far story scrolls as new-game setup places them: FAR_SCROLL_SKILLS, each dealt a skill.
+    const far = [];
+    for (let i = 0; i < FAR_SCROLL_SKILLS; i++) far.push(world.placeScroll(null, start.q, start.r, () => true));
+    new SkillLibrary().deal(far, [], new Set([STARTING]));
+    assert.ok(far.every(p => p !== null && p.skill !== null), 'blank far scroll on a generated world');
+    assert.equal(world.pois.filter(p => p.type === POI.SCROLL).length, CORE.size + FAR_SCROLL_SKILLS, 'scroll count');
 }
 
 console.log('skilllibrary ok: ' + optional.length + ' optional, ' + DEALS + ' deals, ' + WORLDS + ' worlds');

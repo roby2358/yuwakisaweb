@@ -81,13 +81,14 @@ const TERRAIN_COLORS = {
 };
 const PLAYER_COLOR = '#daa520';
 
-// A "special" hex hides its reward — gold, a skill gem, or a scroll — behind a
-// single sparkle, so you can't tell what you're getting until you step on it.
+// A "special" hex hides its reward — gold, a skill gem, a magic item, or a
+// story scroll — behind a single sparkle, so you can't tell what you're getting
+// until you step on it.
 // (SPECIAL_TERRAINS is defined in world.js.)
 const PRIZE_GLYPH = '✨'; // ✨
 function specialPrizeHex(hex) {
     return SPECIAL_TERRAINS.has(hex.terrain)
-        && (hex.goldDeposit > 0 || hex.skillGem || hex.poi === POI.SCROLL);
+        && (hex.goldDeposit > 0 || hex.skillGem || hex.magicItem || hex.poi === POI.SCROLL);
 }
 
 // ---- Game state ----
@@ -1233,6 +1234,15 @@ function checkHexEntry() {
         refreshOpenPanels();
     }
 
+    // Magic-item prize pickup: a random-category magic item, rolled now.
+    if (hex.magicItem) {
+        hex.magicItem = false;
+        const item = rollMagicItem();
+        player.inventory.push(item.id);
+        logCombat(say('found_magic_item', { item: item.name }), 'log-gold');
+        refreshOpenPanels();
+    }
+
     const enteredPoi = world.poiAt(player.q, player.r);
     if (enteredPoi) openPoiDialog(enteredPoi);
 }
@@ -1347,7 +1357,7 @@ function animDelay(ms) { return new Promise(r => setTimeout(r, ms)); }
 const SAVE_KEY = 'warrior_save';
 // Bump by 1 whenever a change breaks old saves (a field added to or renamed in any
 // toJSON/fromJSON, a changed save shape); leave it for non-breaking changes.
-const SAVE_VERSION = 3;
+const SAVE_VERSION = 4;
 
 function saveGame() {
     const data = {
@@ -1466,10 +1476,10 @@ function initGame() {
         || settlements[0] || world.pois[0];
 
     // Drop the map scrolls now that the start is known. One scroll per core
-    // skill lies near the start (Channel Aether's nearest); the 10 story scrolls
-    // hide in the half too far from the Maw to earn a proximity bonus. All must
-    // be reachable on foot. The story scrolls are placed empty
-    // (poi.skill === null) and the SkillLibrary deals skills to some of them.
+    // skill lies near the start (Channel Aether's nearest); FAR_SCROLL_SKILLS
+    // story scrolls hide in the half too far from the Maw to earn a proximity
+    // bonus. All must be reachable on foot. The story scrolls are placed empty
+    // (poi.skill === null) and the SkillLibrary deals one skill to each.
     skillLibrary = new SkillLibrary();
     skillLibrary.placeCoreScrolls(world, startHaven.q, startHaven.r);
     const farScrolls = [];
@@ -1478,7 +1488,7 @@ function initGame() {
         for (const c of mawDists.values()) if (c > mawMax) mawMax = c;
         const farThreshold = mawMax * 0.5;
         const farPred = h => (mawDists.get(hexKey(h.q, h.r)) ?? 0) > farThreshold;
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < FAR_SCROLL_SKILLS; i++) {
             const scroll = world.placeScroll(null, startHaven.q, startHaven.r, farPred);
             if (scroll) farScrolls.push(scroll);
         }
@@ -1490,6 +1500,9 @@ function initGame() {
     // far-scroll and learnable; the Wise Men get non-binding learnable skills.
     const huts = world.pois.filter(p => p.type === POI.HUT);
     skillLibrary.deal(farScrolls, huts, player.learnedSkills);
+    // A scroll is never blank: should fewer optional skills appear than there
+    // are far scrolls (not expected), the unfilled ones are removed.
+    for (const scroll of farScrolls) if (scroll.skill === null) world.removePoi(scroll);
 
     refreshVision();
     computeMawDistances(world);
@@ -2087,22 +2100,18 @@ function learnSkill(skillId, { active = false } = {}) {
 }
 
 // The consolation cascade for any reward the player can't fully use — a skill
-// they already know, an overflow scroll, a skill gem at the SP cap: give a Skill
-// Point, or, when SP is already maxed, XP instead. (At level 10 that XP currently
-// goes nowhere; revisit per pjpd.) Returns { kind: 'sp' | 'xp', amount } so callers
-// can flavor the message; the XP branch logs its own "+N XP" via gainXP.
+// gem, or a Skill Seek with nothing left to learn: give a Skill Point, or, when
+// SP is already maxed, XP instead. (At level 10 that XP currently goes nowhere;
+// revisit per pjpd.) Returns { kind: 'sp' | 'xp', amount } so callers can flavor
+// the message; the XP branch logs its own "+N XP" via gainXP.
 const CONSOLATION_XP = 10;
 
 // What each consolation source says, by the kind grantConsolation returned.
-// logKey is the combat-log line; a scroll also shows a note in its dialog.
+// logKey is the combat-log line.
 const CONSOLATION_TEXT = {
     gem: {
         sp: { logKey: 'log_gem_sp' },
         xp: { logKey: 'log_gem_xp' }
-    },
-    scroll: {
-        sp: { logKey: 'log_scroll_sp', note: c => say('scroll_note_sp', {}) },
-        xp: { logKey: 'log_scroll_xp', note: c => say('scroll_note_xp', { xp: c.amount }) }
     },
     noArts: {
         sp: { logKey: 'log_no_arts_sp' },
@@ -2615,25 +2624,15 @@ function offerHutLesson(teachId) {
         hutLeaveButton()]);
 }
 
-// Stepping onto a scroll claims its skill and consumes the scroll. A scroll
-// dealt no skill (prize scrolls, far scrolls past FAR_SCROLL_SKILLS) or one whose
-// skill the player already has crystallizes into a Skill Point instead — absorbed if the player is capped.
+// Stepping onto a scroll claims its skill and consumes the scroll. Every scroll
+// carries a skill nothing else gives (core, story or RETURN), so a scroll with no
+// skill, or one the player already knows, is a bug.
 function pickUpScroll(poi) {
-    world.pois = world.pois.filter(p => p !== poi);
-    const hex = world.getHex(poi.q, poi.r);
-    if (hex) hex.poi = null;
-
-    const skill = poi.skill ? SKILLS[poi.skill] : null;
-    if (!skill || !learnSkill(poi.skill, { active: true })) {
-        const c = grantConsolation();
-        const text = CONSOLATION_TEXT.scroll[c.kind];
-        logCombat(say(text.logKey, {}), 'log-info');
-        const note = text.note(c);
-        showDialog(say('title_ancient_scroll', {}),
-            say('scroll_empty', {}) + `<p style="color:#aaa;font-size:12px">${note}</p>`,
-            [{ label: say('btn_continue', {}), cls: 'btn-primary' }]);
-        return;
-    }
+    if (!poi.skill) throw new Error(`scroll at ${poi.q},${poi.r} carries no skill`);
+    if (player.learnedSkills.has(poi.skill)) throw new Error(`scroll at ${poi.q},${poi.r} teaches known skill ${poi.skill}`);
+    const skill = SKILLS[poi.skill];
+    world.removePoi(poi);
+    learnSkill(poi.skill, { active: true });
 
     logCombat(say('log_scroll_learn', { skill: skill.name }), 'log-info');
 

@@ -63,9 +63,9 @@ class SkillLibrary {
     // One-time partition at new game. Shuffles the optional skills the player
     // doesn't know yet: the back part is held out, the front part appears. The
     // first FAR_SCROLL_SKILLS appearing skills go to `farScrolls` (marked taken);
-    // leftover scrolls keep poi.skill === null and become Skill-Point scrolls at
-    // pickup. `huts` each get a non-binding display skill from the learnable
-    // optional skills (repeats OK).
+    // a scroll left unfilled (fewer appearing skills than scrolls) keeps
+    // poi.skill === null, and the caller removes it. `huts` each get a
+    // non-binding display skill from the learnable optional skills (repeats OK).
     deal(farScrolls, huts, learned) {
         const optional = Rando.shuffle(Object.values(SKILLS)
             .filter(s => this.isOptional(s) && !learned.has(s.id)).map(s => s.id));

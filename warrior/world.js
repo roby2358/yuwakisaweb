@@ -142,7 +142,7 @@ class GameWorld {
                 const isEdge = row === 0 || row === MAP_ROWS - 1 || col === 0 || col === MAP_COLS - 1;
                 map.set(hexKey(q, r), {
                     q, r, col, row, elevation, isEdge,
-                    terrain: null, poi: null, goldDeposit: 0, shatteredCount: 0, skillGem: false
+                    terrain: null, poi: null, goldDeposit: 0, shatteredCount: 0, skillGem: false, magicItem: false
                 });
             }
         }
@@ -243,23 +243,17 @@ class GameWorld {
     }
 
     // Every prize hex (special terrain, not claimed by a POI) holds one reward,
-    // chosen by weight: gold is the common find, skill gems uncommon, scrolls rare.
-    // Each placer stamps whichever marker that reward's pickup path already reads —
-    // goldDeposit, skillGem, or a SCROLL poi — so checkHexEntry needs no new cases.
+    // chosen by weight: gold is the common find, skill gems uncommon, magic items
+    // rare. Each placer stamps the marker that reward's pickup in checkHexEntry
+    // reads — goldDeposit, skillGem or magicItem.
     _placePrizes() {
         const prizes = [
             { weight: 7, item: h => { h.goldDeposit = Rando.int(10, 20); } },
             { weight: 2, item: h => { h.skillGem = true; } },
-            { weight: 1, item: h => this._placeScrollPrize(h) },
+            { weight: 1, item: h => { h.magicItem = true; } },
         ];
         const hexes = this.passableHexes().filter(h => !h.poi && SPECIAL_TERRAINS.has(h.terrain));
         for (const hex of hexes) Rando.weighted(prizes)(hex);
-    }
-
-    // Prize scrolls are placed empty and stay so: SkillLibrary.deal only fills the
-    // far story scrolls, so a prize scroll becomes a Skill-Point scroll at pickup.
-    _placeScrollPrize(hex) {
-        this._makeScroll(null, hex);
     }
 
     _generateShopItems() {
@@ -307,6 +301,12 @@ class GameWorld {
         const reachable = this.reachableFrom(originQ, originR);
         return this.passableHexes().filter(h =>
             !h.poi && reachable.has(hexKey(h.q, h.r)) && pred(h));
+    }
+
+    // Removes a POI from the map (a picked-up or unfilled scroll).
+    removePoi(poi) {
+        this.pois = this.pois.filter(p => p !== poi);
+        this.getHex(poi.q, poi.r).poi = null;
     }
 
     _makeScroll(skillId, hex) {

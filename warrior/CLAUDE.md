@@ -87,7 +87,8 @@ Axial coordinates `(q, r)` with pointy-top hexes. Hex objects keyed by `"q,r"` s
 
 ### Hex Object Shape
 ```javascript
-{ q, r, col, row, elevation, isEdge, terrain, poi, goldDeposit, shatteredCount }
+{ q, r, col, row, elevation, isEdge, terrain, poi, goldDeposit, shatteredCount, skillGem, magicItem }
+// goldDeposit / skillGem / magicItem mark a prize hex's hidden reward, cleared on pickup
 // `crop` is added dynamically during spawn logic
 ```
 

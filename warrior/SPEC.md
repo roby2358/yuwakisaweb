@@ -47,6 +47,7 @@ Overlay panels slide in from the right when toggled:
 - The world MUST be a rectangular hex grid (60 columns x 40 rows), pointy-top hexes, using axial coordinates
 - Terrain MUST be generated via diamond-square heightmap with the following distribution: 25% water, 50% plains, 10% forest, 10% hills, 1% gold deposits, 2% quarry, 5% mountains
 - Edge hexes MUST be water
+- About 1% of the map MUST be prize hexes (lighter "special" plains, forest and hills) that each hide one reward behind the same sparkle: gold (weight 7), a skill gem (weight 2) or a random-category magic item (weight 1), given once on entry. Prize hexes MUST NOT hold scrolls; story scrolls placed later ride special plains of their own
 - The map MUST support panning via left-button drag (a press that moves past a small threshold pans; one that stays put is a click)
 - The map MUST render terrain with distinct colors per terrain type
 
@@ -157,7 +158,7 @@ All enemies MUST have: name, HP, attack damage, defense, movement speed (hexes p
 - Every skill MUST belong to one group: core (`core: true`: Channel Aether, Spirit Walk, Mountain Skip, Water Skip, Renew, Retrain), fixed (scroll-only RETURN, shop-only Commune and Commission Garrison, the starting skill Restore), or optional (all others)
 - Each core skill MUST ride exactly one scroll near the start haven, reachable on foot, and that scroll MUST be the only channel that grants it (never Skill Seek or a Wise Man hut; never held out or dealt). Channel Aether's scroll MUST be the nearest, within 11 hexes; the other five MUST lie farther than 11 and within 50 hexes
 - At new game, half the optional skills (rounded down) MUST be held out: no channel may grant them that run, and the game MUST NOT tell the player which
-- Of the appearing optional skills, 6 MUST be bound to far story scrolls (10 empty scrolls placed in the half of the map far from the Maw; the rest, and prize scrolls, become Skill-Point scrolls at pickup); the remainder are learnable
+- Of the appearing optional skills, 6 MUST be bound to far story scrolls (exactly 6 scrolls placed in the half of the map far from the Maw, one skill each; a scroll left unfilled is removed, so no scroll is ever blank); the remainder are learnable
 - Skill Seek MUST draw from unlearned skills that are not core, not shop-only, not scroll-bound, not held out, and within level; each Wise Man hut MUST teach its assigned learnable optional skill; once that is known, its 5% per-visit reroll digs up another unlearned optional skill, never a core, held-out, shop-only or scroll-bound one
 - Each Wise Man hut visit MUST have an independent 5% chance (no cap or cooldown) that the sage gives a random magic item into the inventory instead of that visit's lesson or message, leaving the hut's assigned skill untouched
 - The held-out set and scroll-bound set MUST persist in the save, as MUST each hut's assigned skill
