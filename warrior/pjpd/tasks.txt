@@ -23,9 +23,9 @@ Priority:   59
 Status: ToDo
 ID: blank-scroll-x47v
 Created: 2026-11-26T19:53:37Z
-Updated: 2026-11-26T20:02:19Z
+Updated: 2026-11-26T20:13:10Z
 
-No blank scrolls: every scroll on the map carries a skill, and the rare scroll prize becomes a magic-item prize.
+No blank scrolls: every scroll on the map carries a skill, the rare scroll prize becomes a magic-item prize, and the blank-scroll Skill Point conversion is removed.
 
 Goal: today two kinds of scroll carry no skill and turn into a Skill Point at pickup. (1) New-game setup places 10 far story scrolls but the skill deal fills only FAR_SCROLL_SKILLS (6) of them. (2) Prize hexes (special terrain, about 100 per map) roll gold (weight 7), a skill gem (weight 2) or a scroll (weight 1), and prize scrolls stopped getting skills when the per-run skill deal began filling far scrolls only. A blank scroll just repeats what a skill gem gives, and giving prize scrolls skills would tie up most of the optional skills in play.
 
@@ -33,10 +33,11 @@ Settled design:
 - index.js new-game setup places exactly FAR_SCROLL_SKILLS far scrolls (use the constant, not 10). The deal still fills one per scroll; if fewer optional skills appear than scrolls (not expected), remove the unfilled scroll rather than leave it blank.
 - world.js _placePrizes: the weight-1 scroll prize becomes a magic-item prize. Mark the hex the way gold and gems are marked (e.g. hex.magicItem = true) and give it in the hex-entry code next to the skill-gem pickup: roll rollMagicItem() at pickup (random category, as ruins and the hut gift do), push it into player.inventory, log it with the existing found-magic-item text (log-gold class), clear the marker. Remove _placeScrollPrize.
 - Update comments that describe prize scrolls or Skill-Point scrolls (world.js, skilllibrary.js, index.js pickUpScroll), and SPEC.md / DYNAMICS.md where they list prizes or blank scrolls.
-- Keep the existing already-known scroll text (scroll_empty) and its Skill Point conversion as a safety net; no new blank-scroll text.
+- Remove the blank-scroll mechanic entirely. Once core skills come only from their own scrolls (a separate task, done first) and story scrolls are reserved, every scroll carries a skill nothing else can give, so a scroll can never be blank or already known. pickUpScroll always teaches the scroll's skill; if poi.skill is null or the skill is already learned, throw (fail fast: it is a bug). Delete the scroll branch of the consolation code (CONSOLATION_TEXT.scroll, the scroll note lines), the scroll_empty, scroll_note_sp, scroll_note_xp and log_scroll_sp / log_scroll_xp text entries, and comments about Skill-Point scrolls. Skill gems keep their Skill Point / XP consolation.
 - Bump SAVE_VERSION (hex shape changes).
 
-Done when: all test/*.js pass; a new game has exactly FAR_SCROLL_SKILLS far scrolls, all with a skill, and no prize scrolls; stepping on a magic-item prize hex gives one magic item once.
+Done when: all test/*.js pass; a new game has exactly FAR_SCROLL_SKILLS far scrolls, all with a skill, and no prize scrolls; stepping on a magic-item prize hex gives one magic item once; no code or text for blank scrolls remains.
+  ----
 ----
 Priority:   58
 Status: ToDo
