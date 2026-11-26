@@ -1,0 +1,59 @@
+Priority:   60
+Status: ToDo
+ID: core-scrolls-b9hw
+Created: 2026-11-26T19:53:37Z
+Updated: 2026-11-26T19:53:37Z
+
+Core skills come only from scrolls near the start, so the player walks for them; huts and Skill Seek give only optional skills.
+
+Goal: today 5 core skills exist (spirit_walk, mountain_skip, water_skip, respec/Renew, retrain). Three ride non-binding scrolls within 25 hexes, and huts (one core lesson each) and Skill Seek can also grant them, so a core scroll often turns into a Skill Point because the skill was already learned elsewhere. Channel Aether sits on its own scroll within 11 hexes but is classed as a scrollOnly fixed skill.
+
+Settled design:
+- Core skills are exactly: channel, spirit_walk, mountain_skip, water_skip, respec, retrain. Mark channel `core: true` in SKILLS and drop its scrollOnly flag (core skills are never held out or dealt).
+- Every core skill rides exactly one scroll near the start, and core scrolls are the ONLY channel for core skills. SkillLibrary marks every core skill unavailable to other channels: obtainable/poolSkills (Skill Seek) and hut rerolls exclude core skills.
+- Channel Aether is always the closest core scroll: keep its existing placement (within 11 hexes of the start haven) and its existing special handling. The other five core scrolls are placed at distance > 11 and <= NEAR_CORE_SCROLL_RADIUS, which becomes 50 (half the 100-wide map), using the existing placeScroll (reachable on foot).
+- Remove the hut core lesson: firstUnlearnedCore, poi.coreTaught and the core-lesson branch of showHutDialog go away. Huts go back to: assigned optional skill if unlearned, else HUT_REROLL_CHANCE reroll from obtainable (now optional-only) skills, plus the independent gift roll.
+- coreOrder no longer has a purpose; remove it from SkillLibrary (constructor, deal, toJSON/fromJSON) if nothing else needs it. nearCoreSkills is replaced by the list of non-channel core skills.
+- Bump SAVE_VERSION (save shape changes).
+- Update the skilllibrary.js header comment, test/skilllibrary.js (core never in poolSkills or hut rerolls; every core skill has exactly one scroll; channel's scroll is the closest), CLAUDE.md, SPEC.md (Skill Groups) and DYNAMICS.md (hut row, Skill Groups) to match.
+
+Done when: all test/*.js pass; at new game there are 6 core scrolls, channel's is the nearest and within 11, the rest within 50; huts and Skill Seek never offer a core skill.
+----
+Priority:   59
+Status: ToDo
+ID: blank-scroll-x47v
+Created: 2026-11-26T19:53:37Z
+Updated: 2026-11-26T20:02:19Z
+
+No blank scrolls: every scroll on the map carries a skill, and the rare scroll prize becomes a magic-item prize.
+
+Goal: today two kinds of scroll carry no skill and turn into a Skill Point at pickup. (1) New-game setup places 10 far story scrolls but the skill deal fills only FAR_SCROLL_SKILLS (6) of them. (2) Prize hexes (special terrain, about 100 per map) roll gold (weight 7), a skill gem (weight 2) or a scroll (weight 1), and prize scrolls stopped getting skills when the per-run skill deal began filling far scrolls only. A blank scroll just repeats what a skill gem gives, and giving prize scrolls skills would tie up most of the optional skills in play.
+
+Settled design:
+- index.js new-game setup places exactly FAR_SCROLL_SKILLS far scrolls (use the constant, not 10). The deal still fills one per scroll; if fewer optional skills appear than scrolls (not expected), remove the unfilled scroll rather than leave it blank.
+- world.js _placePrizes: the weight-1 scroll prize becomes a magic-item prize. Mark the hex the way gold and gems are marked (e.g. hex.magicItem = true) and give it in the hex-entry code next to the skill-gem pickup: roll rollMagicItem() at pickup (random category, as ruins and the hut gift do), push it into player.inventory, log it with the existing found-magic-item text (log-gold class), clear the marker. Remove _placeScrollPrize.
+- Update comments that describe prize scrolls or Skill-Point scrolls (world.js, skilllibrary.js, index.js pickUpScroll), and SPEC.md / DYNAMICS.md where they list prizes or blank scrolls.
+- Keep the existing already-known scroll text (scroll_empty) and its Skill Point conversion as a safety net; no new blank-scroll text.
+- Bump SAVE_VERSION (hex shape changes).
+
+Done when: all test/*.js pass; a new game has exactly FAR_SCROLL_SKILLS far scrolls, all with a skill, and no prize scrolls; stepping on a magic-item prize hex gives one magic item once.
+----
+Priority:   58
+Status: ToDo
+ID: skill-map-64ce
+Created: 2026-11-26T20:10:12Z
+Updated: 2026-11-26T20:10:12Z
+
+Every skill in play this game sits somewhere on the map: 6 on scattered story scrolls and 12 with the Wise Men, one distinct skill per hut.
+
+Goal: of the 36 optional skills, half are held out and 18 are in play. Today 6 go on story scrolls placed only in the half of the map far from the Maw, and the rest are shared out to 8-12 huts at random (repeats allowed), so some in-play skills sit in no hut at all. Instead, every in-play skill should be findable on the map.
+
+Settled design:
+- Story scrolls (FAR_SCROLL_SKILLS, 6) are placed at random across the whole reachable map, not just the far-from-Maw half: drop the far predicate in index.js new-game setup (keep placeScroll's reachable-on-foot rule). Rename the constant to STORY_SCROLL_SKILLS and update names and comments that say "far".
+- world.js places exactly HUT_COUNT = 12 Wise Man's Huts (was Rando.int(8, 12)). Name the constant.
+- SkillLibrary.deal gives each hut a distinct learnable optional skill (shuffle the learnable optional skills and hand them out in order). With 36 optional skills that is exactly 12. If there are ever fewer learnable skills than huts, the spare huts get a repeat chosen at random; if more, the extras are still learnable through Skill Seek and hut rerolls.
+- Hut behaviour after its skill is learned is unchanged: a HUT_REROLL_CHANCE roll per visit for another obtainable skill, plus the separate gift roll. Skill Seek is unchanged: it offers learnable skills within the player's level.
+- Update test/skilllibrary.js (huts get distinct skills when there are enough), the skilllibrary.js header comment, SPEC.md and DYNAMICS.md (hut count, story scroll placement, skill groups).
+- No save shape change from this task alone (POIs already save hut skills).
+
+Done when: all test/*.js pass; a new game has exactly 12 huts with 12 different skills and 6 story scrolls spread over the whole map.
