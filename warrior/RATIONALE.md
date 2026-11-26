@@ -64,9 +64,8 @@ Leaving a hut is free, as Leave is at havens and villages; only Learn ends the t
 - **Why:** designer's call; to be filled in.
 - **Evidence:** not measured.
 
-### D-8 Ranged skills need a visible target — *Decided, unbuilt*
-Ranged-skill targets will need the enemy to be visible as well as in LOS, like weapon shots.
-The code checks LOS only; filed as a tracker task.
+### D-8 Ranged skills need a visible target — *Decided*
+Ranged-skill targets need the enemy to be visible as well as in LOS, like weapon shots.
 - **Alternatives:** keep LOS-only targeting for skills.
 - **Why:** designer's call; to be filled in.
 - **Evidence:** not measured.

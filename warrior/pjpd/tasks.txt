@@ -1,19 +1,5 @@
 Priority:   50
 Status: ToDo
-ID: skillvis-btfk
-Created: 2026-11-26T22:05:38Z
-Updated: 2026-11-26T22:05:38Z
-
-Ranged skills need a visible target, like weapon shots.
-
-Goal: getSkillTargets in index.js (SKILL_TARGET.RANGED case) accepts any enemy hex in range with line of sight, even one hidden in fog, while ranged weapon attacks only allow visible enemies. Skills should follow the same rule so you can't target what you can't see.
-
-Settled design: in the RANGED case, also require the target hex to be in world.visible (the same visibility test the weapon ranged-target code uses; reuse it rather than writing a second check). Apply it to any other skill target kind that picks enemies at range (check each SKILL_TARGET case; melee-adjacent targets are always visible). Update ONTOLOGY.md (getSkillTargets row, skill use rule, Q-12 reference).
-
-Done when: node test/*.js pass; reading getSkillTargets shows ranged enemy targets must be visible, through the same check weapon shots use; ONTOLOGY.md matches.
-----
-Priority:   50
-Status: ToDo
 ID: invphase-dedz
 Created: 2026-11-26T22:05:38Z
 Updated: 2026-11-26T22:05:38Z

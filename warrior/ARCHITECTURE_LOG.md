@@ -2,6 +2,13 @@
 
 Dated entries, newest first. This is the only design doc that records history.
 
+### 2026-11-26 — Ranged skills need a visible target (D-8 built)
+
+`getSkillTargets`' ranged case now uses `visibleRangedTargets`, the enemy-visible-plus-LOS
+target set ranged weapon shots use, so a skill can't target an enemy hidden in fog (settles the
+former Q-12). The other ranged target kinds already required visible hexes. D-8 is now
+*Decided*, and ONTOLOGY drops its [D, unbuilt] tag.
+
 ### 2026-11-26 — Dodge uses gear-boosted Vigor (D-6 built)
 
 `Player.dodge()` now reads `effectiveVigor()`, so vigor_bonus gear raises dodge like base Vigor.

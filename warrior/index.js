@@ -999,14 +999,7 @@ function getSkillTargets(skillId) {
             break;
         }
         case SKILL_TARGET.RANGED: {
-            const range = effectiveSkillRange(skill);
-            const inRange = hexesInRange(player.q, player.r, range);
-            for (const h of inRange) {
-                if (h.q === player.q && h.r === player.r) continue;
-                if (em.enemies.some(e => e.q === h.q && e.r === h.r) && world.hasLOS(player, h)) {
-                    targets.add(hexKey(h.q, h.r));
-                }
-            }
+            for (const k of visibleRangedTargets(effectiveSkillRange(skill))) targets.add(k);
             break;
         }
         case SKILL_TARGET.RANGED_AOE: {
@@ -1144,19 +1137,26 @@ function computeAttackable(enemyKeys) {
     return computeMeleeAttackable(enemyKeys);
 }
 
-function computeRangedAttackable() {
+// Hex keys within range where an enemy stands, the hex is in current vision, and the player
+// has LOS to it. Shared by ranged weapon shots and ranged-enemy skill targeting.
+function visibleRangedTargets(range) {
     const result = new Set();
-    const wep = player.weapon();
-    const cost = (!wep.magical || wep.special === 'free_ranged' || wep.special === 'channel') ? 0 : 1;
-    if (player.aether < cost) return result;
-    const playerPoi = world.poiAt(player.q, player.r);
-    const range = player.weaponRange(playerTerrain(), playerPoi ? playerPoi.type : null);
     for (const h of hexesInRange(player.q, player.r, range)) {
-        if (em.enemies.some(en => en.q === h.q && en.r === h.r && world.visible.has(hexKey(en.q, en.r))) && world.hasLOS(player, h)) {
-            result.add(hexKey(h.q, h.r));
-        }
+        const key = hexKey(h.q, h.r);
+        if (!world.visible.has(key)) continue;
+        if (!em.enemies.some(en => en.q === h.q && en.r === h.r)) continue;
+        if (!world.hasLOS(player, h)) continue;
+        result.add(key);
     }
     return result;
+}
+
+function computeRangedAttackable() {
+    const wep = player.weapon();
+    const cost = (!wep.magical || wep.special === 'free_ranged' || wep.special === 'channel') ? 0 : 1;
+    if (player.aether < cost) return new Set();
+    const playerPoi = world.poiAt(player.q, player.r);
+    return visibleRangedTargets(player.weaponRange(playerTerrain(), playerPoi ? playerPoi.type : null));
 }
 
 function computeMeleeAttackable(enemyKeys) {
@@ -3488,13 +3488,7 @@ function activateRangedWeapon() {
     const cost = (!wep.magical || wep.special === 'free_ranged' || wep.special === 'channel') ? 0 : 1;
     if (player.aether < cost) { logCombat(say('log_not_enough_aether', {}), 'log-info'); return; }
     const playerPoi = world.poiAt(player.q, player.r);
-    const range = player.weaponRange(playerTerrain(), playerPoi ? playerPoi.type : null);
-    const validHexes = new Set();
-    for (const h of hexesInRange(player.q, player.r, range)) {
-        if (em.enemies.some(en => en.q === h.q && en.r === h.r && world.visible.has(hexKey(en.q, en.r))) && world.hasLOS(player, h)) {
-            validHexes.add(hexKey(h.q, h.r));
-        }
-    }
+    const validHexes = visibleRangedTargets(player.weaponRange(playerTerrain(), playerPoi ? playerPoi.type : null));
     if (validHexes.size === 0) { logCombat(say('log_no_targets_in_range', {}), 'log-info'); return; }
     targeting = { skill: '__ranged__', validHexes };
     deselectPlayer();

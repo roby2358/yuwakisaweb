@@ -674,7 +674,7 @@ else:
 ```
 
 ### Ranged attack [D]
-*Serves:* G-3. (`RangedAction`, `computeRangedAttackable`)
+*Serves:* G-3. (`RangedAction`, `computeRangedAttackable` → `visibleRangedTargets`)
 ```
 aeCost = weapon magical and not free_ranged/channel ? (aetherCost or 1) : 0
 legal: ranged weapon, aether ≥ (aeCost > 0 ? 1 : 0), target enemy visible,
@@ -783,6 +783,7 @@ legal: phase 'player', not over; skill active (hotbar slot, or panelInvoke from 
        aether ≥ effectiveAetherCost; checkSkillUsage passes
 RETURN: confirm dialog → endGame(won)
 self / aoe_self: execute now; else targeting = getSkillTargets() (must be non-empty)
+         ranged: target enemy visible, in range and LOS, as for weapon shots (D-8)
 execute: melee skill out of reach → step to cheapest adjacent reachable hex, pay it
          aether -= cost; combatAlerted = true; run handler
          unless the handler returned false: spend effectiveSkillMpCost
@@ -1237,7 +1238,7 @@ formalized from the code]
 |---|---|---|
 | computeReachable / reachable | Map hexKey → cost | Same function the move command uses. |
 | computeAttackable / attackable | Set hexKey | Melee or ranged by held weapon. |
-| getSkillTargets(id) | Set hexKey | Per SKILL_TARGET kind. Ranged-skill targets need LOS but not enemy visibility [D, unbuilt] (D-8): will also need a visible target, like weapon shots. |
+| getSkillTargets(id) | Set hexKey | Per SKILL_TARGET kind. Ranged-skill enemy targets must be visible and in LOS, through the same check as weapon shots (`visibleRangedTargets`) [D] (D-8). Ranged-AoE, Phase Step and the skip skills pick visible hexes; melee kinds pick adjacent enemies. |
 | checkSkillUsage(skill) | null or reason text | Drives skill-bar dimming and blocks activation. |
 | effectiveAetherCost, effectiveSkillMpCost, skillCostLabel | numbers / label | Same functions as execution. |
 | SKILL_POWER / powerLine / skillSummary | expected single-hit score | A mirror of each handler's formula, not the handler itself [P: drift risk]. |
