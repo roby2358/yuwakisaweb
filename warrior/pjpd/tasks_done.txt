@@ -275,6 +275,27 @@ Tuning: don't overpopulate ranged on a single map — they're a counter to slow 
 ----
 Priority:   50
 Status: Done
+ID: save-version-tczz
+Created: 2026-11-26T18:51:06Z
+Updated: 2026-11-26T19:02:14Z
+
+Saves carry a version counter, so a save that a breaking change has invalidated shows "New Version" on the intro screen instead of a Continue button that silently fails.
+
+Goal: today an old save makes loadGame() throw partway through (e.g. SkillLibrary.fromJSON spreading a missing coreOrder), and Continue appears to do nothing. Instead, every save records the version of the game that wrote it. Non-breaking changes leave the version alone. A breaking change bumps it, and saves from other versions are refused up front.
+
+Settled design:
+- A single integer constant SAVE_VERSION = 1 next to SAVE_KEY in index.js, with a comment: bump by 1 whenever a change breaks old saves (a field added to or renamed in any toJSON/fromJSON, a changed save shape); leave it for non-breaking changes.
+- saveGame() writes `version: SAVE_VERSION` into the saved object.
+- New function saveIsCurrent(): reads and parses the save and returns true only if its version === SAVE_VERSION. A save with no version field (anything written before this change) counts as not current.
+- showIntro(): no save -> "Continue" disabled (as today). Current save -> "Continue" enabled. Save whose version does not match -> the button reads "New Version" and is disabled (grayed out via the existing disabled styling). Both labels come from the text table via say().
+- The Continue click handler only calls loadGame() when saveIsCurrent().
+- No migration and no conversion of old saves; a mismatched save is simply not offered. It stays in localStorage until New Game overwrites it (initGame already calls deleteSave()).
+- CLAUDE.md Save/Load section: document SAVE_VERSION and when to bump it.
+
+Done when: node test/scripts.js, test/fx.js and test/text.js pass; a save written by the game carries version 1; and with a save lacking the field (or a different number) the intro shows a disabled "New Version" button.
+----
+Priority:   50
+Status: Done
 ID: stacking-eckg
 Created: 2026-05-24T02:30:02Z
 Updated: 2026-06-15T02:59:31Z

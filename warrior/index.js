@@ -1345,9 +1345,13 @@ function animDelay(ms) { return new Promise(r => setTimeout(r, ms)); }
 // ================================================================
 
 const SAVE_KEY = 'warrior_save';
+// Bump by 1 whenever a change breaks old saves (a field added to or renamed in any
+// toJSON/fromJSON, a changed save shape); leave it for non-breaking changes.
+const SAVE_VERSION = 1;
 
 function saveGame() {
     const data = {
+        version: SAVE_VERSION,
         turn, victory: victory.toJSON(),
         player: player.toJSON(),
         world: world.toJSON(),
@@ -1361,6 +1365,13 @@ function saveGame() {
 
 function hasSave() {
     return localStorage.getItem(SAVE_KEY) !== null;
+}
+
+// A save written before versioning has no version field and is not current.
+function saveIsCurrent() {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    return JSON.parse(raw).version === SAVE_VERSION;
 }
 
 function deleteSave() {
@@ -3539,7 +3550,9 @@ function activateSkillSlot(slotIdx) {
 function showIntro() {
     const overlay = document.getElementById('intro-overlay');
     const continueBtn = document.getElementById('intro-continue');
-    continueBtn.disabled = !hasSave();
+    const current = saveIsCurrent();
+    continueBtn.disabled = !current;
+    continueBtn.textContent = say(hasSave() && !current ? 'btn_new_version' : 'btn_continue', {});
     overlay.classList.remove('hidden');
 }
 
@@ -3548,7 +3561,7 @@ document.getElementById('intro-new').addEventListener('click', () => {
     initGame();
 });
 document.getElementById('intro-continue').addEventListener('click', () => {
-    if (hasSave()) loadGame();
+    if (saveIsCurrent()) loadGame();
 });
 
 showIntro();

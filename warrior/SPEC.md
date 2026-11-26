@@ -295,6 +295,13 @@ Each artifact MUST have: name, and a passive effect.
 - Upon defeat, the game MUST display the same statistics and offer a "New Game" button
 - There MUST be a "New Game" button accessible at all times from the HUD
 
+### Save and Continue
+
+- The game MUST save to `localStorage`, and the intro screen MUST offer "New Game" and "Continue"
+- Every save MUST record the integer save version of the game that wrote it. The version MUST be bumped by 1 for any change that breaks old saves (a field added to or renamed in any `toJSON`/`fromJSON`, a changed save shape) and left alone otherwise
+- With no save, "Continue" MUST be disabled. With a save from the current version, "Continue" MUST load it. With a save from any other version, or with no version, the button MUST read "New Version", be disabled, and the save MUST NOT be loaded
+- Old saves MUST NOT be migrated or converted; a mismatched save stays until New Game overwrites it
+
 ### Input
 
 - Left-click on the player token MUST select the player and show reachable hexes (yellow highlight)
@@ -360,7 +367,6 @@ Each artifact MUST have: name, and a passive effect.
 - The four overlay panels (Character, Skills, Inventory, Haven/Shop dialog) are HTML elements positioned over the canvas, styled consistently with the existing HUD. They are not rendered on the canvas
 - Skill targeting mode is a distinct interaction state: after pressing a skill key, the cursor changes and valid target hexes highlight. Left-click fires, right-click/Escape cancels
 - Fog of war is rendered as a dark semi-transparent overlay on unrevealed hexes, and a lighter overlay on revealed-but-not-currently-visible hexes
-- Save/load is not in scope for the initial version
 - The polynomial XP curve (50 * level^1.8) creates early levels that feel fast and later levels that require deliberate hunting, pushing the player to engage with breaches and ruins rather than grinding basic enemies
 - Equipment drops use a weighted random selection from the appropriate tier. Breach Guardians always drop a breach-tier item the player doesn't already have
 - The Maw Compass artifact is a deliberate design choice: the Maw is not visible until either a Seer's Lens reveals enough of the map or the player buys/finds the compass, creating an exploration incentive

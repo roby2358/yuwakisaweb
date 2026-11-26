@@ -27,6 +27,7 @@ const TEXT = (() => {
         btn_ok: label('OK'),
         btn_steady: label('Steady'),
         btn_continue: label('Continue'),
+        btn_new_version: label('New Version'),
         btn_accept: label('Accept'),
         btn_decline: label('Decline'),
         btn_rest: label('Rest'),

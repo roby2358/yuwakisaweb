@@ -114,6 +114,7 @@ Canvas clicks are ignored when `phase !== 'player'`.
 ### Save / Load
 
 - `localStorage` key: `warrior_save`
+- Every save carries `version: SAVE_VERSION` (an integer next to `SAVE_KEY` in index.js). Bump it by 1 whenever a change breaks old saves (a field added to or renamed in any `toJSON`/`fromJSON`, a changed save shape); leave it alone for non-breaking changes. `saveIsCurrent()` gates Continue: a save with another version, or none, shows a disabled "New Version" button on the intro and is never loaded (no migration; New Game overwrites it)
 - Snapshot composes `victory.toJSON()`, `player.toJSON()`, `world.toJSON()`, `em.toJSON()`, plus `turn`
 - `fromJSON` restores instances; `gameGeneration++` invalidates any in-flight async enemy loop
 
