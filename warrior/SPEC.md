@@ -154,13 +154,13 @@ All enemies MUST have: name, HP, attack damage, defense, movement speed (hexes p
 - When Skill Seek succeeds, the player MUST choose one skill from up to three randomly offered options drawn from the Skill Seek pool (see Skill Groups)
 
 #### Skill Groups
-- Every skill MUST belong to one group: core (`core: true`: Spirit Walk, Mountain Skip, Water Skip, Renew, Retrain), fixed (scroll-only Channel Aether and RETURN, shop-only Commune and Commission Garrison, the starting skill Restore), or optional (all others)
-- Core skills MUST always be obtainable by Skill Seek or Wise Man huts and MUST never be bound to a scroll or held out; each run MUST shuffle them and place non-binding scrolls for the last 3 within 25 hexes of the start haven
+- Every skill MUST belong to one group: core (`core: true`: Channel Aether, Spirit Walk, Mountain Skip, Water Skip, Renew, Retrain), fixed (scroll-only RETURN, shop-only Commune and Commission Garrison, the starting skill Restore), or optional (all others)
+- Each core skill MUST ride exactly one scroll near the start haven, reachable on foot, and that scroll MUST be the only channel that grants it (never Skill Seek or a Wise Man hut; never held out or dealt). Channel Aether's scroll MUST be the nearest, within 11 hexes; the other five MUST lie farther than 11 and within 50 hexes
 - At new game, half the optional skills (rounded down) MUST be held out: no channel may grant them that run, and the game MUST NOT tell the player which
 - Of the appearing optional skills, 6 MUST be bound to far story scrolls (10 empty scrolls placed in the half of the map far from the Maw; the rest, and prize scrolls, become Skill-Point scrolls at pickup); the remainder are learnable
-- Skill Seek MUST draw from unlearned skills that are not shop-only, not scroll-bound, not held out, and within level; each Wise Man hut MUST give one core lesson (the first core skill in the run's core order the player lacks), then teach its assigned learnable optional skill; its 5% per-visit reroll MAY also dig up an unlearned core skill, never a held-out, shop-only or scroll-bound one
-- Each Wise Man hut visit MUST have an independent 5% chance (no cap or cooldown) that the sage gives a random magic item into the inventory instead of that visit's lesson or message, leaving the hut's core lesson, assigned skill and standing assignment untouched
-- The held-out set, scroll-bound set and core order MUST persist in the save, as MUST each hut's assigned skill and whether it has given its core lesson
+- Skill Seek MUST draw from unlearned skills that are not core, not shop-only, not scroll-bound, not held out, and within level; each Wise Man hut MUST teach its assigned learnable optional skill; once that is known, its 5% per-visit reroll digs up another unlearned optional skill, never a core, held-out, shop-only or scroll-bound one
+- Each Wise Man hut visit MUST have an independent 5% chance (no cap or cooldown) that the sage gives a random magic item into the inventory instead of that visit's lesson or message, leaving the hut's assigned skill untouched
+- The held-out set and scroll-bound set MUST persist in the save, as MUST each hut's assigned skill
 
 #### Skill List
 

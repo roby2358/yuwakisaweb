@@ -792,7 +792,7 @@ const SKILLS = {
         id: 'channel', name: 'Channel Aether', cost: 0, mpCost: 0, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
         scales: ['effectStrength'], tiers: [[4], [4], [4], [4], [4]], // freeAttune: locked at rank 1, kept flat at 4 HP/AE
         desc: 'Burn HP for AE, up to filling AE or half current HP. Min 1 AE — blood from a stone.',
-        scrollOnly: true, panelInvoke: true, freeAttune: true,
+        core: true, panelInvoke: true, freeAttune: true,
         minLevel: 3
     },
     breach_pulse: {

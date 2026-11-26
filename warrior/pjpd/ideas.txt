@@ -265,6 +265,13 @@ Updated: 2026-11-26T19:20:16Z
 
 Some item effects still have working code but no item carries them: mp_penalty, armor_aether_bonus and wall_crown (player.js), regen_combo (enemy_ai.js), and cleave (actions.js: hits every enemy next to the melee target). They came from the old hand-made magic items that were retired when items went procedural. Tie them back to items, e.g. as entries in the procedural magic-effect tables in config.js with text lines in text.js, or decide which to drop.
 ----
+Score:   40
+ID: core-level-byun
+Created: 2026-11-26T20:20:04Z
+Updated: 2026-11-26T20:20:04Z
+
+Core scrolls teach at any level, so every player can pick up Spirit Walk (normally level 6) and Renew/Retrain (level 4) at level 1 from the scrolls near the start. The 12-50 hex spread is the only gate. Watch in playtest; if it is too fast, a scroll could hold its skill until the player reaches its level.
+----
 Score:   35
 ID: renew-dialog-rk9x
 Created: 2026-11-26T17:50:03Z

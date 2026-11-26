@@ -1,5 +1,6 @@
 // Checks SkillLibrary's per-run skill groups: core, fixed, held-out and dealt
-// optional skills. Run: node test/skilllibrary.js
+// optional skills, and the core scrolls placed near the start on generated
+// worlds. Run: node test/skilllibrary.js
 'use strict';
 
 const assert = require('node:assert/strict');
@@ -7,16 +8,22 @@ const fs = require('fs');
 const path = require('path');
 const { load } = require('./load.js');
 
-// Load index.html's scripts in order, up to and including skilllibrary.js.
+// Load index.html's scripts in order, up to and including skilllibrary.js
+// (world.js loads before it).
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const scripts = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map(m => m[1]);
 const g = load(scripts.slice(0, scripts.indexOf('skilllibrary.js') + 1),
-    ['SKILLS', 'SkillLibrary', 'Rando', 'FAR_SCROLL_SKILLS', 'NEAR_CORE_SCROLLS', 'SKILL_HELD_OUT_FRACTION']);
-const { SKILLS, SkillLibrary, Rando, FAR_SCROLL_SKILLS, NEAR_CORE_SCROLLS, SKILL_HELD_OUT_FRACTION } = g;
+    ['SKILLS', 'SkillLibrary', 'Rando', 'FAR_SCROLL_SKILLS', 'SKILL_HELD_OUT_FRACTION', 'GameWorld', 'POI',
+        'hexDistance', 'CHANNEL_SCROLL_RADIUS', 'NEAR_CORE_SCROLL_RADIUS', 'NEAR_CORE_SKILLS']);
+const { SKILLS, SkillLibrary, Rando, FAR_SCROLL_SKILLS, SKILL_HELD_OUT_FRACTION, GameWorld, POI,
+    hexDistance, CHANNEL_SCROLL_RADIUS, NEAR_CORE_SCROLL_RADIUS, NEAR_CORE_SKILLS } = g;
 
 const all = Object.values(SKILLS);
-const CORE = new Set(['spirit_walk', 'mountain_skip', 'water_skip', 'respec', 'retrain']);
+const CORE = new Set(['channel', 'spirit_walk', 'mountain_skip', 'water_skip', 'respec', 'retrain']);
 assert.deepEqual(new Set(all.filter(s => s.core).map(s => s.id)), CORE);
+for (const id of CORE) assert.ok(!SKILLS[id].scrollOnly && !SKILLS[id].shopOnly, 'core skill also fixed: ' + id);
+assert.deepEqual(new Set(NEAR_CORE_SKILLS), new Set([...CORE].filter(id => id !== 'channel')));
+assert.equal(NEAR_CORE_SKILLS.length, CORE.size - 1);
 // The skill a new Player already knows: an inline literal in the Player
 // constructor (player.js, learnedSkills), so keep this in step with it.
 const STARTING = 'restore';
@@ -31,7 +38,7 @@ for (let n = 0; n < DEALS; n++) {
     const huts = Array.from({ length: HUTS }, () => ({ skill: null }));
     lib.deal(scrolls, huts, learned);
     // Every message names the failing deal, so a random failure can be read back.
-    const deal = ' [coreOrder ' + lib.coreOrder.join(',') + '; heldOut ' + [...lib.heldOut].join(',') + ']';
+    const deal = ' [heldOut ' + [...lib.heldOut].join(',') + ']';
     const why = msg => msg + deal;
 
     for (const id of CORE) {
@@ -51,27 +58,9 @@ for (let n = 0; n < DEALS; n++) {
     }
     assert.equal(lib.taken.size, FAR_SCROLL_SKILLS, why('taken count'));
 
-    assert.deepEqual(new Set(lib.coreOrder), CORE, why('coreOrder is not the core skills'));
-    assert.equal(lib.coreOrder.length, CORE.size, why('coreOrder length'));
-    const nearCore = lib.nearCoreSkills();
-    assert.equal(nearCore.length, NEAR_CORE_SCROLLS, why('near core scroll count'));
-    assert.equal(new Set(nearCore).size, NEAR_CORE_SCROLLS, why('near core skills not distinct'));
-    for (const id of nearCore) assert.ok(CORE.has(id), why('non-core near scroll skill: ' + id));
-
     // Huts: learnable optional skills only.
     const hutBad = id => !optional.includes(id) || lib.heldOut.has(id) || lib.taken.has(id);
     for (const h of huts) assert.ok(h.skill !== null && !hutBad(h.skill), why('bad hut skill: ' + h.skill));
-    for (const h of huts) assert.equal(h.coreTaught, false, why('hut starts with its core lesson given'));
-
-    // Core lessons: coreOrder's first unlearned skill, null once all five are known.
-    const coreLearned = new Set([STARTING]);
-    for (const id of lib.coreOrder) {
-        assert.equal(lib.firstUnlearnedCore(coreLearned), id, why('first unlearned core'));
-        coreLearned.add(id);
-    }
-    assert.equal(lib.firstUnlearnedCore(coreLearned), null, why('core lesson after all core learned'));
-    const skipFirst = new Set([STARTING, lib.coreOrder[0], lib.coreOrder[2]]);
-    assert.equal(lib.firstUnlearnedCore(skipFirst), lib.coreOrder[1], why('first unlearned core, skipping learned'));
 
     // poolSkills and hut rerolls with a random learned set and level.
     const someLearned = new Set([STARTING, ...all.filter(() => Rando.bool(0.3)).map(s => s.id)]);
@@ -81,22 +70,44 @@ for (let n = 0; n < DEALS; n++) {
         assert.ok(!lib.heldOut.has(id) && !fixed.has(id) && !lib.taken.has(id), why('bad pool skill: ' + id));
         assert.ok(!someLearned.has(id) && SKILLS[id].minLevel <= level, why('pool skill learned or over level: ' + id));
     }
-    for (const id of CORE)
-        if (!someLearned.has(id) && SKILLS[id].minLevel <= level) assert.ok(pool.includes(id), why('core missing from pool: ' + id));
+    for (const id of CORE) assert.ok(!pool.includes(id), why('core in pool: ' + id));
     const reroll = lib.rerollHutSkill(someLearned);
-    const rerollBad = id => !(CORE.has(id) || optional.includes(id)) || lib.heldOut.has(id) || lib.taken.has(id) || someLearned.has(id);
+    const rerollBad = id => !optional.includes(id) || lib.heldOut.has(id) || lib.taken.has(id) || someLearned.has(id);
     if (reroll !== null) assert.ok(!rerollBad(reroll), why('bad hut reroll: ' + reroll));
     const rerollPool = lib.obtainable(someLearned).map(s => s.id);
     for (const id of rerollPool) assert.ok(!rerollBad(id), why('bad obtainable skill: ' + id));
-    for (const id of CORE)
-        if (!someLearned.has(id)) assert.ok(rerollPool.includes(id), why('core missing from obtainable: ' + id));
+    // Even with nothing learned, no core skill is obtainable.
+    const freshPool = lib.obtainable(new Set()).map(s => s.id);
+    for (const id of CORE) assert.ok(!freshPool.includes(id), why('core obtainable: ' + id));
 
     // Save round-trip.
     const back = SkillLibrary.fromJSON(JSON.parse(JSON.stringify(lib.toJSON())));
     assert.deepEqual(back.taken, lib.taken, why('round-trip taken'));
     assert.deepEqual(back.heldOut, lib.heldOut, why('round-trip heldOut'));
-    assert.deepEqual(back.coreOrder, lib.coreOrder, why('round-trip coreOrder'));
     assert.deepEqual(back.poolSkills(someLearned, level), lib.poolSkills(someLearned, level), why('round-trip poolSkills'));
 }
 
-console.log('skilllibrary ok: ' + optional.length + ' optional, ' + DEALS + ' deals');
+// Core scrolls on generated worlds: exactly one scroll per core skill, Channel
+// Aether's the nearest and within CHANNEL_SCROLL_RADIUS, the rest past it and
+// within NEAR_CORE_SCROLL_RADIUS.
+const WORLDS = 10;
+for (let n = 0; n < WORLDS; n++) {
+    const world = new GameWorld();
+    world.generate();
+    const start = world.pois.find(p => p.type === POI.HAVEN);
+    const placed = new SkillLibrary().placeCoreScrolls(world, start.q, start.r);
+    // Generation already drops empty prize scrolls; the core ones carry a core skill.
+    const scrolls = world.pois.filter(p => p.type === POI.SCROLL && CORE.has(p.skill));
+    assert.deepEqual(new Set(placed), new Set(scrolls), 'placed scrolls are the core scrolls');
+    for (const id of CORE)
+        assert.equal(scrolls.filter(p => p.skill === id).length, 1, 'one scroll for ' + id);
+    const dist = p => hexDistance(p.q, p.r, start.q, start.r);
+    const channel = scrolls.find(p => p.skill === 'channel');
+    assert.ok(dist(channel) <= CHANNEL_SCROLL_RADIUS, 'channel scroll within ' + CHANNEL_SCROLL_RADIUS);
+    for (const p of scrolls.filter(p => p !== channel)) {
+        assert.ok(dist(p) > dist(channel), 'channel scroll not nearest: ' + p.skill);
+        assert.ok(dist(p) <= NEAR_CORE_SCROLL_RADIUS, 'core scroll past ' + NEAR_CORE_SCROLL_RADIUS + ': ' + p.skill);
+    }
+}
+
+console.log('skilllibrary ok: ' + optional.length + ' optional, ' + DEALS + ' deals, ' + WORLDS + ' worlds');

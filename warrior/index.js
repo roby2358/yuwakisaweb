@@ -1347,7 +1347,7 @@ function animDelay(ms) { return new Promise(r => setTimeout(r, ms)); }
 const SAVE_KEY = 'warrior_save';
 // Bump by 1 whenever a change breaks old saves (a field added to or renamed in any
 // toJSON/fromJSON, a changed save shape); leave it for non-breaking changes.
-const SAVE_VERSION = 2;
+const SAVE_VERSION = 3;
 
 function saveGame() {
     const data = {
@@ -1465,13 +1465,13 @@ function initGame() {
     const startHaven = settlements.find(s => !START_HILLS.has(world.getHex(s.q, s.r)?.terrain))
         || settlements[0] || world.pois[0];
 
-    // Drop the map scrolls now that the start is known. Channel Aether sits
-    // within 11 hexes of the start; the 10 story scrolls hide in the half too
-    // far from the Maw to earn a proximity bonus. All must be reachable on foot.
-    // The story scrolls are placed empty (poi.skill === null) and the
-    // SkillLibrary deals skills to some of them.
-    world.placeScroll('channel', startHaven.q, startHaven.r,
-        h => hexDistance(h.q, h.r, startHaven.q, startHaven.r) <= 11);
+    // Drop the map scrolls now that the start is known. One scroll per core
+    // skill lies near the start (Channel Aether's nearest); the 10 story scrolls
+    // hide in the half too far from the Maw to earn a proximity bonus. All must
+    // be reachable on foot. The story scrolls are placed empty
+    // (poi.skill === null) and the SkillLibrary deals skills to some of them.
+    skillLibrary = new SkillLibrary();
+    skillLibrary.placeCoreScrolls(world, startHaven.q, startHaven.r);
     const farScrolls = [];
     if (mawDists) {
         let mawMax = 1;
@@ -1488,13 +1488,8 @@ function initGame() {
 
     // Deal this run's skill groups: optional skills are split into held out,
     // far-scroll and learnable; the Wise Men get non-binding learnable skills.
-    // Then a few core skills ride non-binding scrolls near the start.
-    skillLibrary = new SkillLibrary();
     const huts = world.pois.filter(p => p.type === POI.HUT);
     skillLibrary.deal(farScrolls, huts, player.learnedSkills);
-    for (const id of skillLibrary.nearCoreSkills())
-        world.placeScroll(id, startHaven.q, startHaven.r,
-            h => hexDistance(h.q, h.r, startHaven.q, startHaven.r) <= NEAR_CORE_SCROLL_RADIUS);
 
     refreshVision();
     computeMawDistances(world);
@@ -2558,12 +2553,11 @@ function invokeSanctuary() {
     restHeal(1 / sanct.effectStrength);
 }
 
-// A Wise Man's Hut, case by case: its one core lesson (the first unlearned skill
-// in coreOrder, until this hut has given it), then its assigned optional skill if
-// the player lacks it, then HUT_REROLL_CHANCE per visit to dig up a fresh skill
-// from the obtainable pool (optional or unlearned core; never held out, shop or
-// scroll-taken), which becomes the hut's standing assignment. Huts are never
-// spent: camping one until the roll hits is fine. Separately, HUT_GIFT_CHANCE per
+// A Wise Man's Hut, case by case: its assigned optional skill if the player
+// lacks it, then HUT_REROLL_CHANCE per visit to dig up a fresh skill from the
+// obtainable pool (optional only; never core, held out, shop or scroll-taken),
+// which becomes the hut's standing assignment. Huts are never spent: camping
+// one until the roll hits is fine. Separately, HUT_GIFT_CHANCE per
 // visit the sage hands over a magic item instead, leaving the hut's skill state
 // untouched for the next visit.
 const HUT_GIFT_CHANCE = 0.05;
@@ -2573,13 +2567,10 @@ function showHutDialog(poi) {
 
     if (Rando.bool(HUT_GIFT_CHANCE)) { giveHutGift(); return; }
 
-    const coreId = poi.coreTaught ? null : skillLibrary.firstUnlearnedCore(player.learnedSkills);
-    if (coreId) { offerHutLesson(coreId, () => { poi.coreTaught = true; }); return; }
-
-    if (poi.skill && !player.learnedSkills.has(poi.skill)) { offerHutLesson(poi.skill, () => {}); return; }
+    if (poi.skill && !player.learnedSkills.has(poi.skill)) { offerHutLesson(poi.skill); return; }
 
     const foundId = Rando.bool(HUT_REROLL_CHANCE) ? skillLibrary.rerollHutSkill(player.learnedSkills) : null;
-    if (foundId) { poi.skill = foundId; offerHutLesson(foundId, () => {}); return; }
+    if (foundId) { poi.skill = foundId; offerHutLesson(foundId); return; }
 
     showDialog(hutTitle(),
         say('sage_peers', {}) + `<div style="color:#a1887f">${say('sage_nothing', {})}</div>`,
@@ -2608,15 +2599,14 @@ function hutLeaveButton() {
     return { label: say('btn_leave', {}), action: () => { player.mp = 0; } };
 }
 
-// The hut's teaching dialog for one skill; onLearn runs after the skill is learned.
-function offerHutLesson(teachId, onLearn) {
+// The hut's teaching dialog for one skill.
+function offerHutLesson(teachId) {
     const skill = SKILLS[teachId];
     showDialog(hutTitle(),
         say('sage_eyes_light', {}) + `<div style="color:#b388ff">${say('sage_teach', { skill: skill.name })}</div>${skillBlurbHtml(skill)}`,
         [{
             label: say('btn_learn', {}), cls: 'primary', action: () => {
                 learnSkill(teachId);
-                onLearn();
                 player.mp = 0;
                 logCombat(say('log_sage_teaches', { skill: skill.name }), 'log-info');
             }

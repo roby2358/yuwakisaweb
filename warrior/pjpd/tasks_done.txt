@@ -80,6 +80,27 @@ Done when: node test/scripts.js and node test/fx.js pass; the SkillLibrary metho
 ----
 Priority:   60
 Status: Done
+ID: core-scrolls-b9hw
+Created: 2026-11-26T19:53:37Z
+Updated: 2026-11-26T20:24:29Z
+
+Core skills come only from scrolls near the start, so the player walks for them; huts and Skill Seek give only optional skills.
+
+Goal: today 5 core skills exist (spirit_walk, mountain_skip, water_skip, respec/Renew, retrain). Three ride non-binding scrolls within 25 hexes, and huts (one core lesson each) and Skill Seek can also grant them, so a core scroll often turns into a Skill Point because the skill was already learned elsewhere. Channel Aether sits on its own scroll within 11 hexes but is classed as a scrollOnly fixed skill.
+
+Settled design:
+- Core skills are exactly: channel, spirit_walk, mountain_skip, water_skip, respec, retrain. Mark channel `core: true` in SKILLS and drop its scrollOnly flag (core skills are never held out or dealt).
+- Every core skill rides exactly one scroll near the start, and core scrolls are the ONLY channel for core skills. SkillLibrary marks every core skill unavailable to other channels: obtainable/poolSkills (Skill Seek) and hut rerolls exclude core skills.
+- Channel Aether is always the closest core scroll: keep its existing placement (within 11 hexes of the start haven) and its existing special handling. The other five core scrolls are placed at distance > 11 and <= NEAR_CORE_SCROLL_RADIUS, which becomes 50 (half the 100-wide map), using the existing placeScroll (reachable on foot).
+- Remove the hut core lesson: firstUnlearnedCore, poi.coreTaught and the core-lesson branch of showHutDialog go away. Huts go back to: assigned optional skill if unlearned, else HUT_REROLL_CHANCE reroll from obtainable (now optional-only) skills, plus the independent gift roll.
+- coreOrder no longer has a purpose; remove it from SkillLibrary (constructor, deal, toJSON/fromJSON) if nothing else needs it. nearCoreSkills is replaced by the list of non-channel core skills.
+- Bump SAVE_VERSION (save shape changes).
+- Update the skilllibrary.js header comment, test/skilllibrary.js (core never in poolSkills or hut rerolls; every core skill has exactly one scroll; channel's scroll is the closest), CLAUDE.md, SPEC.md (Skill Groups) and DYNAMICS.md (hut row, Skill Groups) to match.
+
+Done when: all test/*.js pass; at new game there are 6 core scrolls, channel's is the nearest and within 11, the rest within 50; huts and Skill Seek never offer a core skill.
+----
+Priority:   60
+Status: Done
 ID: levelup-sp-z5fp
 Created: 2026-11-26T16:57:48Z
 Updated: 2026-11-26T17:52:48Z
