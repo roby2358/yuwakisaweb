@@ -70,9 +70,9 @@ Ranged-skill targets need the enemy to be visible as well as in LOS, like weapon
 - **Why:** designer's call; to be filled in.
 - **Evidence:** not measured.
 
-### D-9 Gear changes only in the player phase — *Decided, unbuilt*
-Equipping and unequipping from the Inventory panel will be allowed only while phase is
-'player'. The code has no phase check; filed as a tracker task.
+### D-9 Gear changes only in the player phase — *Decided*
+Equipping and unequipping from the Inventory panel is allowed only while phase is 'player'
+and the game is not over; outside it the buttons render disabled. Equipping costs no MP.
 - **Alternatives:** allow gear changes at any time, including the enemy phase.
 - **Why:** designer's call; to be filled in.
 - **Evidence:** not measured.

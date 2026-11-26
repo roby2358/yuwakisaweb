@@ -384,6 +384,20 @@ Tuning: don't overpopulate ranged on a single map — they're a counter to slow 
 ----
 Priority:   50
 Status: Done
+ID: invphase-dedz
+Created: 2026-11-26T22:05:38Z
+Updated: 2026-11-26T22:49:38Z
+
+Gear can be changed only on your turn.
+
+Goal: the Inventory panel's equip/unequip buttons (click handler in index.js near updateInvPanel, data-action "equip"/"unequip") work in any phase, including during the enemy phase and with a dialog open. Gear swaps should be a player-phase action, like every other action.
+
+Settled design: the handler returns early unless phase === 'player' (and the game is not over). Also render the buttons disabled outside the player phase so the panel shows why nothing happens; refreshOpenPanels already redraws the panel when the phase changes, check that it does. Equipping stays free (no MP). Update ONTOLOGY.md (commands table row for equip/unequip, Q-18 reference).
+
+Done when: node test/*.js pass; reading the handler shows the phase guard; ONTOLOGY.md matches.
+----
+Priority:   50
+Status: Done
 ID: skillvis-btfk
 Created: 2026-11-26T22:05:38Z
 Updated: 2026-11-26T22:44:50Z

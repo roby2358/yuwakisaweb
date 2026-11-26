@@ -129,7 +129,7 @@ Canvas clicks are ignored when `phase !== 'player'`.
 - Player-facing wording lives in `text.js`, not at call sites: `say('key', { name })` (always pass the vars object, `{}` when none). Prose kinds (narration/stage/speech) render to `<p>` blocks; labels and log lines are plain text. Functional entries keep one variant; flavor entries (huts, scrolls/ruins, havens/villages/smith greetings, level-up/Skill Seek) carry 20, every variant with the same placeholders. Log colour classes stay at the call site. Skill names/descriptions and item names stay in config.js as data.
 - All randomness goes through `Rando` — `bellCurve(strength)` for damage rolls
 - Color values are 0-1 floats internally, converted to hex strings only for canvas
-- Phase management gates input: canvas clicks ignored when `phase !== 'player'`
+- Phase management gates input: canvas clicks ignored when `phase !== 'player'`; player actions (skills, hex action, Inventory equip/unequip) check `isPlayerTurn()` (player phase and not game over). Set the phase only through `changePhase(p)`, which also redraws open panels
 - `deselectPlayer()` clears selection/reachable/attackable but NOT targeting state
 - Persistent classes must keep `toJSON`/`fromJSON` in sync when fields are added
 

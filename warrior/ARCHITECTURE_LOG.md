@@ -2,6 +2,14 @@
 
 Dated entries, newest first. This is the only design doc that records history.
 
+### 2026-11-26 — Gear changes only in the player phase (D-9 built)
+
+The Inventory panel's equip/unequip handler now returns unless phase is 'player' and the game
+is not over, and the buttons render disabled otherwise. `changePhase` now calls
+`refreshOpenPanels`, since entering the enemy phase or opening a dialog did not redraw open
+panels. Equipping stays free. The repeated `phase === 'player' && !gameOver` test is now one
+`isPlayerTurn()` predicate, used by the inventory panel and the existing player-action guards. D-9 is now *Decided*, and ONTOLOGY drops its [D, unbuilt] tag.
+
 ### 2026-11-26 — Ranged skills need a visible target (D-8 built)
 
 `getSkillTargets`' ranged case now uses `visibleRangedTargets`, the enemy-visible-plus-LOS

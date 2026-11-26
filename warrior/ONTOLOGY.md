@@ -1226,7 +1226,7 @@ formalized from the code]
 | skill choice: pick | Skill Seek offer open | learnSkill (latent) | |
 | settlement reward: Accept / Decline | offer open | gold, settlementsRestored | |
 | RETURN: Return / Cancel | RETURN activated | endGame(won) | |
-| equip / unequip item (Inventory panel) | always, including emptying the weapon slot [D] (D-5); no phase check [D, unbuilt] (D-9): player phase only | swap slot ↔ inventory; clamp HP/AE | free: no MP |
+| equip / unequip item (Inventory panel) | player phase only, game not over [D] (D-9); emptying the weapon slot allowed [D] (D-5). The buttons render disabled outside the player phase | swap slot ↔ inventory; clamp HP/AE | free: no MP |
 | equip / unequip skill slot (Skills panel) | skill active | first empty slot, else the last slot | free |
 | newGame (intro New Game; HUD New Game with confirm; endgame New Game) | always | initGame | deletes save |
 | continue (intro) | saveIsCurrent | loadGame | |

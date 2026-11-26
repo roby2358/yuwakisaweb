@@ -100,8 +100,9 @@ let reachable = null;       // Map<string, cost>
 let attackable = null;      // Set<string> — enemy hexes within melee reach
 let turn = 1;
 let phase = 'player';       // 'player' | 'enemy' | 'animating' | 'dialog'
-function changePhase(p) { phase = p; }
+function changePhase(p) { phase = p; refreshOpenPanels(); }
 let gameOver = false;
+function isPlayerTurn() { return phase === 'player' && !gameOver; }
 let gameWon = false;
 let victory = new Victory();
 const sound = new Sound();
@@ -1099,7 +1100,7 @@ function getSkillTargets(skillId) {
 // ================================================================
 
 function selectPlayer() {
-    if (phase !== 'player' || gameOver) return;
+    if (!isPlayerTurn()) return;
     selected = true;
     computeReachable();
 }
@@ -1288,7 +1289,7 @@ function openPoiDialog(poi) {
 
 // New hex-action types branch here.
 function hexAction() {
-    if (gameOver || phase !== 'player') return;
+    if (!isPlayerTurn()) return;
     const poi = world.poiAt(player.q, player.r);
     if (poi) { openPoiDialog(poi); return; }
     endTurn();
@@ -1986,7 +1987,7 @@ function updateSkillBar() {
     const wep = player.weapon();
     const hasRanged = weaponIsRanged(wep);
     const rangedCost = hasRanged && wep.magical && wep.special !== 'free_ranged' && wep.special !== 'channel' ? 1 : 0;
-    const myTurn = phase === 'player' && !gameOver;
+    const myTurn = isPlayerTurn();
     const rangedWhy = aetherShortfall(rangedCost);
     paintSkillSlot(rangedSlot, {
         icon: RANGED_SLOT_GLYPH, name: say('slot_ranged', {}),
@@ -2171,7 +2172,7 @@ function updateSkillsPanel() {
     const learnedUnequipped = [...player.learnedSkills].filter(id => !equipped.has(id));
     const unequipped = learnedUnequipped.filter(id => player.activeSkills.has(id)).sort(byName);
     const latent = learnedUnequipped.filter(id => !player.activeSkills.has(id)).sort(byName);
-    const canInvokeFromPanel = phase === 'player' && !gameOver;
+    const canInvokeFromPanel = isPlayerTurn();
     if (unequipped.length > 0) {
         html += `<div style="color:#888;margin-top:8px;margin-bottom:4px;font-size:11px">${say('skills_learned', {})}</div>`;
         for (const skillId of unequipped) {
@@ -2237,6 +2238,7 @@ function updateSkillsPanel() {
 }
 
 function updateInvPanel() {
+    const disabled = isPlayerTurn() ? '' : ' disabled';
     document.getElementById('inv-gold').innerHTML = `<div style="color:#ffc107;margin-bottom:8px">${say('inv_gold', { gold: player.gold })}</div>`;
     const list = document.getElementById('inv-list');
     let html = '';
@@ -2250,7 +2252,7 @@ function updateInvPanel() {
         html += `<div class="inv-item equipped">
             <div><span class="${itemRarityClass(item)}">${item.name}</span> <span style="color:#888">(${slot})</span><br>
             <span style="color:#aaa;font-size:11px">${itemStatLine(item)}</span></div>
-            <button data-action="unequip" data-id="${id}" data-slot="${slot}">${say('btn_unequip', {})}</button>
+            <button data-action="unequip" data-id="${id}" data-slot="${slot}"${disabled}>${say('btn_unequip', {})}</button>
         </div>`;
     }
 
@@ -2262,7 +2264,7 @@ function updateInvPanel() {
         html += `<div class="inv-item">
             <div><span class="${itemRarityClass(item)}">${item.name}</span> <span style="color:#888">(${slot})</span> ${compareToEquippedHtml(item)}<br>
             <span style="color:#aaa;font-size:11px">${itemStatLine(item)}</span></div>
-            <button data-action="equip" data-id="${id}" data-slot="${slot}">${say('btn_equip', {})}</button>
+            <button data-action="equip" data-id="${id}" data-slot="${slot}"${disabled}>${say('btn_equip', {})}</button>
         </div>`;
     }
 
@@ -2271,6 +2273,7 @@ function updateInvPanel() {
 
     list.querySelectorAll('button').forEach(btn => {
         btn.addEventListener('click', () => {
+            if (!isPlayerTurn()) return;
             const action = btn.dataset.action;
             const id = btn.dataset.id;
             const slot = btn.dataset.slot;
@@ -2280,7 +2283,7 @@ function updateInvPanel() {
                 if (current) player.inventory.unshift(current);
                 player.equipment[slot] = id;
                 const rmIdx = player.inventory.indexOf(id);
-            if (rmIdx !== -1) player.inventory.splice(rmIdx, 1);
+                if (rmIdx !== -1) player.inventory.splice(rmIdx, 1);
             } else if (action === 'unequip') {
                 player.equipment[slot] = null;
                 player.inventory.unshift(id);
@@ -3497,7 +3500,7 @@ function activateRangedWeapon() {
 }
 
 function activateSkill(skillId) {
-    if (phase !== 'player' || gameOver) return;
+    if (!isPlayerTurn()) return;
     const skill = SKILLS[skillId];
     if (!skill) return;
     if (player.aether < effectiveAetherCost(player, skill)) { logCombat(say('log_not_enough_aether', {}), 'log-info'); return; }
