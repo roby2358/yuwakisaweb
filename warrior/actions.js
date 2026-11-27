@@ -769,14 +769,14 @@ class SkillAction extends Action {
             hex.terrain = UNSHATTERED_VERSION[hex.terrain];
         }
         for (const hex of hexes) {
-            for (const coord of hexesInRange(hex.q, hex.r, 3)) {
+            for (const coord of hexesInRange(hex.q, hex.r, SHATTER_RADIUS)) {
                 const h = world.getHex(coord.q, coord.r);
                 if (h) h.shatteredCount = Math.max(0, h.shatteredCount - 1);
             }
         }
         const checked = new Set();
         for (const hex of hexes) {
-            for (const coord of hexesInRange(hex.q, hex.r, 3)) {
+            for (const coord of hexesInRange(hex.q, hex.r, SHATTER_RADIUS)) {
                 const key = hexKey(coord.q, coord.r);
                 if (checked.has(key)) continue;
                 checked.add(key);
@@ -803,7 +803,7 @@ class SkillAction extends Action {
 function executeRestore(action) {
     const { player, world, em, victory, logCombat, gainXP, closeBreach, offerSettlementReward, showDialog, showOnceDialog } = action.ctx;
     const skill = action.skill;
-    const range = 1 + Math.floor(player.level / 3);
+    const range = RESTORE_BASE_RANGE + Math.floor(player.level / RESTORE_LEVELS_PER_RANGE);
     const shatteredHexes = hexesInRange(player.q, player.r, range)
         .map(h => world.getHex(h.q, h.r))
         .filter(h => h && UNSHATTERED_VERSION[h.terrain] !== undefined);
@@ -838,12 +838,12 @@ function executeRestore(action) {
     player.aether += ae;
     let goldFound = 0;
     for (let i = 0; i < shatteredHexes.length; i++) {
-        if (Rando.bool(0.16)) goldFound++;
+        if (Rando.bool(RESTORE_GOLD_CHANCE)) goldFound++;
     }
     if (goldFound > 0) { player.gold += goldFound; victory.goldCollected += goldFound; }
     victory.hexesRestored += shatteredHexes.length;
     if (shatteredHexes.length > 0) {
-        gainXP(shatteredHexes.length * 3);
+        gainXP(shatteredHexes.length * RESTORE_XP_PER_HEX);
         const hexes = sayCount(shatteredHexes.length, { one: 'word_hex', many: 'word_hexes' }, {});
         const msg = goldFound > 0
             ? say('log_restored_gold', { n: shatteredHexes.length, hexes, ae, gold: goldFound })
@@ -852,7 +852,7 @@ function executeRestore(action) {
         offerSettlementReward(shatteredHexes);
     }
     if (breachInRange) {
-        const chance = breachInRange.type === POI.MAW ? 0.20 : 0.40;
+        const chance = breachInRange.type === POI.MAW ? MAW_SEAL_CHANCE : BREACH_SEAL_CHANCE;
         if (Rando.bool(chance)) {
             closeBreach(breachInRange);
         } else {

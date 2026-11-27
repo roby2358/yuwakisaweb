@@ -245,7 +245,7 @@ Magical items are generated at runtime via `rollMagicItem()`. Each item gets a u
 **Ranged weapons**: damage in MAGIC_DAMAGE, range in MAGIC_RANGE. A d6 picks the variant: normal (2 MP per shot), fast (1 MP) or heavy (double damage, all MP, 2 Aether per shot).
 **Armor**: defense in MAGIC_DEFENSE, plus one armor or passive effect.
 **Artifacts**: no base stat, one passive effect.
-**Price** (MAGIC_PRICE): the item's damage, range or defense times the effect's `value` (how strong the effect is); artifacts get a random base times `value`. Magic gear is expensive next to mundane gear, so most of it is found rather than bought.
+**Price**: the item's damage, range or defense times the effect's `value` (how strong the effect is); artifacts get a random base times `value`. Magic gear is expensive next to mundane gear, so most of it is found rather than bought.
 
 #### Melee Weapon Effects (41 variants)
 armor_pierce (2/4), aether_siphon (1/2), burn (2/3/5), chain (2/3/5), chaos_bonus (2/4/6), channel (+3/+5/+8 damage, 1/3/5 self-damage), charge (+4/+6/+8 bonus, x2 multiplier), counter_mastery, defense_shred (1/2), double_strike, triple_strike, free_action, ignore_defense, knockback, lifesteal (1/2/3), reverberate, riposte (1/2/3), sweep (2/3/5 adjacent), stun (+20/30/40%)

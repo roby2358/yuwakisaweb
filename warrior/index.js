@@ -615,19 +615,19 @@ function enemyEffectiveMaxHp(enemy) {
 function enemyDefense(enemy, def) {
     let d = def.defense + mawProximityBonus(enemy.q, enemy.r).defense;
     if (enemy.defReduction) d = Math.max(0, d - enemy.defReduction);
-    if (enemyOnCorruptedTerrain(enemy, def)) d += 2;
+    if (enemyOnCorruptedTerrain(enemy, def)) d += CORRUPT_DEFENSE;
     return d;
 }
 
 function enemyMeleeAttack(enemy, def) {
     let atk = def.attack + mawProximityBonus(enemy.q, enemy.r).attack;
-    if (enemyOnCorruptedTerrain(enemy, def)) atk += 3;
+    if (enemyOnCorruptedTerrain(enemy, def)) atk += CORRUPT_ATTACK;
     return atk;
 }
 
 function enemyRangedAttack(enemy, def) {
     let atk = def.rangedAttack + mawProximityBonus(enemy.q, enemy.r).attack;
-    if (enemyOnCorruptedTerrain(enemy, def)) atk += 3;
+    if (enemyOnCorruptedTerrain(enemy, def)) atk += CORRUPT_ATTACK;
     return atk;
 }
 
@@ -774,7 +774,7 @@ function killEnemy(enemy, opts = {}) {
         sound.killEnemy();
     }
     if (opts.byGarrison) victory.garrisonKills++;
-    const goldGain = Rando.int(1, 5) + (def.gold || 0);
+    const goldGain = Rando.int(...KILL_GOLD) + (def.gold || 0);
     player.gold += goldGain;
     victory.goldCollected += goldGain;
     logCombat(say('log_defeated', { name: def.name }), 'log-info');
@@ -797,7 +797,7 @@ function killEnemy(enemy, opts = {}) {
         logCombat(say('log_soul_harvest', { n: soulXP }), 'log-xp');
     }
     // Opportunist: chance for bonus gold on kill
-    if (player.equipped('opportunist') && Rando.bool(0.25)) {
+    if (player.equipped('opportunist') && Rando.bool(OPPORTUNIST_CHANCE)) {
         const bonusGold = Rando.int(3, 8);
         player.gold += bonusGold;
         victory.goldCollected += bonusGold;
@@ -812,14 +812,14 @@ function killEnemy(enemy, opts = {}) {
         offerSettlementReward([{ q: enemy.q, r: enemy.r }]);
     }
 
-    // Crawler and Guardian drops: 0-3 non-magical + 10% magical
+    // Crawler and Guardian drops: CHAOS_DROP_MUNDANE non-magical + CHAOS_DROP_MAGIC_CHANCE magical
     if (enemy.type === ENEMY_TYPE.BREACH_CRAWLER || enemy.type === ENEMY_TYPE.BREACH_GUARDIAN) {
-        const nmDrops = rollNonMagicalDrops(0, 3);
+        const nmDrops = rollNonMagicalDrops(...CHAOS_DROP_MUNDANE);
         for (const item of nmDrops) {
             player.inventory.push(item.id);
             logCombat(say('found_item', { item: item.name }), 'log-gold');
         }
-        if (Rando.bool(0.1)) {
+        if (Rando.bool(CHAOS_DROP_MAGIC_CHANCE)) {
             const magicalDrop = rollMagicItem();
             player.inventory.push(magicalDrop.id);
             logCombat(say('found_magic_item', { item: magicalDrop.name }), 'log-gold');
@@ -904,7 +904,7 @@ function gainXP(amount) {
     player.xp += amount;
     logCombat(say('log_xp', { n: amount }), 'log-xp');
     const needed = xpForLevel(player.level + 1);
-    if (player.xp >= needed && player.level < 10) {
+    if (player.xp >= needed && player.level < LEVEL_CAP) {
         player.level++;
         player.xp -= needed;
         player.hp = player.maxHP();
@@ -933,7 +933,7 @@ function checkSkillUsage(skill) {
     if (skill.id === 'sprint' && player.sprintUsedThisTurn) return say('why_sprint_used', {});
     const usage = skill.usage || SKILL_USAGE.ANYTIME;
     if (usage === SKILL_USAGE.ANYTIME) return null;
-    const nearbyEnemy = em.enemies.some(e => hexDistance(player.q, player.r, e.q, e.r) <= 2);
+    const nearbyEnemy = em.enemies.some(e => hexDistance(player.q, player.r, e.q, e.r) <= SKILL_SAFE_RADIUS);
     if (nearbyEnemy) return say('why_too_close', {});
     if (usage === SKILL_USAGE.PRISTINE) {
         const hex = world.getHex(player.q, player.r);
@@ -1140,7 +1140,7 @@ function playerMoveCost(hex) {
     const baseCost = MOVEMENT_COST[hex.terrain] ?? Infinity;
     if (baseCost === Infinity) return Infinity;
     const poi = world.poiAt(hex.q, hex.r);
-    if (poi && (poi.type === POI.HAVEN || poi.type === POI.VILLAGE)) return 1;
+    if (poi && (poi.type === POI.HAVEN || poi.type === POI.VILLAGE)) return SETTLEMENT_MOVE_COST;
     if (player.equipped('strider') && baseCost > 1) return 1;
     return baseCost;
 }
@@ -1230,7 +1230,7 @@ function moveAndAttack(enemyQ, enemyR) {
 }
 
 function eatCrop() {
-    const heal = Math.ceil(player.maxHP() / 10);
+    const heal = Math.ceil(player.maxHP() / CROP_HEAL_DIVISOR);
     const before = player.hp;
     player.hp = Math.min(player.maxHP(), player.hp + heal);
     const gained = player.hp - before;
@@ -1286,18 +1286,18 @@ function closeBreach(poi) {
     render();
 }
 
-// Sealing the Maw leaves a RETURN scroll within 3 hexes of the settling ground.
+// Sealing the Maw leaves a RETURN scroll within MAW_SCROLL_RADIUS of the settling ground.
 // The scroll is NOT revealed — the player seals from within 3 hexes, so it will
 // usually be in sight, but must be sought out and stepped on to be claimed.
 function sealMaw(maw) {
-    world.dropScroll('return', maw.q, maw.r, h => hexDistance(h.q, h.r, maw.q, maw.r) <= 3);
+    world.dropScroll('return', maw.q, maw.r, h => hexDistance(h.q, h.r, maw.q, maw.r) <= MAW_SCROLL_RADIUS);
     logCombat(say('log_maw_sealed', {}), 'log-info');
     showDialog(say('title_maw_sealed', {}), say('maw_sealed', {}),
         [{ label: say('btn_continue', {}), cls: 'btn-primary' }]);
 }
 
 function showBreachLootDialog() {
-    const loot = rollPoiLoot(50, 100);
+    const loot = rollPoiLoot(...BREACH_LOOT_GOLD);
     const body = formatLootHtml(say('breach_loot', {}), loot);
     showDialog(say('title_breach_sealed', {}), body, [{ label: say('btn_continue', {}), cls: 'btn-primary' }]);
 }
@@ -1340,7 +1340,7 @@ function advanceTurn() {
     turn++;
     player.mp = player.maxMP();
     if (player.isEngaged(em.enemies) && !player.equipped('disengage')) {
-        player.mp = Math.max(1, Math.floor(player.mp / 2));
+        player.mp = Math.max(1, Math.floor(player.mp / ENGAGED_MP_DIVISOR));
         logCombat(say('log_engaged', {}), 'log-info');
     }
     player.movedThisTurn = false;
@@ -1352,7 +1352,7 @@ function advanceTurn() {
 
 function startPlayerTurn() {
     combatAlerted = false;
-    if (player.hp > 0 && player.hp / player.maxHP() < 0.10) victory.nearDeathMoments++;
+    if (player.hp > 0 && player.hp / player.maxHP() < NEAR_DEATH_FRACTION) victory.nearDeathMoments++;
     turnStartTime = performance.now();
     resetTurnGains();
     totallingTurnGains = true;
@@ -1935,7 +1935,7 @@ function updateHUD() {
     document.getElementById('ae-fill').style.width = (player.aether / mae * 100) + '%';
     updateMpPips();
     document.getElementById('level-info').textContent = say('hud_level', { level: player.level });
-    const xpNeeded = player.level < 10 ? xpForLevel(player.level + 1) : null;
+    const xpNeeded = player.level < LEVEL_CAP ? xpForLevel(player.level + 1) : null;
     document.getElementById('xp-text').textContent = player.xp + '/' + (xpNeeded ?? '---');
     document.getElementById('xp-fill').style.width = (xpNeeded ? (player.xp / xpNeeded * 100) : 100) + '%';
     document.getElementById('gold-info').textContent = say('hud_gold', { gold: player.gold });
@@ -2124,7 +2124,7 @@ function learnSkill(skillId, { active = false } = {}) {
 
 // The consolation cascade for any reward the player can't fully use — a skill
 // gem, or a Skill Seek with nothing left to learn: give a Skill Point, or, when
-// SP is already maxed, XP instead. (At level 10 that XP currently goes nowhere;
+// SP is already maxed, XP instead. (At LEVEL_CAP that XP currently goes nowhere;
 // revisit per pjpd.) Returns { kind: 'sp' | 'xp', amount } so callers can flavor
 // the message; the XP branch logs its own "+N XP" via gainXP.
 const CONSOLATION_XP = 10;
@@ -2469,7 +2469,7 @@ function offerSettlementReward(originHexes) {
     for (const poi of world.pois) {
         const settlement = SETTLEMENTS[poi.type];
         if (!settlement) continue;
-        if (!originHexes.some(h => hexDistance(poi.q, poi.r, h.q, h.r) <= 3)) continue;
+        if (!originHexes.some(h => hexDistance(poi.q, poi.r, h.q, h.r) <= SETTLEMENT_REWARD_RADIUS)) continue;
         const reward = Rando.int(settlement.reward[0], settlement.reward[1]);
         const symbol = POI_SYMBOLS[poi.type];
         const title = say(settlement.titleKey, { symbol });
@@ -2528,10 +2528,10 @@ function skillGemDropChance() {
 
 // On a kill, roll skillGemDropChance() to drop a skill gem on a passable hex near
 // the fallen enemy — never on the kill hex, under the player, an existing gem, or
-// a POI. Prefer adjacent; widen out to 5 hexes only when nothing closer is free.
+// a POI. Prefer adjacent; widen out to GEM_DROP_RADIUS only when nothing closer is free.
 function trySpawnSkillGem(q, r) {
     if (!Rando.bool(skillGemDropChance())) return;
-    const valid = hexesInRange(q, r, 5).filter(n => {
+    const valid = hexesInRange(q, r, GEM_DROP_RADIUS).filter(n => {
         const h = world.getHex(n.q, n.r);
         return h && world.isPassable(h) && !h.poi && !h.skillGem
             && !(n.q === player.q && n.r === player.r)
@@ -2546,7 +2546,7 @@ function trySpawnSkillGem(q, r) {
 }
 
 function trySpawnVillageCrop(poi) {
-    if (!Rando.bool(0.25)) return;
+    if (!Rando.bool(VILLAGE_CROP_CHANCE)) return;
     const candidates = hexNeighbors(poi.q, poi.r).filter(n => {
         const h = world.getHex(n.q, n.r);
         return h && world.isPassable(h) && h.goldDeposit <= 0;
@@ -2554,7 +2554,7 @@ function trySpawnVillageCrop(poi) {
     if (candidates.length === 0) return;
     const spot = Rando.choice(candidates);
     const hex = world.getHex(spot.q, spot.r);
-    hex.goldDeposit = Rando.int(1, 3);
+    hex.goldDeposit = Rando.int(...CROP_GOLD);
     hex.crop = Rando.choice(CROP_ICONS);
 }
 
@@ -2575,7 +2575,7 @@ function restByFraction(fraction) {
 function showVillageDialog(poi) {
     trySpawnVillageCrop(poi);
     showVerticalDialog(say(SETTLEMENTS[POI.VILLAGE].titleKey, { symbol: POI_SYMBOLS[POI.VILLAGE] }), say('village_intro', {}), [
-        { label: say('btn_rest', {}), cls: 'primary', action: () => { restByFraction(0.5); } },
+        { label: say('btn_rest', {}), cls: 'primary', action: () => { restByFraction(VILLAGE_REST_FRACTION); } },
         { label: say('btn_weaponsmith', {}), action: () => showShopDialog(poi, 'weapon') },
         { label: say('btn_leave', {}) }
     ]);
@@ -2598,10 +2598,6 @@ function invokeSanctuary() {
 // turn visited the sage hands over a magic item instead, leaving the hut's skill state
 // untouched for the next visit. Every outcome ends in showHutMenu, the one place
 // a hut dialog opens; Rest there is a small, unlimited heal (see hutRest).
-const HUT_GIFT_CHANCE = 0.02;
-const HUT_REROLL_CHANCE = 0.02;
-const HUT_REST_HP_FRACTION = 0.25;
-const HUT_REST_AE_FRACTION = 0.5;
 function showHutDialog(poi) {
     grantVisitSP(poi);
 
@@ -2695,7 +2691,7 @@ const SMITHS = {
 
 function showShopDialog(poi, kind) {
     const smith = SMITHS[kind];
-    if (Rando.bool(0.03)) {
+    if (Rando.bool(SHOP_NEW_ITEM_CHANCE)) {
         const newItem = rollMagicItem();
         poi.shopItems.push(newItem);
         logCombat(say('log_shop_new_item', { item: newItem.name }), 'log-info');
@@ -2887,7 +2883,7 @@ const SKILL_POWER = {
     // Heal.
     mending_light:   (e, s) => ({ score: e.effectStrength + s.vigor * 3, factors: say('pow_mending_light', { n: e.effectStrength }) }),
     // Untiered, but range scales with character level (see executeRestore).
-    restore:         () => ({ score: null, factors: say('stat_range', { n: 1 + Math.floor(player.level / 3) }) }),
+    restore:         () => ({ score: null, factors: say('stat_range', { n: RESTORE_BASE_RANGE + Math.floor(player.level / RESTORE_LEVELS_PER_RANGE) }) }),
 };
 
 // Per-skill rendering of the effectStrength axis for utility skills that aren't
@@ -3074,7 +3070,7 @@ function showTrainDialog() {
 }
 
 function ruinEnemiesNearby(poi) {
-    return em.enemies.some(e => hexDistance(e.q, e.r, poi.q, poi.r) <= 2);
+    return em.enemies.some(e => hexDistance(e.q, e.r, poi.q, poi.r) <= RUIN_CLEAR_RADIUS);
 }
 
 // Ruins are deliberately tougher than the surrounding field: same Maw-distance
@@ -3086,7 +3082,7 @@ const RUIN_TIER_BIAS = 2;
 function spawnRuinCreatures(poi) {
     if (Object.keys(em.creatureDefs).length === 0) return 0;
     const occupied = buildOccupiedSet(player, em);   // defined in enemy_ai.js
-    const spots = hexesInRange(poi.q, poi.r, 2).filter(h => {
+    const spots = hexesInRange(poi.q, poi.r, RUIN_CLEAR_RADIUS).filter(h => {
         const hex = world.getHex(h.q, h.r);
         return hex && world.isPassable(hex) && !occupied.has(hexKey(h.q, h.r))
             && !(h.q === player.q && h.r === player.r);
@@ -3095,7 +3091,7 @@ function spawnRuinCreatures(poi) {
     Rando.shuffle(spots);
     const peak = Math.min(NUM_CREATURE_TIERS - 1, mawDistancePeak(poi.q, poi.r) + RUIN_TIER_BIAS);
     const weights = spawnTierWeights(em.creatureDefs, peak);
-    const targetMight = player.level * 10;
+    const targetMight = player.level * RUIN_MIGHT_PER_LEVEL;
     let mightSum = 0, count = 0;
     for (let i = 0; i < spots.length && mightSum < targetMight; i++) {
         const type = Rando.weighted(weights);
@@ -3140,7 +3136,7 @@ function tryRuinInteraction(poi) {
         showDialog(ruinTitle, say('ruins_quiet', {}), [
             { label: say('btn_search', {}), cls: 'primary', action: () => {
                 let spawned = 0;
-                if (Rando.bool(0.10)) {
+                if (Rando.bool(RUIN_RESTIR_CHANCE)) {
                     spawned = activateRuinSpawn(poi, say('log_ruins_new_creatures', {}));
                 } else {
                     logCombat(say('log_ruins_nothing', {}), 'log-info');
@@ -3155,7 +3151,7 @@ function tryRuinInteraction(poi) {
 function showRuinLootDialog(poi) {
     poi.ruinState = 'explored';
     victory.ruinsExplored++;
-    const loot = rollPoiLoot(5, 20);
+    const loot = rollPoiLoot(...RUIN_LOOT_GOLD);
     const body = formatLootHtml(say('ruins_loot', {}), loot);
     showDialog(say('title_ruins', { symbol: POI_SYMBOLS[POI.RUIN] }), body, [{ label: say('btn_continue', {}), action: () => {
         player.mp = 0;
@@ -3205,7 +3201,7 @@ function showSkillChoiceDialog() {
         return;
     }
     Rando.shuffle(available);
-    const offered = available.slice(0, 3);
+    const offered = available.slice(0, SKILL_SEEK_OFFERS);
 
     let body = say('skill_choice_prompt', {}) + '<div style="max-height:260px;overflow-y:auto">';
     for (const skill of offered) {

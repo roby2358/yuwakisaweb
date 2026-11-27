@@ -1,19 +1,5 @@
 Priority:   50
 Status: ToDo
-ID: namedconsts-z7n2
-Created: 2026-11-27T01:14:57Z
-Updated: 2026-11-27T01:14:57Z
-
-Inline tunable literals become named constants in config.js.
-
-Goal: many tunable numbers are inline literals scattered through the code. ONTOLOGY.md marks each with a dagger (†) and already gives it a name in its Numbers table. Naming them gives one source per number.
-
-Settled design: for every †-marked constant in ONTOLOGY.md's Numbers table, add a top-level const in config.js with exactly that name and the value the code uses today, and replace each inline use of the literal with the constant. No value changes and no behaviour change. Names must be unique across all loaded scripts (node test/scripts.js checks this). Where a literal is a per-entry field in a content table (SKILLS, ENEMY_DEFS, item tables), leave the table alone. Then remove every † mark from ONTOLOGY.md, along with its header note and the Numbers-table note about daggers and the [D, unbuilt] tags on them. No save-shape change.
-
-Done when: every test in test/ passes (for f in test/*.js; do node $f; done); ONTOLOGY.md contains no †; every constant in its Numbers table exists by that name in the code.
-----
-Priority:   50
-Status: ToDo
 ID: skillformula-tadu
 Created: 2026-11-27T01:14:57Z
 Updated: 2026-11-27T01:14:57Z
@@ -26,7 +12,7 @@ Settled design: add a table in actions.js (loaded before index.js) keyed by skil
 
 Done when: every test in test/ passes (for f in test/*.js; do node $f; done); no SKILL_POWER entry contains its own arithmetic for the score; each affected handler calls the shared function.
 ----
-Priority:   40
+Priority:   50
 Status: ToDo
 ID: dmgopts-8ggh
 Created: 2026-11-26T23:36:55Z

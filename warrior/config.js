@@ -260,6 +260,151 @@ function enemyIsRanged(def) {
     return def.range > 0;
 }
 
+// ---- Tunable numbers ----
+// One source per number; ONTOLOGY.md's Numbers table lists each by these names.
+// A two-element array is an inclusive [min, max] range for Rando.int.
+
+// Map generation
+const HEIGHTMAP_SIZE = 129;          // diamond-square grid side (2^n + 1)
+const HEIGHTMAP_ROUGHNESS = 0.55;
+const WATER_PCT = 0.25;              // elevation percentile below which a hex is water
+const PLAINS_PCT = 0.85;
+const HILLS_PCT = 0.95;
+const FOREST_SHARE = 0.10;           // of interior hexes
+const QUARRY_SHARE = 0.02;
+const QUARRY_MIN = 2;
+const PRIZE_SHARE = 0.01;            // of interior hexes, split across the three prize terrains
+const PRIZE_WEIGHTS = { gold: 7, gem: 2, magicItem: 1 };
+const PRIZE_GOLD = [10, 20];
+const MAP_ATTEMPTS = 20;
+const POI_MIN_DIST = 10;
+const HAVEN_COUNT = [4, 6];
+const VILLAGE_COUNT = [8, 12];
+const RUIN_COUNT = [12, 20];
+const BREACH_COUNT = [6, 8];
+const HAVEN_MAGIC_STOCK = [2, 3];
+const HAVEN_MUNDANE_STOCK = [2, 3];
+const VILLAGE_STOCK = [2, 3];
+
+// Player
+const LEVEL_CAP = 10;
+const VIGOR_PER_DEFENSE = 3;         // effective vigor per +1 defense
+const MIGHT_PER_DEFENSE = 5;
+const RANGED_MELEE_DIVISOR = 4;      // a ranged weapon swung in melee deals damage / this
+const STARTING_SP = 5;
+const MAX_SP = 50;
+const SKILL_SAFE_RADIUS = 2;         // non-combat skills need no enemy this close
+const SKILL_SEEK_OFFERS = 3;
+const PLAYER_REGEN = 1;              // HP per turn
+const ENGAGED_MP_DIVISOR = 2;
+const NEAR_DEATH_FRACTION = 0.10;
+const SETTLEMENT_MOVE_COST = 1;
+
+// Huts, villages, shops, loot
+const HUT_GIFT_CHANCE = 0.02;
+const HUT_REROLL_CHANCE = 0.02;
+const HUT_REST_HP_FRACTION = 0.25;
+const HUT_REST_AE_FRACTION = 0.5;
+const VILLAGE_REST_FRACTION = 0.5;
+const VILLAGE_CROP_CHANCE = 0.25;
+const CROP_GOLD = [1, 3];
+const CROP_HEAL_DIVISOR = 10;        // eating a crop heals maxHP / this
+const SHOP_NEW_ITEM_CHANCE = 0.03;
+const MAGIC_DAMAGE = [2, 6];
+const MAGIC_RANGE = [3, 5];
+const MAGIC_DEFENSE = [2, 6];
+const KILL_GOLD = [1, 5];
+const OPPORTUNIST_CHANCE = 0.25;
+const CHAOS_DROP_MUNDANE = [0, 3];
+const CHAOS_DROP_MAGIC_CHANCE = 0.10;
+const RUIN_LOOT_GOLD = [5, 20];
+const BREACH_LOOT_GOLD = [50, 100];
+const GEM_DROP_RADIUS = 5;
+const SETTLEMENT_REWARD_RADIUS = 3;
+
+// Ruins
+const RUIN_CLEAR_RADIUS = 2;
+const RUIN_MIGHT_PER_LEVEL = 10;
+const RUIN_RESTIR_CHANCE = 0.10;
+
+// Restore, sealing, corruption
+const RESTORE_BASE_RANGE = 1;
+const RESTORE_LEVELS_PER_RANGE = 3;
+const RESTORE_GOLD_CHANCE = 0.16;
+const RESTORE_XP_PER_HEX = 3;
+const BREACH_SEAL_CHANCE = 0.40;
+const MAW_SEAL_CHANCE = 0.20;
+const MAW_SCROLL_RADIUS = 3;
+const SHATTER_CHANCE = 0.02;
+const SHATTER_RADIUS = 3;
+const CORRUPT_DEFENSE = 2;
+const CORRUPT_ATTACK = 3;
+const CORRUPT_REGEN = 1;
+const MAW_PROXIMITY_FRACTION = 0.5;  // of mawMaxDist
+const MAW_PROXIMITY_ATTACK = 20;     // bonus at the Maw itself
+const MAW_PROXIMITY_DEFENSE = 10;
+const MAW_PROXIMITY_HP = 20;
+
+// Wildlife
+const CREATURE_ATTACK_BASE = 3;      // tier attack = base * 10^(tier / span)
+const CREATURE_ATTACK_SPAN = 11;
+const CREATURE_DETECT_BASE = 4;
+const CREATURE_DETECT_MAX = 7;
+const CREATURE_AGGRO_MIN = 3;
+const CREATURE_XP_PER_ATTACK = 2;
+const CREATURE_HP_PER_ATTACK = 4;
+const RANGED_CREATURE_ATTACK_RATIO = 0.75;
+const RANGED_CREATURE_HP_PER_ATTACK = 2.5;
+const RANGED_CREATURE_HP_MIN = 4;
+const MONSTER_ATTACK = 20;           // tier attack at which wildlife behaves as a monster
+const RUINS_GUARDIAN_ATTACK = 30;
+const SPAWN_TIER_SIGMA = 2;
+const WILDLIFE_MIGHT_CAP = 1000;
+const WILDLIFE_SPAWN_CHANCE = 0.20;
+const SPAWN_SAFE_DISTANCE = 6;
+const PACK_RADIUS = 2;
+
+// Chaos
+const INITIAL_STALKERS = { dice: 2, sides: 4 };
+const INITIAL_ARCHERS = { dice: 1, sides: 3 };
+const INITIAL_SAFE_DISTANCE = 5;
+const BREACH_CRAWLERS = [1, 2];
+const BREACH_CRAWLER_RADIUS = 2;
+const CHAOS_MIGHT_CAP = 500;
+const BREACH_SPAWN_CHANCE = 0.075;
+// Drawn uniformly, so repeats are the weights; the wraith is dropped at WRAITH_CAP.
+const CHAOS_SPAWN_POOL = [
+    ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER,
+    ENEMY_TYPE.FLUX_ARCHER, ENEMY_TYPE.FLUX_ARCHER,
+    ENEMY_TYPE.BREACH_CRAWLER,
+    ENEMY_TYPE.PHASE_WRAITH
+];
+const WRAITH_CAP = 10;
+const GUARDIAN_RESPAWN_CHANCE = 0.3;
+const GUARDIAN_PRESENCE_RADIUS = 3;
+const UNRAVELER_LEASH = 11;
+
+// Enemy AI
+const FOREST_STEALTH = 2;            // aggro lost while the player stands in forest
+const THREAT_SHROUD_REDUCTION = 2;
+const ALERT_RADIUS = 5;              // an alerted fight this close ignores forest stealth
+const ALARM_RADIUS = 2;
+const HUNT_COLD_RADIUS = 3;
+const WILDLIFE_WANDER_CHANCE = 0.3;
+const WANDER_CHANCE = 0.5;
+const GUARDIAN_WANDER_CHANCE = 0.5;
+const MONSTER_LURK_RADIUS = 2;
+const RUIN_PATROL_RADIUS = 2;
+const RUIN_PATROL_CHANCE = 0.3;
+const SETTLEMENT_HUNT_FACTOR = 2;    // x aggro
+const CHASER_RANGED_PREFERENCE = 0.5;
+const KITE_FIRE_CHANCE = 0.5;
+const KITE_MIN_DIST = 2;
+const KITE_MAX_DIST = 3;
+const SWARM_ALLIES = 5;
+const SWARM_RADIUS = 3;
+const SWARM_WEIGHTS = [20, 10, 5, 5];  // by nearness: nearest settlement first
+
 // ---- Equipment ----
 const EQUIP_SLOT = { WEAPON: 'weapon', ARMOR: 'armor', ARTIFACT: 'artifact' };
 
@@ -652,7 +797,7 @@ function rollMagicItem(category) {
     switch (category) {
         case 'melee': {
             const { value, ...effect } = Rando.choice(MELEE_EFFECTS);
-            let damage = Rando.int(2, 6);
+            let damage = Rando.int(...MAGIC_DAMAGE);
             // d6: 1-3 normal, 4-5 fast (0 MP), 6 heavy (all MP, 2x dmg)
             const variant = Rando.int(1, 6);
             const heavy = variant === 6;
@@ -667,8 +812,8 @@ function rollMagicItem(category) {
         }
         case 'ranged': {
             const { value, ...effect } = Rando.choice(RANGED_EFFECTS);
-            let damage = Rando.int(2, 6);
-            const range = Rando.int(3, 5);
+            let damage = Rando.int(...MAGIC_DAMAGE);
+            const range = Rando.int(...MAGIC_RANGE);
             // d6: 1-4 normal (2 MP), 5 fast (1 MP), 6 heavy (all MP, 2x dmg, 2x AE)
             const variant = Rando.int(1, 6);
             const heavy = variant === 6;
@@ -684,7 +829,7 @@ function rollMagicItem(category) {
         }
         case 'armor': {
             const { value, ...effect } = Rando.choice(ARMOR_OR_PASSIVE);
-            const defense = Rando.int(2, 6);
+            const defense = Rando.int(...MAGIC_DEFENSE);
             const name = _rollName(_tierWords(ARMOR_ITEMS, defense), EFFECT_NAMING[effect.special]);
             const price = (defense + 1) * 60 * value;
             item = { id, name, slot: EQUIP_SLOT.ARMOR, defense, price, magical: true, ...effect };

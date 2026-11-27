@@ -20,8 +20,8 @@ class Player {
         // Skill points: the room to keep skills active. The active-skill count can
         // never exceed sp, and sp itself is capped at maxSP. Gained from visiting
         // havens/huts and from skill gems.
-        this.sp = 5;
-        this.maxSP = 50;
+        this.sp = STARTING_SP;
+        this.maxSP = MAX_SP;
         // Per-skill rank (1..SKILL_MAX_RANK) for tiered skills. Absent = rank 1.
         // Skill advancement (spending SP to raise ranks) is not wired yet, so this
         // stays empty for now and every tiered skill resolves at rank 1.
@@ -80,8 +80,8 @@ class Player {
     defense(terrainType) {
         const arm = this.armor();
         let def = arm ? arm.defense : 0;
-        def += Math.floor(this.effectiveVigor() / 3);
-        def += Math.floor(this.stats.might / 5);
+        def += Math.floor(this.effectiveVigor() / VIGOR_PER_DEFENSE);
+        def += Math.floor(this.stats.might / MIGHT_PER_DEFENSE);
         def += TERRAIN_DEFENSE_BONUS[terrainType] || 0;
         const lastStand = this.equipped('last_stand');
         if (lastStand && this.hp <= this.maxHP() / 2) def += lastStand.lastStandBonus;
@@ -122,7 +122,7 @@ class Player {
 
     meleeDamage(isChaosEnemy) {
         const wep = this.weapon();
-        const wepDmg = wep ? (weaponIsRanged(wep) ? Math.ceil(wep.damage / 4) : wep.damage) : 1;
+        const wepDmg = wep ? (weaponIsRanged(wep) ? Math.ceil(wep.damage / RANGED_MELEE_DIVISOR) : wep.damage) : 1;
         let dmg = wepDmg + this.stats.might + this._chaosBonus(wep, isChaosEnemy);
         if (wep && wep.special === 'charge' && this.movedThisTurn) {
             if (wep.chargeBonus) dmg += wep.chargeBonus;

@@ -51,13 +51,13 @@ function mawProximityBonus(q, r) {
     if (!mawDistances) return { attack: 0, defense: 0, hp: 0 };
     const dist = mawDistances.get(hexKey(q, r));
     if (dist === undefined) return { attack: 0, defense: 0, hp: 0 };
-    const threshold = mawMaxDist * 0.5;
+    const threshold = mawMaxDist * MAW_PROXIMITY_FRACTION;
     if (dist > threshold) return { attack: 0, defense: 0, hp: 0 };
     const t = 1 - dist / threshold;
     return {
-        attack: Math.round(20 * t),
-        defense: Math.round(10 * t),
-        hp: Math.round(20 * t)
+        attack: Math.round(MAW_PROXIMITY_ATTACK * t),
+        defense: Math.round(MAW_PROXIMITY_DEFENSE * t),
+        hp: Math.round(MAW_PROXIMITY_HP * t)
     };
 }
 
@@ -99,18 +99,18 @@ class EnemyAI {
         ctx.render();
     }
 
-    // Forest stealth: drop aggro range by 2 unless the player has already
-    // alerted combat (and is within 5 hexes).
+    // Forest stealth: drop aggro range by FOREST_STEALTH unless the player has
+    // already alerted combat (and is within ALERT_RADIUS).
     forestModifiedAggro(enemy, aggro, ctx) {
         if (!ctx.playerInForest()) return aggro;
         const dist = hexDistance(enemy.q, enemy.r, ctx.player.q, ctx.player.r);
-        if (ctx.combatAlerted() && dist <= 5) return aggro;
-        return Math.max(1, aggro - 2);
+        if (ctx.combatAlerted() && dist <= ALERT_RADIUS) return aggro;
+        return Math.max(1, aggro - FOREST_STEALTH);
     }
 
     baseAggro(def, ctx) {
         let aggro = def.aggroRange || def.detectRange || 0;
-        if (ctx.player.equipped('threat_shroud')) aggro = Math.max(1, aggro - 2);
+        if (ctx.player.equipped('threat_shroud')) aggro = Math.max(1, aggro - THREAT_SHROUD_REDUCTION);
         return aggro;
     }
 
@@ -147,7 +147,7 @@ class EnemyAI {
     }
 
     // Sound the alarm: lock the player's hex as this enemy's target and rouse
-    // every enemy within 2 (single hop) to the same hex. Roused enemies hunt
+    // every enemy within ALARM_RADIUS (single hop) to the same hex. Roused enemies hunt
     // the last-known spot even outside their own aggro range. Guardians ignore
     // the target (they never call tryHuntTarget) but can still raise it.
     soundAlarm(enemy, ctx) {
@@ -156,19 +156,19 @@ class EnemyAI {
         enemy.targetR = player.r;
         for (const other of em.enemies) {
             if (other === enemy) continue;
-            if (hexDistance(other.q, other.r, enemy.q, enemy.r) > 2) continue;
+            if (hexDistance(other.q, other.r, enemy.q, enemy.r) > ALARM_RADIUS) continue;
             other.targetQ = player.q;
             other.targetR = player.r;
         }
     }
 
     // Hunt a target hex set by an alarm (or a swarm). March toward it via A*;
-    // once within 3 the trail goes cold and the target clears, so the enemy
+    // once within HUNT_COLD_RADIUS the trail goes cold and the target clears, so the enemy
     // reverts to its idle behavior. Returns true if it acted.
     tryHuntTarget(enemy, occupied, ctx) {
         if (enemy.targetQ == null) return false;
         const { em, world } = ctx;
-        if (hexDistance(enemy.q, enemy.r, enemy.targetQ, enemy.targetR) <= 3) {
+        if (hexDistance(enemy.q, enemy.r, enemy.targetQ, enemy.targetR) <= HUNT_COLD_RADIUS) {
             enemy.targetQ = null;
             enemy.targetR = null;
             return false;
@@ -203,7 +203,7 @@ class WildlifeAI extends EnemyAI {
         if (await this.tryAggroChase(enemy, def, aggro, occupied, ctx)) return;
         const prevKey = hexKey(enemy.q, enemy.r);
         if (this.tryHuntTarget(enemy, occupied, ctx)) { await this.animateMove(enemy, prevKey, ctx); return; }
-        if (Rando.bool(0.3)) {
+        if (Rando.bool(WILDLIFE_WANDER_CHANCE)) {
             const { em, player, world } = ctx;
             em.wanderWildlife(enemy, occupied, player.q, player.r, world);
         }
@@ -225,12 +225,12 @@ class MonsterAI extends EnemyAI {
         if (this.tryHuntTarget(enemy, occupied, ctx)) { await this.animateMove(enemy, prevKey, ctx); return; }
         const settle = this.nearestSettlement(enemy.q, enemy.r, ctx);
 
-        if (settle && settle.dist <= 2) {
+        if (settle && settle.dist <= MONSTER_LURK_RADIUS) {
             em.wanderWildlife(enemy, occupied, player.q, player.r, world);
             await this.animateMove(enemy, prevKey, ctx);
             return;
         }
-        if (settle && settle.dist <= aggro * 2) {
+        if (settle && settle.dist <= aggro * SETTLEMENT_HUNT_FACTOR) {
             em.moveWildlifeToward(enemy, settle.poi.q, settle.poi.r, occupied, player.q, player.r, world);
             await this.animateMove(enemy, prevKey, ctx);
             return;
@@ -253,19 +253,19 @@ class RuinsGuardianAI extends EnemyAI {
         const prevKey = hexKey(enemy.q, enemy.r);
         const ruin = this.nearestPoiOfType(enemy.q, enemy.r, [POI.RUIN], ctx);
 
-        if (ruin && ruin.dist <= 2) {
-            if (Rando.bool(0.3)) {
+        if (ruin && ruin.dist <= RUIN_PATROL_RADIUS) {
+            if (Rando.bool(RUIN_PATROL_CHANCE)) {
                 this.patrolAroundPoi(enemy, occupied, ruin.poi, ctx);
                 await this.animateMove(enemy, prevKey, ctx);
             }
             return;
         }
-        if (ruin && ruin.dist <= aggro * 2) {
+        if (ruin && ruin.dist <= aggro * SETTLEMENT_HUNT_FACTOR) {
             em.moveWildlifeToward(enemy, ruin.poi.q, ruin.poi.r, occupied, player.q, player.r, world);
             await this.animateMove(enemy, prevKey, ctx);
             return;
         }
-        if (Rando.bool(0.5)) {
+        if (Rando.bool(GUARDIAN_WANDER_CHANCE)) {
             em.wanderWildlife(enemy, occupied, player.q, player.r, world);
             await this.animateMove(enemy, prevKey, ctx);
         }
@@ -296,17 +296,17 @@ class ChaosAI extends EnemyAI {
         // Heal on corrupted terrain
         const effMax = ctx.enemyEffectiveMaxHp(enemy);
         if (ctx.enemyOnCorruptedTerrain(enemy, def) && enemy.hp < effMax) {
-            enemy.hp = Math.min(effMax, enemy.hp + 1);
+            enemy.hp = Math.min(effMax, enemy.hp + CORRUPT_REGEN);
         }
 
         const dist = hexDistance(enemy.q, enemy.r, player.q, player.r);
         let aggro = this.baseAggro(def, ctx);
 
-        // Forest stealth: wraiths lose track entirely, others lose 2 aggro.
+        // Forest stealth: wraiths lose track entirely, others lose FOREST_STEALTH aggro.
         const inForest = ctx.playerInForest();
-        if (inForest && !(ctx.combatAlerted() && dist <= 5)) {
+        if (inForest && !(ctx.combatAlerted() && dist <= ALERT_RADIUS)) {
             if (def.behavior === 'teleport') aggro = 0;
-            else aggro = Math.max(1, aggro - 2);
+            else aggro = Math.max(1, aggro - FOREST_STEALTH);
         }
         const prevKey = hexKey(enemy.q, enemy.r);
 
@@ -316,8 +316,8 @@ class ChaosAI extends EnemyAI {
             await this.tryTeleport(enemy, def, occupied, prevKey, ctx);
         }
 
-        // Ranged-capable chasers (Void Stalker): 50% prefer ranged, skip closing in
-        const prefersRanged = enemyIsRanged(def) && def.behavior === 'chase' && Rando.bool(0.5);
+        // Ranged-capable chasers (Void Stalker): CHASER_RANGED_PREFERENCE to prefer ranged, skip closing in
+        const prefersRanged = enemyIsRanged(def) && def.behavior === 'chase' && Rando.bool(CHASER_RANGED_PREFERENCE);
 
         // Aggro check comes first: a detected player rouses the swarm and
         // overrides the swarm march. Guards camp their breach but still raise
@@ -386,11 +386,11 @@ class ChaosAI extends EnemyAI {
         }
         if (def.behavior === 'kite') {
             if (dist <= aggro) {
-                if (dist < 2) em.moveEnemyAway(enemy, player.q, player.r, occupied, player.q, player.r, world);
-                else if (dist > 3) em.moveEnemyToward(enemy, player.q, player.r, occupied, world);
+                if (dist < KITE_MIN_DIST) em.moveEnemyAway(enemy, player.q, player.r, occupied, player.q, player.r, world);
+                else if (dist > KITE_MAX_DIST) em.moveEnemyToward(enemy, player.q, player.r, occupied, world);
                 return true;
             }
-            if (Rando.bool(0.5)) { em.wanderEnemy(enemy, occupied, player.q, player.r, world); return true; }
+            if (Rando.bool(WANDER_CHANCE)) { em.wanderEnemy(enemy, occupied, player.q, player.r, world); return true; }
             return false;
         }
         if (def.behavior === 'boss') {
@@ -402,7 +402,7 @@ class ChaosAI extends EnemyAI {
             em.moveEnemyToward(enemy, player.q, player.r, occupied, world);
             return true;
         }
-        if (!prefersRanged && Rando.bool(0.5)) {
+        if (!prefersRanged && Rando.bool(WANDER_CHANCE)) {
             em.wanderEnemy(enemy, occupied, player.q, player.r, world);
             return true;
         }
@@ -428,7 +428,7 @@ class ChaosAI extends EnemyAI {
 
     enemyAttacks(enemy, def, prefersRanged, newDist, ctx) {
         if (def.behavior === 'kite') {
-            if (Rando.bool(0.5) && this.enemyCanRangedAttack(enemy, def, newDist, ctx)) {
+            if (Rando.bool(KITE_FIRE_CHANCE) && this.enemyCanRangedAttack(enemy, def, newDist, ctx)) {
                 this.doEnemyRanged(enemy, def, ctx);
                 return true;
             }
@@ -461,10 +461,7 @@ class ChaosAI extends EnemyAI {
         if (adj.length === 0) return;
         const spot = Rando.choice(adj);
         const wraithCount = em.enemies.filter(e => e.type === ENEMY_TYPE.PHASE_WRAITH).length;
-        const bossPool = wraithCount >= 10
-            ? [ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.FLUX_ARCHER, ENEMY_TYPE.FLUX_ARCHER, ENEMY_TYPE.BREACH_CRAWLER]
-            : [ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.FLUX_ARCHER, ENEMY_TYPE.FLUX_ARCHER, ENEMY_TYPE.BREACH_CRAWLER, ENEMY_TYPE.PHASE_WRAITH];
-        const spawnType = Rando.choice(bossPool);
+        const spawnType = Rando.choice(chaosSpawnPool(wraithCount));
         const spawned = em.spawn(spawnType, spot.q, spot.r);
         if (spawned) {
             occupied.add(hexKey(spot.q, spot.r));
@@ -473,7 +470,7 @@ class ChaosAI extends EnemyAI {
     }
 
     tryTerrainShatter(enemy, def, ctx) {
-        if (!def.chaosSpawned || !Rando.bool(0.02)) return;
+        if (!def.chaosSpawned || !Rando.bool(SHATTER_CHANCE)) return;
         const { world } = ctx;
         const eHex = world.getHex(enemy.q, enemy.r);
         if (!eHex) return;
@@ -483,7 +480,7 @@ class ChaosAI extends EnemyAI {
         const poi = world.poiAt(enemy.q, enemy.r);
         if (poi && (poi.type === POI.HAVEN || poi.type === POI.VILLAGE)) return;
         eHex.terrain = SHATTERED_VERSION[eHex.terrain];
-        for (const coord of hexesInRange(eHex.q, eHex.r, 3)) {
+        for (const coord of hexesInRange(eHex.q, eHex.r, SHATTER_RADIUS)) {
             const h = world.getHex(coord.q, coord.r);
             if (!h) continue;
             const hPoi = world.poiAt(coord.q, coord.r);
@@ -501,13 +498,12 @@ class ChaosAI extends EnemyAI {
             .map(p => ({ poi: p, dist: hexDistance(enemy.q, enemy.r, p.q, p.r) }))
             .sort((a, b) => a.dist - b.dist);
         if (settlements.length === 0) return null;
-        const weights = [20, 10, 5, 5];
-        const weighted = settlements.slice(0, weights.length)
-            .map((s, i) => ({ item: s.poi, weight: weights[i] }));
+        const weighted = settlements.slice(0, SWARM_WEIGHTS.length)
+            .map((s, i) => ({ item: s.poi, weight: SWARM_WEIGHTS[i] }));
         return Rando.weighted(weighted);
     }
 
-    // Swarm trigger: when 5+ chaos allies cluster within 3, pick a settlement
+    // Swarm trigger: when SWARM_ALLIES+ chaos allies cluster within SWARM_RADIUS, pick a settlement
     // to march on and set it as the target. The march itself is handled by
     // tryHuntTarget, which shares the targetQ/R field with the alarm. The
     // Unraveler swarms too — it marches at the head of its spawn.
@@ -515,10 +511,10 @@ class ChaosAI extends EnemyAI {
         const { em } = ctx;
         const nearbyAllies = em.enemies.filter(e =>
             e !== enemy &&
-            hexDistance(e.q, e.r, enemy.q, enemy.r) <= 3 &&
+            hexDistance(e.q, e.r, enemy.q, enemy.r) <= SWARM_RADIUS &&
             em.getDef(e.type)?.chaosSpawned
         ).length;
-        if (nearbyAllies < 5) return false;
+        if (nearbyAllies < SWARM_ALLIES) return false;
         const target = this.pickSwarmTarget(enemy, ctx);
         if (!target) return false;
         enemy.targetQ = target.q;
@@ -561,7 +557,7 @@ function buildOccupiedSet(player, em) {
 
 function regenPlayerAtPhaseStart(ctx) {
     const { player, logCombat } = ctx;
-    player.hp = Math.min(player.maxHP(), player.hp + 1);
+    player.hp = Math.min(player.maxHP(), player.hp + PLAYER_REGEN);
 
     const healAmt = player.sumEquipped('heal', 'healPerTurn');
     if (healAmt) player.hp = Math.min(player.maxHP(), player.hp + healAmt);
@@ -591,22 +587,30 @@ function tickBurns(ctx) {
     }
 }
 
+// What a breach or the Unraveler may spawn: CHAOS_SPAWN_POOL, minus the wraith
+// once WRAITH_CAP of them are on the map.
+function chaosSpawnPool(wraithCount) {
+    return wraithCount >= WRAITH_CAP
+        ? CHAOS_SPAWN_POOL.filter(t => t !== ENEMY_TYPE.PHASE_WRAITH)
+        : CHAOS_SPAWN_POOL;
+}
+
 function respawnGuardians(occupied, ctx) {
     const { world, em } = ctx;
     for (const poi of world.pois) {
         if (poi.type !== POI.BREACH && poi.type !== POI.MAW) continue;
         if (poi.closed) continue;
         // Skip Maw while the Unraveler is alive AND nearby — guardians only pour
-        // forth if the Unraveler has been displaced (>11 hex).
+        // forth if the Unraveler has been displaced (beyond UNRAVELER_LEASH).
         if (poi.type === POI.MAW) {
             const unraveler = em.enemies.find(e => e.type === ENEMY_TYPE.UNRAVELER);
-            if (unraveler && hexDistance(unraveler.q, unraveler.r, poi.q, poi.r) <= 11) continue;
+            if (unraveler && hexDistance(unraveler.q, unraveler.r, poi.q, poi.r) <= UNRAVELER_LEASH) continue;
         }
         const hasGuardian = em.enemies.some(e =>
-            e.type === ENEMY_TYPE.BREACH_GUARDIAN && hexDistance(poi.q, poi.r, e.q, e.r) <= 3
+            e.type === ENEMY_TYPE.BREACH_GUARDIAN && hexDistance(poi.q, poi.r, e.q, e.r) <= GUARDIAN_PRESENCE_RADIUS
         );
         if (hasGuardian) continue;
-        if (!Rando.bool(0.3)) continue;
+        if (!Rando.bool(GUARDIAN_RESPAWN_CHANCE)) continue;
         if (occupied.has(hexKey(poi.q, poi.r))) continue;
         const g = em.spawn(ENEMY_TYPE.BREACH_GUARDIAN, poi.q, poi.r, poi.q, poi.r);
         if (!g) continue;
@@ -618,14 +622,12 @@ function respawnGuardians(occupied, ctx) {
 
 function spawnChaosAtBreaches(occupied, ctx) {
     const { world, em } = ctx;
-    if (em.chaosMight() >= 500) return;
+    if (em.chaosMight() >= CHAOS_MIGHT_CAP) return;
     const wraiths = em.enemies.filter(e => e.type === ENEMY_TYPE.PHASE_WRAITH).length;
-    const chaosPool = wraiths >= 10
-        ? [ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.FLUX_ARCHER, ENEMY_TYPE.FLUX_ARCHER, ENEMY_TYPE.BREACH_CRAWLER]
-        : [ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.FLUX_ARCHER, ENEMY_TYPE.FLUX_ARCHER, ENEMY_TYPE.BREACH_CRAWLER, ENEMY_TYPE.PHASE_WRAITH];
+    const chaosPool = chaosSpawnPool(wraiths);
     for (const poi of world.pois) {
         if (poi.type !== POI.BREACH || poi.closed) continue;
-        if (!Rando.bool(0.075)) continue;
+        if (!Rando.bool(BREACH_SPAWN_CHANCE)) continue;
         const adj = hexNeighbors(poi.q, poi.r).filter(n => {
             const k = hexKey(n.q, n.r);
             const h = world.getHex(n.q, n.r);

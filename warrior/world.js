@@ -26,7 +26,7 @@ class GameWorld {
             this._assignTerrain();
             this._placePOIs();
             attempts++;
-        } while (attempts < 20 && !this._validate());
+        } while (attempts < MAP_ATTEMPTS && !this._validate());
         this._placePrizes();
     }
 
@@ -135,14 +135,14 @@ class GameWorld {
 
     _generateRectGrid() {
         const map = new Map();
-        const hm = this._diamondSquare(129, 0.55);
+        const hm = this._diamondSquare(HEIGHTMAP_SIZE, HEIGHTMAP_ROUGHNESS);
         for (let row = 0; row < MAP_ROWS; row++) {
             const qOffset = -Math.floor(row / 2);
             for (let col = 0; col < MAP_COLS; col++) {
                 const q = col + qOffset, r = row;
-                const gx = Math.round(col / (MAP_COLS - 1) * 128);
-                const gy = Math.round(row / (MAP_ROWS - 1) * 128);
-                const elevation = hm[gy * 129 + gx];
+                const gx = Math.round(col / (MAP_COLS - 1) * (HEIGHTMAP_SIZE - 1));
+                const gy = Math.round(row / (MAP_ROWS - 1) * (HEIGHTMAP_SIZE - 1));
+                const elevation = hm[gy * HEIGHTMAP_SIZE + gx];
                 const isEdge = row === 0 || row === MAP_ROWS - 1 || col === 0 || col === MAP_COLS - 1;
                 map.set(hexKey(q, r), {
                     q, r, col, row, elevation, isEdge,
@@ -163,19 +163,19 @@ class GameWorld {
         const n = inner.length;
         for (let i = 0; i < n; i++) {
             const pct = i / n;
-            if (pct < 0.25) inner[i].terrain = TERRAIN.WATER;
-            else if (pct < 0.85) inner[i].terrain = TERRAIN.PLAINS;
-            else if (pct < 0.95) inner[i].terrain = TERRAIN.HILLS;
+            if (pct < WATER_PCT) inner[i].terrain = TERRAIN.WATER;
+            else if (pct < PLAINS_PCT) inner[i].terrain = TERRAIN.PLAINS;
+            else if (pct < HILLS_PCT) inner[i].terrain = TERRAIN.HILLS;
             else inner[i].terrain = TERRAIN.MOUNTAIN;
         }
         const plains = inner.filter(h => h.terrain === TERRAIN.PLAINS);
         Rando.shuffle(plains);
         let idx = 0;
-        const forestCount = Math.round(n * 0.10);
+        const forestCount = Math.round(n * FOREST_SHARE);
         for (let i = 0; i < forestCount && idx < plains.length; i++, idx++) plains[idx].terrain = TERRAIN.FOREST;
         const hills = inner.filter(h => h.terrain === TERRAIN.HILLS);
         Rando.shuffle(hills);
-        const quarryCount = Math.max(2, Math.round(n * 0.02));
+        const quarryCount = Math.max(QUARRY_MIN, Math.round(n * QUARRY_SHARE));
         for (let i = 0; i < quarryCount && i < hills.length; i++) hills[i].terrain = TERRAIN.QUARRY;
         this._placeSpecialHexes(inner, n);
     }
@@ -189,7 +189,7 @@ class GameWorld {
             [TERRAIN.FOREST, TERRAIN.SPECIAL_FOREST],
             [TERRAIN.HILLS, TERRAIN.SPECIAL_HILLS],
         ];
-        const perKind = Math.max(1, Math.round(n * 0.01 / kinds.length));
+        const perKind = Math.max(1, Math.round(n * PRIZE_SHARE / kinds.length));
         for (const [base, special] of kinds) {
             const pool = inner.filter(h => h.terrain === base);
             Rando.shuffle(pool);
@@ -201,7 +201,6 @@ class GameWorld {
         this.pois = [];
         const candidates = this.passableHexes();
         const used = new Set();
-        const MIN_DIST = 10;
         const self = this;
 
         function place(type, count, preferRight, reachable) {
@@ -216,7 +215,7 @@ class GameWorld {
                 const key = hexKey(hex.q, hex.r);
                 let tooClose = false;
                 for (const poi of self.pois) {
-                    if (hexDistance(hex.q, hex.r, poi.q, poi.r) < MIN_DIST) { tooClose = true; break; }
+                    if (hexDistance(hex.q, hex.r, poi.q, poi.r) < POI_MIN_DIST) { tooClose = true; break; }
                 }
                 if (tooClose) continue;
                 used.add(key);
@@ -236,13 +235,13 @@ class GameWorld {
             return placed;
         }
 
-        place(POI.HAVEN, Rando.int(4, 6), false);
-        place(POI.VILLAGE, Rando.int(8, 12), false);
-        place(POI.RUIN, Rando.int(12, 20), false);
+        place(POI.HAVEN, Rando.int(...HAVEN_COUNT), false);
+        place(POI.VILLAGE, Rando.int(...VILLAGE_COUNT), false);
+        place(POI.RUIN, Rando.int(...RUIN_COUNT), false);
         place(POI.MAW, 1, true);
         // Breaches must be reachable from the Maw — otherwise the player
         // can never close them and they waste an encounter slot.
-        place(POI.BREACH, Rando.int(6, 8), false, this.mawDistanceMap());
+        place(POI.BREACH, Rando.int(...BREACH_COUNT), false, this.mawDistanceMap());
         place(POI.HUT, HUT_COUNT, false);
     }
 
@@ -252,17 +251,17 @@ class GameWorld {
     // reads — goldDeposit, skillGem or magicItem.
     _placePrizes() {
         const prizes = [
-            { weight: 7, item: h => { h.goldDeposit = Rando.int(10, 20); } },
-            { weight: 2, item: h => { h.skillGem = true; } },
-            { weight: 1, item: h => { h.magicItem = true; } },
+            { weight: PRIZE_WEIGHTS.gold, item: h => { h.goldDeposit = Rando.int(...PRIZE_GOLD); } },
+            { weight: PRIZE_WEIGHTS.gem, item: h => { h.skillGem = true; } },
+            { weight: PRIZE_WEIGHTS.magicItem, item: h => { h.magicItem = true; } },
         ];
         const hexes = this.passableHexes().filter(h => !h.poi && SPECIAL_TERRAINS.has(h.terrain));
         for (const hex of hexes) Rando.weighted(prizes)(hex);
     }
 
     _generateShopItems() {
-        const magicalCount = Rando.int(2, 3);
-        const nonMagicalCount = Rando.int(2, 3);
+        const magicalCount = Rando.int(...HAVEN_MAGIC_STOCK);
+        const nonMagicalCount = Rando.int(...HAVEN_MUNDANE_STOCK);
         const magicalItems = [];
         for (let i = 0; i < magicalCount; i++) magicalItems.push(rollMagicItem());
         const nonMagicalPool = [...NON_MAGICAL_ITEMS];
@@ -279,7 +278,7 @@ class GameWorld {
     _generateWeaponShopItems() {
         const nonMagicalPool = [...NON_MAGICAL_ITEMS];
         Rando.shuffle(nonMagicalPool);
-        return nonMagicalPool.slice(0, Rando.int(2, 3));
+        return nonMagicalPool.slice(0, Rando.int(...VILLAGE_STOCK));
     }
 
 

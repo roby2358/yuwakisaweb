@@ -13,8 +13,6 @@ reasoning and history live in `DECISIONS.md`. Open questions (`Q-n`) are the las
 **[P]** proposed or inferred by Claude, pending review. **[T]** tunable number; its value
 appears only in the Numbers table. **[D, unbuilt]** decided but not in the code yet.
 **Serves:** names the goal (G-n), quality, or DYNAMICS driver an item exists for.
-Constants marked † are inline literals in the code with no constant name yet; the name
-shown is the one each will get in `config.js` [D, unbuilt].
 
 ---
 
@@ -132,7 +130,7 @@ structure and is never traded away. "Room to break the game" beats balance tidin
 | terrain | TERRAIN id | See Terrain. |
 | poi | POI type \| null | Mirror of the POI on this hex. |
 | goldDeposit | int | Gold collected on entry; 0 = none. |
-| shatteredCount | int | Shattered hexes within SHATTER_RADIUS†. |
+| shatteredCount | int | Shattered hexes within SHATTER_RADIUS. |
 | skillGem | bool | A skill gem lies here. |
 | magicItem | bool | A prize magic item lies here. |
 | crop | icon \| false (optional) | Added when a crop sprouts; eating it heals. |
@@ -161,7 +159,7 @@ structure and is never traded away. "Room to break the game" beats balance tidin
 | q, r | int | Position. |
 | stats | {might, reflex, warding, vigor} | Start at STARTING_STATS. |
 | hp, aether | int | Bounded by maxHP(), maxAether(). |
-| xp, level | int | Level 1..LEVEL_CAP†. xp resets by the threshold on level-up. |
+| xp, level | int | Level 1..LEVEL_CAP. xp resets by the threshold on level-up. |
 | gold | int | |
 | equipment | {weapon, armor, artifact} | Item ids or null; the weapon slot may be empty (unarmed) [D]. Starts Rusty Blade, Worn Leather, none. |
 | inventory | item id[] | Starts with Stick Bow. |
@@ -307,13 +305,13 @@ with its label (`Victory.LABELS`) and points.
   it can't pay). [D]
 - `sp ≤ maxSP`. `0 ≤ hp ≤ maxHP()` and `0 ≤ aether ≤ maxAether()` after any equip,
   stat or heal change (each clamps). [D]
-- `player.level ≤ LEVEL_CAP†`. [D]
+- `player.level ≤ LEVEL_CAP`. [D]
 - No two enemies share a hex; no enemy stands on the player's hex. Enemies never walk into
   havens, villages or garrisons, except a swarm whose explicit goal is that hex. A Phase
   Wraith teleport excludes havens and villages only. [D]
 - Breach and Maw hexes are impassable to everyone after spawn. A sealed breach or Maw hex
   becomes Hills. [D]
-- `shatteredCount` of a hex = number of shattered hexes within SHATTER_RADIUS† (kept by
+- `shatteredCount` of a hex = number of shattered hexes within SHATTER_RADIUS (kept by
   shatter and restore). A distressed hex with count 0 reverts to its base terrain on the
   next restore pass. [P: maintained incrementally; not re-derived]
 - A haven or village hex never becomes shattered or distressed through enemy shattering,
@@ -343,7 +341,7 @@ Families (ids in `TERRAIN`, names in `TERRAIN_NAMES`):
 | POI terrain | Ruins, Breach, Maw | Ruins passable; Breach and Maw impassable. |
 
 - Move cost per terrain: `MOVEMENT_COST`. Player cost: `playerMoveCost(hex)` — a haven or
-  village hex costs SETTLEMENT_MOVE_COST†; with `strider` any finite cost above 1 becomes 1.
+  village hex costs SETTLEMENT_MOVE_COST; with `strider` any finite cost above 1 becomes 1.
 - Defense bonus: `TERRAIN_DEFENSE_BONUS` (forest family) and `POI_DEFENSE_BONUS` (haven,
   village, garrison) for the occupant player.
 - Ranged range bonus: `TERRAIN_RANGE_BONUS` (hills family, ruins) and `POI_RANGE_BONUS`
@@ -357,16 +355,16 @@ Families (ids in `TERRAIN`, names in `TERRAIN_NAMES`):
 
 *Serves:* G-2, G-1.
 
-1. Heightmap: diamond-square on a HEIGHTMAP_SIZE† grid with HEIGHTMAP_ROUGHNESS†,
+1. Heightmap: diamond-square on a HEIGHTMAP_SIZE grid with HEIGHTMAP_ROUGHNESS,
    normalized to 0-100, sampled onto MAP_COLS × MAP_ROWS offset rows (axial q = col −
    floor(row/2)).
 2. Edge hexes are water. Interior hexes sorted by elevation get bands by percentile:
-   water below WATER_PCT†, plains below PLAINS_PCT†, hills below HILLS_PCT†, else mountain.
-3. FOREST_SHARE† of the interior count, taken from random plains, becomes forest.
-   max(QUARRY_MIN†, QUARRY_SHARE† of the interior) random hills become quarry.
-4. Special hexes: PRIZE_SHARE† of the interior, split evenly across plains, forest and
+   water below WATER_PCT, plains below PLAINS_PCT, hills below HILLS_PCT, else mountain.
+3. FOREST_SHARE of the interior count, taken from random plains, becomes forest.
+   max(QUARRY_MIN, QUARRY_SHARE of the interior) random hills become quarry.
+4. Special hexes: PRIZE_SHARE of the interior, split evenly across plains, forest and
    hills, become their special version.
-5. POIs (below). Steps 1-5 repeat up to MAP_ATTEMPTS† times until `_validate()` passes:
+5. POIs (below). Steps 1-5 repeat up to MAP_ATTEMPTS times until `_validate()` passes:
    at least one haven and the Maw exist, every haven reaches the Maw on foot, and at least
    half the havens lie more than half of the farthest haven's distance from the Maw. After
    the last attempt the map is kept even if invalid. [D]
@@ -419,7 +417,7 @@ special-looking hex but hold no other prize.
   skills cost 0. Untiered skills stay rank 1.
 - **SP sources.** STARTING_SP at start; +1 per level-up; +1 on first visit to each haven and
   hut; skill gems and empty Skill Seeks give +1 (or CONSOLATION_XP when SP is maxed).
-- **Usage.** anytime: no limit. non_combat: no enemy within SKILL_SAFE_RADIUS†. pristine:
+- **Usage.** anytime: no limit. non_combat: no enemy within SKILL_SAFE_RADIUS. pristine:
   non_combat and the player's hex is not shattered. Phase Step and Sprint are once per
   turn.
 - **Costs.** Aether: `effectiveAetherCost` = max(0, cost − Σ aether_discount). MP:
@@ -471,7 +469,7 @@ special-looking hex but hold no other prize.
   - armor: defense in MAGIC_DEFENSE range, one ARMOR_OR_PASSIVE entry.
   - artifact: one PASSIVE_EFFECTS entry.
   - price: a per-category formula of damage/range/defense times the effect's `value`
-    (see MAGIC_PRICE in Numbers).
+    (the magic item price row in Numbers).
   - name: one of six patterns from MODES, VERBERS, VERBS, ARCHETYPES_GENERAL,
     VERBING_GENERAL, the effect's own words in EFFECT_NAMING, and a noun row chosen by
     damage or defense (MELEE_ITEMS, RANGED_ITEMS, ARMOR_ITEMS) or ARTIFACT_ITEMS.
@@ -491,7 +489,7 @@ special-looking hex but hold no other prize.
   - Inert today [P, observed]: ranged_defense and displacement_immune have no effect;
     high_def_mp_penalty applies its MP penalty but not its defBonus; riposte halves the
     counter but its riposteDamage is unused (Q-1).
-- **Melee with a ranged weapon** deals ceil(damage / RANGED_MELEE_DIVISOR†) + Might.
+- **Melee with a ranged weapon** deals ceil(damage / RANGED_MELEE_DIVISOR) + Might.
 - **Unarmed** (no weapon): damage 1.
 
 ### Enemy types [D]
@@ -503,30 +501,30 @@ special-looking hex but hold no other prize.
   Guardian (guard, melee and ranged), The Unraveler (boss, melee and ranged, spawns
   minions). Stats in the table.
 - **Wildlife tiers** (`generateCreatureTypes`, per run): NUM_CREATURE_TIERS tiers. Tier i
-  has attack = round(CREATURE_ATTACK_BASE† × 10^(i / CREATURE_ATTACK_SPAN†)) and a pair of
-  creatures sharing speed 1, detect range (min(CREATURE_DETECT_MAX†, CREATURE_DETECT_BASE† +
-  floor(attack/4))), a random aggro range from CREATURE_AGGRO_MIN† to detect, xp (attack ×
-  CREATURE_XP_PER_ATTACK†), gold (max(1, floor(attack/3))), tier, behavior, chaosSpawned
+  has attack = round(CREATURE_ATTACK_BASE × 10^(i / CREATURE_ATTACK_SPAN)) and a pair of
+  creatures sharing speed 1, detect range (min(CREATURE_DETECT_MAX, CREATURE_DETECT_BASE +
+  floor(attack/4))), a random aggro range from CREATURE_AGGRO_MIN to detect, xp (attack ×
+  CREATURE_XP_PER_ATTACK), gold (max(1, floor(attack/3))), tier, behavior, chaosSpawned
   false:
-  - **melee**: hp ≈ attack × CREATURE_HP_PER_ATTACK† ± jitter, defense floor(attack/4),
+  - **melee**: hp ≈ attack × CREATURE_HP_PER_ATTACK ± jitter, defense floor(attack/4),
     spawnWeight 1, a procedural name (prefix + predator + suffix).
-  - **ranged**: attack and rangedAttack = round(attack × RANGED_CREATURE_ATTACK_RATIO†), hp
-    ≈ attack × RANGED_CREATURE_HP_PER_ATTACK† ± jitter (floor RANGED_CREATURE_HP_MIN†),
+  - **ranged**: attack and rangedAttack = round(attack × RANGED_CREATURE_ATTACK_RATIO), hp
+    ≈ attack × RANGED_CREATURE_HP_PER_ATTACK ± jitter (floor RANGED_CREATURE_HP_MIN),
     defense floor(attack/6), range from RANGED_CREATURE_BANDS by tier band (one band per
     four tiers), spawnWeight RANGED_CREATURE_SPAWN_WEIGHT, a name with a band role word.
-  - behavior by tier attack (`wildlifeBehaviorFor`): wildlife below MONSTER_ATTACK†,
-    monster below RUINS_GUARDIAN_ATTACK†, else ruins-guardian.
+  - behavior by tier attack (`wildlifeBehaviorFor`): wildlife below MONSTER_ATTACK,
+    monster below RUINS_GUARDIAN_ATTACK, else ruins-guardian.
   - colors from a ColorTheory scheme, saturation shifted per role.
-- **Spawn tier weights** (`spawnTierWeights`): weight = exp(−((tier − peak)/SPAWN_TIER_SIGMA†)²)
+- **Spawn tier weights** (`spawnTierWeights`): weight = exp(−((tier − peak)/SPAWN_TIER_SIGMA)²)
   × spawnWeight.
 - **Maw gradient**: `mawDistancePeak(q, r)` falls linearly from the top tier at the Maw to
   tier 0 at the farthest reachable hex (unreachable hexes: 0).
-- **Maw proximity buff**: within MAW_PROXIMITY_FRACTION† of mawMaxDist, enemies gain attack,
-  defense and max HP rising linearly to MAW_PROXIMITY_ATTACK†, MAW_PROXIMITY_DEFENSE†,
-  MAW_PROXIMITY_HP† at the Maw.
+- **Maw proximity buff**: within MAW_PROXIMITY_FRACTION of mawMaxDist, enemies gain attack,
+  defense and max HP rising linearly to MAW_PROXIMITY_ATTACK, MAW_PROXIMITY_DEFENSE,
+  MAW_PROXIMITY_HP at the Maw.
 - **Corrupted terrain buff**: a chaos enemy on shattered or distressed terrain gets
-  +CORRUPT_DEFENSE† defense, +CORRUPT_ATTACK† melee and ranged attack, and heals
-  CORRUPT_REGEN† HP per turn up to its effective max.
+  +CORRUPT_DEFENSE defense, +CORRUPT_ATTACK melee and ranged attack, and heals
+  CORRUPT_REGEN HP per turn up to its effective max.
 
 ### Corruption (terrain state machine) [D]
 
@@ -534,37 +532,37 @@ special-looking hex but hold no other prize.
 
 ```
 base ──(chaos enemy shatters here)──▶ shattered
-base ──(a shatter within SHATTER_RADIUS†)──▶ distressed
+base ──(a shatter within SHATTER_RADIUS)──▶ distressed
 distressed ──(restore pass, shatteredCount == 0)──▶ base
 shattered ──(Restore / Salvage)──▶ base, or distressed if shatteredCount > 0
 ```
 Shatter: a distressed hex under the enemy first reverts, then becomes shattered; every hex
-within SHATTER_RADIUS† gets shatteredCount +1 and turns distressed if it has a distressed
+within SHATTER_RADIUS gets shatteredCount +1 and turns distressed if it has a distressed
 version. Settlements and their hexes are skipped. Special, ruins, water, mountain have no
 shattered version and never shatter.
 
 ### Ruin lifecycle [D]
 
 ```
-new ──search: creatures spawned──▶ spawned ──enter, none within RUIN_CLEAR_RADIUS†──▶ explored (loot)
+new ──search: creatures spawned──▶ spawned ──enter, none within RUIN_CLEAR_RADIUS──▶ explored (loot)
 new ──search: nothing spawned──▶ new (MP → 0)
-explored ──search, RUIN_RESTIR_CHANCE†──▶ spawned
+explored ──search, RUIN_RESTIR_CHANCE──▶ spawned
 explored ──search, otherwise──▶ explored (MP → 0)
 ```
-Any entry while an enemy stands within RUIN_CLEAR_RADIUS† only logs "clear them first".
+Any entry while an enemy stands within RUIN_CLEAR_RADIUS only logs "clear them first".
 
 ### Breach and Maw lifecycle [D]
 
 ```
 breach open (guardian alive) ──guardian dies──▶ ready (guardianDefeated)
-ready ──no guardian within GUARDIAN_PRESENCE_RADIUS†, GUARDIAN_RESPAWN_CHANCE†──▶ open (new guardian)
-ready ──Restore in range, BREACH_SEAL_CHANCE†──▶ sealed (Hills, loot)
+ready ──no guardian within GUARDIAN_PRESENCE_RADIUS, GUARDIAN_RESPAWN_CHANCE──▶ open (new guardian)
+ready ──Restore in range, BREACH_SEAL_CHANCE──▶ sealed (Hills, loot)
 maw (Unraveler alive) ──Unraveler killed, chaos units exist──▶ Unraveler re-forms elsewhere (noSpawn)
 maw ──Unraveler gone, the Maw's current guardian dead, every breach sealed──▶ sealable
-sealable ──Restore in range, MAW_SEAL_CHANCE†──▶ sealed (Hills, RETURN scroll dropped)
+sealable ──Restore in range, MAW_SEAL_CHANCE──▶ sealed (Hills, RETURN scroll dropped)
 ```
 The Maw also respawns Breach Guardians (like a breach) when the Unraveler is absent or
-farther than UNRAVELER_LEASH† from it.
+farther than UNRAVELER_LEASH from it.
 
 ---
 
@@ -577,7 +575,7 @@ Each rule names the code that runs it. Pseudocode uses constant names; values ar
 ```
 loop while !gameOver and generation current:
   phase = 'player'; combatAlerted = false
-  if 0 < hp < NEAR_DEATH_FRACTION† * maxHP: victory.nearDeathMoments++
+  if 0 < hp < NEAR_DEATH_FRACTION * maxHP: victory.nearDeathMoments++
   await endTurn()                       # Space/E/End Turn, or auto at 0 MP
   saveGame(); phase = 'enemy'
   runEnemyAiPhase()                     # see Enemy phase; ends in advanceTurn
@@ -589,7 +587,7 @@ dialog buttons). The End Turn command on a POI hex re-opens that POI instead (he
 ### Enemy phase [D]
 *Serves:* G-3, G-4, G-5. (`runEnemyAiPhase`)
 ```
-regen: hp += PLAYER_REGEN† + Σheal; revive adds hp and ae; ae += Σaether_regen;
+regen: hp += PLAYER_REGEN + Σheal; revive adds hp and ae; ae += Σaether_regen;
        chaos_circlet: +1 ae on chaos terrain          (all clamped to max)
 tickBurns: each enemy with burnDamage takes it (no defense), burnDamage = 0
 for enemy in copy(enemies) until gameOver:
@@ -603,7 +601,7 @@ respawnGuardians(); spawnChaosAtBreaches(); spawnWildlife(); tickGarrisons(); ad
 *Serves:* G-3.
 ```
 turn++; mp = maxMP()
-if any enemy adjacent and no disengage: mp = max(1, floor(mp / ENGAGED_MP_DIVISOR†))
+if any enemy adjacent and no disengage: mp = max(1, floor(mp / ENGAGED_MP_DIVISOR))
 clear movedThisTurn, hexesMovedThisTurn, phaseStep/sprint flags
 every enemy: stunRolledThisTurn = false
 ```
@@ -646,7 +644,7 @@ refreshVision(); checkHexEntry(); deselect
 ### Hex entry [D]
 *Serves:* "Windfall", G-2. (`checkHexEntry`)
 ```
-if goldDeposit > 0: gold += it; deposit = 0; if crop: heal ceil(maxHP / CROP_HEAL_DIVISOR†)
+if goldDeposit > 0: gold += it; deposit = 0; if crop: heal ceil(maxHP / CROP_HEAL_DIVISOR)
 if skillGem: clear; grantConsolation()            # +1 SP, else CONSOLATION_XP
 if magicItem: clear; inventory += rollMagicItem()
 if a POI is here: open it (haven, village, hut, ruin, scroll)
@@ -662,7 +660,7 @@ if not killed and not target.stunnedNextTurn:
   dealDamageToPlayer(c, attacker = target)
 spend weaponMpCost(weapon)       # none 1; free_action 0; item mpCost; ranged 2; melee 1
 ```
-`meleeDamage` = weapon damage (ranged weapon: ceil(dmg / RANGED_MELEE_DIVISOR†); none: 1)
+`meleeDamage` = weapon damage (ranged weapon: ceil(dmg / RANGED_MELEE_DIVISOR); none: 1)
 + Might + chaos_bonus (vs chaos) + charge (if moved) + channel bonus + wall_of_steel (if
 not moved).
 
@@ -732,15 +730,15 @@ if random < min(pct, MAX_STUN_CHANCE): stunnedNextTurn = true
 ```
 if ranged and ranged_immune: avoid
 if warpShieldTurns > 0 and chance(warp effectStrength / 10): avoid
-if chance(dodge()): avoid            # dodge = 2 × effective vigor + dodge_bonus summed over equipped items, cap MAX_DODGE
+if chance(dodge()): avoid            # dodge = dodge per vigor × effective vigor + dodge_bonus summed over equipped items, cap MAX_DODGE
 rolled = bellCurve(damage); dealt = max(1, rolled − playerDefense())
 if melee, reflectTurns > 0 and chance(reflect effectStrength / 10):
   reflected = max(1, dealt × reflectPercent%); dealt = max(1, dealt × takePercent%)
 hp -= dealt; then reflect / thorns hit the attacker; burning_aura burns adjacent enemies
 if hp ≤ 0: endGame(lost)
 ```
-`playerDefense` = armor defense + floor(effectiveVigor / VIGOR_PER_DEFENSE†) + floor(Might /
-MIGHT_PER_DEFENSE†) + terrain + POI + last_stand (≤ half HP) + momentum × hexes moved +
+`playerDefense` = armor defense + floor(effectiveVigor / VIGOR_PER_DEFENSE) + floor(Might /
+MIGHT_PER_DEFENSE) + terrain + POI + last_stand (≤ half HP) + momentum × hexes moved +
 ranger_defense (ranger terrain) + chaos_defense and chaos_attune (chaos terrain). A
 Warding-based skill-damage reduction exists but no caller uses it (Q-1).
 
@@ -752,16 +750,16 @@ if Unraveler and any chaos unit exists: replace a random chaos unit with a new U
    (noSpawn, Maw guardianId = it); give xp; dialog; stop
 victory counters; gold += rand(KILL_GOLD) + def.gold
 chaos: ae += 1; heal_on_kill; gainXP(def.xp + Σsoul_harvest)
-opportunist: OPPORTUNIST_CHANCE† for extra gold; trySpawnSkillGem
+opportunist: OPPORTUNIST_CHANCE for extra gold; trySpawnSkillGem
 monster or ruins-guardian: offerSettlementReward(kill hex)
-crawler or guardian: CHAOS_DROP_MUNDANE† mundane items + CHAOS_DROP_MAGIC_CHANCE† magic item
+crawler or guardian: CHAOS_DROP_MUNDANE mundane items + CHAOS_DROP_MAGIC_CHANCE magic item
 if a breach/Maw names this enemy as guardian: guardianDefeated = true
 ```
 
 ### Skill gem drop [D]
 ```
 chance = GEM_DROP_PEAK_CHANCE × 4 × t × (1 − t), t = sp / maxSP
-on success: gem on a random nearest free passable non-POI hex within GEM_DROP_RADIUS†,
+on success: gem on a random nearest free passable non-POI hex within GEM_DROP_RADIUS,
 never the kill hex or the player's hex
 ```
 
@@ -769,13 +767,13 @@ never the kill hex or the player's hex
 *Serves:* G-2, "Windfall". (`gainXP`)
 ```
 xp += amount
-if xp ≥ xpForLevel(level+1) and level < LEVEL_CAP†:
+if xp ≥ xpForLevel(level+1) and level < LEVEL_CAP:
   level++; xp -= threshold; hp, aether = max
   statPoints += STAT_POINTS_PER_LEVEL; gainSP(1)
   show the level-up dialog (stat buttons; Done may leave points unspent)
 ```
-`xpForLevel(L)` = XP_CURVE_SCALE × L^XP_CURVE_EXPONENT, rounded to the nearest
-XP_CURVE_ROUND. One level per gainXP call. Unspent stat points stay on the Character panel
+`xpForLevel(L)` is the power curve given in Numbers, rounded to the nearest ten. One level
+per gainXP call. Unspent stat points stay on the Character panel
 [D].
 Skills are never granted by levelling.
 
@@ -797,25 +795,25 @@ a bad hex, Haven's Light away from a settlement).
 ### Restore and sealing [D]
 *Serves:* G-1, G-4. (`executeRestore`)
 ```
-range = RESTORE_BASE_RANGE† + floor(level / RESTORE_LEVELS_PER_RANGE†)
+range = RESTORE_BASE_RANGE + floor(level / RESTORE_LEVELS_PER_RANGE)
 shattered = shattered hexes in range
 breach = an unsealed breach (or the Maw if Unraveler gone and no breach open)
          in range with guardianDefeated
 Maw in range but blocked: once-only dialog (Unraveler alive, or open breaches → reveal them)
 if no shattered and no breach: abort (no MP spent)
-restore hexes; ae += min(deficit, n); per hex RESTORE_GOLD_CHANCE† for 1 gold
-gainXP(n × RESTORE_XP_PER_HEX†); offerSettlementReward(restored hexes)
-if breach: chance(Maw ? MAW_SEAL_CHANCE† : BREACH_SEAL_CHANCE†) → closeBreach, else "failed"
+restore hexes; ae += min(deficit, n); per hex RESTORE_GOLD_CHANCE for 1 gold
+gainXP(n × RESTORE_XP_PER_HEX); offerSettlementReward(restored hexes)
+if breach: chance(Maw ? MAW_SEAL_CHANCE : BREACH_SEAL_CHANCE) → closeBreach, else "failed"
 ```
 `closeBreach`: closed = true, breachesClosed++, hex → Hills, victory.breachesSealed++;
-a breach gives loot (BREACH_LOOT_GOLD range + 1-3 unowned mundane + 1 magic); the Maw drops
-the RETURN scroll on a free reachable hex within MAW_SCROLL_RADIUS†.
+a breach gives loot (BREACH_LOOT_GOLD range + unowned mundane items + 1 magic, as `rollPoiLoot`); the Maw drops
+the RETURN scroll on a free reachable hex within MAW_SCROLL_RADIUS.
 
 ### Restoring terrain [D]
 (`restoreShatteredHexes`, shared by Restore and Salvage)
 ```
 each restored hex → base terrain
-each hex within SHATTER_RADIUS† of a restored hex: shatteredCount -= 1 (floor 0)
+each hex within SHATTER_RADIUS of a restored hex: shatteredCount -= 1 (floor 0)
   if count == 0 and distressed → base
 restored hex with count > 0 → distressed
 ```
@@ -823,64 +821,65 @@ restored hex with count > 0 → distressed
 ### Enemy shattering [D]
 *Serves:* G-4. (`tryTerrainShatter`, after each chaos enemy's turn)
 ```
-if chaos and chance(SHATTER_CHANCE†):
+if chaos and chance(SHATTER_CHANCE):
   under the enemy: distressed → base; if it has a shattered version and isn't a settlement:
-    → shattered; each hex within SHATTER_RADIUS† (not a settlement):
+    → shattered; each hex within SHATTER_RADIUS (not a settlement):
       shatteredCount++, base → distressed
 ```
 
 ### Guardian respawn [D]
 ```
 for each unsealed breach or Maw:
-  Maw: skip while the Unraveler lives within UNRAVELER_LEASH†
-  skip if a Breach Guardian is within GUARDIAN_PRESENCE_RADIUS† or the hex is occupied
-  chance(GUARDIAN_RESPAWN_CHANCE†): spawn guardian on the POI; guardianId = it;
+  Maw: skip while the Unraveler lives within UNRAVELER_LEASH
+  skip if a Breach Guardian is within GUARDIAN_PRESENCE_RADIUS or the hex is occupied
+  chance(GUARDIAN_RESPAWN_CHANCE): spawn guardian on the POI; guardianId = it;
     guardianDefeated = false
 ```
 
 ### Chaos spawning at breaches [D]
 *Serves:* "Escalating Commitment". (`spawnChaosAtBreaches`)
 ```
-if em.chaosMight() ≥ CHAOS_MIGHT_CAP†: none
-pool = CHAOS_SPAWN_POOL† (drop the wraith when wraiths ≥ WRAITH_CAP†)
-each open breach: chance(BREACH_SPAWN_CHANCE†) → one pool enemy on a free adjacent hex
+if em.chaosMight() ≥ CHAOS_MIGHT_CAP: none
+pool = CHAOS_SPAWN_POOL (drop the wraith when wraiths ≥ WRAITH_CAP)
+each open breach: chance(BREACH_SPAWN_CHANCE) → one pool enemy on a free adjacent hex
 ```
 `chaosMight` / `wildlifeMight` = Σ def.attack over chaos / wildlife enemies.
 
 ### Wildlife spawning and packs [D]
 *Serves:* G-5. (`spawnInitialCreatures`, `spawnWildlife`, `pickSpawnPack`, `spawnPack`)
 ```
-initial: until wildlifeMight ≥ WILDLIFE_MIGHT_CAP† or no candidates: pick a random hex
-  (not visible, not POI, not shattered, farther than SPAWN_SAFE_DISTANCE† from player); spawn a pack
-per turn: if wildlifeMight < cap and chance(WILDLIFE_SPAWN_CHANCE†): one pack at a random such hex
+initial: until wildlifeMight ≥ WILDLIFE_MIGHT_CAP or no candidates: pick a random hex
+  (not visible, not POI, not shattered, farther than SPAWN_SAFE_DISTANCE from player); spawn a pack
+per turn: if wildlifeMight < cap and chance(WILDLIFE_SPAWN_CHANCE): one pack at a random such hex
 pack: type = weighted(spawnTierWeights(creatureDefs, mawDistancePeak(hex)))
       size = max(1, ceil(bellCurve(player.meleeDamage(false)) / def.attack))
-      first at hex, rest on free hexes within PACK_RADIUS†, adjacent first
+      first at hex, rest on free hexes within PACK_RADIUS, adjacent first
 ```
 
 ### Initial chaos placement [D]
-(`spawnInitial`) INITIAL_STALKERS† Void Stalkers and INITIAL_ARCHERS† Flux Archers on random
-passable hexes farther than INITIAL_SAFE_DISTANCE† from the player; the Unraveler on the
-Maw; a Breach Guardian on each breach plus BREACH_CRAWLERS† crawlers within
-BREACH_CRAWLER_RADIUS†.
+(`spawnInitial`) INITIAL_STALKERS Void Stalkers and INITIAL_ARCHERS Flux Archers on random
+passable hexes farther than INITIAL_SAFE_DISTANCE from the player; the Unraveler on the
+Maw; a Breach Guardian on each breach plus BREACH_CRAWLERS crawlers within
+BREACH_CRAWLER_RADIUS.
 
 ### Unraveler minions [D]
 ```
 boss, not noSpawn, turnsSinceSpawn > 0, chance(def.spawnChance):
-  one CHAOS_SPAWN_POOL† enemy (wraith dropped at WRAITH_CAP†) on a free adjacent hex
+  one CHAOS_SPAWN_POOL enemy (wraith dropped at WRAITH_CAP) on a free adjacent hex
 ```
 
 ### Ruin search [D]
 *Serves:* "Living map", "Windfall". (`tryRuinInteraction`, `spawnRuinCreatures`)
 ```
-on entry: if any enemy within RUIN_CLEAR_RADIUS†: log, stop
+on entry: if any enemy within RUIN_CLEAR_RADIUS: log, stop
 new: Search → spawn; if nothing spawned, mp = 0
 spawned: loot → explored, ruinsExplored++, rollPoiLoot(RUIN_LOOT_GOLD), Continue: mp = 0
-explored: Search → chance(RUIN_RESTIR_CHANCE†) spawn, else nothing; if nothing, mp = 0
+explored: Search → chance(RUIN_RESTIR_CHANCE) spawn, else nothing; if nothing, mp = 0
 spawn: peak = min(top tier, mawDistancePeak + RUIN_TIER_BIAS); fill free hexes within
-       RUIN_CLEAR_RADIUS† until Σattack ≥ level × RUIN_MIGHT_PER_LEVEL†; any → 'spawned'
+       RUIN_CLEAR_RADIUS until Σattack ≥ level × RUIN_MIGHT_PER_LEVEL; any → 'spawned'
 ```
-`rollPoiLoot`: gold in range, 1-3 mundane items the player doesn't own, 1 magic item.
+`rollPoiLoot`: gold in range, mundane items the player doesn't own (the poi loot mundane
+count in Numbers), 1 magic item.
 
 ### Haven visit [D]
 *Serves:* G-3, "Windfall".
@@ -892,8 +891,8 @@ Weaponsmith / Magicsmith: shop (Done: mp = 0); Train: Train dialog (Done: mp = 0
 
 ### Village visit and Sanctuary [D]
 ```
-village entry: chance(VILLAGE_CROP_CHANCE†) a crop (gold in CROP_GOLD) sprouts adjacent
-Rest: heal floor(maxHP × VILLAGE_REST_FRACTION†) hp and ae likewise; mp = 0
+village entry: chance(VILLAGE_CROP_CHANCE) a crop (gold in CROP_GOLD) sprouts adjacent
+Rest: heal floor(maxHP × VILLAGE_REST_FRACTION) hp and ae likewise; mp = 0
 Weaponsmith: mundane shop; Leave: free
 Sanctuary skill (non-POI hex, not distressed): crop chance on self, rest with fraction 1 / effectStrength
 every rest caps hp and ae at their maximums and logs the amounts
@@ -925,7 +924,7 @@ remove the scroll; learnSkill(skill, active if free SP > 0); dialog
 ### Shops [D]
 *Serves:* G-2. (`showShopDialog`)
 ```
-on open: chance(SHOP_NEW_ITEM_CHANCE†) add a fresh magic item to this POI's stock
+on open: chance(SHOP_NEW_ITEM_CHANCE) add a fresh magic item to this POI's stock
 list stock items not owned and matching the smith (weaponsmith: mundane; magicsmith: magic)
 magicsmith also lists unbought shopOnly skills at shopPrice
 buy: gold ≥ price → gold -= price, item to inventory (stock remains)
@@ -945,7 +944,7 @@ Done: mp = 0
 
 ### Skill Seek and consolation [D]
 ```
-Skill Seek: chance(effectStrength %) → offer up to SKILL_SEEK_OFFERS† from poolSkills; pick one
+Skill Seek: chance(effectStrength %) → offer up to SKILL_SEEK_OFFERS from poolSkills; pick one
             (latent); empty pool → grantConsolation
 grantConsolation: gainSP(1) if below maxSP, else gainXP(CONSOLATION_XP)
 ```
@@ -953,7 +952,7 @@ grantConsolation: gainSP(1) if below maxSP, else gainXP(CONSOLATION_XP)
 ### Settlement reward [D]
 *Serves:* G-4, "Defiance against entropy". (`offerSettlementReward`)
 ```
-first haven/village within SETTLEMENT_REWARD_RADIUS† of any origin hex:
+first haven/village within SETTLEMENT_REWARD_RADIUS of any origin hex:
   dialog offering rand(SETTLEMENTS[type].reward) gold; Accept: gold += it,
   settlementsRestored++. At most one offer per call.
 ```
@@ -1010,19 +1009,19 @@ monster → MonsterAI, ruins-guardian → RuinsGuardianAI, anything else → Cha
 
 - Enemies know the player's exact position at all times. Aggro is a pure distance check
   (no fog, no LOS). Firing needs LOS. [D]
-- Aggro range = aggroRange or detectRange; −THREAT_SHROUD_REDUCTION† (floor 1) with
-  threat_shroud. Forest stealth: the player in forest lowers it by FOREST_STEALTH†
+- Aggro range = aggroRange or detectRange; −THREAT_SHROUD_REDUCTION (floor 1) with
+  threat_shroud. Forest stealth: the player in forest lowers it by FOREST_STEALTH
   (floor 1), and Phase Wraiths lose aggro entirely, unless combatAlerted and the enemy is
-  within ALERT_RADIUS†.
+  within ALERT_RADIUS.
 - Enemies read each other's positions (occupied set) and their own home.
 - Enemies don't read the player's HP, gear, or skills.
 
 ### Shared moves [D]
 
 - **Alarm** (`soundAlarm`): an aggroed enemy sets its target to the player's hex and sets
-  the same target on every enemy within ALARM_RADIUS†.
+  the same target on every enemy within ALARM_RADIUS.
 - **Hunt** (`tryHuntTarget`): with a target, step toward it by A*; within
-  HUNT_COLD_RADIUS† the target clears.
+  HUNT_COLD_RADIUS the target clears.
 - **Aggro chase** (`tryAggroChase`, wildlife buckets): if in aggro, alarm; a ranged
   creature with a shot (distance > 1, ≤ range, LOS) fires and holds; otherwise step toward
   the player avoiding shattered hexes, and melee if adjacent.
@@ -1032,58 +1031,61 @@ monster → MonsterAI, ruins-guardian → RuinsGuardianAI, anything else → Cha
 
 ### WildlifeAI [D]
 ```
-aggro chase → else hunt target → else chance(WILDLIFE_WANDER_CHANCE†) wander
+aggro chase → else hunt target → else chance(WILDLIFE_WANDER_CHANCE) wander
 ```
 
 ### MonsterAI [D]
 ```
 aggro chase → else hunt target
-→ else nearest settlement within MONSTER_LURK_RADIUS†: wander (lurk)
-→ else within aggro × SETTLEMENT_HUNT_FACTOR†: step toward it → else wander
+→ else nearest settlement within MONSTER_LURK_RADIUS: wander (lurk)
+→ else within aggro × SETTLEMENT_HUNT_FACTOR: step toward it → else wander
 ```
 
 ### RuinsGuardianAI [D]
 ```
 aggro chase
-→ else nearest ruin within RUIN_PATROL_RADIUS†: chance(RUIN_PATROL_CHANCE†) patrol around it
-→ else within aggro × SETTLEMENT_HUNT_FACTOR†: step toward it
-→ else chance(GUARDIAN_WANDER_CHANCE†) wander
+→ else nearest ruin within RUIN_PATROL_RADIUS: chance(RUIN_PATROL_CHANCE) patrol around it
+→ else within aggro × SETTLEMENT_HUNT_FACTOR: step toward it
+→ else chance(GUARDIAN_WANDER_CHANCE) wander
 ```
 
 ### ChaosAI [D]
 ```
-heal CORRUPT_REGEN† on corrupted terrain; compute aggro (stealth rules above)
+heal CORRUPT_REGEN on corrupted terrain; compute aggro (stealth rules above)
 teleport (Phase Wraith, in aggro, no wraith_immune, chance teleportChance):
   jump to a free passable non-settlement hex within teleportRange of the player
-prefersRanged = ranged chaser and chance(CHASER_RANGED_PREFERENCE†)
+prefersRanged = ranged chaser and chance(CHASER_RANGED_PREFERENCE)
 if in aggro: alarm
 move: not guard, not aggro → hunt target or swarm; else up to speed steps by behavior
-attack: kite fires with chance KITE_FIRE_CHANCE† if it has a shot;
+attack: kite fires with chance KITE_FIRE_CHANCE if it has a shot;
         others melee if adjacent, else guard/boss/prefersRanged fire if they have a shot
 then: boss minion spawn; terrain shatter
 ```
 Step by behavior: **guard** returns home beyond guardRadius, else steps toward the player
-only while staying within guardRadius; **kite** backs off under KITE_MIN_DIST†, closes
-beyond KITE_MAX_DIST†, else holds, and wanders (chance WANDER_CHANCE†) out of aggro;
+only while staying within guardRadius; **kite** backs off under KITE_MIN_DIST, closes
+beyond KITE_MAX_DIST, else holds, and wanders (chance WANDER_CHANCE) out of aggro;
 **boss** steps toward the player in aggro; **chase** steps toward the player in aggro
-unless prefersRanged, else wanders (WANDER_CHANCE†). When a chaos enemy melees the player
+unless prefersRanged, else wanders (WANDER_CHANCE). When a chaos enemy melees the player
 and the player wears counter_mastery, the player hits back (weapon + Might, bell-curved,
 minus defense). Wildlife melee does not trigger it (Q-3).
 
-**Swarm** (`trySwarmTrigger`): with SWARM_ALLIES† or more chaos allies within
-SWARM_RADIUS†, pick one of the nearest settlements by SWARM_WEIGHTS† and hunt toward it.
+**Swarm** (`trySwarmTrigger`): with SWARM_ALLIES or more chaos allies within
+SWARM_RADIUS, pick one of the nearest settlements by SWARM_WEIGHTS and hunt toward it.
 The Unraveler swarms too.
 
 ### Commitment [D]
 Alarm and swarm targets persist across turns (saved on the enemy) until the enemy comes
-within HUNT_COLD_RADIUS† of them. Guards never hunt or swarm. Stunned enemies skip their
+within HUNT_COLD_RADIUS of them. Guards never hunt or swarm. Stunned enemies skip their
 whole turn.
 
 ---
 
 ## §6 Numbers [T]
 
-Every tunable number, by code name. † = inline literal, shown under the name it will get [D, unbuilt].
+Every tunable number, by code name. A row whose name is an upper-case constant or a function
+is defined under that name in the file its Code column gives. A row named in lower case
+(dodge per vigor, the magic item price, the enemy animation delays) has no constant: it is a
+literal or formula written in place in the function it cites.
 Content-table numbers (each skill's tiers and costs, each item's stats, each fixed enemy's
 stats, effect magnitudes) stay in `SKILLS`, `WEAPONS`, `ARMORS`, the effect pools and
 `ENEMY_DEFS`. Decisions about these numbers, as they are written up, live in DECISIONS.md.
@@ -1092,107 +1094,107 @@ stats, effect magnitudes) stay in `SKILLS`, `WEAPONS`, `ARMORS`, the effect pool
 |---|---|---|---|
 | HEX_SIZE | 24 | px | config.js |
 | MAP_COLS × MAP_ROWS | 100 × 100 | hexes | config.js |
-| HEIGHTMAP_SIZE† / HEIGHTMAP_ROUGHNESS† | 129 / 0.55 | | world._generateRectGrid |
-| WATER_PCT† / PLAINS_PCT† / HILLS_PCT† | 0.25 / 0.85 / 0.95 | elevation percentile | world._assignTerrain |
-| FOREST_SHARE† | 0.10 | of interior | world._assignTerrain |
-| QUARRY_SHARE† / QUARRY_MIN† | 0.02 / 2 | of interior / hexes | world._assignTerrain |
-| PRIZE_SHARE† | 0.01 | of interior, split 3 ways | world._placeSpecialHexes |
-| PRIZE_WEIGHTS† | gold 7, gem 2, magic item 1 | weight | world._placePrizes |
-| PRIZE_GOLD† | 10-20 | gold | world._placePrizes |
-| MAP_ATTEMPTS† | 20 | tries | world.generate |
-| POI_MIN_DIST† | 10 | hexes | world._placePOIs (MIN_DIST) |
-| HAVEN_COUNT† / VILLAGE_COUNT† / RUIN_COUNT† / BREACH_COUNT† | 4-6 / 8-12 / 12-20 / 6-8 | | world._placePOIs |
+| HEIGHTMAP_SIZE / HEIGHTMAP_ROUGHNESS | 129 / 0.55 | | config.js; used in world._generateRectGrid |
+| WATER_PCT / PLAINS_PCT / HILLS_PCT | 0.25 / 0.85 / 0.95 | elevation percentile | config.js; used in world._assignTerrain |
+| FOREST_SHARE | 0.10 | of interior | config.js; used in world._assignTerrain |
+| QUARRY_SHARE / QUARRY_MIN | 0.02 / 2 | of interior / hexes | config.js; used in world._assignTerrain |
+| PRIZE_SHARE | 0.01 | of interior, split 3 ways | config.js; used in world._placeSpecialHexes |
+| PRIZE_WEIGHTS | gold 7, gem 2, magic item 1 | weight | config.js; used in world._placePrizes |
+| PRIZE_GOLD | 10-20 | gold | config.js; used in world._placePrizes |
+| MAP_ATTEMPTS | 20 | tries | config.js; used in world.generate |
+| POI_MIN_DIST | 10 | hexes | config.js; used in world._placePOIs |
+| HAVEN_COUNT / VILLAGE_COUNT / RUIN_COUNT / BREACH_COUNT | 4-6 / 8-12 / 12-20 / 6-8 | | config.js; used in world._placePOIs |
 | HUT_COUNT | 12 | huts | world.js |
-| HAVEN_MAGIC_STOCK† / HAVEN_MUNDANE_STOCK† / VILLAGE_STOCK† | 2-3 / 2-3 / 2-3 | items | world shop generators |
+| HAVEN_MAGIC_STOCK / HAVEN_MUNDANE_STOCK / VILLAGE_STOCK | 2-3 / 2-3 / 2-3 | items | config.js; used in world shop generators |
 | BASE_VISION | 6 | hexes | config.js |
 | PLAYER_MP | 4 | MP | config.js |
 | STARTING_STATS | might 3, reflex 3, warding 2, vigor 3 | | config.js |
 | maxHP(vigor) | 50 + 10 × vigor | HP | config.js |
 | maxAether(warding) | 5 + 2 × warding | AE | config.js |
 | STAT_POINTS_PER_LEVEL | 3 | points | config.js |
-| XP_CURVE (xpForLevel) | 50 × L^1.8, nearest 10 | XP | config.js |
-| LEVEL_CAP† | 10 | level | index.gainXP |
-| VIGOR_PER_DEFENSE† / MIGHT_PER_DEFENSE† | 3 / 5 | stat per +1 def | player.defense |
-| dodge per vigor† | 2 | % | player.dodge |
+| xpForLevel(L) | round(50 × L^1.8 / 10) × 10 | XP to reach level L | config.js |
+| LEVEL_CAP | 10 | level | config.js; used in index.gainXP |
+| VIGOR_PER_DEFENSE / MIGHT_PER_DEFENSE | 3 / 5 | stat per +1 def | config.js; used in player.defense |
+| dodge per vigor | 2 | % per effective vigor | player.dodge |
 | MAX_DODGE | 90 | % | config.js |
 | MAX_STUN_CHANCE | 90 | % | config.js |
 | STUN_DIVISOR_PRIMARY / STUN_DIVISOR_OTHER | 40 / 60 | damage per 100% | config.js |
-| RANGED_MELEE_DIVISOR† | 4 | | player.meleeDamage |
-| STARTING_SP / MAX_SP† | 5 / 50 | SP | Player constructor |
+| RANGED_MELEE_DIVISOR | 4 | | config.js; used in player.meleeDamage |
+| STARTING_SP / MAX_SP | 5 / 50 | SP | config.js; used in Player constructor |
 | SKILL_SLOTS | 5 | slots | index.js |
 | SKILL_MAX_RANK | 5 | rank | config.js |
-| SKILL_SAFE_RADIUS† | 2 | hexes | index.checkSkillUsage |
+| SKILL_SAFE_RADIUS | 2 | hexes | config.js; used in index.checkSkillUsage |
 | SKILL_HELD_OUT_FRACTION | 0.5 | | skilllibrary.js |
 | STORY_SCROLL_SKILLS | 6 | scrolls | skilllibrary.js |
 | CHANNEL_SCROLL_RADIUS / NEAR_CORE_SCROLL_RADIUS | 11 / 50 | hexes | skilllibrary.js |
-| HUT_GIFT_CHANCE / HUT_REROLL_CHANCE | 0.02 / 0.02 | per hut per turn | index.js |
-| HUT_REST_HP_FRACTION / HUT_REST_AE_FRACTION | 0.25 / 0.5 | of max (hp floored, min 1; ae rounded up) | index.js |
-| SKILL_SEEK_OFFERS† | 3 | skills | index.showSkillChoiceDialog |
+| HUT_GIFT_CHANCE / HUT_REROLL_CHANCE | 0.02 / 0.02 | per hut per turn | config.js; used in index.js |
+| HUT_REST_HP_FRACTION / HUT_REST_AE_FRACTION | 0.25 / 0.5 | of max (hp floored, min 1; ae rounded up) | config.js; used in index.js |
+| SKILL_SEEK_OFFERS | 3 | skills | config.js; used in index.showSkillChoiceDialog |
 | CONSOLATION_XP | 10 | XP | index.js |
 | GEM_DROP_PEAK_CHANCE | 0.25 | | index.js |
-| GEM_DROP_RADIUS† | 5 | hexes | index.trySpawnSkillGem |
+| GEM_DROP_RADIUS | 5 | hexes | config.js; used in index.trySpawnSkillGem |
 | SELL_PRICE_RATIO | 0.4 | | config.js |
-| SHOP_NEW_ITEM_CHANCE† | 0.03 | per shop open | index.showShopDialog |
-| MAGIC_DAMAGE† / MAGIC_RANGE† / MAGIC_DEFENSE† | 2-6 / 3-5 / 2-6 | | config.rollMagicItem |
-| MAGIC_PRICE† | melee (dmg+1)×60×value; ranged (dmg+range+1)×30×value; armor (def+1)×60×value; artifact (d101+d101−2)×value | gold | config.rollMagicItem |
-| KILL_GOLD† | 1-5 (+ def.gold) | gold | index.killEnemy |
-| OPPORTUNIST_CHANCE† / gold | 0.25 / 3-8 | | index.killEnemy |
-| CHAOS_DROP_MUNDANE† / CHAOS_DROP_MAGIC_CHANCE† | 0-3 / 0.10 | | index.killEnemy |
-| RUIN_LOOT_GOLD† / BREACH_LOOT_GOLD† | 5-20 / 50-100 | gold | index.js |
-| POI loot mundane count† | 1-3 | items | index.rollPoiLoot |
-| RUIN_CLEAR_RADIUS† | 2 | hexes | index.ruinEnemiesNearby |
+| SHOP_NEW_ITEM_CHANCE | 0.03 | per shop open | config.js; used in index.showShopDialog |
+| MAGIC_DAMAGE / MAGIC_RANGE / MAGIC_DEFENSE | 2-6 / 3-5 / 2-6 | | config.js; used in config.rollMagicItem |
+| magic item price | melee (dmg+1)×60×value; ranged (dmg+range+1)×30×value; armor (def+1)×60×value; artifact (two rolls of 0-100, summed)×value | gold | config.rollMagicItem |
+| KILL_GOLD | 1-5 (+ def.gold) | gold | config.js; used in index.killEnemy |
+| OPPORTUNIST_CHANCE / opportunist gold | 0.25 / 3-8 | chance / gold | config.js (the chance); both used in index.killEnemy, the gold range a literal there |
+| CHAOS_DROP_MUNDANE / CHAOS_DROP_MAGIC_CHANCE | 0-3 / 0.10 | | config.js; used in index.killEnemy |
+| RUIN_LOOT_GOLD / BREACH_LOOT_GOLD | 5-20 / 50-100 | gold | config.js; used in index.js |
+| poi loot mundane count | 1-3 | items | index.rollPoiLoot |
+| RUIN_CLEAR_RADIUS | 2 | hexes | config.js; used in index.ruinEnemiesNearby |
 | RUIN_TIER_BIAS | 2 | tiers | index.js |
-| RUIN_MIGHT_PER_LEVEL† | 10 | attack per level | index.spawnRuinCreatures |
-| RUIN_RESTIR_CHANCE† | 0.10 | per search | index.tryRuinInteraction |
-| SETTLEMENT_REWARD_RADIUS† | 3 | hexes | index.offerSettlementReward |
+| RUIN_MIGHT_PER_LEVEL | 10 | attack per level | config.js; used in index.spawnRuinCreatures |
+| RUIN_RESTIR_CHANCE | 0.10 | per search | config.js; used in index.tryRuinInteraction |
+| SETTLEMENT_REWARD_RADIUS | 3 | hexes | config.js; used in index.offerSettlementReward |
 | SETTLEMENTS reward | haven 5-20, village 1-10 | gold | index.js |
-| VILLAGE_REST_FRACTION† | 0.5 | of max | index.showVillageDialog |
-| VILLAGE_CROP_CHANCE† / CROP_GOLD† | 0.25 / 1-3 | | index.trySpawnVillageCrop |
-| CROP_HEAL_DIVISOR† | 10 | maxHP / n | index.eatCrop |
-| SETTLEMENT_MOVE_COST† | 1 | MP | index.playerMoveCost |
-| ENGAGED_MP_DIVISOR† | 2 | | index.advanceTurn |
-| NEAR_DEATH_FRACTION† | 0.10 | of max HP | index.startPlayerTurn |
-| PLAYER_REGEN† | 1 | HP per turn | enemy_ai.regenPlayerAtPhaseStart |
-| RESTORE_BASE_RANGE† / RESTORE_LEVELS_PER_RANGE† | 1 / 3 | | actions.executeRestore |
-| RESTORE_GOLD_CHANCE† / RESTORE_XP_PER_HEX† | 0.16 / 3 | | actions.executeRestore |
-| BREACH_SEAL_CHANCE† / MAW_SEAL_CHANCE† | 0.40 / 0.20 | per Restore | actions.executeRestore |
-| MAW_SCROLL_RADIUS† | 3 | hexes | index.sealMaw |
-| PROSPECT strike chance† / radius† / deposit† | 0.2 / 4 / 10 | | actions.executeProspect |
-| SALVAGE gold per hex† | 1-10 | gold | actions.executeSalvage |
-| GROUND_WEEPS radius† | 3 | hexes | actions.executeGroundWeeps |
+| VILLAGE_REST_FRACTION | 0.5 | of max | config.js; used in index.showVillageDialog |
+| VILLAGE_CROP_CHANCE / CROP_GOLD | 0.25 / 1-3 | | config.js; used in index.trySpawnVillageCrop |
+| CROP_HEAL_DIVISOR | 10 | maxHP / n | config.js; used in index.eatCrop |
+| SETTLEMENT_MOVE_COST | 1 | MP | config.js; used in index.playerMoveCost |
+| ENGAGED_MP_DIVISOR | 2 | | config.js; used in index.advanceTurn |
+| NEAR_DEATH_FRACTION | 0.10 | of max HP | config.js; used in index.startPlayerTurn |
+| PLAYER_REGEN | 1 | HP per turn | config.js; used in enemy_ai.regenPlayerAtPhaseStart |
+| RESTORE_BASE_RANGE / RESTORE_LEVELS_PER_RANGE | 1 / 3 | | config.js; used in actions.executeRestore |
+| RESTORE_GOLD_CHANCE / RESTORE_XP_PER_HEX | 0.16 / 3 | | config.js; used in actions.executeRestore |
+| BREACH_SEAL_CHANCE / MAW_SEAL_CHANCE | 0.40 / 0.20 | per Restore | config.js; used in actions.executeRestore |
+| MAW_SCROLL_RADIUS | 3 | hexes | config.js; used in index.sealMaw |
+| prospect strike chance / strike radius / deposit | 0.2 / 4 / 10 | per cast / hexes / gold | actions.executeProspect |
+| salvage gold per hex | 1-10 | gold | actions.executeSalvage |
+| ground weeps threat radius | 3 | hexes | actions.executeGroundWeeps |
 | GARRISON_BUILD_CHANCE / GARRISON_KILL_RANGE | 0.10 / 5 | per turn / hexes | index.js |
-| SHATTER_CHANCE† / SHATTER_RADIUS† | 0.02 / 3 | per chaos turn / hexes | enemy_ai.tryTerrainShatter |
-| CORRUPT_DEFENSE† / CORRUPT_ATTACK† / CORRUPT_REGEN† | 2 / 3 / 1 | | index.enemyDefense/Attack, ChaosAI |
-| MAW_PROXIMITY_FRACTION† | 0.5 | of mawMaxDist | enemy_ai.mawProximityBonus |
-| MAW_PROXIMITY_ATTACK† / DEFENSE† / HP† | 20 / 10 / 20 | at the Maw | enemy_ai.mawProximityBonus |
+| SHATTER_CHANCE / SHATTER_RADIUS | 0.02 / 3 | per chaos turn / hexes | config.js; used in enemy_ai.tryTerrainShatter |
+| CORRUPT_DEFENSE / CORRUPT_ATTACK / CORRUPT_REGEN | 2 / 3 / 1 | | config.js; used in index.enemyDefense/Attack, ChaosAI |
+| MAW_PROXIMITY_FRACTION | 0.5 | of mawMaxDist | config.js; used in enemy_ai.mawProximityBonus |
+| MAW_PROXIMITY_ATTACK / MAW_PROXIMITY_DEFENSE / MAW_PROXIMITY_HP | 20 / 10 / 20 | at the Maw | config.js; used in enemy_ai.mawProximityBonus |
 | NUM_CREATURE_TIERS | 12 | tiers | enemies.js |
-| CREATURE_ATTACK_BASE† / CREATURE_ATTACK_SPAN† | 3 / 11 | atk = base × 10^(i/span) | enemies.generateCreatureTypes |
-| CREATURE_DETECT_BASE† / CREATURE_DETECT_MAX† / CREATURE_AGGRO_MIN† | 4 / 7 / 3 | hexes | enemies.generateCreatureTypes |
-| CREATURE_XP_PER_ATTACK† / CREATURE_HP_PER_ATTACK† | 2 / 4 (±3) | | enemies.generateCreatureTypes |
-| RANGED_CREATURE_ATTACK_RATIO† / HP_PER_ATTACK† / HP_MIN† | 0.75 / 2.5 (±2) / 4 | | enemies.rangedCreatureDef |
+| CREATURE_ATTACK_BASE / CREATURE_ATTACK_SPAN | 3 / 11 | atk = base × 10^(i/span) | config.js; used in enemies.generateCreatureTypes |
+| CREATURE_DETECT_BASE / CREATURE_DETECT_MAX / CREATURE_AGGRO_MIN | 4 / 7 / 3 | hexes | config.js; used in enemies.generateCreatureTypes |
+| CREATURE_XP_PER_ATTACK / CREATURE_HP_PER_ATTACK | 2 / 4 (±3) | | config.js; used in enemies.generateCreatureTypes |
+| RANGED_CREATURE_ATTACK_RATIO / RANGED_CREATURE_HP_PER_ATTACK / RANGED_CREATURE_HP_MIN | 0.75 / 2.5 (±2) / 4 | | config.js; used in enemies.rangedCreatureDef |
 | RANGED_CREATURE_SPAWN_WEIGHT | 0.25 | | enemies.js |
 | RANGED_CREATURE_BANDS | ranges 2 / 3 / 4, four tiers each | hexes | enemies.js |
-| MONSTER_ATTACK† / RUINS_GUARDIAN_ATTACK† | 20 / 30 | attack | enemies.wildlifeBehaviorFor |
-| SPAWN_TIER_SIGMA† | 2 | tiers | enemies.spawnTierWeights |
-| WILDLIFE_MIGHT_CAP† / WILDLIFE_SPAWN_CHANCE† | 1000 / 0.20 | attack sum / per turn | enemies.js |
-| SPAWN_SAFE_DISTANCE† / PACK_RADIUS† | 6 / 2 | hexes | enemies.js |
-| INITIAL_STALKERS† / INITIAL_ARCHERS† / INITIAL_SAFE_DISTANCE† | 2d4 / 1d3 / 5 | | enemies.spawnInitial |
-| BREACH_CRAWLERS† / BREACH_CRAWLER_RADIUS† | 1-2 / 2 | | enemies.spawnInitial |
-| CHAOS_MIGHT_CAP† / BREACH_SPAWN_CHANCE† | 500 / 0.075 | attack sum / per breach per turn | enemy_ai.spawnChaosAtBreaches |
-| CHAOS_SPAWN_POOL† | stalker ×3, archer ×2, crawler ×1, wraith ×1 | weights | enemy_ai.js (twice) |
-| WRAITH_CAP† | 10 | wraiths | enemy_ai.js |
-| GUARDIAN_RESPAWN_CHANCE† / GUARDIAN_PRESENCE_RADIUS† | 0.3 / 3 | per turn / hexes | enemy_ai.respawnGuardians |
-| UNRAVELER_LEASH† | 11 | hexes | enemy_ai.respawnGuardians |
-| FOREST_STEALTH† / THREAT_SHROUD_REDUCTION† / ALERT_RADIUS† | 2 / 2 / 5 | hexes | enemy_ai.js |
-| ALARM_RADIUS† / HUNT_COLD_RADIUS† | 2 / 3 | hexes | enemy_ai.js |
-| WILDLIFE_WANDER_CHANCE† / WANDER_CHANCE† / GUARDIAN_WANDER_CHANCE† | 0.3 / 0.5 / 0.5 | | enemy_ai.js |
-| MONSTER_LURK_RADIUS† / RUIN_PATROL_RADIUS† / RUIN_PATROL_CHANCE† | 2 / 2 / 0.3 | | enemy_ai.js |
-| SETTLEMENT_HUNT_FACTOR† | 2 | × aggro | enemy_ai.js |
-| CHASER_RANGED_PREFERENCE† / KITE_FIRE_CHANCE† | 0.5 / 0.5 | | enemy_ai.js |
-| KITE_MIN_DIST† / KITE_MAX_DIST† | 2 / 3 | hexes | ChaosAI.moveEnemyStep |
-| SWARM_ALLIES† / SWARM_RADIUS† / SWARM_WEIGHTS† | 5 / 3 / 20, 10, 5, 5 | | ChaosAI swarm |
-| teleportChance fallback† / spawnChance fallback† | 0.3 / 0.16 | | ChaosAI |
-| enemy animation delays† | 80 move / 100 teleport / 150 attack | ms | enemy_ai.js |
+| MONSTER_ATTACK / RUINS_GUARDIAN_ATTACK | 20 / 30 | attack | config.js; used in enemies.wildlifeBehaviorFor |
+| SPAWN_TIER_SIGMA | 2 | tiers | config.js; used in enemies.spawnTierWeights |
+| WILDLIFE_MIGHT_CAP / WILDLIFE_SPAWN_CHANCE | 1000 / 0.20 | attack sum / per turn | config.js; used in enemies.js |
+| SPAWN_SAFE_DISTANCE / PACK_RADIUS | 6 / 2 | hexes | config.js; used in enemies.js |
+| INITIAL_STALKERS / INITIAL_ARCHERS / INITIAL_SAFE_DISTANCE | 2d4 / 1d3 / 5 | | config.js; used in enemies.spawnInitial |
+| BREACH_CRAWLERS / BREACH_CRAWLER_RADIUS | 1-2 / 2 | | config.js; used in enemies.spawnInitial |
+| CHAOS_MIGHT_CAP / BREACH_SPAWN_CHANCE | 500 / 0.075 | attack sum / per breach per turn | config.js; used in enemy_ai.spawnChaosAtBreaches |
+| CHAOS_SPAWN_POOL | stalker ×3, archer ×2, crawler ×1, wraith ×1 | repeats in a uniform draw | config.js; used in enemy_ai.chaosSpawnPool |
+| WRAITH_CAP | 10 | wraiths | config.js; used in enemy_ai.js |
+| GUARDIAN_RESPAWN_CHANCE / GUARDIAN_PRESENCE_RADIUS | 0.3 / 3 | per turn / hexes | config.js; used in enemy_ai.respawnGuardians |
+| UNRAVELER_LEASH | 11 | hexes | config.js; used in enemy_ai.respawnGuardians |
+| FOREST_STEALTH / THREAT_SHROUD_REDUCTION / ALERT_RADIUS | 2 / 2 / 5 | hexes | config.js; used in enemy_ai.js |
+| ALARM_RADIUS / HUNT_COLD_RADIUS | 2 / 3 | hexes | config.js; used in enemy_ai.js |
+| WILDLIFE_WANDER_CHANCE / WANDER_CHANCE / GUARDIAN_WANDER_CHANCE | 0.3 / 0.5 / 0.5 | | config.js; used in enemy_ai.js |
+| MONSTER_LURK_RADIUS / RUIN_PATROL_RADIUS / RUIN_PATROL_CHANCE | 2 / 2 / 0.3 | | config.js; used in enemy_ai.js |
+| SETTLEMENT_HUNT_FACTOR | 2 | × aggro | config.js; used in enemy_ai.js |
+| CHASER_RANGED_PREFERENCE / KITE_FIRE_CHANCE | 0.5 / 0.5 | | config.js; used in enemy_ai.js |
+| KITE_MIN_DIST / KITE_MAX_DIST | 2 / 3 | hexes | config.js; used in ChaosAI.moveEnemyStep |
+| SWARM_ALLIES / SWARM_RADIUS / SWARM_WEIGHTS | 5 / 3 / 20, 10, 5, 5 | | config.js; used in ChaosAI swarm |
+| teleportChance fallback / spawnChance fallback | 0.3 / 0.16 | used when the def omits the field | enemy_ai.js ChaosAI |
+| enemy animation delays | 80 move / 100 teleport / 150 attack | ms | enemy_ai.js (`ctx.animDelay` calls) |
 | SLIDE_MS / FLOAT_MS | 90 / 420 | ms | fx.js |
 | HIT_FLASH_MS | 100 | ms | index.js |
 | DRAG_THRESHOLD | 4 | px | index.js |
@@ -1229,7 +1231,7 @@ formalized from the code]
 | haven: Rest / Weaponsmith / Magicsmith / Train / Leave | on a haven | see Haven visit | Rest: mp = 0 |
 | village: Rest / Weaponsmith / Leave | on a village | see Village visit | Rest: mp = 0 |
 | hut: Learn / Rest / Train / Leave | on a hut; Learn only when a lesson is offered | see Hut visit | Learn, Rest: mp = 0; Leave: free |
-| ruin: Search / Leave / Continue | on a ruin, none within RUIN_CLEAR_RADIUS† | see Ruin search | may spawn; mp = 0 |
+| ruin: Search / Leave / Continue | on a ruin, none within RUIN_CLEAR_RADIUS | see Ruin search | may spawn; mp = 0 |
 | shop: Buy item / Buy skill / Sell / Sell All / Done | shop open, gold ≥ price | see Shops | Done: mp = 0 |
 | train: → / ← / Done | Train open | see Train | Done: mp = 0 |
 | level-up: + stat / Done | statPoints > 0 for + | stat +1, statPoints −1; clamp HP/AE | |

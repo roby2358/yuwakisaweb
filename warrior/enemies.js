@@ -1,8 +1,8 @@
 'use strict';
 
 function wildlifeBehaviorFor(attack) {
-    if (attack >= 30) return 'ruins-guardian';
-    if (attack >= 20) return 'monster';
+    if (attack >= RUINS_GUARDIAN_ATTACK) return 'ruins-guardian';
+    if (attack >= MONSTER_ATTACK) return 'monster';
     return 'wildlife';
 }
 
@@ -35,6 +35,13 @@ const RANGED_CREATURE_BANDS = [
     { range: 4, roles: ['Warden', 'Sentinel', 'Stormcaller', 'Magus'] }
 ];
 
+// Sum of `dice` rolls of a `sides`-sided die (INITIAL_STALKERS is 2d4).
+function rollDice({ dice, sides }) {
+    let total = 0;
+    for (let i = 0; i < dice; i++) total += Rando.int(1, sides);
+    return total;
+}
+
 // Draws names from makeName until one is unused, and claims it.
 function uniqueCreatureName(usedNames, makeName) {
     let name;
@@ -52,13 +59,12 @@ function variedCreatureColor(baseColor, satShift) {
     return ColorTheory.rgbToHex(r, g, b);
 }
 
-// Gaussian weight over tiers, peaked at `peakTier`. Sigma = 2 so ±2 tiers common, ±4 rare.
+// Gaussian weight over tiers, peaked at `peakTier`. SPAWN_TIER_SIGMA = 2 makes ±2 tiers common, ±4 rare.
 // Scaled by each def's spawnWeight.
 function spawnTierWeights(creatureDefs, peakTier) {
-    const sigma = 2;
     return Object.keys(creatureDefs).map(type => {
         const def = creatureDefs[type];
-        const d = (def.tier - peakTier) / sigma;
+        const d = (def.tier - peakTier) / SPAWN_TIER_SIGMA;
         return { item: type, weight: Math.exp(-d * d) * def.spawnWeight };
     });
 }
@@ -105,16 +111,16 @@ class EnemyManager {
         const palette = ColorTheory.randomScheme(() => Rando.float(0, 1));
 
         for (let i = 0; i < NUM_CREATURE_TIERS; i++) {
-            const attack = Math.round(3 * Math.pow(10, i / 11));
-            const detectRange = Math.min(7, 4 + Math.floor(attack / 4));
+            const attack = Math.round(CREATURE_ATTACK_BASE * Math.pow(10, i / CREATURE_ATTACK_SPAN));
+            const detectRange = Math.min(CREATURE_DETECT_MAX, CREATURE_DETECT_BASE + Math.floor(attack / 4));
             const baseColor = palette[i % palette.length];
 
             // Fields the tier's melee and ranged creatures share.
             const tierFields = {
                 speed: 1,
                 detectRange,
-                aggroRange: Rando.int(3, detectRange),
-                xp: attack * 2,
+                aggroRange: Rando.int(CREATURE_AGGRO_MIN, detectRange),
+                xp: attack * CREATURE_XP_PER_ATTACK,
                 gold: Math.max(1, Math.floor(attack / 3)),
                 tier: i,
                 behavior: wildlifeBehaviorFor(attack),
@@ -127,7 +133,7 @@ class EnemyManager {
                 ...tierFields,
                 name,
                 label: name[0],
-                hp: attack * 4 + Rando.int(-3, 3),
+                hp: attack * CREATURE_HP_PER_ATTACK + Rando.int(-3, 3),
                 attack,
                 defense: Math.floor(attack / 4),
                 spawnWeight: 1,
@@ -147,12 +153,12 @@ class EnemyManager {
         const band = RANGED_CREATURE_BANDS[Math.min(RANGED_CREATURE_BANDS.length - 1, Math.floor(tierFields.tier / 4))];
         const name = uniqueCreatureName(usedNames, () =>
             Rando.choice(CREATURE_NAME_PREFIXES) + Rando.choice(CREATURE_NAME_SUFFIXES) + ' ' + Rando.choice(band.roles));
-        const attack = Math.max(1, Math.round(tierAttack * 0.75));
+        const attack = Math.max(1, Math.round(tierAttack * RANGED_CREATURE_ATTACK_RATIO));
         return {
             ...tierFields,
             name,
             label: name[0],
-            hp: Math.max(4, Math.round(tierAttack * 2.5) + Rando.int(-2, 2)),
+            hp: Math.max(RANGED_CREATURE_HP_MIN, Math.round(tierAttack * RANGED_CREATURE_HP_PER_ATTACK) + Rando.int(-2, 2)),
             attack,
             rangedAttack: attack,
             range: band.range,
@@ -164,17 +170,17 @@ class EnemyManager {
 
     spawnInitial(world, playerQ, playerR) {
         const passable = world.passableHexes();
-        const farEnough = (q, r) => hexDistance(q, r, playerQ, playerR) > 5;
+        const farEnough = (q, r) => hexDistance(q, r, playerQ, playerR) > INITIAL_SAFE_DISTANCE;
 
         // 2d4 Void Stalkers
-        const numStalkers = Rando.int(1, 4) + Rando.int(1, 4);
+        const numStalkers = rollDice(INITIAL_STALKERS);
         for (let i = 0; i < numStalkers; i++) {
             const hex = Rando.choice(passable.filter(h => farEnough(h.q, h.r) && !this.enemyAt(h.q, h.r)));
             if (hex) this.spawn(ENEMY_TYPE.VOID_STALKER, hex.q, hex.r);
         }
 
         // 1d3 Flux Archers
-        const numArchers = Rando.int(1, 3);
+        const numArchers = rollDice(INITIAL_ARCHERS);
         for (let i = 0; i < numArchers; i++) {
             const hex = Rando.choice(passable.filter(h => farEnough(h.q, h.r) && !this.enemyAt(h.q, h.r)));
             if (hex) this.spawn(ENEMY_TYPE.FLUX_ARCHER, hex.q, hex.r);
@@ -189,10 +195,10 @@ class EnemyManager {
                 const g = this.spawn(ENEMY_TYPE.BREACH_GUARDIAN, poi.q, poi.r, poi.q, poi.r);
                 if (g) poi.guardianId = g.id;
                 // 1-2 crawlers near each breach
-                const nearby = hexesInRange(poi.q, poi.r, 2)
+                const nearby = hexesInRange(poi.q, poi.r, BREACH_CRAWLER_RADIUS)
                     .filter(h => world.isPassable(world.getHex(h.q, h.r)) && !this.enemyAt(h.q, h.r)
                         && !(h.q === poi.q && h.r === poi.r));
-                const numCrawlers = Rando.int(1, 2);
+                const numCrawlers = Rando.int(...BREACH_CRAWLERS);
                 for (let i = 0; i < numCrawlers; i++) {
                     const hex = Rando.choice(nearby.filter(h => !this.enemyAt(h.q, h.r)));
                     if (hex) this.spawn(ENEMY_TYPE.BREACH_CRAWLER, hex.q, hex.r, poi.q, poi.r);
@@ -229,10 +235,10 @@ class EnemyManager {
             if (world.poiAt(h.q, h.r)) return false;
             const hex = world.getHex(h.q, h.r);
             if (hex && UNSHATTERED_VERSION[hex.terrain] !== undefined) return false;
-            return hexDistance(h.q, h.r, playerQ, playerR) > 6;
+            return hexDistance(h.q, h.r, playerQ, playerR) > SPAWN_SAFE_DISTANCE;
         });
 
-        while (this.wildlifeMight() < 1000 && candidates.length > 0) {
+        while (this.wildlifeMight() < WILDLIFE_MIGHT_CAP && candidates.length > 0) {
             const idx = Rando.int(0, candidates.length - 1);
             const hex = candidates[idx];
             candidates.splice(idx, 1);
@@ -243,13 +249,13 @@ class EnemyManager {
     }
 
     spawnWildlife(world, playerQ, playerR, pickPack) {
-        if (this.wildlifeMight() >= 1000) return;
-        if (!Rando.bool(0.20)) return;
+        if (this.wildlifeMight() >= WILDLIFE_MIGHT_CAP) return;
+        if (!Rando.bool(WILDLIFE_SPAWN_CHANCE)) return;
         if (Object.keys(this.creatureDefs).length === 0) return;
         const pool = world.passableHexes().filter(h => {
             if (this.enemyAt(h.q, h.r)) return false;
             if (world.poiAt(h.q, h.r)) return false;
-            if (hexDistance(h.q, h.r, playerQ, playerR) <= 6) return false;
+            if (hexDistance(h.q, h.r, playerQ, playerR) <= SPAWN_SAFE_DISTANCE) return false;
             const hex = world.getHex(h.q, h.r);
             if (hex && UNSHATTERED_VERSION[hex.terrain] !== undefined) return false;
             return true;
@@ -261,19 +267,19 @@ class EnemyManager {
     }
 
     // Place a pack of `packSize` enemies of `type`: first at (q,r), the rest on
-    // eligible hexes within 2 of the origin, preferring adjacent. Pack members
+    // eligible hexes within PACK_RADIUS of the origin, preferring adjacent. Pack members
     // honor the same player-safety buffer as the origin.
     spawnPack(world, q, r, type, packSize, playerQ, playerR) {
         this.spawn(type, q, r);
         if (packSize <= 1) return;
-        const slots = hexesInRange(q, r, 2).filter(n => {
+        const slots = hexesInRange(q, r, PACK_RADIUS).filter(n => {
             if (n.q === q && n.r === r) return false;
             if (this.enemyAt(n.q, n.r)) return false;
             if (world.poiAt(n.q, n.r)) return false;
             const hex = world.getHex(n.q, n.r);
             if (!hex || !world.isPassable(hex)) return false;
             if (UNSHATTERED_VERSION[hex.terrain] !== undefined) return false;
-            return hexDistance(n.q, n.r, playerQ, playerR) > 6;
+            return hexDistance(n.q, n.r, playerQ, playerR) > SPAWN_SAFE_DISTANCE;
         });
         Rando.shuffle(slots);
         // Stable sort by ring distance: adjacent (dist 1) before dist 2.
