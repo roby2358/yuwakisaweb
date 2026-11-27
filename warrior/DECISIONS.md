@@ -396,6 +396,30 @@ landed or was avoided. counter_mastery's own roll is unchanged.
     check is new. ONTOLOGY's shared moves gained the enemy melee rule and Q-3 left its
     open questions; DYNAMICS and CLAUDE.md were updated.
 
+### D-28 Riposte is a half-strength reply to enemy melee — *Decided*
+A riposte weapon answers every melee attack an enemy makes on its own turn, like
+counter_mastery but lighter: the same roll of weapon damage plus Might, halved rounding
+down, plus the weapon's riposteDamage, less the enemy's defense, and never below 1 damage.
+It follows the same reply rules as counter_mastery (both sides alive; fires whether the hit
+landed or was avoided; none for ranged attacks or for the enemy's counter to the player's
+own strike). A player with both effects gets both replies, counter_mastery first and
+riposte only if the enemy is still alive. A riposte weapon no longer halves the enemy's
+counter to the player's own melee strike.
+- **Alternatives:** keep the halved enemy counter and drop riposteDamage; remove the
+  effect.
+- **Why:** this is what riposte was designed to be; the halved counter was a misreading of
+  the design, and it left riposteDamage, the number printed on the item, unread.
+- **Evidence:** not measured.
+- **History:**
+  - 2026-11-27: settled the riposte part of Q-1; decided and built. `MELEE_REPLIES` in
+    enemy_ai.js gained a riposte entry; each entry now gives only its strength and its log
+    line, and `runMeleeReply` holds the roll, defense, minimum and kill for both.
+    `RIPOSTE_DIVISOR` is new in config.js. The halving line left `MeleeAction.execute`.
+    text.js gained `log_riposte` and `spec_riposte` now reads "Half-strength reply +N on
+    enemy melee". No item field changed, so SAVE_VERSION was not bumped. ONTOLOGY's melee
+    strike rule, enemy melee rule, Numbers table and Q-1, DYNAMICS, md/MAGIC_ITEMS.md and
+    CLAUDE.md were updated.
+
 ### Code structure
 
 ### D-17 Inline tunables get constant names — *Decided*

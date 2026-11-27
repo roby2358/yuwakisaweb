@@ -293,6 +293,7 @@ const MIGHT_PER_DEFENSE = 5;
 const DODGE_PER_REFLEX = 2;          // dodge % per point of Reflex
 const DODGE_MP_DIVISOR = 2;          // a 'half' MP cost (the Dodge skill) spends floor(current MP / this)
 const RANGED_MELEE_DIVISOR = 4;      // a ranged weapon swung in melee deals damage / this
+const RIPOSTE_DIVISOR = 2;           // a riposte reply rolls full strength, then divides by this
 const STARTING_SP = 5;
 const MAX_SP = 50;
 const SKILL_SAFE_RADIUS = 2;         // non-combat skills need no enemy this close

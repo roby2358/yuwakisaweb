@@ -78,26 +78,40 @@ function pickSpawnPack(q, r, player, em) {
 // Melee replies — what the player's gear does back to an enemy that
 // has just meleed them on its own turn (EnemyAI.doEnemyMelee). One
 // entry per item special, run in order while both sides still stand.
-// A new reply effect is a new entry here; no call site changes.
+// Every reply is a strike of weapon + Might: an entry says only how
+// strong its strike is (`strength`, from the full-strength roll and
+// the item carrying the special) and what it logs. runMeleeReply does
+// the rest. A new reply effect is a new entry here; no call site changes.
 // ================================================================
 
 const MELEE_REPLIES = [
     {
-        // Counter Mastery: the player strikes back with weapon + Might.
+        // Counter Mastery: a full-strength strike back.
         special: 'counter_mastery',
-        run(enemy, def, ctx) {
-            const { player } = ctx;
-            const pWep = player.weapon();
-            const counterDmg = (pWep ? pWep.damage : 1) + player.stats.might;
-            const rolled = Rando.bellCurve(counterDmg);
-            const actualDmg = Math.max(1, rolled - ctx.enemyDefense(enemy, def));
-            enemy.hp -= actualDmg;
-            ctx.logCombat(say('log_counter_mastery', { dmg: actualDmg }), 'log-dmg');
-            ctx.sound.hitEnemy();
-            if (enemy.hp <= 0) ctx.killEnemy(enemy, {});
-        },
+        strength(rolled, item) { return rolled; },
+        logLine(dmg) { return say('log_counter_mastery', { dmg }); },
+    },
+    {
+        // Riposte: the lighter sibling, half a strike plus the weapon's riposteDamage.
+        special: 'riposte',
+        strength(rolled, item) { return Math.floor(rolled / RIPOSTE_DIVISOR) + item.riposteDamage; },
+        logLine(dmg) { return say('log_riposte', { dmg }); },
     },
 ];
+
+// One reply strike: roll weapon + Might, let the reply set its strength, take
+// off the enemy's defense (never below 1 damage) and kill the enemy at 0 HP.
+// `item` is the equipped item that carries the reply's special.
+function runMeleeReply(reply, item, enemy, def, ctx) {
+    const { player } = ctx;
+    const pWep = player.weapon();
+    const rolled = Rando.bellCurve((pWep ? pWep.damage : 1) + player.stats.might);
+    const actualDmg = Math.max(1, reply.strength(rolled, item) - ctx.enemyDefense(enemy, def));
+    enemy.hp -= actualDmg;
+    ctx.logCombat(reply.logLine(actualDmg), 'log-dmg');
+    ctx.sound.hitEnemy();
+    if (enemy.hp <= 0) ctx.killEnemy(enemy, {});
+}
 
 // ================================================================
 // EnemyAI base — shared helpers for all per-enemy turn handlers.
@@ -156,7 +170,8 @@ class EnemyAI {
         ctx.dealDamageToPlayer(ctx.enemyMeleeAttack(enemy, def), def.name, false, { attacker: enemy });
         for (const reply of MELEE_REPLIES) {
             if (player.hp <= 0 || enemy.hp <= 0) return;
-            if (player.equipped(reply.special)) reply.run(enemy, def, ctx);
+            const item = player.equipped(reply.special);
+            if (item) runMeleeReply(reply, item, enemy, def, ctx);
         }
     }
 

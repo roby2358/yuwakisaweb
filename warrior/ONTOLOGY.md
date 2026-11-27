@@ -497,8 +497,7 @@ special-looking hex but hold no other prize.
     reveal_maw, revive, soul_harvest, strider, threat_shroud, vigor_bonus, vision_bonus,
     wraith_immune.
   - Inert today [P, observed]: ranged_defense and displacement_immune have no effect;
-    high_def_mp_penalty applies its MP penalty but not its defBonus; riposte halves the
-    counter but its riposteDamage is unused (Q-1).
+    high_def_mp_penalty applies its MP penalty but not its defBonus (Q-1).
 - **Melee with a ranged weapon** deals ceil(damage / RANGED_MELEE_DIVISOR) + Might.
 - **Unarmed** (no weapon): damage 1.
 
@@ -666,7 +665,7 @@ if a POI is here: open it (haven, village, hut, ruin, scroll)
 combatAlerted = true
 WeaponStrike(base = meleeDamage(target is chaos), bucket 'primary').apply(target)
 if not killed and not target.stunnedNextTurn:
-  c = enemyMeleeAttack(target); riposte: c = floor(c/2); counter_deflect: c *= (100-pct)/100
+  c = enemyMeleeAttack(target); counter_deflect: c *= (100-pct)/100
   dealDamageToPlayer(c, attacker = target)
 spend weaponMpCost(weapon)       # none 1; free_action 0; item mpCost; ranged 2; melee 1
 ```
@@ -1068,8 +1067,14 @@ monster → MonsterAI, ruins-guardian → RuinsGuardianAI, anything else → Cha
     stop if player.hp ≤ 0 or enemy.hp ≤ 0
     if the player wears reply.special: run it
   ```
-  The one reply is **counter_mastery**: dealt = max(1, bellCurve(weapon damage, or 1
-  unarmed, + Might) − enemyDefense); enemy.hp -= dealt; killEnemy at hp ≤ 0. A reply runs
+  Every reply is one strike (`runMeleeReply`), differing only in its strength:
+  ```
+  rolled = bellCurve(weapon damage, or 1 unarmed, + Might)
+  dealt = max(1, strength(rolled) − enemyDefense); enemy.hp -= dealt; killEnemy at hp ≤ 0
+  ```
+  The replies, in order: **counter_mastery**, strength = rolled; then **riposte**,
+  strength = floor(rolled / RIPOSTE_DIVISOR) + the weapon's riposteDamage. A player with
+  both gets both, riposte only if the enemy survived counter_mastery. A reply runs
   whether the hit landed or was avoided (dodge, Warp Shield). Enemy ranged attacks run no
   replies, and neither does the enemy's counter to the player's own melee strike.
 - **Movement limits**: passable, unoccupied, not the player's hex, not a haven, village or
@@ -1168,6 +1173,7 @@ stats, effect magnitudes) stay in `SKILLS`, `WEAPONS`, `ARMORS`, the effect pool
 | MAX_STUN_CHANCE | 90 | % | config.js |
 | STUN_DIVISOR_PRIMARY / STUN_DIVISOR_OTHER | 40 / 60 | damage per 100% | config.js |
 | RANGED_MELEE_DIVISOR | 4 | | config.js; used in player.meleeDamage |
+| RIPOSTE_DIVISOR | 2 | | config.js; used in the riposte melee reply (enemy_ai.js) |
 | STARTING_SP / MAX_SP | 5 / 50 | SP | config.js; used in Player constructor |
 | SKILL_SLOTS | 5 | slots | index.js |
 | SKILL_MAX_RANK | 5 | rank | config.js |
@@ -1341,9 +1347,9 @@ formalized from the code]
 Not yet settled. Recommendations are Claude's. A settled question leaves this list.
 
 ### Q-1 Inert or half-wired gear effects
-ranged_defense, displacement_immune, high_def_mp_penalty's defBonus, riposte's
-riposteDamage, and Warding's skill-damage reduction exist in data or code but do nothing (or
-only part of what they say). Filed as a tracker idea for discussion.
+ranged_defense, displacement_immune, high_def_mp_penalty's defBonus, and Warding's
+skill-damage reduction exist in data or code but do nothing (or only part of what they
+say). Filed as a tracker idea for discussion.
 - **Options:** wire each one up; remove each one; mix per effect.
 - **Recommendation:** decide per effect; wire the ones whose text players see on items, drop
   the rest.

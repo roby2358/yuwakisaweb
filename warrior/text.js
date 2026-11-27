@@ -110,6 +110,7 @@ const TEXT = (() => {
         log_unraveler_reforms: log('The Unraveler reforms within another chaos spawn!'),
         log_unraveler_spawns: log('The Unraveler spawns a {name}!'),
         log_counter_mastery: log('Counter Mastery: {dmg} dmg!'),
+        log_riposte: log('Riposte: {dmg} dmg!'),
         log_chaos_circlet: log('Chaos Circlet: +1 AE'),
         log_burn: log('Burn: {dmg} dmg to {name}'),
         log_defeated: log('{name} defeated!'),
@@ -935,7 +936,7 @@ const TEXT = (() => {
         spec_lifesteal: label('+{lifestealAmount} HP/hit'),
         spec_channel: label('+{channelBonus} dmg, {channelDamage} self-dmg'),
         spec_reverberate: label('Chain {chainCount} +{chainBonus}/jump'),
-        spec_riposte: label('+{riposteDamage} counter-atk'),
+        spec_riposte: label('Half-strength reply +{riposteDamage} on enemy melee'),
         // ---- Ranged weapon effects
         spec_double_shot: label('Double shot'),
         spec_triple_shot: label('Triple shot'),

@@ -591,10 +591,8 @@ class MeleeAction extends Action {
         const { killed } = new WeaponStrike(this, baseDmg, say('src_melee', {}), 'primary').apply(enemy);
 
         if (!killed && !enemy.stunnedNextTurn) {
-            const wep = player.weapon();
             const def = em.getDef(enemy.type);
             let counterDmg = enemyMeleeAttack(enemy, def);
-            if (wep && wep.special === 'riposte') counterDmg = Math.floor(counterDmg / 2);
             const deflect = player.equipped('counter_deflect');
             if (deflect) counterDmg = Math.floor(counterDmg * (100 - deflect.counterDeflect) / 100);
             dealDamageToPlayer(counterDmg, say('src_counters', { name: def.name }), false, { attacker: enemy });

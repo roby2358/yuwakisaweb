@@ -1,19 +1,5 @@
 Priority:   50
 Status: ToDo
-ID: riposte-6kyb
-Created: 2026-11-27T22:23:30Z
-Updated: 2026-11-27T22:23:30Z
-
-Wire the riposte weapon effect as designed: a half-strength reply, plus the weapon's riposteDamage, whenever an enemy melees the player.
-
-Goal: riposte weapons (config.js, riposteDamage 1/2/3, text "+N counter-atk") were meant to be the lighter sibling of counter_mastery. counter_mastery replies to an enemy's melee attack with a full strike; riposte replies with a half-strength strike plus N. It was never wired: riposteDamage is unread, and instead actions.js halves the enemy's counter when the player's weapon is riposte, which was a misreading of the design.
-
-Settled design: this depends on enemy melee already going through one shared function with a reply step (where counter_mastery lives); add riposte there. When an enemy melee attack on the enemy's turn hits the player, and both the player and the enemy are alive, and the player's equipped weapon has special 'riposte': roll Rando.bellCurve(weapon damage + Might), halve it rounding down, add the weapon's riposteDamage, subtract enemy defense, and deal at least 1 damage (every attack does a minimum of 1). Kill the enemy through killEnemy if it drops to 0. If the player also has counter_mastery, both replies fire, counter_mastery first, and riposte only if the enemy is still alive. Share the roll/defense/minimum/kill code between the two replies; do not copy it. Remove the line in MeleeAction.execute (actions.js) that halves the enemy's counter for a riposte weapon. Text: add a log line in text.js for the riposte reply in the style of log_counter_mastery, and change spec_riposte to say what it does, e.g. "Half-strength reply +{riposteDamage} on enemy melee". No item fields change, so do not bump SAVE_VERSION. Update ONTOLOGY.md (the melee strike rule loses the riposte halving, the enemy melee rule gains the riposte reply, riposte leaves Q-1 and the half-wired note), add a DECISIONS.md entry, and fix DYNAMICS.md and md/MAGIC_ITEMS.md where they describe riposte.
-
-Done when: every test in test/ passes (for f in test/*.js; do node $f; done); riposteDamage is read in the reply code; actions.js no longer mentions riposte; SAVE_VERSION is unchanged.
-----
-Priority:   50
-Status: ToDo
 ID: statstitle-rweb
 Created: 2026-11-27T22:31:12Z
 Updated: 2026-11-27T22:31:12Z
