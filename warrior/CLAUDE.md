@@ -104,7 +104,7 @@ Canvas clicks are ignored when `phase !== 'player'`.
 
 - Canvas draws hex map, fog, highlights, and tokens
 - Tokens drawn from sprite sheets via `SpriteSheet.drawCell(ctx, col, row, x, y, w, h, tint?)`:
-  - `mainSheet` (sprites.png, 5x20 grid) — player, common enemies
+  - `mainSheet` (sprites.png, 5x20 grid) — player, common enemies. Each run picks random cells (`assignSprites` fills `playerSprite` and `enemySprites`, both saved), except the types in `FIXED_ENEMY_SPRITES` (Drudge, Brute), whose fixed cells the token draw reads first and `enemySprites` never holds
   - `guardianSheet` (sprites_guardians.png, 5x2 grid) — guardians
 - HTML overlay panels (Character/Skills/Inventory) slide in from right
 - Dialog overlay for havens/villages/ruins/level-up/skill choice/shop

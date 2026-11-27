@@ -102,7 +102,7 @@ structure and is never traded away. "Room to break the game" beats balance tidin
 | combatAlerted | bool | Set by any attack or skill; cleared at player-turn start. Cancels forest stealth nearby. |
 | threatOverlay | Map<hexKey, number> \| null | Ground Weeps heat map until dismissed. |
 | showingWorldMap, hoveredHex, panX/panY, panning, dragCandidate, pan origin | view state | UI only. |
-| playerSprite, enemySprites | sprite cells | Chosen at new game; saved. |
+| playerSprite, enemySprites | sprite cells | Chosen at new game; saved. enemySprites has no entry for the Drudge and the Brute, which draw from the fixed cells in `FIXED_ENEMY_SPRITES` (index.js; the token draw looks there first). |
 | ALL_EQUIPMENT | {id: Item} | Global item registry (config.js); mundane items plus every magic item rolled this run. Saved. |
 | mawDistances, mawMaxDist | Map<hexKey, cost>, number | In `enemy_ai.js`. Movement-cost distance from the Maw; rebuilt by computeMawDistances at new game and load. Derived, not saved. |
 | turnTimesAll, turnTimesNonPoi | number[] | Turn-time metrics (capped at TURN_METRICS_CAP), shown on the Character panel. Not saved. |
@@ -208,8 +208,8 @@ All fields are saved (the enemy list is saved whole).
 ### EnemyDef (template)
 
 *Serves:* G-2, G-5. Fixed chaos defs live in `ENEMY_DEFS` (config.js): Void Stalker,
-Breach Crawler, Flux Archer, Phase Wraith, Breach Guardian, The Unraveler. Wildlife defs
-are generated per run into `em.creatureDefs` (see Wildlife tiers).
+Breach Crawler, Flux Archer, Phase Wraith, Drudge, Brute, Breach Guardian, The Unraveler.
+Wildlife defs are generated per run into `em.creatureDefs` (see Wildlife tiers).
 
 | Field | Type | Notes |
 |---|---|---|
@@ -514,10 +514,11 @@ special-looking hex but hold no other prize.
 
 *Serves:* G-4, G-5.
 
-- **Chaos** (`ENEMY_DEFS`, all chaosSpawned): Void Stalker (chase, also ranged), Breach
-  Crawler (chase, melee), Flux Archer (kite, ranged), Phase Wraith (teleport), Breach
-  Guardian (guard, melee and ranged), The Unraveler (boss, melee and ranged, a chaos
-  spawn source until its first death). Stats in the table.
+- **Chaos** (`ENEMY_DEFS`, all chaosSpawned): Void Stalker (chase, melee, the fast one), Breach
+  Crawler (chase, melee), Flux Archer (kite, ranged), Phase Wraith (teleport), Drudge
+  (chase, melee, weak), Brute (chase, melee, strong), Breach Guardian (guard, melee and
+  ranged), The Unraveler (boss, melee and ranged, a chaos spawn source until its first
+  death). Their stats are the rows of `ENEMY_DEFS`.
 - **Wildlife tiers** (`generateCreatureTypes`, per run): NUM_CREATURE_TIERS tiers. Tier i
   has attack = round(CREATURE_ATTACK_BASE × 10^(i / CREATURE_ATTACK_SPAN)) and a pair of
   creatures sharing speed 1, detect range (min(CREATURE_DETECT_MAX, CREATURE_DETECT_BASE +
@@ -888,7 +889,7 @@ once a turn: chance(CHAOS_SPAWN_CHANCE) →
   source = uniform draw from sources
   breach or Maw, and em.chaosMight() ≥ CHAOS_MIGHT_CAP: none
   pool = CHAOS_SPAWN_POOL (drop the wraith when wraiths ≥ WRAITH_CAP)
-  one pool enemy on nearestFreeHex(source)
+  one pool enemy (uniform draw over the pool's slots) on nearestFreeHex(source)
   home: the breach for a breach spawn; its own spawn hex for a Maw or Unraveler spawn
   Unraveler spawn: log log_unraveler_spawns (breach and Maw spawns are silent)
 ```
@@ -1128,18 +1129,17 @@ aggro chase
 heal CORRUPT_REGEN on corrupted terrain; compute aggro (stealth rules above)
 teleport (Phase Wraith, in aggro, no wraith_immune, chance teleportChance):
   jump to a free passable non-settlement hex within teleportRange of the player
-prefersRanged = ranged chaser and chance(CHASER_RANGED_PREFERENCE)
 if in aggro: alarm
 move: not guard, not aggro → hunt target or swarm; else up to speed steps by behavior
 attack: kite fires with chance KITE_FIRE_CHANCE if it has a shot;
-        others melee if adjacent, else guard/boss/prefersRanged fire if they have a shot
+        others melee if adjacent, else guard/boss fire if they have a shot
 then: terrain shatter
 ```
 Step by behavior: **guard** returns home beyond guardRadius, else steps toward the player
 only while staying within guardRadius; **kite** backs off under KITE_MIN_DIST, closes
 beyond KITE_MAX_DIST, else holds, and wanders (chance WANDER_CHANCE) out of aggro;
-**boss** steps toward the player in aggro; **chase** steps toward the player in aggro
-unless prefersRanged, else wanders (WANDER_CHANCE). A chaos enemy's melee is the shared
+**boss** steps toward the player in aggro; **chase** steps toward the player in aggro,
+else wanders (WANDER_CHANCE). A chaos enemy's melee is the shared
 enemy melee rule above.
 
 **Swarm** (`trySwarmTrigger`): with SWARM_ALLIES or more chaos allies within
@@ -1258,7 +1258,7 @@ stats, effect magnitudes) stay in `SKILLS`, `WEAPONS`, `ARMORS`, the effect pool
 | INITIAL_STALKERS / INITIAL_ARCHERS / INITIAL_SAFE_DISTANCE | 2d4 / 1d3 / 5 | | config.js; used in enemies.spawnInitial |
 | BREACH_CRAWLERS / BREACH_CRAWLER_RADIUS | 1-2 / 2 | | config.js; used in enemies.spawnInitial |
 | CHAOS_MIGHT_CAP / CHAOS_SPAWN_CHANCE | 500 / 0.5 | attack sum / one roll per turn | config.js; used in enemy_ai.spawnChaos |
-| CHAOS_SPAWN_POOL | stalker ×3, archer ×2, crawler ×1, wraith ×1 | repeats in a uniform draw | config.js; used in enemy_ai.chaosSpawnPool |
+| CHAOS_SPAWN_POOL | archer ×2, stalker ×1, crawler ×1, wraith ×1, drudge ×1, brute ×1 | repeats in a uniform draw | config.js; used in enemy_ai.chaosSpawnPool |
 | WRAITH_CAP | 10 | wraiths | config.js; used in enemy_ai.js |
 | GUARDIAN_RESPAWN_CHANCE / GUARDIAN_PRESENCE_RADIUS | 0.3 / 3 | per turn / hexes | config.js; used in enemy_ai.respawnGuardians |
 | UNRAVELER_LEASH | 11 | hexes | config.js; used in enemy_ai.respawnGuardians |
@@ -1267,7 +1267,7 @@ stats, effect magnitudes) stay in `SKILLS`, `WEAPONS`, `ARMORS`, the effect pool
 | WILDLIFE_WANDER_CHANCE / WANDER_CHANCE / GUARDIAN_WANDER_CHANCE | 0.3 / 0.5 / 0.5 | | config.js; used in enemy_ai.js |
 | MONSTER_LURK_RADIUS / RUIN_PATROL_RADIUS / RUIN_PATROL_CHANCE | 2 / 2 / 0.3 | | config.js; used in enemy_ai.js |
 | SETTLEMENT_HUNT_FACTOR | 2 | × aggro | config.js; used in enemy_ai.js |
-| CHASER_RANGED_PREFERENCE / KITE_FIRE_CHANCE | 0.5 / 0.5 | | config.js; used in enemy_ai.js |
+| KITE_FIRE_CHANCE | 0.5 | | config.js; used in enemy_ai.js |
 | KITE_MIN_DIST / KITE_MAX_DIST | 2 / 3 | hexes | config.js; used in ChaosAI.moveEnemyStep |
 | SWARM_ALLIES / SWARM_RADIUS / SWARM_WEIGHTS | 5 / 3 / 20, 10, 5, 5 | | config.js; used in ChaosAI swarm |
 | enemy animation delays | 80 move / 100 teleport / 150 attack | ms | enemy_ai.js (`ctx.animDelay` calls) |

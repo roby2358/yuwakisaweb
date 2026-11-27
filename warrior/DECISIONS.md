@@ -376,6 +376,36 @@ pool and WRAITH_CAP are unchanged.
     the Unraveler-minions rule), entity tables and Numbers table, DYNAMICS and CLAUDE.md
     were updated.
 
+### D-32 Two of seven chaos spawns shoot; the Void Stalker is melee only — *Decided*
+The Void Stalker has no ranged attack: it is the fast melee unit (speed 2) and nothing
+else about it changed. Two slow melee units join the chaos pool, the Drudge (weak) and the
+Brute (strong), both plain chasers with no ranged attack and no special drops.
+CHAOS_SPAWN_POOL is two slots of Flux Archer and one each of Void Stalker, Breach Crawler,
+Phase Wraith, Drudge and Brute, so two spawns in seven shoot and the Stalker is one in
+seven. Each spawn roll still makes one enemy; the Drudge does not come in groups. The
+opening scatter, the crawlers around breaches and WRAITH_CAP are unchanged. The Drudge and
+the Brute draw from fixed cells on the main sprite sheet, for now, with no standout look.
+- **Alternatives:** reweighting the old pool only, which leaves the Stalker shooting and
+  has too few melee types to fill the slots; capping the number of archers on the map;
+  softening the archer (shorter range or a weaker shot).
+- **Why:** five of the seven slots (Stalker ×3, Archer ×2) were enemies that shoot, far
+  above the 20 to 30 percent ranged share wildlife gets, and play felt ranged-heavy. The
+  Stalker was only ever meant to be fast, not ranged. A fast melee unit cannot be
+  disengaged from, so it should be uncommon, with ordinary ground units filling the pool.
+- **Evidence:** play felt ranged-heavy (designer's playtest); the new mix is not measured.
+- **History:**
+  - 2026-11-27: decided and built. In config.js the Void Stalker def lost `range` and
+    `rangedAttack`, ENEMY_TYPE and ENEMY_DEFS gained the Drudge and the Brute, and
+    CHAOS_SPAWN_POOL was rewritten. index.js gained `FIXED_ENEMY_SPRITES` (the two fixed
+    cells), which the token draw reads before `enemySprites` and `assignSprites` leaves
+    out, and two token colours in `enemyColor`. `enemySprites` keeps its saved shape and
+    nothing else saved changed, so SAVE_VERSION was not bumped; a game in progress draws
+    from the new pool, and its Stalkers stop shooting. The Stalker was the only ranged
+    chaser, so ChaosAI's prefer-ranged roll and CHASER_RANGED_PREFERENCE (0.5) had no user
+    left and were removed; only guards and the boss fire outside kiting. ONTOLOGY's enemy lists,
+    chaos-spawning rule, ChaosAI rule and Numbers rows, DYNAMICS's enemy table, spawn mix
+    and dual-attack section, and CLAUDE.md's rendering notes were updated.
+
 ### D-25 Every enemy melee attack draws the player's replies — *Decided*
 Every melee attack an enemy makes on its own turn goes through one function, which deals
 the hit and then runs the player's reply effects, so counter_mastery answers wildlife,

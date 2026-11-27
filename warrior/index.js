@@ -37,17 +37,26 @@ const SHIFTER_ROW = { [ENEMY_TYPE.BREACH_GUARDIAN]: 0, [ENEMY_TYPE.UNRAVELER]: 1
 const shifterFaces = new WeakMap();   // enemy -> column on the guardian sheet
 let playerSprite = null;    // { col, row }
 let enemySprites = {};      // { [enemyType]: { col, row } }
+// Enemy types with a fixed cell on the main sheet. The token draw reads these
+// before enemySprites, and assignSprites leaves them out, so enemySprites keeps
+// its saved shape.
+const FIXED_ENEMY_SPRITES = {
+    [ENEMY_TYPE.DRUDGE]: { col: 1, row: 6 },
+    [ENEMY_TYPE.BRUTE]: { col: 3, row: 12 }
+};
 
 // HUD skill hotbar size (keys 1-N). Must match the .skill-slot count in index.html.
 const SKILL_SLOTS = 5;
 
 // Assign sprites: player gets row 0 or 1, enemies get shuffled from rows 2-20
+// (all but the FIXED_ENEMY_SPRITES types)
 function assignSprites() {
     playerSprite = { col: Rando.int(0, SPRITE_COLS - 1), row: Rando.int(0, 1) };
     const enemyRows = [];
     for (let r = 2; r < SPRITE_ROWS; r++) enemyRows.push(r);
     Rando.shuffle(enemyRows);
-    const allTypes = [...Object.values(ENEMY_TYPE), ...Object.keys(em.creatureDefs)];
+    const allTypes = [...Object.values(ENEMY_TYPE), ...Object.keys(em.creatureDefs)]
+        .filter(t => !(t in FIXED_ENEMY_SPRITES));
     enemySprites = {};
     for (let i = 0; i < allTypes.length; i++) {
         enemySprites[allTypes[i]] = { col: Rando.int(0, SPRITE_COLS - 1), row: enemyRows[i % enemyRows.length] };
@@ -1730,7 +1739,7 @@ function drawScene() {
         const color = enemyColor(enemy.type);
         const effMaxHp = enemyEffectiveMaxHp(enemy);
         const isGuardianSprite = enemy.type in SHIFTER_ROW;
-        const sprite = isGuardianSprite ? shifterSprite(enemy) : enemySprites[enemy.type];
+        const sprite = isGuardianSprite ? shifterSprite(enemy) : (FIXED_ENEMY_SPRITES[enemy.type] || enemySprites[enemy.type]);
         const chaosLabelColor = (def.chaosSpawned && enemy.type !== ENEMY_TYPE.PHASE_WRAITH && !isGuardianSprite) ? '#d580ff' : null;
         const spriteTint = (def.chaosSpawned && !isGuardianSprite) ? '#d580ff' : null;
         drawCounter(x, y, color, def.label, enemy.hp / effMaxHp, chaosLabelColor, { atk: enemyMeleeAttack(enemy, def), def: enemyDefense(enemy, def), mov: def.speed || 1 }, sprite, spriteTint);
@@ -1905,6 +1914,8 @@ function enemyColor(type) {
         case ENEMY_TYPE.BREACH_CRAWLER: return '#3a3a3a';
         case ENEMY_TYPE.FLUX_ARCHER: return '#333333';
         case ENEMY_TYPE.PHASE_WRAITH: return '#9b59b6';
+        case ENEMY_TYPE.DRUDGE: return '#3b3226';
+        case ENEMY_TYPE.BRUTE: return '#4a2424';
         case ENEMY_TYPE.BREACH_GUARDIAN: return '#b890d8';
         case ENEMY_TYPE.UNRAVELER: return '#d580ff';
         default: return '#cc3333';

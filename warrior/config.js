@@ -216,15 +216,17 @@ const ENEMY_TYPE = {
     BREACH_CRAWLER: 'breach_crawler',
     FLUX_ARCHER: 'flux_archer',
     PHASE_WRAITH: 'phase_wraith',
+    DRUDGE: 'drudge',
+    BRUTE: 'brute',
     BREACH_GUARDIAN: 'breach_guardian',
     UNRAVELER: 'unraveler'
 };
 
 const ENEMY_DEFS = {
     [ENEMY_TYPE.VOID_STALKER]: {
-        name: 'Void Stalker', label: 'V', hp: 15, attack: 5, rangedAttack: 3, defense: 1,
+        name: 'Void Stalker', label: 'V', hp: 15, attack: 5, defense: 1,
         speed: 2, detectRange: 5, xp: 15, gold: 2, behavior: 'chase',
-        range: 2, chaosSpawned: true
+        chaosSpawned: true
     },
     [ENEMY_TYPE.BREACH_CRAWLER]: {
         name: 'Breach Crawler', label: 'C', hp: 30, attack: 8, defense: 4,
@@ -240,6 +242,16 @@ const ENEMY_DEFS = {
         name: 'Phase Wraith', label: 'W', hp: 10, attack: 5, defense: 1,
         speed: 2, detectRange: 4, aggroRange: 30, xp: 25, gold: 3, behavior: 'teleport',
         teleportRange: 3, teleportChance: 0.3, chaosSpawned: true
+    },
+    [ENEMY_TYPE.DRUDGE]: {
+        name: 'Drudge', label: 'D', hp: 6, attack: 2, defense: 0,
+        speed: 1, detectRange: 4, xp: 8, gold: 1, behavior: 'chase',
+        chaosSpawned: true
+    },
+    [ENEMY_TYPE.BRUTE]: {
+        name: 'Brute', label: 'B', hp: 20, attack: 7, defense: 1,
+        speed: 1, detectRange: 4, xp: 25, gold: 3, behavior: 'chase',
+        chaosSpawned: true
     },
     [ENEMY_TYPE.BREACH_GUARDIAN]: {
         name: 'Breach Guardian', label: 'G', hp: 50, attack: 10, rangedAttack: 8, defense: 5,
@@ -378,10 +390,12 @@ const CHAOS_MIGHT_CAP = 500;
 const CHAOS_SPAWN_CHANCE = 0.5;
 // Drawn uniformly, so repeats are the weights; the wraith is dropped at WRAITH_CAP.
 const CHAOS_SPAWN_POOL = [
-    ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER,
     ENEMY_TYPE.FLUX_ARCHER, ENEMY_TYPE.FLUX_ARCHER,
+    ENEMY_TYPE.VOID_STALKER,
     ENEMY_TYPE.BREACH_CRAWLER,
-    ENEMY_TYPE.PHASE_WRAITH
+    ENEMY_TYPE.PHASE_WRAITH,
+    ENEMY_TYPE.DRUDGE,
+    ENEMY_TYPE.BRUTE
 ];
 const WRAITH_CAP = 10;
 const GUARDIAN_RESPAWN_CHANCE = 0.3;
@@ -401,7 +415,6 @@ const MONSTER_LURK_RADIUS = 2;
 const RUIN_PATROL_RADIUS = 2;
 const RUIN_PATROL_CHANCE = 0.3;
 const SETTLEMENT_HUNT_FACTOR = 2;    // x aggro
-const CHASER_RANGED_PREFERENCE = 0.5;
 const KITE_FIRE_CHANCE = 0.5;
 const KITE_MIN_DIST = 2;
 const KITE_MAX_DIST = 3;

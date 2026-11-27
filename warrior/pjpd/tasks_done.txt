@@ -546,6 +546,29 @@ Tuning: don't overpopulate ranged on a single map — they're a counter to slow 
 ----
 Priority:   50
 Status: Done
+ID: chaosmix-cgff
+Created: 2026-11-27T22:59:17Z
+Updated: 2026-11-27T23:58:54Z
+
+Rebalance the chaos spawn mix: the Void Stalker becomes a rare fast melee unit, and two new slow melee units, the Drudge and the Brute, join the pool.
+
+Goal: 5 of the 7 slots in CHAOS_SPAWN_POOL (config.js) are enemies that shoot (Void Stalker x3, Flux Archer x2), far above the 20 to 30 percent ranged share wildlife gets, and play felt ranged-heavy. The Void Stalker was only ever meant to be fast, not ranged. But a fast melee unit cannot be disengaged from, so it should be uncommon, with ordinary ground units filling the pool.
+
+Settled design:
+- Void Stalker: remove its range and rangedAttack (it no longer shoots or shows the ranged badge). Everything else about it stays, including speed 2.
+- New ENEMY_TYPE entries and ENEMY_DEFS rows, both chaosSpawned: true, behavior 'chase', speed 1, no ranged attack:
+  - Drudge: label 'D', hp 6, attack 2, defense 0, detectRange 4, xp 8, gold 1.
+  - Brute: label 'B', hp 20, attack 7, defense 1, detectRange 4, xp 25, gold 3.
+- CHAOS_SPAWN_POOL becomes one slot each of Void Stalker, Breach Crawler, Phase Wraith, Drudge and Brute, plus two of Flux Archer (seven slots; 2 of 7 shoot). The wraith cap is unchanged.
+- Each spawn roll still produces a single enemy; the Drudge is not spawned in groups. The opening scatter (INITIAL_STALKERS, INITIAL_ARCHERS) and the crawlers placed around breaches are unchanged. The new units have no special drops.
+- Art: no standout look. For now their sprites are fixed cells on the main sheet, held in one small named table in index.js: Drudge { col: 1, row: 6 }, Brute { col: 3, row: 12 }. The token draw looks a type up in that table first and otherwise in enemySprites as today. assignSprites skips these two types, so enemySprites (which is saved per run) keeps the same shape and old saves still load. Each also gets a dark token colour in enemyColor (index.js) distinct from the Stalker's and Crawler's.
+- Saves: nothing saved changes shape, so do not bump SAVE_VERSION. An old save simply starts drawing from the new pool.
+- Docs: update the enemy tables and the chaos spawn rule in ONTOLOGY.md (including the Numbers table), DYNAMICS.md where it lists chaos enemies or says the Stalker shoots, and add a DECISIONS.md entry (why: ranged share; alternatives: reweighting only, capping archers, softening the archer).
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); the Void Stalker def has no range or rangedAttack; CHAOS_SPAWN_POOL has the seven slots above; the Drudge and Brute sprites come from the fixed table; SAVE_VERSION is unchanged.
+----
+Priority:   50
+Status: Done
 ID: rendscale-uxx4
 Created: 2026-11-27T23:06:06Z
 Updated: 2026-11-27T23:54:44Z

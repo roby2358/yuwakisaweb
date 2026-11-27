@@ -368,9 +368,6 @@ class ChaosAI extends EnemyAI {
             await this.tryTeleport(enemy, def, occupied, prevKey, ctx);
         }
 
-        // Ranged-capable chasers (Void Stalker): CHASER_RANGED_PREFERENCE to prefer ranged, skip closing in
-        const prefersRanged = enemyIsRanged(def) && def.behavior === 'chase' && Rando.bool(CHASER_RANGED_PREFERENCE);
-
         // Aggro check comes first: a detected player rouses the swarm and
         // overrides the swarm march. Guards camp their breach but still raise
         // the alarm.
@@ -386,13 +383,13 @@ class ChaosAI extends EnemyAI {
             (this.tryHuntTarget(enemy, occupied, ctx) || this.trySwarmTrigger(enemy, occupied, ctx));
         if (!moved) {
             for (let step = 0; step < speed; step++) {
-                if (this.moveEnemyStep(enemy, def, dist, aggro, prefersRanged, occupied, ctx)) moved = true;
+                if (this.moveEnemyStep(enemy, def, dist, aggro, occupied, ctx)) moved = true;
             }
         }
         if (moved && this.enemyIsVisible(enemy, prevKey, ctx)) { await ctx.animDelay(80); ctx.render(); }
 
         const newDist = hexDistance(enemy.q, enemy.r, player.q, player.r);
-        const attacked = this.enemyAttacks(enemy, def, prefersRanged, newDist, ctx);
+        const attacked = this.enemyAttacks(enemy, def, newDist, ctx);
         if (attacked) { await ctx.animDelay(150); ctx.render(); }
 
         this.tryTerrainShatter(enemy, def, ctx);
@@ -417,7 +414,7 @@ class ChaosAI extends EnemyAI {
         if (this.enemyIsVisible(enemy, prevKey, ctx)) { await ctx.animDelay(100); ctx.render(); }
     }
 
-    moveEnemyStep(enemy, def, dist, aggro, prefersRanged, occupied, ctx) {
+    moveEnemyStep(enemy, def, dist, aggro, occupied, ctx) {
         const { player, em, world } = ctx;
         if (def.behavior === 'guard') {
             if (hexDistance(enemy.q, enemy.r, enemy.homeQ, enemy.homeR) > def.guardRadius) {
@@ -449,18 +446,18 @@ class ChaosAI extends EnemyAI {
             return false;
         }
         // chase or default
-        if (dist <= aggro && !prefersRanged) {
+        if (dist <= aggro) {
             em.moveEnemyToward(enemy, player.q, player.r, occupied, world);
             return true;
         }
-        if (!prefersRanged && Rando.bool(WANDER_CHANCE)) {
+        if (Rando.bool(WANDER_CHANCE)) {
             em.wanderEnemy(enemy, occupied, player.q, player.r, world);
             return true;
         }
         return false;
     }
 
-    enemyAttacks(enemy, def, prefersRanged, newDist, ctx) {
+    enemyAttacks(enemy, def, newDist, ctx) {
         if (def.behavior === 'kite') {
             if (Rando.bool(KITE_FIRE_CHANCE) && this.enemyCanRangedAttack(enemy, def, newDist, ctx)) {
                 this.doEnemyRanged(enemy, def, ctx);
@@ -472,11 +469,10 @@ class ChaosAI extends EnemyAI {
             this.doEnemyMelee(enemy, def, ctx);
             return true;
         }
-        if (this.enemyCanRangedAttack(enemy, def, newDist, ctx)) {
-            if (def.behavior === 'guard' || def.behavior === 'boss' || prefersRanged) {
-                this.doEnemyRanged(enemy, def, ctx);
-                return true;
-            }
+        const firesAtRange = def.behavior === 'guard' || def.behavior === 'boss';
+        if (firesAtRange && this.enemyCanRangedAttack(enemy, def, newDist, ctx)) {
+            this.doEnemyRanged(enemy, def, ctx);
+            return true;
         }
         return false;
     }
