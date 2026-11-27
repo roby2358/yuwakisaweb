@@ -439,6 +439,29 @@ the roll, is removed along with the flag that selected it.
     SAVE_VERSION was not bumped. ONTOLOGY's damage-to-the-player rule and Q-1 no longer
     mention the reduction.
 
+### D-30 ranged_defense adds to defense against ranged attacks — *Decided*
+An enemy ranged attack is reduced by the player's defense plus the rangedDefenseBonus of
+every equipped ranged_defense item. The bonus counts for that hit only: melee attacks and
+the Character panel's defense figure do not include it, and the item's own text ("+N def
+vs ranged") is the only place it shows. The order of checks is unchanged (ranged_immune,
+Warp Shield, then dodge, before any damage is rolled) and a hit that lands still does at
+least 1 damage. The bonus sizes stay 2 and 4.
+- **Alternatives:** a percent reduction of ranged damage, which would need new numbers and
+  new item text; removing the effect; counting only the best equipped item.
+- **Why:** the item already says "+N def vs ranged", so a flat addition to defense is what
+  the player has been promised, with the numbers already on the items. Summing over items
+  matches how dodge and the other gear bonuses stack.
+- **Evidence:** not measured.
+- **History:**
+  - 2026-11-27: settled the ranged_defense part of Q-1; decided and built.
+    `dealDamageToPlayer` in index.js adds
+    `player.sumEquipped('ranged_defense', 'rangedDefenseBonus')` to `playerDefense()`
+    when `opts.isRanged` is set. Before this nothing read rangedDefenseBonus, so the item
+    did nothing. No item field or value changed, so SAVE_VERSION was not bumped. ONTOLOGY's
+    damage-to-the-player rule, effect-pool notes and Q-1, and DYNAMICS's armor effect list
+    and defensive mechanics, were updated. md/MAGIC_ITEMS.md listed the two ranged_defense
+    rows under ranged_immune's name and verbs; they now carry their own.
+
 ### Code structure
 
 ### D-17 Inline tunables get constant names — *Decided*

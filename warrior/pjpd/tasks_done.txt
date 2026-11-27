@@ -546,6 +546,20 @@ Tuning: don't overpopulate ranged on a single map — they're a counter to slow 
 ----
 Priority:   50
 Status: Done
+ID: rangeddef-f8s9
+Created: 2026-11-27T22:41:10Z
+Updated: 2026-11-27T23:50:06Z
+
+Make the ranged_defense armour effect work: its bonus adds to the player's defence against enemy ranged attacks.
+
+Goal: magic armour can roll ranged_defense (config.js effect pool, rangedDefenseBonus 2 or 4; text "+N def vs ranged"), but no code reads rangedDefenseBonus, so the item does nothing.
+
+Settled design: in dealDamageToPlayer (index.js), when opts.isRanged is true, the defence used for that hit is playerDefense() plus the sum of rangedDefenseBonus over every equipped item with special 'ranged_defense' (player.sumEquipped('ranged_defense', 'rangedDefenseBonus'), the same way dodge bonuses stack). Everything else in the function is unchanged: ranged_immune, Warp Shield and dodge are checked first as now, and the hit still does at least 1 damage. The bonus values stay 2 and 4. Nothing new is shown in the Character panel; the item text is the only display. No item fields change, so do not bump SAVE_VERSION. Update ONTOLOGY.md: the rule for damage to the player gains the ranged bonus, and ranged_defense leaves Q-1 and the note about half-wired effects. Add a DECISIONS.md entry (alternatives considered: a percent reduction, removing the effect, best-item-only).
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); rangedDefenseBonus is read in dealDamageToPlayer through sumEquipped; SAVE_VERSION is unchanged.
+----
+Priority:   50
+Status: Done
 ID: wardflag-u4tt
 Created: 2026-11-27T22:45:28Z
 Updated: 2026-11-27T23:48:02Z

@@ -118,6 +118,7 @@ Press 1-5 to activate a hotbar skill; some skills (Restore, Recall, the utility 
 - **Dodge**: `DODGE_PER_REFLEX`% × Reflex + dodge_bonus summed across equipped items (cap `MAX_DODGE`). Checked before damage. The Dodge skill adds +20% → +60% (inside the same cap) until your next turn starts, for half your current MP and no Aether: enough MP is left to attack, not much to run. The bonus is not saved: a loaded game resumes on your turn with no bonus up, and Dodge can be cast again.
 - **Stun**: One stun roll per enemy per player turn. Chance = rolled damage / `STUN_DIVISOR_PRIMARY` for melee attacks and Might/Vigor-based skills; / `STUN_DIVISOR_OTHER` for everything else. Melee `stun` weapon affix adds +20/30/40%, and the Stun skill adds its own bonus. Cap `MAX_STUN_CHANCE`. On success: suppresses that attack's counter, target loses next turn.
 - **Ranged Immune**: ranged_immune armor negates all incoming ranged damage.
+- **Ranged Defense**: ranged_defense armor adds +2/+4 defense against enemy ranged attacks only, summed across equipped items. It is not part of the defense figure on the Character panel.
 - **Thorns**: thorns armor reflects 50-100% of damage to melee attackers.
 - **Counter Mastery**: a counter_mastery weapon strikes back when any enemy melees you on its turn.
 - **Riposte**: a riposte weapon is Counter Mastery's lighter sibling: when any enemy melees you on its turn it replies with a half-strength strike plus the weapon's +1/+2/+3, always at least 1 damage.
@@ -255,7 +256,7 @@ armor_pierce (2/4), aether_siphon (1/2), burn (2/3/5), chain (2/3/5), chaos_bonu
 armor_pierce (2/4), aether_siphon (1/2), burn (2/3/5), chain (2/3/5), chaos_bonus (2/4/6), channel (+5/+8/+13 damage, 1/3/5 self-damage), defense_shred (1/2), double_shot, triple_shot, free_action, free_ranged, ignore_defense, knockback, lifesteal (1/2/3), piercing, sniper (2/4/8), splash (2)
 
 #### Armor Effects (24 variants)
-burning_aura (2/5), counter_deflect (50/70/90%), dodge_bonus (10/20/30%), heal_on_kill (5/8), high_def_mp_penalty (-1 MP; its +5 defense is not applied yet), last_stand (4/6), momentum (1/2/3), ranged_defense (2/4; no effect yet), ranged_immune, thorns (50/100%), wall_of_steel (2/4/6)
+burning_aura (2/5), counter_deflect (50/70/90%), dodge_bonus (10/20/30%), heal_on_kill (5/8), high_def_mp_penalty (-1 MP; its +5 defense is not applied yet), last_stand (4/6), momentum (1/2/3), ranged_defense (+2/+4 defense vs ranged), ranged_immune, thorns (50/100%), wall_of_steel (2/4/6)
 
 #### Passive Effects (44 variants, artifacts and armor)
 aether_bonus (10/20), aether_discount (1/2/3 off every skill's Aether cost), aether_regen (1/2/3), aether_signet (3/5), blink_ring (range 4, +2 bonus), breach_jewel (4/6), chaos_attune (2/4 might, 2/3 def), chaos_circlet, chaos_defense (2/4), disengage, displacement_immune (no effect yet), heal (1/2/3 per turn), hp_bonus (10/20), mp_bonus (2/4), opportunist, ranger_defense (1/2/4), reveal_maw, revive (1/2 hp+ae), soul_harvest (2/4 XP), strider, threat_shroud, vigor_bonus (3/6/12), vision_bonus (2/4), wraith_immune

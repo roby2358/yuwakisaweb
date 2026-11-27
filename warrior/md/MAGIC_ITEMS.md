@@ -317,8 +317,8 @@ Defensive effects with a combat component -- reactive damage, evasion, or combat
 | `momentum`            | +1 defense per hex moved this turn               | Crushing, Streaming, Overbearing   | Wraith, Navigator, Wayfarer        |
 | `momentum`            | +2 defense per hex moved this turn               | Crushing, Streaming, Overbearing   | Wraith, Navigator, Wayfarer        |
 | `momentum`            | +3 defense per hex moved this turn               | Crushing, Streaming, Overbearing   | Wraith, Navigator, Wayfarer        |
-| `ranged_immune`       | +2 defense to ranged attacks                     | Mirrored, Warding, Flickering      | Sentinel, Warden, Technomancer     |
-| `ranged_immune`       | +4 defense to ranged attacks                     | Mirrored, Warding, Flickering      | Sentinel, Warden, Technomancer     |
+| `ranged_defense`      | +2 defense to ranged attacks                     | Deflecting, Warding, Flickering    | Sentinel, Warden, Technomancer     |
+| `ranged_defense`      | +4 defense to ranged attacks                     | Deflecting, Warding, Flickering    | Sentinel, Warden, Technomancer     |
 | `ranged_immune`       | Immune to ranged attacks                         | Mirrored, Warding, Flickering      | Sentinel, Warden, Technomancer     |
 | `thorns`              | Reflect 50% damage back to melee attackers       | Bristling, Piercing, Rending       | Sentinel, Warden, Xenarch          |
 | `thorns`              | Reflect 100% damage back to melee attackers      | Bristling, Piercing, Rending       | Sentinel, Warden, Xenarch          |

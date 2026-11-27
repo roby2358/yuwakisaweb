@@ -496,8 +496,10 @@ special-looking hex but hold no other prize.
     disengage, displacement_immune, heal, hp_bonus, mp_bonus, opportunist, ranger_defense,
     reveal_maw, revive, soul_harvest, strider, threat_shroud, vigor_bonus, vision_bonus,
     wraith_immune.
-  - Inert today [P, observed]: ranged_defense and displacement_immune have no effect;
-    high_def_mp_penalty applies its MP penalty but not its defBonus (Q-1).
+  - ranged_defense (armor): its rangedDefenseBonus adds to defense against enemy ranged
+    attacks only, summed over equipped items.
+  - Inert today [P, observed]: displacement_immune has no effect; high_def_mp_penalty
+    applies its MP penalty but not its defBonus (Q-1).
 - **Melee with a ranged weapon** deals ceil(damage / RANGED_MELEE_DIVISOR) + Might.
 - **Unarmed** (no weapon): damage 1.
 
@@ -740,7 +742,9 @@ if random < min(pct, MAX_STUN_CHANCE): stunnedNextTurn = true
 if ranged and ranged_immune: avoid
 if warpShieldTurns > 0 and chance(warp effectStrength / 10): avoid
 if chance(dodge()): avoid            # dodge = DODGE_PER_REFLEX × Reflex + dodge_bonus summed over equipped items + dodgeSkillBonus, cap MAX_DODGE
-rolled = bellCurve(damage); dealt = max(1, rolled − playerDefense())
+defense = playerDefense()
+if ranged: defense += ranged_defense summed over equipped items   # rangedDefenseBonus
+rolled = bellCurve(damage); dealt = max(1, rolled − defense)
 if melee, reflectTurns > 0 and chance(reflect effectStrength / 10):
   reflected = max(1, dealt × reflectPercent%); dealt = max(1, dealt × takePercent%)
 hp -= dealt; then reflect / thorns hit the attacker; burning_aura burns adjacent enemies
@@ -1346,7 +1350,7 @@ formalized from the code]
 Not yet settled. Recommendations are Claude's. A settled question leaves this list.
 
 ### Q-1 Inert or half-wired gear effects
-ranged_defense, displacement_immune and high_def_mp_penalty's defBonus exist in data or
+displacement_immune and high_def_mp_penalty's defBonus exist in data or
 code but do nothing (or only part of what they say). Filed as a tracker idea for discussion.
 - **Options:** wire each one up; remove each one; mix per effect.
 - **Recommendation:** decide per effect; wire the ones whose text players see on items, drop

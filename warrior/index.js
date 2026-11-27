@@ -691,7 +691,9 @@ function dealDamageToPlayer(damage, source, opts) {
         return { dealt: 0, avoided: true };
     }
     const rolled = Rando.bellCurve(damage);
-    let dealt = Math.max(1, rolled - playerDefense());
+    let defense = playerDefense();
+    if (opts.isRanged) defense += player.sumEquipped('ranged_defense', 'rangedDefenseBonus');
+    let dealt = Math.max(1, rolled - defense);
     let reflected = 0;
     if (player.reflectTurns > 0 && opts.attacker && !opts.isRanged) {
         const r = effectiveSkill(SKILLS.reflect, player.rankOf('reflect'));
