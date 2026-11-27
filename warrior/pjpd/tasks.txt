@@ -1,0 +1,13 @@
+Priority:   50
+Status: ToDo
+ID: optsdefaults-usup
+Created: 2026-11-27T08:37:40Z
+Updated: 2026-11-27T08:37:40Z
+
+dealDamageToEnemy and killEnemy drop their opts = {} default parameters.
+
+Goal: dealDamageToEnemy(enemy, damage, source, opts = {}) and killEnemy(enemy, opts = {}) in index.js have default parameters, against the project's no-default-parameters rule.
+
+Settled design: remove both defaults; every call site (index.js, and actions.js / enemy_ai.js through the ctx callbacks) passes its options object explicitly ({} when none). No behaviour change, no save-shape change.
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); neither function has a default parameter and every caller passes an opts argument.
