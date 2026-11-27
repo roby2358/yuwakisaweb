@@ -297,7 +297,7 @@ Offensive effects that trigger when attacking.
 
 ## Armor Effects
 
-Defensive effects with a combat component -- reactive damage, evasion, or combat-conditional bonuses.
+Defensive effects with a combat component -- reactive damage, evasion, or combat-conditional bonuses. Artifacts roll `dodge_bonus` too, at the same three sizes, alongside the passive effects below.
 
 | Effect                | Description                                      | Verbings                           | Archetypes                        |
 |-----------------------|--------------------------------------------------|------------------------------------|------------------------------------|

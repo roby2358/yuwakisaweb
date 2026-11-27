@@ -681,15 +681,20 @@ const RANGED_EFFECTS = [
     { special: 'free_action', value: 5 },
 ];
 
+// Shared by armour and artifacts, so both roll dodge at the same sizes and values
+const DODGE_BONUS_EFFECTS = [
+    { special: 'dodge_bonus', dodgeBonus: 10, value: 2 },
+    { special: 'dodge_bonus', dodgeBonus: 20, value: 3 },
+    { special: 'dodge_bonus', dodgeBonus: 30, value: 4 },
+];
+
 const ARMOR_EFFECTS = [
     { special: 'burning_aura', burnAuraDamage: 2, value: 2 },
     { special: 'burning_aura', burnAuraDamage: 5, value: 4 },
     { special: 'counter_deflect', counterDeflect: 50, value: 2 },
     { special: 'counter_deflect', counterDeflect: 70, value: 3 },
     { special: 'counter_deflect', counterDeflect: 90, value: 4 },
-    { special: 'dodge_bonus', dodgeBonus: 10, value: 2 },
-    { special: 'dodge_bonus', dodgeBonus: 20, value: 3 },
-    { special: 'dodge_bonus', dodgeBonus: 30, value: 4 },
+    ...DODGE_BONUS_EFFECTS,
     { special: 'heal_on_kill', healOnKill: 5, value: 3 },
     { special: 'heal_on_kill', healOnKill: 8, value: 4 },
     { special: 'high_def_mp_penalty', defBonus: 5, mpPenalty: 1, value: 3 },
@@ -756,6 +761,7 @@ const PASSIVE_EFFECTS = [
 ];
 
 const ARMOR_OR_PASSIVE = [...ARMOR_EFFECTS, ...PASSIVE_EFFECTS];
+const ARTIFACT_EFFECTS = [...PASSIVE_EFFECTS, ...DODGE_BONUS_EFFECTS];
 
 function _pickVerbing(naming) {
     return Rando.bool(0.5) ? Rando.choice(VERBING_GENERAL) : Rando.choice(naming.v);
@@ -838,7 +844,7 @@ function rollMagicItem(category) {
             break;
         }
         case 'artifact': {
-            const { value, ...effect } = Rando.choice(PASSIVE_EFFECTS);
+            const { value, ...effect } = Rando.choice(ARTIFACT_EFFECTS);
             const name = _rollName(ARTIFACT_ITEMS, EFFECT_NAMING[effect.special]);
             const price = (Rando.int(0, 100) + Rando.int(0, 100)) * value;
             item = { id, name, slot: EQUIP_SLOT.ARTIFACT, price, magical: true, ...effect };

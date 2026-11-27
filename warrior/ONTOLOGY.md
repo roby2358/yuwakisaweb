@@ -475,7 +475,7 @@ special-looking hex but hold no other prize.
     entry, a d6 variant: normal (mpCost 2) / fast (mpCost 1) / heavy (damage × 2, mpCost
     'all', aetherCost 2).
   - armor: defense in MAGIC_DEFENSE range, one ARMOR_OR_PASSIVE entry.
-  - artifact: one PASSIVE_EFFECTS entry.
+  - artifact: one ARTIFACT_EFFECTS entry (PASSIVE_EFFECTS plus DODGE_BONUS_EFFECTS).
   - price: a per-category formula of damage/range/defense times the effect's `value`
     (the magic item price row in Numbers).
   - name: one of six patterns from MODES, VERBERS, VERBS, ARCHETYPES_GENERAL,
@@ -489,6 +489,8 @@ special-looking hex but hold no other prize.
   - defensive armor: burning_aura, counter_deflect, dodge_bonus, heal_on_kill,
     high_def_mp_penalty, last_stand, momentum, ranged_defense, ranged_immune, thorns,
     wall_of_steel.
+  - dodge_bonus (armor or artifact): the same DODGE_BONUS_EFFECTS rows in both pools, so
+    armor and artifact dodge add up in `dodge()`. Weapons never carry it.
   - passives (armor or artifact): aether_bonus, aether_regen, aether_discount,
     aether_signet, blink_ring, breach_jewel, chaos_attune, chaos_circlet, chaos_defense,
     disengage, displacement_immune, heal, hp_bonus, mp_bonus, opportunist, ranger_defense,

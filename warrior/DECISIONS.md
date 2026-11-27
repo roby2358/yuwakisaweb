@@ -162,6 +162,12 @@ total stays capped at MAX_DODGE (90%), so there is always at least a 10% chance 
     item's bonus. No item values or MAX_DODGE changed; the character panel already read
     `player.dodge()`. ONTOLOGY's player-damage rule and DYNAMICS's dodge lines were updated.
     No save shape changed.
+  - 2026-11-27: artifacts roll dodge_bonus too. Only armor carried it and there is one
+    armor slot, so nothing ever stacked. `DODGE_BONUS_EFFECTS` in config.js holds the three
+    rows (10 / 20 / 30 at values 2 / 3 / 4), spread into `ARMOR_EFFECTS` and into the new
+    `ARTIFACT_EFFECTS` pool that `rollMagicItem` draws artifacts from. Weapons do not get
+    it. ONTOLOGY's magic-item rule and DYNAMICS's effect lists were updated. Existing items
+    are untouched and no save shape changed.
 
 ### D-26 Dodge comes from Reflex, not Vigor — *Decided*
 Dodge = DODGE_PER_REFLEX × the Reflex stat + every equipped dodge_bonus item's bonus, capped

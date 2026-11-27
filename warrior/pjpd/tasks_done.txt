@@ -486,6 +486,20 @@ Done when: no player-facing string literals remain in enemy_ai.js, test/text.js 
 ----
 Priority:   51
 Status: Done
+ID: dodgeart-ciiu
+Created: 2026-11-27T23:19:48Z
+Updated: 2026-11-27T23:43:12Z
+
+Artifacts can roll the dodge_bonus effect, at the same sizes and values as armour.
+
+Goal: dodge bonuses from all equipped items already add up (capped at MAX_DODGE), but only armour carries dodge_bonus and there is one armour slot, so stacking never happens.
+
+Settled design: add dodge_bonus to the artifact effect pool in config.js with the same three rows armour has (dodgeBonus 10, 20, 30 at values 2, 3, 4). Weapons do not get it. The effect's name-table row and text line already exist and are shared. No logic changes; Player.dodge() already sums across equipped items. Existing items are untouched, so do not bump SAVE_VERSION. Update ONTOLOGY.md and DYNAMICS.md where they list artifact effects or say only armour carries dodge, and md/MAGIC_ITEMS.md if it lists pools.
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); rollMagicItem can produce an artifact with dodge_bonus; SAVE_VERSION is unchanged.
+----
+Priority:   51
+Status: Done
 ID: restore-ae-3s2j
 Created: 2026-11-26T20:52:54Z
 Updated: 2026-11-26T21:06:31Z

@@ -244,7 +244,7 @@ Magical items are generated at runtime via `rollMagicItem()`. Each item gets a u
 **Melee weapons**: damage in MAGIC_DAMAGE. A d6 picks the variant: normal (1 MP per attack), fast (0 MP) or heavy (double damage, spends all MP).
 **Ranged weapons**: damage in MAGIC_DAMAGE, range in MAGIC_RANGE. A d6 picks the variant: normal (2 MP per shot), fast (1 MP) or heavy (double damage, all MP, 2 Aether per shot).
 **Armor**: defense in MAGIC_DEFENSE, plus one armor or passive effect.
-**Artifacts**: no base stat, one passive effect.
+**Artifacts**: no base stat, one passive effect or a dodge_bonus.
 **Price**: the item's damage, range or defense times the effect's `value` (how strong the effect is); artifacts get a random base times `value`. Magic gear is expensive next to mundane gear, so most of it is found rather than bought.
 
 #### Melee Weapon Effects (41 variants)
@@ -260,6 +260,9 @@ burning_aura (2/5), counter_deflect (50/70/90%), dodge_bonus (10/20/30%), heal_o
 aether_bonus (10/20), aether_discount (1/2/3 off every skill's Aether cost), aether_regen (1/2/3), aether_signet (3/5), blink_ring (range 4, +2 bonus), breach_jewel (4/6), chaos_attune (2/4 might, 2/3 def), chaos_circlet, chaos_defense (2/4), disengage, displacement_immune (no effect yet), heal (1/2/3 per turn), hp_bonus (10/20), mp_bonus (2/4), opportunist, ranger_defense (1/2/4), reveal_maw, revive (1/2 hp+ae), soul_harvest (2/4 XP), strider, threat_shroud, vigor_bonus (3/6/12), vision_bonus (2/4), wraith_immune
 
 Armor can also roll any passive effect (from the combined armor + passive pool), giving armors access to passive effects like aether_regen or hp_bonus in addition to defensive specials. Passives on armor and artifact stack where they add up (vision_bonus, heal, hp_bonus, and the like).
+
+#### Artifact Effects (47 variants)
+Every passive effect above, plus dodge_bonus (10/20/30%) at the same sizes and values as armor. Dodge on armor and on an artifact add up, inside the `MAX_DODGE` cap.
 
 ### Loot Sources
 - **Ruins**: 1-3 non-magical items + 1 magical item + gold
@@ -398,7 +401,7 @@ Seal the rest of the breaches. Gear up for the Maw. Starfall trivializes mob fig
 ### Build Archetypes
 - **Sustain Melee**: lifesteal/aether_siphon weapon + heal_on_kill armor + Siphon Strike — heal through everything, never retreat
 - **Skill Caster**: aether_siphon weapon + aether_regen armor + aether_discount or aether_bonus artifact — near-endless Aether, skill every turn
-- **Glass Cannon**: channel weapon + dodge_bonus armor — huge burst paid for in HP, pray for dodges
+- **Glass Cannon**: channel weapon + dodge_bonus armor and artifact — huge burst paid for in HP, pray for dodges
 - **Tank Breacher**: armor_pierce weapon + last_stand armor + Shredding Blow — grind through Guardian fights
 - **Sniper**: sniper ranged weapon + vision_bonus artifact + Penetrating Shot — shoot from max range, never get touched
 - **Kite Control**: knockback ranged weapon + thorns armor + Shockwave — push enemies away, punish the ones that reach you
