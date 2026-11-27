@@ -2306,18 +2306,12 @@ function updateInvPanel() {
             const id = btn.dataset.id;
             const slot = btn.dataset.slot;
             if (action === 'equip') {
-                // Move current equipped item to inventory
-                const current = player.equipment[slot];
-                if (current) player.inventory.unshift(current);
-                player.equipment[slot] = id;
-                const rmIdx = player.inventory.indexOf(id);
-                if (rmIdx !== -1) player.inventory.splice(rmIdx, 1);
+                equipFromInventory(id);
             } else if (action === 'unequip') {
                 player.equipment[slot] = null;
                 player.inventory.unshift(id);
             }
-            player.hp = Math.min(player.hp, player.maxHP());
-            player.aether = Math.min(player.aether, player.maxAether());
+            clampPlayerVitals();
             updateInvPanel();
             updateCharPanel();
             updateHUD();
@@ -2371,6 +2365,22 @@ function itemStatLine(item) {
 
 // The shop's inspect pane: a fuller readout of one item than its terse row —
 // name, slot, and full effect list — shown when a shop row is clicked.
+// Puts a carried item on; whatever was in its slot goes to the front of the inventory.
+// Shared by the Inventory panel and the smiths' sell lists.
+function equipFromInventory(id) {
+    const slot = ALL_EQUIPMENT[id].slot;
+    const current = player.equipment[slot];
+    if (current) player.inventory.unshift(current);
+    player.equipment[slot] = id;
+    player.inventory.splice(player.inventory.indexOf(id), 1);
+}
+
+// Gear changes can lower the maximums; HP and Aether never sit above them.
+function clampPlayerVitals() {
+    player.hp = Math.min(player.hp, player.maxHP());
+    player.aether = Math.min(player.aether, player.maxAether());
+}
+
 function shopItemDetailHtml(item) {
     return `<span class="si-name ${itemRarityClass(item)}">${item.name}</span>`
         + ` <span style="color:#888">(${item.slot})</span> ${compareToEquippedHtml(item)}`
@@ -2690,12 +2700,17 @@ const SMITHS = {
 };
 
 function showShopDialog(poi, kind) {
-    const smith = SMITHS[kind];
     if (Rando.bool(SHOP_NEW_ITEM_CHANCE)) {
         const newItem = rollMagicItem();
         poi.shopItems.push(newItem);
         logCombat(say('log_shop_new_item', { item: newItem.name }), 'log-info');
     }
+    renderShopDialog(poi, kind);
+}
+
+// Draws the shop without the new-stock roll, so a free action (Equip) can redraw it.
+function renderShopDialog(poi, kind) {
+    const smith = SMITHS[kind];
     let bodyHtml = say(smith.greetKey, {});
     bodyHtml += `<div style="margin-bottom:8px;color:#ffc107" data-gold-display>${say('shop_gold', { gold: player.gold })}</div>`;
     bodyHtml += '<div class="shop-scroll">';
@@ -2745,7 +2760,10 @@ function showShopDialog(poi, kind) {
             const sp = sellPrice(item);
             bodyHtml += `<div class="shop-item" data-detail="${id}">
                 <div class="${itemRarityClass(item)}">${item.name}</div>
-                <button data-sell="${id}" data-sell-idx="${i}" data-price="${sp}">${say('btn_sell', { gold: sp })}</button>
+                <span class="shop-actions">
+                    <button data-shop-equip="${id}">${say('btn_equip', {})}</button>
+                    <button data-sell="${id}" data-sell-idx="${i}" data-price="${sp}">${say('btn_sell', { gold: sp })}</button>
+                </span>
             </div>`;
         }
     }
@@ -2822,6 +2840,15 @@ function showShopDialog(poi, kind) {
             refreshOpenPanels();
         });
     }
+    body.querySelectorAll('button[data-shop-equip]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            equipFromInventory(btn.dataset.shopEquip);
+            clampPlayerVitals();
+            updateSkillBar();
+            refreshOpenPanels();
+            renderShopDialog(poi, kind);
+        });
+    });
     body.querySelectorAll('button[data-sell]').forEach(btn => {
         btn.addEventListener('click', () => {
             const id = btn.dataset.sell;

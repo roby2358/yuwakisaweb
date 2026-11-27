@@ -949,6 +949,7 @@ list stock items not owned and matching the smith (weaponsmith: mundane; magicsm
 magicsmith also lists unbought shopOnly skills at shopPrice
 buy: gold ≥ price → gold -= price, item to inventory (stock remains)
 sell: only items of the smith's kind, for sellPrice = max(1, floor(price × SELL_PRICE_RATIO))
+each sell row also has Equip: equipFromInventory(item), clamp HP/AE, redraw (no new-stock roll); free
 weaponsmith: Sell All mundane.  Done: mp = 0
 ```
 
@@ -1260,6 +1261,7 @@ formalized from the code]
 | settlement reward: Accept / Decline | offer open | gold, settlementsRestored | |
 | RETURN: Return / Cancel | RETURN activated | endGame(won) | |
 | equip / unequip item (Inventory panel) | player phase only, game not over [D]; emptying the weapon slot allowed [D]. The buttons render disabled outside the player phase | swap slot ↔ inventory; clamp HP/AE | free: no MP |
+| equip item (a smith's sell list) | shop dialog open | same swap as the Inventory panel's Equip (`equipFromInventory`); clamp HP/AE; the shop redraws | free: no MP |
 | equip / unequip skill slot (Skills panel) | skill active | first empty slot, else the last slot | free |
 | newGame (intro New Game; HUD New Game with confirm; endgame New Game) | always | initGame | deletes save |
 | continue (intro) | saveIsCurrent | loadGame | |

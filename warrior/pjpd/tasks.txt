@@ -1,24 +1,3 @@
-Priority:   60
-Status: ToDo
-ID: shopequip-ewf7
-Created: 2026-11-27T19:34:16Z
-Updated: 2026-11-27T19:34:16Z
-
-An Equip button sits next to Sell on each row of a smith's sell list.
-
-Goal: at a Weaponsmith, Armorsmith or Magicsmith the player often wants to put on an item they are carrying (for example one just bought) without closing the shop and opening the Inventory panel. The sell list in showShopDialog (index.js) shows each carried item with only a Sell button.
-
-Settled design:
-- Each item row in the sell section of showShopDialog gets an Equip button placed just before its Sell button, labelled with the existing btn_equip text. The "sell all" row gets none.
-- Clicking it equips that item exactly as the Inventory panel's Equip does: the item currently in that slot (if any) goes to the front of the inventory, the clicked item moves from the inventory into the slot, and HP and Aether are clamped to their new maximums.
-- The equip logic lives in one shared function used by both the Inventory panel's Equip button and the shop's. The Inventory panel keeps its own isPlayerTurn() check at its call site; the shop button has no such check, because the shop is a dialog (phase 'dialog') opened on the player's turn.
-- After equipping, the shop redraws the same way it does after a purchase (showShopDialog(poi, kind) plus refreshOpenPanels()), so the swapped-out item appears in the sell list if this smith deals in it, and the comparison arrows against equipped gear update.
-- The Equip button must not trigger the row's click-to-inspect handler (that handler already ignores clicks on buttons).
-- No new text key, no new numbers, no save-shape change. Equipping in the shop costs nothing.
-- Docs: update the shop description in ONTOLOGY.md (commands/interface and the shop rule, wherever the sell list is described).
-
-Done when: every test in test/ passes (for f in test/*.js; do node $f; done); each sell-list row has Equip then Sell; both Equip buttons call the one shared function.
-----
 Priority:   50
 Status: ToDo
 ID: spawnhome-ymac
