@@ -2558,20 +2558,24 @@ function trySpawnVillageCrop(poi) {
     hex.crop = Rando.choice(CROP_ICONS);
 }
 
-// Heal half max HP/AE and burn remaining MP — shared by village Rest and Sanctuary.
-function restHeal(fraction) {
-    const healAmt = Math.floor(player.maxHP() * fraction);
-    player.hp = Math.min(player.maxHP(), player.hp + healAmt);
-    const aeAmt = Math.floor(player.maxAether() * fraction);
+// Heal the given HP/AE amounts (capped at max) and burn remaining MP — shared by
+// village Rest, Sanctuary and hut Rest. Each caller works out its own amounts.
+function restHeal(hpAmt, aeAmt) {
+    player.hp = Math.min(player.maxHP(), player.hp + hpAmt);
     player.aether = Math.min(player.maxAether(), player.aether + aeAmt);
     player.mp = 0;
-    logCombat(say('log_rested', { hp: healAmt, ae: aeAmt }), 'log-heal');
+    logCombat(say('log_rested', { hp: hpAmt, ae: aeAmt }), 'log-heal');
+}
+
+// Village Rest and Sanctuary: the same fraction of max HP and max AE, rounded down.
+function restByFraction(fraction) {
+    restHeal(Math.floor(player.maxHP() * fraction), Math.floor(player.maxAether() * fraction));
 }
 
 function showVillageDialog(poi) {
     trySpawnVillageCrop(poi);
     showVerticalDialog(say(SETTLEMENTS[POI.VILLAGE].titleKey, { symbol: POI_SYMBOLS[POI.VILLAGE] }), say('village_intro', {}), [
-        { label: say('btn_rest', {}), cls: 'primary', action: () => { restHeal(0.5); } },
+        { label: say('btn_rest', {}), cls: 'primary', action: () => { restByFraction(0.5); } },
         { label: say('btn_weaponsmith', {}), action: () => showShopDialog(poi, 'weapon') },
         { label: say('btn_leave', {}) }
     ]);
@@ -2583,31 +2587,56 @@ function invokeSanctuary() {
     logCombat(say('log_sanctuary', {}), 'log-heal');
     trySpawnVillageCrop({ q: player.q, r: player.r });
     const sanct = effectiveSkill(SKILLS.sanctuary, player.rankOf('sanctuary'));
-    restHeal(1 / sanct.effectStrength);
+    restByFraction(1 / sanct.effectStrength);
 }
 
 // A Wise Man's Hut, case by case: its assigned optional skill if the player
-// lacks it, then HUT_REROLL_CHANCE per visit to dig up a fresh skill from the
+// lacks it, then HUT_REROLL_CHANCE per turn visited to dig up a fresh skill from the
 // obtainable pool (optional only; never core, held out, shop or scroll-taken),
 // which becomes the hut's standing assignment. Huts are never spent: camping
 // one until the roll hits is fine. Separately, HUT_GIFT_CHANCE per
-// visit the sage hands over a magic item instead, leaving the hut's skill state
-// untouched for the next visit.
-const HUT_GIFT_CHANCE = 0.05;
-const HUT_REROLL_CHANCE = 0.05;
+// turn visited the sage hands over a magic item instead, leaving the hut's skill state
+// untouched for the next visit. Every outcome ends in showHutMenu, the one place
+// a hut dialog opens; Rest there is a small, unlimited heal (see hutRest).
+const HUT_GIFT_CHANCE = 0.02;
+const HUT_REROLL_CHANCE = 0.02;
+const HUT_REST_HP_FRACTION = 0.25;
+const HUT_REST_AE_FRACTION = 0.5;
 function showHutDialog(poi) {
     grantVisitSP(poi);
 
-    if (Rando.bool(HUT_GIFT_CHANCE)) { giveHutGift(); return; }
+    // The gift and reroll chances are rolled once per hut per turn, so leaving and
+    // stepping back in on the same turn is not another try.
+    const firstVisitThisTurn = poi.rolledTurn !== turn;
+    poi.rolledTurn = turn;
+
+    if (firstVisitThisTurn && Rando.bool(HUT_GIFT_CHANCE)) { giveHutGift(); return; }
 
     if (poi.skill && !player.learnedSkills.has(poi.skill)) { offerHutLesson(poi.skill); return; }
 
-    const foundId = Rando.bool(HUT_REROLL_CHANCE) ? skillLibrary.rerollHutSkill(player.learnedSkills) : null;
+    const foundId = firstVisitThisTurn && Rando.bool(HUT_REROLL_CHANCE) ? skillLibrary.rerollHutSkill(player.learnedSkills) : null;
     if (foundId) { poi.skill = foundId; offerHutLesson(foundId); return; }
 
-    showDialog(hutTitle(),
-        say('sage_peers', {}) + `<div style="color:#a1887f">${say('sage_nothing', {})}</div>`,
-        [hutTrainButton(), hutLeaveButton()]);
+    showHutMenu(say('sage_peers', {}) + `<div style="color:#a1887f">${say('sage_nothing', {})}</div>`, null);
+}
+
+// The hut dialog: Learn (only when a lesson is offered; null otherwise), Rest,
+// Train, Leave, stacked like the village menu.
+function showHutMenu(bodyHtml, learnButton) {
+    const lesson = learnButton ? [learnButton] : [];
+    showVerticalDialog(hutTitle(), bodyHtml, [
+        ...lesson,
+        { label: say('btn_rest', {}), action: hutRest },
+        { label: say('btn_train', {}), action: () => showTrainDialog() },
+        { label: say('btn_leave', {}) }
+    ]);
+}
+
+// Hut Rest: a quarter of max HP rounded down (at least 1), half of max AE rounded up.
+function hutRest() {
+    restHeal(
+        Math.max(1, Math.floor(player.maxHP() * HUT_REST_HP_FRACTION)),
+        Math.ceil(player.maxAether() * HUT_REST_AE_FRACTION));
 }
 
 // The sage's gift: a random magic item straight into the inventory.
@@ -2615,37 +2644,25 @@ function giveHutGift() {
     const item = rollMagicItem();
     player.inventory.push(item.id);
     logCombat(say('log_sage_gift', { item: item.name }), 'log-gold');
-    showDialog(hutTitle(),
-        say('sage_rummages', {}) + `<div style="color:#a1887f">${say('sage_gift', {})}</div><p style="color:#e040fb">${say('gift_item', { item: item.name })}</p>`,
-        [hutTrainButton(), hutLeaveButton()]);
+    showHutMenu(say('sage_rummages', {}) + `<div style="color:#a1887f">${say('sage_gift', {})}</div><p style="color:#e040fb">${say('gift_item', { item: item.name })}</p>`, null);
 }
 
 function hutTitle() {
     return say('title_hut', { symbol: POI_SYMBOLS[POI.HUT] });
 }
 
-function hutTrainButton() {
-    return { label: say('btn_train', {}), action: () => showTrainDialog() };
-}
-
-function hutLeaveButton() {
-    return { label: say('btn_leave', {}) };
-}
-
-// The hut's teaching dialog for one skill.
+// The hut's lesson for one skill: the sage's pitch plus the Learn button.
 function offerHutLesson(teachId) {
     const skill = SKILLS[teachId];
-    showDialog(hutTitle(),
+    showHutMenu(
         say('sage_eyes_light', {}) + `<div style="color:#b388ff">${say('sage_teach', { skill: skill.name })}</div>${skillBlurbHtml(skill)}`,
-        [{
+        {
             label: say('btn_learn', {}), cls: 'primary', action: () => {
                 learnSkill(teachId);
                 player.mp = 0;
                 logCombat(say('log_sage_teaches', { skill: skill.name }), 'log-info');
             }
-        },
-        hutTrainButton(),
-        hutLeaveButton()]);
+        });
 }
 
 // Stepping onto a scroll claims its skill and consumes the scroll. Every scroll

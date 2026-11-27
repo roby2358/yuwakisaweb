@@ -72,7 +72,7 @@ Dodge reads effective Vigor (base plus vigor_bonus gear), as defense and max HP 
     dropped the [D, unbuilt] tag.
 
 ### D-7 Hut Leave does not end the turn — *Decided*
-Leaving a hut is free, as Leave is at havens and villages; only Learn ends the turn's movement.
+Leaving a hut is free, as Leave is at havens and villages; Learn and Rest end the turn's movement.
 - **Alternatives:** keep hut Leave ending the turn's movement.
 - **Why:** designer's call; to be filled in.
 - **Evidence:** not measured.
@@ -81,6 +81,8 @@ Leaving a hut is free, as Leave is at havens and villages; only Learn ends the t
     and tagged the change [D, unbuilt].
   - 2026-11-26: built — hut Leave no longer sets MP to 0. ONTOLOGY dropped the
     [D, unbuilt] tag.
+  - 2026-11-27: the statement formerly read "only Learn ends the turn's movement"; hut Rest
+    (D-19) ends it too. Leave is unchanged.
 
 ### D-8 Ranged skills need a visible target — *Decided*
 Ranged-skill targets need the enemy to be visible as well as in LOS, like weapon shots.
@@ -208,6 +210,41 @@ Chaos drops are random mundane items, owned or not.
 - **Evidence:** none needed.
 - **History:**
   - 2026-11-27: settled Q-15; no code change.
+
+### D-19 Huts offer a small rest, in one vertical menu — *Decided*
+A hut's Rest restores HUT_REST_HP_FRACTION of max HP, rounded down but at least 1, and
+HUT_REST_AE_FRACTION of max Aether, rounded up, then ends the turn's movement as village Rest
+does. It is always offered and unlimited, rolls no village crop chance, and leaves an offered
+lesson in place for the next visit. The hut dialog is one vertical menu: Learn (only when a
+lesson is offered), Rest, Train, Leave.
+- **Alternatives:** keep the hut as it was: no Rest, and a row of buttons built separately by
+  each of the three outcomes (nothing to teach, the gift, a lesson).
+- **Why:** designer's call: the hut should read like the village menu, and be a useful stop
+  even when the sage has nothing to teach. Unlimited because huts are never spent ("Living
+  map").
+- **Evidence:** not measured. The fractions (0.25 HP, 0.5 AE) are first values.
+- **History:**
+  - 2026-11-27: decided and built — `showHutMenu` in index.js is the one place the hut
+    dialog opens (via `showVerticalDialog`); `showHutDialog`, `giveHutGift` and
+    `offerHutLesson` pass it a body and an optional Learn button, replacing three separate
+    `showDialog` calls and the `hutTrainButton`/`hutLeaveButton` helpers. `restHeal` now
+    takes the HP and AE amounts already computed, so each caller owns its rounding:
+    `restByFraction` (village Rest, Sanctuary; amounts unchanged) and `hutRest`. ONTOLOGY's
+    Hut visit rule, POI table, Numbers table and command row were updated. No save shape
+    changed.
+
+### D-20 Hut gift and reroll chances roll once per turn, at 2% — *Decided*
+A hut rolls HUT_GIFT_CHANCE and HUT_REROLL_CHANCE at most once per turn; re-entering the hut
+on the same turn (after Leave) shows the menu without rolling again. Both chances are 0.02.
+- **Alternatives:** roll on every opening of the dialog, at 0.05 each (the previous behaviour).
+- **Why:** designer's call: it was too easy to camp a hut and get good stuff. Leave is free, so
+  every re-entry was another try within one turn; now a try costs a turn (Rest ends it).
+- **Evidence:** not measured.
+- **History:**
+  - 2026-11-27: decided and built. The hut POI carries `rolledTurn`; `showHutDialog` rolls
+    only when it differs from the current turn. Both constants moved from 0.05 to 0.02. Old
+    saves load unchanged (a hut without the field simply rolls on its next visit), so
+    SAVE_VERSION was not bumped.
 
 ### Code structure
 

@@ -150,6 +150,7 @@ structure and is never traded away. "Room to break the game" beats balance tidin
 | guardianId | int \| null | Breach and Maw: id of the enemy whose death marks the POI ready to seal. |
 | guardianDefeated | bool | Breach and Maw: set when that enemy dies; cleared on guardian respawn. |
 | skill | skill id \| null | Hut: its standing assigned skill. Scroll: the skill it grants. |
+| rolledTurn | int \| absent | Hut: the turn its gift and reroll chances were last rolled. |
 
 ### Player (`player.js`)
 
@@ -390,7 +391,7 @@ within POI_MIN_DIST of an earlier POI; a type that runs out of room places fewer
 | Ruin | ruinState 'new'; terrain → Ruins | Stir creatures, then loot. Never spent. |
 | Breach | closed false; terrain → Breach; gets a Breach Guardian and crawlers | Spawns chaos until sealed. |
 | Maw | closed false; terrain → Maw; gets the Unraveler | Final seal. |
-| Hut | skill dealt by SkillLibrary | Teaches optional skills; first-visit SP. |
+| Hut | skill dealt by SkillLibrary | Teaches optional skills; small rest, Train, first-visit SP. |
 | Scroll | skill set | Grants one skill on pickup; removed. |
 | Garrison build → Garrison | made by the Commission Garrison skill | Becomes a garrison by chance; slays chaos nearby. |
 
@@ -895,17 +896,24 @@ village entry: chance(VILLAGE_CROP_CHANCE†) a crop (gold in CROP_GOLD) sprouts
 Rest: heal floor(maxHP × VILLAGE_REST_FRACTION†) hp and ae likewise; mp = 0
 Weaponsmith: mundane shop; Leave: free
 Sanctuary skill (non-POI hex): crop chance on self, rest with fraction 1 / effectStrength
+every rest caps hp and ae at their maximums and logs the amounts
 ```
 
 ### Hut visit [D]
-*Serves:* G-2, "Living map". (`showHutDialog`)
+*Serves:* G-2, "Living map". (`showHutDialog`; `showHutMenu` is the one place the dialog opens)
 ```
 first visit to this hut: gainSP(1)
-chance(HUT_GIFT_CHANCE): a magic item, hut unchanged; stop
+fresh = hut.rolledTurn ≠ turn; hut.rolledTurn = turn   # the two chances roll once per hut per turn
+if fresh and chance(HUT_GIFT_CHANCE): a magic item, hut unchanged; stop
 if hut.skill unknown: offer it
-else if chance(HUT_REROLL_CHANCE) and an obtainable skill exists: hut.skill = it; offer it
+else if fresh and chance(HUT_REROLL_CHANCE) and an obtainable skill exists: hut.skill = it; offer it
 else: "nothing to teach"
-Learn: learnSkill (latent unless freeAttune); mp = 0.  Leave: free.  Train: Train dialog
+buttons, stacked top to bottom: Learn (only when a skill is offered), Rest, Train, Leave
+Learn: learnSkill (latent unless freeAttune); mp = 0
+Rest: heal max(1, floor(maxHP × HUT_REST_HP_FRACTION)) hp and
+      ceil(maxAether × HUT_REST_AE_FRACTION) ae, each capped at max; mp = 0.
+      Always available and unlimited; no crop chance; an offered skill stays for the next visit
+Train: Train dialog.  Leave: free
 ```
 
 ### Scroll pickup [D]
@@ -1117,7 +1125,8 @@ stats, effect magnitudes) stay in `SKILLS`, `WEAPONS`, `ARMORS`, the effect pool
 | SKILL_HELD_OUT_FRACTION | 0.5 | | skilllibrary.js |
 | STORY_SCROLL_SKILLS | 6 | scrolls | skilllibrary.js |
 | CHANNEL_SCROLL_RADIUS / NEAR_CORE_SCROLL_RADIUS | 11 / 50 | hexes | skilllibrary.js |
-| HUT_GIFT_CHANCE / HUT_REROLL_CHANCE | 0.05 / 0.05 | per visit | index.js |
+| HUT_GIFT_CHANCE / HUT_REROLL_CHANCE | 0.02 / 0.02 | per hut per turn | index.js |
+| HUT_REST_HP_FRACTION / HUT_REST_AE_FRACTION | 0.25 / 0.5 | of max (hp floored, min 1; ae rounded up) | index.js |
 | SKILL_SEEK_OFFERS† | 3 | skills | index.showSkillChoiceDialog |
 | CONSOLATION_XP | 10 | XP | index.js |
 | GEM_DROP_PEAK_CHANCE | 0.25 | | index.js |
@@ -1219,7 +1228,7 @@ formalized from the code]
 | dismissOverlay (click, Space, Esc) | threat overlay or world map shown | hides it | |
 | haven: Rest / Weaponsmith / Magicsmith / Train / Leave | on a haven | see Haven visit | Rest: mp = 0 |
 | village: Rest / Weaponsmith / Leave | on a village | see Village visit | Rest: mp = 0 |
-| hut: Learn / Train / Leave | on a hut, lesson offered | see Hut visit | Learn: mp = 0; Leave: free |
+| hut: Learn / Rest / Train / Leave | on a hut; Learn only when a lesson is offered | see Hut visit | Learn, Rest: mp = 0; Leave: free |
 | ruin: Search / Leave / Continue | on a ruin, none within RUIN_CLEAR_RADIUS† | see Ruin search | may spawn; mp = 0 |
 | shop: Buy item / Buy skill / Sell / Sell All / Done | shop open, gold ≥ price | see Shops | Done: mp = 0 |
 | train: → / ← / Done | Train open | see Train | Done: mp = 0 |

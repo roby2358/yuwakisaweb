@@ -398,6 +398,26 @@ Tuning: don't overpopulate ranged on a single map — they're a counter to slow 
 ----
 Priority:   50
 Status: Done
+ID: hutrest-yqrf
+Created: 2026-11-27T06:58:11Z
+Updated: 2026-11-27T07:06:23Z
+
+Wise Man's Hut: stack the buttons vertically and add a Rest button.
+
+Goal: the hut dialog should read like the village menu, and a hut should offer a small rest so it is a useful stop even when the sage has nothing to teach.
+
+Settled design:
+1. One hut dialog. Today the three hut outcomes (nothing to teach, the gift, a lesson) each call showDialog themselves with their own button list. Replace that with a single renderer, e.g. showHutMenu(bodyHtml, learnButton), which is the only place a hut dialog is opened: it calls showVerticalDialog (as showVillageDialog does) with hutTitle(), the given body and the buttons. showHutDialog, giveHutGift and offerHutLesson only work out the visit's outcome and build the body HTML (and, for a lesson, the Learn button), then hand them to the renderer.
+2. Buttons, top to bottom: Learn (present only when a lesson is offered; the other two outcomes pass null), Rest, Train, Leave. Learn keeps the 'primary' class; Rest is a plain button in huts. Rest is labelled with the existing say('btn_rest', {}).
+3. What Rest does: restores HP by a quarter of max HP rounded down but at least 1, and aether by half of max aether rounded up, both capped at the maximum. Then it behaves exactly like the village's Rest: remaining MP goes to 0 (which ends the turn), the dialog closes back to the map, and the same 'log_rested' line reports the amounts.
+4. Structure: restHeal currently takes one fraction and floors both amounts. Change it to take the HP amount and the AE amount already computed (or two small amount functions), so village Rest, Sanctuary and hut Rest all share the heal/cap/MP/log code and each caller owns its own rounding. Village Rest and Sanctuary amounts must not change. Name the hut's two fractions as constants beside HUT_GIFT_CHANCE (e.g. HUT_REST_HP_FRACTION, HUT_REST_AE_FRACTION).
+5. Rest is always available and unlimited, like every hut interaction (huts are never spent). It does not roll the village crop chance. Resting instead of learning leaves the offered lesson in place for the next visit.
+6. Docs: update ONTOLOGY.md (hut rule, the Numbers table for the two new constants) in the same change.
+
+Done when: the test/*.js checks pass; reading the code, there is one place that opens the hut dialog, it shows stacked buttons in the order above, and Learn appears only when a lesson is offered; a player at 1/40 HP and 0/7 AE who rests at a hut ends at 11 HP and 4 AE with 0 MP and is back on the map; a player with 3 max HP gains 1 HP; village Rest and Sanctuary heal the same amounts as before.
+----
+Priority:   50
+Status: Done
 ID: dodgerando-yuz7
 Created: 2026-11-26T22:59:38Z
 Updated: 2026-11-26T23:37:14Z
