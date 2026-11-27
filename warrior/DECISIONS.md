@@ -344,6 +344,10 @@ content tables (skills, enemies, items) stay in their tables.
     in lower case there: the magic item price formulas, dodge per vigor, opportunist gold,
     the POI loot mundane count, the Prospect, Salvage and Ground Weeps numbers, the
     teleportChance and spawnChance fallbacks, and the enemy animation delays.
+  - 2026-11-27: the teleportChance fallback row left the Numbers table. ChaosAI rolls the
+    Phase Wraith def's `teleportChance` directly, with no inline 0.3 behind it, so the def
+    is the chance's only source. The chance stays a per-entry field of ENEMY_DEFS. No value,
+    behaviour or save-shape change.
 
 ### D-18 Skill previews call the same formulas as the skills — *Decided*
 Each skill's damage or heal formula is one shared function that both the skill's handler and

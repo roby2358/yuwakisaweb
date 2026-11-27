@@ -1214,7 +1214,6 @@ stats, effect magnitudes) stay in `SKILLS`, `WEAPONS`, `ARMORS`, the effect pool
 | CHASER_RANGED_PREFERENCE / KITE_FIRE_CHANCE | 0.5 / 0.5 | | config.js; used in enemy_ai.js |
 | KITE_MIN_DIST / KITE_MAX_DIST | 2 / 3 | hexes | config.js; used in ChaosAI.moveEnemyStep |
 | SWARM_ALLIES / SWARM_RADIUS / SWARM_WEIGHTS | 5 / 3 / 20, 10, 5, 5 | | config.js; used in ChaosAI swarm |
-| teleportChance fallback | 0.3 | used when the def omits the field | enemy_ai.js ChaosAI |
 | enemy animation delays | 80 move / 100 teleport / 150 attack | ms | enemy_ai.js (`ctx.animDelay` calls) |
 | SLIDE_MS / FLOAT_MS | 90 / 420 | ms | fx.js |
 | HIT_FLASH_MS | 100 | ms | index.js |

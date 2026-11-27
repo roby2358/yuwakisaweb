@@ -312,7 +312,7 @@ class ChaosAI extends EnemyAI {
 
         // Phase Wraith teleport (blocked by wraith_immune)
         if (def.behavior === 'teleport' && dist <= aggro && !player.equipped('wraith_immune')
-            && Rando.bool(def.teleportChance || 0.3)) {
+            && Rando.bool(def.teleportChance)) {
             await this.tryTeleport(enemy, def, occupied, prevKey, ctx);
         }
 

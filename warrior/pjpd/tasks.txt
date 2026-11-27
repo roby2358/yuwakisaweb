@@ -1,16 +1,16 @@
 Priority:   50
 Status: ToDo
-ID: wraithtele-vcad
-Created: 2026-11-27T19:35:00Z
-Updated: 2026-11-27T19:35:00Z
+ID: guardradius-9xp7
+Created: 2026-11-27T19:50:39Z
+Updated: 2026-11-27T19:50:39Z
 
-The Phase Wraith's teleport chance loses its inline fallback.
+The Breach Guardian's guard radius loses its inline fallback.
 
-Goal: ChaosAI in enemy_ai.js rolls Rando.bool(def.teleportChance || 0.3). The Phase Wraith's def already sets teleportChance, so the 0.3 is an inline default that hides a missing value, against the project's fail-fast rule.
+Goal: enemy_ai.js reads def.guardRadius || 2 in two places (the guard's camp logic). The Breach Guardian's def already sets guardRadius, so the 2 is an inline default that hides a missing value, against the project's fail-fast rule.
 
-Settled design: use def.teleportChance directly, with no fallback. Remove the fallback row from ONTOLOGY.md's Numbers table (or reword it if it lists other things). No behaviour change, no save-shape change.
+Settled design: use def.guardRadius directly in both places, with no fallback. If ONTOLOGY.md's Numbers table has a row for the fallback, remove it. No behaviour change, no save-shape change.
 
-Done when: every test in test/ passes (for f in test/*.js; do node $f; done); no "teleportChance ||" or "teleportChance ??" remains in the code.
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); no "guardRadius ||" or "guardRadius ??" remains in the code.
 ----
 Priority:   30
 Status: ToDo
