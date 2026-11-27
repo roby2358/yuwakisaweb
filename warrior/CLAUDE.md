@@ -109,7 +109,7 @@ Canvas clicks are ignored when `phase !== 'player'`.
 - HTML overlay panels (Character/Skills/Inventory) slide in from right
 - Dialog overlay for havens/villages/ruins/level-up/skill choice/shop
 - `render()` = `drawScene()` (canvas only) + `updateHUD()` + `refreshOpenPanels()` — don't call `render()` and `updateHUD()` both
-- Motion is visual only and never blocks input or the turn: tokens are drawn via `tokenScreenPos(entity)`, which glides one from where it was drawn last frame (no call needed at the sites that move things), and `spawnDamageFloat` adds a rising number. `floatGain` floats a token's HP/AE rises, except the player's during the player phase, which are totalled in `turnGains` and floated once by `floatTurnGains` at end of turn (D-11). While `fx.busy`, `kickAnim()` redraws `drawScene()` per animation frame
+- Motion is visual only and never blocks input or the turn: tokens are drawn via `tokenScreenPos(entity)`, which glides one from where it was drawn last frame (no call needed at the sites that move things), and `spawnDamageFloat` adds a rising number. `floatGain` floats a token's HP/AE rises, except the player's during the player phase, which are totalled in `turnGains` and floated once by `floatTurnGains` at end of turn. While `fx.busy`, `kickAnim()` redraws `drawScene()` per animation frame
 - UI colours and fonts are CSS variables at the top of `index.css` (serif for titles/prose, monospace for numbers); the intro overlay deliberately keeps its own hardcoded look
 
 ### Save / Load
@@ -136,7 +136,7 @@ Canvas clicks are ignored when `phase !== 'player'`.
 ## Design Documents
 
 - `ONTOLOGY.md` — Implementation reference: purpose and goals, entities, invariants, rules as pseudocode, numbers, commands and events; tagged [D]/[P]/[T]. Code wins where they disagree
-- `ARCHITECTURE_LOG.md` — Dated design changes, newest first; the only doc that records history
+- `DECISIONS.md` — Decisions with their reasoning, alternatives and dated history; records of other changes; open questions. Not needed to implement the game
 - `DYNAMICS.md` — Game design philosophy, key drivers, strategy analysis
 - `docs/` — `ASPIRATIONS.md`, `RUST_WASM.md` (forward-looking notes)
 - `md/` — design brainstorms: `MAGIC_ITEMS.md`, `PRIME_GOALS.md`, `QUEST_BRAINSTORM.md`

@@ -6,8 +6,8 @@ tunable number, and the de facto interface between the rules and the screen. The
 is the source of truth: where this doc and the code disagree, the code wins and the doc
 gets fixed. Content tables (each skill, each item, each fixed enemy) stay in
 `config.js` and `enemies.js`; this doc describes their templates and names the table.
-The design story (theme, drivers, strategies) lives in `DYNAMICS.md`; the why of decisions
-(`D-n`) and the open questions (`Q-n`) live in `RATIONALE.md`.
+The design story (theme, drivers, strategies) lives in `DYNAMICS.md`; decisions, their
+reasoning and history, and the open questions (`Q-n`) live in `DECISIONS.md`.
 
 **Tags.** **[D]** decided by the designer (shipped behaviour the user designed).
 **[P]** proposed or inferred by Claude, pending review. **[T]** tunable number; its value
@@ -161,11 +161,11 @@ structure and is never traded away. "Room to break the game" beats balance tidin
 | hp, aether | int | Bounded by maxHP(), maxAether(). |
 | xp, level | int | Level 1..LEVEL_CAP†. xp resets by the threshold on level-up. |
 | gold | int | |
-| equipment | {weapon, armor, artifact} | Item ids or null; the weapon slot may be empty (unarmed) [D] (D-5). Starts Rusty Blade, Worn Leather, none. |
+| equipment | {weapon, armor, artifact} | Item ids or null; the weapon slot may be empty (unarmed) [D]. Starts Rusty Blade, Worn Leather, none. |
 | inventory | item id[] | Starts with Stick Bow. |
 | learnedSkills | Set<skill id> | Everything the player knows. Starts {restore}. |
 | activeSkills | Set<skill id> | Trained (usable) subset of learned. Starts {restore}. |
-| skills | (skill id \| null)[SKILL_SLOTS] | Hotbar; only active skills go here. Five slots [D] (D-4). |
+| skills | (skill id \| null)[SKILL_SLOTS] | Hotbar; only active skills go here. Five slots [D]. |
 | sp, maxSP | int | Skill points owned, and their ceiling (STARTING_SP, MAX_SP). |
 | skillRanks | {skill id: 1..SKILL_MAX_RANK} | Absent = rank 1. |
 | statPoints | int | Unspent stat points. |
@@ -319,7 +319,7 @@ with its label (`Victory.LABELS`) and points.
 - Game over ⇒ no further enemy actions this phase; the save is deleted when the loop ends. [D]
 - A save with a version other than SAVE_VERSION is never loaded. [D]
 - Every random draw in the loaded code goes through `Rando`; `Math.random` is called only
-  in rando.js. [D] (D-13)
+  in rando.js. [D]
 - Determinism does **not** hold: same commands do not give the same state (no seed). [P]
 
 ---
@@ -556,10 +556,10 @@ Any entry while an enemy stands within RUIN_CLEAR_RADIUS† only logs "clear the
 ```
 breach open (guardian alive) ──guardian dies──▶ ready (guardianDefeated)
 ready ──no guardian within GUARDIAN_PRESENCE_RADIUS†, GUARDIAN_RESPAWN_CHANCE†──▶ open (new guardian)
-ready ──Restore in range, BREACH_SEAL_CHANCE†──▶ sealed (Hills, loot)   (D-2)
+ready ──Restore in range, BREACH_SEAL_CHANCE†──▶ sealed (Hills, loot)
 maw (Unraveler alive) ──Unraveler killed, chaos units exist──▶ Unraveler re-forms elsewhere (noSpawn)
 maw ──Unraveler gone, the Maw's current guardian dead, every breach sealed──▶ sealable
-sealable ──Restore in range, MAW_SEAL_CHANCE†──▶ sealed (Hills, RETURN scroll dropped)   (D-2, D-3)
+sealable ──Restore in range, MAW_SEAL_CHANCE†──▶ sealed (Hills, RETURN scroll dropped)
 ```
 The Maw also respawns Breach Guardians (like a breach) when the Unraveler is absent or
 farther than UNRAVELER_LEASH† from it.
@@ -730,7 +730,7 @@ if random < min(pct, MAX_STUN_CHANCE): stunnedNextTurn = true
 ```
 if ranged and ranged_immune: avoid
 if warpShieldTurns > 0 and chance(warp effectStrength / 10): avoid
-if chance(dodge()): avoid            # dodge = 2 × effective vigor + dodge_bonus summed over equipped items, cap MAX_DODGE (D-6, D-12)
+if chance(dodge()): avoid            # dodge = 2 × effective vigor + dodge_bonus summed over equipped items, cap MAX_DODGE
 rolled = bellCurve(damage); dealt = max(1, rolled − playerDefense())
 if melee, reflectTurns > 0 and chance(reflect effectStrength / 10):
   reflected = max(1, dealt × reflectPercent%); dealt = max(1, dealt × takePercent%)
@@ -770,11 +770,11 @@ xp += amount
 if xp ≥ xpForLevel(level+1) and level < LEVEL_CAP†:
   level++; xp -= threshold; hp, aether = max
   statPoints += STAT_POINTS_PER_LEVEL; gainSP(1)
-  show the level-up dialog (stat buttons; Done may leave points unspent)   # D-1
+  show the level-up dialog (stat buttons; Done may leave points unspent)
 ```
 `xpForLevel(L)` = XP_CURVE_SCALE × L^XP_CURVE_EXPONENT, rounded to the nearest
 XP_CURVE_ROUND. One level per gainXP call. Unspent stat points stay on the Character panel
-[D] (D-1).
+[D].
 Skills are never granted by levelling.
 
 ### Skill use [D]
@@ -784,7 +784,7 @@ legal: phase 'player', not over; skill active (hotbar slot, or panelInvoke from 
        aether ≥ effectiveAetherCost; checkSkillUsage passes
 RETURN: confirm dialog → endGame(won)
 self / aoe_self: execute now; else targeting = getSkillTargets() (must be non-empty)
-         ranged: target enemy visible, in range and LOS, as for weapon shots (D-8)
+         ranged: target enemy visible, in range and LOS, as for weapon shots
 execute: melee skill out of reach → step to cheapest adjacent reachable hex, pay it
          aether -= cost; combatAlerted = true; run handler
          unless the handler returned false: spend effectiveSkillMpCost
@@ -803,7 +803,7 @@ Maw in range but blocked: once-only dialog (Unraveler alive, or open breaches �
 if no shattered and no breach: abort (no MP spent)
 restore hexes; ae += min(deficit, n); per hex RESTORE_GOLD_CHANCE† for 1 gold
 gainXP(n × RESTORE_XP_PER_HEX†); offerSettlementReward(restored hexes)
-if breach: chance(Maw ? MAW_SEAL_CHANCE† : BREACH_SEAL_CHANCE†) → closeBreach, else "failed"   # D-2
+if breach: chance(Maw ? MAW_SEAL_CHANCE† : BREACH_SEAL_CHANCE†) → closeBreach, else "failed"
 ```
 `closeBreach`: closed = true, breachesClosed++, hex → Hills, victory.breachesSealed++;
 a breach gives loot (BREACH_LOOT_GOLD range + 1-3 unowned mundane + 1 magic); the Maw drops
@@ -904,7 +904,7 @@ chance(HUT_GIFT_CHANCE): a magic item, hut unchanged; stop
 if hut.skill unknown: offer it
 else if chance(HUT_REROLL_CHANCE) and an obtainable skill exists: hut.skill = it; offer it
 else: "nothing to teach"
-Learn: learnSkill (latent unless freeAttune); mp = 0.  Leave: free (D-7).  Train: Train dialog
+Learn: learnSkill (latent unless freeAttune); mp = 0.  Leave: free.  Train: Train dialog
 ```
 
 ### Scroll pickup [D]
@@ -984,7 +984,7 @@ Bump SAVE_VERSION by 1 on any change that breaks old saves; never migrate.
 ### Victory and defeat [D]
 *Serves:* G-1. (`endGame`)
 ```
-won: RETURN confirmed (D-3).  lost: hp ≤ 0 (enemy hit, counter, or channel self-damage)
+won: RETURN confirmed.  lost: hp ≤ 0 (enemy hit, counter, or channel self-damage)
 gameOver = true; endgame overlay: turns, level, victory.breakdown(), score; New Game
 ```
 
@@ -1077,7 +1077,7 @@ whole turn.
 Every tunable number, by code name. † = inline literal with a proposed name (Q-5).
 Content-table numbers (each skill's tiers and costs, each item's stats, each fixed enemy's
 stats, effect magnitudes) stay in `SKILLS`, `WEAPONS`, `ARMORS`, the effect pools and
-`ENEMY_DEFS`. Decisions about these numbers are cited in RATIONALE.md as they are written up.
+`ENEMY_DEFS`. Decisions about these numbers, as they are written up, live in DECISIONS.md.
 
 | Name | Value | Unit | Code |
 |---|---|---|---|
@@ -1218,7 +1218,7 @@ formalized from the code]
 | dismissOverlay (click, Space, Esc) | threat overlay or world map shown | hides it | |
 | haven: Rest / Weaponsmith / Magicsmith / Train / Leave | on a haven | see Haven visit | Rest: mp = 0 |
 | village: Rest / Weaponsmith / Leave | on a village | see Village visit | Rest: mp = 0 |
-| hut: Learn / Train / Leave | on a hut, lesson offered | see Hut visit | Learn: mp = 0; Leave: free (D-7) |
+| hut: Learn / Train / Leave | on a hut, lesson offered | see Hut visit | Learn: mp = 0; Leave: free |
 | ruin: Search / Leave / Continue | on a ruin, none within RUIN_CLEAR_RADIUS† | see Ruin search | may spawn; mp = 0 |
 | shop: Buy item / Buy skill / Sell / Sell All / Done | shop open, gold ≥ price | see Shops | Done: mp = 0 |
 | train: → / ← / Done | Train open | see Train | Done: mp = 0 |
@@ -1227,7 +1227,7 @@ formalized from the code]
 | skill choice: pick | Skill Seek offer open | learnSkill (latent) | |
 | settlement reward: Accept / Decline | offer open | gold, settlementsRestored | |
 | RETURN: Return / Cancel | RETURN activated | endGame(won) | |
-| equip / unequip item (Inventory panel) | player phase only, game not over [D] (D-9); emptying the weapon slot allowed [D] (D-5). The buttons render disabled outside the player phase | swap slot ↔ inventory; clamp HP/AE | free: no MP |
+| equip / unequip item (Inventory panel) | player phase only, game not over [D]; emptying the weapon slot allowed [D]. The buttons render disabled outside the player phase | swap slot ↔ inventory; clamp HP/AE | free: no MP |
 | equip / unequip skill slot (Skills panel) | skill active | first empty slot, else the last slot | free |
 | newGame (intro New Game; HUD New Game with confirm; endgame New Game) | always | initGame | deletes save |
 | continue (intro) | saveIsCurrent | loadGame | |
@@ -1239,7 +1239,7 @@ formalized from the code]
 |---|---|---|
 | computeReachable / reachable | Map hexKey → cost | Same function the move command uses. |
 | computeAttackable / attackable | Set hexKey | Melee or ranged by held weapon. |
-| getSkillTargets(id) | Set hexKey | Per SKILL_TARGET kind. Ranged-skill enemy targets must be visible and in LOS, through the same check as weapon shots (`visibleRangedTargets`) [D] (D-8). Ranged-AoE, Phase Step and the skip skills pick visible hexes; melee kinds pick adjacent enemies. |
+| getSkillTargets(id) | Set hexKey | Per SKILL_TARGET kind. Ranged-skill enemy targets must be visible and in LOS, through the same check as weapon shots (`visibleRangedTargets`) [D]. Ranged-AoE, Phase Step and the skip skills pick visible hexes; melee kinds pick adjacent enemies. |
 | checkSkillUsage(skill) | null or reason text | Drives skill-bar dimming and blocks activation. |
 | effectiveAetherCost, effectiveSkillMpCost, skillCostLabel | numbers / label | Same functions as execution. |
 | SKILL_POWER / powerLine / skillSummary | expected single-hit score | A mirror of each handler's formula, not the handler itself [P: drift risk]. |
@@ -1255,7 +1255,7 @@ formalized from the code]
 |---|---|---|
 | log line (`logCombat(msg, cls)`) | text from `say()`; cls log-dmg, log-heal, log-info, log-gold, log-xp | Always, except garrison lines, which log only when the garrison or its target is visible. |
 | damage float | hex, amount; enemy or player colour | On the hit hex. |
-| gain float | +HP / +AE over a token | D-11. The player's rises during the player phase are totalled per stat and float once, "+N", when the turn ends; the player's rises outside that phase, and every enemy's, float when HP or AE rises between frames. |
+| gain float | +HP / +AE over a token | The player's rises during the player phase are totalled per stat and float once, "+N", when the turn ends; the player's rises outside that phase, and every enemy's, float when HP or AE rises between frames. |
 | hit flash | hex | On the hit hex. |
 | token slide | entity, from → to | Any drawn token; jumps beyond SLIDE_MAX_JUMP appear. |
 | enemy-phase pacing | animDelay per move / attack | Only for enemies visible and on screen. |
