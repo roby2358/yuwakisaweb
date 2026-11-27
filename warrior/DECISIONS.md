@@ -256,8 +256,8 @@ keeps it off shattered hexes. The other Pristine skills still work on distressed
   - 2026-11-27: decided and built, as a check in `executeSanctuary` beside the no-POI one.
 
 ### D-22 A chaos spawn at a crowded source lands on the nearest free hex — *Decided*
-A breach spawn and an Unraveler minion spawn land on the nearest free passable hex to the
-source, found by searching outward over passable hexes; ties at the same distance are broken
+Every chaos spawn (from a breach, the Maw or the Unraveler) lands on the nearest free
+passable hex to its source, found by searching outward over passable hexes; ties at the same distance are broken
 at random, the source hex is never used, and nothing spawns only when no free hex can be
 reached. Spawn chances, the might cap, the pool and homes are unchanged.
 - **Alternatives:** skip the spawn when the adjacent hexes are all taken (the previous
@@ -270,13 +270,14 @@ reached. Spawn chances, the might cap, the pool and homes are unchanged.
     helper, called by `spawnChaosAtBreaches` and `ChaosAI.tryBossSpawn` in place of their
     own adjacent-hex filters; it widens a `bfsHexes` search one step at a time. ONTOLOGY's
     chaos-spawning and Unraveler-minion rules were updated. No save shape changed.
+  - 2026-11-27: D-24 made the Maw a source and moved every spawn into `spawnChaos`, now
+    the helper's one caller; the statement was widened from breach and Unraveler spawns.
 
-### D-23 Breach spawning is one flat roll a turn at a random open breach — *Decided*
-The spawn step makes one CHAOS_SPAWN_CHANCE roll each turn; on a success one open breach is
-drawn uniformly and one enemy from the chaos pool spawns there, placed and homed as breach
-spawns were before. The might cap still stops breach spawning, and with no open breach
-nothing spawns. The Unraveler's own spawning, guardian respawn, wildlife, the pool and
-WRAITH_CAP are unchanged.
+### D-23 Chaos spawning is one flat roll a turn at a random source — *Decided*
+The spawn step makes one CHAOS_SPAWN_CHANCE roll each turn; on a success one source is
+drawn uniformly and one enemy from the chaos pool spawns there. Which sources are in the
+draw, and which of them obey the might cap, is D-24. With no source nothing spawns.
+Guardian respawn, wildlife, the pool and WRAITH_CAP are unchanged.
 - **Alternatives:** every open breach rolls its own chance each turn (the previous
   behaviour, BREACH_SPAWN_CHANCE 0.075 per breach), so the total rate falls as breaches
   close.
@@ -288,6 +289,40 @@ WRAITH_CAP are unchanged.
     sources (`chaosSpawnSources`, the open breaches), rolls once and draws one;
     CHAOS_SPAWN_CHANCE (0.5) replaced BREACH_SPAWN_CHANCE in config.js. ONTOLOGY's
     chaos-spawning rule and Numbers row, and DYNAMICS, were updated. No save shape changed.
+    As decided, the sources were the open breaches only, the might cap stopped the roll
+    outright, and the Unraveler kept its own per-turn roll.
+  - 2026-11-27: D-24 widened the sources to the Maw and the original Unraveler and moved
+    the might-cap check to after the draw; the title and statement were rewritten from
+    "Breach spawning is one flat roll a turn at a random open breach".
+
+### D-24 The Maw and the Unraveler join the chaos spawn draw — *Decided*
+The one CHAOS_SPAWN_CHANCE roll a turn draws from every open breach, the Maw until it is
+sealed (whatever has happened to the Unraveler) and the original Unraveler until its first
+death, each with equal weight, so the Maw side holds two entries while both are up. The
+Unraveler no longer rolls on its own turn, and the re-formed Unraveler is still not a
+source. Every source uses the same pool and nearest-free-hex placement; an Unraveler spawn
+searches from where it stands. A breach spawn is homed on its breach and silent; a Maw
+spawn has no home and is silent; an Unraveler spawn has no home and logs its line. The
+Unraveler ignores CHAOS_MIGHT_CAP; breaches and the Maw obey it but stay in the draw, so a
+draw that lands on one at the cap spawns nothing that turn. Guardian respawn, wildlife, the
+pool and WRAITH_CAP are unchanged.
+- **Alternatives:** the Unraveler rolling its own spawnChance each turn, apart from the
+  shared roll (the previous behaviour, 0.16 per turn, with the Maw spawning nothing); the
+  Maw as the only Maw-side source; the Unraveler as the only Maw-side source; one cap for
+  all sources; the Maw exempt from the cap too; a heavier Maw weight.
+- **Why:** designer's call: one steady rate shared by every source ends at the Maw as
+  breaches close, so the player arrives to find an army of chaos there, which the designer
+  recalls as a fun endgame; killing the Unraveler the first time starts the wind-down.
+- **Evidence:** not measured.
+- **History:**
+  - 2026-11-27: decided and built. `chaosSpawnSources` in enemy_ai.js returns each source
+    as data (where to search from, its home or none, whether it obeys the cap, its log line
+    or none) and `spawnChaos` (renamed from `spawnChaosAtBreaches`) rolls, draws and
+    spawns on one code path. `ChaosAI.tryBossSpawn`, the Unraveler def's spawnChance and
+    its 0.16 fallback were removed. The `noSpawn` flag on the re-formed Unraveler is kept
+    as saved, so SAVE_VERSION was not bumped. ONTOLOGY's chaos-spawning rule (which absorbed
+    the Unraveler-minions rule), entity tables and Numbers table, DYNAMICS and CLAUDE.md
+    were updated.
 
 ### Code structure
 

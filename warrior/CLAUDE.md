@@ -96,7 +96,7 @@ Axial coordinates `(q, r)` with pointy-top hexes. Hex objects keyed by `"q,r"` s
 
 1. **Player phase**: select → move/attack/skill via `Action` classes → auto-end on 0 MP or manual end
 2. **Enemy phase** (async, awaited via `endTurnResolve`): `runEnemyAiPhase(enemyAiCtx)` runs each enemy's AI with `animDelay` between actions
-3. **Spawn phase**: guardian respawn → one chaos spawn roll at a random open breach (`spawnChaosAtBreaches`) → wildlife pack spawn (`pickSpawnPack`) → garrisons tick → turn increment → MP reset (halved if engaged)
+3. **Spawn phase**: guardian respawn → one chaos spawn roll at a random source: an open breach, the unsealed Maw or the original Unraveler (`spawnChaos`) → wildlife pack spawn (`pickSpawnPack`) → garrisons tick → turn increment → MP reset (halved if engaged)
 
 Canvas clicks are ignored when `phase !== 'player'`.
 

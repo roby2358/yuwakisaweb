@@ -1,22 +1,62 @@
-Priority:   90
+Priority:   60
 Status: ToDo
-ID: mawsource-iwj2
-Created: 2026-11-27T19:24:31Z
-Updated: 2026-11-27T19:26:14Z
+ID: shopequip-ewf7
+Created: 2026-11-27T19:34:16Z
+Updated: 2026-11-27T19:34:16Z
 
-The Maw and the Unraveler join the chaos spawn draw.
+An Equip button sits next to Sell on each row of a smith's sell list.
 
-Goal: the Unraveler rolls its own spawnChance during its AI turn (tryBossSpawn in enemy_ai.js), separate from the one flat CHAOS_SPAWN_CHANCE roll that picks a random open breach, and the Maw itself spawns nothing. The designer wants one steady rate shared by every source, so that as breaches close it ends up at the Maw and the player arrives to find an army of chaos.
+Goal: at a Weaponsmith, Armorsmith or Magicsmith the player often wants to put on an item they are carrying (for example one just bought) without closing the shop and opening the Inventory panel. The sell list in showShopDialog (index.js) shows each carried item with only a Sell button.
 
 Settled design:
-- The spawn draw's sources are: every open breach; the Maw POI until it is sealed (not closed), whatever has happened to the Unraveler; and the original Unraveler until its first death. Each source has equal weight, so while both are up the Maw side holds two entries.
-- The reformed Unraveler (the second form after its first death) is never a source, as today. Keep the noSpawn flag or replace it with something clearer, but keep the behaviour.
-- The Unraveler no longer rolls during its own AI turn: remove tryBossSpawn's own chance roll, the Unraveler def's spawnChance (and the "?? 0.16" fallback) and the turnsSinceSpawn === 0 guard on spawning. Its conjuring happens in the spawn step when the draw lands on it. Leave turnsSinceSpawn itself alone if anything else reads it.
-- Every source uses the same pool and the same nearest-free-hex placement. A Maw spawn searches outward from the Maw hex; an Unraveler spawn searches outward from wherever the Unraveler stands.
-- Homes and log lines: a breach spawn keeps the breach as its home and is silent (as today). An Unraveler spawn has no home and logs log_unraveler_spawns (as today). A Maw spawn has no home and is silent.
-- Might cap: the Unraveler ignores CHAOS_MIGHT_CAP (as today); breaches and the Maw obey it. All sources stay in the draw at the cap; when the draw lands on a breach or the Maw while em.chaosMight() >= CHAOS_MIGHT_CAP, nothing spawns that turn.
-- Guardian respawn (including the Maw's, with its Unraveler-leash condition), wildlife spawning, the pool and WRAITH_CAP are unchanged.
-- Save shape: bump SAVE_VERSION only if a field written or read by toJSON/fromJSON is added, renamed or removed.
-- Docs: update the chaos-spawning rule, the Unraveler's behaviour and the Numbers table in ONTOLOGY.md; record the decision in DECISIONS.md dated 2026-11-27 with the alternatives (the Unraveler rolling on its own, as before; the Maw as the only Maw-side source; the Unraveler as the only Maw-side source; one cap for all sources; the Maw exempt from the cap too; a heavier Maw weight) and the reason (the steady rate ends at the Maw; the designer recalls an army of chaos at the Maw as a fun endgame; killing the Unraveler the first time starts the wind-down); fix any DYNAMICS.md and CLAUDE.md lines that describe the old rule.
+- Each item row in the sell section of showShopDialog gets an Equip button placed just before its Sell button, labelled with the existing btn_equip text. The "sell all" row gets none.
+- Clicking it equips that item exactly as the Inventory panel's Equip does: the item currently in that slot (if any) goes to the front of the inventory, the clicked item moves from the inventory into the slot, and HP and Aether are clamped to their new maximums.
+- The equip logic lives in one shared function used by both the Inventory panel's Equip button and the shop's. The Inventory panel keeps its own isPlayerTurn() check at its call site; the shop button has no such check, because the shop is a dialog (phase 'dialog') opened on the player's turn.
+- After equipping, the shop redraws the same way it does after a purchase (showShopDialog(poi, kind) plus refreshOpenPanels()), so the swapped-out item appears in the sell list if this smith deals in it, and the comparison arrows against equipped gear update.
+- The Equip button must not trigger the row's click-to-inspect handler (that handler already ignores clicks on buttons).
+- No new text key, no new numbers, no save-shape change. Equipping in the shop costs nothing.
+- Docs: update the shop description in ONTOLOGY.md (commands/interface and the shop rule, wherever the sell list is described).
 
-Done when: every test in test/ passes (for f in test/*.js; do node $f; done); the Unraveler's spawnChance and its own per-turn roll appear nowhere in the code or docs except DECISIONS.md history; the Maw and the original Unraveler are in the spawn draw, the reformed Unraveler is not, and only the Unraveler is exempt from the might cap.
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); each sell-list row has Equip then Sell; both Equip buttons call the one shared function.
+----
+Priority:   50
+Status: ToDo
+ID: spawnhome-ymac
+Created: 2026-11-27T19:35:00Z
+Updated: 2026-11-27T19:35:00Z
+
+EnemyManager.spawn takes its home hex as required arguments.
+
+Goal: em.spawn(type, q, r, homeQ, homeR) in enemies.js falls back to the spawn hex when homeQ/homeR are undefined, and several callers pass only three arguments. That is an optional parameter with an inline default, against the project's rules.
+
+Settled design: make homeQ and homeR required; every caller passes them explicitly (the spawn hex itself where it relied on the fallback). No behaviour change, no save-shape change.
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); spawn has no undefined check for the home arguments and every caller passes five arguments.
+----
+Priority:   50
+Status: ToDo
+ID: deadturns-395r
+Created: 2026-11-27T19:35:00Z
+Updated: 2026-11-27T19:35:00Z
+
+Remove the enemy field turnsSinceSpawn, which nothing reads.
+
+Goal: turnsSinceSpawn on enemy instances is set in enemies.js and incremented in runEnemyAiPhase (enemy_ai.js), but its only reader was the Unraveler's own spawn roll, which is gone. It is dead state that is still saved.
+
+Settled design: remove the field, its increments, its toJSON/fromJSON handling and its row in ONTOLOGY.md's Enemy instance table. This changes the save shape, so bump SAVE_VERSION by 1 and tell the user old saves will show "New Version".
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); turnsSinceSpawn appears nowhere in the code or ONTOLOGY.md; SAVE_VERSION is one higher.
+----
+Priority:   50
+Status: ToDo
+ID: wraithtele-vcad
+Created: 2026-11-27T19:35:00Z
+Updated: 2026-11-27T19:35:00Z
+
+The Phase Wraith's teleport chance loses its inline fallback.
+
+Goal: ChaosAI in enemy_ai.js rolls Rando.bool(def.teleportChance || 0.3). The Phase Wraith's def already sets teleportChance, so the 0.3 is an inline default that hides a missing value, against the project's fail-fast rule.
+
+Settled design: use def.teleportChance directly, with no fallback. Remove the fallback row from ONTOLOGY.md's Numbers table (or reword it if it lists other things). No behaviour change, no save-shape change.
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); no "teleportChance ||" or "teleportChance ??" remains in the code.

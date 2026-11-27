@@ -194,13 +194,13 @@ are read with `equipped(special)` (first match) and `sumEquipped(special, field)
 | q, r | int | Position. |
 | hp, maxHp | int | maxHp is the def's hp; Maw proximity adds to the effective max. |
 | homeQ, homeR | int | Spawn hex or owning breach/Maw. Guards return here. |
-| turnsSinceSpawn | int | +1 each enemy phase. |
+| turnsSinceSpawn | int | +1 each enemy phase. Nothing reads it. |
 | targetQ, targetR | int \| null | Hunt target from an alarm or a swarm. |
 | stunnedNextTurn | bool | Skips its next turn. |
 | stunRolledThisTurn | bool | One stun roll per player turn; cleared in advanceTurn. |
 | burnDamage | int | Dealt at the next enemy phase, ignoring defense, then cleared. |
 | defReduction | int | Permanent defense shred. |
-| noSpawn | bool | Set on the re-formed Unraveler; it no longer spawns minions. |
+| noSpawn | bool | Set on the re-formed Unraveler; it is not a chaos spawn source. |
 
 All fields are saved (the enemy list is saved whole).
 
@@ -222,7 +222,6 @@ are generated per run into `em.creatureDefs` (see Wildlife tiers).
 | chaosSpawned | bool | Chaos enemies: grant AE on kill, shatter terrain, get corrupted-terrain buffs, are revealed by reveal_maw. |
 | teleportRange, teleportChance | | Phase Wraith. |
 | guardRadius | int | Breach Guardian. |
-| spawnChance | number | Unraveler minion spawn chance per turn. |
 | tier, spawnWeight, color | | Wildlife only. |
 
 ### Item (template)
@@ -390,7 +389,7 @@ within POI_MIN_DIST of an earlier POI; a type that runs out of room places fewer
 | Village | shopItems = VILLAGE_STOCK mundane | Half rest, weaponsmith, crops. |
 | Ruin | ruinState 'new'; terrain → Ruins | Stir creatures, then loot. Never spent. |
 | Breach | closed false; terrain → Breach; gets a Breach Guardian and crawlers | Spawns chaos until sealed. |
-| Maw | closed false; terrain → Maw; gets the Unraveler | Final seal. |
+| Maw | closed false; terrain → Maw; gets the Unraveler | Spawns chaos until sealed. Final seal. |
 | Hut | skill dealt by SkillLibrary | Teaches optional skills; small rest, Train, first-visit SP. |
 | Scroll | skill set | Grants one skill on pickup; removed. |
 | Garrison build → Garrison | made by the Commission Garrison skill | Becomes a garrison by chance; slays chaos nearby. |
@@ -505,8 +504,8 @@ special-looking hex but hold no other prize.
 
 - **Chaos** (`ENEMY_DEFS`, all chaosSpawned): Void Stalker (chase, also ranged), Breach
   Crawler (chase, melee), Flux Archer (kite, ranged), Phase Wraith (teleport), Breach
-  Guardian (guard, melee and ranged), The Unraveler (boss, melee and ranged, spawns
-  minions). Stats in the table.
+  Guardian (guard, melee and ranged), The Unraveler (boss, melee and ranged, a chaos
+  spawn source until its first death). Stats in the table.
 - **Wildlife tiers** (`generateCreatureTypes`, per run): NUM_CREATURE_TIERS tiers. Tier i
   has attack = round(CREATURE_ATTACK_BASE × 10^(i / CREATURE_ATTACK_SPAN)) and a pair of
   creatures sharing speed 1, detect range (min(CREATURE_DETECT_MAX, CREATURE_DETECT_BASE +
@@ -601,7 +600,7 @@ for enemy in copy(enemies) until gameOver:
   turnsSinceSpawn++; if stunnedNextTurn: clear it, skip
   aiFor(def.behavior).takeTurn(enemy)
 warpShieldTurns--, reflectTurns-- (floor 0)
-respawnGuardians(); spawnChaosAtBreaches(); spawnWildlife(); tickGarrisons(); advanceTurn()
+respawnGuardians(); spawnChaos(); spawnWildlife(); tickGarrisons(); advanceTurn()
 ```
 
 ### Advance turn and engagement [D]
@@ -843,18 +842,29 @@ for each unsealed breach or Maw:
     guardianDefeated = false
 ```
 
-### Chaos spawning at breaches [D]
-*Serves:* "Escalating Commitment". (`spawnChaosAtBreaches`)
+### Chaos spawning [D]
+*Serves:* "Escalating Commitment". (`spawnChaos`, `chaosSpawnSources`)
 ```
-if em.chaosMight() ≥ CHAOS_MIGHT_CAP: none
-sources = the open breaches; none → none
+sources = every open breach
+        + the Maw while unsealed (whatever has happened to the Unraveler)
+        + the Unraveler unless noSpawn (the original, until its first death)
+none → none
 once a turn: chance(CHAOS_SPAWN_CHANCE) →
   source = uniform draw from sources
+  breach or Maw, and em.chaosMight() ≥ CHAOS_MIGHT_CAP: none
   pool = CHAOS_SPAWN_POOL (drop the wraith when wraiths ≥ WRAITH_CAP)
-  one pool enemy on nearestFreeHex(source), homed on the source
+  one pool enemy on nearestFreeHex(source)
+  home: the breach for a breach spawn; its own spawn hex for a Maw or Unraveler spawn
+  Unraveler spawn: log log_unraveler_spawns (breach and Maw spawns are silent)
 ```
 The one roll covers the whole map, so the spawn rate stays the same as breaches are sealed
-and falls on fewer sources.
+and falls on fewer sources, ending at the Maw. Every source has equal weight; while the
+original Unraveler lives, it and the Maw are two entries. The Unraveler searches outward
+from wherever it stands and ignores the might cap; a breach or the Maw stays in the draw at
+the cap, and a draw that lands on one then spawns nothing that turn. The Unraveler leaves the
+draw at its first death, whether or not it re-forms; the Maw carries on as a capped source
+until it is sealed, so with every breach sealed and the Unraveler slain once, every
+successful roll lands on the Maw. Once the Maw is sealed there are no sources.
 `nearestFreeHex(source)`: search outward from the source over passable hexes, a step at a
 time, walking through occupied ones; take a random hex among the nearest free ones (passable
 and unoccupied), never the source itself. A crowded source spawns further out; if no free hex
@@ -877,12 +887,6 @@ pack: type = weighted(spawnTierWeights(creatureDefs, mawDistancePeak(hex)))
 passable hexes farther than INITIAL_SAFE_DISTANCE from the player; the Unraveler on the
 Maw; a Breach Guardian on each breach plus BREACH_CRAWLERS crawlers within
 BREACH_CRAWLER_RADIUS.
-
-### Unraveler minions [D]
-```
-boss, not noSpawn, turnsSinceSpawn > 0, chance(def.spawnChance):
-  one CHAOS_SPAWN_POOL enemy (wraith dropped at WRAITH_CAP) on nearestFreeHex(Unraveler)
-```
 
 ### Ruin search [D]
 *Serves:* "Living map", "Windfall". (`tryRuinInteraction`, `spawnRuinCreatures`)
@@ -1075,7 +1079,7 @@ if in aggro: alarm
 move: not guard, not aggro → hunt target or swarm; else up to speed steps by behavior
 attack: kite fires with chance KITE_FIRE_CHANCE if it has a shot;
         others melee if adjacent, else guard/boss/prefersRanged fire if they have a shot
-then: boss minion spawn; terrain shatter
+then: terrain shatter
 ```
 Step by behavior: **guard** returns home beyond guardRadius, else steps toward the player
 only while staying within guardRadius; **kite** backs off under KITE_MIN_DIST, closes
@@ -1196,7 +1200,7 @@ stats, effect magnitudes) stay in `SKILLS`, `WEAPONS`, `ARMORS`, the effect pool
 | SPAWN_SAFE_DISTANCE / PACK_RADIUS | 6 / 2 | hexes | config.js; used in enemies.js |
 | INITIAL_STALKERS / INITIAL_ARCHERS / INITIAL_SAFE_DISTANCE | 2d4 / 1d3 / 5 | | config.js; used in enemies.spawnInitial |
 | BREACH_CRAWLERS / BREACH_CRAWLER_RADIUS | 1-2 / 2 | | config.js; used in enemies.spawnInitial |
-| CHAOS_MIGHT_CAP / CHAOS_SPAWN_CHANCE | 500 / 0.5 | attack sum / one roll per turn | config.js; used in enemy_ai.spawnChaosAtBreaches |
+| CHAOS_MIGHT_CAP / CHAOS_SPAWN_CHANCE | 500 / 0.5 | attack sum / one roll per turn | config.js; used in enemy_ai.spawnChaos |
 | CHAOS_SPAWN_POOL | stalker ×3, archer ×2, crawler ×1, wraith ×1 | repeats in a uniform draw | config.js; used in enemy_ai.chaosSpawnPool |
 | WRAITH_CAP | 10 | wraiths | config.js; used in enemy_ai.js |
 | GUARDIAN_RESPAWN_CHANCE / GUARDIAN_PRESENCE_RADIUS | 0.3 / 3 | per turn / hexes | config.js; used in enemy_ai.respawnGuardians |
@@ -1209,7 +1213,7 @@ stats, effect magnitudes) stay in `SKILLS`, `WEAPONS`, `ARMORS`, the effect pool
 | CHASER_RANGED_PREFERENCE / KITE_FIRE_CHANCE | 0.5 / 0.5 | | config.js; used in enemy_ai.js |
 | KITE_MIN_DIST / KITE_MAX_DIST | 2 / 3 | hexes | config.js; used in ChaosAI.moveEnemyStep |
 | SWARM_ALLIES / SWARM_RADIUS / SWARM_WEIGHTS | 5 / 3 / 20, 10, 5, 5 | | config.js; used in ChaosAI swarm |
-| teleportChance fallback / spawnChance fallback | 0.3 / 0.16 | used when the def omits the field | enemy_ai.js ChaosAI |
+| teleportChance fallback | 0.3 | used when the def omits the field | enemy_ai.js ChaosAI |
 | enemy animation delays | 80 move / 100 teleport / 150 attack | ms | enemy_ai.js (`ctx.animDelay` calls) |
 | SLIDE_MS / FLOAT_MS | 90 / 420 | ms | fx.js |
 | HIT_FLASH_MS | 100 | ms | index.js |

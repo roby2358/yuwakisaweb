@@ -343,7 +343,6 @@ class ChaosAI extends EnemyAI {
         const attacked = this.enemyAttacks(enemy, def, prefersRanged, newDist, ctx);
         if (attacked) { await ctx.animDelay(150); ctx.render(); }
 
-        this.tryBossSpawn(enemy, def, occupied, ctx);
         this.tryTerrainShatter(enemy, def, ctx);
     }
 
@@ -445,23 +444,6 @@ class ChaosAI extends EnemyAI {
             }
         }
         return false;
-    }
-
-    tryBossSpawn(enemy, def, occupied, ctx) {
-        if (def.behavior !== 'boss') return;
-        if (enemy.noSpawn) return;
-        if (enemy.turnsSinceSpawn === 0) return;
-        if (!Rando.bool(def.spawnChance ?? 0.16)) return;
-        const { em, world, logCombat } = ctx;
-        const spot = nearestFreeHex(enemy.q, enemy.r, occupied, world);
-        if (!spot) return;
-        const wraithCount = em.enemies.filter(e => e.type === ENEMY_TYPE.PHASE_WRAITH).length;
-        const spawnType = Rando.choice(chaosSpawnPool(wraithCount));
-        const spawned = em.spawn(spawnType, spot.q, spot.r);
-        if (spawned) {
-            occupied.add(hexKey(spot.q, spot.r));
-            logCombat(say('log_unraveler_spawns', { name: em.getDef(spawnType).name }), 'log-info');
-        }
     }
 
     tryTerrainShatter(enemy, def, ctx) {
@@ -582,9 +564,10 @@ function tickBurns(ctx) {
     }
 }
 
-// What a breach or the Unraveler may spawn: CHAOS_SPAWN_POOL, minus the wraith
-// once WRAITH_CAP of them are on the map.
-function chaosSpawnPool(wraithCount) {
+// What a chaos source may spawn: CHAOS_SPAWN_POOL, minus the wraith once WRAITH_CAP
+// of them are on the map.
+function chaosSpawnPool(em) {
+    const wraithCount = em.enemies.filter(e => e.type === ENEMY_TYPE.PHASE_WRAITH).length;
     return wraithCount >= WRAITH_CAP
         ? CHAOS_SPAWN_POOL.filter(t => t !== ENEMY_TYPE.PHASE_WRAITH)
         : CHAOS_SPAWN_POOL;
@@ -630,25 +613,41 @@ function respawnGuardians(occupied, ctx) {
     }
 }
 
-// The places a turn's chaos spawn can come from: the open breaches.
-function chaosSpawnSources(world) {
-    return world.pois.filter(poi => poi.type === POI.BREACH && !poi.closed);
+// The places a turn's chaos spawn can come from, each with equal weight: every open
+// breach, the Maw until it is sealed, and the original Unraveler (the re-formed one,
+// noSpawn, is not a source). A source says where the search for a free hex starts
+// (q, r), the home its spawn gets given the hex it lands on (homeOf: the breach, or
+// that hex itself for no home), whether it stops at CHAOS_MIGHT_CAP (capped) and the
+// log line its spawn prints (logKey, null: silent).
+function chaosSpawnSources(world, em) {
+    const breaches = world.pois
+        .filter(poi => poi.type === POI.BREACH && !poi.closed)
+        .map(poi => ({ q: poi.q, r: poi.r, homeOf: () => poi, capped: true, logKey: null }));
+    const maws = world.pois
+        .filter(poi => poi.type === POI.MAW && !poi.closed)
+        .map(poi => ({ q: poi.q, r: poi.r, homeOf: spot => spot, capped: true, logKey: null }));
+    const unravelers = em.enemies
+        .filter(e => e.type === ENEMY_TYPE.UNRAVELER && !e.noSpawn)
+        .map(e => ({ q: e.q, r: e.r, homeOf: spot => spot, capped: false, logKey: 'log_unraveler_spawns' }));
+    return [...breaches, ...maws, ...unravelers];
 }
 
 // One roll a turn; a success spawns one pool enemy at one source drawn uniformly.
-function spawnChaosAtBreaches(occupied, ctx) {
-    const { world, em } = ctx;
-    if (em.chaosMight() >= CHAOS_MIGHT_CAP) return;
-    const sources = chaosSpawnSources(world);
+// Capped sources stay in the draw at CHAOS_MIGHT_CAP: landing on one then spawns nothing.
+function spawnChaos(occupied, ctx) {
+    const { world, em, logCombat } = ctx;
+    const sources = chaosSpawnSources(world, em);
     if (sources.length === 0) return;
     if (!Rando.bool(CHAOS_SPAWN_CHANCE)) return;
     const source = Rando.choice(sources);
+    if (source.capped && em.chaosMight() >= CHAOS_MIGHT_CAP) return;
     const spot = nearestFreeHex(source.q, source.r, occupied, world);
     if (!spot) return;
-    const wraiths = em.enemies.filter(e => e.type === ENEMY_TYPE.PHASE_WRAITH).length;
-    const type = Rando.choice(chaosSpawnPool(wraiths));
-    em.spawn(type, spot.q, spot.r, source.q, source.r);
+    const type = Rando.choice(chaosSpawnPool(em));
+    const home = source.homeOf(spot);
+    em.spawn(type, spot.q, spot.r, home.q, home.r);
     occupied.add(hexKey(spot.q, spot.r));
+    if (source.logKey) logCombat(say(source.logKey, { name: em.getDef(type).name }), 'log-info');
 }
 
 async function runEnemyAiPhase(ctx) {
@@ -677,7 +676,7 @@ async function runEnemyAiPhase(ctx) {
     if (ctx.player.reflectTurns > 0) ctx.player.reflectTurns--;
 
     respawnGuardians(occupied, ctx);
-    spawnChaosAtBreaches(occupied, ctx);
+    spawnChaos(occupied, ctx);
 
     // Wildlife population maintenance
     ctx.em.spawnWildlife(ctx.world, ctx.player.q, ctx.player.r,
