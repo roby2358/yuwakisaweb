@@ -135,8 +135,8 @@ Canvas clicks are ignored when `phase !== 'player'`.
 
 ## Design Documents
 
-- `ONTOLOGY.md` — Implementation reference: purpose and goals, entities, invariants, rules as pseudocode, numbers, commands and events; tagged [D]/[P]/[T]. Code wins where they disagree
-- `DECISIONS.md` — Decisions with their reasoning, alternatives and dated history; records of other changes; open questions. Not needed to implement the game
+- `ONTOLOGY.md` — Implementation reference: purpose and goals, entities, invariants, rules as pseudocode, numbers, commands and events, open questions (Q-n); tagged [D]/[P]/[T]. Code wins where they disagree
+- `DECISIONS.md` — Decisions with their reasoning, alternatives and dated history; records of other changes. Not needed to implement the game
 - `DYNAMICS.md` — Game design philosophy, key drivers, strategy analysis
 - `docs/` — `ASPIRATIONS.md`, `RUST_WASM.md` (forward-looking notes)
 - `md/` — design brainstorms: `MAGIC_ITEMS.md`, `PRIME_GOALS.md`, `QUEST_BRAINSTORM.md`

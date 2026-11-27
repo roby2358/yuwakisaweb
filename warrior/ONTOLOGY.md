@@ -7,7 +7,7 @@ is the source of truth: where this doc and the code disagree, the code wins and 
 gets fixed. Content tables (each skill, each item, each fixed enemy) stay in
 `config.js` and `enemies.js`; this doc describes their templates and names the table.
 The design story (theme, drivers, strategies) lives in `DYNAMICS.md`; decisions, their
-reasoning and history, and the open questions (`Q-n`) live in `DECISIONS.md`.
+reasoning and history live in `DECISIONS.md`. Open questions (`Q-n`) are the last section here.
 
 **Tags.** **[D]** decided by the designer (shipped behaviour the user designed).
 **[P]** proposed or inferred by Claude, pending review. **[T]** tunable number; its value
@@ -1273,3 +1273,53 @@ formalized from the code]
 - The UI layer in `index.js` reads and writes game state directly; there is no boundary
   between rules and UI there. [P: observed]
 - Motion is visual only and never blocks input or the turn.
+
+---
+
+## Open questions
+
+Not yet settled. Recommendations are Claude's. A settled question leaves this list.
+
+### Q-1 Inert or half-wired gear effects
+ranged_defense, displacement_immune, high_def_mp_penalty's defBonus, riposte's
+riposteDamage, and Warding's skill-damage reduction exist in data or code but do nothing (or
+only part of what they say). Filed as a tracker idea for discussion.
+- **Options:** wire each one up; remove each one; mix per effect.
+- **Recommendation:** decide per effect; wire the ones whose text players see on items, drop
+  the rest.
+
+### Q-3 counter_mastery fires only against chaos melee
+Wildlife melee does not trigger it. Filed as a tracker idea for discussion.
+- **Options:** extend it to all melee attackers; keep it chaos-only and say so in its text.
+- **Recommendation:** extend it to all melee, unless chaos-only is meant as flavour.
+
+### Q-4 Map validation keeps an invalid map after MAP_ATTEMPTS
+If every attempt fails the stricter check, the last map is kept anyway.
+- **Options:** keep as is; keep retrying until valid; relax the check on later attempts.
+- **Recommendation:** relax the check on later attempts so a run never starts on a failed map.
+
+### Q-5 Inline literals have no constant names
+Many tunables (marked † in ONTOLOGY) are inline literals.
+- **Options:** name them as constants in config.js; leave them inline.
+- **Recommendation:** name them, using the proposed names in ONTOLOGY's Numbers table.
+
+### Q-10 Enemies sense the player through fog by distance alone
+Aggro uses hex distance with no fog or LOS check.
+- **Options:** keep distance-only sensing; require LOS (or forest stealth rules) to notice.
+- **Recommendation:** keep it unless playtests show it feels unfair; it keeps pressure up.
+
+### Q-14 No seeded randomness
+All randomness goes through `Rando`, which draws from an unseeded `Math.random`.
+- **Options:** add a seed to Rando; keep unseeded.
+- **Recommendation:** keep unseeded for now (a non-goal); a seed becomes worth it if a headless
+  sim or tests need reproducible runs.
+
+### Q-15 Chaos drops may duplicate owned mundane items
+Crawlers and guardians drop random mundane items whether owned or not.
+- **Options:** keep; prefer unowned items as breach loot does.
+- **Recommendation:** prefer unowned items, falling back to owned when none remain.
+
+### Q-17 SKILL_POWER previews mirror the handlers' formulas
+Skill-power previews recompute the formulas instead of calling the handlers' code.
+- **Options:** keep the mirror; factor shared formula functions both call.
+- **Recommendation:** factor shared functions so the preview is the rule.

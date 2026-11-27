@@ -2,10 +2,9 @@
 
 ONTOLOGY.md describes what is. This file records what we decided, why, and how it changed:
 each decision with the alternatives considered, the reasoning and evidence, and a dated
-history of the code changes behind it, plus records of other changes, the questions still
-open, and what was deliberately left out. Nobody needs this file or its IDs to understand or
-implement the game; they are for reconstructing history. Decisions are `D-n`, open questions
-`Q-n`; IDs are stable and never reused. History entries are dated.
+history of the code changes behind it, plus records of other changes and what was deliberately left out. Nobody needs this file or its IDs to understand or
+implement the game; they are for reconstructing history. Decisions are `D-n`; the open questions
+(`Q-n`) live in ONTOLOGY.md until a decision settles them. IDs are stable and never reused. History entries are dated.
 
 ---
 
@@ -192,6 +191,11 @@ The decisions file (RATIONALE.md) and the dated log (ARCHITECTURE_LOG.md) became
 file. Each log entry about a decision now sits in that decision's History; the rest are here.
 ONTOLOGY.md no longer cites D IDs.
 
+### 2026-11-27 — Open questions moved to ONTOLOGY.md
+
+The open questions (Q-n) are unsettled current state, not history, so they moved to the end
+of ONTOLOGY.md. A settled question leaves that list and becomes a decision here.
+
 ### 2026-11-26 — Conversion questions ruled on
 
 The designer ruled on the open questions from the conversion entry below. The ones that
@@ -326,7 +330,7 @@ literal, proposed name).
     are sprites from sprite sheets, not letter labels.
 
 **Open questions raised by the conversion** (IDs are stable; the open ones now live in
-DECISIONS.md under Open questions, and the 2026-11-26 rulings entry above records which
+ONTOLOGY.md under Open questions, and the 2026-11-26 rulings entry above records which
 became decisions)
 - Q-1 Inert or half-wired effects: ranged_defense, displacement_immune,
   high_def_mp_penalty's defBonus, riposte's riposteDamage, Warding skill-damage reduction.
@@ -349,56 +353,6 @@ became decisions)
 - Q-16 Hut Leave ends the turn; haven and village Leave do not.
 - Q-17 SKILL_POWER previews mirror the handlers' formulas instead of calling them.
 - Q-18 The Inventory panel allows equipping during the enemy phase.
-
----
-
-## Open questions
-
-Recommendations are Claude's.
-
-### Q-1 Inert or half-wired gear effects
-ranged_defense, displacement_immune, high_def_mp_penalty's defBonus, riposte's
-riposteDamage, and Warding's skill-damage reduction exist in data or code but do nothing (or
-only part of what they say). Filed as a tracker idea for discussion.
-- **Options:** wire each one up; remove each one; mix per effect.
-- **Recommendation:** decide per effect; wire the ones whose text players see on items, drop
-  the rest.
-
-### Q-3 counter_mastery fires only against chaos melee
-Wildlife melee does not trigger it. Filed as a tracker idea for discussion.
-- **Options:** extend it to all melee attackers; keep it chaos-only and say so in its text.
-- **Recommendation:** extend it to all melee, unless chaos-only is meant as flavour.
-
-### Q-4 Map validation keeps an invalid map after MAP_ATTEMPTS
-If every attempt fails the stricter check, the last map is kept anyway.
-- **Options:** keep as is; keep retrying until valid; relax the check on later attempts.
-- **Recommendation:** relax the check on later attempts so a run never starts on a failed map.
-
-### Q-5 Inline literals have no constant names
-Many tunables (marked † in ONTOLOGY) are inline literals.
-- **Options:** name them as constants in config.js; leave them inline.
-- **Recommendation:** name them, using the proposed names in ONTOLOGY's Numbers table.
-
-### Q-10 Enemies sense the player through fog by distance alone
-Aggro uses hex distance with no fog or LOS check.
-- **Options:** keep distance-only sensing; require LOS (or forest stealth rules) to notice.
-- **Recommendation:** keep it unless playtests show it feels unfair; it keeps pressure up.
-
-### Q-14 No seeded randomness
-All randomness goes through `Rando` (D-13), which draws from an unseeded `Math.random`.
-- **Options:** add a seed to Rando; keep unseeded.
-- **Recommendation:** keep unseeded for now (a non-goal); a seed becomes worth it if a headless
-  sim or tests need reproducible runs.
-
-### Q-15 Chaos drops may duplicate owned mundane items
-Crawlers and guardians drop random mundane items whether owned or not.
-- **Options:** keep; prefer unowned items as breach loot does.
-- **Recommendation:** prefer unowned items, falling back to owned when none remain.
-
-### Q-17 SKILL_POWER previews mirror the handlers' formulas
-Skill-power previews recompute the formulas instead of calling the handlers' code.
-- **Options:** keep the mirror; factor shared formula functions both call.
-- **Recommendation:** factor shared functions so the preview is the rule.
 
 ---
 
