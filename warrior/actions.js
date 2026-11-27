@@ -86,6 +86,12 @@ function matchedWeaponDamage(player, skill) {
     return skillWeaponMatches(player, skill) ? player.weapon().damage : 1;
 }
 
+// Dimensional Rend's full HP cost at the rank-resolved skill `e`. The handler and
+// the preview in index.js both read it here.
+function rendHpCost(e) {
+    return e.effectStrength - REND_HP_COST_OFFSET;
+}
+
 // One formula per skill with a damage or heal number, keyed by skill id: the
 // pre-roll amount of a SINGLE hit on ONE target, from the rank-resolved skill
 // `e`, the player's stats `s` and `w`, the matched weapon damage (see
@@ -1097,15 +1103,16 @@ function executeDimensionalRend(action) {
     const { player, em, logCombat } = action.ctx;
     const enemy = em.enemyAt(action.targetQ, action.targetR);
     if (!enemy) return;
-    const hpCost = action.skill.effectStrength - 4;
-    const tooLow = player.hp <= hpCost;
-    player.hp -= hpCost;
-    logCombat(say('log_rend_cost', { n: hpCost }), 'log-dmg');
-    if (tooLow) {
-        logCombat(say('log_rend_fizzle', {}), 'log-info');
-        return;
-    }
-    new WeaponStrike(action, action.baseAmount(), say('src_dimensional_rend', {}), 'other').apply(enemy);
+    // Never below 1 HP: a player short of the full cost pays down to 1 HP and the
+    // whole strike scales by the share paid. checkSkillUsage blocks the cast at 1 HP.
+    const hpCost = rendHpCost(action.skill);
+    const paid = Math.min(hpCost, player.hp - 1);
+    if (paid <= 0) return false;
+    player.hp -= paid;
+    logCombat(say('log_rend_cost', { n: paid }), 'log-dmg');
+    const share = paid / hpCost;
+    if (share < 1) logCombat(say('log_rend_weakened', { pct: Math.round(100 * share) }), 'log-info');
+    new WeaponStrike(action, Math.round(action.baseAmount() * share), say('src_dimensional_rend', {}), 'other').apply(enemy);
 }
 
 function executeExecute(action) {

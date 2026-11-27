@@ -321,7 +321,7 @@ In the tables, **AE** is the Aether cost (aether_discount passives lower it), **
 | Gravity Well | 3 | 1 | AoE Self (5 → 7) | — | Anytime | 6 | Pull enemies in range one hex closer. |
 | Shredding Blow | 2 | all | Melee | Might | Anytime | 6 | weapon + Might. Permanently shred 3 → 7 enemy defense. |
 | Meteor | 4 | all | Ranged AoE (4 → 6) | Warding | Anytime | 6 | Target hex: 8 → 16 + Warding to all enemies within 1 → 2 of it. |
-| Dimensional Rend | 0 (1 → 11 HP) | all | Melee | Vigor | Anytime | 8 | (weapon × 1 → × 3) + Vigor, paid in HP; if your HP is no higher than the cost, the HP is still paid and the strike fizzles. |
+| Dimensional Rend | 0 (1 → 11 HP) | all | Melee | Vigor | Anytime | 8 | (weapon × 1 → × 3) + Vigor, paid in HP. It never takes you below 1 HP: unless your HP is above the full cost you pay down to 1 HP and the whole strike is scaled by the share you paid; at 1 HP it cannot be cast. |
 | Execute | 3 | all | Melee | Might | Anytime | 8 | (weapon + Might) × 2 → × 5. Only targets enemies below 50% HP. |
 | Ricochet | 3 | all | Ranged (4) | Reflex | Anytime | 8 | 5 + Reflex, bouncing to 2 → 5 more enemies within 3 → 5 hexes. |
 | Starfall | 5 | all | AoE Self (3 → 4) | Warding | Anytime | 10 | 15 → 28 + Warding × 2 to all enemies in range. |

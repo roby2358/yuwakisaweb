@@ -546,6 +546,26 @@ Tuning: don't overpopulate ranged on a single map — they're a counter to slow 
 ----
 Priority:   50
 Status: Done
+ID: rendscale-uxx4
+Created: 2026-11-27T23:06:06Z
+Updated: 2026-11-27T23:54:44Z
+
+Dimensional Rend never drops the player below 1 HP: a player short of the full HP cost pays what they have and strikes at proportionally reduced strength, and at 1 HP the skill cannot be cast.
+
+Goal: executeDimensionalRend (actions.js) takes the HP cost (skill.effectStrength - 4) even when the player's HP is no higher than the cost, then fizzles. So the skill can put the player at 0 HP or below and do nothing for it.
+
+Settled design:
+- Full cost affordable (HP greater than the cost): unchanged. Pay the cost, strike for action.baseAmount().
+- Short (HP above 1 but not above the cost): pay HP - 1, ending at exactly 1 HP, and strike for baseAmount() scaled by paid / cost, rounded. The whole strike is scaled, weapon part and Vigor part together; the usual minimum of 1 damage still applies. Log the HP paid as now, plus a line saying the strike was weakened (new text entry in text.js).
+- At 1 HP: the skill cannot be cast at all. Block it up front through the same can-use check and reason text other unusable skills use (button disabled, reason shown), so no MP, turn or cooldown is spent. With that in place the fizzle branch and log_rend_fizzle are dead; remove them.
+- The skill's preview (skillSummary / SKILL_POWER in index.js, pow_dimensional_rend) keeps showing the full-strength numbers and full cost; it does not change with current HP. SKILL_FORMULAS.dimensional_rend stays the full-strength formula; the scaling is applied in the handler.
+- Nothing saved changes; do not bump SAVE_VERSION.
+- Docs: update the Dimensional Rend row in DYNAMICS.md and the skill-use rule in ONTOLOGY.md, and add a DECISIONS.md entry (alternatives: fizzle with no cost; scale only the weapon part; a preview that follows current HP).
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); no path in executeDimensionalRend leaves the player below 1 HP; log_rend_fizzle is gone; SAVE_VERSION is unchanged.
+----
+Priority:   50
+Status: Done
 ID: rangeddef-f8s9
 Created: 2026-11-27T22:41:10Z
 Updated: 2026-11-27T23:50:06Z

@@ -10,7 +10,7 @@ Warrior is a single-player tactical hex RPG. Canvas rendering, plain `<script>` 
 
 No build or install step, and no server: double-click `index.html` (it must run from `file://`).
 
-Checks (Node, DOM-free): `node test/scripts.js` (the script includes load as one shared scope, no duplicate top-level names), `node test/fx.js`, `node test/skilllibrary.js` (skill-group dealing), `node test/text.js` (the text table's shape and fail-fast helper), `node test/creatures.js` (each wildlife tier's melee/ranged pair and the ranged spawn share) and `node test/skillformulas.js` (the shared skill formulas and the previews cover the same skills).
+Checks (Node, DOM-free): `node test/scripts.js` (the script includes load as one shared scope, no duplicate top-level names), `node test/fx.js`, `node test/skilllibrary.js` (skill-group dealing), `node test/text.js` (the text table's shape and fail-fast helper), `node test/creatures.js` (each wildlife tier's melee/ranged pair and the ranged spawn share), `node test/skillformulas.js` (the shared skill formulas and the previews cover the same skills) and `node test/rend.js` (Dimensional Rend's HP cost never leaves the player below 1 HP and scales a short-paid strike).
 
 ### Plain scripts, not modules
 

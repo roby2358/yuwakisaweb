@@ -462,6 +462,42 @@ least 1 damage. The bonus sizes stay 2 and 4.
     and defensive mechanics, were updated. md/MAGIC_ITEMS.md listed the two ranged_defense
     rows under ranged_immune's name and verbs; they now carry their own.
 
+### D-31 Dimensional Rend never takes the player below 1 HP — *Decided*
+Dimensional Rend's HP cost is effectStrength − REND_HP_COST_OFFSET. A player with more HP
+than the cost pays it and strikes at full strength, as before. A player whose HP is no
+higher than the cost pays all but 1 HP and the
+whole strike, weapon part and Vigor part together, is scaled by paid / cost and rounded;
+the usual minimum of 1 damage still applies, and a log line says the strike was weakened.
+Flat equipment bonus damage (Breach Jewel, Aether Signet, Chaos Attune) is not part of the
+formula amount and is added unscaled.
+At 1 HP the skill cannot be cast: its button is disabled with a reason, like any other
+unusable skill, so no MP or turn is spent. The preview keeps showing the full cost and the
+full-strength numbers whatever the player's HP.
+- **Alternatives:** fizzle with no cost when HP is too low; scale only the weapon part and
+  keep the Vigor part whole; a preview that follows current HP.
+- **Why:** the old rule took the full cost from a player who could not afford it and then
+  did nothing, so the skill could kill its caster for no effect. Paying what you have for a
+  proportional strike keeps the skill usable at low HP without making the last HP free
+  damage. Scaling the whole strike keeps one rule (the share paid is the share dealt). A
+  fixed preview matches every other skill's preview, which describes the skill and not the
+  moment.
+- **Evidence:** not measured.
+- **History:**
+  - 2026-11-27: decided and built. `executeDimensionalRend` in actions.js pays
+    min(cost, HP − 1) and scales `baseAmount()` when short; `SKILL_FORMULAS.dimensional_rend`
+    stays the full-strength formula. `checkSkillUsage` in index.js blocks the skill at
+    1 HP or less; the handler also returns false there, spending nothing, should a caller
+    skip that check. text.js gained `why_rend_hp` and `log_rend_weakened` and lost
+    `log_rend_fizzle` with the fizzle branch. Nothing saved changed, so SAVE_VERSION was
+    not bumped. ONTOLOGY's skill usage and cost rules and DYNAMICS's Dimensional Rend row
+    were updated. `node test/rend.js` casts the skill at every rank and HP from 1 to past
+    the cost.
+  - 2026-11-27: design-doc review. The cost's inline 4, written once in the handler and
+    once in the preview, became REND_HP_COST_OFFSET in config.js, read through
+    `rendHpCost` in actions.js by the handler, the preview and the test; no value or
+    behaviour change. ONTOLOGY gained the constant's Numbers row, the handler's rule under
+    Skill use and a never-below-1-HP invariant.
+
 ### Code structure
 
 ### D-17 Inline tunables get constant names — *Decided*

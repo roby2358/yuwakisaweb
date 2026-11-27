@@ -308,6 +308,7 @@ with its label (`Victory.LABELS`) and points.
 - `sp ≤ maxSP`. `0 ≤ hp ≤ maxHP()` and `0 ≤ aether ≤ maxAether()` after any equip,
   stat or heal change (each clamps). [D]
 - `player.level ≤ LEVEL_CAP`. [D]
+- Dimensional Rend never leaves the player below 1 HP. [D]
 - No two enemies share a hex; no enemy stands on the player's hex. Enemies never walk into
   havens, villages or garrisons, except a swarm whose explicit goal is that hex. A Phase
   Wraith teleport excludes havens and villages only. [D]
@@ -422,11 +423,17 @@ special-looking hex but hold no other prize.
 - **Usage.** anytime: no limit. non_combat: no enemy within SKILL_SAFE_RADIUS. pristine:
   non_combat and the player's hex is not shattered. Phase Step and Sprint are once per
   turn; Dodge cannot be cast while its bonus is active, which makes it once per turn too.
+  Dimensional Rend cannot be cast at 1 HP or less. A blocked skill's button is disabled
+  and shows the reason; nothing is spent.
 - **Costs.** Aether: `effectiveAetherCost` = max(0, cost − Σ aether_discount). MP:
   `skillMpCost` = mpCost or 'all'; 'half' spends floor(current MP / DODGE_MP_DIVISOR),
   which can be 0; a weapon-class skill with a matching held weapon pays
   max(skill MP, weapon MP) (`effectiveSkillMpCost`). Some skills cost gold (goldCost) or
   HP (Dimensional Rend) instead of or as well as Aether.
+- **Dimensional Rend's HP cost.** The full cost is `rendHpCost` = effectStrength −
+  REND_HP_COST_OFFSET. A player whose HP is not above it pays down to 1 HP and strikes at
+  the share paid (see Skill use). The skill's preview always shows the full cost and the
+  full-strength numbers, whatever the player's HP.
 - **Weapon flow.** weaponClass melee/ranged with a matching held weapon: the skill uses the
   weapon's damage, affixes, and (ranged) the weapon's effective range. Mismatch or
   'direct': unarmed damage (1), no affixes, the skill's own range.
@@ -814,6 +821,18 @@ execute: melee skill out of reach → step to cheapest adjacent reachable hex, p
 A handler that aborts may refund the Aether (Recall with no haven, Sanctuary or Garrison on
 a bad hex, Haven's Light away from a settlement).
 
+Dimensional Rend's handler (`executeDimensionalRend`) pays HP and scales its strike by the
+share of the cost paid:
+```
+cost = rendHpCost(skill); paid = min(cost, hp − 1)
+if paid ≤ 0: return false                 # at 1 HP; checkSkillUsage blocks this cast first
+hp -= paid; log the HP paid; if paid < cost: log that the strike is weakened
+strike base = round(SKILL_FORMULAS.dimensional_rend × paid / cost)   # weapon and Vigor parts together
+```
+The scaled base then goes through the strike pipeline as any melee skill's does, so the
+flat equipment bonuses (breach_jewel, aether_signet, chaos_attune) are added unscaled and
+each hit still deals at least 1.
+
 ### Restore and sealing [D]
 *Serves:* G-1, G-4. (`executeRestore`)
 ```
@@ -1173,6 +1192,7 @@ stats, effect magnitudes) stay in `SKILLS`, `WEAPONS`, `ARMORS`, the effect pool
 | MAX_DODGE | 90 | % | config.js |
 | Dodge skill bonus by rank | 20 / 30 / 40 / 50 / 60 | % dodge | config.js (`SKILLS.dodge.tiers`) |
 | DODGE_MP_DIVISOR | 2 | | config.js; a 'half' MP cost spends floor(current MP / this) |
+| REND_HP_COST_OFFSET | 4 | HP | config.js; used in actions.rendHpCost (Dimensional Rend's full HP cost = effectStrength − this) |
 | MAX_STUN_CHANCE | 90 | % | config.js |
 | STUN_DIVISOR_PRIMARY / STUN_DIVISOR_OTHER | 40 / 60 | damage per 100% | config.js |
 | RANGED_MELEE_DIVISOR | 4 | | config.js; used in player.meleeDamage |

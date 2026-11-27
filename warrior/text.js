@@ -62,6 +62,7 @@ const TEXT = (() => {
         why_phase_step_used: label('Phase Step already used this turn!'),
         why_sprint_used: label('Sprint already used this turn!'),
         why_dodge_active: label('Dodge already raised this turn!'),
+        why_rend_hp: label('Need more than 1 HP!'),
         why_too_close: label('Too close to enemies!'),
         why_shattered: label('Cannot use on shattered terrain!'),
 
@@ -830,7 +831,7 @@ const TEXT = (() => {
         log_gravity_well: log('Gravity Well!'),
         log_meteor: log('Meteor!'),
         log_rend_cost: log('Dimensional Rend tears at you: -{n} HP'),
-        log_rend_fizzle: log('Health too low — the rift fizzles.'),
+        log_rend_weakened: log('Too little health to feed the rift: it strikes at {pct}% strength.'),
         log_no_havens: log('No havens exist!'),
         log_recall: log('Recall! Teleported to haven.'),
         log_aether_tap: log('Aether Tap: +{ae} AE ({n} clean hexes)'),

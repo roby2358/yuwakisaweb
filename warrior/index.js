@@ -932,6 +932,7 @@ function checkSkillUsage(skill) {
     if (skill.id === 'phase_step' && player.phaseStepUsedThisTurn) return say('why_phase_step_used', {});
     if (skill.id === 'sprint' && player.sprintUsedThisTurn) return say('why_sprint_used', {});
     if (skill.id === 'dodge' && player.dodgeSkillBonus > 0) return say('why_dodge_active', {});
+    if (skill.id === 'dimensional_rend' && player.hp <= 1) return say('why_rend_hp', {});
     const usage = skill.usage || SKILL_USAGE.ANYTIME;
     if (usage === SKILL_USAGE.ANYTIME) return null;
     const nearbyEnemy = em.enemies.some(e => hexDistance(player.q, player.r, e.q, e.r) <= SKILL_SAFE_RADIUS);
@@ -2902,7 +2903,7 @@ const SKILL_POWER = {
     void_strike:     e => say('pow_void_strike', { mult: (e.effectStrength / 5).toFixed(1) }),
     siphon_strike:   e => say('pow_siphon_strike', { mult: (e.effectStrength / 10).toFixed(1) }),
     execute:         e => say('pow_execute', { mult: (e.effectStrength / 10).toFixed(1) }),
-    dimensional_rend:e => say('pow_dimensional_rend', { mult: (e.effectStrength / 5).toFixed(1), hp: e.effectStrength - 4 }),
+    dimensional_rend:e => say('pow_dimensional_rend', { mult: (e.effectStrength / 5).toFixed(1), hp: rendHpCost(e) }),
     sweep:           e => say('pow_sweep', { n: e.hitCount }),
     stun_blow:       e => say('pow_stun_blow', { n: e.effectStrength }),
     immolate:        e => say('pow_immolate', { n: e.effectStrength }),
