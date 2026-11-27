@@ -368,13 +368,13 @@ class ChaosAI extends EnemyAI {
     moveEnemyStep(enemy, def, dist, aggro, prefersRanged, occupied, ctx) {
         const { player, em, world } = ctx;
         if (def.behavior === 'guard') {
-            if (hexDistance(enemy.q, enemy.r, enemy.homeQ, enemy.homeR) > (def.guardRadius || 2)) {
+            if (hexDistance(enemy.q, enemy.r, enemy.homeQ, enemy.homeR) > def.guardRadius) {
                 em.moveEnemyToward(enemy, enemy.homeQ, enemy.homeR, occupied, world);
                 return true;
             }
             if (dist <= aggro) {
                 const next = em.getNextStepToward(enemy, player.q, player.r, occupied, world);
-                if (next && hexDistance(next.q, next.r, enemy.homeQ, enemy.homeR) <= (def.guardRadius || 2)) {
+                if (next && hexDistance(next.q, next.r, enemy.homeQ, enemy.homeR) <= def.guardRadius) {
                     occupied.delete(hexKey(enemy.q, enemy.r));
                     enemy.q = next.q; enemy.r = next.r;
                     occupied.add(hexKey(enemy.q, enemy.r));

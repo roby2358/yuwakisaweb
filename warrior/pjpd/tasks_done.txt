@@ -481,6 +481,20 @@ Tuning: don't overpopulate ranged on a single map — they're a counter to slow 
 ----
 Priority:   50
 Status: Done
+ID: guardradius-9xp7
+Created: 2026-11-27T19:50:39Z
+Updated: 2026-11-27T19:53:00Z
+
+The Breach Guardian's guard radius loses its inline fallback.
+
+Goal: enemy_ai.js reads def.guardRadius || 2 in two places (the guard's camp logic). The Breach Guardian's def already sets guardRadius, so the 2 is an inline default that hides a missing value, against the project's fail-fast rule.
+
+Settled design: use def.guardRadius directly in both places, with no fallback. If ONTOLOGY.md's Numbers table has a row for the fallback, remove it. No behaviour change, no save-shape change.
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); no "guardRadius ||" or "guardRadius ??" remains in the code.
+----
+Priority:   50
+Status: Done
 ID: wraithtele-vcad
 Created: 2026-11-27T19:35:00Z
 Updated: 2026-11-27T19:50:39Z
