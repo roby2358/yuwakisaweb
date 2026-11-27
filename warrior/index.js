@@ -673,7 +673,7 @@ function rollPlayerStun(enemy, rolledDmg, bucket, bonusPct) {
     return false;
 }
 
-function dealDamageToPlayer(damage, source, isSkillDamage, opts = {}) {
+function dealDamageToPlayer(damage, source, isSkillDamage, opts) {
     if (opts.isRanged && player.equipped('ranged_immune')) {
         logCombat(say('log_ranged_negated', {}), 'log-info');
         return { dealt: 0, avoided: true };

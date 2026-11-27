@@ -398,6 +398,20 @@ Tuning: don't overpopulate ranged on a single map — they're a counter to slow 
 ----
 Priority:   50
 Status: Done
+ID: dmgopts-8ggh
+Created: 2026-11-26T23:36:55Z
+Updated: 2026-11-27T08:37:30Z
+
+dealDamageToPlayer drops its opts = {} default parameter.
+
+Goal: dealDamageToPlayer(..., opts = {}) in index.js has a default parameter, against the project's no-default-parameters rule.
+
+Settled design: remove the default; every call site passes its options object explicitly ({} when none). No behaviour change, no save-shape change.
+
+Done when: node test/*.js pass; dealDamageToPlayer has no default parameter and every caller passes an opts argument.
+----
+Priority:   50
+Status: Done
 ID: skillformula-tadu
 Created: 2026-11-27T01:14:57Z
 Updated: 2026-11-27T08:37:18Z
