@@ -422,7 +422,7 @@ class ChaosAI extends EnemyAI {
             enemy.hp -= actualDmg;
             logCombat(say('log_counter_mastery', { dmg: actualDmg }), 'log-dmg');
             ctx.sound.hitEnemy();
-            if (enemy.hp <= 0) killEnemy(enemy);
+            if (enemy.hp <= 0) killEnemy(enemy, {});
         }
     }
 
@@ -583,7 +583,7 @@ function tickBurns(ctx) {
         enemy.hp -= enemy.burnDamage;
         logCombat(say('log_burn', { dmg: enemy.burnDamage, name: bDef.name }), 'log-dmg');
         enemy.burnDamage = 0;
-        if (enemy.hp <= 0) killEnemy(enemy);
+        if (enemy.hp <= 0) killEnemy(enemy, {});
     }
 }
 

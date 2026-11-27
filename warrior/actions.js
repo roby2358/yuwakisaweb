@@ -290,7 +290,7 @@ class Action {
             logCombat(say('log_chain_hit', { source: skillName, dmg: actualDmg, name: closestDef.name }), 'log-dmg');
             sound.hitEnemy();
             rollPlayerStun(closest, dmg, stunBucket, 0);
-            if (closest.hp <= 0) killEnemy(closest);
+            if (closest.hp <= 0) killEnemy(closest, {});
             curQ = closest.q; curR = closest.r;
         }
     }

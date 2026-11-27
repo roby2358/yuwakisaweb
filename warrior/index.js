@@ -631,7 +631,7 @@ function enemyRangedAttack(enemy, def) {
     return atk;
 }
 
-function dealDamageToEnemy(enemy, damage, source, opts = {}) {
+function dealDamageToEnemy(enemy, damage, source, opts) {
     const def = em.getDef(enemy.type);
     const rolled = Rando.bellCurve(damage);
     let eDef = opts.ignoreDefense ? 0 : enemyDefense(enemy, def);
@@ -645,7 +645,7 @@ function dealDamageToEnemy(enemy, damage, source, opts = {}) {
     spawnHitFlash(enemy.q, enemy.r);
     const stunned = rollPlayerStun(enemy, rolled, opts.stunBucket, opts.stunBonus || 0);
     const killed = enemy.hp <= 0;
-    if (killed) killEnemy(enemy);
+    if (killed) killEnemy(enemy, {});
     return { dealt, killed, stunned };
 }
 
@@ -714,7 +714,7 @@ function dealDamageToPlayer(damage, source, isSkillDamage, opts) {
         opts.attacker.hp -= reflected;
         logCombat(say('log_reflect_hit', { dmg: reflected, name: em.getDef(opts.attacker.type).name }), 'log-dmg');
         sound.hitEnemy();
-        if (opts.attacker.hp <= 0) killEnemy(opts.attacker);
+        if (opts.attacker.hp <= 0) killEnemy(opts.attacker, {});
     }
 
     if (opts.attacker && !opts.isRanged && opts.attacker.hp > 0) {
@@ -724,7 +724,7 @@ function dealDamageToPlayer(damage, source, isSkillDamage, opts) {
             opts.attacker.hp -= thornDmg;
             logCombat(say('log_thorns', { dmg: thornDmg, name: em.getDef(opts.attacker.type).name }), 'log-dmg');
             sound.hitEnemy();
-            if (opts.attacker.hp <= 0) killEnemy(opts.attacker);
+            if (opts.attacker.hp <= 0) killEnemy(opts.attacker, {});
         }
         const burnAura = player.equipped('burning_aura');
         if (burnAura) {
@@ -741,7 +741,7 @@ function dealDamageToPlayer(damage, source, isSkillDamage, opts) {
     return { dealt, avoided: false };
 }
 
-function killEnemy(enemy, opts = {}) {
+function killEnemy(enemy, opts) {
     const def = em.getDef(enemy.type);
     em.remove(enemy);
     // Unraveler hunt: first kill respawns it in place of a random chaos unit
