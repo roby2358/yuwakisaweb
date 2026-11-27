@@ -14,20 +14,6 @@ Done when: every test in test/ passes (for f in test/*.js; do node $f; done); sp
 ----
 Priority:   50
 Status: ToDo
-ID: deadturns-395r
-Created: 2026-11-27T19:35:00Z
-Updated: 2026-11-27T19:35:00Z
-
-Remove the enemy field turnsSinceSpawn, which nothing reads.
-
-Goal: turnsSinceSpawn on enemy instances is set in enemies.js and incremented in runEnemyAiPhase (enemy_ai.js), but its only reader was the Unraveler's own spawn roll, which is gone. It is dead state that is still saved.
-
-Settled design: remove the field, its increments, its toJSON/fromJSON handling and its row in ONTOLOGY.md's Enemy instance table. This changes the save shape, so bump SAVE_VERSION by 1 and tell the user old saves will show "New Version".
-
-Done when: every test in test/ passes (for f in test/*.js; do node $f; done); turnsSinceSpawn appears nowhere in the code or ONTOLOGY.md; SAVE_VERSION is one higher.
-----
-Priority:   50
-Status: ToDo
 ID: wraithtele-vcad
 Created: 2026-11-27T19:35:00Z
 Updated: 2026-11-27T19:35:00Z
@@ -39,3 +25,17 @@ Goal: ChaosAI in enemy_ai.js rolls Rando.bool(def.teleportChance || 0.3). The Ph
 Settled design: use def.teleportChance directly, with no fallback. Remove the fallback row from ONTOLOGY.md's Numbers table (or reword it if it lists other things). No behaviour change, no save-shape change.
 
 Done when: every test in test/ passes (for f in test/*.js; do node $f; done); no "teleportChance ||" or "teleportChance ??" remains in the code.
+----
+Priority:   30
+Status: ToDo
+ID: deadturns-395r
+Created: 2026-11-27T19:35:00Z
+Updated: 2026-11-27T19:42:27Z
+
+Remove the enemy field turnsSinceSpawn, which nothing reads.
+
+Goal: turnsSinceSpawn on enemy instances is set in enemies.js and incremented in runEnemyAiPhase (enemy_ai.js), but its only reader was the Unraveler's own spawn roll, which is gone. It is dead state that is still saved.
+
+Settled design: remove the field, its increments, its toJSON/fromJSON handling and its row in ONTOLOGY.md's Enemy instance table. This changes the save shape, so bump SAVE_VERSION by 1 and tell the user old saves will show "New Version".
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); turnsSinceSpawn appears nowhere in the code or ONTOLOGY.md; SAVE_VERSION is one higher.
