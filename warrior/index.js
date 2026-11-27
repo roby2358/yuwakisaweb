@@ -3121,7 +3121,7 @@ function spawnRuinCreatures(poi) {
     let mightSum = 0, count = 0;
     for (let i = 0; i < spots.length && mightSum < targetMight; i++) {
         const type = Rando.weighted(weights);
-        const e = em.spawn(type, spots[i].q, spots[i].r);
+        const e = em.spawn(type, spots[i].q, spots[i].r, spots[i].q, spots[i].r);
         if (e) {
             mightSum += em.getDef(type).attack;
             count++;

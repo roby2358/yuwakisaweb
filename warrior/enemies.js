@@ -89,8 +89,8 @@ class EnemyManager {
             q, r,
             hp: def.hp,
             maxHp: def.hp,
-            homeQ: homeQ !== undefined ? homeQ : q,
-            homeR: homeR !== undefined ? homeR : r,
+            homeQ,
+            homeR,
             turnsSinceSpawn: 0
         };
         this.enemies.push(enemy);
@@ -176,14 +176,14 @@ class EnemyManager {
         const numStalkers = rollDice(INITIAL_STALKERS);
         for (let i = 0; i < numStalkers; i++) {
             const hex = Rando.choice(passable.filter(h => farEnough(h.q, h.r) && !this.enemyAt(h.q, h.r)));
-            if (hex) this.spawn(ENEMY_TYPE.VOID_STALKER, hex.q, hex.r);
+            if (hex) this.spawn(ENEMY_TYPE.VOID_STALKER, hex.q, hex.r, hex.q, hex.r);
         }
 
         // 1d3 Flux Archers
         const numArchers = rollDice(INITIAL_ARCHERS);
         for (let i = 0; i < numArchers; i++) {
             const hex = Rando.choice(passable.filter(h => farEnough(h.q, h.r) && !this.enemyAt(h.q, h.r)));
-            if (hex) this.spawn(ENEMY_TYPE.FLUX_ARCHER, hex.q, hex.r);
+            if (hex) this.spawn(ENEMY_TYPE.FLUX_ARCHER, hex.q, hex.r, hex.q, hex.r);
         }
 
         // Spawn guardians and crawlers at breach/maw POIs
@@ -270,7 +270,7 @@ class EnemyManager {
     // eligible hexes within PACK_RADIUS of the origin, preferring adjacent. Pack members
     // honor the same player-safety buffer as the origin.
     spawnPack(world, q, r, type, packSize, playerQ, playerR) {
-        this.spawn(type, q, r);
+        this.spawn(type, q, r, q, r);
         if (packSize <= 1) return;
         const slots = hexesInRange(q, r, PACK_RADIUS).filter(n => {
             if (n.q === q && n.r === r) return false;
@@ -286,7 +286,7 @@ class EnemyManager {
         slots.sort((a, b) => hexDistance(a.q, a.r, q, r) - hexDistance(b.q, b.r, q, r));
         const fill = Math.min(packSize - 1, slots.length);
         for (let i = 0; i < fill; i++) {
-            this.spawn(type, slots[i].q, slots[i].r);
+            this.spawn(type, slots[i].q, slots[i].r, slots[i].q, slots[i].r);
         }
     }
 

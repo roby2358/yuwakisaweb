@@ -1,19 +1,5 @@
 Priority:   50
 Status: ToDo
-ID: spawnhome-ymac
-Created: 2026-11-27T19:35:00Z
-Updated: 2026-11-27T19:35:00Z
-
-EnemyManager.spawn takes its home hex as required arguments.
-
-Goal: em.spawn(type, q, r, homeQ, homeR) in enemies.js falls back to the spawn hex when homeQ/homeR are undefined, and several callers pass only three arguments. That is an optional parameter with an inline default, against the project's rules.
-
-Settled design: make homeQ and homeR required; every caller passes them explicitly (the spawn hex itself where it relied on the fallback). No behaviour change, no save-shape change.
-
-Done when: every test in test/ passes (for f in test/*.js; do node $f; done); spawn has no undefined check for the home arguments and every caller passes five arguments.
-----
-Priority:   50
-Status: ToDo
 ID: wraithtele-vcad
 Created: 2026-11-27T19:35:00Z
 Updated: 2026-11-27T19:35:00Z
