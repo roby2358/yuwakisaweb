@@ -14,7 +14,7 @@ reasoning and history live in `DECISIONS.md`. Open questions (`Q-n`) are the las
 appears only in the Numbers table. **[D, unbuilt]** decided but not in the code yet.
 **Serves:** names the goal (G-n), quality, or DYNAMICS driver an item exists for.
 Constants marked † are inline literals in the code with no constant name yet; the name
-shown is proposed [P] so this doc can refer to them (see Q-5).
+shown is the one each will get in `config.js` [D, unbuilt].
 
 ---
 
@@ -71,7 +71,8 @@ structure and is never traded away. "Room to break the game" beats balance tidin
 - Multiplayer or a server. [P]
 - Save migration or back-compat for old saves. [D] A version mismatch shows "New
   Version" and the save is not loaded.
-- Seeded or reproducible runs. [P] Rando has no seed (see Q-14).
+- Seeded or reproducible runs. [D] `Rando` has no seed; it exists to keep the random
+  functions in one place.
 - Mobile/touch play. [P]
 
 ---
@@ -367,7 +368,7 @@ Families (ids in `TERRAIN`, names in `TERRAIN_NAMES`):
 5. POIs (below). Steps 1-5 repeat up to MAP_ATTEMPTS† times until `_validate()` passes:
    at least one haven and the Maw exist, every haven reaches the Maw on foot, and at least
    half the havens lie more than half of the farthest haven's distance from the Maw. After
-   the last attempt the map is kept even if invalid (Q-4).
+   the last attempt the map is kept even if invalid. [D]
 6. Prizes are rolled on every special hex that holds no POI.
 7. At new game (after the start is chosen): core scrolls, story scrolls, the skill deal,
    enemies.
@@ -1000,7 +1001,7 @@ monster → MonsterAI, ruins-guardian → RuinsGuardianAI, anything else → Cha
 ### Information limits [D]
 
 - Enemies know the player's exact position at all times. Aggro is a pure distance check
-  (no fog, no LOS). Firing needs LOS. (See Q-10.)
+  (no fog, no LOS). Firing needs LOS. [D]
 - Aggro range = aggroRange or detectRange; −THREAT_SHROUD_REDUCTION† (floor 1) with
   threat_shroud. Forest stealth: the player in forest lowers it by FOREST_STEALTH†
   (floor 1), and Phase Wraiths lose aggro entirely, unless combatAlerted and the enemy is
@@ -1074,7 +1075,7 @@ whole turn.
 
 ## §6 Numbers [T]
 
-Every tunable number, by code name. † = inline literal with a proposed name (Q-5).
+Every tunable number, by code name. † = inline literal, shown under the name it will get [D, unbuilt].
 Content-table numbers (each skill's tiers and costs, each item's stats, each fixed enemy's
 stats, effect magnitudes) stay in `SKILLS`, `WEAPONS`, `ARMORS`, the effect pools and
 `ENEMY_DEFS`. Decisions about these numbers, as they are written up, live in DECISIONS.md.
@@ -1292,34 +1293,3 @@ only part of what they say). Filed as a tracker idea for discussion.
 Wildlife melee does not trigger it. Filed as a tracker idea for discussion.
 - **Options:** extend it to all melee attackers; keep it chaos-only and say so in its text.
 - **Recommendation:** extend it to all melee, unless chaos-only is meant as flavour.
-
-### Q-4 Map validation keeps an invalid map after MAP_ATTEMPTS
-If every attempt fails the stricter check, the last map is kept anyway.
-- **Options:** keep as is; keep retrying until valid; relax the check on later attempts.
-- **Recommendation:** relax the check on later attempts so a run never starts on a failed map.
-
-### Q-5 Inline literals have no constant names
-Many tunables (marked † in ONTOLOGY) are inline literals.
-- **Options:** name them as constants in config.js; leave them inline.
-- **Recommendation:** name them, using the proposed names in ONTOLOGY's Numbers table.
-
-### Q-10 Enemies sense the player through fog by distance alone
-Aggro uses hex distance with no fog or LOS check.
-- **Options:** keep distance-only sensing; require LOS (or forest stealth rules) to notice.
-- **Recommendation:** keep it unless playtests show it feels unfair; it keeps pressure up.
-
-### Q-14 No seeded randomness
-All randomness goes through `Rando`, which draws from an unseeded `Math.random`.
-- **Options:** add a seed to Rando; keep unseeded.
-- **Recommendation:** keep unseeded for now (a non-goal); a seed becomes worth it if a headless
-  sim or tests need reproducible runs.
-
-### Q-15 Chaos drops may duplicate owned mundane items
-Crawlers and guardians drop random mundane items whether owned or not.
-- **Options:** keep; prefer unowned items as breach loot does.
-- **Recommendation:** prefer unowned items, falling back to owned when none remain.
-
-### Q-17 SKILL_POWER previews mirror the handlers' formulas
-Skill-power previews recompute the formulas instead of calling the handlers' code.
-- **Options:** keep the mirror; factor shared formula functions both call.
-- **Recommendation:** factor shared functions so the preview is the rule.

@@ -167,8 +167,8 @@ and the creature palette's RNG function is `() => Rando.float(0, 1)`. Only rando
 `Math.random`. `Rando.bool` takes its probability explicitly.
 - **Alternatives:** leave the scattered `Math.random` calls (gameplay rolls, map noise,
   palette, sound noise) as they were.
-- **Why:** one source of randomness, so a seed (Q-14) would cover every draw by changing
-  rando.js alone. Odds are unchanged.
+- **Why:** the random functions live in one place in the code. Seeding is not a goal. Odds
+  are unchanged.
 - **Evidence:** `grep -n Math.random` over the loaded files finds only rando.js and a
   comment in colortheory.js.
 - **History:**
@@ -178,6 +178,57 @@ and the creature palette's RNG function is `() => Rando.float(0, 1)`. Only rando
     noise in world.js and the noise buffer in sound.js, and the creature palette RNG in
     enemies.js. `Rando.bool` lost its 0.5 default. Q-14 stayed open. ONTOLOGY gained a
     matching invariant. No save shape changed.
+  - 2026-11-27: Q-14 (no seeded randomness) closed. Seeded runs are a non-goal; Rando exists
+    only to centralize the functions.
+
+### Map and enemies
+
+### D-14 A map that fails validation on every attempt is kept — *Decided*
+Map generation retries up to MAP_ATTEMPTS times; if every attempt fails `_validate()`, the
+last map is used anyway.
+- **Alternatives:** keep retrying until valid; relax the check on later attempts.
+- **Why:** every attempt failing is not going to happen in practice (the designer: a
+  civilization-ending comet will hit first), so it is not worth code.
+- **Evidence:** none measured; the designer's judgment of the odds.
+- **History:**
+  - 2026-11-27: settled Q-4; no code change.
+
+### D-15 Enemies sense the player by distance alone — *Decided*
+Aggro is a hex-distance check with no fog or line-of-sight test. Firing still needs LOS.
+- **Alternatives:** require LOS, or forest stealth rules, before an enemy notices.
+- **Why:** the player already has an overwhelming advantage.
+- **Evidence:** none measured.
+- **History:**
+  - 2026-11-27: settled Q-10; no code change.
+
+### D-16 Crawlers and guardians may drop items the player already owns — *Decided*
+Chaos drops are random mundane items, owned or not.
+- **Alternatives:** prefer unowned items, as breach loot does.
+- **Why:** as intended: crawlers and guardians just drop stuff.
+- **Evidence:** none needed.
+- **History:**
+  - 2026-11-27: settled Q-15; no code change.
+
+### Code structure
+
+### D-17 Inline tunables get constant names — *Decided*
+Every tunable that is an inline literal (marked † in ONTOLOGY) becomes a named constant in
+config.js, under the name ONTOLOGY's Numbers table already uses for it.
+- **Alternatives:** leave them inline.
+- **Why:** one named source per number, so tuning is one edit and the docs and code share
+  a name.
+- **Evidence:** none needed; no value changes.
+- **History:**
+  - 2026-11-27: settled Q-5; unbuilt, filed as a task.
+
+### D-18 Skill previews call the same formulas as the skills — *Decided*
+Each skill's damage or heal formula is one shared function that both the skill's handler and
+its SKILL_POWER preview call.
+- **Alternatives:** keep the preview as a hand-kept mirror of the handlers' math.
+- **Why:** the preview is then the rule and cannot drift from it.
+- **Evidence:** none needed; no value changes.
+- **History:**
+  - 2026-11-27: settled Q-17; unbuilt, filed as a task.
 
 ---
 
@@ -358,6 +409,8 @@ became decisions)
 
 ## Deliberately left out
 
+- **Seeded or reproducible runs** [D]. Rando exists only to keep the random functions in one
+  place.
 - **Save migration or back-compat for old saves** [D]. A version mismatch shows "New Version"
   and the save is not loaded.
 - **Multiplayer or a server; mobile/touch play** [P] (ONTOLOGY non-goals).
