@@ -181,6 +181,33 @@ defense. Supersedes D-6; D-12 (dodge bonuses stack) stands.
     player-damage rule and Numbers table and DYNAMICS's dodge lines were updated. No
     player-facing text named the stat. No save shape changed.
 
+### D-27 The Dodge skill trades half your current MP for dodge — *Decided*
+Dodge is an optional skill (minLevel 2, 0 Aether, self, usable any time). Casting it spends
+half the player's current MP, rounded down, and adds 20 / 30 / 40 / 50 / 60 percent (by
+rank) to dodge, inside MAX_DODGE, until the player's next turn starts. It cannot be cast
+again while the bonus is up. It shares its name with the Dodge number on the Character
+panel on purpose.
+- **Alternatives:** charge half of maximum MP, so an engaged player (whose MP is already
+  halved) could not also attack; a flat +50 at every rank; round the cost up; name it Evade.
+- **Why:** designer's call. A defensive choice that costs no Aether is always available;
+  paying in current MP trades mobility for safety, leaving enough MP to attack but making
+  it hard to run. Rounding down keeps it castable on 1 MP.
+- **Evidence:** not measured.
+- **History:**
+  - 2026-11-27: decided and built. `SKILLS.dodge` in config.js carries the bonus in its
+    tiers and the new MP cost value `'half'` (`DODGE_MP_DIVISOR`), which `Action.spendMP`
+    and `mpLabel` in actions.js understand. `executeDodge` sets `player.dodgeSkillBonus`;
+    `Player.dodge()` adds it; `advanceTurn` clears it; `checkSkillUsage` blocks a second
+    cast. The turn-end save runs before the enemy phase, while the bonus is up, but the
+    field is transient: it stays out of `Player.toJSON`, starts at 0 in the constructor,
+    and SAVE_VERSION stays 4, so saves from before this change still load. A loaded game
+    has no bonus up and Dodge can be cast again; that is harmless because a load resumes
+    in the player phase and skips that turn's enemy phase. The optional skills
+    went from 36 to 37, so 19 appear in a run and one of the 13 hut/Skill Seek skills has
+    no hut of its own. ONTOLOGY (player fields, skill costs and usage, advance turn,
+    player-damage rule, Numbers) and DYNAMICS (dodge lines, skill groups, skill table) were
+    updated.
+
 ### D-13 All randomness goes through Rando — *Decided*
 Every random draw in the files index.html loads goes through a `Rando` method: percent rolls
 use `Rando.bool(p / 100)`, fixed chances `Rando.bool(c)`, continuous values `Rando.float`,

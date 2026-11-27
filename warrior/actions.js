@@ -25,7 +25,8 @@
 // Pure helpers — no ctx needed
 // ================================================================
 
-// MP cost tiers: 0 (free), 1 (natural melee), 2 (ranged), 'all' (zeroes MP).
+// MP cost tiers: 0 (free), 1 (natural melee), 2 (ranged), 'all' (zeroes MP),
+// 'half' (skills only: floor(current MP / DODGE_MP_DIVISOR)).
 // 'free_action' magical affix forces 0 regardless of weapon type.
 function weaponMpCost(wep) {
     if (!wep) return 1;
@@ -52,7 +53,8 @@ function skillWeaponMatches(player, skill) {
 }
 
 // Weapon-flow skills pay max(skill MP, weapon MP) when a matching weapon is
-// held; neutral skills and mismatches pay the skill's own MP. 'all' stays 'all'.
+// held; neutral skills and mismatches pay the skill's own MP. 'all' stays 'all'
+// and 'half' stays 'half' (no weapon-class skill uses it).
 function effectiveSkillMpCost(player, skill) {
     const base = skillMpCost(skill);
     if (base === 'all' || !skillWeaponMatches(player, skill)) return base;
@@ -60,7 +62,9 @@ function effectiveSkillMpCost(player, skill) {
 }
 
 function mpLabel(cost) {
-    return cost === 'all' ? say('mp_all', {}) : say('mp_n', { n: cost });
+    if (cost === 'all') return say('mp_all', {});
+    if (cost === 'half') return say('mp_half', {});
+    return say('mp_n', { n: cost });
 }
 
 function skillMpLabel(skill) {
@@ -143,6 +147,7 @@ class Action {
     spendMP(cost) {
         const player = this.ctx.player;
         if (cost === 'all') player.mp = 0;
+        else if (cost === 'half') player.mp -= Math.floor(player.mp / DODGE_MP_DIVISOR);
         else player.mp = Math.max(0, player.mp - cost);
     }
 
@@ -1055,6 +1060,12 @@ function executeSprint(action) {
     logCombat(say('log_sprint', { n: bonus }), 'log-info');
 }
 
+function executeDodge(action) {
+    const { player, logCombat } = action.ctx;
+    player.dodgeSkillBonus = action.skill.effectStrength;
+    logCombat(say('log_dodge_raised', { n: player.dodgeSkillBonus }), 'log-info');
+}
+
 function executeGravityWell(action) {
     const { player, world, em, logCombat } = action.ctx;
     for (const h of hexesInRange(player.q, player.r, action.skill.range)) {
@@ -1466,6 +1477,7 @@ const SKILL_HANDLERS = {
     stun_blow: executeStunBlow,
     mending_light: executeMendingLight,
     sprint: executeSprint,
+    dodge: executeDodge,
     gravity_well: executeGravityWell,
     sundering_blow: executeSunderingBlow,
     meteor: executeMeteor,

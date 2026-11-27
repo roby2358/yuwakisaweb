@@ -1,26 +1,3 @@
-Priority:   52
-Status: ToDo
-ID: dodgeskill-2ve9
-Created: 2026-11-27T23:19:42Z
-Updated: 2026-11-27T23:19:42Z
-
-Add the Dodge skill: spend half your current MP to raise your dodge until your next turn.
-
-Goal: give the player a defensive choice that trades mobility for safety and is always available because it costs no Aether. It leaves enough MP to attack but makes it hard to run.
-
-Settled design:
-- New SKILLS entry in config.js: id dodge, name "Dodge" (sharing the name with the Dodge number on the Character panel is intended), an optional skill (not core; obtained from huts and Skill Seek like other optional skills), minLevel 2, Aether cost 0, target self, usable any time on the player's turn.
-- Five ranks; the dodge bonus is 20 / 30 / 40 / 50 / 60 percent by rank, held in the skill's tiers like other scaled values.
-- MP cost: half the player's current MP, rounded down, in place of the skill's normal MP cost (3 MP costs 1 and leaves 2; 1 MP costs 0). It does not end the turn by itself.
-- Effect: the bonus is added in Player.dodge() alongside the stat and gear terms, inside the MAX_DODGE cap. It lasts until the start of the player's next turn, so it covers the rest of this turn (counters) and the enemy phase. Clear it where the new turn resets MP.
-- Once per turn: while the bonus is active the skill cannot be cast again; block it up front through the same can-use check and reason text other unusable skills use.
-- State: one field on the player for the active bonus. saveGame appears to run only at the end of the turn cycle, after the bonus has been cleared; confirm that. If so, keep the field out of toJSON/fromJSON and do not bump SAVE_VERSION. If a save can happen while the bonus is active, add the field to toJSON/fromJSON, bump SAVE_VERSION by 1, and say so in the report.
-- Text: skill description in config.js as data; a log line for casting and the preview/summary entry the skill previews need (text.js, skillSummary in index.js). Show the active bonus in the Character panel's Dodge line simply by it being part of Player.dodge().
-- Keep test/skilllibrary.js and test/skillformulas.js passing; adjust their expectations only where they count or enumerate skills.
-- Docs: ONTOLOGY.md (skill table, dodge rule, player fields, Numbers), DYNAMICS.md skill table, DECISIONS.md entry (alternatives: half of maximum MP so an engaged player cannot also attack; a flat 50; round the cost up; name it Evade).
-
-Done when: every test in test/ passes (for f in test/*.js; do node $f; done); casting Dodge with 3 MP leaves 2 MP and raises Player.dodge() by the rank's bonus until the next turn starts; it cannot be cast twice in a turn.
-----
 Priority:   51
 Status: ToDo
 ID: dodgeart-ciiu

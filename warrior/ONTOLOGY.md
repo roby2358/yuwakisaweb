@@ -173,6 +173,7 @@ structure and is never traded away. "Room to break the game" beats balance tidin
 | statPoints | int | Unspent stat points. |
 | mp | int | Movement points left this turn. |
 | warpShieldTurns, reflectTurns | int | Defensive buffs, count down at enemy-phase end. |
+| dodgeSkillBonus | int | The Dodge skill's active bonus in percent, 0 when not raised. Set by the cast, cleared at advance turn. Not saved: a loaded game starts with 0. |
 | movedThisTurn, hexesMovedThisTurn | bool, int | Charge, wall_of_steel, momentum read these. Not saved. |
 | phaseStepUsedThisTurn, sprintUsedThisTurn | bool | Once-per-turn gates. Not saved. |
 | seenDialogs | Set<string> | Once-only dialog keys and "sp:<poi id>" first-visit SP grants. |
@@ -253,7 +254,7 @@ Mundane items: `WEAPONS` and `ARMORS` in config.js. Magic items: rolled by
 |---|---|---|
 | id, name, desc | | |
 | cost | int | Aether cost (before aether_discount). |
-| mpCost | int \| absent | Absent = 'all' (ends the turn's movement). |
+| mpCost | int \| 'half' \| absent | Absent = 'all' (ends the turn's movement). 'half' = floor(current MP / DODGE_MP_DIVISOR) (Dodge). |
 | target | SKILL_TARGET | self, melee, melee_execute, ranged, ranged_aoe, aoe_self, teleport, teleport_revealed, water_skip, mountain_skip. |
 | usage | SKILL_USAGE | anytime, non_combat, pristine. |
 | weaponClass | 'melee' \| 'ranged' \| 'direct' \| absent | melee/ranged skills flow through a matching held weapon. |
@@ -420,9 +421,10 @@ special-looking hex but hold no other prize.
   hut; skill gems and empty Skill Seeks give +1 (or CONSOLATION_XP when SP is maxed).
 - **Usage.** anytime: no limit. non_combat: no enemy within SKILL_SAFE_RADIUS. pristine:
   non_combat and the player's hex is not shattered. Phase Step and Sprint are once per
-  turn.
+  turn; Dodge cannot be cast while its bonus is active, which makes it once per turn too.
 - **Costs.** Aether: `effectiveAetherCost` = max(0, cost − Σ aether_discount). MP:
-  `skillMpCost` = mpCost or 'all'; a weapon-class skill with a matching held weapon pays
+  `skillMpCost` = mpCost or 'all'; 'half' spends floor(current MP / DODGE_MP_DIVISOR),
+  which can be 0; a weapon-class skill with a matching held weapon pays
   max(skill MP, weapon MP) (`effectiveSkillMpCost`). Some skills cost gold (goldCost) or
   HP (Dimensional Rend) instead of or as well as Aether.
 - **Weapon flow.** weaponClass melee/ranged with a matching held weapon: the skill uses the
@@ -608,7 +610,7 @@ respawnGuardians(); spawnChaos(); spawnWildlife(); tickGarrisons(); advanceTurn(
 ```
 turn++; mp = maxMP()
 if any enemy adjacent and no disengage: mp = max(1, floor(mp / ENGAGED_MP_DIVISOR))
-clear movedThisTurn, hexesMovedThisTurn, phaseStep/sprint flags
+clear movedThisTurn, hexesMovedThisTurn, phaseStep/sprint flags; dodgeSkillBonus = 0
 every enemy: stunRolledThisTurn = false
 ```
 `maxMP()` = max(1, PLAYER_MP − high_def_mp_penalty.mpPenalty + Σmp_bonus).
@@ -736,7 +738,7 @@ if random < min(pct, MAX_STUN_CHANCE): stunnedNextTurn = true
 ```
 if ranged and ranged_immune: avoid
 if warpShieldTurns > 0 and chance(warp effectStrength / 10): avoid
-if chance(dodge()): avoid            # dodge = DODGE_PER_REFLEX × Reflex + dodge_bonus summed over equipped items, cap MAX_DODGE
+if chance(dodge()): avoid            # dodge = DODGE_PER_REFLEX × Reflex + dodge_bonus summed over equipped items + dodgeSkillBonus, cap MAX_DODGE
 rolled = bellCurve(damage); dealt = max(1, rolled − playerDefense())
 if melee, reflectTurns > 0 and chance(reflect effectStrength / 10):
   reflected = max(1, dealt × reflectPercent%); dealt = max(1, dealt × takePercent%)
@@ -750,6 +752,13 @@ Warding-based skill-damage reduction exists but no caller uses it (Q-1).
 
 effectiveVigor (Vigor + vigor_bonus gear) feeds max HP and defense only. Dodge reads the
 Reflex stat itself; no gear raises Reflex.
+
+**Dodge skill.** Casting Dodge (0 Aether, 'half' MP) sets dodgeSkillBonus to the rank's
+effectStrength. The bonus is a term of `dodge()`, inside the MAX_DODGE cap, so it covers
+the rest of the player's turn and the enemy phase; advance turn clears it. The field is
+transient and not saved, although the turn-end save falls inside that window: a load
+resumes in the player phase, skipping that turn's enemy phase, with no bonus up, so Dodge
+can be cast again.
 
 ### Kill [D]
 *Serves:* "Windfall", G-2. (`killEnemy`)
@@ -1152,6 +1161,8 @@ stats, effect magnitudes) stay in `SKILLS`, `WEAPONS`, `ARMORS`, the effect pool
 | VIGOR_PER_DEFENSE / MIGHT_PER_DEFENSE | 3 / 5 | stat per +1 def | config.js; used in player.defense |
 | DODGE_PER_REFLEX | 2 | % per Reflex | config.js; used in player.dodge |
 | MAX_DODGE | 90 | % | config.js |
+| Dodge skill bonus by rank | 20 / 30 / 40 / 50 / 60 | % dodge | config.js (`SKILLS.dodge.tiers`) |
+| DODGE_MP_DIVISOR | 2 | | config.js; a 'half' MP cost spends floor(current MP / this) |
 | MAX_STUN_CHANCE | 90 | % | config.js |
 | STUN_DIVISOR_PRIMARY / STUN_DIVISOR_OTHER | 40 / 60 | damage per 100% | config.js |
 | RANGED_MELEE_DIVISOR | 4 | | config.js; used in player.meleeDamage |

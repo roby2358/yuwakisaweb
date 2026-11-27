@@ -931,6 +931,7 @@ function gainXP(amount) {
 function checkSkillUsage(skill) {
     if (skill.id === 'phase_step' && player.phaseStepUsedThisTurn) return say('why_phase_step_used', {});
     if (skill.id === 'sprint' && player.sprintUsedThisTurn) return say('why_sprint_used', {});
+    if (skill.id === 'dodge' && player.dodgeSkillBonus > 0) return say('why_dodge_active', {});
     const usage = skill.usage || SKILL_USAGE.ANYTIME;
     if (usage === SKILL_USAGE.ANYTIME) return null;
     const nearbyEnemy = em.enemies.some(e => hexDistance(player.q, player.r, e.q, e.r) <= SKILL_SAFE_RADIUS);
@@ -1347,6 +1348,7 @@ function advanceTurn() {
     player.hexesMovedThisTurn = 0;
     player.phaseStepUsedThisTurn = false;
     player.sprintUsedThisTurn = false;
+    player.dodgeSkillBonus = 0;
     for (const e of em.enemies) e.stunRolledThisTurn = false;
 }
 
@@ -2916,6 +2918,7 @@ const SKILL_POWER = {
 // per skill, so the trickiness is centralized here keyed by skill id.
 const EFFECT_STRENGTH_DISPLAY = {
     sprint:           es => say('es_sprint', { n: es }),
+    dodge:            es => say('es_dodge', { n: es }),
     warp_shield:      es => say('es_warp_shield', { n: es * 10 }),
     reflect:          es => say('es_reflect', { n: es * 10 }),
     channel:          es => say('es_channel', { n: es }),

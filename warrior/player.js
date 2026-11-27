@@ -35,6 +35,9 @@ class Player {
         this.hexesMovedThisTurn = 0;
         this.phaseStepUsedThisTurn = false;
         this.sprintUsedThisTurn = false;
+        // The Dodge skill's active bonus (percent), 0 when not raised. Not saved:
+        // a loaded game resumes in the player phase with no bonus up.
+        this.dodgeSkillBonus = 0;
         this.seenDialogs = new Set();
     }
 
@@ -145,7 +148,7 @@ class Player {
     }
 
     dodge() {
-        return Math.min(DODGE_PER_REFLEX * this.stats.reflex + this.sumEquipped('dodge_bonus', 'dodgeBonus'), MAX_DODGE);
+        return Math.min(DODGE_PER_REFLEX * this.stats.reflex + this.sumEquipped('dodge_bonus', 'dodgeBonus') + this.dodgeSkillBonus, MAX_DODGE);
     }
 
     weaponRange(terrainType, poiType) {

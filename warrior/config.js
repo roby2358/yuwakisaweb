@@ -291,6 +291,7 @@ const LEVEL_CAP = 10;
 const VIGOR_PER_DEFENSE = 3;         // effective vigor per +1 defense
 const MIGHT_PER_DEFENSE = 5;
 const DODGE_PER_REFLEX = 2;          // dodge % per point of Reflex
+const DODGE_MP_DIVISOR = 2;          // a 'half' MP cost (the Dodge skill) spends floor(current MP / this)
 const RANGED_MELEE_DIVISOR = 4;      // a ranged weapon swung in melee deals damage / this
 const STARTING_SP = 5;
 const MAX_SP = 50;
@@ -905,6 +906,11 @@ const SKILLS = {
     sprint: {
         id: 'sprint', name: 'Sprint', cost: 2, mpCost: 0, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
         scales: ['effectStrength'], tiers: [[1], [2], [4], [6], [8]], desc: 'Gain bonus MP this turn. Once per turn.', minLevel: 2
+    },
+    dodge: {
+        id: 'dodge', name: 'Dodge', cost: 0, mpCost: 'half', target: SKILL_TARGET.SELF, usage: SKILL_USAGE.ANYTIME,
+        scales: ['effectStrength'], tiers: [[20], [30], [40], [50], [60]],
+        desc: 'Spend half your current MP (rounded down) to raise your dodge until your next turn. Once per turn.', minLevel: 2
     },
     cosmic_bolt: {
         id: 'cosmic_bolt', name: 'Cosmic Bolt', cost: 3, target: SKILL_TARGET.RANGED, usage: SKILL_USAGE.ANYTIME,

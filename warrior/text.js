@@ -61,6 +61,7 @@ const TEXT = (() => {
         why_need_ae: label('Need {n} AE'),
         why_phase_step_used: label('Phase Step already used this turn!'),
         why_sprint_used: label('Sprint already used this turn!'),
+        why_dodge_active: label('Dodge already raised this turn!'),
         why_too_close: label('Too close to enemies!'),
         why_shattered: label('Cannot use on shattered terrain!'),
 
@@ -754,6 +755,7 @@ const TEXT = (() => {
 
         // ---- Costs (actions.js) ----
         mp_all: label('All MP'),
+        mp_half: label('Half MP'),
         mp_n: label('{n} MP'),
         skill_cost: label('{ae} AE, {mp}'),
         word_hex: label('hex'),
@@ -823,6 +825,7 @@ const TEXT = (() => {
         log_channel: log('Channel Aether: -{hp} HP, +{ae} AE'),
         log_healed: log('Healed {n} HP'),
         log_sprint: log('Sprint: +{n} MP'),
+        log_dodge_raised: log('Dodge: +{n}% until your next turn'),
         log_gravity_well: log('Gravity Well!'),
         log_meteor: log('Meteor!'),
         log_rend_cost: log('Dimensional Rend tears at you: -{n} HP'),
@@ -1007,6 +1010,7 @@ const TEXT = (() => {
         pow_mending_light: label('{n}+Vig×3 heal'),
         pow_hits: label('Hits {n}'),
         es_sprint: label('+{n} MP'),
+        es_dodge: label('+{n}% dodge'),
         es_warp_shield: label('Block {n}%'),
         es_reflect: label('Reflect {n}% chance'),
         es_channel: label('{n}:1 HP→AE'),

@@ -93,7 +93,7 @@ Shattered terrain is visually distinct (dark red tones) and distressed terrain s
 - Starts with Rusty Blade (1 melee damage) and Worn Leather (1 defense) equipped, Stick Bow (1 ranged damage, range 2) in inventory, Restore learned
 - Regenerates PLAYER_REGEN HP per turn naturally (at start of enemy phase)
 - Defense = armor + Vigor (with vigor_bonus) / VIGOR_PER_DEFENSE + Might / MIGHT_PER_DEFENSE (both rounded down) + terrain + POI + situational armor and passive bonuses
-- Dodge chance = `DODGE_PER_REFLEX`% × Reflex + every equipped dodge_bonus item's bonus, summed, capped at `MAX_DODGE`
+- Dodge chance = `DODGE_PER_REFLEX`% × Reflex + every equipped dodge_bonus item's bonus, summed, + the Dodge skill's bonus while it is raised, capped at `MAX_DODGE`
 - Melee damage = weapon damage + Might (+ special bonuses: chaos_bonus, charge, channel, wall_of_steel). A ranged weapon used in melee deals a quarter of its damage (rounded up) + Might; bare hands deal 1 + Might
 - Ranged damage = weapon damage + Reflex (+ chaos_bonus, channel, sniper bonus at max range)
 - Bell curve damage rolls: 3 rolls of 1..strength×2, averaged. Mean ≈ strength, with natural variance.
@@ -107,7 +107,7 @@ Move onto an enemy hex (or press A and pick a target). You step to the cheapest 
 Press R or click the ranged slot on the skill bar to enter targeting mode. Requires a ranged weapon (any weapon with range), a visible target in range, and line of sight. Magical ranged weapons cost 1 Aether per shot (2 for heavy ones; free with free_ranged or channel weapons); mundane bows are free. A shot costs the weapon's MP: 2 for mundane bows and normal magic bows, 1 for fast, all remaining MP for heavy. Hills and ruins grant +1 range, a garrison +2. Weapon specials: chain hits nearby enemies, knockback pushes target, splash damages adjacent enemies, piercing continues through to the next enemy, double_shot/triple_shot fire multiple times, burn applies damage next turn (ignores defense), sniper adds damage at max range.
 
 ### Skills
-Press 1-5 to activate a hotbar skill; some skills (Restore, Recall, the utility skills) can also be cast straight from the Skills panel without a slot. Most skills cost Aether; some cost nothing, HP (Dimensional Rend, Channel Aether) or gold (Commission Garrison). Each skill also has an MP cost: most spend all remaining MP (ending your movement for the turn), a few cost 0-2 MP. A weapon-flow skill cast through a matching weapon pays the higher of its own MP and the weapon's. Some require targeting (melee, ranged, teleport targets), others execute immediately (self, AoE centered on self). Phase Step and Sprint are once per turn. Skills never provoke a counter-attack. Skills have usage categories that restrict when they can be activated.
+Press 1-5 to activate a hotbar skill; some skills (Restore, Recall, the utility skills) can also be cast straight from the Skills panel without a slot. Most skills cost Aether; some cost nothing, HP (Dimensional Rend, Channel Aether) or gold (Commission Garrison). Each skill also has an MP cost: most spend all remaining MP (ending your movement for the turn), a few cost 0-2 MP, and Dodge costs half of what you have left. A weapon-flow skill cast through a matching weapon pays the higher of its own MP and the weapon's. Some require targeting (melee, ranged, teleport targets), others execute immediately (self, AoE centered on self). Phase Step, Sprint and Dodge are once per turn. Skills never provoke a counter-attack. Skills have usage categories that restrict when they can be activated.
 
 ### Damage Formula
 `rollDamage(strength)` → `Rando.bellCurve(strength)`: rolls 3 times from 1..strength×2, divides by 3, rounds. Produces a bell curve centered on strength. Applied to both player and enemy damage. Defense subtracts from rolled damage (minimum 1). Enemy defense can be permanently reduced by defense_shred weapons and Shredding Blow.
@@ -115,7 +115,7 @@ Press 1-5 to activate a hotbar skill; some skills (Restore, Recall, the utility 
 ### Defensive Mechanics
 - **Warp Shield**: For the coming enemy turn, each hit has a chance (50% at rank 1, rising to certain at rank 5) to be blocked entirely.
 - **Reflect**: For the coming enemy turn, each melee hit has a chance to be cut to 10% with 90% sent back at the attacker.
-- **Dodge**: `DODGE_PER_REFLEX`% × Reflex + dodge_bonus summed across equipped items (cap `MAX_DODGE`). Checked before damage.
+- **Dodge**: `DODGE_PER_REFLEX`% × Reflex + dodge_bonus summed across equipped items (cap `MAX_DODGE`). Checked before damage. The Dodge skill adds +20% → +60% (inside the same cap) until your next turn starts, for half your current MP and no Aether: enough MP is left to attack, not much to run. The bonus is not saved: a loaded game resumes on your turn with no bonus up, and Dodge can be cast again.
 - **Stun**: One stun roll per enemy per player turn. Chance = rolled damage / `STUN_DIVISOR_PRIMARY` for melee attacks and Might/Vigor-based skills; / `STUN_DIVISOR_OTHER` for everything else. Melee `stun` weapon affix adds +20/30/40%, and the Stun skill adds its own bonus. Cap `MAX_STUN_CHANCE`. On success: suppresses that attack's counter, target loses next turn.
 - **Ranged Immune**: ranged_immune armor negates all incoming ranged damage.
 - **Thorns**: thorns armor reflects 50-100% of damage to melee attackers.
@@ -279,19 +279,19 @@ A skill is **learned** (you know it), then **trained** (made active) in the Trai
 Each run deals the skills differently, so every game has its own flavor (SkillLibrary in `skilllibrary.js`):
 - **Core** (`core: true`): Channel Aether, Spirit Walk, Mountain Skip, Water Skip (a screwy map can always be crossed) and Renew, Retrain (the meta skills). Never held out or dealt; each rides exactly one scroll near the start settlement, and that scroll is the only way to learn it, so the player walks for the core kit. Channel Aether's scroll is always the nearest (within `CHANNEL_SCROLL_RADIUS`); the other five lie past it, within `NEAR_CORE_SCROLL_RADIUS` (half the map).
 - **Fixed**: RETURN comes only from the scroll the Maw leaves, Commune and Commission Garrison only from the Magicsmith, and Restore is the starting skill.
-- **Optional**: every other skill (36). `SKILL_HELD_OUT_FRACTION` of them (half, rounded down) are held out and can't be obtained by any channel this run; the player is not told which. Of the half that appears (18 of 36), `STORY_SCROLL_SKILLS` are bound to story scrolls (one each, scattered anywhere on the map reachable on foot; every scroll carries a skill, none is blank) and the other 12 are learnable via Skill Seek and Wise Man huts, one per hut, so every skill in play this run sits somewhere on the map. Huts and Skill Seek only ever give optional skills. Phase Step, Mending Light and Skill Seek are optional on purpose: survival skills are earned, and a run without Skill Seek means finding skills or camping huts.
+- **Optional**: every other skill (37). `SKILL_HELD_OUT_FRACTION` of them (half, rounded down) are held out and can't be obtained by any channel this run; the player is not told which. Of the rest (19 of 37), `STORY_SCROLL_SKILLS` are bound to story scrolls (one each, scattered anywhere on the map reachable on foot; every scroll carries a skill, none is blank) and the other 13 are learnable via Skill Seek and Wise Man huts, one per hut; with `HUT_COUNT` huts, one of the 13 has no hut of its own this run and comes only from Skill Seek or a hut's reroll. Huts and Skill Seek only ever give optional skills. Phase Step, Mending Light and Skill Seek are optional on purpose: survival skills are earned, and a run without Skill Seek means finding skills or camping huts.
 
 ### Skill Usage Categories
 Each skill has a usage restriction that determines when it can be activated:
 - **Pristine**: No enemies within 2 hexes AND player not on shattered terrain. Rewards maintaining safe, clean territory. (Aether Tap, Bountiful Harvest, Prospect, Commune, Salvage, Skill Seek, Sanctuary, Renew, Retrain, Commission Garrison, RETURN)
 - **Non-combat**: No enemies within 2 hexes. Distressed or shattered terrain is OK. (Restore, Farsight, Spirit Walk, Ground Weeps)
-- **Anytime**: No restrictions. All combat skills plus Recall, Phase Step, Sprint, Channel Aether, the skips and Loot.
+- **Anytime**: No restrictions. All combat skills plus Recall, Phase Step, Sprint, Dodge, Channel Aether, the skips and Loot.
 
 The skill bar visually grays out skills whose usage conditions aren't met, providing immediate feedback on what's available.
 
-In the tables, **AE** is the Aether cost (aether_discount passives lower it), **MP** is the movement cost ("all" spends every remaining MP, ending your movement for the turn), **Lv** is the minimum level for Skill Seek to offer an optional skill (huts and scrolls ignore it; "—" marks core and fixed skills, which Skill Seek never offers), and effect numbers read rank 1 → rank 5. "Weapon" means the held weapon's damage when it matches the skill (melee weapon for melee skills, ranged for ranged); a mismatched or missing weapon counts as 1, and a matching weapon also brings its affixes and, for ranged skills, its range.
+In the tables, **AE** is the Aether cost (aether_discount passives lower it), **MP** is the movement cost ("all" spends every remaining MP, ending your movement for the turn; "half" spends half your current MP, rounded down), **Lv** is the minimum level for Skill Seek to offer an optional skill (huts and scrolls ignore it; "—" marks core and fixed skills, which Skill Seek never offers), and effect numbers read rank 1 → rank 5. "Weapon" means the held weapon's damage when it matches the skill (melee weapon for melee skills, ranged for ranged); a mismatched or missing weapon counts as 1, and a matching weapon also brings its affixes and, for ranged skills, its range.
 
-### Combat Skills (27)
+### Combat Skills (28)
 
 | Skill | AE | MP | Target | Scales | Usage | Lv | Effect |
 |-------|----|----|--------|--------|-------|----|--------|
@@ -305,6 +305,7 @@ In the tables, **AE** is the Aether cost (aether_discount passives lower it), **
 | Penetrating Shot | 2 | all | Ranged (4) | Reflex | Anytime | 2 | 6 → 14 + Reflex. Ignores defense. |
 | Shockwave | 2 | all | AoE Self (2 → 3) | Might | Anytime | 2 | 4 → 12 + Might to enemies in range. Pushes each survivor 1 hex away. |
 | Warp Shield | 5 | 1 | Self | — | Anytime | 4 | For the coming enemy turn, a 50% → 100% chance to block each hit. |
+| Dodge | 0 | half | Self | — | Anytime | 2 | +20% → +60% dodge until your next turn starts (inside the `MAX_DODGE` cap). Costs half your current MP, rounded down. Once per turn. |
 | Reflect | 3 | all | Self | — | Anytime | 4 | For the coming enemy turn, a 40% → 90% chance per melee hit to take 10% and reflect 90%. |
 | Breach Pulse | 3 | all | AoE Self (2 → 3) | Warding | Anytime | 4 | 5 → 13 + Warding to all enemies in range. |
 | Chain Lightning | 3 | all | Ranged (3) | Warding | Anytime | 4 | 6 → 14 + Warding to target, chaining at full damage to 2 → 4 more enemies nearby. |
