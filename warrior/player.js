@@ -145,7 +145,7 @@ class Player {
     }
 
     dodge() {
-        return Math.min(2 * this.effectiveVigor() + this.sumEquipped('dodge_bonus', 'dodgeBonus'), MAX_DODGE);
+        return Math.min(DODGE_PER_REFLEX * this.stats.reflex + this.sumEquipped('dodge_bonus', 'dodgeBonus'), MAX_DODGE);
     }
 
     weaponRange(terrainType, poiType) {

@@ -60,7 +60,7 @@ The player may unequip the weapon and fight unarmed (damage 1).
     moved from [P] to [D]. A stale code comment ("Can't unequip weapon to nothing") that
     contradicted it was removed.
 
-### D-6 Dodge uses gear-boosted Vigor — *Decided*
+### D-6 Dodge uses gear-boosted Vigor — *Superseded by D-26*
 Dodge reads effective Vigor (base plus vigor_bonus gear), as defense and max HP already do.
 - **Alternatives:** keep dodge on base Vigor.
 - **Why:** designer's call; to be filled in.
@@ -70,6 +70,7 @@ Dodge reads effective Vigor (base plus vigor_bonus gear), as defense and max HP 
     (dodge on base Vigor) and tagged the change [D, unbuilt].
   - 2026-11-26: built — `Player.dodge()` in player.js reads `effectiveVigor()`. ONTOLOGY
     dropped the [D, unbuilt] tag.
+  - 2026-11-27: superseded by D-26; dodge left Vigor for Reflex.
 
 ### D-7 Hut Leave does not end the turn — *Decided*
 Leaving a hut is free, as Leave is at havens and villages; Learn and Rest end the turn's movement.
@@ -161,6 +162,24 @@ total stays capped at MAX_DODGE (90%), so there is always at least a 10% chance 
     item's bonus. No item values or MAX_DODGE changed; the character panel already read
     `player.dodge()`. ONTOLOGY's player-damage rule and DYNAMICS's dodge lines were updated.
     No save shape changed.
+
+### D-26 Dodge comes from Reflex, not Vigor — *Decided*
+Dodge = DODGE_PER_REFLEX × the Reflex stat + every equipped dodge_bonus item's bonus, capped
+at MAX_DODGE. Vigor and vigor_bonus gear no longer affect dodge; they still give max HP and
+defense. Supersedes D-6; D-12 (dodge bonuses stack) stands.
+- **Alternatives:** keep dodge on gear-boosted Vigor (D-6); split dodge between the two
+  stats.
+- **Why:** designer's call. Vigor was the whole survival stat (max HP, defense and dodge),
+  while Reflex had no defensive side at all; moving dodge gives Reflex one and makes
+  survival a choice between soaking hits and avoiding them.
+- **Evidence:** not measured.
+- **History:**
+  - 2026-11-27: built — `Player.dodge()` in player.js reads `stats.reflex` in place of
+    `effectiveVigor()`; there is no Reflex gear, so it reads the stat directly. The
+    per-point rate, formerly an inline 2 (the "dodge per vigor" row), became
+    `DODGE_PER_REFLEX` in config.js at the same value; MAX_DODGE is unchanged. ONTOLOGY's
+    player-damage rule and Numbers table and DYNAMICS's dodge lines were updated. No
+    player-facing text named the stat. No save shape changed.
 
 ### D-13 All randomness goes through Rando — *Decided*
 Every random draw in the files index.html loads goes through a `Rando` method: percent rolls

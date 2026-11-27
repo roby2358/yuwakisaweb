@@ -290,6 +290,7 @@ const VILLAGE_STOCK = [2, 3];
 const LEVEL_CAP = 10;
 const VIGOR_PER_DEFENSE = 3;         // effective vigor per +1 defense
 const MIGHT_PER_DEFENSE = 5;
+const DODGE_PER_REFLEX = 2;          // dodge % per point of Reflex
 const RANGED_MELEE_DIVISOR = 4;      // a ranged weapon swung in melee deals damage / this
 const STARTING_SP = 5;
 const MAX_SP = 50;

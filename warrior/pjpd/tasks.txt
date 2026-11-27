@@ -1,17 +1,3 @@
-Priority:   53
-Status: ToDo
-ID: reflexdodge-s7np
-Created: 2026-11-27T23:19:42Z
-Updated: 2026-11-27T23:19:42Z
-
-Dodge comes from Reflex, not Vigor.
-
-Goal: Player.dodge() (player.js) is 2 x effectiveVigor plus equipped dodge bonuses, capped at MAX_DODGE. Vigor already gives max HP and defence, while Reflex has no defensive role at all. The user has decided dodge belongs to Reflex.
-
-Settled design: dodge = 2 x the player's Reflex stat + the sum of dodgeBonus over equipped dodge_bonus items, capped at MAX_DODGE (unchanged at 90). Vigor, and Vigor gear (vigor_bonus through effectiveVigor), no longer affect dodge; they still give max HP and defence. There is no Reflex gear, so read player.stats.reflex directly. Give the per-point rate a named constant in config.js if it does not have one. Nothing saved changes; do not bump SAVE_VERSION. Update every place that says Vigor gives dodge: ONTOLOGY.md (stat effects, the dodge rule, the Numbers table), DYNAMICS.md, any player-facing text in text.js or index.html, and DECISIONS.md (a new entry that supersedes the earlier decision that dodge uses gear-boosted Vigor; why: Vigor was the whole survival stat and Reflex had no defensive side).
-
-Done when: every test in test/ passes (for f in test/*.js; do node $f; done); Player.dodge() reads Reflex and does not read Vigor; SAVE_VERSION is unchanged.
-----
 Priority:   52
 Status: ToDo
 ID: dodgeskill-2ve9

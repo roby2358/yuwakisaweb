@@ -93,7 +93,7 @@ Shattered terrain is visually distinct (dark red tones) and distressed terrain s
 - Starts with Rusty Blade (1 melee damage) and Worn Leather (1 defense) equipped, Stick Bow (1 ranged damage, range 2) in inventory, Restore learned
 - Regenerates PLAYER_REGEN HP per turn naturally (at start of enemy phase)
 - Defense = armor + Vigor (with vigor_bonus) / VIGOR_PER_DEFENSE + Might / MIGHT_PER_DEFENSE (both rounded down) + terrain + POI + situational armor and passive bonuses
-- Dodge chance = 2% × Vigor (vigor_bonus gear counts) + every equipped dodge_bonus item's bonus, summed, capped at `MAX_DODGE`
+- Dodge chance = `DODGE_PER_REFLEX`% × Reflex + every equipped dodge_bonus item's bonus, summed, capped at `MAX_DODGE`
 - Melee damage = weapon damage + Might (+ special bonuses: chaos_bonus, charge, channel, wall_of_steel). A ranged weapon used in melee deals a quarter of its damage (rounded up) + Might; bare hands deal 1 + Might
 - Ranged damage = weapon damage + Reflex (+ chaos_bonus, channel, sniper bonus at max range)
 - Bell curve damage rolls: 3 rolls of 1..strength×2, averaged. Mean ≈ strength, with natural variance.
@@ -115,7 +115,7 @@ Press 1-5 to activate a hotbar skill; some skills (Restore, Recall, the utility 
 ### Defensive Mechanics
 - **Warp Shield**: For the coming enemy turn, each hit has a chance (50% at rank 1, rising to certain at rank 5) to be blocked entirely.
 - **Reflect**: For the coming enemy turn, each melee hit has a chance to be cut to 10% with 90% sent back at the attacker.
-- **Dodge**: 2% × Vigor (gear included) + dodge_bonus summed across equipped items (cap `MAX_DODGE`). Checked before damage.
+- **Dodge**: `DODGE_PER_REFLEX`% × Reflex + dodge_bonus summed across equipped items (cap `MAX_DODGE`). Checked before damage.
 - **Stun**: One stun roll per enemy per player turn. Chance = rolled damage / `STUN_DIVISOR_PRIMARY` for melee attacks and Might/Vigor-based skills; / `STUN_DIVISOR_OTHER` for everything else. Melee `stun` weapon affix adds +20/30/40%, and the Stun skill adds its own bonus. Cap `MAX_STUN_CHANCE`. On success: suppresses that attack's counter, target loses next turn.
 - **Ranged Immune**: ranged_immune armor negates all incoming ranged damage.
 - **Thorns**: thorns armor reflects 50-100% of damage to melee attackers.
@@ -406,7 +406,7 @@ Seal the rest of the breaches. Gear up for the Maw. Starfall trivializes mob fig
 - **Harvester**: Loot + Bountiful Harvest + Salvage + Prospect — maximize gold income for shop upgrades
 
 ### Key Decisions
-- **Melee vs Ranged build**: Melee (Might + melee weapon) does more single-target damage and benefits from Void Strike/Execute/Shredding Blow. Ranged (Reflex + ranged weapon) avoids counter-attacks and kites safely but has lower burst, and magic bows tax Aether per shot. Vigor is the stat that double-scales: it raises HP, defense and dodge. Penetrating Shot, Ricochet and Void Salvo give Reflex builds skill scaling. Weapons with ignore_defense are excellent against high-defense targets (Breach Guardian at 5 def, Unraveler at 6 def, both higher near the Maw).
+- **Melee vs Ranged build**: Melee (Might + melee weapon) does more single-target damage and benefits from Void Strike/Execute/Shredding Blow. Ranged (Reflex + ranged weapon) avoids counter-attacks and kites safely but has lower burst, and magic bows tax Aether per shot. Vigor raises HP and defense; Reflex is the other half of survival, raising dodge alongside ranged damage, so a ranged build dodges more as it hits harder and a melee build has to buy its dodge separately. Penetrating Shot, Ricochet and Void Salvo give Reflex builds skill scaling. Weapons with ignore_defense are excellent against high-defense targets (Breach Guardian at 5 def, Unraveler at 6 def, both higher near the Maw).
 - **When to engage breaches**: Each sealed breach frees its region of new chaos and pushes the same spawn rate onto the sources still open (the other breaches, the Maw and the Unraveler until its first death), so the last breaches and the Maw are the most crowded; and the guardian fight (50 HP, 10 atk, 8 ranged atk at range 5, 5 def) is dangerous. Their long ranged reach and aggro range of 6 means you can't safely plunk away from a distance. Shredding Blow makes guardians far more approachable. After the kill you still need to stand within Restore's range, out of enemies' reach, and may need several casts.
 - **Skill Points and slots**: dozens of skills, `SKILL_SLOTS` slots, and only enough SP to keep a handful trained. Rank 3 in one skill costs as much as six skills at rank 1. The Skills panel lets you swap freely among trained skills, but mid-combat you're locked to what's trained and slotted. Restore, Recall and most utility skills can be cast from the Skills panel without a slot, so slots go to the fight. Pristine skills incentivize returning to safe territory between fights, and retraining needs a haven, a hut or Retrain.
 - **High defense trade-off**: Armor with high_def_mp_penalty costs 1 MP per turn (its +5 defense bonus isn't applied yet), severely limiting mobility. Best paired with Phase Step or Sprint for repositioning.
@@ -415,7 +415,7 @@ Seal the rest of the breaches. Gear up for the Maw. Starfall trivializes mob fig
 ### Anti-Strategies
 - **Turtling near haven**: Breach spawns fill the map and shatter terrain, and chaos swarms march on settlements. The chaos might cap holds back the breaches and the Maw (only the Unraveler's share ignores it), but the shattered wasteland left behind makes movement increasingly costly and Pristine skills unusable.
 - **Ignoring breaches**: Even with the chaos might cap, the continuous spawning creates a target-rich environment that drains HP and Aether without strategic progress, and the Maw can't be sealed until every breach is. Meanwhile shattered terrain accumulates, degrading map mobility and Aether Tap yields.
-- **Pure glass cannon**: High Might, no Vigor. Works until a Phase Wraith teleports adjacent and you eat hits with only 50 HP, no Vigor defense and no dodge. Near the Maw, the Unraveler's attacks carry the Maw-proximity bonus on top of 12 melee + 6 ranged and will two-shot you.
+- **Pure glass cannon**: High Might, no Vigor, no Reflex. Works until a Phase Wraith teleports adjacent and you eat hits with only 50 HP, no Vigor defense and no Reflex dodge. Near the Maw, the Unraveler's attacks carry the Maw-proximity bonus on top of 12 melee + 6 ranged and will two-shot you.
 - **Grinding Void Stalkers forever**: Polynomial XP curve makes this increasingly futile past level 5. Breaches and ruins give better returns for the risk.
 - **Ignoring engagement**: Ending turns adjacent to enemies halves your MP next turn. Getting pinned between two enemies can cascade into a death spiral of reduced mobility.
 - **Skill Seek spam at havens**: Costs 3 AE per attempt for a low chance (5% at rank 1), with nothing on a plain failure. At a haven you'd need to rest between attempts, eating turns. The polynomial XP curve and breach escalation make this a poor use of time; huts teach for free.

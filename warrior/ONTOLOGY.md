@@ -736,7 +736,7 @@ if random < min(pct, MAX_STUN_CHANCE): stunnedNextTurn = true
 ```
 if ranged and ranged_immune: avoid
 if warpShieldTurns > 0 and chance(warp effectStrength / 10): avoid
-if chance(dodge()): avoid            # dodge = dodge per vigor × effective vigor + dodge_bonus summed over equipped items, cap MAX_DODGE
+if chance(dodge()): avoid            # dodge = DODGE_PER_REFLEX × Reflex + dodge_bonus summed over equipped items, cap MAX_DODGE
 rolled = bellCurve(damage); dealt = max(1, rolled − playerDefense())
 if melee, reflectTurns > 0 and chance(reflect effectStrength / 10):
   reflected = max(1, dealt × reflectPercent%); dealt = max(1, dealt × takePercent%)
@@ -747,6 +747,9 @@ if hp ≤ 0: endGame(lost)
 MIGHT_PER_DEFENSE) + terrain + POI + last_stand (≤ half HP) + momentum × hexes moved +
 ranger_defense (ranger terrain) + chaos_defense and chaos_attune (chaos terrain). A
 Warding-based skill-damage reduction exists but no caller uses it (Q-1).
+
+effectiveVigor (Vigor + vigor_bonus gear) feeds max HP and defense only. Dodge reads the
+Reflex stat itself; no gear raises Reflex.
 
 ### Kill [D]
 *Serves:* "Windfall", G-2. (`killEnemy`)
@@ -1116,7 +1119,7 @@ whole turn.
 
 Every tunable number, by code name. A row whose name is an upper-case constant or a function
 is defined under that name in the file its Code column gives. A row named in lower case
-(dodge per vigor, the magic item price, the enemy animation delays) has no constant: it is a
+(the magic item price, the enemy animation delays) has no constant: it is a
 literal or formula written in place in the function it cites.
 Content-table numbers (each skill's tiers and costs, each item's stats, each fixed enemy's
 stats, effect magnitudes) stay in `SKILLS`, `WEAPONS`, `ARMORS`, the effect pools and
@@ -1147,7 +1150,7 @@ stats, effect magnitudes) stay in `SKILLS`, `WEAPONS`, `ARMORS`, the effect pool
 | xpForLevel(L) | round(50 × L^1.8 / 10) × 10 | XP to reach level L | config.js |
 | LEVEL_CAP | 10 | level | config.js; used in index.gainXP |
 | VIGOR_PER_DEFENSE / MIGHT_PER_DEFENSE | 3 / 5 | stat per +1 def | config.js; used in player.defense |
-| dodge per vigor | 2 | % per effective vigor | player.dodge |
+| DODGE_PER_REFLEX | 2 | % per Reflex | config.js; used in player.dodge |
 | MAX_DODGE | 90 | % | config.js |
 | MAX_STUN_CHANCE | 90 | % | config.js |
 | STUN_DIVISOR_PRIMARY / STUN_DIVISOR_OTHER | 40 / 60 | damage per 100% | config.js |
