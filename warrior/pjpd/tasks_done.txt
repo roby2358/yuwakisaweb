@@ -546,6 +546,20 @@ Tuning: don't overpopulate ranged on a single map — they're a counter to slow 
 ----
 Priority:   50
 Status: Done
+ID: wardflag-u4tt
+Created: 2026-11-27T22:45:28Z
+Updated: 2026-11-27T23:48:02Z
+
+Remove the unused isSkillDamage parameter and the Warding skill-damage reduction from dealDamageToPlayer.
+
+Goal: dealDamageToPlayer(damage, source, isSkillDamage, opts) in index.js raises defence by Warding percent of the roll when isSkillDamage is true, but every caller passes false (enemy_ai.js ranged and melee attacks, the enemy counter in actions.js), because enemies have no skills. It is dead logic. Nothing player-facing mentions it and nothing saved depends on it.
+
+Settled design: delete the isSkillDamage parameter and the line that uses it, so the signature is dealDamageToPlayer(damage, source, opts), and update every caller and the comment headers that list the signature (actions.js, enemy_ai.js). Behaviour is unchanged. Do not bump SAVE_VERSION. Update ONTOLOGY.md: remove the sentence saying the Warding-based reduction exists but is unused, and drop it from Q-1 and the half-wired note; update CLAUDE.md if it quotes the signature.
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); isSkillDamage appears nowhere in the code or ONTOLOGY.md; SAVE_VERSION is unchanged.
+----
+Priority:   50
+Status: Done
 ID: riposte-6kyb
 Created: 2026-11-27T22:23:30Z
 Updated: 2026-11-27T23:46:20Z

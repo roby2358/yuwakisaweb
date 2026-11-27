@@ -159,7 +159,7 @@ class EnemyAI {
     }
 
     doEnemyRanged(enemy, def, ctx) {
-        ctx.dealDamageToPlayer(ctx.enemyRangedAttack(enemy, def), say('src_enemy_ranged', { name: def.name }), false, { attacker: enemy, isRanged: true });
+        ctx.dealDamageToPlayer(ctx.enemyRangedAttack(enemy, def), say('src_enemy_ranged', { name: def.name }), { attacker: enemy, isRanged: true });
     }
 
     // The one place an enemy's melee attack lands on the player during the enemy
@@ -167,7 +167,7 @@ class EnemyAI {
     // A reply needs both sides standing, so the chain stops once either falls.
     doEnemyMelee(enemy, def, ctx) {
         const { player } = ctx;
-        ctx.dealDamageToPlayer(ctx.enemyMeleeAttack(enemy, def), def.name, false, { attacker: enemy });
+        ctx.dealDamageToPlayer(ctx.enemyMeleeAttack(enemy, def), def.name, { attacker: enemy });
         for (const reply of MELEE_REPLIES) {
             if (player.hp <= 0 || enemy.hp <= 0) return;
             const item = player.equipped(reply.special);

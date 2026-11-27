@@ -748,8 +748,7 @@ if hp ≤ 0: endGame(lost)
 ```
 `playerDefense` = armor defense + floor(effectiveVigor / VIGOR_PER_DEFENSE) + floor(Might /
 MIGHT_PER_DEFENSE) + terrain + POI + last_stand (≤ half HP) + momentum × hexes moved +
-ranger_defense (ranger terrain) + chaos_defense and chaos_attune (chaos terrain). A
-Warding-based skill-damage reduction exists but no caller uses it (Q-1).
+ranger_defense (ranger terrain) + chaos_defense and chaos_attune (chaos terrain).
 
 effectiveVigor (Vigor + vigor_bonus gear) feeds max HP and defense only. Dodge reads the
 Reflex stat itself; no gear raises Reflex.
@@ -1347,9 +1346,8 @@ formalized from the code]
 Not yet settled. Recommendations are Claude's. A settled question leaves this list.
 
 ### Q-1 Inert or half-wired gear effects
-ranged_defense, displacement_immune, high_def_mp_penalty's defBonus, and Warding's
-skill-damage reduction exist in data or code but do nothing (or only part of what they
-say). Filed as a tracker idea for discussion.
+ranged_defense, displacement_immune and high_def_mp_penalty's defBonus exist in data or
+code but do nothing (or only part of what they say). Filed as a tracker idea for discussion.
 - **Options:** wire each one up; remove each one; mix per effect.
 - **Recommendation:** decide per effect; wire the ones whose text players see on items, drop
   the rest.

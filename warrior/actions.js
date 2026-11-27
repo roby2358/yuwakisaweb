@@ -595,7 +595,7 @@ class MeleeAction extends Action {
             let counterDmg = enemyMeleeAttack(enemy, def);
             const deflect = player.equipped('counter_deflect');
             if (deflect) counterDmg = Math.floor(counterDmg * (100 - deflect.counterDeflect) / 100);
-            dealDamageToPlayer(counterDmg, say('src_counters', { name: def.name }), false, { attacker: enemy });
+            dealDamageToPlayer(counterDmg, say('src_counters', { name: def.name }), { attacker: enemy });
         }
 
         this.spendWeaponMP();

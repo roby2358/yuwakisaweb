@@ -673,7 +673,7 @@ function rollPlayerStun(enemy, rolledDmg, bucket, bonusPct) {
     return false;
 }
 
-function dealDamageToPlayer(damage, source, isSkillDamage, opts) {
+function dealDamageToPlayer(damage, source, opts) {
     if (opts.isRanged && player.equipped('ranged_immune')) {
         logCombat(say('log_ranged_negated', {}), 'log-info');
         return { dealt: 0, avoided: true };
@@ -691,9 +691,7 @@ function dealDamageToPlayer(damage, source, isSkillDamage, opts) {
         return { dealt: 0, avoided: true };
     }
     const rolled = Rando.bellCurve(damage);
-    let def = playerDefense();
-    if (isSkillDamage) def += Math.round(player.stats.warding / 100 * rolled);
-    let dealt = Math.max(1, rolled - def);
+    let dealt = Math.max(1, rolled - playerDefense());
     let reflected = 0;
     if (player.reflectTurns > 0 && opts.attacker && !opts.isRanged) {
         const r = effectiveSkill(SKILLS.reflect, player.rankOf('reflect'));

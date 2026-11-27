@@ -420,6 +420,25 @@ counter to the player's own melee strike.
     strike rule, enemy melee rule, Numbers table and Q-1, DYNAMICS, md/MAGIC_ITEMS.md and
     CLAUDE.md were updated.
 
+### D-29 Warding does not reduce damage the player takes — *Decided*
+Damage to the player is the roll less the player's defense, whatever its source. Warding
+raises Aether and the skills that scale with it; it gives no defense. The unused
+skill-damage branch in `dealDamageToPlayer`, which raised defense by Warding percent of
+the roll, is removed along with the flag that selected it.
+- **Alternatives:** wire it up by giving enemies attacks marked as skill damage; leave the
+  dead branch in place.
+- **Why:** enemies have no skills, so every caller passed false and the branch never ran;
+  nothing the player reads mentions it and no save holds it. A parameter that is always
+  false misleads whoever reads the function next.
+- **Evidence:** not measured; behaviour is unchanged, since no caller ever set the flag.
+- **History:**
+  - 2026-11-27: settled the Warding part of Q-1; decided and built. `dealDamageToPlayer`
+    in index.js lost its `isSkillDamage` parameter and the line that read it, so it takes
+    (damage, source, opts); its three callers (the enemy counter in actions.js, enemy
+    ranged and melee in enemy_ai.js) dropped the argument. No saved field changed, so
+    SAVE_VERSION was not bumped. ONTOLOGY's damage-to-the-player rule and Q-1 no longer
+    mention the reduction.
+
 ### Code structure
 
 ### D-17 Inline tunables get constant names — *Decided*
