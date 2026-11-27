@@ -91,20 +91,6 @@ Open questions:
 4. Is the rebalance done before or after adding variants and hybrids, since those multiply the table?
 5. Does it include rank costs and the Skill Point economy (one point per level now), or only the skills' own numbers?
 ----
-Score:   55
-ID: ripostedmg-64st
-Created: 2026-11-26T22:05:38Z
-Updated: 2026-11-26T22:05:38Z
-
-The riposte weapon effect (config.js riposteDamage 1/2/3; text "+N counter-atk") reads only as a special name: actions.js halves the counter damage when the weapon is riposte (counterDmg / 2), and riposteDamage is never read. So the item that advertises a stronger counter makes the counter weaker. Talk through what riposte should do (add riposteDamage to the counter, counter on enemy melee too, something else) and fix the code or the text.
-----
-Score:   55
-ID: countermast-8hym
-Created: 2026-11-26T22:05:38Z
-Updated: 2026-11-26T22:05:38Z
-
-The counter_mastery magic-item effect ("Counter-attack on enemy melee") fires only on chaos-enemy melee (enemy_ai.js ~416, in the chaos melee path). Wildlife and monster melee go through a different attack path and never trigger it. Talk through sending all enemy melee through one shared function so counter_mastery (and any other on-hit-by-melee effect) works against every enemy, and whether anything should stay chaos-only.
-----
 Score:   50
 ID: rand-xvfp
 Created: 2026-11-26T17:08:55Z
@@ -386,6 +372,46 @@ Open design calls, to settle before this is a task:
 - When the chosen source has no free adjacent hex, is the spawn skipped or does another source get picked?
 - When every breach is closed and only the Maw is left, does the whole rate land on the Maw?
 - How does this sit with the endgame pressure the design wants (Escalating Commitment): closing breaches would now make the remaining ones harder, not easier.
+----
+Score:   55
+ID: countermast-8hym
+Created: 2026-11-26T22:05:38Z
+Updated: 2026-11-27T22:23:30Z
+
+(Done) The counter_mastery magic-item effect ("Counter-attack on enemy melee") fires only on chaos-enemy melee (enemy_ai.js ~416, in the chaos melee path). Wildlife and monster melee go through a different attack path and never trigger it. Talk through sending all enemy melee through one shared function so counter_mastery (and any other on-hit-by-melee effect) works against every enemy, and whether anything should stay chaos-only.
+----
+Score:   55
+ID: ripostedmg-64st
+Created: 2026-11-26T22:05:38Z
+Updated: 2026-11-27T22:18:26Z
+
+(Done) The riposte weapon effect (config.js riposteDamage 1/2/3; text "+N counter-atk") reads only as a special name: actions.js halves the counter damage when the weapon is riposte (counterDmg / 2), and riposteDamage is never read. So the item that advertises a stronger counter makes the counter weaker. Talk through what riposte should do (add riposteDamage to the counter, counter on enemy melee too, something else) and fix the code or the text.
+----
+Score:   50
+ID: ripostecut-msgf
+Created: 2026-11-27T22:23:30Z
+Updated: 2026-11-27T22:23:30Z
+
+(Done) Stop the riposte weapon effect from doing anything and from appearing on new items.
+
+Goal: riposte is a weaker copy of counter_deflect (it halves the enemy's counter-attack; its riposteDamage field is never read, and its text "+N counter-atk" matches nothing). The user has decided to remove it. This task is the part that does not break saves: old saves may still hold a riposte weapon, which must keep loading and displaying.
+
+Settled design: in MeleeAction.execute (actions.js) delete the line that halves counterDmg for a riposte weapon, and the wep lookup if nothing else there uses it. In config.js delete the three { special: 'riposte', ... } rows from the magic-effect pool so rollMagicItem never produces one. Leave the riposte row of the name table in config.js and spec_riposte in text.js alone, so a riposte weapon in an existing save still shows its name and text; it simply has no effect now. Do not bump SAVE_VERSION. Update ONTOLOGY.md: drop the riposte halving from the "Melee strike and counter" pseudocode, drop the riposte clause from the note about half-wired effects and from Q-1, and remove riposte from the list of rollable specials (say, where that note sits, that the name and text rows remain only for old saves until the follow-up removal). Add a DECISIONS.md entry: riposte removed as a weaker duplicate of counter_deflect; a counter-strike version was rejected to avoid attack response chains. Update DYNAMICS.md and md/MAGIC_ITEMS.md if they list riposte among live effects.
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); "riposte" appears in no .js file except the name-table row in config.js, spec_riposte in text.js and origitems.js; SAVE_VERSION is unchanged.
+----
+Score:   50
+ID: ripostegone-8pyd
+Created: 2026-11-27T22:23:30Z
+Updated: 2026-11-27T22:23:30Z
+
+(Done) Remove the last traces of the retired riposte weapon effect. This breaks old saves.
+
+Goal: riposte no longer does anything and no longer rolls on new items, but its name-table row in config.js and its spec_riposte line in text.js were kept so a riposte weapon in an old save still displays. Removing them makes such a save throw when the item's text is looked up, so this is a save-breaking change.
+
+Settled design: delete the riposte row from the magic-item name table in config.js and spec_riposte from text.js. Bump SAVE_VERSION by 1 and tell the user old saves will show "New Version". Remove any remaining mention in ONTOLOGY.md that the rows are kept for old saves. Leave origitems.js (an unloaded archive) alone. If another save-breaking cleanup is being done in the same session, they may share one SAVE_VERSION bump only if the user says so; otherwise bump by 1 here.
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); "riposte" appears in no loaded .js file and not in ONTOLOGY.md outside history; SAVE_VERSION is one higher.
 ----
 Score:   50
 ID: text-vary-hr8q
