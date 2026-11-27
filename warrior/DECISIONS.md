@@ -324,6 +324,26 @@ pool and WRAITH_CAP are unchanged.
     the Unraveler-minions rule), entity tables and Numbers table, DYNAMICS and CLAUDE.md
     were updated.
 
+### D-25 Every enemy melee attack draws the player's replies — *Decided*
+Every melee attack an enemy makes on its own turn goes through one function, which deals
+the hit and then runs the player's reply effects, so counter_mastery answers wildlife,
+monsters and ruin guardians as well as chaos. Enemy ranged attacks draw no reply. The
+enemy's counter to the player's own melee strike is not an enemy attack and draws none. A
+reply runs only while both the enemy and the player are alive, and runs whether the hit
+landed or was avoided. counter_mastery's own roll is unchanged.
+- **Alternatives:** keep it chaos-only and say so in the item's text.
+- **Why:** the item's text promises a counter-attack on enemy melee, with no exception;
+  one shared attack function keeps any later reply effect from being chaos-only by
+  accident.
+- **Evidence:** not measured.
+- **History:**
+  - 2026-11-27: settled Q-3; decided and built. `EnemyAI.doEnemyMelee` in enemy_ai.js
+    (moved up from ChaosAI) is the one place enemy-phase melee damage reaches the player; `tryAggroChase`
+    now calls it instead of `dealDamageToPlayer`. The replies are the `MELEE_REPLIES`
+    table (item special + what it does), so a second reply is a new entry. The player-alive
+    check is new. ONTOLOGY's shared moves gained the enemy melee rule and Q-3 left its
+    open questions; DYNAMICS and CLAUDE.md were updated.
+
 ### Code structure
 
 ### D-17 Inline tunables get constant names — *Decided*
@@ -388,8 +408,8 @@ of ONTOLOGY.md. A settled question leaves that list and becomes a decision here.
 The designer ruled on the open questions from the conversion entry below. The ones that
 became decisions (D-1 to D-9) are recorded in each decision's History. Still open after the
 rulings:
-Q-1 and Q-3 (filed as tracker ideas for discussion), Q-2 (covered by an existing tracker idea;
-later settled as D-10), Q-4, Q-5, Q-10, Q-14, Q-15, Q-17.
+Q-1 and Q-3 (filed as tracker ideas for discussion; Q-3 later settled as D-25), Q-2 (covered
+by an existing tracker idea; later settled as D-10), Q-4, Q-5, Q-10, Q-14, Q-15, Q-17.
 
 ### 2026-11-26 — ONTOLOGY.md replaces SPEC.md
 

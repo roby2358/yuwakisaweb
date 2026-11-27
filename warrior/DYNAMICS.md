@@ -119,7 +119,7 @@ Press 1-5 to activate a hotbar skill; some skills (Restore, Recall, the utility 
 - **Stun**: One stun roll per enemy per player turn. Chance = rolled damage / `STUN_DIVISOR_PRIMARY` for melee attacks and Might/Vigor-based skills; / `STUN_DIVISOR_OTHER` for everything else. Melee `stun` weapon affix adds +20/30/40%, and the Stun skill adds its own bonus. Cap `MAX_STUN_CHANCE`. On success: suppresses that attack's counter, target loses next turn.
 - **Ranged Immune**: ranged_immune armor negates all incoming ranged damage.
 - **Thorns**: thorns armor reflects 50-100% of damage to melee attackers.
-- **Counter Mastery**: a counter_mastery weapon strikes back when a chaos enemy melees you.
+- **Counter Mastery**: a counter_mastery weapon strikes back when any enemy melees you on its turn.
 - **Burning Aura**: burning_aura armor burns adjacent enemies when you're hit.
 - **Last Stand**: last_stand armor grants +4/+6 defense at or below half HP.
 - **Momentum**: momentum armor adds defense per hex moved this turn.

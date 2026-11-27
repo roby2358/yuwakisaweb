@@ -314,6 +314,20 @@ Done when: all test/*.js pass; a new game has exactly 12 huts with 12 different 
 ----
 Priority:   55
 Status: Done
+ID: meleereply-5k8e
+Created: 2026-11-27T22:23:30Z
+Updated: 2026-11-27T23:33:18Z
+
+Send every enemy melee attack on the player through one function, so the player's reply effects work against all enemies.
+
+Goal: the counter_mastery item ("Counter-attack on enemy melee") only fires in ChaosAI's doEnemyMelee (enemy_ai.js, around line 413). The other enemy melee site (enemy_ai.js around line 143, used by wildlife and monsters) calls dealDamageToPlayer directly and never triggers it. The item's text promises a reply to any enemy melee.
+
+Settled design: one shared function in enemy_ai.js performs an enemy melee attack on the player: deal enemyMeleeAttack damage with attacker = enemy, then run the player's replies. Every enemy melee attack made on the enemy's turn calls it; nothing stays chaos-only. Ranged attacks do not trigger replies. The enemy's counter to the player's own strike (MeleeAction in actions.js) is not an enemy attack and does not trigger replies. counter_mastery's reply is unchanged: roll Rando.bellCurve(weapon damage, or 1 unarmed, + Might), subtract enemy defense, minimum 1 damage, only if the enemy is alive, and also only if the player is still alive. Structure the reply step so a second reply effect can be added beside counter_mastery without another conditional at each call site. Update ONTOLOGY.md's enemy melee rule and CLAUDE.md if its description of enemy_ai.js changes.
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); enemy_ai.js has exactly one place where an enemy's melee damage is dealt to the player on the enemy's turn, and counter_mastery is checked there.
+----
+Priority:   55
+Status: Done
 ID: dodgestack-xjsk
 Created: 2026-11-26T23:28:35Z
 Updated: 2026-11-26T23:34:00Z

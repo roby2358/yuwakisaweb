@@ -6,7 +6,7 @@
 // one entry to BEHAVIOR_AI — no changes to runEnemyAiPhase needed.
 //
 // The ctx passed to runEnemyAiPhase must supply (mirrors actions.js pattern):
-//   state (live getters):    player, world, em, victory
+//   state (live getters):    player, world, em, victory, sound
 //   predicates (functions):  combatAlerted, isGameOver, playerInForest, playerTerrain
 //   combat math (functions): enemyMeleeAttack, enemyRangedAttack, enemyDefense,
 //                            enemyEffectiveMaxHp, enemyOnCorruptedTerrain
@@ -75,6 +75,31 @@ function pickSpawnPack(q, r, player, em) {
 }
 
 // ================================================================
+// Melee replies — what the player's gear does back to an enemy that
+// has just meleed them on its own turn (EnemyAI.doEnemyMelee). One
+// entry per item special, run in order while both sides still stand.
+// A new reply effect is a new entry here; no call site changes.
+// ================================================================
+
+const MELEE_REPLIES = [
+    {
+        // Counter Mastery: the player strikes back with weapon + Might.
+        special: 'counter_mastery',
+        run(enemy, def, ctx) {
+            const { player } = ctx;
+            const pWep = player.weapon();
+            const counterDmg = (pWep ? pWep.damage : 1) + player.stats.might;
+            const rolled = Rando.bellCurve(counterDmg);
+            const actualDmg = Math.max(1, rolled - ctx.enemyDefense(enemy, def));
+            enemy.hp -= actualDmg;
+            ctx.logCombat(say('log_counter_mastery', { dmg: actualDmg }), 'log-dmg');
+            ctx.sound.hitEnemy();
+            if (enemy.hp <= 0) ctx.killEnemy(enemy, {});
+        },
+    },
+];
+
+// ================================================================
 // EnemyAI base — shared helpers for all per-enemy turn handlers.
 // Subclasses override takeTurn(enemy, def, occupied, ctx).
 // ================================================================
@@ -123,6 +148,18 @@ class EnemyAI {
         ctx.dealDamageToPlayer(ctx.enemyRangedAttack(enemy, def), say('src_enemy_ranged', { name: def.name }), false, { attacker: enemy, isRanged: true });
     }
 
+    // The one place an enemy's melee attack lands on the player during the enemy
+    // phase: the hit, then each reply the player's gear grants (MELEE_REPLIES).
+    // A reply needs both sides standing, so the chain stops once either falls.
+    doEnemyMelee(enemy, def, ctx) {
+        const { player } = ctx;
+        ctx.dealDamageToPlayer(ctx.enemyMeleeAttack(enemy, def), def.name, false, { attacker: enemy });
+        for (const reply of MELEE_REPLIES) {
+            if (player.hp <= 0 || enemy.hp <= 0) return;
+            if (player.equipped(reply.special)) reply.run(enemy, def, ctx);
+        }
+    }
+
     // Standard "see player → chase and melee" used by wildlife/monster/guardian.
     // A ranged creature with a clear shot holds its ground and fires instead.
     // Returns true if the enemy spent its turn aggro-chasing.
@@ -140,7 +177,7 @@ class EnemyAI {
         em.moveWildlifeToward(enemy, player.q, player.r, occupied, player.q, player.r, world);
         if (this.enemyIsVisible(enemy, prevKey, ctx)) { await ctx.animDelay(80); ctx.render(); }
         if (hexDistance(enemy.q, enemy.r, player.q, player.r) === 1) {
-            ctx.dealDamageToPlayer(ctx.enemyMeleeAttack(enemy, def), def.name, false, { attacker: enemy });
+            this.doEnemyMelee(enemy, def, ctx);
             await ctx.animDelay(150); ctx.render();
         }
         return true;
@@ -406,23 +443,6 @@ class ChaosAI extends EnemyAI {
             return true;
         }
         return false;
-    }
-
-    doEnemyMelee(enemy, def, ctx) {
-        const { player, em, dealDamageToPlayer, logCombat, killEnemy } = ctx;
-        dealDamageToPlayer(ctx.enemyMeleeAttack(enemy, def), def.name, false, { attacker: enemy });
-        // Counter Mastery: player counter-attacks after being hit in melee
-        if (player.equipped('counter_mastery') && enemy.hp > 0) {
-            const pWep = player.weapon();
-            const counterDmg = (pWep ? pWep.damage : 1) + player.stats.might;
-            const rolled = Rando.bellCurve(counterDmg);
-            const eDef = ctx.enemyDefense(enemy, def);
-            const actualDmg = Math.max(1, rolled - eDef);
-            enemy.hp -= actualDmg;
-            logCombat(say('log_counter_mastery', { dmg: actualDmg }), 'log-dmg');
-            ctx.sound.hitEnemy();
-            if (enemy.hp <= 0) killEnemy(enemy, {});
-        }
     }
 
     enemyAttacks(enemy, def, prefersRanged, newDist, ctx) {

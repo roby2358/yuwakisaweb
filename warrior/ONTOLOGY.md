@@ -1046,6 +1046,18 @@ monster → MonsterAI, ruins-guardian → RuinsGuardianAI, anything else → Cha
 - **Aggro chase** (`tryAggroChase`, wildlife buckets): if in aggro, alarm; a ranged
   creature with a shot (distance > 1, ≤ range, LOS) fires and holds; otherwise step toward
   the player avoiding shattered hexes, and melee if adjacent.
+- **Enemy melee** (`doEnemyMelee`): every melee attack an enemy makes on its own turn,
+  from any AI, goes through this one rule:
+  ```
+  dealDamageToPlayer(enemyMeleeAttack(enemy), attacker = enemy)
+  for each reply in MELEE_REPLIES, in order:
+    stop if player.hp ≤ 0 or enemy.hp ≤ 0
+    if the player wears reply.special: run it
+  ```
+  The one reply is **counter_mastery**: dealt = max(1, bellCurve(weapon damage, or 1
+  unarmed, + Might) − enemyDefense); enemy.hp -= dealt; killEnemy at hp ≤ 0. A reply runs
+  whether the hit landed or was avoided (dodge, Warp Shield). Enemy ranged attacks run no
+  replies, and neither does the enemy's counter to the player's own melee strike.
 - **Movement limits**: passable, unoccupied, not the player's hex, not a haven, village or
   garrison (a swarm's goal hex excepted). Wildlife never wanders or chases onto shattered
   hexes; hunting a target by A* can cross them.
@@ -1086,9 +1098,8 @@ Step by behavior: **guard** returns home beyond guardRadius, else steps toward t
 only while staying within guardRadius; **kite** backs off under KITE_MIN_DIST, closes
 beyond KITE_MAX_DIST, else holds, and wanders (chance WANDER_CHANCE) out of aggro;
 **boss** steps toward the player in aggro; **chase** steps toward the player in aggro
-unless prefersRanged, else wanders (WANDER_CHANCE). When a chaos enemy melees the player
-and the player wears counter_mastery, the player hits back (weapon + Might, bell-curved,
-minus defense). Wildlife melee does not trigger it (Q-3).
+unless prefersRanged, else wanders (WANDER_CHANCE). A chaos enemy's melee is the shared
+enemy melee rule above.
 
 **Swarm** (`trySwarmTrigger`): with SWARM_ALLIES or more chaos allies within
 SWARM_RADIUS, pick one of the nearest settlements by SWARM_WEIGHTS and hunt toward it.
@@ -1321,7 +1332,3 @@ only part of what they say). Filed as a tracker idea for discussion.
 - **Recommendation:** decide per effect; wire the ones whose text players see on items, drop
   the rest.
 
-### Q-3 counter_mastery fires only against chaos melee
-Wildlife melee does not trigger it. Filed as a tracker idea for discussion.
-- **Options:** extend it to all melee attackers; keep it chaos-only and say so in its text.
-- **Recommendation:** extend it to all melee, unless chaos-only is meant as flavour.
