@@ -32,8 +32,10 @@ loot, and ends the run by sealing the Maw, the wound where reality is dissolving
 - **Windfall** [D] — big, sudden gains: a strong magic item, a level-up heal, a ruin haul.
 - **Weight of choice** [D] — few MP, few slots, little Aether; each action costs something.
 - **Readability** [D] — what you can reach, hit and fear is shown on the map.
-- **Room to break the game** [D] — discoverable rule-breaking combos of gear and skills
-  are intended fun. No reflexive floors or caps.
+- **Room to break the game** [D] — the system is meant to have exploits. Discoverable
+  rule-breaking combos of gear and skills are intended fun, and landing on one that wins
+  the game is part of the windfall. Balancing is light, with no reflexive floors or caps;
+  a careful player loses only by getting careless.
 - **Living map** [D] — huts and ruins are never spent. Repeat visits use a low chance,
   not a one-time limit.
 
@@ -846,8 +848,12 @@ for each unsealed breach or Maw:
 ```
 if em.chaosMight() ≥ CHAOS_MIGHT_CAP: none
 pool = CHAOS_SPAWN_POOL (drop the wraith when wraiths ≥ WRAITH_CAP)
-each open breach: chance(BREACH_SPAWN_CHANCE) → one pool enemy on a free adjacent hex
+each open breach: chance(BREACH_SPAWN_CHANCE) → one pool enemy on nearestFreeHex(breach)
 ```
+`nearestFreeHex(source)`: search outward from the source over passable hexes, a step at a
+time, walking through occupied ones; take a random hex among the nearest free ones (passable
+and unoccupied), never the source itself. A crowded source spawns further out; if no free hex
+can be reached, nothing spawns.
 `chaosMight` / `wildlifeMight` = Σ def.attack over chaos / wildlife enemies.
 
 ### Wildlife spawning and packs [D]
@@ -870,7 +876,7 @@ BREACH_CRAWLER_RADIUS.
 ### Unraveler minions [D]
 ```
 boss, not noSpawn, turnsSinceSpawn > 0, chance(def.spawnChance):
-  one CHAOS_SPAWN_POOL enemy (wraith dropped at WRAITH_CAP) on a free adjacent hex
+  one CHAOS_SPAWN_POOL enemy (wraith dropped at WRAITH_CAP) on nearestFreeHex(Unraveler)
 ```
 
 ### Ruin search [D]

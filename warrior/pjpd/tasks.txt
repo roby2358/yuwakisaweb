@@ -1,0 +1,42 @@
+Priority:   91
+Status: ToDo
+ID: flatspawn-z8b9
+Created: 2026-11-27T19:21:44Z
+Updated: 2026-11-27T19:24:31Z
+
+Breach spawning becomes one flat roll a turn at a random open breach.
+
+Goal: today every open breach rolls BREACH_SPAWN_CHANCE on its own each turn (spawnChaosAtBreaches in enemy_ai.js), so the total spawn rate falls as breaches close. The designer wants a steady rate that lands on fewer and fewer sources, so chaos scatters early and concentrates late.
+
+Settled design:
+- One roll each turn in the spawn step of the enemy phase: chance CHAOS_SPAWN_CHANCE, a new constant in config.js with value 0.5. It replaces BREACH_SPAWN_CHANCE; remove that.
+- On a successful roll, draw one open breach uniformly and spawn one enemy from chaosSpawnPool(wraithCount) there, placed and homed as breach spawns are today.
+- The might cap works as today: when em.chaosMight() >= CHAOS_MIGHT_CAP, no breach spawns.
+- With no open breach, nothing spawns from this step.
+- The Unraveler's own spawning (tryBossSpawn) is not touched by this task. Guardian respawn, wildlife spawning, the pool and WRAITH_CAP are unchanged. No save-shape change.
+- Docs: update the chaos-spawning rule and the Numbers table in ONTOLOGY.md; record the decision in DECISIONS.md dated 2026-11-27 with the alternative (per-breach rolls, as before) and the reason (a steady rate that concentrates as breaches close); fix any DYNAMICS.md line that describes per-breach rolls.
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); BREACH_SPAWN_CHANCE appears nowhere in the code or docs except DECISIONS.md history; the spawn step makes one CHAOS_SPAWN_CHANCE roll a turn.
+----
+Priority:   90
+Status: ToDo
+ID: mawsource-iwj2
+Created: 2026-11-27T19:24:31Z
+Updated: 2026-11-27T19:26:14Z
+
+The Maw and the Unraveler join the chaos spawn draw.
+
+Goal: the Unraveler rolls its own spawnChance during its AI turn (tryBossSpawn in enemy_ai.js), separate from the one flat CHAOS_SPAWN_CHANCE roll that picks a random open breach, and the Maw itself spawns nothing. The designer wants one steady rate shared by every source, so that as breaches close it ends up at the Maw and the player arrives to find an army of chaos.
+
+Settled design:
+- The spawn draw's sources are: every open breach; the Maw POI until it is sealed (not closed), whatever has happened to the Unraveler; and the original Unraveler until its first death. Each source has equal weight, so while both are up the Maw side holds two entries.
+- The reformed Unraveler (the second form after its first death) is never a source, as today. Keep the noSpawn flag or replace it with something clearer, but keep the behaviour.
+- The Unraveler no longer rolls during its own AI turn: remove tryBossSpawn's own chance roll, the Unraveler def's spawnChance (and the "?? 0.16" fallback) and the turnsSinceSpawn === 0 guard on spawning. Its conjuring happens in the spawn step when the draw lands on it. Leave turnsSinceSpawn itself alone if anything else reads it.
+- Every source uses the same pool and the same nearest-free-hex placement. A Maw spawn searches outward from the Maw hex; an Unraveler spawn searches outward from wherever the Unraveler stands.
+- Homes and log lines: a breach spawn keeps the breach as its home and is silent (as today). An Unraveler spawn has no home and logs log_unraveler_spawns (as today). A Maw spawn has no home and is silent.
+- Might cap: the Unraveler ignores CHAOS_MIGHT_CAP (as today); breaches and the Maw obey it. All sources stay in the draw at the cap; when the draw lands on a breach or the Maw while em.chaosMight() >= CHAOS_MIGHT_CAP, nothing spawns that turn.
+- Guardian respawn (including the Maw's, with its Unraveler-leash condition), wildlife spawning, the pool and WRAITH_CAP are unchanged.
+- Save shape: bump SAVE_VERSION only if a field written or read by toJSON/fromJSON is added, renamed or removed.
+- Docs: update the chaos-spawning rule, the Unraveler's behaviour and the Numbers table in ONTOLOGY.md; record the decision in DECISIONS.md dated 2026-11-27 with the alternatives (the Unraveler rolling on its own, as before; the Maw as the only Maw-side source; the Unraveler as the only Maw-side source; one cap for all sources; the Maw exempt from the cap too; a heavier Maw weight) and the reason (the steady rate ends at the Maw; the designer recalls an army of chaos at the Maw as a fun endgame; killing the Unraveler the first time starts the wind-down); fix any DYNAMICS.md and CLAUDE.md lines that describe the old rule.
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); the Unraveler's spawnChance and its own per-turn roll appear nowhere in the code or docs except DECISIONS.md history; the Maw and the original Unraveler are in the spawn draw, the reformed Unraveler is not, and only the Unraveler is exempt from the might cap.

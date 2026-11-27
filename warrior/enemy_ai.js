@@ -453,13 +453,8 @@ class ChaosAI extends EnemyAI {
         if (enemy.turnsSinceSpawn === 0) return;
         if (!Rando.bool(def.spawnChance ?? 0.16)) return;
         const { em, world, logCombat } = ctx;
-        const adj = hexNeighbors(enemy.q, enemy.r).filter(n => {
-            const k = hexKey(n.q, n.r);
-            const h = world.getHex(n.q, n.r);
-            return h && world.isPassable(h) && !occupied.has(k);
-        });
-        if (adj.length === 0) return;
-        const spot = Rando.choice(adj);
+        const spot = nearestFreeHex(enemy.q, enemy.r, occupied, world);
+        if (!spot) return;
         const wraithCount = em.enemies.filter(e => e.type === ENEMY_TYPE.PHASE_WRAITH).length;
         const spawnType = Rando.choice(chaosSpawnPool(wraithCount));
         const spawned = em.spawn(spawnType, spot.q, spot.r);
@@ -595,6 +590,21 @@ function chaosSpawnPool(wraithCount) {
         : CHAOS_SPAWN_POOL;
 }
 
+// Where a chaos spawn lands: the nearest free passable hex to (q, r), never (q, r) itself.
+// Searches outward one ring at a time over passable hexes (occupied ones are walked
+// through), picks at random among the free hexes of the first ring that has any, and
+// returns null once a ring is empty (nothing further can be reached).
+function nearestFreeHex(q, r, occupied, world) {
+    const stepCost = hex => world.isPassable(hex) ? 1 : Infinity;
+    for (let radius = 1; ; radius++) {
+        const costs = bfsHexes({ q, r }, world.hexes, stepCost, radius);
+        const ring = [...costs].filter(([, cost]) => cost === radius).map(([key]) => key);
+        if (ring.length === 0) return null;
+        const free = ring.filter(key => !occupied.has(key));
+        if (free.length > 0) return parseHexKey(Rando.choice(free));
+    }
+}
+
 function respawnGuardians(occupied, ctx) {
     const { world, em } = ctx;
     for (const poi of world.pois) {
@@ -628,13 +638,8 @@ function spawnChaosAtBreaches(occupied, ctx) {
     for (const poi of world.pois) {
         if (poi.type !== POI.BREACH || poi.closed) continue;
         if (!Rando.bool(BREACH_SPAWN_CHANCE)) continue;
-        const adj = hexNeighbors(poi.q, poi.r).filter(n => {
-            const k = hexKey(n.q, n.r);
-            const h = world.getHex(n.q, n.r);
-            return h && world.isPassable(h) && !occupied.has(k);
-        });
-        if (adj.length === 0) continue;
-        const spot = Rando.choice(adj);
+        const spot = nearestFreeHex(poi.q, poi.r, occupied, world);
+        if (!spot) continue;
         const type = Rando.choice(chaosPool);
         em.spawn(type, spot.q, spot.r, poi.q, poi.r);
         occupied.add(hexKey(spot.q, spot.r));

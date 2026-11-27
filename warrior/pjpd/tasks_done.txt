@@ -1,3 +1,22 @@
+Priority:   92
+Status: Done
+ID: spawnbfs-e3gb
+Created: 2026-11-27T19:24:31Z
+Updated: 2026-11-27T19:27:14Z
+
+A chaos spawn at a crowded source lands on the nearest free hex, found by searching outward.
+
+Goal: today a breach spawn (spawnChaosAtBreaches in enemy_ai.js) and an Unraveler spawn (tryBossSpawn) both pick a random free passable hex adjacent to the source and give up when all six are taken. The designer wants a crowded source to keep spawning, further out, so an army can pile up around it.
+
+Settled design:
+- One shared placement helper used by both spawn sites: the nearest free passable hex to the source, found by a breadth-first search outward over passable hexes from the source hex. The source hex itself is never used. Ties at the same distance are broken at random through Rando. If the search finds no free hex at all, nothing spawns.
+- "Free" means what it means today (passable and not in the occupied set).
+- Reuse an existing BFS helper from hex.js if one fits.
+- Nothing else changes: spawn chances, the might cap, the pool, homes and the log line stay as they are. No save-shape change.
+- Docs: update the placement wording in ONTOLOGY.md's chaos-spawning and Unraveler rules; add a dated (2026-11-27) entry in DECISIONS.md with the alternatives (skip the spawn when the adjacent hexes are full, as before; draw only from sources with room) and the reason (a crowded source keeps growing outward).
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); both spawn sites use the one helper and neither has its own adjacent-hex filter.
+----
 Priority:   70
 Status: Done
 ID: recall-ctr-3yj3

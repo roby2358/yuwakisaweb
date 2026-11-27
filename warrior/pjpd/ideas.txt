@@ -368,6 +368,25 @@ Open questions:
 4. Core delivery: how many near scrolls versus huts, and do Renew / Retrain move from far scrolls to this near/hut delivery?
 5. Is the player told which skills are absent this run? (proposal: hidden)
 ----
+Score:   60
+ID: chaosspawn-azz9
+Created: 2026-11-27T18:43:28Z
+Updated: 2026-11-27T19:21:44Z
+
+(Done) Review the chaos spawn logic: one spawn per turn at a random open source, so chaos concentrates as breaches close.
+
+The user's idea: each turn, spawn one chaos unit at a randomly chosen open breach or the Maw, up to the limit. With many breaches open the spawns scatter around the map. As breaches close, the same spawn rate lands on fewer sources, so the chaos becomes more concentrated and more prone to swarm.
+
+How it works today (spawnChaosAtBreaches in enemy_ai.js): every open breach rolls BREACH_SPAWN_CHANCE on its own each turn, and nothing spawns once chaos might reaches CHAOS_MIGHT_CAP. So the total spawn rate falls as breaches close, and each remaining breach is no busier than before. The Maw is not a spawn source in this rule (it only respawns its guardian, and only when the Unraveler is away).
+
+Open design calls, to settle before this is a task:
+- Is it exactly one spawn each turn, or one roll each turn at some chance? What should the per-turn rate be compared with today's total (number of open breaches times BREACH_SPAWN_CHANCE)?
+- Is "the limit" the existing chaos might cap, or a new count limit?
+- Does the Maw join the pool of sources as an equal, and does the nearby-Unraveler condition still gate it?
+- When the chosen source has no free adjacent hex, is the spawn skipped or does another source get picked?
+- When every breach is closed and only the Maw is left, does the whole rate land on the Maw?
+- How does this sit with the endgame pressure the design wants (Escalating Commitment): closing breaches would now make the remaining ones harder, not easier.
+----
 Score:   50
 ID: text-vary-hr8q
 Created: 2026-11-26T17:07:07Z

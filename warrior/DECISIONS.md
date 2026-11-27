@@ -255,6 +255,22 @@ keeps it off shattered hexes. The other Pristine skills still work on distressed
 - **History:**
   - 2026-11-27: decided and built, as a check in `executeSanctuary` beside the no-POI one.
 
+### D-22 A chaos spawn at a crowded source lands on the nearest free hex — *Decided*
+A breach spawn and an Unraveler minion spawn land on the nearest free passable hex to the
+source, found by searching outward over passable hexes; ties at the same distance are broken
+at random, the source hex is never used, and nothing spawns only when no free hex can be
+reached. Spawn chances, the might cap, the pool and homes are unchanged.
+- **Alternatives:** skip the spawn when the adjacent hexes are all taken (the previous
+  behaviour); draw only from sources that still have room.
+- **Why:** designer's call: a crowded source keeps growing outward, so an army can pile up
+  around it.
+- **Evidence:** not measured.
+- **History:**
+  - 2026-11-27: decided and built. `nearestFreeHex` in enemy_ai.js is the one placement
+    helper, called by `spawnChaosAtBreaches` and `ChaosAI.tryBossSpawn` in place of their
+    own adjacent-hex filters; it widens a `bfsHexes` search one step at a time. ONTOLOGY's
+    chaos-spawning and Unraveler-minion rules were updated. No save shape changed.
+
 ### Code structure
 
 ### D-17 Inline tunables get constant names — *Decided*
