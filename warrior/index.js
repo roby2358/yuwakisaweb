@@ -2850,40 +2850,38 @@ function showShopDialog(poi, kind) {
 
 // ---- Skill summaries (shared by the Skills overlay and the Train panel) ----
 // One model, so the two panels can't drift apart from each other or from the
-// real formulas. Each SKILL_POWER entry mirrors the damage math in its
-// actions.js execute*(): given the rank-resolved skill `e`, the player's `stats`,
-// and `w` (matched weapon damage, 1 when the held weapon's class doesn't match),
-// it returns the expected output of a SINGLE hit on ONE target plus a terse
-// `factors` string. AoE radius, multi-hit, chains and riders are shown only as
-// factors text — never folded into the score. If you change a formula in
-// actions.js, update the matching entry here.
+// real formulas. The score, the expected output of a SINGLE hit on ONE target,
+// comes from the skill's SKILL_FORMULAS entry in actions.js, the same function
+// its execute*() calls. Each SKILL_POWER entry is only the terse factors text
+// for the rank-resolved skill `e`: AoE radius, multi-hit, chains and riders
+// are shown there, never folded into the score.
 const SKILL_POWER = {
-    // Flat: base damage + a stat. (`+War/2` floors, matching the executor.)
-    cosmic_bolt:     (e, s) => ({ score: e.baseDamage + s.warding,           factors: say('pow_cosmic_bolt', { base: e.baseDamage }) }),
-    shockwave:       (e, s) => ({ score: e.baseDamage + s.might,             factors: say('pow_shockwave', { base: e.baseDamage, range: e.range }) }),
-    piercing_shot:   (e, s) => ({ score: e.baseDamage + s.reflex,            factors: say('pow_piercing_shot', { base: e.baseDamage }) }),
-    breach_pulse:    (e, s) => ({ score: e.baseDamage + s.warding,           factors: say('pow_breach_pulse', { base: e.baseDamage, range: e.range }) }),
-    chain_lightning: (e, s) => ({ score: e.baseDamage + s.warding,           factors: say('pow_chain_lightning', { base: e.baseDamage, n: e.hitCount }) }),
-    meteor:          (e, s) => ({ score: e.baseDamage + s.warding,           factors: say('pow_meteor', { base: e.baseDamage, radius: e.effectStrength }) }),
-    starfall:        (e, s) => ({ score: e.baseDamage + s.warding * 2,       factors: say('pow_starfall', { base: e.baseDamage, range: e.range }) }),
-    void_salvo:      (e, s) => ({ score: e.baseDamage + s.reflex,            factors: say('pow_void_salvo', { base: e.baseDamage, n: e.hitCount }) }),
-    ricochet:        (e, s) => ({ score: e.baseDamage + s.reflex,            factors: say('pow_ricochet', { base: e.baseDamage, n: e.hitCount }) }),
-    lifedrain_blast: (e, s) => ({ score: e.baseDamage + s.vigor,             factors: say('pow_lifedrain_blast', { base: e.baseDamage, range: e.range, n: e.hpPerHit }) }),
-    aether_blast:    (e, s) => ({ score: e.baseDamage + Math.floor(s.warding / 2), factors: say('pow_aether_blast', { base: e.baseDamage, range: e.range, n: e.aetherPerHit }) }),
-    havens_light:    (e, s) => ({ score: e.baseDamage + s.warding,           factors: say('pow_havens_light', { base: e.baseDamage, range: e.range }) }),
-    // Weapon-scaling melee. `wpn` is the matched weapon's damage.
-    void_strike:     (e, s, w) => ({ score: Math.round((w + s.might + s.warding) * e.effectStrength / 5),  factors: say('pow_void_strike', { mult: (e.effectStrength / 5).toFixed(1) }) }),
-    siphon_strike:   (e, s, w) => ({ score: Math.round((w + s.might) * e.effectStrength / 10),             factors: say('pow_siphon_strike', { mult: (e.effectStrength / 10).toFixed(1) }) }),
-    execute:         (e, s, w) => ({ score: Math.round((w + s.might) * e.effectStrength / 10),             factors: say('pow_execute', { mult: (e.effectStrength / 10).toFixed(1) }) }),
-    dimensional_rend:(e, s, w) => ({ score: Math.round(w * e.effectStrength / 5) + s.vigor,                 factors: say('pow_dimensional_rend', { mult: (e.effectStrength / 5).toFixed(1), hp: e.effectStrength - 4 }) }),
-    sweep:           (e, s, w) => ({ score: w + s.might, factors: say('pow_sweep', { n: e.hitCount }) }),
-    stun_blow:       (e, s, w) => ({ score: w + s.might, factors: say('pow_stun_blow', { n: e.effectStrength }) }),
-    immolate:        (e, s, w) => ({ score: w + s.might, factors: say('pow_immolate', { n: e.effectStrength }) }),
-    sundering_blow:  (e, s, w) => ({ score: w + s.might, factors: say('pow_sundering_blow', { n: e.effectStrength }) }),
+    // Flat: base damage + a stat.
+    cosmic_bolt:     e => say('pow_cosmic_bolt', { base: e.baseDamage }),
+    shockwave:       e => say('pow_shockwave', { base: e.baseDamage, range: e.range }),
+    piercing_shot:   e => say('pow_piercing_shot', { base: e.baseDamage }),
+    breach_pulse:    e => say('pow_breach_pulse', { base: e.baseDamage, range: e.range }),
+    chain_lightning: e => say('pow_chain_lightning', { base: e.baseDamage, n: e.hitCount }),
+    meteor:          e => say('pow_meteor', { base: e.baseDamage, radius: e.effectStrength }),
+    starfall:        e => say('pow_starfall', { base: e.baseDamage, range: e.range }),
+    void_salvo:      e => say('pow_void_salvo', { base: e.baseDamage, n: e.hitCount }),
+    ricochet:        e => say('pow_ricochet', { base: e.baseDamage, n: e.hitCount }),
+    lifedrain_blast: e => say('pow_lifedrain_blast', { base: e.baseDamage, range: e.range, n: e.hpPerHit }),
+    aether_blast:    e => say('pow_aether_blast', { base: e.baseDamage, range: e.range, n: e.aetherPerHit }),
+    havens_light:    e => say('pow_havens_light', { base: e.baseDamage, range: e.range }),
+    // Weapon-scaling melee.
+    void_strike:     e => say('pow_void_strike', { mult: (e.effectStrength / 5).toFixed(1) }),
+    siphon_strike:   e => say('pow_siphon_strike', { mult: (e.effectStrength / 10).toFixed(1) }),
+    execute:         e => say('pow_execute', { mult: (e.effectStrength / 10).toFixed(1) }),
+    dimensional_rend:e => say('pow_dimensional_rend', { mult: (e.effectStrength / 5).toFixed(1), hp: e.effectStrength - 4 }),
+    sweep:           e => say('pow_sweep', { n: e.hitCount }),
+    stun_blow:       e => say('pow_stun_blow', { n: e.effectStrength }),
+    immolate:        e => say('pow_immolate', { n: e.effectStrength }),
+    sundering_blow:  e => say('pow_sundering_blow', { n: e.effectStrength }),
     // Heal.
-    mending_light:   (e, s) => ({ score: e.effectStrength + s.vigor * 3, factors: say('pow_mending_light', { n: e.effectStrength }) }),
-    // Untiered, but range scales with character level (see executeRestore).
-    restore:         () => ({ score: null, factors: say('stat_range', { n: RESTORE_BASE_RANGE + Math.floor(player.level / RESTORE_LEVELS_PER_RANGE) }) }),
+    mending_light:   e => say('pow_mending_light', { n: e.effectStrength }),
+    // No score. Untiered, but range scales with character level (see executeRestore).
+    restore:         () => say('stat_range', { n: RESTORE_BASE_RANGE + Math.floor(player.level / RESTORE_LEVELS_PER_RANGE) }),
 };
 
 // Per-skill rendering of the effectStrength axis for utility skills that aren't
@@ -2906,10 +2904,11 @@ const EFFECT_STRENGTH_DISPLAY = {
 function skillSummary(skillId) {
     const def = SKILLS[skillId];
     const eff = effectiveSkill(def, player.rankOf(skillId));
-    const power = SKILL_POWER[skillId];
-    if (power) {
-        const w = skillWeaponMatches(player, def) ? player.weapon().damage : 1;
-        return power(eff, player.stats, w);
+    const factorsText = SKILL_POWER[skillId];
+    if (factorsText) {
+        const formula = SKILL_FORMULAS[skillId];
+        const score = formula ? formula(eff, player.stats, matchedWeaponDamage(player, eff)) : null;
+        return { score, factors: factorsText(eff) };
     }
     if (!def.tiers) return null;
     const factors = def.scales.map(axis => {

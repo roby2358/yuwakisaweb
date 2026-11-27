@@ -431,6 +431,11 @@ special-looking hex but hold no other prize.
   coded) or 'other'.
 - The individual skills, their tiers and descriptions are the `SKILLS` table; their
   handlers are `SKILL_HANDLERS` in actions.js.
+- **Formulas.** Each skill with a damage or heal number has one entry in `SKILL_FORMULAS`
+  (actions.js): from the rank-resolved skill, the player's stats and the matched weapon
+  damage it returns the pre-roll amount of a single hit on one target. The handler takes
+  its base amount from that entry (`SkillAction.baseAmount`) and then applies its own
+  rolls, multi-hit, area and riders.
 
 ### Skill groups and the per-run deal [D]
 
@@ -1254,7 +1259,7 @@ formalized from the code]
 | getSkillTargets(id) | Set hexKey | Per SKILL_TARGET kind. Ranged-skill enemy targets must be visible and in LOS, through the same check as weapon shots (`visibleRangedTargets`) [D]. Ranged-AoE, Phase Step and the skip skills pick visible hexes; melee kinds pick adjacent enemies. |
 | checkSkillUsage(skill) | null or reason text | Drives skill-bar dimming and blocks activation. |
 | effectiveAetherCost, effectiveSkillMpCost, skillCostLabel | numbers / label | Same functions as execution. |
-| SKILL_POWER / powerLine / skillSummary | expected single-hit score | A mirror of each handler's formula, not the handler itself [P: drift risk]. |
+| SKILL_POWER / powerLine / skillSummary | expected single-hit score, factors text | The score comes from the skill's `SKILL_FORMULAS` entry in actions.js, the function its handler also calls. SKILL_POWER holds only the factors text (area, hit count, riders); Restore has factors text and no score. |
 | threat overlay (Ground Weeps) | Map hexKey → threat | Σ enemyMeleeAttack × (4 − d)/3 for enemies within 3. |
 | compareToEquippedHtml, itemStatLine, itemSpecialText | item comparison text | Inventory and shops. |
 | Character panel derived | attack, defense, dodge, vision, MP | Calls the Player methods. |

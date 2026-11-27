@@ -398,6 +398,20 @@ Tuning: don't overpopulate ranged on a single map — they're a counter to slow 
 ----
 Priority:   50
 Status: Done
+ID: skillformula-tadu
+Created: 2026-11-27T01:14:57Z
+Updated: 2026-11-27T08:37:18Z
+
+Skill previews and skill handlers share one formula function per skill.
+
+Goal: SKILL_POWER in index.js recomputes each skill's damage or heal math by hand, mirroring the execute* handlers in actions.js. A change to a handler can leave the preview wrong.
+
+Settled design: add a table in actions.js (loaded before index.js) keyed by skill id, one function per skill that has a SKILL_POWER score today, taking the rank-resolved skill, the player's stats and the matched weapon damage, and returning the pre-roll amount for a single hit on one target (exactly what SKILL_POWER's score returns today). Each execute* handler computes its base amount by calling its entry, then applies its rolls, multi-hit, area and riders as now. Each SKILL_POWER entry takes its score from the same entry and keeps only its factors text. Where a handler and its preview disagree today, the handler's math wins; list any such differences in the report. Remove the "if you change a formula in actions.js, update the matching entry here" comment. No save-shape change, no change to what skills do.
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); no SKILL_POWER entry contains its own arithmetic for the score; each affected handler calls the shared function.
+----
+Priority:   50
+Status: Done
 ID: namedconsts-z7n2
 Created: 2026-11-27T01:14:57Z
 Updated: 2026-11-27T08:33:06Z

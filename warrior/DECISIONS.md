@@ -284,6 +284,14 @@ its SKILL_POWER preview call.
 - **Evidence:** none needed; no value changes.
 - **History:**
   - 2026-11-27: settled Q-17; unbuilt, filed as a task.
+  - 2026-11-27: built: `SKILL_FORMULAS` in actions.js holds one function per skill with a
+    damage or heal number (21 skills; the four weapon-plus-Might skills share one), giving
+    the pre-roll amount of a single hit on one target. Each handler takes its base amount
+    from it through `SkillAction.baseAmount()`, and `skillSummary` in index.js takes the
+    preview score from the same entry, so SKILL_POWER keeps only the factors text. Restore
+    has factors text and no formula. The old previews and handlers agreed on every skill,
+    so no number changed; no save-shape change. `node test/skillformulas.js` checks that
+    the two tables cover the same skills.
 
 ---
 

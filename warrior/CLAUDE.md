@@ -10,7 +10,7 @@ Warrior is a single-player tactical hex RPG. Canvas rendering, plain `<script>` 
 
 No build or install step, and no server: double-click `index.html` (it must run from `file://`).
 
-Checks (Node, DOM-free): `node test/scripts.js` (the script includes load as one shared scope, no duplicate top-level names), `node test/fx.js`, `node test/skilllibrary.js` (skill-group dealing), `node test/text.js` (the text table's shape and fail-fast helper) and `node test/creatures.js` (each wildlife tier's melee/ranged pair and the ranged spawn share).
+Checks (Node, DOM-free): `node test/scripts.js` (the script includes load as one shared scope, no duplicate top-level names), `node test/fx.js`, `node test/skilllibrary.js` (skill-group dealing), `node test/text.js` (the text table's shape and fail-fast helper), `node test/creatures.js` (each wildlife tier's melee/ranged pair and the ranged spawn share) and `node test/skillformulas.js` (the shared skill formulas and the previews cover the same skills).
 
 ### Plain scripts, not modules
 
@@ -29,7 +29,7 @@ index.js (orchestrator: rendering, input, UI, save/load, combat math, dialogs)
   ├─ skilllibrary.js (SkillLibrary class: per-run skill groups (core / fixed / optional, half of optional held out) and discovery channels so no skill is awarded twice; core skills come only from their one scroll each near the start (`placeCoreScrolls`, Channel Aether's nearest), story scrolls (`STORY_SCROLL_SKILLS`) land anywhere reachable and each of the `HUT_COUNT` huts gets a distinct optional skill; huts and Skill Seek give only optional skills; checked by `node test/skilllibrary.js`)
   ├─ enemies.js      (EnemyManager class: enemy list, spawn, defs; per-run wildlife tiers, each a melee creature plus a rarer ranged one (`spawnWeight`); uses colortheory; checked by `node test/creatures.js`)
   ├─ text.js         (TEXT table of every player-facing line + say(key, vars): picks a variant via Rando, styles by kind, fills {placeholders}, throws on a missing key, an unfilled placeholder or an unused var; `itemSpecialText(item)` fills an item special's stat line from the item's own fields; checked by `node test/text.js`, which also checks every literal `say()` key in index.js, actions.js and enemy_ai.js)
-  ├─ actions.js      (player Action classes + MP/aether cost helpers; see below)
+  ├─ actions.js      (player Action classes + MP/aether cost helpers; `SKILL_FORMULAS`, one damage/heal formula per skill, called by its `execute*` handler via `SkillAction.baseAmount()` and by the skill previews (`skillSummary` in index.js, whose `SKILL_POWER` holds only factors text); checked by `node test/skillformulas.js`; see below)
   ├─ enemy_ai.js     (enemy AI classes, maw-distance math, runEnemyAiPhase; see below)
   ├─ victory.js      (Victory class: score tracking and final breakdown)
   ├─ sound.js        (Sound class: WebAudio-synth combat sfx)
@@ -123,7 +123,7 @@ Canvas clicks are ignored when `phase !== 'player'`.
 
 - Pure client-side JavaScript (plain script includes, no ES modules, no npm; Node is used only to run `test/`)
 - No build step, no bundler, no external dependencies
-- No gameplay tests; `test/` holds the load/motion/skill-dealing/text/creature checks above
+- No gameplay tests; `test/` holds the load/motion/skill-dealing/text/creature/skill-formula checks above
 - Game state lives as `index.js` top-level `let`s (shared script scope, not `window` properties)
 - Lookups via config tables: `ALL_EQUIPMENT[id]`, `ENEMY_DEFS[type]`, `SKILLS[id]`, `TERRAIN[...]`
 - Player-facing wording lives in `text.js`, not at call sites: `say('key', { name })` (always pass the vars object, `{}` when none). Prose kinds (narration/stage/speech) render to `<p>` blocks; labels and log lines are plain text. Functional entries keep one variant; flavor entries (huts, scrolls/ruins, havens/villages/smith greetings, level-up/Skill Seek) carry 20, every variant with the same placeholders. Log colour classes stay at the call site. Skill names/descriptions and item names stay in config.js as data.
