@@ -398,6 +398,20 @@ Tuning: don't overpopulate ranged on a single map — they're a counter to slow 
 ----
 Priority:   50
 Status: Done
+ID: sanctclean-ad6i
+Created: 2026-11-27T07:44:57Z
+Updated: 2026-11-27T07:45:02Z
+
+Sanctuary refuses distressed hexes
+
+Goal: Sanctuary should need clean ground. As a Pristine skill it already refuses shattered hexes, but distressed hexes (the ones beside shattered terrain) still pass.
+
+Settled design: only Sanctuary changes; the other Pristine skills keep working on distressed terrain. executeSanctuary aborts (with refund) when the player's hex is distressed, beside its existing no-POI check, logging a new text line. Update the skill description, ONTOLOGY, DYNAMICS and DECISIONS.
+
+Done when: casting Sanctuary on a distressed hex logs the refusal and does not rest or end movement; on clean terrain it works as before; the test/ checks pass.
+----
+Priority:   50
+Status: Done
 ID: hutrest-yqrf
 Created: 2026-11-27T06:58:11Z
 Updated: 2026-11-27T07:06:23Z

@@ -1299,6 +1299,9 @@ function executeSanctuary(action) {
     if (world.poiAt(player.q, player.r)) {
         return action.abortSkillWithRefund(say('log_sanctify_blocked', {}));
     }
+    if (UNDISTRESSED_VERSION[world.getHex(player.q, player.r).terrain] !== undefined) {
+        return action.abortSkillWithRefund(say('log_sanctuary_distressed', {}));
+    }
     // Conjure the village, rest, and end turn — all in one cast (handled in index.js
     // so it can pop the dialog and reuse the village rest flow).
     action.ctx.invokeSanctuary();

@@ -895,7 +895,7 @@ Weaponsmith / Magicsmith: shop (Done: mp = 0); Train: Train dialog (Done: mp = 0
 village entry: chance(VILLAGE_CROP_CHANCE†) a crop (gold in CROP_GOLD) sprouts adjacent
 Rest: heal floor(maxHP × VILLAGE_REST_FRACTION†) hp and ae likewise; mp = 0
 Weaponsmith: mundane shop; Leave: free
-Sanctuary skill (non-POI hex): crop chance on self, rest with fraction 1 / effectStrength
+Sanctuary skill (non-POI hex, not distressed): crop chance on self, rest with fraction 1 / effectStrength
 every rest caps hp and ae at their maximums and logs the amounts
 ```
 

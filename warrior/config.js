@@ -886,7 +886,7 @@ const SKILLS = {
     sanctuary: {
         id: 'sanctuary', name: 'Sanctuary', cost: 0, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
         scales: ['effectStrength'], tiers: [[4], [4], [3], [3], [2]],
-        desc: 'Conjure a fleeting village and rest at once: heal a fraction of HP/AE. Must be non-POI terrain.', panelInvoke: true, minLevel: 8
+        desc: 'Conjure a fleeting village and rest at once: heal a fraction of HP/AE. Must be non-POI terrain, neither shattered nor distressed.', panelInvoke: true, minLevel: 8
     },
     // ---- Special combat skills ----
     loot: {

@@ -886,6 +886,7 @@ const TEXT = (() => {
         log_ground_weeps: log('The ground weeps... threats revealed.'),
         log_renew: log('Renew: {n} stat points refunded.'),
         log_sanctify_blocked: log('Cannot sanctify — already a point of interest!'),
+        log_sanctuary_distressed: log('Cannot sanctify — the ground here is distressed!'),
         log_looted: log('Looted {gold}g!'),
         log_looted_many: log('Looted {gold}g from {n} enemies!'),
         log_need_settlement: log('Must be at a haven or village!'),

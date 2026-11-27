@@ -199,7 +199,7 @@ Wildlife comes in packs. Where a pack spawns, its tier is drawn around a peak th
 - Closing a shop (or the Train dialog) ends your movement; leaving the haven or village without buying doesn't
 
 ### Sanctuary
-The Sanctuary skill rests you on the spot: a fraction of max HP and Aether (a quarter at rank 1, rising to half at rank 5), the usual village crop chance, and your turn's movement ends. No POI is left behind. It can't be cast on a POI hex.
+The Sanctuary skill rests you on the spot: a fraction of max HP and Aether (a quarter at rank 1, rising to half at rank 5), the usual village crop chance, and your turn's movement ends. No POI is left behind. It can't be cast on a POI hex, nor on distressed ground (and, as a Pristine skill, not on shattered ground either).
 ## Equipment
 
 Items are either **magical** (unique, procedurally generated, special properties, purple in UI) or **non-magical** (mundane, fixed stats, no special abilities). All equipment is stored in a single runtime registry (`ALL_EQUIPMENT`), which includes both static non-magical items and dynamically generated magical items. The registry is saved/loaded with the game state. A weapon is ranged when it has a range; any weapon with range fires and flows as a bow.
@@ -349,7 +349,7 @@ In the tables, **AE** is the Aether cost (aether_discount passives lower it), **
 | Skill Seek | 3 | all | Self | Pristine | 6 | A 5% → 20% chance to be offered up to 3 obtainable skills (pick 1). |
 | Spirit Walk | 3 | all | Teleport Revealed (6 → 14) | Non-combat | — | Core. Teleport to any revealed passable hex in range. |
 | Ground Weeps | 4 | 0 | Self | Non-combat | 8 | Full-map enemy threat heatmap overlay. Blue=safe, red=deadly. Dismiss with Space/click. |
-| Sanctuary | 0 | all | Self | Pristine | 8 | Rest in place: heal a quarter → half of max HP and AE. Must be non-POI terrain. |
+| Sanctuary | 0 | all | Self | Pristine | 8 | Rest in place: heal a quarter → half of max HP and AE. Must be non-POI terrain, not distressed. |
 | Commission Garrison | 0 (1000 gold) | all | Self | Pristine | — | Magicsmith only. Build a garrison on this hex; a haven or village must be in sight. |
 
 ## Turn Structure

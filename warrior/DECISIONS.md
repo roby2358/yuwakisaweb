@@ -246,6 +246,15 @@ on the same turn (after Leave) shows the menu without rolling again. Both chance
     saves load unchanged (a hut without the field simply rolls on its next visit), so
     SAVE_VERSION was not bumped.
 
+### D-21 Sanctuary needs clean ground: not shattered, not distressed — *Decided*
+Sanctuary aborts (with refund) on a distressed hex, on top of the Pristine rule that already
+keeps it off shattered hexes. The other Pristine skills still work on distressed terrain.
+- **Alternatives:** leave distressed hexes allowed; make every Pristine skill refuse them.
+- **Why:** designer's call: a rest in the wilds should need unspoiled ground.
+- **Evidence:** not measured.
+- **History:**
+  - 2026-11-27: decided and built, as a check in `executeSanctuary` beside the no-POI one.
+
 ### Code structure
 
 ### D-17 Inline tunables get constant names — *Decided*
