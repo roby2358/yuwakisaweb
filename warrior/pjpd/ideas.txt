@@ -1,3 +1,21 @@
+Score:   90
+ID: help-panel-aj2t
+Created: 2026-11-26T17:09:57Z
+Updated: 2026-11-27T22:38:05Z
+
+Help panel: an in-game reference the player can open at any time to see how the game works.
+
+Today the game teaches through a stark intro overlay (which the user likes and wants left alone), one-time dialogs, tooltips and the combat log. There is no place to look something up mid-run: controls, what the stats do, how skills are found, what the map symbols mean.
+
+Sketch: a fourth slide-in panel beside Character / Skills / Inventory, opened from the HUD (a "?" button) and a key, styled with the existing panel CSS variables. Possible sections: controls (click to select and move, left-drag to pan, end turn, hotbar, targeting); the turn (MP, AE, engaged = halved MP); stats (Might, Reflex, Warding, Vigor); skills (Skill Points, ranks, latent vs trained, where skills come from: huts, scrolls, Skill Seek; some skills do not appear every game); map legend (haven, village, hut, ruin, scroll, breach, Maw, shattered and corrupted terrain); the goal (seal breaches, the Maw, RETURN).
+
+Open questions:
+1. Scope: a short controls-and-legend card, or a fuller manual with the sections above?
+2. How much to reveal: does it explain held-out skills and the hut 5% rolls, or leave those to be discovered?
+3. Static text, or partly generated from the config tables (POI symbols, terrain, skill list) so it cannot drift from the game?
+4. Does opening it pause input like a dialog, or sit beside the map like the other panels?
+5. Should it replace or absorb any of the existing one-time dialogs?
+----
 Score:   60
 ID: skill-minlvl-3i8p
 Created: 2026-11-26T16:59:39Z
@@ -41,6 +59,13 @@ Open questions:
 6. Naming and flavor rules: distinct names per skill; no vampire imagery; harm-coded verbs only on harm-doing effects.
 7. Balance stance: overlapping-strong options and game-breaking combos are intended; add alternatives rather than weakening existing skills.
 ----
+Score:   60
+ID: more-flavor-gpai
+Created: 2026-11-26T18:22:20Z
+Updated: 2026-11-27T22:46:55Z
+
+More flavor variants beyond the huts / scrolls & ruins / havens & villages / level-up / Skill Seek / smith batch: the breach-loot line ("Closing the breach scatters its hoard...") and the Maw and Unraveler narration lines.
+----
 Score:   55
 ID: immolate-chk-8gse
 Created: 2026-11-26T17:05:18Z
@@ -55,7 +80,7 @@ Open: the user has not said what looked wrong in play. Ask what they observed (n
 Score:   55
 ID: mob-skills-6dzb
 Created: 2026-11-26T17:08:41Z
-Updated: 2026-11-26T17:08:41Z
+Updated: 2026-11-27T22:45:28Z
 
 Monster skills: give enemies skills of their own, so fights differ by what a creature can do and not only by its HP / attack / defense numbers.
 
@@ -70,6 +95,8 @@ Open questions:
 4. Limits: cooldown, a per-enemy charge, or an aether-like pool? How often should a skill fire compared with a plain attack?
 5. Which enemies get them first (bosses and guardians only, or common enemies too), and does the spawn-difficulty gradient account for skilled enemies?
 6. Does Reflect / Warp Shield / stun on the player's side interact with enemy skills the same way it does with plain attacks?
+
+Also consider: a defence against enemy skill damage that comes from Warding. Warding is purely offensive and a resource stat today (aether pool, direct-damage skill scaling). An earlier, never-used hook raised the player's defence by Warding percent of the damage roll for skill damage; it was removed as dead code, and enemy skills would be the place to bring some form of it back.
 ----
 Score:   55
 ID: skill-power-yfxy
@@ -116,24 +143,6 @@ Design feel: every run gets weird, unique tools. Pairs with the broader design p
 Details TBD: probability of random vs. standard, the bonus-effect pool, formula tuning, name generation pool, save format change for random skills.
 ----
 Score:   50
-ID: help-panel-aj2t
-Created: 2026-11-26T17:09:57Z
-Updated: 2026-11-26T17:09:57Z
-
-Help panel: an in-game reference the player can open at any time to see how the game works.
-
-Today the game teaches through a stark intro overlay (which the user likes and wants left alone), one-time dialogs, tooltips and the combat log. There is no place to look something up mid-run: controls, what the stats do, how skills are found, what the map symbols mean.
-
-Sketch: a fourth slide-in panel beside Character / Skills / Inventory, opened from the HUD (a "?" button) and a key, styled with the existing panel CSS variables. Possible sections: controls (click to select and move, left-drag to pan, end turn, hotbar, targeting); the turn (MP, AE, engaged = halved MP); stats (Might, Reflex, Warding, Vigor); skills (Skill Points, ranks, latent vs trained, where skills come from: huts, scrolls, Skill Seek; some skills do not appear every game); map legend (haven, village, hut, ruin, scroll, breach, Maw, shattered and corrupted terrain); the goal (seal breaches, the Maw, RETURN).
-
-Open questions:
-1. Scope: a short controls-and-legend card, or a fuller manual with the sections above?
-2. How much to reveal: does it explain held-out skills and the hut 5% rolls, or leave those to be discovered?
-3. Static text, or partly generated from the config tables (POI symbols, terrain, skill list) so it cannot drift from the game?
-4. Does opening it pause input like a dialog, or sit beside the map like the other panels?
-5. Should it replace or absorb any of the existing one-time dialogs?
-----
-Score:   50
 ID: land-zfdc
 Created: 2026-11-26T17:24:03Z
 Updated: 2026-11-26T17:24:03Z
@@ -162,9 +171,11 @@ Earned revival mechanism: give the player one second-chance per run, but only if
 Score:   50
 ID: xp-wxyj
 Created: 2026-11-26T17:25:07Z
-Updated: 2026-11-26T17:25:07Z
+Updated: 2026-11-27T22:39:16Z
 
 Add a use for XP after reaching max level 10. Possible idea: spend accumulated XP to heal/restore chaos-corrupted hexes, giving endgame players something meaningful to do with excess XP.
+
+Another option: after level 10, award Skill Points instead of XP at some ratio (every N XP earned becomes one Skill Point), so kills keep paying out. This ties into the separate question of giving Skill Points something to be spent on, since the cap and the lack of a sink would otherwise make the extra points pile up unused.
 ----
 Score:   50
 ID: map-xd9x
@@ -224,13 +235,6 @@ SKILLS:
 SCALING: both HP cost AND skill effect increase with skill level/rank (more invested = bigger spend = bigger payoff).
 ----
 Score:   50
-ID: rangeddef-ccpj
-Created: 2026-11-26T22:05:38Z
-Updated: 2026-11-26T22:05:38Z
-
-The ranged_defense magic-armor effect (config.js effect pool, rangedDefenseBonus 2 or 4; text "+N def vs ranged") does nothing: no damage code reads rangedDefenseBonus. Talk through what it should do: add the bonus to defense when the hit comes from an enemy ranged attack (enemyRangedAttack in index.js), also against ranged skills/chaos bolts, or rework or drop the effect.
-----
-Score:   50
 ID: highdefmp-jczt
 Created: 2026-11-26T22:05:38Z
 Updated: 2026-11-26T22:05:38Z
@@ -238,46 +242,37 @@ Updated: 2026-11-26T22:05:38Z
 The high_def_mp_penalty armor effect (config.js, defBonus 5, mpPenalty 1; text "+5 def -1 MP") only half works: player.js applies the MP penalty but nothing adds defBonus to defense. Talk through whether to wire defBonus into the player's defense, change the numbers, or drop the effect.
 ----
 Score:   50
-ID: wardskill-ya87
-Created: 2026-11-26T22:05:38Z
-Updated: 2026-11-26T22:05:38Z
+ID: spendsp-fgyn
+Created: 2026-11-27T22:37:06Z
+Updated: 2026-11-27T22:37:06Z
 
-Warding's resistance to skill damage never applies. dealDamageToPlayer(damage, source, isSkillDamage, opts) in index.js adds warding% of the roll to defense when isSkillDamage is true, but no caller passes true (enemies have no skills as such; chaos ranged bolts and abilities go through as ordinary damage). Talk through which enemy attacks count as "skill" damage (chaos bolts? Unraveler? breach effects?) and wire them, or drop the parameter and the Warding claim.
+Give Skill Points something to be spent on.
+
+Today Skill Points are never spent: the player holds a total (up to MAX_SP), and training assigns them to skill ranks, with whatever is not assigned sitting free. Level-ups, prize scrolls and the "nothing left to learn" consolation all hand out more. A player with few skills, or with every wanted rank filled, ends up with free points and nothing to do with them.
+
+Open questions: is the sink a true spend (the point is gone) or another place to assign points that can be taken back like ranks; what it buys (a one-off effect such as a heal or aether refill, a permanent perk, a stat point, a reroll of a hut or smith offer, unlocking a held-out skill, gold); where it happens (the training dialog, havens, huts, anywhere); and whether it should be strong enough to compete with skill ranks or only soak up the leftovers.
 ----
-Score:   45
-ID: more-flavor-gpai
-Created: 2026-11-26T18:22:20Z
-Updated: 2026-11-26T18:28:24Z
+Score:   50
+ID: statgear-g6b6
+Created: 2026-11-27T23:16:10Z
+Updated: 2026-11-27T23:16:10Z
 
-More flavor variants beyond the huts / scrolls & ruins / havens & villages / level-up / Skill Seek / smith batch: the breach-loot line ("Closing the breach scatters its hoard...") and the Maw and Unraveler narration lines. Also consider whether Renew's stat refund should skip the level-up prose (it reuses the Level Up dialog).
+Gear that raises Reflex, and gear that raises Might.
+
+Today the only stat-raising item effect is vigor_bonus (+3 / +6 / +12 Vigor), which feeds max HP and defence through effectiveVigor. There is no matching effect for Reflex or Might. With dodge moving from Vigor to Reflex, Reflex gear would be the way to raise dodge from equipment through the stat, and Might gear would do the same for melee damage and Might's share of defence.
+
+Open questions: which slots carry each (armour, artifact, weapon); the bonus sizes and values (mirror vigor_bonus or smaller, since Reflex and Might feed damage directly); whether the bonus counts everywhere the stat is used (weapon damage, skill formulas, dodge, defence) through an effectiveReflex / effectiveMight the way Vigor does; whether Warding should get one too for symmetry.
 ----
-Score:   45
-ID: chaos-mix-873g
-Created: 2026-11-26T18:38:29Z
-Updated: 2026-11-26T18:38:29Z
+Score:   50
+ID: evadeskill-8w4k
+Created: 2026-11-27T23:19:42Z
+Updated: 2026-11-27T23:19:42Z
 
-Flux Archers now actually shoot (they had a range but no rangedAttack, so the AI never fired them). That leaves the chaos/breach spawn pool about 5/7 ranged, well above the 20-30% ranged share wildlife gets. Playtest how strong Archers feel, then decide whether to rebalance the chaos pool.
-----
-Score:   45
-ID: displaceimm-3i52
-Created: 2026-11-26T22:05:38Z
-Updated: 2026-11-26T22:05:38Z
+An Evade skill: a turn spent purely on getting away.
 
-The displacement_immune magic-item effect ("No displacement") does nothing: nothing in the game displaces the player (no knockback, pull or teleport-the-player enemy move). Talk through whether to add an enemy that displaces the player so the effect matters, repurpose it into something else, or drop it from the effect pool in config.js.
-----
-Score:   45
-ID: rendcost-adiw
-Created: 2026-11-26T22:14:29Z
-Updated: 2026-11-26T22:14:29Z
+Casting it raises the player's movement for the turn to double the base MP, ignores the movement penalty for being engaged (MP is normally halved when enemies are adjacent at the start of the turn), and disallows any other action that turn: no attacks, no other skills. It is the running counterpart to the Dodge skill, which keeps you in the fight but makes it hard to leave.
 
-Dimensional Rend takes its HP cost even when the cast fizzles, and the cost can push HP to 0 or below. Check its handler in actions.js: whether paying HP is checked against current HP before the cast, what happens at HP 0 (death? clamped?), and whether a fizzle should refund or skip the cost. Decide the intended behavior, then fix the code and the ONTOLOGY.md skill-use rule.
-----
-Score:   40
-ID: prize-scroll-esnu
-Created: 2026-11-26T17:42:48Z
-Updated: 2026-11-26T17:42:48Z
-
-Prize scrolls (the empty scrolls world-gen places on special terrain) now always grant a Skill Point, because only the far story scrolls get skills from the per-run deal. Should a prize scroll instead carry a learnable optional skill, non-binding like a hut offer?
+Open questions: Aether cost and cooldown; whether it must be cast before anything else that turn; whether item use, equipping, and entering havens or huts count as "other actions"; whether enemies still get any parting hit; how it reads next to Sprint and the disengage effect; ranks (what would scale).
 ----
 Score:   40
 ID: text-static-7wcz
@@ -287,34 +282,15 @@ Updated: 2026-11-26T18:08:41Z
 Static UI text in index.html (HUD HP/AE/MP labels, End Turn, New, panel headings, intro buttons, tooltips) and the score labels from the victory breakdown are not in the text table yet. Moving them needs either a fill-on-load pass over the HTML or say() calls in victory.js. Worth it only if the table is to be the single source for every visible string (e.g. for localization).
 ----
 Score:   40
-ID: enemy-hover-25zh
-Created: 2026-11-26T18:38:29Z
-Updated: 2026-11-26T18:38:29Z
+ID: multieffect-4tnk
+Created: 2026-11-27T23:16:10Z
+Updated: 2026-11-27T23:16:10Z
 
-Show an enemy's attack range in the hover bar next to its name and HP, so the ranged badge on the token has a number behind it.
-----
-Score:   40
-ID: core-level-byun
-Created: 2026-11-26T20:20:04Z
-Updated: 2026-11-26T20:20:04Z
+Magic items that carry two or three effects.
 
-Core scrolls teach at any level, so every player can pick up Spirit Walk (normally level 6) and Renew/Retrain (level 4) at level 1 from the scrolls near the start. The 12-50 hex spread is the only gate. Watch in playtest; if it is too fast, a scroll could hold its skill until the player reaches its level.
-----
-Score:   40
-ID: dodgesource-bgih
-Created: 2026-11-26T23:33:39Z
-Updated: 2026-11-26T23:33:39Z
+Today rollMagicItem (config.js) gives each magic item exactly one effect from its slot's pool, stored as a single special plus that effect's fields spread onto the item. Rare items with two or three effects would make finds more exciting and builds more varied.
 
-More sources of dodge_bonus so stacking matters.
-
-Dodge bonuses now add up across equipped items (capped at MAX_DODGE), but only armor carries dodge_bonus and the player has one armor slot, so no one can stack two today. Options: put dodge_bonus in the artifact pool, add a second armor-type slot, or give a skill a dodge bonus.
-----
-Score:   35
-ID: renew-dialog-rk9x
-Created: 2026-11-26T17:50:03Z
-Updated: 2026-11-26T17:50:03Z
-
-Renew (respec) refunds stat points through the "Level Up!" dialog, so that title shows when the player has not levelled. A separate "Assign stat points" dialog might read better.
+Open questions: how an item holds several effects (the code reads item.special and fields directly in many places, and player.equipped / sumEquipped match on one special per item); how often they appear and where (deep ruins, breach hoards, guardians); how the name is built from several effects; pricing; which effect pairs are excluded; and that this changes the saved item shape, so it breaks old saves.
 ----
 Score:   30
 ID: sprite-rows-s27w
@@ -388,6 +364,20 @@ Updated: 2026-11-27T22:18:26Z
 (Done) The riposte weapon effect (config.js riposteDamage 1/2/3; text "+N counter-atk") reads only as a special name: actions.js halves the counter damage when the weapon is riposte (counterDmg / 2), and riposteDamage is never read. So the item that advertises a stronger counter makes the counter weaker. Talk through what riposte should do (add riposteDamage to the counter, counter on enemy melee too, something else) and fix the code or the text.
 ----
 Score:   50
+ID: wardskill-ya87
+Created: 2026-11-26T22:05:38Z
+Updated: 2026-11-27T22:45:28Z
+
+(Done) Warding's resistance to skill damage never applies. dealDamageToPlayer(damage, source, isSkillDamage, opts) in index.js adds warding% of the roll to defense when isSkillDamage is true, but no caller passes true (enemies have no skills as such; chaos ranged bolts and abilities go through as ordinary damage). Talk through which enemy attacks count as "skill" damage (chaos bolts? Unraveler? breach effects?) and wire them, or drop the parameter and the Warding claim.
+----
+Score:   50
+ID: rangeddef-ccpj
+Created: 2026-11-26T22:05:38Z
+Updated: 2026-11-27T22:41:10Z
+
+(Done) The ranged_defense magic-armor effect (config.js effect pool, rangedDefenseBonus 2 or 4; text "+N def vs ranged") does nothing: no damage code reads rangedDefenseBonus. Talk through what it should do: add the bonus to defense when the hit comes from an enemy ranged attack (enemyRangedAttack in index.js), also against ranged skills/chaos bolts, or rework or drop the effect.
+----
+Score:   50
 ID: ripostecut-msgf
 Created: 2026-11-27T22:23:30Z
 Updated: 2026-11-27T22:23:30Z
@@ -433,11 +423,62 @@ Open questions:
 6. Tone rules to carry over: no vampire imagery; harm-coded verbs only on harm-doing effects.
 ----
 Score:   45
+ID: rendcost-adiw
+Created: 2026-11-26T22:14:29Z
+Updated: 2026-11-27T23:06:06Z
+
+(Done) Dimensional Rend takes its HP cost even when the cast fizzles, and the cost can push HP to 0 or below. Check its handler in actions.js: whether paying HP is checked against current HP before the cast, what happens at HP 0 (death? clamped?), and whether a fizzle should refund or skip the cost. Decide the intended behavior, then fix the code and the ONTOLOGY.md skill-use rule.
+----
+Score:   45
+ID: displaceimm-3i52
+Created: 2026-11-26T22:05:38Z
+Updated: 2026-11-27T23:03:21Z
+
+(Done) The displacement_immune magic-item effect ("No displacement") does nothing: nothing in the game displaces the player (no knockback, pull or teleport-the-player enemy move). Talk through whether to add an enemy that displaces the player so the effect matters, repurpose it into something else, or drop it from the effect pool in config.js.
+----
+Score:   45
+ID: chaos-mix-873g
+Created: 2026-11-26T18:38:29Z
+Updated: 2026-11-27T22:59:17Z
+
+(Done) Flux Archers now actually shoot (they had a range but no rangedAttack, so the AI never fired them). That leaves the chaos/breach spawn pool about 5/7 ranged, well above the 20-30% ranged share wildlife gets. Playtest how strong Archers feel, then decide whether to rebalance the chaos pool.
+----
+Score:   45
 ID: spec-rewrite-hvu5
 Created: 2026-11-26T20:54:41Z
 Updated: 2026-11-26T21:26:14Z
 
 (Done) Large parts of SPEC.md are still the original design: the skill list table (levels, costs, starting with Void Strike), the weapon/armor/artifact tables, enemy types and spawning numbers, gold sources (no gold terrain any more; prize gold is 10-20), the "2+ breaches closed before the Maw" rule (no check for it in the code), the victory and Maw interaction lines, and Haven Shop "3-5 items". These need a section rewrite, not line fixes. First decide whether SPEC.md should keep exact tuning numbers at all, or state the rules and point to config.js and DYNAMICS.md for numbers so it stops going stale.
+----
+Score:   40
+ID: dodgesource-bgih
+Created: 2026-11-26T23:33:39Z
+Updated: 2026-11-27T23:19:42Z
+
+(Done) More sources of dodge_bonus so stacking matters.
+
+Dodge bonuses now add up across equipped items (capped at MAX_DODGE), but only armor carries dodge_bonus and the player has one armor slot, so no one can stack two today. Options: put dodge_bonus in the artifact pool, add a second armor-type slot, or give a skill a dodge bonus.
+----
+Score:   40
+ID: core-level-byun
+Created: 2026-11-26T20:20:04Z
+Updated: 2026-11-27T23:08:27Z
+
+(Done) Core scrolls teach at any level, so every player can pick up Spirit Walk (normally level 6) and Renew/Retrain (level 4) at level 1 from the scrolls near the start. The 12-50 hex spread is the only gate. Watch in playtest; if it is too fast, a scroll could hold its skill until the player reaches its level.
+----
+Score:   40
+ID: prize-scroll-esnu
+Created: 2026-11-26T17:42:48Z
+Updated: 2026-11-27T22:37:06Z
+
+(Done) Prize scrolls (the empty scrolls world-gen places on special terrain) now always grant a Skill Point, because only the far story scrolls get skills from the per-run deal. Should a prize scroll instead carry a learnable optional skill, non-binding like a hut offer?
+----
+Score:   40
+ID: enemy-hover-25zh
+Created: 2026-11-26T18:38:29Z
+Updated: 2026-11-27T22:35:11Z
+
+(Done) Show an enemy's attack range in the hover bar next to its name and HP, so the ranged badge on the token has a number behind it.
 ----
 Score:   40
 ID: dodgestack-g2dm
@@ -452,3 +493,10 @@ Created: 2026-11-26T19:20:16Z
 Updated: 2026-11-26T22:20:57Z
 
 (Done) Some item effects still have working code but no item carries them: mp_penalty, armor_aether_bonus and wall_crown (player.js), regen_combo (enemy_ai.js), and cleave (actions.js: hits every enemy next to the melee target). They came from the old hand-made magic items that were retired when items went procedural. Tie them back to items, e.g. as entries in the procedural magic-effect tables in config.js with text lines in text.js, or decide which to drop.
+----
+Score:   35
+ID: renew-dialog-rk9x
+Created: 2026-11-26T17:50:03Z
+Updated: 2026-11-27T22:31:12Z
+
+(Done) Renew (respec) refunds stat points through the "Level Up!" dialog, so that title shows when the player has not leveled. A separate "Assign stat points" dialog might read better.

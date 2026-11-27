@@ -12,6 +12,57 @@ Settled design: one shared function in enemy_ai.js performs an enemy melee attac
 
 Done when: every test in test/ passes (for f in test/*.js; do node $f; done); enemy_ai.js has exactly one place where an enemy's melee damage is dealt to the player on the enemy's turn, and counter_mastery is checked there.
 ----
+Priority:   53
+Status: ToDo
+ID: reflexdodge-s7np
+Created: 2026-11-27T23:19:42Z
+Updated: 2026-11-27T23:19:42Z
+
+Dodge comes from Reflex, not Vigor.
+
+Goal: Player.dodge() (player.js) is 2 x effectiveVigor plus equipped dodge bonuses, capped at MAX_DODGE. Vigor already gives max HP and defence, while Reflex has no defensive role at all. The user has decided dodge belongs to Reflex.
+
+Settled design: dodge = 2 x the player's Reflex stat + the sum of dodgeBonus over equipped dodge_bonus items, capped at MAX_DODGE (unchanged at 90). Vigor, and Vigor gear (vigor_bonus through effectiveVigor), no longer affect dodge; they still give max HP and defence. There is no Reflex gear, so read player.stats.reflex directly. Give the per-point rate a named constant in config.js if it does not have one. Nothing saved changes; do not bump SAVE_VERSION. Update every place that says Vigor gives dodge: ONTOLOGY.md (stat effects, the dodge rule, the Numbers table), DYNAMICS.md, any player-facing text in text.js or index.html, and DECISIONS.md (a new entry that supersedes the earlier decision that dodge uses gear-boosted Vigor; why: Vigor was the whole survival stat and Reflex had no defensive side).
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); Player.dodge() reads Reflex and does not read Vigor; SAVE_VERSION is unchanged.
+----
+Priority:   52
+Status: ToDo
+ID: dodgeskill-2ve9
+Created: 2026-11-27T23:19:42Z
+Updated: 2026-11-27T23:19:42Z
+
+Add the Dodge skill: spend half your current MP to raise your dodge until your next turn.
+
+Goal: give the player a defensive choice that trades mobility for safety and is always available because it costs no Aether. It leaves enough MP to attack but makes it hard to run.
+
+Settled design:
+- New SKILLS entry in config.js: id dodge, name "Dodge" (sharing the name with the Dodge number on the Character panel is intended), an optional skill (not core; obtained from huts and Skill Seek like other optional skills), minLevel 2, Aether cost 0, target self, usable any time on the player's turn.
+- Five ranks; the dodge bonus is 20 / 30 / 40 / 50 / 60 percent by rank, held in the skill's tiers like other scaled values.
+- MP cost: half the player's current MP, rounded down, in place of the skill's normal MP cost (3 MP costs 1 and leaves 2; 1 MP costs 0). It does not end the turn by itself.
+- Effect: the bonus is added in Player.dodge() alongside the stat and gear terms, inside the MAX_DODGE cap. It lasts until the start of the player's next turn, so it covers the rest of this turn (counters) and the enemy phase. Clear it where the new turn resets MP.
+- Once per turn: while the bonus is active the skill cannot be cast again; block it up front through the same can-use check and reason text other unusable skills use.
+- State: one field on the player for the active bonus. saveGame appears to run only at the end of the turn cycle, after the bonus has been cleared; confirm that. If so, keep the field out of toJSON/fromJSON and do not bump SAVE_VERSION. If a save can happen while the bonus is active, add the field to toJSON/fromJSON, bump SAVE_VERSION by 1, and say so in the report.
+- Text: skill description in config.js as data; a log line for casting and the preview/summary entry the skill previews need (text.js, skillSummary in index.js). Show the active bonus in the Character panel's Dodge line simply by it being part of Player.dodge().
+- Keep test/skilllibrary.js and test/skillformulas.js passing; adjust their expectations only where they count or enumerate skills.
+- Docs: ONTOLOGY.md (skill table, dodge rule, player fields, Numbers), DYNAMICS.md skill table, DECISIONS.md entry (alternatives: half of maximum MP so an engaged player cannot also attack; a flat 50; round the cost up; name it Evade).
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); casting Dodge with 3 MP leaves 2 MP and raises Player.dodge() by the rank's bonus until the next turn starts; it cannot be cast twice in a turn.
+----
+Priority:   51
+Status: ToDo
+ID: dodgeart-ciiu
+Created: 2026-11-27T23:19:48Z
+Updated: 2026-11-27T23:19:48Z
+
+Artifacts can roll the dodge_bonus effect, at the same sizes and values as armour.
+
+Goal: dodge bonuses from all equipped items already add up (capped at MAX_DODGE), but only armour carries dodge_bonus and there is one armour slot, so stacking never happens.
+
+Settled design: add dodge_bonus to the artifact effect pool in config.js with the same three rows armour has (dodgeBonus 10, 20, 30 at values 2, 3, 4). Weapons do not get it. The effect's name-table row and text line already exist and are shared. No logic changes; Player.dodge() already sums across equipped items. Existing items are untouched, so do not bump SAVE_VERSION. Update ONTOLOGY.md and DYNAMICS.md where they list artifact effects or say only armour carries dodge, and md/MAGIC_ITEMS.md if it lists pools.
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); rollMagicItem can produce an artifact with dodge_bonus; SAVE_VERSION is unchanged.
+----
 Priority:   50
 Status: ToDo
 ID: riposte-6kyb
@@ -26,6 +77,119 @@ Settled design: this depends on enemy melee already going through one shared fun
 
 Done when: every test in test/ passes (for f in test/*.js; do node $f; done); riposteDamage is read in the reply code; actions.js no longer mentions riposte; SAVE_VERSION is unchanged.
 ----
+Priority:   50
+Status: ToDo
+ID: statstitle-rweb
+Created: 2026-11-27T22:31:12Z
+Updated: 2026-11-27T22:31:12Z
+
+Title the stat-allocation dialog "Assign stat points" every time it opens.
+
+Goal: showLevelUpDialog (index.js) is titled "Level Up!" (title_level_up in text.js). The Renew skill reopens the same dialog to hand back refunded stat points (actions.js calls showLevelUpDialog(0)), so "Level Up!" shows when the player has not levelled.
+
+Settled design: one title for both cases, no branching on why the dialog opened. Change the title text to "Assign stat points" and rename the text key from title_level_up to title_assign_stats, updating its one caller. Nothing else about the dialog changes: the body (the "Level N!" line, the Skill Point line, the prose, the "Assign N stat points:" line and the allocation rows) and the function name stay as they are. Update ONTOLOGY.md or CLAUDE.md only if they quote the old title.
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); title_level_up and the string "Level Up!" appear nowhere in the loaded .js files.
+----
+Priority:   50
+Status: ToDo
+ID: hoverrange-z4au
+Created: 2026-11-27T22:35:11Z
+Updated: 2026-11-27T22:35:11Z
+
+Show a ranged enemy's shot strength and range in the hover bar.
+
+Goal: hovering an enemy fills the context bar with its name and HP (updateHUD in index.js, text key hud_enemy: "{name} (HP {hp}/{max})"). A ranged enemy's token carries a ranged badge (drawRangedMarker) and shows its melee attack, but nowhere shows how far it shoots or how hard, which differs from its melee attack.
+
+Settled design: melee enemies keep the bar exactly as it is. For an enemy where enemyIsRanged(def) is true, the bar reads "{name} (HP {hp}/{max}, Ranged {atk} at {range})", e.g. "Flux Archer (HP 12/12, Ranged 6 at 4)". {atk} is the value the enemy's shot actually uses, taken from the same function the attack calls (enemyRangedAttack(enemy, def)), not read straight from the def; {range} is the def's range. Add a second text entry in text.js for the ranged form (e.g. hud_enemy_ranged) beside hud_enemy; do not build the string at the call site. Update ONTOLOGY.md where it describes the hover/context bar, if it does.
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); the ranged form is produced only through say() with the new key, and its numbers come from enemyRangedAttack and the def's range.
+----
+Priority:   50
+Status: ToDo
+ID: rangeddef-f8s9
+Created: 2026-11-27T22:41:10Z
+Updated: 2026-11-27T22:41:10Z
+
+Make the ranged_defense armour effect work: its bonus adds to the player's defence against enemy ranged attacks.
+
+Goal: magic armour can roll ranged_defense (config.js effect pool, rangedDefenseBonus 2 or 4; text "+N def vs ranged"), but no code reads rangedDefenseBonus, so the item does nothing.
+
+Settled design: in dealDamageToPlayer (index.js), when opts.isRanged is true, the defence used for that hit is playerDefense() plus the sum of rangedDefenseBonus over every equipped item with special 'ranged_defense' (player.sumEquipped('ranged_defense', 'rangedDefenseBonus'), the same way dodge bonuses stack). Everything else in the function is unchanged: ranged_immune, Warp Shield and dodge are checked first as now, and the hit still does at least 1 damage. The bonus values stay 2 and 4. Nothing new is shown in the Character panel; the item text is the only display. No item fields change, so do not bump SAVE_VERSION. Update ONTOLOGY.md: the rule for damage to the player gains the ranged bonus, and ranged_defense leaves Q-1 and the note about half-wired effects. Add a DECISIONS.md entry (alternatives considered: a percent reduction, removing the effect, best-item-only).
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); rangedDefenseBonus is read in dealDamageToPlayer through sumEquipped; SAVE_VERSION is unchanged.
+----
+Priority:   50
+Status: ToDo
+ID: wardflag-u4tt
+Created: 2026-11-27T22:45:28Z
+Updated: 2026-11-27T22:45:28Z
+
+Remove the unused isSkillDamage parameter and the Warding skill-damage reduction from dealDamageToPlayer.
+
+Goal: dealDamageToPlayer(damage, source, isSkillDamage, opts) in index.js raises defence by Warding percent of the roll when isSkillDamage is true, but every caller passes false (enemy_ai.js ranged and melee attacks, the enemy counter in actions.js), because enemies have no skills. It is dead logic. Nothing player-facing mentions it and nothing saved depends on it.
+
+Settled design: delete the isSkillDamage parameter and the line that uses it, so the signature is dealDamageToPlayer(damage, source, opts), and update every caller and the comment headers that list the signature (actions.js, enemy_ai.js). Behaviour is unchanged. Do not bump SAVE_VERSION. Update ONTOLOGY.md: remove the sentence saying the Warding-based reduction exists but is unused, and drop it from Q-1 and the half-wired note; update CLAUDE.md if it quotes the signature.
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); isSkillDamage appears nowhere in the code or ONTOLOGY.md; SAVE_VERSION is unchanged.
+----
+Priority:   50
+Status: ToDo
+ID: chaosmix-cgff
+Created: 2026-11-27T22:59:17Z
+Updated: 2026-11-27T23:01:55Z
+
+Rebalance the chaos spawn mix: the Void Stalker becomes a rare fast melee unit, and two new slow melee units, the Drudge and the Brute, join the pool.
+
+Goal: 5 of the 7 slots in CHAOS_SPAWN_POOL (config.js) are enemies that shoot (Void Stalker x3, Flux Archer x2), far above the 20 to 30 percent ranged share wildlife gets, and play felt ranged-heavy. The Void Stalker was only ever meant to be fast, not ranged. But a fast melee unit cannot be disengaged from, so it should be uncommon, with ordinary ground units filling the pool.
+
+Settled design:
+- Void Stalker: remove its range and rangedAttack (it no longer shoots or shows the ranged badge). Everything else about it stays, including speed 2.
+- New ENEMY_TYPE entries and ENEMY_DEFS rows, both chaosSpawned: true, behavior 'chase', speed 1, no ranged attack:
+  - Drudge: label 'D', hp 6, attack 2, defense 0, detectRange 4, xp 8, gold 1.
+  - Brute: label 'B', hp 20, attack 7, defense 1, detectRange 4, xp 25, gold 3.
+- CHAOS_SPAWN_POOL becomes one slot each of Void Stalker, Breach Crawler, Phase Wraith, Drudge and Brute, plus two of Flux Archer (seven slots; 2 of 7 shoot). The wraith cap is unchanged.
+- Each spawn roll still produces a single enemy; the Drudge is not spawned in groups. The opening scatter (INITIAL_STALKERS, INITIAL_ARCHERS) and the crawlers placed around breaches are unchanged. The new units have no special drops.
+- Art: no standout look. For now their sprites are fixed cells on the main sheet, held in one small named table in index.js: Drudge { col: 1, row: 6 }, Brute { col: 3, row: 12 }. The token draw looks a type up in that table first and otherwise in enemySprites as today. assignSprites skips these two types, so enemySprites (which is saved per run) keeps the same shape and old saves still load. Each also gets a dark token colour in enemyColor (index.js) distinct from the Stalker's and Crawler's.
+- Saves: nothing saved changes shape, so do not bump SAVE_VERSION. An old save simply starts drawing from the new pool.
+- Docs: update the enemy tables and the chaos spawn rule in ONTOLOGY.md (including the Numbers table), DYNAMICS.md where it lists chaos enemies or says the Stalker shoots, and add a DECISIONS.md entry (why: ranged share; alternatives: reweighting only, capping archers, softening the archer).
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); the Void Stalker def has no range or rangedAttack; CHAOS_SPAWN_POOL has the seven slots above; the Drudge and Brute sprites come from the fixed table; SAVE_VERSION is unchanged.
+----
+Priority:   50
+Status: ToDo
+ID: rendscale-uxx4
+Created: 2026-11-27T23:06:06Z
+Updated: 2026-11-27T23:06:06Z
+
+Dimensional Rend never drops the player below 1 HP: a player short of the full HP cost pays what they have and strikes at proportionally reduced strength, and at 1 HP the skill cannot be cast.
+
+Goal: executeDimensionalRend (actions.js) takes the HP cost (skill.effectStrength - 4) even when the player's HP is no higher than the cost, then fizzles. So the skill can put the player at 0 HP or below and do nothing for it.
+
+Settled design:
+- Full cost affordable (HP greater than the cost): unchanged. Pay the cost, strike for action.baseAmount().
+- Short (HP above 1 but not above the cost): pay HP - 1, ending at exactly 1 HP, and strike for baseAmount() scaled by paid / cost, rounded. The whole strike is scaled, weapon part and Vigor part together; the usual minimum of 1 damage still applies. Log the HP paid as now, plus a line saying the strike was weakened (new text entry in text.js).
+- At 1 HP: the skill cannot be cast at all. Block it up front through the same can-use check and reason text other unusable skills use (button disabled, reason shown), so no MP, turn or cooldown is spent. With that in place the fizzle branch and log_rend_fizzle are dead; remove them.
+- The skill's preview (skillSummary / SKILL_POWER in index.js, pow_dimensional_rend) keeps showing the full-strength numbers and full cost; it does not change with current HP. SKILL_FORMULAS.dimensional_rend stays the full-strength formula; the scaling is applied in the handler.
+- Nothing saved changes; do not bump SAVE_VERSION.
+- Docs: update the Dimensional Rend row in DYNAMICS.md and the skill-use rule in ONTOLOGY.md, and add a DECISIONS.md entry (alternatives: fizzle with no cost; scale only the weapon part; a preview that follows current HP).
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); no path in executeDimensionalRend leaves the player below 1 HP; log_rend_fizzle is gone; SAVE_VERSION is unchanged.
+----
+Priority:   50
+Status: ToDo
+ID: corelevel-2i9s
+Created: 2026-11-27T23:08:27Z
+Updated: 2026-11-27T23:08:27Z
+
+Set minLevel to 2 on every core skill.
+
+Goal: core skills (the SKILLS entries in config.js with core: true: Channel Aether, the crossing skills, Spirit Walk, Renew, Retrain and any others so marked) carry assorted minLevel values up to 6, but those values mean nothing for them: a core skill is only ever taught by its scroll near the start, which teaches at any level, and huts and Skill Seek never offer core skills. The listed levels are misleading data.
+
+Settled design: change minLevel to 2 on every skill with core: true, and nothing else. No logic changes: scrolls still teach at any level, and core skills stay out of hut and Skill Seek offers. Update any table in ONTOLOGY.md or DYNAMICS.md that lists a level for these skills. Nothing saved changes; do not bump SAVE_VERSION.
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); every SKILLS entry with core: true has minLevel 2; SAVE_VERSION is unchanged.
+----
 Priority:   30
 Status: ToDo
 ID: deadturns-395r
@@ -39,3 +203,31 @@ Goal: turnsSinceSpawn on enemy instances is set in enemies.js and incremented in
 Settled design: remove the field, its increments, its toJSON/fromJSON handling and its row in ONTOLOGY.md's Enemy instance table. This changes the save shape, so bump SAVE_VERSION by 1 and tell the user old saves will show "New Version".
 
 Done when: every test in test/ passes (for f in test/*.js; do node $f; done); turnsSinceSpawn appears nowhere in the code or ONTOLOGY.md; SAVE_VERSION is one higher.
+----
+Priority:   30
+Status: ToDo
+ID: chaossprites-tkk2
+Created: 2026-11-27T23:01:55Z
+Updated: 2026-11-27T23:01:55Z
+
+Give the Drudge and the Brute their sprites the same way every other enemy type gets one. This breaks old saves.
+
+Goal: the Drudge and Brute chaos enemies were added with fixed sprite cells in a small table in index.js, and assignSprites skips them, so that the saved enemySprites map kept its shape and old saves kept loading. That was a stopgap. Every other enemy type is given a random sheet row per run by assignSprites and stored in enemySprites.
+
+Settled design: delete the fixed-cell table and its lookup in the token draw, and stop skipping the two types in assignSprites, so they are assigned and saved like the rest. An old save then has no sprite for them, so bump SAVE_VERSION by 1 and tell the user old saves will show "New Version". Update ONTOLOGY.md or CLAUDE.md if they mention the fixed cells.
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); no enemy type has a hardcoded sprite cell in index.js; SAVE_VERSION is one higher.
+----
+Priority:   30
+Status: ToDo
+ID: nodisplace-h8ji
+Created: 2026-11-27T23:03:21Z
+Updated: 2026-11-27T23:03:21Z
+
+Remove the displacement_immune magic-item effect ("No displacement"). This breaks old saves.
+
+Goal: nothing in the game displaces the player (no knockback, pull or forced teleport), so an item with displacement_immune does nothing. The user has decided to drop it and not to add displacing enemies for its sake.
+
+Settled design: delete the displacement_immune row from the magic-effect pool in config.js, its row in the item name table in config.js, and spec_displacement_immune in text.js. No game logic reads the effect, so there is nothing else to remove in loaded code; leave origitems.js (an unloaded archive) alone. A saved item with this effect would throw when its text is looked up, so bump SAVE_VERSION by 1 and tell the user old saves will show "New Version". Update ONTOLOGY.md (the list of item effects, the note about inert effects and Q-1), DYNAMICS.md's effect list and md/MAGIC_ITEMS.md, and add a DECISIONS.md entry (alternatives: add an enemy that displaces the player, repurpose the effect).
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); displacement_immune appears in no loaded .js file and not in ONTOLOGY.md; SAVE_VERSION is one higher.
