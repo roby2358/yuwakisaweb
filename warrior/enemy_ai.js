@@ -630,20 +630,25 @@ function respawnGuardians(occupied, ctx) {
     }
 }
 
+// The places a turn's chaos spawn can come from: the open breaches.
+function chaosSpawnSources(world) {
+    return world.pois.filter(poi => poi.type === POI.BREACH && !poi.closed);
+}
+
+// One roll a turn; a success spawns one pool enemy at one source drawn uniformly.
 function spawnChaosAtBreaches(occupied, ctx) {
     const { world, em } = ctx;
     if (em.chaosMight() >= CHAOS_MIGHT_CAP) return;
+    const sources = chaosSpawnSources(world);
+    if (sources.length === 0) return;
+    if (!Rando.bool(CHAOS_SPAWN_CHANCE)) return;
+    const source = Rando.choice(sources);
+    const spot = nearestFreeHex(source.q, source.r, occupied, world);
+    if (!spot) return;
     const wraiths = em.enemies.filter(e => e.type === ENEMY_TYPE.PHASE_WRAITH).length;
-    const chaosPool = chaosSpawnPool(wraiths);
-    for (const poi of world.pois) {
-        if (poi.type !== POI.BREACH || poi.closed) continue;
-        if (!Rando.bool(BREACH_SPAWN_CHANCE)) continue;
-        const spot = nearestFreeHex(poi.q, poi.r, occupied, world);
-        if (!spot) continue;
-        const type = Rando.choice(chaosPool);
-        em.spawn(type, spot.q, spot.r, poi.q, poi.r);
-        occupied.add(hexKey(spot.q, spot.r));
-    }
+    const type = Rando.choice(chaosSpawnPool(wraiths));
+    em.spawn(type, spot.q, spot.r, source.q, source.r);
+    occupied.add(hexKey(spot.q, spot.r));
 }
 
 async function runEnemyAiPhase(ctx) {

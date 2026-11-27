@@ -271,6 +271,24 @@ reached. Spawn chances, the might cap, the pool and homes are unchanged.
     own adjacent-hex filters; it widens a `bfsHexes` search one step at a time. ONTOLOGY's
     chaos-spawning and Unraveler-minion rules were updated. No save shape changed.
 
+### D-23 Breach spawning is one flat roll a turn at a random open breach — *Decided*
+The spawn step makes one CHAOS_SPAWN_CHANCE roll each turn; on a success one open breach is
+drawn uniformly and one enemy from the chaos pool spawns there, placed and homed as breach
+spawns were before. The might cap still stops breach spawning, and with no open breach
+nothing spawns. The Unraveler's own spawning, guardian respawn, wildlife, the pool and
+WRAITH_CAP are unchanged.
+- **Alternatives:** every open breach rolls its own chance each turn (the previous
+  behaviour, BREACH_SPAWN_CHANCE 0.075 per breach), so the total rate falls as breaches
+  close.
+- **Why:** designer's call: a steady spawn rate that lands on fewer and fewer sources, so
+  chaos scatters early and concentrates as breaches close.
+- **Evidence:** not measured.
+- **History:**
+  - 2026-11-27: decided and built. `spawnChaosAtBreaches` in enemy_ai.js collects its
+    sources (`chaosSpawnSources`, the open breaches), rolls once and draws one;
+    CHAOS_SPAWN_CHANCE (0.5) replaced BREACH_SPAWN_CHANCE in config.js. ONTOLOGY's
+    chaos-spawning rule and Numbers row, and DYNAMICS, were updated. No save shape changed.
+
 ### Code structure
 
 ### D-17 Inline tunables get constant names — *Decided*

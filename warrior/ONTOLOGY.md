@@ -847,9 +847,14 @@ for each unsealed breach or Maw:
 *Serves:* "Escalating Commitment". (`spawnChaosAtBreaches`)
 ```
 if em.chaosMight() ≥ CHAOS_MIGHT_CAP: none
-pool = CHAOS_SPAWN_POOL (drop the wraith when wraiths ≥ WRAITH_CAP)
-each open breach: chance(BREACH_SPAWN_CHANCE) → one pool enemy on nearestFreeHex(breach)
+sources = the open breaches; none → none
+once a turn: chance(CHAOS_SPAWN_CHANCE) →
+  source = uniform draw from sources
+  pool = CHAOS_SPAWN_POOL (drop the wraith when wraiths ≥ WRAITH_CAP)
+  one pool enemy on nearestFreeHex(source), homed on the source
 ```
+The one roll covers the whole map, so the spawn rate stays the same as breaches are sealed
+and falls on fewer sources.
 `nearestFreeHex(source)`: search outward from the source over passable hexes, a step at a
 time, walking through occupied ones; take a random hex among the nearest free ones (passable
 and unoccupied), never the source itself. A crowded source spawns further out; if no free hex
@@ -1191,7 +1196,7 @@ stats, effect magnitudes) stay in `SKILLS`, `WEAPONS`, `ARMORS`, the effect pool
 | SPAWN_SAFE_DISTANCE / PACK_RADIUS | 6 / 2 | hexes | config.js; used in enemies.js |
 | INITIAL_STALKERS / INITIAL_ARCHERS / INITIAL_SAFE_DISTANCE | 2d4 / 1d3 / 5 | | config.js; used in enemies.spawnInitial |
 | BREACH_CRAWLERS / BREACH_CRAWLER_RADIUS | 1-2 / 2 | | config.js; used in enemies.spawnInitial |
-| CHAOS_MIGHT_CAP / BREACH_SPAWN_CHANCE | 500 / 0.075 | attack sum / per breach per turn | config.js; used in enemy_ai.spawnChaosAtBreaches |
+| CHAOS_MIGHT_CAP / CHAOS_SPAWN_CHANCE | 500 / 0.5 | attack sum / one roll per turn | config.js; used in enemy_ai.spawnChaosAtBreaches |
 | CHAOS_SPAWN_POOL | stalker ×3, archer ×2, crawler ×1, wraith ×1 | repeats in a uniform draw | config.js; used in enemy_ai.chaosSpawnPool |
 | WRAITH_CAP | 10 | wraiths | config.js; used in enemy_ai.js |
 | GUARDIAN_RESPAWN_CHANCE / GUARDIAN_PRESENCE_RADIUS | 0.3 / 3 | per turn / hexes | config.js; used in enemy_ai.respawnGuardians |

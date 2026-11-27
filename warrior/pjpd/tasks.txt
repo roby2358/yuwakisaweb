@@ -1,23 +1,3 @@
-Priority:   91
-Status: ToDo
-ID: flatspawn-z8b9
-Created: 2026-11-27T19:21:44Z
-Updated: 2026-11-27T19:24:31Z
-
-Breach spawning becomes one flat roll a turn at a random open breach.
-
-Goal: today every open breach rolls BREACH_SPAWN_CHANCE on its own each turn (spawnChaosAtBreaches in enemy_ai.js), so the total spawn rate falls as breaches close. The designer wants a steady rate that lands on fewer and fewer sources, so chaos scatters early and concentrates late.
-
-Settled design:
-- One roll each turn in the spawn step of the enemy phase: chance CHAOS_SPAWN_CHANCE, a new constant in config.js with value 0.5. It replaces BREACH_SPAWN_CHANCE; remove that.
-- On a successful roll, draw one open breach uniformly and spawn one enemy from chaosSpawnPool(wraithCount) there, placed and homed as breach spawns are today.
-- The might cap works as today: when em.chaosMight() >= CHAOS_MIGHT_CAP, no breach spawns.
-- With no open breach, nothing spawns from this step.
-- The Unraveler's own spawning (tryBossSpawn) is not touched by this task. Guardian respawn, wildlife spawning, the pool and WRAITH_CAP are unchanged. No save-shape change.
-- Docs: update the chaos-spawning rule and the Numbers table in ONTOLOGY.md; record the decision in DECISIONS.md dated 2026-11-27 with the alternative (per-breach rolls, as before) and the reason (a steady rate that concentrates as breaches close); fix any DYNAMICS.md line that describes per-breach rolls.
-
-Done when: every test in test/ passes (for f in test/*.js; do node $f; done); BREACH_SPAWN_CHANCE appears nowhere in the code or docs except DECISIONS.md history; the spawn step makes one CHAOS_SPAWN_CHANCE roll a turn.
-----
 Priority:   90
 Status: ToDo
 ID: mawsource-iwj2

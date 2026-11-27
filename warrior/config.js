@@ -371,7 +371,7 @@ const INITIAL_SAFE_DISTANCE = 5;
 const BREACH_CRAWLERS = [1, 2];
 const BREACH_CRAWLER_RADIUS = 2;
 const CHAOS_MIGHT_CAP = 500;
-const BREACH_SPAWN_CHANCE = 0.075;
+const CHAOS_SPAWN_CHANCE = 0.5;
 // Drawn uniformly, so repeats are the weights; the wraith is dropped at WRAITH_CAP.
 const CHAOS_SPAWN_POOL = [
     ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER, ENEMY_TYPE.VOID_STALKER,
