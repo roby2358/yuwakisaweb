@@ -546,6 +546,20 @@ Tuning: don't overpopulate ranged on a single map — they're a counter to slow 
 ----
 Priority:   50
 Status: Done
+ID: corelevel-2i9s
+Created: 2026-11-27T23:08:27Z
+Updated: 2026-11-28T00:00:40Z
+
+Set minLevel to 2 on every core skill.
+
+Goal: core skills (the SKILLS entries in config.js with core: true: Channel Aether, the crossing skills, Spirit Walk, Renew, Retrain and any others so marked) carry assorted minLevel values up to 6, but those values mean nothing for them: a core skill is only ever taught by its scroll near the start, which teaches at any level, and huts and Skill Seek never offer core skills. The listed levels are misleading data.
+
+Settled design: change minLevel to 2 on every skill with core: true, and nothing else. No logic changes: scrolls still teach at any level, and core skills stay out of hut and Skill Seek offers. Update any table in ONTOLOGY.md or DYNAMICS.md that lists a level for these skills. Nothing saved changes; do not bump SAVE_VERSION.
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); every SKILLS entry with core: true has minLevel 2; SAVE_VERSION is unchanged.
+----
+Priority:   50
+Status: Done
 ID: chaosmix-cgff
 Created: 2026-11-27T22:59:17Z
 Updated: 2026-11-27T23:58:54Z

@@ -576,6 +576,13 @@ its SKILL_POWER preview call.
 
 Dated changes that are history but not a single decision, newest first.
 
+### 2026-11-27 — Core skills all carry minLevel 2
+
+Channel Aether (3), Spirit Walk (6), Renew (4) and Retrain (4) had their minLevel set to 2,
+matching Water Skip and Mountain Skip. The level is read only when Skill Seek filters the
+optional skills, and a core skill is taught only by its scroll, at any level, so the assorted
+values were misleading data. No rule changed and nothing saved changed.
+
 ### 2026-11-27 — RATIONALE.md and ARCHITECTURE_LOG.md merged into DECISIONS.md
 
 The decisions file (RATIONALE.md) and the dated log (ARCHITECTURE_LOG.md) became this one

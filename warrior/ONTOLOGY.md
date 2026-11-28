@@ -259,7 +259,7 @@ Mundane items: `WEAPONS` and `ARMORS` in config.js. Magic items: rolled by
 | usage | SKILL_USAGE | anytime, non_combat, pristine. |
 | weaponClass | 'melee' \| 'ranged' \| 'direct' \| absent | melee/ranged skills flow through a matching held weapon. |
 | scales, tiers | string[], tuple[] | Per-rank values; `effectiveSkill(def, rank)` overlays tiers[rank-1] onto the named axes. |
-| minLevel | int | Skill Seek level gate. |
+| minLevel | int | Skill Seek level gate. Read only for optional skills; every core skill carries the same value, which nothing reads. |
 | core, shopOnly, scrollOnly | bool | Skill group flags. |
 | shopPrice, goldCost | int | Shop-only skills. |
 | panelInvoke | bool | May be invoked from the Skills panel without a hotbar slot. |

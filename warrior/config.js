@@ -966,7 +966,7 @@ const SKILLS = {
         scales: ['effectStrength'], tiers: [[4], [4], [4], [4], [4]], // freeAttune: locked at rank 1, kept flat at 4 HP/AE
         desc: 'Burn HP for AE, up to filling AE or half current HP. Min 1 AE — blood from a stone.',
         core: true, panelInvoke: true, freeAttune: true,
-        minLevel: 3
+        minLevel: 2
     },
     breach_pulse: {
         id: 'breach_pulse', name: 'Breach Pulse', cost: 3, target: SKILL_TARGET.AOE_SELF, usage: SKILL_USAGE.ANYTIME,
@@ -1050,7 +1050,7 @@ const SKILLS = {
     },
     spirit_walk: {
         id: 'spirit_walk', name: 'Spirit Walk', cost: 3, target: SKILL_TARGET.TELEPORT_REVEALED, usage: SKILL_USAGE.NON_COMBAT,
-        core: true, scales: ['range'], tiers: [[6], [8], [10], [12], [14]], desc: 'Teleport to any revealed hex nearby.', panelInvoke: true, minLevel: 6
+        core: true, scales: ['range'], tiers: [[6], [8], [10], [12], [14]], desc: 'Teleport to any revealed hex nearby.', panelInvoke: true, minLevel: 2
     },
     ground_weeps: {
         id: 'ground_weeps', name: 'Ground Weeps', cost: 4, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.NON_COMBAT,
@@ -1095,12 +1095,12 @@ const SKILLS = {
     respec: {
         id: 'respec', name: 'Renew', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
         core: true, panelInvoke: true,
-        desc: 'Refund all spent stat points and reallocate them. Requires clean hex, no enemies.', minLevel: 4
+        desc: 'Refund all spent stat points and reallocate them. Requires clean hex, no enemies.', minLevel: 2
     },
     retrain: {
         id: 'retrain', name: 'Retrain', cost: 3, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
         core: true, panelInvoke: true,
-        desc: 'Open the Train panel to reallocate your skill points. Requires clean hex, no enemies.', minLevel: 4
+        desc: 'Open the Train panel to reallocate your skill points. Requires clean hex, no enemies.', minLevel: 2
     },
     garrison: {
         id: 'garrison', name: 'Commission Garrison', cost: 0, target: SKILL_TARGET.SELF, usage: SKILL_USAGE.PRISTINE,
