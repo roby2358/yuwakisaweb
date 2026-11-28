@@ -274,6 +274,13 @@ Casting it raises the player's movement for the turn to double the base MP, igno
 
 Open questions: Aether cost and cooldown; whether it must be cast before anything else that turn; whether item use, equipping, and entering havens or huts count as "other actions"; whether enemies still get any parting hit; how it reads next to Sprint and the disengage effect; ranks (what would scale).
 ----
+Score:   50
+ID: replyrules-ty4v
+Created: 2026-11-28T00:03:39Z
+Updated: 2026-11-28T00:03:39Z
+
+Loose ends in the player's replies to enemy melee (counter_mastery, riposte). (1) A reply fires even when the enemy's hit was dodged or absorbed by Warp Shield. (2) The reply subtracts enemy HP directly instead of going through dealDamageToEnemy, so it shows no damage float or hit flash, adds nothing to the damage-dealt score and cannot stun. (3) It rolls the weapon's raw damage, skipping the ranged-weapon-in-melee divisor. (4) Riposte ranks 2 and 3 cost 3 and 4, at or above counter_mastery's 3. (5) The riposte item text "Half-strength reply +N on enemy melee" is much longer than other effect labels and may not fit. (6) The item text does not say replies only answer attacks on the enemy's turn.
+----
 Score:   40
 ID: text-static-7wcz
 Created: 2026-11-26T18:08:41Z
@@ -291,6 +298,34 @@ Magic items that carry two or three effects.
 Today rollMagicItem (config.js) gives each magic item exactly one effect from its slot's pool, stored as a single special plus that effect's fields spread onto the item. Rare items with two or three effects would make finds more exciting and builds more varied.
 
 Open questions: how an item holds several effects (the code reads item.special and fields directly in many places, and player.equipped / sumEquipped match on one special per item); how often they appear and where (deep ruins, breach hoards, guardians); how the name is built from several effects; pricing; which effect pairs are excluded; and that this changes the saved item shape, so it breaks old saves.
+----
+Score:   40
+ID: hutcount-b8hj
+Created: 2026-11-28T00:03:39Z
+Updated: 2026-11-28T00:03:39Z
+
+With the Dodge skill there are 37 optional skills, so 13 are left each run for huts and Skill Seek but HUT_COUNT is 12: one in-play skill has no hut of its own. Options: a 13th hut, a seventh story scroll, or leave it (Skill Seek and hut rerolls can still reach it).
+----
+Score:   40
+ID: rendchannel-jwk9
+Created: 2026-11-28T00:03:39Z
+Updated: 2026-11-28T00:03:39Z
+
+A short-paid Dimensional Rend leaves the player at 1 HP, but a weapon with the channel effect then takes its own HP cost on the strike and can kill the player. Decide whether channel should skip, be capped at 1 HP, or stay lethal (it is the weapon's own rule). Related: a weakened Rend scales only the skill's own formula; flat gear bonuses (Breach Jewel, Aether Signet, Chaos Attune) are added at full size.
+----
+Score:   40
+ID: skillchecks-dsry
+Created: 2026-11-28T00:03:39Z
+Updated: 2026-11-28T00:03:39Z
+
+Small skill-code cleanups. checkSkillUsage branches on skill id for Phase Step, Sprint, Dodge and Dimensional Rend; a per-skill hook on the skill def would fit the dispatch rule better. Melee skill handlers return undefined when there is no enemy on the target hex, which spends the MP. abortSkill treats its message as optional. The fixed skills (Restore, Commission Garrison, RETURN, Commune) carry minLevel values nothing reads.
+----
+Score:   40
+ID: drudgetips-zvr3
+Created: 2026-11-28T00:03:39Z
+Updated: 2026-11-28T00:03:39Z
+
+After the chaos mix change a lone Drudge is an easy early chaos kill, so DYNAMICS.md's early-game advice to avoid chaos-spawned enemies and its "grinding Void Stalkers forever" anti-strategy row may be out of date. Revisit after playtest. Also: the Drudge's and Brute's fixed sprite cells can coincide with a cell dealt to another enemy type in a run (goes away when they get sprites the normal way).
 ----
 Score:   30
 ID: sprite-rows-s27w

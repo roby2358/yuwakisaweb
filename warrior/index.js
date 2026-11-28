@@ -3216,7 +3216,7 @@ function showLevelUpDialog(spGained) {
     }
     body += `<div id="alloc-remaining" style="margin-top:8px;color:#ffc107">${say('levelup_remaining', { n: player.statPoints })}</div>`;
 
-    showDialog(say('title_level_up', {}), body, [{ label: say('btn_done', {}), cls: 'primary' }]);
+    showDialog(say('title_assign_stats', {}), body, [{ label: say('btn_done', {}), cls: 'primary' }]);
 
     // Wire up allocation buttons
     const dialogBody = document.getElementById('dialog-body');

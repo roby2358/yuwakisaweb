@@ -1,16 +1,72 @@
 Priority:   50
 Status: ToDo
-ID: statstitle-rweb
-Created: 2026-11-27T22:31:12Z
-Updated: 2026-11-27T22:31:12Z
+ID: failfastai-ywjt
+Created: 2026-11-28T00:03:38Z
+Updated: 2026-11-28T00:03:38Z
 
-Title the stat-allocation dialog "Assign stat points" every time it opens.
+Remove the inline fallbacks in enemy_ai.js.
 
-Goal: showLevelUpDialog (index.js) is titled "Level Up!" (title_level_up in text.js). The Renew skill reopens the same dialog to hand back refunded stat points (actions.js calls showLevelUpDialog(0)), so "Level Up!" shows when the player has not levelled.
+Goal: two silent defaults break the project's fail-fast rule. baseAggro reads "def.aggroRange || def.detectRange || 0", and aiFor falls back to chaosAI for an unknown behaviour ("BEHAVIOR_AI[behavior] || chaosAI"); moveEnemyStep also has a "chase or default" tail.
 
-Settled design: one title for both cases, no branching on why the dialog opened. Change the title text to "Assign stat points" and rename the text key from title_level_up to title_assign_stats, updating its one caller. Nothing else about the dialog changes: the body (the "Level N!" line, the Skill Point line, the prose, the "Assign N stat points:" line and the allocation rows) and the function name stay as they are. Update ONTOLOGY.md or CLAUDE.md only if they quote the old title.
+Settled design: every enemy def carries the fields it needs (add any missing value to ENEMY_DEFS or the creature defs with the value the fallback gives today, so behaviour does not change), baseAggro reads one field, and aiFor throws on a behaviour with no AI. No save-shape change; SAVE_VERSION stays as it is.
 
-Done when: every test in test/ passes (for f in test/*.js; do node $f; done); title_level_up and the string "Level Up!" appear nowhere in the loaded .js files.
+ Done when: every test in test/ passes (for f in test/*.js; do node $f; done); neither fallback remains in enemy_ai.js.
+----
+Priority:   50
+Status: ToDo
+ID: artifactpool-cmyi
+Created: 2026-11-28T00:03:38Z
+Updated: 2026-11-28T00:03:38Z
+
+test/text.js checks the artifact effect pool too.
+
+Goal: test/text.js builds its set of item specials from the melee, ranged, armour and passive pools but not ARTIFACT_EFFECTS, so an effect that existed only in the artifact pool would have no checked spec text.
+
+Settled design: add ARTIFACT_EFFECTS to the pools the check unions. No game code changes.
+
+ Done when: every test in test/ passes (for f in test/*.js; do node $f; done); test/text.js reads ARTIFACT_EFFECTS.
+----
+Priority:   50
+Status: ToDo
+ID: rendmult-zng6
+Created: 2026-11-28T00:03:38Z
+Updated: 2026-11-28T00:03:38Z
+
+Name the rank divisor in the Dimensional Rend and Void Strike formulas.
+
+Goal: SKILL_FORMULAS.dimensional_rend and void_strike in actions.js, and their previews in index.js, divide by an inline literal 5. The project rule is that tunables are named constants in config.js with the value only in ONTOLOGY's Numbers table.
+
+Settled design: one named constant in config.js (or two if the two skills' divisors are separate ideas in the code), used at every site; a Numbers row in ONTOLOGY.md. No value or behaviour change, no save change.
+
+ Done when: every test in test/ passes (for f in test/*.js; do node $f; done); the literal is gone from those formulas and previews.
+----
+Priority:   50
+Status: ToDo
+ID: enemyattack-5smi
+Created: 2026-11-28T00:03:38Z
+Updated: 2026-11-28T00:03:38Z
+
+Fold enemyMeleeAttack and enemyRangedAttack in index.js into one function.
+
+Goal: the two are identical apart from reading def.attack or def.rangedAttack, then adding the Maw-proximity and corrupted-ground bonuses.
+
+Settled design: one shared function takes the base value; the two existing names stay as thin callers so actionCtx/enemyAiCtx and every call site keep working. No behaviour change, no save change.
+
+ Done when: every test in test/ passes (for f in test/*.js; do node $f; done); the bonus arithmetic appears once.
+----
+Priority:   50
+Status: ToDo
+ID: itemsdoc-d7qg
+Created: 2026-11-28T00:03:39Z
+Updated: 2026-11-28T00:03:39Z
+
+Bring md/MAGIC_ITEMS.md back in line with the effect pools in config.js.
+
+Goal: the brainstorm doc lists recoil rows where config has channel, and its passive table lacks rows such as aether_discount, heal, hp_bonus and vigor_bonus.
+
+Settled design: config.js wins. Rewrite the doc's effect tables from the pools (names, sizes, values, text); change no code.
+
+Done when: every effect row in the doc's tables matches a row in config.js's pools and no pool row is missing.
 ----
 Priority:   30
 Status: ToDo

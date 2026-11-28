@@ -719,7 +719,7 @@ const TEXT = (() => {
             'The old walls held more than echoes...'),
 
         // ---- Level up and skill choice ----
-        title_level_up: label('Level Up!'),
+        title_assign_stats: label('Assign stat points'),
         levelup_level: label('Level {level}!'),
         levelup_prose: narration(
             'Something in you settles, like a blade finding its sheath.',

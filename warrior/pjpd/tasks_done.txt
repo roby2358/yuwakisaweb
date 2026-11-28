@@ -546,6 +546,20 @@ Tuning: don't overpopulate ranged on a single map — they're a counter to slow 
 ----
 Priority:   50
 Status: Done
+ID: statstitle-rweb
+Created: 2026-11-27T22:31:12Z
+Updated: 2026-11-28T00:03:42Z
+
+Title the stat-allocation dialog "Assign stat points" every time it opens.
+
+Goal: showLevelUpDialog (index.js) is titled "Level Up!" (title_level_up in text.js). The Renew skill reopens the same dialog to hand back refunded stat points (actions.js calls showLevelUpDialog(0)), so "Level Up!" shows when the player has not levelled.
+
+Settled design: one title for both cases, no branching on why the dialog opened. Change the title text to "Assign stat points" and rename the text key from title_level_up to title_assign_stats, updating its one caller. Nothing else about the dialog changes: the body (the "Level N!" line, the Skill Point line, the prose, the "Assign N stat points:" line and the allocation rows) and the function name stay as they are. Update ONTOLOGY.md or CLAUDE.md only if they quote the old title.
+
+Done when: every test in test/ passes (for f in test/*.js; do node $f; done); title_level_up and the string "Level Up!" appear nowhere in the loaded .js files.
+----
+Priority:   50
+Status: Done
 ID: hoverrange-z4au
 Created: 2026-11-27T22:35:11Z
 Updated: 2026-11-28T00:02:27Z
