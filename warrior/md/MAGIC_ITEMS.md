@@ -249,9 +249,9 @@ Offensive effects that trigger when attacking.
 | `recoil`          | 5 High damage but hurts self 3                         | Kicking, Shrieking, Searing        | Zealot, Slayer, Xenarch            |
 | `recoil`          | 8 High damage but hurts self 5                         | Kicking, Shrieking, Searing        | Zealot, Slayer, Xenarch            |
 | `reverberate`     | Damage chains to 3 nearby enemies, +2 damage each jump | Echoing, Shrieking, Sundering      | Technomancer, Xenarch, Operator    |
-| `riposte`         | Half-strength reply +1 on enemy melee                  | Riposting, Warding, Piercing       | Warden, Sentinel, Slayer           |
-| `riposte`         | Half-strength reply +2 on enemy melee                  | Riposting, Warding, Piercing       | Warden, Sentinel, Slayer           |
-| `riposte`         | Half-strength reply +3 on enemy melee                  | Riposting, Warding, Piercing       | Warden, Sentinel, Slayer           |
+| `riposte`         | +1 counter-attack                                      | Riposting, Warding, Piercing       | Warden, Sentinel, Slayer           |
+| `riposte`         | +2 counter-attack                                      | Riposting, Warding, Piercing       | Warden, Sentinel, Slayer           |
+| `riposte`         | +3 counter-attack                                      | Riposting, Warding, Piercing       | Warden, Sentinel, Slayer           |
 
 ## Ranged Weapon Effects
 

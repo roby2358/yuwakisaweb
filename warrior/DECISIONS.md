@@ -462,8 +462,7 @@ counter to the player's own melee strike.
     enemy_ai.js gained a riposte entry; each entry now gives only its strength and its log
     line, and `runMeleeReply` holds the roll, defense, minimum and kill for both.
     `RIPOSTE_DIVISOR` is new in config.js. The halving line left `MeleeAction.execute`.
-    text.js gained `log_riposte` and `spec_riposte` now reads "Half-strength reply +N on
-    enemy melee". No item field changed, so SAVE_VERSION was not bumped. ONTOLOGY's melee
+    text.js gained `log_riposte` and `spec_riposte` now reads "+N counter-attack". No item field changed, so SAVE_VERSION was not bumped. ONTOLOGY's melee
     strike rule, enemy melee rule, Numbers table and Q-1, DYNAMICS, md/MAGIC_ITEMS.md and
     CLAUDE.md were updated.
 

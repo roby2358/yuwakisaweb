@@ -938,7 +938,7 @@ const TEXT = (() => {
         spec_lifesteal: label('+{lifestealAmount} HP/hit'),
         spec_channel: label('+{channelBonus} dmg, {channelDamage} self-dmg'),
         spec_reverberate: label('Chain {chainCount} +{chainBonus}/jump'),
-        spec_riposte: label('Half-strength reply +{riposteDamage} on enemy melee'),
+        spec_riposte: label('+{riposteDamage} counter-attack'),
         // ---- Ranged weapon effects
         spec_double_shot: label('Double shot'),
         spec_triple_shot: label('Triple shot'),
