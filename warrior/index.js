@@ -1962,7 +1962,10 @@ function updateHUD() {
             const enemy = em.enemies.find(e => e.q === hoveredHex.q && e.r === hoveredHex.r && world.visible.has(hexKey(e.q, e.r)));
             if (enemy) {
                 const def = em.getDef(enemy.type);
-                document.getElementById('ctx-entity').textContent = say('hud_enemy', { name: def.name, hp: enemy.hp, max: enemyEffectiveMaxHp(enemy) });
+                const vitals = { name: def.name, hp: enemy.hp, max: enemyEffectiveMaxHp(enemy) };
+                document.getElementById('ctx-entity').textContent = enemyIsRanged(def)
+                    ? say('hud_enemy_ranged', { ...vitals, atk: enemyRangedAttack(enemy, def), range: def.range })
+                    : say('hud_enemy', vitals);
             } else {
                 document.getElementById('ctx-entity').textContent = '';
             }

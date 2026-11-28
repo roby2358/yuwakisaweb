@@ -54,6 +54,7 @@ const TEXT = (() => {
         hud_mp: label('MP {mp}'),
         hud_unknown: label('Unknown'),
         hud_enemy: label('{name} (HP {hp}/{max})'),
+        hud_enemy_ranged: label('{name} (HP {hp}/{max}, Ranged {atk} at {range})'),
         hud_threat_map: label('Threat Map — Space/click to dismiss'),
         hud_world_map: label('World Map — M/Esc to close'),
         slot_ranged: label('Ranged'),

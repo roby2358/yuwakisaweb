@@ -1335,7 +1335,7 @@ formalized from the code]
 | threat overlay (Ground Weeps) | Map hexKey → threat | Σ enemyMeleeAttack × (4 − d)/3 for enemies within 3. |
 | compareToEquippedHtml, itemStatLine, itemSpecialText | item comparison text | Inventory and shops. |
 | Character panel derived | attack, defense, dodge, vision, MP | Calls the Player methods. |
-| context bar (hover) | terrain name; visible enemy name and HP | |
+| context bar (hover) | terrain name; visible enemy name and HP; for a ranged enemy (`enemyIsRanged`) also its shot strength and range | The shot strength is `enemyRangedAttack(enemy, def)`, the value the shot uses; the range is the def's `range`. |
 | saveIsCurrent, hasSave | bool | Intro buttons. |
 
 ### Events (what the player is shown)

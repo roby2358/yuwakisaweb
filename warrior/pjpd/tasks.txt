@@ -12,20 +12,6 @@ Settled design: one title for both cases, no branching on why the dialog opened.
 
 Done when: every test in test/ passes (for f in test/*.js; do node $f; done); title_level_up and the string "Level Up!" appear nowhere in the loaded .js files.
 ----
-Priority:   50
-Status: ToDo
-ID: hoverrange-z4au
-Created: 2026-11-27T22:35:11Z
-Updated: 2026-11-27T22:35:11Z
-
-Show a ranged enemy's shot strength and range in the hover bar.
-
-Goal: hovering an enemy fills the context bar with its name and HP (updateHUD in index.js, text key hud_enemy: "{name} (HP {hp}/{max})"). A ranged enemy's token carries a ranged badge (drawRangedMarker) and shows its melee attack, but nowhere shows how far it shoots or how hard, which differs from its melee attack.
-
-Settled design: melee enemies keep the bar exactly as it is. For an enemy where enemyIsRanged(def) is true, the bar reads "{name} (HP {hp}/{max}, Ranged {atk} at {range})", e.g. "Flux Archer (HP 12/12, Ranged 6 at 4)". {atk} is the value the enemy's shot actually uses, taken from the same function the attack calls (enemyRangedAttack(enemy, def)), not read straight from the def; {range} is the def's range. Add a second text entry in text.js for the ranged form (e.g. hud_enemy_ranged) beside hud_enemy; do not build the string at the call site. Update ONTOLOGY.md where it describes the hover/context bar, if it does.
-
-Done when: every test in test/ passes (for f in test/*.js; do node $f; done); the ranged form is produced only through say() with the new key, and its numbers come from enemyRangedAttack and the def's range.
-----
 Priority:   30
 Status: ToDo
 ID: deadturns-395r

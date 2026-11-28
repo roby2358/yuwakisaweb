@@ -406,6 +406,23 @@ the Brute draw from fixed cells on the main sprite sheet, for now, with no stand
     chaos-spawning rule, ChaosAI rule and Numbers rows, DYNAMICS's enemy table, spawn mix
     and dual-attack section, and CLAUDE.md's rendering notes were updated.
 
+### D-33 Hovering a ranged enemy shows its shot strength and range — *Decided*
+The context bar reads "name (HP hp/max)" for a melee enemy, as before, and
+"name (HP hp/max, Ranged atk at range)" for an enemy that `enemyIsRanged`. The strength is
+what `enemyRangedAttack(enemy, def)` returns, the same call the shot makes, so it includes
+the Maw-proximity and corrupted-ground bonuses where the enemy stands; the range is the
+def's `range`. The two forms are two text entries, `hud_enemy` and `hud_enemy_ranged`.
+- **Alternatives:** reading `rangedAttack` straight from the def, which understates the
+  shot near the Maw or on corrupted ground; changing the bar for every enemy.
+- **Why:** a ranged token carries the arrow badge and its melee attack, but nothing showed
+  how far it shoots or how hard, and the shot's strength differs from the melee attack.
+- **Evidence:** not measured.
+- **History:**
+  - 2026-11-27: decided and built. `updateHUD` in index.js picks the text key by
+    `enemyIsRanged(def)`; text.js gained `hud_enemy_ranged`. Display only: nothing saved
+    changed and SAVE_VERSION was not bumped. ONTOLOGY's read-only queries row for the
+    context bar and DYNAMICS's readability paragraph were updated.
+
 ### D-25 Every enemy melee attack draws the player's replies — *Decided*
 Every melee attack an enemy makes on its own turn goes through one function, which deals
 the hit and then runs the player's reply effects, so counter_mastery answers wildlife,
